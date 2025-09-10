@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990127-1.c:4:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    4 | main()
+      | ^
+      | int
+1 error generated.

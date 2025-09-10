@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-ctor_dtor_count-2 
+VERIFY: %b/fpcmp-target %o %S/ctor_dtor_count-2.reference_output

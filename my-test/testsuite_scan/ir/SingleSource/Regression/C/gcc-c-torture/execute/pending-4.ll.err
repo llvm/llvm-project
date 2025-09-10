@@ -1,0 +1,15 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pending-4.c:2:6: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    2 | void dummy (x, y)
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pending-4.c:31:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   31 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pending-4.c:31:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pending-4.c:32:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   32 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pending-4.c:32:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pending-4.c:8:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    8 | main (argc, argv)
+      | ^
+2 warnings and 2 errors generated.

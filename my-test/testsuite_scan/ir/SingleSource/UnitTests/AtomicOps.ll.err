@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/AtomicOps.c:3:19: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    3 | int foo(volatile *mem, int val, int c) {
+      |         ~~~~~~~~  ^
+      |         int
+1 error generated.

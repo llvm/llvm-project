@@ -1,0 +1,71 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Matrix/AMXINT8/t_gemm_bf16.cpp:1:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:14:2: error: "This header is only meant to be used on x86 and x64 architecture"
+   14 | #error "This header is only meant to be used on x86 and x64 architecture"
+      |  ^
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Matrix/AMXINT8/t_gemm_bf16.cpp:1:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:17:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86gprintrin.h:13:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/hresetintrin.h:42:27: error: invalid input constraint 'a' in asm
+   42 |   __asm__ ("hreset $0" :: "a"(__eax));
+      |                           ^
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Matrix/AMXINT8/t_gemm_bf16.cpp:1:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:17:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86gprintrin.h:19:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/crc32intrin.h:33:10: error: use of undeclared identifier '__builtin_ia32_crc32qi'
+   33 |   return __builtin_ia32_crc32qi(__C, __D);
+      |          ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/crc32intrin.h:53:10: error: use of undeclared identifier '__builtin_ia32_crc32hi'; did you mean '__builtin_arm_crc32h'?
+   53 |   return __builtin_ia32_crc32hi(__C, __D);
+      |          ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/crc32intrin.h:73:10: error: use of undeclared identifier '__builtin_ia32_crc32si'
+   73 |   return __builtin_ia32_crc32si(__C, __D);
+      |          ^~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Matrix/AMXINT8/t_gemm_bf16.cpp:1:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:17:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86gprintrin.h:23:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/raointintrin.h:39:3: error: use of undeclared identifier '__builtin_ia32_aadd32'; did you mean '__builtin_arm_addg'?
+   39 |   __builtin_ia32_aadd32((int *)__A, __B);
+      |   ^~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/raointintrin.h:39:3: error: argument to '__builtin_arm_addg' must be a constant integer
+   39 |   __builtin_ia32_aadd32((int *)__A, __B);
+      |   ^                                 ~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/raointintrin.h:61:3: error: use of undeclared identifier '__builtin_ia32_aand32'
+   61 |   __builtin_ia32_aand32((int *)__A, __B);
+      |   ^~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/raointintrin.h:83:3: error: use of undeclared identifier '__builtin_ia32_aor32'
+   83 |   __builtin_ia32_aor32((int *)__A, __B);
+      |   ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/raointintrin.h:105:3: error: use of undeclared identifier '__builtin_ia32_axor32'
+  105 |   __builtin_ia32_axor32((int *)__A, __B);
+      |   ^~~~~~~~~~~~~~~~~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Matrix/AMXINT8/t_gemm_bf16.cpp:1:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:19:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:14:2: error: "This header is only meant to be used on x86 and x64 architecture"
+   14 | #error "This header is only meant to be used on x86 and x64 architecture"
+      |  ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:77:3: error: use of undeclared identifier '__builtin_ia32_emms'; did you mean '__builtin_isless'?
+   77 |   __builtin_ia32_emms();
+      |   ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:77:23: error: too few arguments to function call, expected 2, have 0
+   77 |   __builtin_ia32_emms();
+      |   ~~~~~~~~~~~~~~~~~~~~^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:168:22: error: use of undeclared identifier '__builtin_ia32_packsswb128'
+  168 |     return __trunc64(__builtin_ia32_packsswb128(
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:194:22: error: use of undeclared identifier '__builtin_ia32_packssdw128'
+  194 |     return __trunc64(__builtin_ia32_packssdw128(
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:220:22: error: use of undeclared identifier '__builtin_ia32_packuswb128'
+  220 |     return __trunc64(__builtin_ia32_packuswb128(
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:694:22: error: use of undeclared identifier '__builtin_ia32_pmaddwd128'
+  694 |     return __trunc64(__builtin_ia32_pmaddwd128((__v8hi)__anyext128(__m1),
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:716:22: error: use of undeclared identifier '__builtin_ia32_pmulhw128'
+  716 |     return __trunc64(__builtin_ia32_pmulhw128((__v8hi)__zext128(__m1),
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:761:22: error: use of undeclared identifier '__builtin_ia32_psllw128'; did you mean '__builtin_arm_wsr128'?
+  761 |     return __trunc64(__builtin_ia32_psllw128((__v8hi)__anyext128(__m),
+      |                      ^~~~~~~~~~~~~~~~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

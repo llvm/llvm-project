@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/revertBits.c:64:39: warning: format specifies type 'unsigned long long' but the argument has type 'unsigned long' [-Wformat]
+   64 |   printf("0x%llx -> 0x%llx\n", rev64, __builtin_bitreverse64(rev64));
+      |                       ~~~~            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                       %lx
+1 warning generated.

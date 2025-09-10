@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Obsequi < input
+VERIFY: %b/fpcmp-target %o %S/Obsequi.reference_output

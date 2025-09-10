@@ -1,0 +1,7 @@
+# ninja log v6
+60	86	1756464858495033490	/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/cmake.verify_globs	b7b12d7ed93d820b
+88	146	1756463977098811219	tools/CMakeFiles/timeit-target.dir/timeit.c.o	7765c364e8a5f658
+146	153	1756463977157475751	tools/timeit-target	1bf051c744eb2c4b
+88	153	1756463977098419034	tools/CMakeFiles/fpcmp-target.dir/fpcmp.c.o	35cb2d2374cf9f58
+153	159	1756463977163650123	tools/fpcmp-target	745ebdcb8485c55
+58	84	1756466105545110360	/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/cmake.verify_globs	b7b12d7ed93d820b

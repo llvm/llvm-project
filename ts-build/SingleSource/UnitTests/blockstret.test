@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/blockstret 
+VERIFY: %b/fpcmp-target %o %S/blockstret.reference_output

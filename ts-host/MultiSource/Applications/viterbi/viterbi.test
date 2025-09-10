@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/viterbi 
+VERIFY: %b/fpcmp-target %o %S/viterbi.reference_output

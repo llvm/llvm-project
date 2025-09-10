@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsprintf-chk.c:166:29: warning: format string is empty [-Wformat-zero-length]
+  166 |       vsprintf (a.buf1 + 2, "", ap);
+      |                             ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsprintf-chk.c:247:7: error: __builtin_setjmp is not supported for the current target
+  247 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsprintf-chk.c:252:7: error: __builtin_setjmp is not supported for the current target
+  252 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsprintf-chk.c:257:7: error: __builtin_setjmp is not supported for the current target
+  257 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsprintf-chk.c:262:7: error: __builtin_setjmp is not supported for the current target
+  262 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsprintf-chk.c:268:7: error: __builtin_setjmp is not supported for the current target
+  268 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning and 5 errors generated.

@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset.c:18:25: warning: 'size' argument to memset is '0'; did you mean to transpose the last two arguments? [-Wmemset-transposed-args]
+   18 |   memset (buffer, argc, 0);
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset.c:18:25: note: parenthesize the third argument to silence
+1 warning generated.

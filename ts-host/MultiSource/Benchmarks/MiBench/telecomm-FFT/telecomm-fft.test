@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/telecomm-fft 8 32768 -i
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target -a 0.00001 %o %S/telecomm-fft.reference_output

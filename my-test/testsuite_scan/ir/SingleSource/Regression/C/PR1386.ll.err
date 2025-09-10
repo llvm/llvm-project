@@ -1,0 +1,8 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR1386.c:15:9: warning: implicit truncation from 'int' to bit-field changes value from 255 to 15 [-Wbitfield-constant-conversion]
+   15 |   x.pad = 255;
+      |         ^ ~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR1386.c:20:30: warning: format specifies type 'unsigned long long' but the argument has type 'uint64_t' (aka 'unsigned long') [-Wformat]
+   20 |   printf("bad bits: %llx\n", bad_bits);
+      |                     ~~~~     ^~~~~~~~
+      |                     %lx
+2 warnings generated.

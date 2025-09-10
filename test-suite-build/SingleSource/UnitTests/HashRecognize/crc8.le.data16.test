@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/crc8.le.data16 
+VERIFY: %b/fpcmp-target %o %S/crc8.le.data16.reference_output

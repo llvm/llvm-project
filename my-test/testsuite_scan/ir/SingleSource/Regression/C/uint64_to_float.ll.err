@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/uint64_to_float.c:82:42: warning: format specifies type 'unsigned long long' but the argument has type 'uint64_t' (aka 'unsigned long') [-Wformat]
+   82 |                 printf("Error detected @ 0x%016llx\n", x);
+      |                                            ~~~~~~~     ^
+      |                                            %016lx
+1 warning generated.

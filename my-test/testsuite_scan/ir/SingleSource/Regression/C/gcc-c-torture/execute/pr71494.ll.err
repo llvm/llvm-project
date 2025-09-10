@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr71494.c:10:3: error: function definition is not allowed here
+   10 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr71494.c:19:3: error: call to undeclared function 'test'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   19 |   test ();
+      |   ^
+2 errors generated.

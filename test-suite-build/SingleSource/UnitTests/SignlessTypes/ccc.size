@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/SignlessTypes/ccc  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             288      632
+.dynstr             160      920
+.gnu.version         24     1080
+.gnu.version_r       48     1104
+.rela.dyn           192     1152
+.rela.plt           168     1344
+.init                28     1512
+.plt                144     1552
+.text               528     1728
+.fini                24     2256
+.rodata              51     2280
+.eh_frame_hdr        92     2332
+.eh_frame           292     2424
+.note.ABI-tag        32     2716
+.note.package       112     2748
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             80   131048
+.data                16   131128
+.bss                 24   131144
+.comment            155        0
+Total              3057
+
+

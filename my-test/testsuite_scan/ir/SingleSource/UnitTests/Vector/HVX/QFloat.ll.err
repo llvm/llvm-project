@@ -1,0 +1,59 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:23:25: error: unknown type name 'HVX_Vector'
+   23 | void print_vector_words(HVX_Vector x) {
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:38:39: error: unknown type name 'HVX_Vector'
+   38 | static __attribute__((always_inline)) HVX_Vector
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:42:3: error: use of undeclared identifier 'HVX_Vector'
+   42 |   HVX_Vector tmp = Q6_V_vsplat_R(cvt.i);
+      |   ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:43:10: error: use of undeclared identifier 'tmp'
+   43 |   return tmp;
+      |          ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:47:39: error: unknown type name 'HVX_Vector'
+   47 | static __attribute__((always_inline)) HVX_Vector
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:52:3: error: use of undeclared identifier 'HVX_Vector'
+   52 |   HVX_Vector tmp = Q6_Vh_vsplat_R(cvt.i);
+      |   ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:53:10: error: use of undeclared identifier 'tmp'
+   53 |   return tmp;
+      |          ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:57:39: error: unknown type name 'HVX_Vector'
+   57 | static __attribute__((always_inline)) HVX_Vector
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:59:3: error: use of undeclared identifier 'HVX_Vector'
+   59 |   HVX_Vector tmp =
+      |   ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:61:10: error: use of undeclared identifier 'tmp'
+   61 |   return tmp;
+      |          ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:65:39: error: unknown type name 'HVX_Vector'
+   65 | static __attribute__((always_inline)) HVX_Vector
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:68:3: error: use of undeclared identifier 'HVX_Vector'
+   68 |   HVX_Vector tmp =
+      |   ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:70:10: error: use of undeclared identifier 'tmp'
+   70 |   return tmp;
+      |          ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:78:39: error: unknown type name 'HVX_Vector'
+   78 | static __attribute__((always_inline)) HVX_Vector
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:79:23: error: unknown type name 'HVX_Vector'
+   79 | convert_qf32v_to_fltv(HVX_Vector vect) {
+      |                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:80:3: error: use of undeclared identifier 'HVX_Vector'
+   80 |   HVX_Vector tmp = Q6_Vsf_equals_Vqf32(vect);
+      |   ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:81:10: error: use of undeclared identifier 'tmp'
+   81 |   return tmp;
+      |          ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:85:39: error: unknown type name 'HVX_Vector'
+   85 | static __attribute__((always_inline)) HVX_Vector
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/HVX/QFloat.c:86:22: error: unknown type name 'HVX_Vector'
+   86 | convert_qf16v_to_hfv(HVX_Vector vect) {
+      |                      ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

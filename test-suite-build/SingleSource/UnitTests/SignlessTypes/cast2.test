@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/cast2 31415926
+VERIFY: %b/fpcmp-target %o %S/cast2.reference_output

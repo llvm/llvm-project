@@ -1,0 +1,138 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/AVX512VL/i32gather_32.c:9:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86intrin.h:15:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:14:2: error: "This header is only meant to be used on x86 and x64 architecture"
+   14 | #error "This header is only meant to be used on x86 and x64 architecture"
+      |  ^
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/AVX512VL/i32gather_32.c:9:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86intrin.h:15:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:17:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86gprintrin.h:13:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/hresetintrin.h:42:27: error: invalid input constraint 'a' in asm
+   42 |   __asm__ ("hreset $0" :: "a"(__eax));
+      |                           ^
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/AVX512VL/i32gather_32.c:9:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/x86intrin.h:15:
+In file included from /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/immintrin.h:19:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:14:2: error: "This header is only meant to be used on x86 and x64 architecture"
+   14 | #error "This header is only meant to be used on x86 and x64 architecture"
+      |  ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:168:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  168 |     return __trunc64(__builtin_ia32_packsswb128(
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  169 |         (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:194:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  194 |     return __trunc64(__builtin_ia32_packssdw128(
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  195 |         (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:220:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  220 |     return __trunc64(__builtin_ia32_packuswb128(
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  221 |         (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:694:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  694 |     return __trunc64(__builtin_ia32_pmaddwd128((__v8hi)__anyext128(__m1),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  695 |                                                (__v8hi)__anyext128(__m2)));
+      |                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:716:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  716 |     return __trunc64(__builtin_ia32_pmulhw128((__v8hi)__zext128(__m1),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  717 |                                               (__v8hi)__zext128(__m2)));
+      |                                               ~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:761:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  761 |     return __trunc64(__builtin_ia32_psllw128((__v8hi)__anyext128(__m),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  762 |                                              (__v8hi)__anyext128(__count)));
+      |                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:783:10: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  783 |   return __trunc64(__builtin_ia32_psllwi128((__v8hi)__zext128(__m), __count));
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:806:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  806 |     return __trunc64(__builtin_ia32_pslld128((__v4si)__anyext128(__m),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  807 |                                              (__v4si)__anyext128(__count)));
+      |                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:828:10: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  828 |   return __trunc64(__builtin_ia32_pslldi128((__v4si)__zext128(__m), __count));
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:848:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  848 |     return __trunc64(__builtin_ia32_psllq128((__v2di)__anyext128(__m),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  849 |                                              (__v2di)__anyext128(__count)));
+      |                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:868:10: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  868 |   return __trunc64(__builtin_ia32_psllqi128((__v2di)__zext128(__m), __count));
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:892:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  892 |     return __trunc64(__builtin_ia32_psraw128((__v8hi)__anyext128(__m),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  893 |                                              (__v8hi)__anyext128(__count)));
+      |                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:915:10: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  915 |   return __trunc64(__builtin_ia32_psrawi128((__v8hi)__zext128(__m), __count));
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:939:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  939 |     return __trunc64(__builtin_ia32_psrad128((__v4si)__anyext128(__m),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  940 |                                              (__v4si)__anyext128(__count)));
+      |                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:962:10: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  962 |   return __trunc64(__builtin_ia32_psradi128((__v4si)__zext128(__m), __count));
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:985:12: error: invalid conversion between vector type '__v2di' (vector of 2 'long long' values) and integer type 'int' of different size
+  985 |     return __trunc64(__builtin_ia32_psrlw128((__v8hi)__anyext128(__m),
+      |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  986 |                                              (__v8hi)__anyext128(__count)));
+      |                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/mmintrin.h:59:35: note: expanded from macro '__trunc64'
+   59 |   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+      |                                   ^~~~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

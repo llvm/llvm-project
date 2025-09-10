@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2003-05-26-Shorts  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                168     928
+.gnu.version            14    1096
+.gnu.version_r          48    1112
+.gnu.hash               28    1160
+.dynstr                135    1188
+.rela.dyn              192    1328
+.rela.plt               72    1520
+.rodata                817    1592
+.eh_frame_hdr           36    2412
+.eh_frame              124    2448
+.text                  834    6668
+.plt                    80    7504
+.preinit_array           8   11680
+.fini_array              8   11688
+.init_array              8   11696
+.dynamic               416   11704
+.got                    40   12120
+.relro_padding         128   12160
+.data                    8   16256
+.tm_clone_table          0   16264
+.got.plt                40   16264
+.bss                     1   16304
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3756
+
+

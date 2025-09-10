@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/CrossingThresholds-dbl 5880 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/CrossingThresholds-dbl.reference_output

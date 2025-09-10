@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-2005-05-06-LongLongSignedShift 
+VERIFY: %b/fpcmp-target %o %S/2005-05-06-LongLongSignedShift.reference_output

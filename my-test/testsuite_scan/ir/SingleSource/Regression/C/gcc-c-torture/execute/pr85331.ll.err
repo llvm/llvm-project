@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr85331.c:6:16: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+    6 | __attribute__((noipa)) void
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr85331.c:11:8: error: use of unknown builtin '__builtin_shuffle' [-Wimplicit-function-declaration]
+   11 |   *r = __builtin_shuffle (y, m);
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr85331.c:11:6: error: assigning to 'V' (vector of 2 'double' values) from incompatible type 'int'
+   11 |   *r = __builtin_shuffle (y, m);
+      |      ^ ~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning and 2 errors generated.

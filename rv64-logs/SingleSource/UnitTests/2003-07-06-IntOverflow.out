@@ -1,0 +1,4 @@
+compare after overflow is TRUE
+divide after overflow = -170 (0xffffff56)
+divide negative value by power-of-2 = -16 (0xfffffff0)
+subtract after overflow = 2134900731 (0x7f3ffffb)

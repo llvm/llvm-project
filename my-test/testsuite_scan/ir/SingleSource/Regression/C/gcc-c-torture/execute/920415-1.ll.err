@@ -1,0 +1,28 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:28: error: function definition is not allowed here
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:45: error: call to undeclared function 'x'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:44: error: incompatible integer to pointer conversion passing 'int' to parameter of type 'const void *' [-Wint-conversion]
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                                            ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:49: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:49: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:57: error: non-void function 'main' should return a value [-Wreturn-mismatch]
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                                                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:66: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                                                                  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:66: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920415-1.c:2:40: error: indirect goto in function with no address-of-label expressions
+    2 | main(){__label__ l;void*x(){return&&l;}goto*x();abort();return;l:exit(0);}
+      |                                        ^
+8 errors generated.

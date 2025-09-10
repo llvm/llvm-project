@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C++/2003-06-08-VirtualFunctions.cpp:11:12: warning: non-void function does not return a value [-Wreturn-type]
+   11 |   int T() {}
+      |            ^
+1 warning generated.

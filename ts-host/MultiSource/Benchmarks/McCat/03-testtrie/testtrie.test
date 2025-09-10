@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/testtrie testtrie.in2
+VERIFY: %b/fpcmp-target %o %S/testtrie.reference_output

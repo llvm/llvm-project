@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/printargs  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             264      632
+.dynstr             153      896
+.gnu.version         22     1050
+.gnu.version_r       48     1072
+.rela.dyn           192     1120
+.rela.plt           144     1312
+.init                28     1456
+.plt                128     1488
+.text               384     1664
+.fini                24     2048
+.rodata              27     2072
+.eh_frame_hdr        60     2100
+.eh_frame           212     2160
+.note.ABI-tag        32     2372
+.note.package       112     2404
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             72   131048
+.data                16   131120
+.bss                  8   131136
+.comment            155        0
+Total              2680
+
+

@@ -1,0 +1,25 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:18:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   18 | main ()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:20:19: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   20 |   x = (struct S) {b:0, a:0, c:({ struct S o = x; o.a == 1 ? 10 : 20;})};
+      |                   ^~
+      |                   .b = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:20:24: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   20 |   x = (struct S) {b:0, a:0, c:({ struct S o = x; o.a == 1 ? 10 : 20;})};
+      |                        ^~
+      |                        .a = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:20:29: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   20 |   x = (struct S) {b:0, a:0, c:({ struct S o = x; o.a == 1 ? 10 : 20;})};
+      |                             ^~
+      |                             .c = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:22:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   22 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:22:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:23:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   23 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compndlit-1.c:23:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+3 warnings and 3 errors generated.

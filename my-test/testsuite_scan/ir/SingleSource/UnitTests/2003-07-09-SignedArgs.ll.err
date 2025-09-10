@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2003-07-09-SignedArgs.c:52:16: warning: passing an object that undergoes default argument promotion to 'va_start' has undefined behavior [-Wvarargs]
+   52 |   va_start(ap, c);
+      |                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2003-07-09-SignedArgs.c:45:22: note: parameter of type 'schar' (aka 'signed char') is declared here
+   45 | int getUnknown(schar c, ...)
+      |                      ^
+1 warning generated.

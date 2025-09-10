@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/city 
+VERIFY: %b/fpcmp-target %o %S/city.reference_output

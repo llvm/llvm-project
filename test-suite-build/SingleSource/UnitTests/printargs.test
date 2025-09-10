@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/printargs 
+VERIFY: %b/fpcmp-target %o %S/printargs.reference_output

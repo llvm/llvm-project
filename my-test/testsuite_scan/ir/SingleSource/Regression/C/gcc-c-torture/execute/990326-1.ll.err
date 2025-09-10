@@ -1,0 +1,57 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:244:29: warning: implicit truncation from 'int' to bit-field changes value from 65056 to -480 [-Wbitfield-constant-conversion]
+  244 |         static struct gx x = { ~1, 0xfe20, 0xfd10 };
+      |                                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:244:37: warning: implicit truncation from 'int' to bit-field changes value from 64784 to -752 [-Wbitfield-constant-conversion]
+  244 |         static struct gx x = { ~1, 0xfe20, 0xfd10 };
+      |                                            ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:245:25: warning: implicit truncation from 'int' to bit-field changes value from 49711 to 559 [-Wbitfield-constant-conversion]
+  245 |         static struct gy y = { 0xc22f, 0xc11f, ~2 };
+      |                                ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:245:33: warning: implicit truncation from 'int' to bit-field changes value from 49439 to 287 [-Wbitfield-constant-conversion]
+  245 |         static struct gy y = { 0xc22f, 0xc11f, ~2 };
+      |                                        ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:254:29: warning: implicit truncation from 'int' to bit-field changes value from 49711 to 559 [-Wbitfield-constant-conversion]
+  254 |         static struct gx x = { ~1, 0xc22f, 0xc11f };
+      |                                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:254:37: warning: implicit truncation from 'int' to bit-field changes value from 49439 to 287 [-Wbitfield-constant-conversion]
+  254 |         static struct gx x = { ~1, 0xc22f, 0xc11f };
+      |                                            ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:255:25: warning: implicit truncation from 'int' to bit-field changes value from 65056 to -480 [-Wbitfield-constant-conversion]
+  255 |         static struct gy y = { 0xfe20, 0xfd10, ~2 };
+      |                                ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:255:33: warning: implicit truncation from 'int' to bit-field changes value from 64784 to -752 [-Wbitfield-constant-conversion]
+  255 |         static struct gy y = { 0xfe20, 0xfd10, ~2 };
+      |                                        ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:318:25: warning: implicit truncation from 'int' to bit-field changes value from 64784 to -752 [-Wbitfield-constant-conversion]
+  318 |         static struct hx x = { 0xfd10, 0xfe20, ~1 };
+      |                                ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:318:33: warning: implicit truncation from 'int' to bit-field changes value from 65056 to -480 [-Wbitfield-constant-conversion]
+  318 |         static struct hx x = { 0xfd10, 0xfe20, ~1 };
+      |                                        ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:319:29: warning: implicit truncation from 'int' to bit-field changes value from 49439 to 287 [-Wbitfield-constant-conversion]
+  319 |         static struct hy y = { ~2, 0xc11f, 0xc22f };
+      |                                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:319:37: warning: implicit truncation from 'int' to bit-field changes value from 49711 to 559 [-Wbitfield-constant-conversion]
+  319 |         static struct hy y = { ~2, 0xc11f, 0xc22f };
+      |                                            ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:328:25: warning: implicit truncation from 'int' to bit-field changes value from 49439 to 287 [-Wbitfield-constant-conversion]
+  328 |         static struct hx x = { 0xc11f, 0xc22f, ~1 };
+      |                                ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:328:33: warning: implicit truncation from 'int' to bit-field changes value from 49711 to 559 [-Wbitfield-constant-conversion]
+  328 |         static struct hx x = { 0xc11f, 0xc22f, ~1 };
+      |                                        ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:329:29: warning: implicit truncation from 'int' to bit-field changes value from 64784 to -752 [-Wbitfield-constant-conversion]
+  329 |         static struct hy y = { ~2, 0xfd10, 0xfe20 };
+      |                                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:329:37: warning: implicit truncation from 'int' to bit-field changes value from 65056 to -480 [-Wbitfield-constant-conversion]
+  329 |         static struct hy y = { ~2, 0xfd10, 0xfe20 };
+      |                                            ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:339:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  339 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:339:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:406:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  406 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990326-1.c:406:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+16 warnings and 2 errors generated.

@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/extern-inline-redef.c:16:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef int __attribute__ ((bitwidth(61))) int61;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/extern-inline-redef.c:25:3: error: redefinition of a 'extern inline' function '__strtol_l' is not supported in C99 mode
+   25 |   __strtol_l (int a)
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/extern-inline-redef.c:19:3: note: previous definition is here
+   19 |   __strtol_l (int a)
+      |   ^
+1 warning and 1 error generated.

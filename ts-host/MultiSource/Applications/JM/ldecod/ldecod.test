@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ldecod -i data/test.264 -o Output/test_dec.yuv -r data/test_rec.yuv
+VERIFY: %b/fpcmp-target %o %S/ldecod.reference_output

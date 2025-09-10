@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-bigstack 
+VERIFY: %b/fpcmp-target %o %S/bigstack.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/simulator 
+VERIFY: %b/fpcmp-target %o %S/simulator.reference_output

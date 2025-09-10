@@ -1,0 +1,29 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy-chk.c:34:31: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   34 |   if (strcpy (p + 16, "vwxyz" + 1) != p + 16 || memcmp (p + 16, "wxyz", 5))
+      |                       ~~~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:21:32: note: expanded from macro 'strcpy'
+   21 |   __builtin___strcpy_chk (dst, src, os (dst))
+      |                                ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy-chk.c:34:31: note: use array indexing to silence this warning
+   34 |   if (strcpy (p + 16, "vwxyz" + 1) != p + 16 || memcmp (p + 16, "wxyz", 5))
+      |                               ^
+      |                       &       [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:21:32: note: expanded from macro 'strcpy'
+   21 |   __builtin___strcpy_chk (dst, src, os (dst))
+      |                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy-chk.c:200:7: error: __builtin_setjmp is not supported for the current target
+  200 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy-chk.c:205:7: error: __builtin_setjmp is not supported for the current target
+  205 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy-chk.c:211:7: error: __builtin_setjmp is not supported for the current target
+  211 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy-chk.c:213:7: warning: 'strcpy' will always overflow; destination buffer has size 1, but the source string has length 2 (including NUL byte) [-Wfortify-source]
+  213 |       strcpy (&buf3[19], "a");
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:21:3: note: expanded from macro 'strcpy'
+   21 |   __builtin___strcpy_chk (dst, src, os (dst))
+      |   ^
+2 warnings and 3 errors generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-short_circuit_dtor 
+VERIFY: %b/fpcmp-target %o %S/short_circuit_dtor.reference_output

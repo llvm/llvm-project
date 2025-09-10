@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/AVX512BWVL/shuffles.c:17:10: fatal error: 'm512_test_util.h' file not found
+   17 | #include "m512_test_util.h"
+      |          ^~~~~~~~~~~~~~~~~~
+1 error generated.

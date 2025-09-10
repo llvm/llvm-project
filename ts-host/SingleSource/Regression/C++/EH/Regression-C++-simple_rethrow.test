@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-simple_rethrow 
+VERIFY: %b/fpcmp-target %o %S/simple_rethrow.reference_output

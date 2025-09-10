@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr28865.c:3:20: error: initialization of flexible array member is not allowed
+    3 | union B b = { { 1, "123456789012345678901234567890" } };
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr28865.c:1:24: note: initialized flexible array member 'b' is here
+    1 | struct A { int a; char b[]; };
+      |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr28865.c:4:20: error: initialization of flexible array member is not allowed
+    4 | union B c = { { 2, "123456789012345678901234567890" } };
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr28865.c:1:24: note: initialized flexible array member 'b' is here
+    1 | struct A { int a; char b[]; };
+      |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr28865.c:6:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    6 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+1 warning and 2 errors generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/treecc -n examples/expr_cpp.tc
+VERIFY: %b/fpcmp-target %o %S/treecc.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/bisect < bisect_test.in
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/bisect.reference_output

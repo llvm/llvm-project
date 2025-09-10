@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2005-05-12-Int64ToFP 
+VERIFY: %b/fpcmp-target %o %S/2005-05-12-Int64ToFP.reference_output

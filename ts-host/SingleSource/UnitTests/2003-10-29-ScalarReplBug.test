@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2003-10-29-ScalarReplBug 
+VERIFY: %b/fpcmp-target %o %S/2003-10-29-ScalarReplBug.reference_output

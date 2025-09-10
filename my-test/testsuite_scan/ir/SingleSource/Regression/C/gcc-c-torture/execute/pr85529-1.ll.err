@@ -1,0 +1,8 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr85529-1.c:24:9: warning: inequality comparison result unused [-Wunused-comparison]
+   24 |     s.a != (k < foo (k, 2) && (c = k = g));
+      |     ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr85529-1.c:24:9: note: use '|=' to turn this inequality comparison into an or-assignment
+   24 |     s.a != (k < foo (k, 2) && (c = k = g));
+      |         ^~
+      |         |=
+1 warning generated.

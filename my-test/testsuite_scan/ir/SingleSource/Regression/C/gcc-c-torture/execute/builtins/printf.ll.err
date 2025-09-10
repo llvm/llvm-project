@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/printf.c:44:3: error: use of unknown builtin '__builtin_putchar' [-Wimplicit-function-declaration]
+   44 |   __builtin_putchar ('\n');
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/printf.c:45:3: error: use of unknown builtin '__builtin_puts' [-Wimplicit-function-declaration]
+   45 |   __builtin_puts ("hello");
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/printf.c:49:3: error: use of unknown builtin '__builtin_printf_unlocked' [-Wimplicit-function-declaration]
+   49 |   __builtin_printf_unlocked ("");
+      |   ^
+3 errors generated.

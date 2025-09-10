@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/SIBsim4 -A4 x.fa y.fa
+VERIFY: %b/fpcmp-target %o %S/SIBsim4.reference_output

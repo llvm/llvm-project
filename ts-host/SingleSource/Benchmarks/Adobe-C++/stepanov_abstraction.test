@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/stepanov_abstraction 
+VERIFY: %b/fpcmp-target -a 0.01 %o %S/stepanov_abstraction.reference_output

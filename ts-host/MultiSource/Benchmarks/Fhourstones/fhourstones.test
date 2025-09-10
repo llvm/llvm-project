@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/fhourstones < input
+VERIFY: %b/fpcmp-target %o %S/fhourstones.reference_output

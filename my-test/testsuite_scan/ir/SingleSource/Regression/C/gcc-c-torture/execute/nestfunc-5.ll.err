@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-5.c:11:3: error: function definition is not allowed here
+   11 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-5.c:16:25: error: use of undeclared identifier 'do_goto'
+   16 |       recursive (n - 1, do_goto);
+      |                         ^~~~~~~
+2 errors generated.

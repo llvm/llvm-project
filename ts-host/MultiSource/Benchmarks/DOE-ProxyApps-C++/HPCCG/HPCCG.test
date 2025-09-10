@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/HPCCG 50 50 50
+VERIFY: %b/fpcmp-target %o %S/HPCCG.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-casts 
+VERIFY: %b/fpcmp-target %o %S/casts.reference_output

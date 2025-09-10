@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Searching-dbl 80000 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Searching-dbl.reference_output

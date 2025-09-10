@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990413-2.c:20:11: error: invalid output constraint '=t' in asm
+   20 |                       : "=t" (__value)
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990413-2.c:30:33: error: invalid output constraint '=t' in asm
+   30 |   __asm __volatile__ ("fsqrt" : "=t" (__result) : "0" (__x));
+      |                                 ^
+2 errors generated.

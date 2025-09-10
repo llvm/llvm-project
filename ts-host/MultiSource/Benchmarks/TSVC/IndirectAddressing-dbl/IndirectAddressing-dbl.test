@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/IndirectAddressing-dbl 12500 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/IndirectAddressing-dbl.reference_output

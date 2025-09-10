@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-recursive-throw 
+VERIFY: %b/fpcmp-target %o %S/recursive-throw.reference_output

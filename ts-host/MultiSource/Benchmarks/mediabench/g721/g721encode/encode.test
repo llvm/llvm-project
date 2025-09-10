@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/encode -4 -l < clinton.pcm
+VERIFY: %b/fpcmp-target %o %S/encode.reference_output.little-endian

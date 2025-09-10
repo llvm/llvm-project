@@ -1,0 +1,49 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:11:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   11 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:19:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   19 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:27:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   27 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:35:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   35 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:43:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   43 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:51:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   51 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:60:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   60 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:68:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   68 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:76:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   76 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:84:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   84 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:92:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   92 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr51581-1.c:100:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  100 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+12 warnings generated.

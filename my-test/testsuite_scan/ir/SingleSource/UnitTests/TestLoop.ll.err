@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/TestLoop.c:9:5: warning: only one parameter on 'main' declaration [-Wmain]
+    9 | int main(int level) {
+      |     ^
+1 warning generated.

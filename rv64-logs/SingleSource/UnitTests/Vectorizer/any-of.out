@@ -1,0 +1,12 @@
+Checking anyof_icmp_s32_true_update
+Checking anyof_fcmp_s32_true_update
+Checking anyof_icmp_s16_true_update
+Checking anyof_icmp_s32_false_update
+Checking anyof_fcmp_s32_false_update
+Checking anyof_icmp_s16_false_update
+Checking anyof_icmp_u32_start_TC
+Checking anyof_fcmp_u32_start_TC
+Checking anyof_icmp_u16_start_TC
+Checking anyof_icmp_u32_update_by_TC
+Checking anyof_fcmp_u32_update_by_TC
+Checking anyof_icmp_u16_update_by_TC

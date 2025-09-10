@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/functionobjects 
+VERIFY: %b/fpcmp-target -a 0.01 %o %S/functionobjects.reference_output

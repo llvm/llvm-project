@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-7.c:16:5: error: function definition is not allowed here
+   16 |     {
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-7.c:30:16: error: call to undeclared function 'Foo'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   30 |   struct A a = Foo ();
+      |                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-7.c:30:12: error: initializing 'struct A' with an expression of incompatible type 'int'
+   30 |   struct A a = Foo ();
+      |            ^   ~~~~~~
+3 errors generated.

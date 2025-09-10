@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ipa-sra-2.c:34:21: warning: allocation of insufficient size '40' for type 'union both' with size '4000000' [-Walloc-size]
+   34 |   union both *agg = calloc (1, sizeof (struct small));
+      |                     ^
+1 warning generated.

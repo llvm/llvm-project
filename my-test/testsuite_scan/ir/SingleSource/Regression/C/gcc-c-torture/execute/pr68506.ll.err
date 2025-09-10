@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr68506.c:33:62: warning: result of comparison of constant 4 with boolean expression is always true [-Wtautological-constant-out-of-range-compare]
+   33 |       c = (unsigned) c > -(unsigned) ((o = (m = d = t) == p) <= 4UL) && n;
+      |                                       ~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~
+1 warning generated.

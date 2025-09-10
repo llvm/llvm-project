@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20011115-1.c:17:11: warning: self-comparison always evaluates to true [-Wtautological-compare]
+   17 |   if (foo == foo)
+      |           ^
+1 warning generated.

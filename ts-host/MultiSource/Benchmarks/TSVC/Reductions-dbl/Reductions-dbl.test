@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Reductions-dbl 1670 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Reductions-dbl.reference_output

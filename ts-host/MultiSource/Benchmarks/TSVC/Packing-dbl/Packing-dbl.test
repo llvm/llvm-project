@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Packing-dbl 50000 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Packing-dbl.reference_output

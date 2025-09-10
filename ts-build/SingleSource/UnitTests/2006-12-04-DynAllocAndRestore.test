@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2006-12-04-DynAllocAndRestore 
+VERIFY: %b/fpcmp-target %o %S/2006-12-04-DynAllocAndRestore.reference_output

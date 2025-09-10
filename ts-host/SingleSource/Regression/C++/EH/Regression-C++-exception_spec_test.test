@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-exception_spec_test 
+VERIFY: %b/fpcmp-target %o %S/exception_spec_test.reference_output

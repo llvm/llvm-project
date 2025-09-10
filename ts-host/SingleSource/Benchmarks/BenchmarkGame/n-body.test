@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/n-body 
+VERIFY: %b/fpcmp-target %o %S/n-body.reference_output

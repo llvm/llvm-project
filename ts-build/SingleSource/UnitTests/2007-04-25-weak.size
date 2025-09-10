@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2007-04-25-weak  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                130    1164
+.rela.dyn              216    1296
+.rela.plt               48    1512
+.rodata                  4    1560
+.eh_frame_hdr           28    1564
+.eh_frame               92    1592
+.text                  268    5780
+.plt                    64    6048
+.preinit_array           8   10208
+.fini_array              8   10216
+.init_array              8   10224
+.dynamic               416   10232
+.got                    48   10648
+.relro_padding        1592   10696
+.data                    8   14792
+.tm_clone_table          0   14800
+.got.plt                32   14800
+.bss                     1   14832
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3754
+
+

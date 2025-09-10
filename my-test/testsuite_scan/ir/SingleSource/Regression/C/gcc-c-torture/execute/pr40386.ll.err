@@ -1,0 +1,73 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:43:26: warning: signed shift result (0xF2340000000) requires 45 bits to represent, but 'int' only has 32 bits [-Wshift-overflow]
+   43 |   if (ROR (i, shift1) != ROR (INT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:46:26: warning: signed shift result (0xF2340000000) requires 45 bits to represent, but 'int' only has 32 bits [-Wshift-overflow]
+   46 |   if (ROR (i, SHIFT1) != ROR (INT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:49:26: warning: signed shift result (0xF2345678000000000000000) requires 93 bits to represent, but 'long' only has 64 bits [-Wshift-overflow]
+   49 |   if (ROR (l, shift1) != ROR (LONG_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:52:26: warning: signed shift result (0xF2345678000000000000000) requires 93 bits to represent, but 'long' only has 64 bits [-Wshift-overflow]
+   52 |   if (ROR (l, SHIFT1) != ROR (LONG_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:55:27: warning: signed shift result (0xF2345678ABCDEF0000000000000000) requires 121 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   55 |   if (ROR (ll, shift1) != ROR (LL_VALUE, SHIFT1))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:58:27: warning: signed shift result (0xF2345678ABCDEF0000000000000000) requires 121 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   58 |   if (ROR (ll, SHIFT1) != ROR (LL_VALUE, SHIFT1))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:97:27: warning: signed shift result (0xF2345678ABCDEF0000000000000000) requires 121 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   97 |   if (ROL (ll, shift2) != ROL (LL_VALUE, SHIFT2))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:9:24: note: expanded from macro 'ROL'
+    9 | #define ROL(a,b) (((a) << (b)) | ((a) >> ((sizeof (a) * CHAR_BIT) - (b))))
+      |                    ~~~ ^  ~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:100:27: warning: signed shift result (0xF2345678ABCDEF0000000000000000) requires 121 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+  100 |   if (ROL (ll, SHIFT2) != ROL (LL_VALUE, SHIFT2))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:9:24: note: expanded from macro 'ROL'
+    9 | #define ROL(a,b) (((a) << (b)) | ((a) >> ((sizeof (a) * CHAR_BIT) - (b))))
+      |                    ~~~ ^  ~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:37:26: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   37 |   if (ROR (s, shift1) != ROR (SHORT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:40:26: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   40 |   if (ROR (s, SHIFT1) != ROR (SHORT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:8:39: note: expanded from macro 'ROR'
+    8 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:73:26: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   73 |   if (ROL (s, shift1) != ROL (SHORT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:9:24: note: expanded from macro 'ROL'
+    9 | #define ROL(a,b) (((a) << (b)) | ((a) >> ((sizeof (a) * CHAR_BIT) - (b))))
+      |                    ~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:76:26: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   76 |   if (ROL (s, SHIFT1) != ROL (SHORT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr40386.c:9:24: note: expanded from macro 'ROL'
+    9 | #define ROL(a,b) (((a) << (b)) | ((a) >> ((sizeof (a) * CHAR_BIT) - (b))))
+      |                    ~~~ ^
+12 warnings generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/scimark2 
+VERIFY: %b/fpcmp-target %o %S/scimark2.reference_output

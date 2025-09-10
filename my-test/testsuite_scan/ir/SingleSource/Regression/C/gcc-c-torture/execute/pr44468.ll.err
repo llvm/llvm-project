@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr44468.c:16:29: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   16 | int __attribute__((noinline,noclone))
+      |                             ^~~~~~~
+      |                             noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr44468.c:24:29: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   24 | int __attribute__((noinline,noclone))
+      |                             ^~~~~~~
+      |                             noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr44468.c:32:29: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   32 | int __attribute__((noinline,noclone))
+      |                             ^~~~~~~
+      |                             noinline
+3 warnings generated.

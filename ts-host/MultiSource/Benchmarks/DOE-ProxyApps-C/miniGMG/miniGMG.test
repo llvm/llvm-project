@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/miniGMG 5 2 2 2 1 1 1
+VERIFY: %b/fpcmp-target -a 0.00000001 %o %S/miniGMG.reference_output

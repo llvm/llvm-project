@@ -1,0 +1,85 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:45:5: error: redefinition of 'polybench_papi_counters_threadid'
+   45 | int polybench_papi_counters_threadid = POLYBENCH_THREAD_MONITOR;
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:297:5: note: previous definition is here
+  297 | int polybench_papi_counters_threadid = POLYBENCH_THREAD_MONITOR;
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:46:8: error: redefinition of 'polybench_program_total_flops'
+   46 | double polybench_program_total_flops = 0;
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:298:8: note: previous definition is here
+  298 | double polybench_program_total_flops = 0;
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:67:8: error: redefinition of 'polybench_data_ptrs'
+   67 | struct polybench_data_ptrs
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:319:8: note: previous definition is here
+  319 | struct polybench_data_ptrs
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:74:36: error: redefinition of '_polybench_alloc_table'
+   74 | static struct polybench_data_ptrs* _polybench_alloc_table = NULL;
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:326:36: note: previous definition is here
+  326 | static struct polybench_data_ptrs* _polybench_alloc_table = NULL;
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:75:15: error: redefinition of 'polybench_inter_array_padding_sz'
+   75 | static size_t polybench_inter_array_padding_sz = 0;
+      |               ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:327:15: note: previous definition is here
+  327 | static size_t polybench_inter_array_padding_sz = 0;
+      |               ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:83:8: error: redefinition of 'rtclock'
+   83 | double rtclock()
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:335:8: note: previous definition is here
+  335 | double rtclock()
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:112:6: error: redefinition of 'polybench_flush_cache'
+  112 | void polybench_flush_cache()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:364:6: note: previous definition is here
+  364 | void polybench_flush_cache()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:353:6: error: redefinition of 'polybench_prepare_instruments'
+  353 | void polybench_prepare_instruments()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:605:6: note: previous definition is here
+  605 | void polybench_prepare_instruments()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:364:6: error: redefinition of 'polybench_timer_start'
+  364 | void polybench_timer_start()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:616:6: note: previous definition is here
+  616 | void polybench_timer_start()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:375:6: error: redefinition of 'polybench_timer_stop'
+  375 | void polybench_timer_stop()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:627:6: note: previous definition is here
+  627 | void polybench_timer_stop()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:388:6: error: redefinition of 'polybench_timer_print'
+  388 | void polybench_timer_print()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:640:6: note: previous definition is here
+  640 | void polybench_timer_print()
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:517:1: error: redefinition of 'xmalloc'
+  517 | xmalloc(size_t alloc_sz)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:769:1: note: previous definition is here
+  769 | xmalloc(size_t alloc_sz)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:547:6: error: redefinition of 'polybench_free_data'
+  547 | void polybench_free_data(void* ptr)
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:799:6: note: previous definition is here
+  799 | void polybench_free_data(void* ptr)
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.c:557:7: error: redefinition of 'polybench_alloc_data'
+  557 | void* polybench_alloc_data(unsigned long long int n, int elt_size)
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/polybench.h:809:7: note: previous definition is here
+  809 | void* polybench_alloc_data(unsigned long long int n, int elt_size)
+      |       ^
+14 errors generated.

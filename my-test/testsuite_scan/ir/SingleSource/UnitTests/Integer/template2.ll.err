@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/template2.cpp:16:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef int __attribute__ ((bitwidth(26))) int26;
+      |                             ^~~~~~~~~~~~
+1 warning generated.

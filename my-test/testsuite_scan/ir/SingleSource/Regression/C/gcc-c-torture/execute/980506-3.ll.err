@@ -1,0 +1,29 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:9:7: error: call to undeclared library function 'strlen' with type '__size_t (const char *)' (aka 'unsigned long (const char *)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    9 |   m = strlen (pattern) - 1;
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:9:7: note: include the header <string.h> or explicitly provide a declaration for 'strlen'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:9:15: warning: passing 'unsigned char *' to parameter of type 'const char *' converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+    9 |   m = strlen (pattern) - 1;
+      |               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:11:3: error: call to undeclared library function 'memset' with type 'void *(void *, int, __size_t)' (aka 'void *(void *, int, unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   11 |   memset (lookup_table, ++m, 257);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:11:3: note: include the header <string.h> or explicitly provide a declaration for 'memset'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:4:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    4 | build_lookup (pattern)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:19:21: warning: passing 'char[5]' to parameter of type 'unsigned char *' converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+   19 |   if (build_lookup ("bind") != 4)
+      |                     ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:20:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   20 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:20:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:22:5: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   22 |     exit (0);
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:22:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980506-3.c:15:5: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   15 | int main(argc, argv)
+      |     ^
+4 warnings and 4 errors generated.

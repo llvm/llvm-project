@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/div 31415926
+VERIFY: %b/fpcmp-target %o %S/div.reference_output

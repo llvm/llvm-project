@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/folding.c:16:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef int __attribute__ ((bitwidth(7))) int7;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/folding.c:17:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef unsigned int __attribute__ ((bitwidth(7))) uint7;
+      |                                      ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/folding.c:18:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   18 | typedef int __attribute__ ((bitwidth(15))) int15;
+      |                             ^~~~~~~~~~~~
+3 warnings generated.

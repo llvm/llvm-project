@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/abs-3.c:82:7: error: use of unknown builtin '__builtin_imaxabs' [-Wimplicit-function-declaration]
+   82 |   if (__builtin_imaxabs (imax0) != 0)
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/abs-3.c:94:35: warning: result of comparison of constant 9223372036854775807 with expression of type 'int' is always true [-Wtautological-constant-out-of-range-compare]
+   94 |   if (__builtin_imaxabs (imaxmin) != INTMAX_MAX)
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/abs-3.c:96:39: warning: result of comparison of constant 9223372036854775807 with expression of type 'int' is always true [-Wtautological-constant-out-of-range-compare]
+   96 |   if (__builtin_imaxabs (-INTMAX_MAX) != INTMAX_MAX)
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/abs-3.c:98:35: warning: result of comparison of constant 9223372036854775807 with expression of type 'int' is always true [-Wtautological-constant-out-of-range-compare]
+   98 |   if (__builtin_imaxabs (imaxmax) != INTMAX_MAX)
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/abs-3.c:100:38: warning: result of comparison of constant 9223372036854775807 with expression of type 'int' is always true [-Wtautological-constant-out-of-range-compare]
+  100 |   if (__builtin_imaxabs (INTMAX_MAX) != INTMAX_MAX)
+      |       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+4 warnings and 1 error generated.

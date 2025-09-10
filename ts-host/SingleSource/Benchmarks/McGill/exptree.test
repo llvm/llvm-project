@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/exptree 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/exptree.reference_output

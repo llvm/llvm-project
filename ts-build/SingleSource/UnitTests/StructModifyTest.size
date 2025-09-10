@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/StructModifyTest  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 22    1536
+.eh_frame_hdr           36    1560
+.eh_frame              124    1600
+.text                  382    5820
+.plt                    64    6208
+.preinit_array           8   10368
+.fini_array              8   10376
+.init_array              8   10384
+.dynamic               416   10392
+.got                    40   10808
+.relro_padding        1440   10848
+.data                    8   14944
+.tm_clone_table          0   14952
+.got.plt                32   14952
+.bss                     1   14984
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3739
+
+

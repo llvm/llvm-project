@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr39228.c:10:10: error: use of unknown builtin '__builtin_isinff' [-Wimplicit-function-declaration]
+   10 |   return __builtin_isinff (c);
+      |          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr39228.c:24:10: error: use of unknown builtin '__builtin_isinfl' [-Wimplicit-function-declaration]
+   24 |   return __builtin_isinfl (c);
+      |          ^
+2 errors generated.

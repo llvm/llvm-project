@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Mips/Mips16/mips16_32_4.c:3:21: warning: unknown attribute 'mips16' ignored [-Wunknown-attributes]
+    3 | void __attribute__((mips16)) foo (void) {
+      |                     ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Mips/Mips16/mips16_32_4.c:6:21: warning: unknown attribute 'nomips16' ignored [-Wunknown-attributes]
+    6 | void __attribute__((nomips16)) nofoo (void) {
+      |                     ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Mips/Mips16/mips16_32_4.c:10:20: warning: unknown attribute 'mips16' ignored [-Wunknown-attributes]
+   10 | int __attribute__((mips16)) main() {
+      |                    ^~~~~~
+3 warnings generated.

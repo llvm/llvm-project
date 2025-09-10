@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/conditional-gnu-ext-cxx  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                165    1164
+.rela.dyn              192    1336
+.rela.plt               48    1528
+.rodata                  4    1576
+.eh_frame_hdr           60    1580
+.eh_frame              196    1640
+.text                  418    5932
+.plt                    64    6352
+.preinit_array           8   10512
+.fini_array              8   10520
+.init_array              8   10528
+.dynamic               464   10536
+.got                    40   11000
+.relro_padding        1248   11040
+.data                   12   15136
+.tm_clone_table          0   15152
+.got.plt                32   15152
+.bss                    12   15184
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3762
+
+

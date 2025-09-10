@@ -1,0 +1,15 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-17.c:16:26: warning: adding 'size_t' (aka 'unsigned long') to a string does not append to the string [-Wstring-plus-int]
+   16 |   strcpy (s, "foobarbaz" + i++);
+      |              ~~~~~~~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-17.c:16:26: note: use array indexing to silence this warning
+   16 |   strcpy (s, "foobarbaz" + i++);
+      |                          ^    
+      |              &           [    ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-17.c:32:26: warning: adding 'size_t' (aka 'unsigned long') to a string does not append to the string [-Wstring-plus-int]
+   32 |   strcpy (s, "foobarbaz" + check2 ());
+      |              ~~~~~~~~~~~~^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-17.c:32:26: note: use array indexing to silence this warning
+   32 |   strcpy (s, "foobarbaz" + check2 ());
+      |                          ^          
+      |              &           [          ]
+2 warnings generated.

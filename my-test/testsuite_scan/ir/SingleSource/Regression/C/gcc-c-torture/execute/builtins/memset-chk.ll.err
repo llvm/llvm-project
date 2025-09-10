@@ -1,0 +1,26 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:26:25: warning: 'size' argument to memset is '0'; did you mean to transpose the last two arguments? [-Wmemset-transposed-args]
+   26 |   memset (buffer, argc, 0);
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:26:25: note: parenthesize the third argument to silence
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:132:7: error: __builtin_setjmp is not supported for the current target
+  132 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:137:7: error: __builtin_setjmp is not supported for the current target
+  137 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:139:40: warning: passing 'volatile char *' to parameter of type 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  139 |       memset (&a.buf2[7], 'T', strlen (s3) + 1);
+      |                                        ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:7:34: note: passing argument to parameter here
+    7 | extern size_t strlen(const char *);
+      |                                  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:143:7: error: __builtin_setjmp is not supported for the current target
+  143 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memset-chk.c:145:7: warning: 'memset' will always overflow; destination buffer has size 1, but size argument is 2 [-Wbuiltin-memcpy-chk-size]
+  145 |       memset (&buf3[19], 'b', 2);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:18:3: note: expanded from macro 'memset'
+   18 |   __builtin___memset_chk (dst, val, len, os (dst))
+      |   ^
+3 warnings and 3 errors generated.

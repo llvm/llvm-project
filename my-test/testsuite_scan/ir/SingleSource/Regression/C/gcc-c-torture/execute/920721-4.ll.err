@@ -1,0 +1,25 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:6:29: error: function definition is not allowed here
+    6 |   void *do_switch (int num) {
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:25:9: error: call to undeclared function 'do_switch'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   25 |   goto *do_switch (num);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:25:8: error: incompatible integer to pointer conversion passing 'int' to parameter of type 'const void *' [-Wint-conversion]
+   25 |   goto *do_switch (num);
+      |        ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:25:3: error: indirect goto in function with no address-of-label expressions
+   25 |   goto *do_switch (num);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:49:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   49 | main()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:55:2: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   55 |         abort();
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:55:2: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:57:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   57 |   exit(0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920721-4.c:57:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+7 errors generated.

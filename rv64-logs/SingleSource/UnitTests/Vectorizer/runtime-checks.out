@@ -1,0 +1,48 @@
+Checking 1 read, 1 write, step 1, uint8_t
+Checking 1 read, 1 write, step 1, uint32_t
+Checking 1 read, 1 write, step 1, uint64_t
+Checking 1 read, 1 write, offset 3, uint8_t
+Checking 1 read, 1 write, offset 3, uint32_t
+Checking 1 read, 1 write, offset 3, uint64_t
+Checking 1 read, 1 write, offset -3, uint8_t
+Checking 1 read, 1 write, offset -3, uint32_t
+Checking 1 read, 1 write, offset -3, uint64_t
+Checking 1 read, 1 write, index count down, uint8_t
+Checking 1 read, 1 write, index count down, uint32_t
+Checking 1 read, 1 write, index count down, uint64_t
+Checking 1 read, 1 write, index count down 2, uint8_t
+Checking 1 read, 1 write, index count down 2, uint32_t
+Checking 1 read, 1 write, index count down 2, uint64_t
+Checking 1 read, 1 write, 2 inductions, different steps, uint8_t
+Checking 1 read, 1 write, 2 inductions, different steps, uint32_t
+Checking 1 read, 1 write, 2 inductions, different steps, uint64_t
+Checking 1 read, 1 write, induction increment 2, uint8_t
+Checking 1 read, 1 write, induction increment 2, uint32_t
+Checking 1 read, 1 write, induction increment 2, uint64_t
+Checking 1 read, 1 write to invariant address, step 1, uint8_t
+Checking 1 read, 1 write to invariant address, step 1, uint32_t
+Checking 1 read, 1 write to invariant address, step 1, uint64_t
+Checking 2 reads, 1 write, simple indices, uint32_t
+Checking 2 reads, 1 write, simple indices, uint8_t
+Checking 2 reads, 1 write, simple indices, uint64_t
+Checking 1 read, 2 writes, simple indices, uint8_t
+Checking 1 read, 2 writes, simple indices, uint32_t
+Checking 1 read, 2 writes, simple indices, uint64_t
+Checking 1 read, 1 write, nested loop (matching trip counts), uint8_t
+Checking 1 read, 1 write, nested loop (matching trip counts), uint32_t
+Checking 1 read, 1 write, nested loop (matching trip counts), uint64_t
+Checking 1 read, 1 write, nested loop (different trip counts), uint8_t
+Checking 1 read, 1 write, nested loop (different trip counts), uint32_t
+Checking 1 read, 1 write, nested loop (different trip counts), uint64_t
+Checking 2 reads, 1 write, nested loop (matching trip counts), uint8_t
+Checking 2 reads, 1 write, nested loop (matching trip counts), uint32_t
+Checking 2 reads, 1 write, nested loop (matching trip counts), uint64_t
+Checking 2 reads, 1 write, nested loop (different trip counts), uint8_t
+Checking 2 reads, 1 write, nested loop (different trip counts), uint32_t
+Checking 2 reads, 1 write, nested loop (different trip counts), uint64_t
+Checking 1 read, 1 write, nested loop (decreasing outer iv, matching trip counts), uint8_t
+Checking 1 read, 1 write, nested loop (decreasing outer iv, matching trip counts), uint32_t
+Checking 1 read, 1 write, nested loop (decreasing outer iv, matching trip counts), uint64_t
+Checking 2 reads, 1 write, nested loop (decreasing outer iv, matching trip counts), uint8_t
+Checking 2 reads, 1 write, nested loop (decreasing outer iv, matching trip counts), uint32_t
+Checking 2 reads, 1 write, nested loop (decreasing outer iv, matching trip counts), uint64_t

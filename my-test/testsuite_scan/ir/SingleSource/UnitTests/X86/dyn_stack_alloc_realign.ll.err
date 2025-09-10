@@ -1,0 +1,11 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/X86/dyn_stack_alloc_realign.cpp:37:24: error: invalid input constraint 'b' in asm
+   37 |   asm volatile("nop" ::"b"(405) :);
+      |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/X86/dyn_stack_alloc_realign.cpp:49:36: warning: value size does not match register size specified by the constraint and modifier [-Wasm-operand-widths]
+   49 |   asm volatile("movl %0, %1" ::"r"(size), "m"(Var) :);
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/X86/dyn_stack_alloc_realign.cpp:49:22: note: use constraint modifier "w"
+   49 |   asm volatile("movl %0, %1" ::"r"(size), "m"(Var) :);
+      |                      ^~
+      |                      %w0
+1 warning and 1 error generated.

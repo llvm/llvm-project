@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2004-11-28-GlobalBoolLayout 
+VERIFY: %b/fpcmp-target %o %S/2004-11-28-GlobalBoolLayout.reference_output

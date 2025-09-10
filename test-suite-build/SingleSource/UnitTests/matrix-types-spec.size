@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/matrix-types-spec  :
+section              size     addr
+.interp                27      568
+.gnu.hash              28      600
+.dynsym               552      632
+.dynstr               416     1184
+.gnu.version           46     1600
+.gnu.version_r        160     1648
+.rela.dyn             216     1808
+.rela.plt             384     2024
+.init                  28     2408
+.plt                  288     2448
+.text              406412     2752
+.fini                  24   409164
+.rodata                89   409200
+.eh_frame_hdr         180   409292
+.eh_frame            1508   409472
+.note.ABI-tag          32   410980
+.note.package         112   411012
+.init_array             8   523664
+.fini_array             8   523672
+.dynamic              528   523680
+.got                   56   524208
+.got.plt              152   524264
+.data                  16   524416
+.bss                    8   524432
+.comment              155        0
+Total              411433
+
+

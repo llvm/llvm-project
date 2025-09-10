@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/durbin 
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/durbin.reference_output

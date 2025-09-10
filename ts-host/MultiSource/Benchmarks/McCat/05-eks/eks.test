@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/eks 
+VERIFY: %b/fpcmp-target %o %S/eks.reference_output

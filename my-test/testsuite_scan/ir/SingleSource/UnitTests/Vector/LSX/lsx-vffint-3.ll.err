@@ -1,0 +1,63 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:7:3: error: use of undeclared identifier '__m128i'
+    7 |   __m128i __m128i_out, __m128i_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:8:3: error: unknown type name '__m128'; did you mean '__mfp8'?
+    8 |   __m128  __m128_out, __m128_result;
+      |   ^~~~~~
+      |   __mfp8
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:9:3: error: use of undeclared identifier '__m128d'
+    9 |   __m128d __m128d_out, __m128d_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:10:3: error: use of undeclared identifier 'v2u64'
+   10 |   v2u64 v2u64_op0, v2u64_op1, v2u64_op2, v2u64_result;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:11:3: error: use of undeclared identifier 'v4i32'
+   11 |   v4i32 v4i32_op0, v4i32_op1, v4i32_op2, v4i32_result;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:19:3: error: use of undeclared identifier 'v2u64_op0'
+   19 |   v2u64_op0 = (v2u64){0x0000000000000000, 0x0000000000000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:19:16: error: use of undeclared identifier 'v2u64'
+   19 |   v2u64_op0 = (v2u64){0x0000000000000000, 0x0000000000000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:20:3: error: use of undeclared identifier 'v4i32_result'
+   20 |   v4i32_result = (v4i32){0x00000000, 0x00000000, 0x00000000, 0x00000000};
+      |   ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:20:19: error: use of undeclared identifier 'v4i32'
+   20 |   v4i32_result = (v4i32){0x00000000, 0x00000000, 0x00000000, 0x00000000};
+      |                   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:21:16: error: call to undeclared function '__lsx_vffint_s_wu'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   21 |   __m128_out = __lsx_vffint_s_wu((__m128)v2u64_op0);
+      |                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:21:35: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   21 |   __m128_out = __lsx_vffint_s_wu((__m128)v2u64_op0);
+      |                                   ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:22:18: error: use of undeclared identifier 'v4i32_result'
+   22 |   check_lsx_out(&v4i32_result, &__m128_out, sizeof(__m128_out), __FILE__, __LINE__);
+      |                  ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:24:3: error: use of undeclared identifier 'v2u64_op0'
+   24 |   v2u64_op0 = (v2u64){0x0000001600000016, 0x0000001600000016};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:24:16: error: use of undeclared identifier 'v2u64'
+   24 |   v2u64_op0 = (v2u64){0x0000001600000016, 0x0000001600000016};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:25:3: error: use of undeclared identifier 'v4i32_result'
+   25 |   v4i32_result = (v4i32){0x41b00000, 0x41b00000, 0x41b00000, 0x41b00000};
+      |   ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:25:19: error: use of undeclared identifier 'v4i32'
+   25 |   v4i32_result = (v4i32){0x41b00000, 0x41b00000, 0x41b00000, 0x41b00000};
+      |                   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:26:35: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   26 |   __m128_out = __lsx_vffint_s_wu((__m128)v2u64_op0);
+      |                                   ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:27:18: error: use of undeclared identifier 'v4i32_result'
+   27 |   check_lsx_out(&v4i32_result, &__m128_out, sizeof(__m128_out), __FILE__, __LINE__);
+      |                  ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vffint-3.c:29:3: error: use of undeclared identifier 'v2u64_op0'
+   29 |   v2u64_op0 = (v2u64){0xffffffffffffffff, 0xffffffffffffffff};
+      |   ^~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

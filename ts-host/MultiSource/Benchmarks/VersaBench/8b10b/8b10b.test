@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/8b10b input.txt 20000
+VERIFY: %b/fpcmp-target %o %S/8b10b.reference_output

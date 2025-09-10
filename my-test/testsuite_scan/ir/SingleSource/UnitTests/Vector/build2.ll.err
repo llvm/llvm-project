@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/build2.c:95:11: warning: incompatible pointer types passing 'v4f32 *' to parameter of type 'FV *' [-Wincompatible-pointer-types]
+   95 |   printFV(&x);
+      |           ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/helpers.h:41:25: note: passing argument to parameter 'F' here
+   41 | static void printFV(FV *F) {
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/build2.c:96:11: warning: incompatible pointer types passing 'v4f32 *' to parameter of type 'FV *' [-Wincompatible-pointer-types]
+   96 |   printFV(&y);
+      |           ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/helpers.h:41:25: note: passing argument to parameter 'F' here
+   41 | static void printFV(FV *F) {
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/build2.c:97:11: warning: incompatible pointer types passing 'v4f32 *' to parameter of type 'FV *' [-Wincompatible-pointer-types]
+   97 |   printFV(&z);
+      |           ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/helpers.h:41:25: note: passing argument to parameter 'F' here
+   41 | static void printFV(FV *F) {
+      |                         ^
+3 warnings generated.

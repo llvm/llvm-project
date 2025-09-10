@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-C++-strcat 
+VERIFY: %b/fpcmp-target -r 0.00000001 %o %S/strcat.reference_output

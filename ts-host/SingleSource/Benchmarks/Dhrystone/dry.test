@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/dry 
+VERIFY: %b/fpcmp-target %o %S/dry.reference_output

@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/stmtexpr  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             216      632
+.dynstr             180      848
+.gnu.version         18     1028
+.gnu.version_r       48     1048
+.rela.dyn           192     1096
+.rela.plt            96     1288
+.init                28     1384
+.plt                 96     1424
+.text               332     1536
+.fini                24     1868
+.rodata               4     1892
+.eh_frame_hdr        92     1896
+.eh_frame           268     1992
+.note.ABI-tag        32     2260
+.note.package       112     2292
+.init_array           8   130456
+.fini_array           8   130464
+.dynamic            528   130472
+.got                 48   131000
+.got.plt             56   131048
+.data                16   131104
+.bss                  8   131120
+.comment            155        0
+Total              2620
+
+

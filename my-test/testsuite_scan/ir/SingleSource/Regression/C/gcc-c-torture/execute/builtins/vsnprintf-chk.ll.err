@@ -1,0 +1,34 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:189:33: warning: format string is empty [-Wformat-zero-length]
+  189 |       vsnprintf (a.buf1 + 2, 4, "", ap);
+      |                                 ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:256:7: warning: 'vsnprintf' will always overflow; destination buffer has size 1, but size argument is 2 [-Wbuiltin-memcpy-chk-size]
+  256 |       vsnprintf (&buf3[19], 2, "a", ap);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:48:3: note: expanded from macro 'vsnprintf'
+   48 |   __builtin___vsnprintf_chk (dst, len, 0, os (dst), fmt, ap)
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:259:7: warning: 'vsnprintf' will always overflow; destination buffer has size 4, but size argument is 5 [-Wbuiltin-memcpy-chk-size]
+  259 |       vsnprintf (&buf3[16], 5, "a", ap);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:48:3: note: expanded from macro 'vsnprintf'
+   48 |   __builtin___vsnprintf_chk (dst, len, 0, os (dst), fmt, ap)
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:273:7: error: __builtin_setjmp is not supported for the current target
+  273 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:278:7: error: __builtin_setjmp is not supported for the current target
+  278 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:283:7: error: __builtin_setjmp is not supported for the current target
+  283 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:288:7: error: __builtin_setjmp is not supported for the current target
+  288 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:294:7: error: __builtin_setjmp is not supported for the current target
+  294 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/vsnprintf-chk.c:299:7: error: __builtin_setjmp is not supported for the current target
+  299 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3 warnings and 6 errors generated.

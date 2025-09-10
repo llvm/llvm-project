@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/lencod -d data/encoder.cfg -p InputFile=data/foreman_part_qcif_444.yuv -p LeakyBucketRateFile=data/leakybucketrate.cfg -p QmatrixFile=data/q_matrix.cfg
+VERIFY: %b/fpcmp-target -r 0.025 %o %S/lencod.reference_output

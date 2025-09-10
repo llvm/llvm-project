@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/HACCKernels 450
+VERIFY: %b/fpcmp-target -r 0.00001 %o %S/HACCKernels.reference_output

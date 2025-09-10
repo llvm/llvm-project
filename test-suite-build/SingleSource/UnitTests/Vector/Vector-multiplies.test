@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Vector-multiplies 
+VERIFY: %b/fpcmp-target %o %S/multiplies.reference_output

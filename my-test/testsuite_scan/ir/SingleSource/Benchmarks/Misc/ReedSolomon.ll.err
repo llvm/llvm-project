@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/ReedSolomon.c:60:8: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   60 | static inited = 0;
+      | ~~~~~~ ^
+      | int
+1 error generated.

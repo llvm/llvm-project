@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/oourafft 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/oourafft.reference_output

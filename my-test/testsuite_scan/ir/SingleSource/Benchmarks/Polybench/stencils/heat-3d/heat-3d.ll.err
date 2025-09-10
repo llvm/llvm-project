@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/stencils/heat-3d/heat-3d.c:18:10: fatal error: 'polybench.h' file not found
+   18 | #include <polybench.h>
+      |          ^~~~~~~~~~~~~
+1 error generated.

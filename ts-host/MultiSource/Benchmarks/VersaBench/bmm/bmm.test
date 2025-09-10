@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/bmm 1024 64
+VERIFY: %b/fpcmp-target %o %S/bmm.reference_output

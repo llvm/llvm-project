@@ -1,0 +1,37 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:162:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  162 |   printf("%08x\n", zz());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:163:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  163 |   printf("%08x\n", zs());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:164:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  164 |   printf("%08x\n", zu());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:165:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  165 |   printf("%08x\n", sz());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:166:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  166 |   printf("%08x\n", ss());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:167:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  167 |   printf("%08x\n", su());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:168:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  168 |   printf("%08x\n", uz());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:169:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  169 |   printf("%08x\n", us());
+      |           ~~~~     ^~~~
+      |           %08lx
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2006-12-11-LoadConstants.c:170:20: warning: format specifies type 'unsigned int' but the argument has type 'long' [-Wformat]
+  170 |   printf("%08x\n", uu());
+      |           ~~~~     ^~~~
+      |           %08lx
+9 warnings generated.

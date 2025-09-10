@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Vector/AArch64/aarch64_neon_intrinsics  :
+section               size      addr
+.interp                 27       568
+.gnu.hash               28       600
+.dynsym                264       632
+.dynstr                153       896
+.gnu.version            22      1050
+.gnu.version_r          48      1072
+.rela.dyn              192      1120
+.rela.plt              144      1312
+.init                   28      1456
+.plt                   128      1488
+.text               989684      1664
+.fini                   24    991348
+.rodata            1297047    991376
+.eh_frame_hdr        27012   2288424
+.eh_frame           188084   2315440
+.note.ABI-tag           32   2503524
+.note.package          112   2503556
+.init_array              8   2620872
+.fini_array              8   2620880
+.dynamic               480   2620888
+.got                    48   2621368
+.got.plt                72   2621416
+.data                   16   2621488
+.bss                     8   2621504
+.comment               155         0
+Total              2503824
+
+

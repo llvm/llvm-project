@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/DuffsDevice.c:11:11: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   11 |         register count;
+      |         ~~~~~~~~ ^
+      |         int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/DuffsDevice.c:9:2: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    9 |         sum(to, from, count)
+      |         ^
+      |         int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/DuffsDevice.c:13:12: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   13 |                 register n=(count+7)/8;
+      |                 ~~~~~~~~ ^
+      |                 int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/DuffsDevice.c:9:2: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    9 |         sum(to, from, count)
+      |         ^
+1 warning and 3 errors generated.

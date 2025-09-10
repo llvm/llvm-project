@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Shootout-C++/moments.cpp:81:40: warning: format specifies type 'int' but the argument has type 'typename __normal_iterator<double *, std::vector<double, std::allocator<double>>>::difference_type' (aka 'long') [-Wformat]
+   81 |     printf("n:                  %d\n", v.end() - v.begin());
+      |                                 ~~     ^~~~~~~~~~~~~~~~~~~
+      |                                 %td
+1 warning generated.

@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58564.c:10:8: warning: left operand of comma operator has no effect [-Wunused-value]
+   10 |   b = (0, 0 > ((&c == d) & (1 && (a ^ 1)))) | 0U;
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58564.c:10:13: warning: result of comparison of constant 0 with boolean expression is always false [-Wtautological-constant-compare]
+   10 |   b = (0, 0 > ((&c == d) & (1 && (a ^ 1)))) | 0U;
+      |           ~ ^ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2 warnings generated.

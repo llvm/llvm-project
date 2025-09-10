@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/20030331-1.c:6:1: warning: incompatible redeclaration of library function 'rintf' [-Wincompatible-library-redeclaration]
+    6 | rintf (void)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/20030331-1.c:6:1: note: 'rintf' is a builtin with type 'float (float)'
+1 warning generated.

@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2005-05-11-Popcount-ffs-fls  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                168     928
+.gnu.version            14    1096
+.gnu.version_r          48    1112
+.gnu.hash               28    1160
+.dynstr                132    1188
+.rela.dyn              192    1320
+.rela.plt               72    1512
+.rodata                461    1584
+.eh_frame_hdr           68    2048
+.eh_frame              236    2120
+.text                 1836    6452
+.plt                    80    8288
+.preinit_array           8   12464
+.fini_array              8   12472
+.init_array              8   12480
+.dynamic               416   12488
+.got                    40   12904
+.relro_padding        3440   12944
+.data                    8   17040
+.tm_clone_table          0   17048
+.got.plt                40   17048
+.bss                     8   17088
+.riscv.attributes      116       0
+.comment               250       0
+Total                 7862
+
+

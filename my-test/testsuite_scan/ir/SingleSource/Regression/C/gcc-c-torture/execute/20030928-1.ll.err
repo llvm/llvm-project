@@ -1,0 +1,65 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:8:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+    8 |   x[0] = "a1111" + (y[0] - 0x10000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:8:18: note: use array indexing to silence this warning
+    8 |   x[0] = "a1111" + (y[0] - 0x10000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:9:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+    9 |   x[1] = "a1112" + (y[1] - 0x20000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:9:18: note: use array indexing to silence this warning
+    9 |   x[1] = "a1112" + (y[1] - 0x20000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:10:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   10 |   x[2] = "a1113" + (y[2] - 0x30000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:10:18: note: use array indexing to silence this warning
+   10 |   x[2] = "a1113" + (y[2] - 0x30000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:11:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   11 |   x[3] = "a1114" + (y[3] - 0x40000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:11:18: note: use array indexing to silence this warning
+   11 |   x[3] = "a1114" + (y[3] - 0x40000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:12:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   12 |   x[4] = "a1115" + (y[4] - 0x50000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:12:18: note: use array indexing to silence this warning
+   12 |   x[4] = "a1115" + (y[4] - 0x50000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:13:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   13 |   x[5] = "a1116" + (y[5] - 0x60000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:13:18: note: use array indexing to silence this warning
+   13 |   x[5] = "a1116" + (y[5] - 0x60000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:14:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   14 |   x[6] = "a1117" + (y[6] - 0x70000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:14:18: note: use array indexing to silence this warning
+   14 |   x[6] = "a1117" + (y[6] - 0x70000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:15:18: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   15 |   x[7] = "a1118" + (y[7] - 0x80000) * 2;
+      |          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:15:18: note: use array indexing to silence this warning
+   15 |   x[7] = "a1118" + (y[7] - 0x80000) * 2;
+      |                  ^                     
+      |          &       [                     ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:29:7: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   29 |       abort ();
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:29:7: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:30:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   30 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030928-1.c:30:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+8 warnings and 2 errors generated.

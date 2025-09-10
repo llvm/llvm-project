@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/miniAMR --nx 8 --ny 8 --nz 8 --num_tsteps 100
+VERIFY: %b/fpcmp-target %o %S/miniAMR.reference_output

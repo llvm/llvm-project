@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/objects 
+VERIFY: %b/fpcmp-target %o %S/objects.reference_output

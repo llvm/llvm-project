@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63843.c:9:42: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    9 | unsigned short __attribute__ ((noinline, noclone, hot))
+      |                                          ^~~~~~~
+      |                                          noinline
+1 warning generated.

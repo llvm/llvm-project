@@ -1,0 +1,64 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:7:3: error: use of undeclared identifier '__m128i'
+    7 |   __m128i __m128i_out, __m128i_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:8:3: error: unknown type name '__m128'; did you mean '__mfp8'?
+    8 |   __m128  __m128_out, __m128_result;
+      |   ^~~~~~
+      |   __mfp8
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:9:3: error: use of undeclared identifier '__m128d'
+    9 |   __m128d __m128d_out, __m128d_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:10:3: error: use of undeclared identifier 'v2u64'
+   10 |   v2u64 v2u64_op0, v2u64_op1, v2u64_op2, v2u64_result;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:11:3: error: use of undeclared identifier 'v4i32'
+   11 |   v4i32 v4i32_op0, v4i32_op1, v4i32_op2, v4i32_result;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:19:3: error: use of undeclared identifier 'v4i32_op0'
+   19 |   v4i32_op0 = (v4i32){0x00000000, 0x00000000, 0x00000000, 0x00000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:19:16: error: use of undeclared identifier 'v4i32'
+   19 |   v4i32_op0 = (v4i32){0x00000000, 0x00000000, 0x00000000, 0x00000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:20:3: error: use of undeclared identifier 'v4i32_op1'
+   20 |   v4i32_op1 = (v4i32){0x00000000, 0x00000000, 0x00000000, 0x00000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:20:16: error: use of undeclared identifier 'v4i32'
+   20 |   v4i32_op1 = (v4i32){0x00000000, 0x00000000, 0x00000000, 0x00000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:21:3: error: use of undeclared identifier 'v4i32_op2'
+   21 |   v4i32_op2 = (v4i32){0x00000000, 0x00000002, 0x00000000, 0x00000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:21:16: error: use of undeclared identifier 'v4i32'
+   21 |   v4i32_op2 = (v4i32){0x00000000, 0x00000002, 0x00000000, 0x00000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:22:3: error: use of undeclared identifier 'v4i32_result'
+   22 |   v4i32_result = (v4i32){0x00000000, 0x00000002, 0x00000000, 0x00000000};
+      |   ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:22:19: error: use of undeclared identifier 'v4i32'
+   22 |   v4i32_result = (v4i32){0x00000000, 0x00000002, 0x00000000, 0x00000000};
+      |                   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:23:16: error: call to undeclared function '__lsx_vfmadd_s'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   23 |   __m128_out = __lsx_vfmadd_s((__m128)v4i32_op0, (__m128)v4i32_op1, (__m128)v4i32_op2);
+      |                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:23:32: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   23 |   __m128_out = __lsx_vfmadd_s((__m128)v4i32_op0, (__m128)v4i32_op1, (__m128)v4i32_op2);
+      |                                ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:23:51: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   23 |   __m128_out = __lsx_vfmadd_s((__m128)v4i32_op0, (__m128)v4i32_op1, (__m128)v4i32_op2);
+      |                                                   ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:23:70: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   23 |   __m128_out = __lsx_vfmadd_s((__m128)v4i32_op0, (__m128)v4i32_op1, (__m128)v4i32_op2);
+      |                                                                      ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:24:18: error: use of undeclared identifier 'v4i32_result'
+   24 |   check_lsx_out(&v4i32_result, &__m128_out, sizeof(__m128_out), __FILE__, __LINE__);
+      |                  ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_s.c:26:3: error: use of undeclared identifier 'v4i32_op0'
+   26 |   v4i32_op0 = (v4i32){0x00010001, 0x01000041, 0xa000a041, 0x0028e0a1};
+      |   ^~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20011024-1.c:13:38: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   13 |   if (memcpy (buf, "abc", 4) != buf) abort ();
+      |                                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20011024-1.c:13:38: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+1 error generated.

@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr33142.c:7:20: warning: absolute value function 'abs' given an argument of type 'long' but has parameter of type 'int' which may cause truncation of value [-Wabsolute-value]
+    7 |             return abs(dx) <= abs(dy);
+      |                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr33142.c:7:20: note: use function 'labs' instead
+    7 |             return abs(dx) <= abs(dy);
+      |                    ^~~
+      |                    labs
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr33142.c:7:20: note: include the header <stdlib.h> or explicitly provide a declaration for 'labs'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr33142.c:7:31: warning: absolute value function 'abs' given an argument of type 'long' but has parameter of type 'int' which may cause truncation of value [-Wabsolute-value]
+    7 |             return abs(dx) <= abs(dy);
+      |                               ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr33142.c:7:31: note: use function 'labs' instead
+    7 |             return abs(dx) <= abs(dy);
+      |                               ^~~
+      |                               labs
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr33142.c:7:31: note: include the header <stdlib.h> or explicitly provide a declaration for 'labs'
+2 warnings generated.

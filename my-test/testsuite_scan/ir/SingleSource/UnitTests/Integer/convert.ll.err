@@ -1,0 +1,25 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:14:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   14 | typedef int __attribute__ ((bitwidth(7))) int7;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:15:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   15 | typedef int __attribute__ ((bitwidth(15))) int15;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:16:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef int __attribute__ ((bitwidth(31))) int31;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:17:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef int __attribute__ ((bitwidth(8))) int8;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:19:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   19 | typedef unsigned int __attribute__ ((bitwidth(7))) uint7;
+      |                                      ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:20:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   20 | typedef unsigned int __attribute__ ((bitwidth(15))) uint15;
+      |                                      ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:21:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   21 | typedef unsigned int __attribute__ ((bitwidth(31))) uint31;
+      |                                      ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/convert.c:22:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   22 | typedef unsigned int __attribute__ ((bitwidth(8))) uint8;
+      |                                      ^~~~~~~~~~~
+8 warnings generated.

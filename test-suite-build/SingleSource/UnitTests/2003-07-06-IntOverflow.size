@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2003-07-06-IntOverflow  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             264      632
+.dynstr             153      896
+.gnu.version         22     1050
+.gnu.version_r       48     1072
+.rela.dyn           192     1120
+.rela.plt           144     1312
+.init                28     1456
+.plt                128     1488
+.text               544     1664
+.fini                24     2208
+.rodata             191     2232
+.eh_frame_hdr        92     2424
+.eh_frame           288     2520
+.note.ABI-tag        32     2808
+.note.package       112     2840
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             72   131048
+.data                16   131120
+.bss                  8   131136
+.comment            155        0
+Total              3112
+
+

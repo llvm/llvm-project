@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2003-08-11-VaListArg 
+VERIFY: %b/fpcmp-target %o %S/2003-08-11-VaListArg.reference_output

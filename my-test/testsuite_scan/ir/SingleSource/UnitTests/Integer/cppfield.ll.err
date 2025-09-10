@@ -1,0 +1,69 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:15:39: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   15 | typedef unsigned char __attribute__ ((bitwidth(7))) int7;
+      |                                       ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:16:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef unsigned int __attribute__ ((bitwidth(17))) int17;
+      |                                      ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:17:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef unsigned int __attribute__ ((bitwidth(32))) int32;
+      |                                      ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:18:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   18 | typedef unsigned int __attribute__ ((bitwidth(8))) int8;
+      |                                      ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:38:44: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   38 |   printf("sizeof(bitFieldStruct) == %d\n", sizeof(bitFieldStruct));
+      |                                     ~~     ^~~~~~~~~~~~~~~~~~~~~~
+      |                                     %zu
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:39:47: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   39 |   printf("sizeof(bitAccurateStruct) == %d\n", sizeof(bitAccurateStruct));
+      |                                        ~~     ^~~~~~~~~~~~~~~~~~~~~~~~~
+      |                                        %zu
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:43:13: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   42 |     printf("bitAccurrateStruct should be %d but is %d \n", 
+      |                                          ~~
+      |                                          %zu
+   43 |             4 * sizeof(int), sizeof(bitAccurateStruct));
+      |             ^~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:43:30: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   42 |     printf("bitAccurrateStruct should be %d but is %d \n", 
+      |                                                    ~~
+      |                                                    %zu
+   43 |             4 * sizeof(int), sizeof(bitAccurateStruct));
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:47:13: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   46 |     printf("bitFieldStruct should be %d but is %d \n", 
+      |                                      ~~
+      |                                      %zu
+   47 |             2 * sizeof(int), sizeof(bitAccurateStruct));
+      |             ^~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:47:30: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   46 |     printf("bitFieldStruct should be %d but is %d \n", 
+      |                                                ~~
+      |                                                %zu
+   47 |             2 * sizeof(int), sizeof(bitAccurateStruct));
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:56:47: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   56 |   printf("Offset bitAccurateStruct.i = %d\n", yip - yip);
+      |                                        ~~     ^~~~~~~~~
+      |                                        %td
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:57:47: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   57 |   printf("Offset bitAccurateStruct.c = %d\n", ycp - yip);
+      |                                        ~~     ^~~~~~~~~
+      |                                        %td
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:58:47: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   58 |   printf("Offset bitAccurateStruct.s = %d\n", ysp - yip);
+      |                                        ~~     ^~~~~~~~~
+      |                                        %td
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:59:48: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   59 |   printf("Offset bitAccurateStruct.c2 = %d\n", yc2p - yip);
+      |                                         ~~     ^~~~~~~~~~
+      |                                         %td
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:63:44: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   63 |   printf("Offset bitFieldStruct.i = %d\n", xip - xip);
+      |                                     ~~     ^~~~~~~~~
+      |                                     %td
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/cppfield.cpp:64:45: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   64 |   printf("Offset bitFieldStruct.c2 = %d\n", xc2p - xip);
+      |                                      ~~     ^~~~~~~~~~
+      |                                      %td
+16 warnings generated.

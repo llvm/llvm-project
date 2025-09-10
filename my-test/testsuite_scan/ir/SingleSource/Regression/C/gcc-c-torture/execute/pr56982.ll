@@ -1,0 +1,88 @@
+; ModuleID = '/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr56982.c'
+source_filename = "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr56982.c"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+%struct.__jmp_buf_tag = type { [22 x i64], i32, %struct.__sigset_t }
+%struct.__sigset_t = type { [16 x i64] }
+
+@env = internal global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 8
+
+; Function Attrs: nounwind uwtable
+define dso_local void @baz() local_unnamed_addr #0 {
+  tail call void asm sideeffect "", "~{memory}"() #5, !srcloc !6
+  ret void
+}
+
+; Function Attrs: nounwind uwtable
+define dso_local noundef i32 @f(ptr noundef readonly captures(none) %0) local_unnamed_addr #0 {
+  %2 = load i32, ptr %0, align 4, !tbaa !7
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %5, label %4
+
+4:                                                ; preds = %1
+  ret i32 1
+
+5:                                                ; preds = %1
+  %6 = call i32 @_setjmp(ptr noundef nonnull @env) #6
+  %7 = icmp eq i32 %6, 0
+  call void asm sideeffect "", "~{memory}"() #5, !srcloc !6
+  br i1 %7, label %9, label %8
+
+8:                                                ; preds = %5
+  call void @exit(i32 noundef 0) #7
+  unreachable
+
+9:                                                ; preds = %5
+  call void @longjmp(ptr noundef nonnull @env, i32 noundef 42) #7
+  unreachable
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(ptr captures(none)) #1
+
+; Function Attrs: nounwind returns_twice
+declare i32 @_setjmp(ptr noundef) local_unnamed_addr #2
+
+; Function Attrs: nofree noreturn
+declare void @exit(i32 noundef) local_unnamed_addr #3
+
+; Function Attrs: noreturn nounwind
+declare void @longjmp(ptr noundef, i32 noundef) local_unnamed_addr #4
+
+; Function Attrs: nounwind uwtable
+define dso_local noundef i32 @main(i32 noundef %0, ptr noundef readnone captures(none) %1) local_unnamed_addr #0 {
+  %3 = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(ptr nonnull %3) #5
+  store i32 0, ptr %3, align 4, !tbaa !7
+  %4 = call i32 @f(ptr noundef nonnull %3)
+  call void @llvm.lifetime.end.p0(ptr nonnull %3) #5
+  ret i32 1
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(ptr captures(none)) #1
+
+attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,-fmv" }
+attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nounwind returns_twice "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,-fmv" }
+attributes #3 = { nofree noreturn "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,-fmv" }
+attributes #4 = { noreturn nounwind "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,-fmv" }
+attributes #5 = { nounwind }
+attributes #6 = { nounwind returns_twice }
+attributes #7 = { noreturn nounwind }
+
+!llvm.module.flags = !{!0, !1, !2, !3, !4}
+!llvm.ident = !{!5}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{i32 8, !"PIC Level", i32 2}
+!2 = !{i32 7, !"PIE Level", i32 2}
+!3 = !{i32 7, !"uwtable", i32 2}
+!4 = !{i32 7, !"frame-pointer", i32 1}
+!5 = !{!"clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)"}
+!6 = !{i64 186}
+!7 = !{!8, !8, i64 0}
+!8 = !{!"int", !9, i64 0}
+!9 = !{!"omnipotent char", !10, i64 0}
+!10 = !{!"Simple C/C++ TBAA"}

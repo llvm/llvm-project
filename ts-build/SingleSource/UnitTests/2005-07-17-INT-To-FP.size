@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2005-07-17-INT-To-FP  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 23    1536
+.eh_frame_hdr           28    1560
+.eh_frame              124    1592
+.text                  888    5812
+.plt                    64    6704
+.preinit_array           8   10864
+.fini_array              8   10872
+.init_array              8   10880
+.dynamic               416   10888
+.got                    40   11304
+.relro_padding         944   11344
+.data                   52   15440
+.tm_clone_table          0   15496
+.got.plt                32   15496
+.bss                     1   15528
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3786
+
+

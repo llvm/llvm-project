@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/alias-1.c:4:8: warning: incompatible pointer types initializing 'float *' with an expression of type 'int *' [-Wincompatible-pointer-types]
+    4 | float *ptr2 = &val;
+      |        ^      ~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/alias-1.c:7:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    6 | __attribute__((optimize ("-fno-strict-aliasing")))
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      | int
+    7 | typepun ()
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/alias-1.c:6:16: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+    6 | __attribute__((optimize ("-fno-strict-aliasing")))
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/alias-1.c:12:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   12 | main()
+      | ^
+      | int
+2 warnings and 2 errors generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Equivalencing-dbl 3125 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Equivalencing-dbl.reference_output

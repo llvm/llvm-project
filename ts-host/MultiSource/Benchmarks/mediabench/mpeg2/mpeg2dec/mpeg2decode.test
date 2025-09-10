@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/mpeg2decode -b mei16v2.m2v -r -f -o0 tmp%d
+VERIFY: %b/fpcmp-target %o %S/mpeg2decode.reference_output

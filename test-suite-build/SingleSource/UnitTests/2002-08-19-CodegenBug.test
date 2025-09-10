@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2002-08-19-CodegenBug 
+VERIFY: %b/fpcmp-target %o %S/2002-08-19-CodegenBug.reference_output

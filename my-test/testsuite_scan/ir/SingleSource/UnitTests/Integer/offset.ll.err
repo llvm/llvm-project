@@ -1,0 +1,14 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/offset.c:16:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef int __attribute__ ((bitwidth(33))) int33;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/offset.c:22:5: warning: variable length array folded to constant array as an extension [-Wgnu-folding-constant]
+   22 | int foo[OFFS];
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/offset.c:26:18: warning: format specifies type 'int' but the argument has type '__ptrdiff_t' (aka 'long') [-Wformat]
+   26 |   printf("%d\n", OFFS);
+      |           ~~     ^~~~
+      |           %td
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/offset.c:20:14: note: expanded from macro 'OFFS'
+   20 | #define OFFS (((char *) &((struct s *) 0)->field[1]) - (char *) 0)
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3 warnings generated.

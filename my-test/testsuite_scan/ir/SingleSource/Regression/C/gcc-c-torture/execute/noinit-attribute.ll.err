@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/noinit-attribute.c:14:20: warning: unknown attribute 'noinit' ignored [-Wunknown-attributes]
+   14 | int __attribute__((noinit)) var_noinit;
+      |                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/noinit-attribute.c:17:20: warning: unknown attribute 'noinit' ignored [-Wunknown-attributes]
+   17 | int __attribute__((noinit)) func(); /* { dg-warning "attribute only applies to variables" } */
+      |                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/noinit-attribute.c:18:43: warning: unknown attribute 'noinit' ignored [-Wunknown-attributes]
+   18 | int __attribute__((section ("mysection"), noinit)) var_section1; /* { dg-warning "because it conflicts with attribute" } */
+      |                                           ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/noinit-attribute.c:19:20: warning: unknown attribute 'noinit' ignored [-Wunknown-attributes]
+   19 | int __attribute__((noinit, section ("mysection"))) var_section2; /* { dg-warning "because it conflicts with attribute" } */
+      |                    ^~~~~~
+4 warnings generated.

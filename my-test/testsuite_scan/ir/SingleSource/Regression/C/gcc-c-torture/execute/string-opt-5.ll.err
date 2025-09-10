@@ -1,0 +1,12 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-5.c:63:45: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   63 |   if (strcmp (foo + (x++ & 1), "ello world" + (--y & 1)))
+      |                                ~~~~~~~~~~~~~^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-5.c:63:45: note: use array indexing to silence this warning
+   63 |   if (strcmp (foo + (x++ & 1), "ello world" + (--y & 1)))
+      |                                             ^          
+      |                                &            [          ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-5.c:76:43: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   76 |   if (strncpy (dst + (++x & 1), (y++ & 3) + "foo", 10) != dst + 1
+      |                                 ~~~~~~~~~~^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/string-opt-5.c:76:43: note: use array indexing to silence this warning
+2 warnings generated.

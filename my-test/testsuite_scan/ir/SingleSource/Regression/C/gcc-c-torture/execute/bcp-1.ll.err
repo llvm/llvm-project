@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bcp-1.c:6:17: warning: unknown attribute 'externally_visible' ignored [-Wunknown-attributes]
+    6 | __attribute__ ((externally_visible)) int global;
+      |                 ^~~~~~~~~~~~~~~~~~
+1 warning generated.

@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++/bigfib.cpp:201:13: warning: ISO C++11 does not allow conversion from string literal to 'char *' [-Wwritable-strings]
+  201 |   argv[0] = "bigfib";
+      |             ^
+1 warning generated.

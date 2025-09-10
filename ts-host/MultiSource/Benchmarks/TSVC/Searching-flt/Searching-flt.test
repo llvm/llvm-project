@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Searching-flt 80000 5
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Searching-flt.reference_output

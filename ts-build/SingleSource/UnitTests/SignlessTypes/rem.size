@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/SignlessTypes/rem  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                192     928
+.gnu.version            16    1120
+.gnu.version_r          48    1136
+.gnu.hash               28    1184
+.dynstr                137    1212
+.rela.dyn              192    1352
+.rela.plt               96    1544
+.rodata                141    1640
+.eh_frame_hdr           36    1784
+.eh_frame              148    1824
+.text                 3394    6068
+.plt                    96    9472
+.preinit_array           8   13664
+.fini_array              8   13672
+.init_array              8   13680
+.dynamic               416   13688
+.got                    40   14104
+.relro_padding        2240   14144
+.data                    8   18240
+.tm_clone_table          0   18248
+.got.plt                48   18248
+.bss                     1   18296
+.riscv.attributes      116       0
+.comment               250       0
+Total                 7852
+
+

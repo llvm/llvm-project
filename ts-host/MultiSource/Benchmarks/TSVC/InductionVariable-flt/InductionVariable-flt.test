@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/InductionVariable-flt 9100 5
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/InductionVariable-flt.reference_output

@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2003-05-02-DependentPHI  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              312    1296
+.rela.plt               48    1608
+.rodata                 11    1656
+.eh_frame_hdr           28    1668
+.eh_frame              100    1696
+.text                  318    5892
+.plt                    64    6224
+.preinit_array           8   10384
+.fini_array              8   10392
+.init_array              8   10400
+.dynamic               416   10408
+.got                    40   10824
+.relro_padding        1424   10864
+.data                  104   14960
+.tm_clone_table          0   15064
+.got.plt                32   15064
+.bss                     1   15096
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3832
+
+

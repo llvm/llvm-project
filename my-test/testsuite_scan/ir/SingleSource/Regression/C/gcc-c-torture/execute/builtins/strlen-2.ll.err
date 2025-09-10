@@ -1,0 +1,43 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:27:25: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   27 |   if (strlen (i ? "foo" + 1 : j ? "bar" + 1 : "baz" + 1) != 2)
+      |                   ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:27:25: note: use array indexing to silence this warning
+   27 |   if (strlen (i ? "foo" + 1 : j ? "bar" + 1 : "baz" + 1) != 2)
+      |                         ^
+      |                   &     [  ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:27:41: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   27 |   if (strlen (i ? "foo" + 1 : j ? "bar" + 1 : "baz" + 1) != 2)
+      |                                   ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:27:41: note: use array indexing to silence this warning
+   27 |   if (strlen (i ? "foo" + 1 : j ? "bar" + 1 : "baz" + 1) != 2)
+      |                                         ^
+      |                                   &     [  ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:27:53: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   27 |   if (strlen (i ? "foo" + 1 : j ? "bar" + 1 : "baz" + 1) != 2)
+      |                                               ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:27:53: note: use array indexing to silence this warning
+   27 |   if (strlen (i ? "foo" + 1 : j ? "bar" + 1 : "baz" + 1) != 2)
+      |                                                     ^  
+      |                                               &     [  ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:31:28: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   31 |   if (strlen (h++ ? "xfoo" + 1 : "bar") != 3 || h != 1)
+      |                     ~~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:31:28: note: use array indexing to silence this warning
+   31 |   if (strlen (h++ ? "xfoo" + 1 : "bar") != 3 || h != 1)
+      |                            ^
+      |                     &      [  ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:37:25: warning: adding 'size_t' (aka 'unsigned long') to a string does not append to the string [-Wstring-plus-int]
+   37 |   if (strlen (j ? "foo" + k++ : "bar" + k++) != 3 || k != 1)
+      |                   ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:37:25: note: use array indexing to silence this warning
+   37 |   if (strlen (j ? "foo" + k++ : "bar" + k++) != 3 || k != 1)
+      |                         ^
+      |                   &     [    ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:37:39: warning: adding 'size_t' (aka 'unsigned long') to a string does not append to the string [-Wstring-plus-int]
+   37 |   if (strlen (j ? "foo" + k++ : "bar" + k++) != 3 || k != 1)
+      |                                 ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strlen-2.c:37:39: note: use array indexing to silence this warning
+   37 |   if (strlen (j ? "foo" + k++ : "bar" + k++) != 3 || k != 1)
+      |                                       ^    
+      |                                 &     [    ]
+6 warnings generated.

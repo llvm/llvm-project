@@ -1,0 +1,8 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr67037.c:15:29: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   15 | int __attribute__((noinline,noclone))
+      |                             ^~~~~~~
+      |                             noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr67037.c:30:12: warning: passing arguments to a function without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   30 |     extfunc(superblock);
+      |            ^
+2 warnings generated.

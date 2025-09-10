@@ -1,0 +1,34 @@
+string abc
+string def
+int -123
+char a
+int 123
+int 6
+int 7
+int 8
+int 9
+string 10 args done!
+string abc
+string def
+int -123
+char a
+int 123
+int 6
+int 7
+int 8
+int 9
+string 10 args done!
+double 1.000000
+double 2.000000
+int 32764
+long long 12345677823423
+double 1.000000
+double 2.000000
+int 32764
+long long 12345677823423
+DWord { 18, a }
+QuadWord { 19, 20.000000 }
+LargeS { 21, 22.000000, 0x1, 23 }
+DWord { 18, a }
+QuadWord { 19, 20.000000 }
+LargeS { 21, 22.000000, 0x1, 23 }

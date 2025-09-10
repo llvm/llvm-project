@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/LinearDependence-dbl 3570 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/LinearDependence-dbl.reference_output

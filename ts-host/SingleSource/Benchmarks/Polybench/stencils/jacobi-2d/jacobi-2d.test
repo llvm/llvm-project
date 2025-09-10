@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/jacobi-2d 
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/jacobi-2d.reference_output

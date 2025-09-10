@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-random 
+VERIFY: %b/fpcmp-target %o %S/random.reference_output

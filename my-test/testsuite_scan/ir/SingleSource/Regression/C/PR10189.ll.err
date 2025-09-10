@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR10189.c:48:19: error: parameter 'vo' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   48 | struct S2 func_1 (vo)
+      |                   ^
+   49 | {
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR10189.c:48:11: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   48 | struct S2 func_1 (vo)
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR10189.c:79:11: warning: too few arguments in call to 'func_1'
+   79 |   func_1 ();
+      |   ~~~~~~  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR10189.c:34:5: warning: tentative array definition assumed to have one element [-Wtentative-definition-array]
+   34 | int g_20[][1][0];
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/PR10189.c:42:11: warning: tentative array definition assumed to have one element [-Wtentative-definition-array]
+   42 | struct S2 g_1639[];
+      |           ^
+4 warnings and 1 error generated.

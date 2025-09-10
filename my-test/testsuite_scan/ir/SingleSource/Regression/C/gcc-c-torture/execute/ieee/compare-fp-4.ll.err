@@ -1,0 +1,37 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:28:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   28 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:33:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   33 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:40:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   40 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:46:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   46 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:52:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   52 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:61:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   61 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:67:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   67 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:76:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   76 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:82:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   82 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:91:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   91 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:97:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   97 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/compare-fp-4.c:106:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+  106 | }
+      | ^
+12 warnings generated.

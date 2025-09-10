@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/initp1  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                168     928
+.gnu.version            14    1096
+.gnu.version_r          48    1112
+.gnu.hash               28    1160
+.dynstr                170    1188
+.rela.dyn              192    1360
+.rela.plt               72    1552
+.rodata                  4    1624
+.eh_frame_hdr           28    1628
+.eh_frame              100    1656
+.text                  746    5852
+.plt                    80    6608
+.preinit_array           8   10784
+.fini_array              8   10792
+.init_array              8   10800
+.dynamic               464   10808
+.got                    40   11272
+.relro_padding         976   11312
+.data                  252   15408
+.tm_clone_table          0   15664
+.got.plt                40   15664
+.bss                    16   15704
+.riscv.attributes      116       0
+.comment               250       0
+Total                 4013
+
+

@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20050502-2.c:3:12: warning: incompatible redeclaration of library function 'memcmp' [-Wincompatible-library-redeclaration]
+    3 | extern int memcmp (const char *, const char *, size_t);
+      |            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20050502-2.c:3:12: note: 'memcmp' is a builtin with type 'int (const void *, const void *, __size_t)' (aka 'int (const void *, const void *, unsigned long)')
+1 warning generated.

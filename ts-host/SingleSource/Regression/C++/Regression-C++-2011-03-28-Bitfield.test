@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-2011-03-28-Bitfield 
+VERIFY: %b/fpcmp-target %o %S/2011-03-28-Bitfield.reference_output

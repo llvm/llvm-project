@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/va-arg-pack-1.c:125:33: error: use of unknown builtin '__builtin_va_arg_pack' [-Wimplicit-function-declaration]
+  125 |     return foo1 (x, foo3 (), 5, __builtin_va_arg_pack ());
+      |                                 ^
+1 error generated.

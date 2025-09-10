@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/memset-2.c:46:7: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   46 |       abort ();
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/memset-2.c:46:7: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/memset-2.c:67:11: error: call to undeclared library function 'memset' with type 'void *(void *, int, __size_t)' (aka 'void *(void *, int, unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   67 |       p = memset (u.buf + off, '\0', 1);
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/memset-2.c:67:11: note: include the header <string.h> or explicitly provide a declaration for 'memset'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/memset-2.c:332:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  332 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/memset-2.c:332:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+3 errors generated.

@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2003-08-05-CastFPToUint  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             148      872
+.gnu.version         20     1020
+.gnu.version_r       48     1040
+.rela.dyn           192     1088
+.rela.plt           120     1280
+.init                28     1400
+.plt                112     1440
+.text               384     1600
+.fini                24     1984
+.rodata              61     2008
+.eh_frame_hdr        60     2072
+.eh_frame           208     2136
+.note.ABI-tag        32     2344
+.note.package       112     2376
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2631
+
+

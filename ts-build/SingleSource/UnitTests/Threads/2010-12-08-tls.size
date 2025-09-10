@@ -1,0 +1,33 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Threads/2010-12-08-tls  :
+section               size    addr
+.interp                 33     792
+.note.ABI-tag           32     828
+.note.package          120     860
+.dynsym                144     984
+.gnu.version            12    1128
+.gnu.version_r          48    1140
+.gnu.hash               28    1192
+.dynstr                127    1220
+.rela.dyn              192    1352
+.rela.plt               48    1544
+.rodata                 13    1592
+.eh_frame_hdr           36    1608
+.eh_frame              116    1648
+.text                  276    5860
+.plt                    64    6144
+.tdata                   4   10304
+.preinit_array           8   10312
+.fini_array              8   10320
+.init_array              8   10328
+.dynamic               416   10336
+.got                    40   10752
+.relro_padding        1496   10792
+.data                    8   14888
+.tm_clone_table          0   14896
+.got.plt                32   14896
+.bss                     1   14928
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3676
+
+

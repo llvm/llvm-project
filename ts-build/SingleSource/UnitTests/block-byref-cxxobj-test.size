@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/block-byref-cxxobj-test  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                120     928
+.gnu.version            10    1048
+.gnu.version_r          48    1060
+.gnu.hash               28    1112
+.dynstr                159    1140
+.rela.dyn              192    1304
+.rela.plt               24    1496
+.rodata                  4    1520
+.eh_frame_hdr           28    1524
+.eh_frame               84    1552
+.text                  246    5732
+.plt                    48    5984
+.preinit_array           8   10128
+.fini_array              8   10136
+.init_array              8   10144
+.dynamic               464   10152
+.got                    40   10616
+.relro_padding        1632   10656
+.data                    8   14752
+.tm_clone_table          0   14760
+.got.plt                24   14760
+.bss                     1   14784
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3735
+
+

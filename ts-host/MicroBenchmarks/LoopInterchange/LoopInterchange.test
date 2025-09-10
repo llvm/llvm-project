@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/LoopInterchange 
+VERIFY: %b/fpcmp-target %S/LoopInterchange.reference_output %S/LoopInterchange.txt

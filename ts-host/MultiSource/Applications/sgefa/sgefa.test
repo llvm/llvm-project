@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/sgefa 
+VERIFY: %b/fpcmp-target -r 0.0001 %o %S/sgefa.reference_output

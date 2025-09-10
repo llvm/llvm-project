@@ -1,0 +1,1 @@
+void __init_cpu_features(void);

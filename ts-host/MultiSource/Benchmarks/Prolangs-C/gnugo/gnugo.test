@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/gnugo < stdin
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/gnugo.reference_output

@@ -1,0 +1,23 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:1:3: error: parameter 'got' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    1 | f(got){if(got!=0xffff)abort();}
+      |   ^   
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:1:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    1 | f(got){if(got!=0xffff)abort();}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:1:23: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    1 | f(got){if(got!=0xffff)abort();}
+      |                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:1:23: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:1:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    1 | f(got){if(got!=0xffff)abort();}
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:2:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    2 | main(){signed char c=-1;unsigned u=(unsigned short)c;f(u);exit(0);}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:2:59: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    2 | main(){signed char c=-1;unsigned u=(unsigned short)c;f(u);exit(0);}
+      |                                                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920603-1.c:2:59: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+1 warning and 5 errors generated.

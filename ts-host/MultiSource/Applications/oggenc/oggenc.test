@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/oggenc -Q -s 901820 - < tune
+VERIFY: %b/fpcmp-target %o %S/oggenc.reference_output

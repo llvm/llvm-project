@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/siod -v1 test.scm
+VERIFY: %b/fpcmp-target %o %S/siod.reference_output

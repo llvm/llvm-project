@@ -1,0 +1,20 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/EH/filter-1.cpp:4:12: error: ISO C++17 does not allow dynamic exception specifications [-Wdynamic-exception-spec]
+    4 | void bar() throw (int) {
+      |            ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/EH/filter-1.cpp:4:12: note: use 'noexcept(false)' instead
+    4 | void bar() throw (int) {
+      |            ^~~~~~~~~~~
+      |            noexcept(false)
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/EH/filter-1.cpp:23:8: warning: 'set_unexpected' is deprecated [-Wdeprecated-declarations]
+   23 |   std::set_unexpected(unexpected);
+      |        ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/exception:91:3: note: 'set_unexpected' has been explicitly marked deprecated here
+   91 |   _GLIBCXX11_DEPRECATED
+      |   ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:107:32: note: expanded from macro '_GLIBCXX11_DEPRECATED'
+  107 | # define _GLIBCXX11_DEPRECATED _GLIBCXX_DEPRECATED
+      |                                ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:98:46: note: expanded from macro '_GLIBCXX_DEPRECATED'
+   98 | # define _GLIBCXX_DEPRECATED __attribute__ ((__deprecated__))
+      |                                              ^
+1 warning and 1 error generated.

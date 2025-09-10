@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/gs -DNODISPLAY INPUT/large.ps
+VERIFY: %b/fpcmp-target %o %S/gs.reference_output

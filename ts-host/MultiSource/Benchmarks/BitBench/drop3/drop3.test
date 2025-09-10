@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/drop3 input-file
+VERIFY: %b/fpcmp-target %o %S/drop3.reference_output

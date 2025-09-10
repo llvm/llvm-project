@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/enc-pc1 5000000
+VERIFY: %b/fpcmp-target %o %S/enc-pc1.reference_output

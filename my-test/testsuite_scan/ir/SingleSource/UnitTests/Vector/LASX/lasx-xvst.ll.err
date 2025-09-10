@@ -1,0 +1,59 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:7:3: error: use of undeclared identifier '__m256i'
+    7 |   __m256i __m256i_out, __m256i_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:8:3: error: use of undeclared identifier '__m256'
+    8 |   __m256 __m256_out, __m256_result;
+      |   ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:9:3: error: use of undeclared identifier '__m256d'
+    9 |   __m256d __m256d_out, __m256d_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:10:3: error: use of undeclared identifier 'v4u64'
+   10 |   v4u64 v4u64_op0, v4u64_op1, v4u64_op2;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:11:3: error: use of undeclared identifier 'v8i32'
+   11 |   v8i32 v8i32_op0, v8i32_op1, v8i32_op2;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:19:3: error: use of undeclared identifier 'v4u64_op0'
+   19 |   v4u64_op0 = (v4u64){0x0ad152a5ad72feeb, 0xa98d4f7a77c308ee,
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:19:16: error: use of undeclared identifier 'v4u64'
+   19 |   v4u64_op0 = (v4u64){0x0ad152a5ad72feeb, 0xa98d4f7a77c308ee,
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:21:3: error: use of undeclared identifier '__m256i_result'
+   21 |   __m256i_result = (__m256i){0x0, 0x0, 0x0, 0x0};
+      |   ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:21:21: error: use of undeclared identifier '__m256i'
+   21 |   __m256i_result = (__m256i){0x0, 0x0, 0x0, 0x0};
+      |                     ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:22:3: error: call to undeclared function '__lasx_xvst'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   22 |   __lasx_xvst((__m256)v4u64_op0, (unsigned long *)&__m256i_result, 0x0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:22:16: error: use of undeclared identifier '__m256'
+   22 |   __lasx_xvst((__m256)v4u64_op0, (unsigned long *)&__m256i_result, 0x0);
+      |                ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:22:52: error: use of undeclared identifier '__m256i_result'
+   22 |   __lasx_xvst((__m256)v4u64_op0, (unsigned long *)&__m256i_result, 0x0);
+      |                                                    ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:23:19: error: use of undeclared identifier 'v4u64_op0'
+   23 |   check_lasx_out(&v4u64_op0, &__m256i_result, sizeof(__m256i_result), __FILE__, __LINE__);
+      |                   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:23:31: error: use of undeclared identifier '__m256i_result'
+   23 |   check_lasx_out(&v4u64_op0, &__m256i_result, sizeof(__m256i_result), __FILE__, __LINE__);
+      |                               ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:23:54: error: use of undeclared identifier '__m256i_result'
+   23 |   check_lasx_out(&v4u64_op0, &__m256i_result, sizeof(__m256i_result), __FILE__, __LINE__);
+      |                                                      ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:25:3: error: use of undeclared identifier 'v4u64_op0'
+   25 |   v4u64_op0 = (v4u64){0x0ad152a5ad72feeb, 0xa98d4f7a77c308ee,
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:25:16: error: use of undeclared identifier 'v4u64'
+   25 |   v4u64_op0 = (v4u64){0x0ad152a5ad72feeb, 0xa98d4f7a77c308ee,
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:27:3: error: use of undeclared identifier '__m256i_result'
+   27 |   __m256i_result = (__m256i){0x0, 0x0, 0x0, 0x0};
+      |   ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvst.c:27:21: error: use of undeclared identifier '__m256i'
+   27 |   __m256i_result = (__m256i){0x0, 0x0, 0x0, 0x0};
+      |                     ^~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

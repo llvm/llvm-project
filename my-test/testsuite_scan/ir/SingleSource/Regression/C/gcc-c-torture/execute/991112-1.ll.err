@@ -1,0 +1,9 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991112-1.c:8:10: error: call to undeclared library function 'isprint' with type 'int (int)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    8 |   return isprint (c) ? 1 : 2;
+      |          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991112-1.c:8:10: note: include the header <ctype.h> or explicitly provide a declaration for 'isprint'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991112-1.c:15:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   15 |     abort();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991112-1.c:15:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+2 errors generated.

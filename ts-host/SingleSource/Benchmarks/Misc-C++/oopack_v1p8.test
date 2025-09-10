@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/oopack_v1p8 
+VERIFY: %b/fpcmp-target -a 0.01 %o %S/oopack_v1p8.reference_output

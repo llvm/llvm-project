@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C++/EH/exception_spec_test.cpp:28:21: error: ISO C++17 does not allow dynamic exception specifications [-Wdynamic-exception-spec]
+   28 | void test(bool Int) throw (double) {
+      |                     ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C++/EH/exception_spec_test.cpp:28:21: note: use 'noexcept(false)' instead
+   28 | void test(bool Int) throw (double) {
+      |                     ^~~~~~~~~~~~~~
+      |                     noexcept(false)
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C++/EH/exception_spec_test.cpp:47:8: warning: 'set_unexpected' is deprecated [-Wdeprecated-declarations]
+   47 |   std::set_unexpected(UnexpectedHandler1);
+      |        ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/exception:91:3: note: 'set_unexpected' has been explicitly marked deprecated here
+   91 |   _GLIBCXX11_DEPRECATED
+      |   ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:107:32: note: expanded from macro '_GLIBCXX11_DEPRECATED'
+  107 | # define _GLIBCXX11_DEPRECATED _GLIBCXX_DEPRECATED
+      |                                ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:98:46: note: expanded from macro '_GLIBCXX_DEPRECATED'
+   98 | # define _GLIBCXX_DEPRECATED __attribute__ ((__deprecated__))
+      |                                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C++/EH/exception_spec_test.cpp:56:8: warning: 'set_unexpected' is deprecated [-Wdeprecated-declarations]
+   56 |   std::set_unexpected(UnexpectedHandler2);
+      |        ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/exception:91:3: note: 'set_unexpected' has been explicitly marked deprecated here
+   91 |   _GLIBCXX11_DEPRECATED
+      |   ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:107:32: note: expanded from macro '_GLIBCXX11_DEPRECATED'
+  107 | # define _GLIBCXX11_DEPRECATED _GLIBCXX_DEPRECATED
+      |                                ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:98:46: note: expanded from macro '_GLIBCXX_DEPRECATED'
+   98 | # define _GLIBCXX_DEPRECATED __attribute__ ((__deprecated__))
+      |                                              ^
+2 warnings and 1 error generated.

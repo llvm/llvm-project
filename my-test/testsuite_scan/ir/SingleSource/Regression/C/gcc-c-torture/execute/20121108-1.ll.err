@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20121108-1.c:4:71: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    4 | int strtoul1(const char *a, char **b, int c) __attribute__((noinline, noclone));
+      |                                                                       ^~~~~~~
+      |                                                                       noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20121108-1.c:7:6: warning: assigning to 'char *' from 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+    7 |   *b = a+3;
+      |      ^ ~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20121108-1.c:19:57: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   19 | int string_to_ip(const char *s) __attribute__((noinline,noclone));
+      |                                                         ^~~~~~~
+      |                                                         noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20121108-1.c:44:3: error: call to undeclared library function 'printf' with type 'int (const char *, ...)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   44 |   printf ("%x\n", t);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20121108-1.c:44:3: note: include the header <stdio.h> or explicitly provide a declaration for 'printf'
+3 warnings and 1 error generated.

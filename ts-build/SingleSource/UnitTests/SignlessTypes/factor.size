@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/SignlessTypes/factor  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                168     928
+.gnu.version            14    1096
+.gnu.version_r          48    1112
+.gnu.hash               28    1160
+.dynstr                135    1188
+.rela.dyn              192    1328
+.rela.plt               72    1520
+.rodata                 76    1592
+.eh_frame_hdr           36    1668
+.eh_frame              156    1704
+.text                  834    5956
+.plt                    80    6800
+.preinit_array           8   10976
+.fini_array              8   10984
+.init_array              8   10992
+.dynamic               416   11000
+.got                    40   11416
+.relro_padding         832   11456
+.data                    8   15552
+.tm_clone_table          0   15560
+.got.plt                40   15560
+.bss                    51   15600
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3801
+
+

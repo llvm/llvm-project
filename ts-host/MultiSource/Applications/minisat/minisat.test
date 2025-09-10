@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/minisat -verbosity=0 short.cnf
+VERIFY: %b/fpcmp-target -r 0.1 %o %S/minisat.reference_output

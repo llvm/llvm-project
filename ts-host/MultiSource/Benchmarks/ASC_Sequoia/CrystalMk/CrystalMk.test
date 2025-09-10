@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/CrystalMk 
+VERIFY: %b/fpcmp-target %o %S/CrystalMk.reference_output

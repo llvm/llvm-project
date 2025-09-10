@@ -1,0 +1,5 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk-lib.c:1:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/lib/chk.c:31:5: error: __builtin_longjmp is not supported for the current target
+   31 |     __builtin_longjmp (chk_fail_buf, 1);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.

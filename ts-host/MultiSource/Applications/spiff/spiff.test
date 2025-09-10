@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/spiff Sample.3 Sample.4
+VERIFY: %b/fpcmp-target %o %S/spiff.reference_output

@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/ccc.c:42:8: warning: cast to smaller integer type 'int' from 'void *' [-Wvoid-pointer-to-int-cast]
+   42 |   F1 = (int)(void*)ubyteArg;
+      |        ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/ccc.c:43:8: warning: cast to smaller integer type 'int' from 'void *' [-Wvoid-pointer-to-int-cast]
+   43 |   F2 = (int)(void*)sbyteArg;
+      |        ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/ccc.c:44:8: warning: cast to smaller integer type 'int' from 'void *' [-Wvoid-pointer-to-int-cast]
+   44 |   F3 = (int)(void*)ushortArg;
+      |        ^~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/ccc.c:45:8: warning: cast to smaller integer type 'int' from 'void *' [-Wvoid-pointer-to-int-cast]
+   45 |   F4 = (int)(void*)sshortArg;
+      |        ^~~~~~~~~~~~~~~~~~~~~
+4 warnings generated.

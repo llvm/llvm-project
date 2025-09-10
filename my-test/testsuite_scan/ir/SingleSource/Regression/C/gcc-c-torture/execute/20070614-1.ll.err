@@ -1,0 +1,25 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070614-1.c:3:1: warning: plain '_Complex' requires a type specifier; assuming '_Complex double'
+    3 | _Complex v = 3.0 + 1.0iF;
+      | ^
+      |          double
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070614-1.c:6:6: warning: plain '_Complex' requires a type specifier; assuming '_Complex double'
+    6 | foo (_Complex z, int *x)
+      |      ^
+      |               double
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070614-1.c:12:1: warning: plain '_Complex' requires a type specifier; assuming '_Complex double'
+   12 | _Complex bar (_Complex z) __attribute__ ((pure));
+      | ^
+      |          double
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070614-1.c:12:15: warning: plain '_Complex' requires a type specifier; assuming '_Complex double'
+   12 | _Complex bar (_Complex z) __attribute__ ((pure));
+      |               ^
+      |                        double
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070614-1.c:13:1: warning: plain '_Complex' requires a type specifier; assuming '_Complex double'
+   13 | _Complex
+      | ^       
+      |          double
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070614-1.c:14:6: warning: plain '_Complex' requires a type specifier; assuming '_Complex double'
+   14 | bar (_Complex z)
+      |      ^
+      |               double
+6 warnings generated.

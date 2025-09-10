@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/office-stringsearch 
+VERIFY: %b/fpcmp-target %o %S/office-stringsearch.reference_output

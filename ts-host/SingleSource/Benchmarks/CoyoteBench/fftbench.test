@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/fftbench 
+VERIFY: %b/fpcmp-target %o %S/fftbench.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/CLAMR -n 64 -t 1000
+VERIFY: %b/fpcmp-target %o %S/CLAMR.reference_output

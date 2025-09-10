@@ -1,0 +1,15 @@
+File,GreedyReal(s),SegtreReal(s),Ratio(segtre/greedy)
+SingleSource/Benchmarks/Adobe-C++/functionobjects.ll,0.04,0.05,1.250
+SingleSource/Benchmarks/Adobe-C++/loop_unroll.ll,1.13,1.54,1.363
+SingleSource/Benchmarks/Adobe-C++/simple_types_constant_folding.ll,0.43,0.51,1.186
+SingleSource/Benchmarks/Adobe-C++/simple_types_loop_invariant.ll,0.34,0.44,1.294
+SingleSource/Benchmarks/Adobe-C++/stepanov_abstraction.ll,0.06,0.08,1.333
+SingleSource/Benchmarks/Adobe-C++/stepanov_vector.ll,0.05,1.19,23.800
+SingleSource/Benchmarks/BenchmarkGame/Large/fasta.ll,0.01,0.01,1.000
+SingleSource/Benchmarks/BenchmarkGame/fannkuch.ll,0.01,0.01,1.000
+SingleSource/Benchmarks/BenchmarkGame/n-body.ll,0.01,0.02,2.000
+SingleSource/Benchmarks/BenchmarkGame/nsieve-bits.ll,0.00,0.00,Inf
+SingleSource/Benchmarks/BenchmarkGame/partialsums.ll,0.00,0.00,Inf
+SingleSource/Benchmarks/BenchmarkGame/puzzle.ll,0.01,0.01,1.000
+SingleSource/Benchmarks/BenchmarkGame/recursive.ll,0.00,0.00,Inf
+SingleSource/Benchmarks/BenchmarkGame/spectral-norm.ll,0.00,0.00,Inf

@@ -1,0 +1,18 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:58:94: warning: expression result unused [-Wunused-value]
+   58 |   (((osection)->vma = (osection)->lma= (vaddr)), ((osection)->user_set_vma = (boolean)true), true);
+      |                                                                                              ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:59:40: warning: expression result unused [-Wunused-value]
+   59 |   (((osection)->alignment_power = (0)),true);
+      |                                        ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:89:1: warning: non-void function does not return a value [-Wreturn-type]
+   89 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:95:3: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   95 |                 abort();
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:95:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:103:2: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  103 |         exit(0);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020404-1.c:103:2: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+3 warnings and 2 errors generated.

@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/SSAtest.c:17:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef int __attribute__ ((bitwidth(4))) int4;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/SSAtest.c:33:1: warning: non-void function does not return a value [-Wreturn-type]
+   33 | }
+      | ^
+2 warnings generated.

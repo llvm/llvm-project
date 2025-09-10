@@ -1,0 +1,234 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:8067:21: warning: add explicit braces to avoid dangling else [-Wdangling-else]
+ 8067 |                     else
+      |                     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6124:31: warning: 'mem_fun<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<c_grammar>>, boost::spirit::grammar<c_grammar> *>' is deprecated: use 'std::mem_fn' instead [-Wdeprecated-declarations]
+ 6124 |             std::bind2nd(std::mem_fun(&helper_base_t::undefine), self));
+      |                               ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6176:24: note: in instantiation of function template specialization 'boost::spirit::impl::grammar_destruct<boost::spirit::grammar<c_grammar>>' requested here
+ 6176 |     ~grammar() { impl::grammar_destruct(this); }
+      |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13487:8: note: in instantiation of member function 'boost::spirit::grammar<c_grammar>::~grammar' requested here
+ 13487 | struct c_grammar : public grammar<c_grammar>
+       |        ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/bits/stl_function.h:1390:5: note: 'mem_fun<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<c_grammar>>, boost::spirit::grammar<c_grammar> *>' has been explicitly marked deprecated here
+ 1390 |     _GLIBCXX11_DEPRECATED_SUGGEST("std::mem_fn")
+      |     ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6124:18: warning: 'bind2nd<std::mem_fun1_t<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<c_grammar>>, boost::spirit::grammar<c_grammar> *>, boost::spirit::grammar<c_grammar> *>' is deprecated: use 'std::bind' instead [-Wdeprecated-declarations]
+ 6124 |             std::bind2nd(std::mem_fun(&helper_base_t::undefine), self));
+      |                  ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/binders.h:170:5: note: 'bind2nd<std::mem_fun1_t<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<c_grammar>>, boost::spirit::grammar<c_grammar> *>, boost::spirit::grammar<c_grammar> *>' has been explicitly marked deprecated here
+  170 |     _GLIBCXX11_DEPRECATED_SUGGEST("std::bind")
+      |     ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6124:31: warning: 'mem_fun<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<skip_grammar>>, boost::spirit::grammar<skip_grammar> *>' is deprecated: use 'std::mem_fn' instead [-Wdeprecated-declarations]
+ 6124 |             std::bind2nd(std::mem_fun(&helper_base_t::undefine), self));
+      |                               ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6176:24: note: in instantiation of function template specialization 'boost::spirit::impl::grammar_destruct<boost::spirit::grammar<skip_grammar>>' requested here
+ 6176 |     ~grammar() { impl::grammar_destruct(this); }
+      |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13458:8: note: in instantiation of member function 'boost::spirit::grammar<skip_grammar>::~grammar' requested here
+ 13458 | struct skip_grammar : public grammar<skip_grammar>
+       |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:14222:9: note: in instantiation of function template specialization 'parse<c_grammar>' requested here
+ 14222 |     if (parse(g, g_code, strlen(g_code))) {
+       |         ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/bits/stl_function.h:1390:5: note: 'mem_fun<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<skip_grammar>>, boost::spirit::grammar<skip_grammar> *>' has been explicitly marked deprecated here
+ 1390 |     _GLIBCXX11_DEPRECATED_SUGGEST("std::mem_fn")
+      |     ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6124:18: warning: 'bind2nd<std::mem_fun1_t<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<skip_grammar>>, boost::spirit::grammar<skip_grammar> *>, boost::spirit::grammar<skip_grammar> *>' is deprecated: use 'std::bind' instead [-Wdeprecated-declarations]
+ 6124 |             std::bind2nd(std::mem_fun(&helper_base_t::undefine), self));
+      |                  ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/binders.h:170:5: note: 'bind2nd<std::mem_fun1_t<int, boost::spirit::impl::grammar_helper_base<boost::spirit::grammar<skip_grammar>>, boost::spirit::grammar<skip_grammar> *>, boost::spirit::grammar<skip_grammar> *>' has been explicitly marked deprecated here
+  170 |     _GLIBCXX11_DEPRECATED_SUGGEST("std::bind")
+      |     ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:4984:30: warning: 'auto_ptr<boost::spirit::impl::abstract_parser<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>, boost::spirit::nil_t>>' is deprecated: use 'std::unique_ptr' instead [-Wdeprecated-declarations]
+ 4984 |     explicit scoped_ptr(std::auto_ptr<T> p): ptr(p.release())
+      |                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:5240:39: note: in instantiation of template class 'boost::scoped_ptr<boost::spirit::impl::abstract_parser<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>, boost::spirit::nil_t>>' requested here
+ 5240 |         scoped_ptr<abstract_parser_t> ptr;
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:14161:17: note: in instantiation of template class 'boost::spirit::rule<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 14161 |                 LEFT_BRACE, RIGHT_BRACE, LEFT_BRACKET, RIGHT_BRACKET;
+       |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6058:13: note: in instantiation of template class 'c_grammar::definition<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 6058 |             delete definitions[id];
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6031:9: note: in instantiation of member function 'boost::spirit::impl::grammar_helper<boost::spirit::grammar<c_grammar>, c_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>::undefine' requested here
+ 6031 |         grammar_helper(helper_weak_ptr_t& p)
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6078:17: note: in instantiation of member function 'boost::spirit::impl::grammar_helper<boost::spirit::grammar<c_grammar>, c_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>::grammar_helper' requested here
+ 6078 |             new helper_t(helper);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6110:29: note: (skipping 2 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+ 6110 |         definition_t &def = get_definition<DerivedT, ContextT, ScannerT>(self);
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6187:124: note: in instantiation of function template specialization 'boost::spirit::grammar<c_grammar>::parse_main<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 6187 |         scanner_t scan_wrap(scan); context_t context_wrap(*this); context_wrap.pre_parse(*this, scan_wrap); result_t hit = parse_main(scan); return context_wrap.post_parse(hit, *this, scan_wrap);
+      |                                                                                                                            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2549:38: note: in instantiation of function template specialization 'boost::spirit::grammar<c_grammar>::parse<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 2549 |                 match<nil_t> hit = p.parse(scan);
+      |                                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2589:13: note: in instantiation of function template specialization 'boost::spirit::impl::phrase_parser<skip_grammar>::parse<const char *, c_grammar>' requested here
+ 2589 |             parse(first, last, p.derived(), skip.derived());
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13484:9: note: in instantiation of function template specialization 'boost::spirit::parse<const char *, c_grammar, skip_grammar>' requested here
+ 13484 |         parse(text, text+len, g, skip);
+       |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:14222:9: note: in instantiation of function template specialization 'parse<c_grammar>' requested here
+ 14222 |     if (parse(g, g_code, strlen(g_code))) {
+       |         ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/auto_ptr.h:291:7: note: 'auto_ptr<boost::spirit::impl::abstract_parser<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>, boost::spirit::nil_t>>' has been explicitly marked deprecated here
+  291 |     } _GLIBCXX11_DEPRECATED_SUGGEST("std::unique_ptr");
+      |       ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6045:18: warning: 'auto_ptr<c_grammar::definition<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' is deprecated: use 'std::unique_ptr' instead [-Wdeprecated-declarations]
+ 6045 |             std::auto_ptr<definition_t>
+      |                  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6079:44: note: in instantiation of member function 'boost::spirit::impl::grammar_helper<boost::spirit::grammar<c_grammar>, c_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>::define' requested here
+ 6079 |         return boost::make_shared(helper)->define(self);
+      |                                            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6110:29: note: in instantiation of function template specialization 'boost::spirit::impl::get_definition<c_grammar, boost::spirit::parser_context<>, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 6110 |         definition_t &def = get_definition<DerivedT, ContextT, ScannerT>(self);
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6180:20: note: in instantiation of function template specialization 'boost::spirit::impl::grammar_parser_parse<0, c_grammar, boost::spirit::parser_context<>, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 6180 |     { return impl::grammar_parser_parse<0>(this, scan); }
+      |                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6187:124: note: in instantiation of function template specialization 'boost::spirit::grammar<c_grammar>::parse_main<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 6187 |         scanner_t scan_wrap(scan); context_t context_wrap(*this); context_wrap.pre_parse(*this, scan_wrap); result_t hit = parse_main(scan); return context_wrap.post_parse(hit, *this, scan_wrap);
+      |                                                                                                                            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2549:38: note: in instantiation of function template specialization 'boost::spirit::grammar<c_grammar>::parse<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 2549 |                 match<nil_t> hit = p.parse(scan);
+      |                                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2589:13: note: in instantiation of function template specialization 'boost::spirit::impl::phrase_parser<skip_grammar>::parse<const char *, c_grammar>' requested here
+ 2589 |             parse(first, last, p.derived(), skip.derived());
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13484:9: note: in instantiation of function template specialization 'boost::spirit::parse<const char *, c_grammar, skip_grammar>' requested here
+ 13484 |         parse(text, text+len, g, skip);
+       |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:14222:9: note: in instantiation of function template specialization 'parse<c_grammar>' requested here
+ 14222 |     if (parse(g, g_code, strlen(g_code))) {
+       |         ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/auto_ptr.h:291:7: note: 'auto_ptr<c_grammar::definition<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' has been explicitly marked deprecated here
+  291 |     } _GLIBCXX11_DEPRECATED_SUGGEST("std::unique_ptr");
+      |       ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:4984:30: warning: 'auto_ptr<boost::spirit::impl::abstract_parser<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>, boost::spirit::nil_t>>' is deprecated: use 'std::unique_ptr' instead [-Wdeprecated-declarations]
+ 4984 |     explicit scoped_ptr(std::auto_ptr<T> p): ptr(p.release())
+      |                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:5240:39: note: in instantiation of template class 'boost::scoped_ptr<boost::spirit::impl::abstract_parser<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>, boost::spirit::nil_t>>' requested here
+ 5240 |         scoped_ptr<abstract_parser_t> ptr;
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13473:24: note: in instantiation of template class 'boost::spirit::rule<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' requested here
+ 13473 |         rule<ScannerT> skip;
+       |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6058:13: note: in instantiation of template class 'skip_grammar::definition<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' requested here
+ 6058 |             delete definitions[id];
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6031:9: note: in instantiation of member function 'boost::spirit::impl::grammar_helper<boost::spirit::grammar<skip_grammar>, skip_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>::undefine' requested here
+ 6031 |         grammar_helper(helper_weak_ptr_t& p)
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6078:17: note: in instantiation of member function 'boost::spirit::impl::grammar_helper<boost::spirit::grammar<skip_grammar>, skip_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>::grammar_helper' requested here
+ 6078 |             new helper_t(helper);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6110:29: note: (skipping 4 contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all)
+ 6110 |         definition_t &def = get_definition<DerivedT, ContextT, ScannerT>(self);
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2435:19: note: in instantiation of function template specialization 'boost::spirit::impl::skipper_skip<skip_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>, boost::spirit::iteration_policy>' requested here
+ 2435 |             impl::skipper_skip(subject, scan, scan);
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2550:22: note: in instantiation of function template specialization 'boost::spirit::skip_parser_iteration_policy<skip_grammar>::skip<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 2550 |                 scan.skip(scan);
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2589:13: note: in instantiation of function template specialization 'boost::spirit::impl::phrase_parser<skip_grammar>::parse<const char *, c_grammar>' requested here
+ 2589 |             parse(first, last, p.derived(), skip.derived());
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13484:9: note: in instantiation of function template specialization 'boost::spirit::parse<const char *, c_grammar, skip_grammar>' requested here
+ 13484 |         parse(text, text+len, g, skip);
+       |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:14222:9: note: in instantiation of function template specialization 'parse<c_grammar>' requested here
+ 14222 |     if (parse(g, g_code, strlen(g_code))) {
+       |         ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/auto_ptr.h:291:7: note: 'auto_ptr<boost::spirit::impl::abstract_parser<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>, boost::spirit::nil_t>>' has been explicitly marked deprecated here
+  291 |     } _GLIBCXX11_DEPRECATED_SUGGEST("std::unique_ptr");
+      |       ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6045:18: warning: 'auto_ptr<skip_grammar::definition<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>>' is deprecated: use 'std::unique_ptr' instead [-Wdeprecated-declarations]
+ 6045 |             std::auto_ptr<definition_t>
+      |                  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6079:44: note: in instantiation of member function 'boost::spirit::impl::grammar_helper<boost::spirit::grammar<skip_grammar>, skip_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>::define' requested here
+ 6079 |         return boost::make_shared(helper)->define(self);
+      |                                            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6110:29: note: in instantiation of function template specialization 'boost::spirit::impl::get_definition<skip_grammar, boost::spirit::parser_context<>, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' requested here
+ 6110 |         definition_t &def = get_definition<DerivedT, ContextT, ScannerT>(self);
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6180:20: note: in instantiation of function template specialization 'boost::spirit::impl::grammar_parser_parse<0, skip_grammar, boost::spirit::parser_context<>, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' requested here
+ 6180 |     { return impl::grammar_parser_parse<0>(this, scan); }
+      |                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:6187:124: note: in instantiation of function template specialization 'boost::spirit::grammar<skip_grammar>::parse_main<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' requested here
+ 6187 |         scanner_t scan_wrap(scan); context_t context_wrap(*this); context_wrap.pre_parse(*this, scan_wrap); result_t hit = parse_main(scan); return context_wrap.post_parse(hit, *this, scan_wrap);
+      |                                                                                                                            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2488:24: note: in instantiation of function template specialization 'boost::spirit::grammar<skip_grammar>::parse<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>' requested here
+ 2488 |                 if (!s.parse(scan2))
+      |                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2435:19: note: in instantiation of function template specialization 'boost::spirit::impl::skipper_skip<skip_grammar, boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>, boost::spirit::iteration_policy>' requested here
+ 2435 |             impl::skipper_skip(subject, scan, scan);
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2550:22: note: in instantiation of function template specialization 'boost::spirit::skip_parser_iteration_policy<skip_grammar>::skip<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>' requested here
+ 2550 |                 scan.skip(scan);
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:2589:13: note: in instantiation of function template specialization 'boost::spirit::impl::phrase_parser<skip_grammar>::parse<const char *, c_grammar>' requested here
+ 2589 |             parse(first, last, p.derived(), skip.derived());
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:13484:9: note: in instantiation of function template specialization 'boost::spirit::parse<const char *, c_grammar, skip_grammar>' requested here
+ 13484 |         parse(text, text+len, g, skip);
+       |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++-EH/spirit.cpp:14222:9: note: in instantiation of function template specialization 'parse<c_grammar>' requested here
+ 14222 |     if (parse(g, g_code, strlen(g_code))) {
+       |         ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/auto_ptr.h:291:7: note: 'auto_ptr<skip_grammar::definition<boost::spirit::scanner<const char *, boost::spirit::scanner_policies<boost::spirit::no_skipper_iteration_policy<boost::spirit::skip_parser_iteration_policy<skip_grammar>>>>>>' has been explicitly marked deprecated here
+  291 |     } _GLIBCXX11_DEPRECATED_SUGGEST("std::unique_ptr");
+      |       ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:108:45: note: expanded from macro '_GLIBCXX11_DEPRECATED_SUGGEST'
+  108 | # define _GLIBCXX11_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^

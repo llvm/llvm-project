@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/AArch64/acle-fmv-features.c:382:13: warning: omitting the parameter name in a function definition is a C23 extension [-Wc23-extensions]
+  382 | int main(int, const char **) {
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/AArch64/acle-fmv-features.c:382:28: warning: omitting the parameter name in a function definition is a C23 extension [-Wc23-extensions]
+  382 | int main(int, const char **) {
+      |                            ^
+2 warnings generated.

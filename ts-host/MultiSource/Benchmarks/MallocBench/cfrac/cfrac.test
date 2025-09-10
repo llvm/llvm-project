@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/cfrac 41757646344123832613190542166099121
+VERIFY: %b/fpcmp-target %o %S/cfrac.reference_output

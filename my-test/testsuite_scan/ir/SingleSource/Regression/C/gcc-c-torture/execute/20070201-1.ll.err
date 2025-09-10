@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20070201-1.c:9:26: warning: data argument not used by format string [-Wformat-extra-args]
+    9 |   sprintf (buf, "abcde", p++);
+      |                 ~~~~~~~  ^
+1 warning generated.

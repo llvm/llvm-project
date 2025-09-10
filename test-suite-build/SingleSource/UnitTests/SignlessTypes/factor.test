@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/factor 31415926
+VERIFY: %b/fpcmp-target %o %S/factor.reference_output

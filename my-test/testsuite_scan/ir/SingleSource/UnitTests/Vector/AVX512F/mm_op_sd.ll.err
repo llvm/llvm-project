@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/AVX512F/mm_op_sd.c:1:10: fatal error: 'm512_test_util.h' file not found
+    1 | #include "m512_test_util.h"
+      |          ^~~~~~~~~~~~~~~~~~
+1 error generated.

@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr90949.c:1:22: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+    1 | void __attribute__ ((noipa, noinline)) my_puts (const char *str) { }
+      |                      ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr90949.c:3:22: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+    3 | void __attribute__ ((noipa, noinline)) my_free (void *p) { }
+      |                      ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr90949.c:13:31: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   13 | struct Node * __attribute__ ((noipa, noinline)) my_malloc (int bytes)
+      |                               ^~~~~
+3 warnings generated.

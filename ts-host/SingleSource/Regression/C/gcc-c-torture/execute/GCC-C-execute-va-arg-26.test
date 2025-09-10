@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-va-arg-26 

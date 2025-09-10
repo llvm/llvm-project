@@ -1,0 +1,75 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:228:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  228 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:229:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  229 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:250:13: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  250 |        dtime(TimeArray);
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:257:13: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  257 |        dtime(TimeArray);
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:273:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  273 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:277:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  277 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:315:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  315 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:321:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  321 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:332:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  332 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:342:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  342 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:375:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  375 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:383:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  383 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:418:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  418 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:425:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  425 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:461:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  461 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:469:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  469 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:505:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  505 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:513:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  513 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:553:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  553 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:560:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  560 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:599:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  599 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:607:9: warning: passing arguments to 'dtime' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  607 |    dtime(TimeArray);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:988:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  988 | dtime(p)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:988:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc/flops.c:173:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  173 | int dtime();
+      |     ^
+24 warnings and 1 error generated.

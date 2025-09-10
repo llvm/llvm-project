@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-hash 
+VERIFY: %b/fpcmp-target %o %S/hash.reference_output

@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/member-function-pointers  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                164    1164
+.rela.dyn              192    1328
+.rela.plt               48    1520
+.rodata                 20    1568
+.eh_frame_hdr           44    1588
+.eh_frame              132    1632
+.text                  290    5860
+.plt                    64    6160
+.preinit_array           8   10320
+.fini_array              8   10328
+.init_array              8   10336
+.dynamic               464   10344
+.got                    40   10808
+.relro_padding        1440   10848
+.data                    8   14944
+.tm_clone_table          0   14952
+.got.plt                32   14952
+.bss                     1   14984
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3746
+
+

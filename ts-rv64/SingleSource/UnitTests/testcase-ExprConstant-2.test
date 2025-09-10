@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/testcase-ExprConstant-2 
+VERIFY: %b/fpcmp-target %o %S/testcase-ExprConstant-2.reference_output

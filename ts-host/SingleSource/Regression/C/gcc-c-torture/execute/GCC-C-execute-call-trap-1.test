@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-call-trap-1 

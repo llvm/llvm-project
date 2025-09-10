@@ -1,0 +1,11 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20000822-1.c:13:3: error: function definition is not allowed here
+   13 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20000822-1.c:18:13: error: use of undeclared identifier 'f2'
+   18 |   return f0(f2, &i);
+      |             ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20000822-1.c:24:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   24 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20000822-1.c:24:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+3 errors generated.

@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compare-1.c:38:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   38 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compare-1.c:48:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   48 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compare-1.c:58:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   58 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compare-1.c:68:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   68 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compare-1.c:78:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   78 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/compare-1.c:88:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   88 | }
+      | ^
+6 warnings generated.

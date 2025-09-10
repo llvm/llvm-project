@@ -1,0 +1,9 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040411-1.c:9:7: error: call to undeclared library function 'memcpy' with type 'void *(void *, const void *, __size_t)' (aka 'void *(void *, const void *, unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    9 |       memcpy (x, y, 10 * sizeof (int));
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040411-1.c:9:7: note: include the header <string.h> or explicitly provide a declaration for 'memcpy'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040411-1.c:20:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   20 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040411-1.c:20:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+2 errors generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/recursive 
+VERIFY: %b/fpcmp-target %o %S/recursive.reference_output

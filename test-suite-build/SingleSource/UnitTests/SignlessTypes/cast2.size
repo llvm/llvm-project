@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/SignlessTypes/cast2  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             187      872
+.gnu.version         20     1060
+.gnu.version_r       48     1080
+.rela.dyn           192     1128
+.rela.plt           120     1320
+.init                28     1440
+.plt                112     1472
+.text               380     1600
+.fini                24     1980
+.rodata               8     2004
+.eh_frame_hdr        68     2012
+.eh_frame           228     2080
+.note.ABI-tag        32     2308
+.note.package       112     2340
+.init_array           8   130456
+.fini_array           8   130464
+.dynamic            528   130472
+.got                 48   131000
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2689
+
+

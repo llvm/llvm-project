@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:11:7: error: call to undeclared library function 'alloca' with type 'void *(__size_t)' (aka 'void *(unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   11 |   x = alloca (2 * N);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:11:7: note: include the header <stdlib.h> or explicitly provide a declaration for 'alloca'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:12:3: error: call to undeclared library function 'memset' with type 'void *(void *, int, __size_t)' (aka 'void *(void *, int, unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   12 |   memset (x, 0, 2 * N);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:12:3: note: include the header <string.h> or explicitly provide a declaration for 'memset'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:15:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   15 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:15:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:16:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   16 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr22061-1.c:16:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+4 errors generated.

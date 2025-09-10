@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-2004-03-15-IndirectGoto 
+VERIFY: %b/fpcmp-target %o %S/2004-03-15-IndirectGoto.reference_output

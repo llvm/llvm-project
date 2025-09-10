@@ -1,0 +1,24 @@
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+Stack dump:
+0.	Program arguments: /home/youzhewei.linux/work/llvm-project/build/bin/llc -O3 -mtriple=aarch64-unknown-linux-gnu -regalloc=segtre /home/youzhewei.linux/work/llvm-project/my-test/testsuite_scan/ir/SingleSource/Benchmarks/Adobe-C++/loop_unroll.ll -o /home/youzhewei.linux/work/llvm-project/my-test/testsuite_scan/results/asm/segtre/SingleSource_Benchmarks_Adobe-C++_loop_unroll.s
+1.	Running pass 'Function Pass Manager' on module '/home/youzhewei.linux/work/llvm-project/my-test/testsuite_scan/ir/SingleSource/Benchmarks/Adobe-C++/loop_unroll.ll'.
+2.	Running pass 'Segment Tree Register Allocator' on function '@_Z27test_for_loop_unroll_factorILi5EiEvPKT0_iPKc'
+ #0 0x0000bd599dcd1468 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x21c1468)
+ #1 0x0000bd599dccdb58 SignalHandler(int, siginfo_t*, void*) Signals.cpp:0:0
+ #2 0x0000ec1d873c29a0 (linux-vdso.so.1+0x9a0)
+ #3 0x0000bd599cfffef4 llvm::RegAllocSegmentTree::ensureCoordsAndTree(unsigned int, llvm::SlotIndex, llvm::SlotIndex) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x14efef4)
+ #4 0x0000bd599d001154 llvm::RegAllocSegmentTree::isPhysRegAvailable(unsigned int, llvm::LiveInterval const&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x14f1154)
+ #5 0x0000bd599d001344 llvm::RegAllocSegmentTree::tryAllocateRegister(llvm::LiveInterval&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x14f1344)
+ #6 0x0000bd599d001d38 llvm::RegAllocSegmentTree::runOnMachineFunction(llvm::MachineFunction&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x14f1d38)
+ #7 0x0000bd599ce1dccc llvm::MachineFunctionPass::runOnFunction(llvm::Function&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x130dccc)
+ #8 0x0000bd599d372d24 llvm::FPPassManager::runOnFunction(llvm::Function&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x1862d24)
+ #9 0x0000bd599d372f30 llvm::FPPassManager::runOnModule(llvm::Module&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x1862f30)
+#10 0x0000bd599d3725e8 llvm::legacy::PassManagerImpl::run(llvm::Module&) (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x18625e8)
+#11 0x0000bd599c056068 compileModule(char**, llvm::LLVMContext&) llc.cpp:0:0
+#12 0x0000bd599bf963d8 main (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x4863d8)
+#13 0x0000ec1d86d422dc (/lib/aarch64-linux-gnu/libc.so.6+0x222dc)
+#14 0x0000ec1d86d423bc __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x223bc)
+#15 0x0000bd599c04eeb0 _start (/home/youzhewei.linux/work/llvm-project/build/bin/llc+0x53eeb0)
+real 1.54
+user 0.43
+sys 0.01

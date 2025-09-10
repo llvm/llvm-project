@@ -1,0 +1,5 @@
+RUN: cd %S ; %S/Interpolation 
+VERIFY: %b/HashProgramOutput.sh %S/bicubicOutput.txt
+VERIFY: %b/fpcmp-target %S/bicubic.reference_output %S/bicubicOutput.txt
+VERIFY: %b/HashProgramOutput.sh %S/bilinearOutput.txt
+VERIFY: %b/fpcmp-target %S/bilinear.reference_output %S/bilinearOutput.txt

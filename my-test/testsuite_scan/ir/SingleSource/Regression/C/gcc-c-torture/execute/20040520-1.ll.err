@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040520-1.c:7:9: error: function definition is not allowed here
+    7 |         {
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040520-1.c:14:14: error: call to undeclared function 'bar'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   14 |         if (!bar ())
+      |              ^
+2 errors generated.

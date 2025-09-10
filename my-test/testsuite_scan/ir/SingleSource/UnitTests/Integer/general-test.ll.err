@@ -1,0 +1,70 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:19:23: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   19 | typedef unsigned char ATTR_BITS( 4) My04BitInt;
+      |                       ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:20:24: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   20 | typedef unsigned short ATTR_BITS(16) My16BitInt;
+      |                        ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:21:22: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   21 | typedef unsigned int ATTR_BITS(17) My17BitInt;
+      |                      ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:22:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   22 | typedef unsigned long long ATTR_BITS(37) My37BitInt;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:23:18: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   23 | typedef unsigned ATTR_BITS(63) My63BitInt;
+      |                  ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:28:18: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   28 |   unsigned short ATTR_BITS(12) i12Field;
+      |                  ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:29:12: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   29 |   unsigned ATTR_BITS(17) i17Field;
+      |            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:36:34: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   36 | struct MyStruct* getSizes( short ATTR_BITS(23) num, My37BitInt * result) {
+      |                                  ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:38:24: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   38 |   short __attribute__((bitwidth(9))) j;
+      |                        ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:39:38: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   39 |   printf("sizeof(MyStruct) == %d\n", sizeof(struct MyStruct));
+      |                               ~~     ^~~~~~~~~~~~~~~~~~~~~~~
+      |                               %zu
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:40:40: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   40 |   printf("sizeof(My17BitInt) == %d\n", sizeof(My17BitInt));
+      |                                 ~~     ^~~~~~~~~~~~~~~~~~
+      |                                 %zu
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:41:31: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   41 |   printf("sizeof(j) == %d\n", sizeof(j));
+      |                        ~~     ^~~~~~~~~
+      |                        %zu
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:67:7: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   67 |   int ATTR_BITS(23) val = 0;
+      |       ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/general-test.c:17:37: note: expanded from macro 'ATTR_BITS'
+   17 | #define ATTR_BITS(N) __attribute__((bitwidth(N))) 
+      |                                     ^~~~~~~~~~~
+13 warnings generated.

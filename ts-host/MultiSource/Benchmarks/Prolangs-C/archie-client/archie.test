@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/archie 
+VERIFY: %b/fpcmp-target %o %S/archie.reference_output

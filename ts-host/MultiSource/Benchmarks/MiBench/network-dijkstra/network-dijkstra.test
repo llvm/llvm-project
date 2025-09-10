@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/network-dijkstra input.dat
+VERIFY: %b/fpcmp-target %o %S/network-dijkstra.reference_output

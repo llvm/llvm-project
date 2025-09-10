@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/DefaultInitDynArrays  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                120     928
+.gnu.version            10    1048
+.gnu.version_r          48    1060
+.gnu.hash               28    1112
+.dynstr                159    1140
+.rela.dyn              192    1304
+.rela.plt               24    1496
+.rodata                  4    1520
+.eh_frame_hdr           36    1524
+.eh_frame              108    1560
+.text                  248    5764
+.plt                    48    6016
+.preinit_array           8   10160
+.fini_array              8   10168
+.init_array              8   10176
+.dynamic               464   10184
+.got                    40   10648
+.relro_padding        1600   10688
+.data                    8   14784
+.tm_clone_table          0   14792
+.got.plt                24   14792
+.bss                     1   14816
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3737
+
+

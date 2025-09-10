@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/flops-8 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/flops-8.reference_output

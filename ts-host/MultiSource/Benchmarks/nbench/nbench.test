@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/nbench 
+VERIFY: %b/fpcmp-target %o %S/nbench.reference_output

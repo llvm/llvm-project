@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-uint64_to_float 
+VERIFY: %b/fpcmp-target %o %S/uint64_to_float.reference_output

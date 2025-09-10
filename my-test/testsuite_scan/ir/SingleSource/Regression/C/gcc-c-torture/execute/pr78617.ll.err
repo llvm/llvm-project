@@ -1,0 +1,12 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr78617.c:18:14: warning: logical not is only applied to the left hand side of this comparison [-Wlogical-not-parentheses]
+   18 |   return fn3(!d > fn2((f = fn1() - 1000) || p2, p1));
+      |              ^  ~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr78617.c:18:14: note: add parentheses after the '!' to evaluate the comparison first
+   18 |   return fn3(!d > fn2((f = fn1() - 1000) || p2, p1));
+      |              ^                                     
+      |               (                                    )
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr78617.c:18:14: note: add parentheses around left hand side expression to silence this warning
+   18 |   return fn3(!d > fn2((f = fn1() - 1000) || p2, p1));
+      |              ^
+      |              ( )
+1 warning generated.

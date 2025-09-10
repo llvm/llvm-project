@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20060110-1.c:9:37: warning: signed shift result (0x123456787654321000000000) requires 94 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+    9 | long long b = (0x1234567876543210LL << 32) >> 32;
+      |                ~~~~~~~~~~~~~~~~~~~~ ^  ~~
+1 warning generated.

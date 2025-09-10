@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/employ 400 < input.txt
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/employ.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/member-function-pointers 
+VERIFY: %b/fpcmp-target %o %S/member-function-pointers.reference_output

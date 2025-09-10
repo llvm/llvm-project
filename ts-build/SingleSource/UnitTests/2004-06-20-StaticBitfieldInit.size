@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2004-06-20-StaticBitfieldInit  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 14    1536
+.eh_frame_hdr           28    1552
+.eh_frame               92    1584
+.text                  286    5772
+.plt                    64    6064
+.preinit_array           8   10224
+.fini_array              8   10232
+.init_array              8   10240
+.dynamic               416   10248
+.got                    40   10664
+.relro_padding        1584   10704
+.data                   12   14800
+.tm_clone_table          0   14816
+.got.plt                32   14816
+.bss                     1   14848
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3743
+
+

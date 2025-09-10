@@ -1,0 +1,11 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/SmallPT/smallpt.cpp:55:48: warning: add explicit braces to avoid dangling else [-Wdangling-else]
+   55 |   if (++depth>5) if (erand48(Xi)<p) f=f*(1/p); else return obj.e; //R.R.
+      |                                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/SmallPT/smallpt.cpp:84:41: error: non-constant-expression cannot be narrowed from type 'int' to 'unsigned short' in initializer list [-Wc++11-narrowing]
+   84 |     for (unsigned short x=0, Xi[3]={0,0,y*y*y}; x<w; x++)   // Loop cols
+      |                                         ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/SmallPT/smallpt.cpp:84:41: note: insert an explicit cast to silence this issue
+   84 |     for (unsigned short x=0, Xi[3]={0,0,y*y*y}; x<w; x++)   // Loop cols
+      |                                         ^~~~~
+      |                                         static_cast<unsigned short>( )
+1 warning and 1 error generated.

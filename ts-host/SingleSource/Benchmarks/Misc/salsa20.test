@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/salsa20 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/salsa20.reference_output

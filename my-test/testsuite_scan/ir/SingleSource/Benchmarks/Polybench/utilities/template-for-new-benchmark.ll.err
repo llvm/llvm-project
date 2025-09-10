@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Polybench/utilities/template-for-new-benchmark.c:16:10: error: 'polybench.h' file not found with <angled> include; use "quotes" instead
+   16 | #include <polybench.h>
+      |          ^~~~~~~~~~~~~
+      |          "polybench.h"
+1 error generated.

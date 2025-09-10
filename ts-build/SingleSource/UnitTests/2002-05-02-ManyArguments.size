@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2002-05-02-ManyArguments  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 60    1536
+.eh_frame_hdr           36    1596
+.eh_frame              140    1632
+.text                  428    5868
+.plt                    64    6304
+.preinit_array           8   10464
+.fini_array              8   10472
+.init_array              8   10480
+.dynamic               416   10488
+.got                    40   10904
+.relro_padding        1344   10944
+.data                    8   15040
+.tm_clone_table          0   15048
+.got.plt                32   15048
+.bss                     1   15080
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3743
+
+

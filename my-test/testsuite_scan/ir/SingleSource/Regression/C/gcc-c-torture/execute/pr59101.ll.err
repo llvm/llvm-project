@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr59101.c:3:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    3 | __attribute__((noinline, noclone)) int
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr59101.c:6:34: warning: | has lower precedence than >; > will be evaluated first [-Wparentheses]
+    6 |   return (~a & 4102790424LL) > 0 | 6;
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr59101.c:6:34: note: place parentheses around the '>' expression to silence this warning
+    6 |   return (~a & 4102790424LL) > 0 | 6;
+      |                                  ^
+      |          (                      )
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr59101.c:6:34: note: place parentheses around the | expression to evaluate it first
+    6 |   return (~a & 4102790424LL) > 0 | 6;
+      |                                  ^  
+      |                                (    )
+2 warnings generated.

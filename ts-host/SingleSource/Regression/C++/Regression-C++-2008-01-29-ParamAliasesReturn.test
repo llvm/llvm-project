@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-2008-01-29-ParamAliasesReturn 
+VERIFY: %b/fpcmp-target %o %S/2008-01-29-ParamAliasesReturn.reference_output

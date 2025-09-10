@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Vector/Vector-sumarray-dbl  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 41    1536
+.eh_frame_hdr           28    1580
+.eh_frame              100    1608
+.text                  456    5804
+.plt                    64    6272
+.preinit_array           8   10432
+.fini_array              8   10440
+.init_array              8   10448
+.dynamic               416   10456
+.got                    40   10872
+.relro_padding        1376   10912
+.data                    8   15008
+.tm_clone_table          0   15016
+.got.plt                32   15016
+.bss                  6464   15104
+.riscv.attributes      116       0
+.comment               250       0
+Total                10199
+
+

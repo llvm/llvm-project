@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/PENNANT intermediate_leblanc.pnt
+VERIFY: %b/fpcmp-target %o %S/PENNANT.reference_output

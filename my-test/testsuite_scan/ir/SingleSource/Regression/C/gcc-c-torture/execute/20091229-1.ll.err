@@ -1,0 +1,9 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20091229-1.c:2:65: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    2 | int main(int argc, char **argv) { if (foo(0x080000000LL) != -1) abort(); exit (0); }
+      |                                                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20091229-1.c:2:65: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20091229-1.c:2:74: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    2 | int main(int argc, char **argv) { if (foo(0x080000000LL) != -1) abort(); exit (0); }
+      |                                                                          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20091229-1.c:2:74: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+2 errors generated.

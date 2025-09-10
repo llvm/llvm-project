@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/testcase-InstCombine-1 
+VERIFY: %b/fpcmp-target %o %S/testcase-InstCombine-1.reference_output

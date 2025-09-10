@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20031012-1.c:26:9: error: call to undeclared library function 'strlen' with type '__size_t (const char *)' (aka 'unsigned long (const char *)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   26 |     if (strlen(a) != STRLEN)
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20031012-1.c:26:9: note: include the header <string.h> or explicitly provide a declaration for 'strlen'
+1 error generated.

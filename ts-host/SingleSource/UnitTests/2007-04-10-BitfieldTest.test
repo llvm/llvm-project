@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2007-04-10-BitfieldTest 
+VERIFY: %b/fpcmp-target %o %S/2007-04-10-BitfieldTest.reference_output

@@ -1,0 +1,86 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:7:3: error: use of undeclared identifier '__m128i'
+    7 |   __m128i __m128i_out, __m128i_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:3: error: unknown type name '__m128'; did you mean '__mfp8'?
+    8 |   __m128  __m128_out, __m128_result;
+      |   ^~~~~~
+      |   __mfp8
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:9:3: error: use of undeclared identifier '__m128d'
+    9 |   __m128d __m128d_out, __m128d_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:10:3: error: use of undeclared identifier 'v2u64'
+   10 |   v2u64 v2u64_op0, v2u64_op1, v2u64_op2;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:11:3: error: use of undeclared identifier 'v4i32'
+   11 |   v4i32 v4i32_op0, v4i32_op1, v4i32_op2;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:19:3: error: use of undeclared identifier 'v2u64_op0'
+   19 |   v2u64_op0 = (v2u64){0x0000000000000000, 0x0000000000000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:19:16: error: use of undeclared identifier 'v2u64'
+   19 |   v2u64_op0 = (v2u64){0x0000000000000000, 0x0000000000000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:20:3: error: use of undeclared identifier '__m128i_result'; did you mean '__m128_result'?
+   20 |   __m128i_result = (__m128i){0x0202020202020202, 0x0202020202020202};
+      |   ^~~~~~~~~~~~~~
+      |   __m128_result
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:23: note: '__m128_result' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:20:21: error: use of undeclared identifier '__m128i'
+   20 |   __m128i_result = (__m128i){0x0202020202020202, 0x0202020202020202};
+      |                     ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:21:3: error: use of undeclared identifier '__m128i_out'; did you mean '__m128_out'?
+   21 |   __m128i_out = __lsx_vbitrevi_b((__m128)v2u64_op0, 0x1);
+      |   ^~~~~~~~~~~
+      |   __m128_out
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:11: note: '__m128_out' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:21:17: error: call to undeclared function '__lsx_vbitrevi_b'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   21 |   __m128i_out = __lsx_vbitrevi_b((__m128)v2u64_op0, 0x1);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:21:35: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   21 |   __m128i_out = __lsx_vbitrevi_b((__m128)v2u64_op0, 0x1);
+      |                                   ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:22:18: error: use of undeclared identifier '__m128i_result'; did you mean '__m128_result'?
+   22 |   check_lsx_out(&__m128i_result, &__m128i_out, sizeof(__m128i_out), __FILE__, __LINE__);
+      |                  ^~~~~~~~~~~~~~
+      |                  __m128_result
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:23: note: '__m128_result' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:22:35: error: use of undeclared identifier '__m128i_out'; did you mean '__m128_out'?
+   22 |   check_lsx_out(&__m128i_result, &__m128i_out, sizeof(__m128i_out), __FILE__, __LINE__);
+      |                                   ^~~~~~~~~~~
+      |                                   __m128_out
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:11: note: '__m128_out' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:22:55: error: use of undeclared identifier '__m128i_out'; did you mean '__m128_out'?
+   22 |   check_lsx_out(&__m128i_result, &__m128i_out, sizeof(__m128i_out), __FILE__, __LINE__);
+      |                                                       ^~~~~~~~~~~
+      |                                                       __m128_out
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:11: note: '__m128_out' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:24:3: error: use of undeclared identifier 'v2u64_op0'
+   24 |   v2u64_op0 = (v2u64){0xe86ce7eb5e9ce950, 0x0000000000000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:24:16: error: use of undeclared identifier 'v2u64'
+   24 |   v2u64_op0 = (v2u64){0xe86ce7eb5e9ce950, 0x0000000000000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:25:3: error: use of undeclared identifier '__m128i_result'; did you mean '__m128_result'?
+   25 |   __m128i_result = (__m128i){0xec68e3ef5a98ed54, 0x0404040404040404};
+      |   ^~~~~~~~~~~~~~
+      |   __m128_result
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:8:23: note: '__m128_result' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vbitrevi.c:25:21: error: use of undeclared identifier '__m128i'
+   25 |   __m128i_result = (__m128i){0xec68e3ef5a98ed54, 0x0404040404040404};
+      |                     ^~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

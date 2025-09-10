@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/uudecode input-file
+VERIFY: %b/fpcmp-target %o %S/uudecode.reference_output

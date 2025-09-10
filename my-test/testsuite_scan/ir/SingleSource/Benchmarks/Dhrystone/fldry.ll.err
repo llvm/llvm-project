@@ -1,0 +1,134 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:103:19: warning: '/*' within block comment [-Wcomment]
+  103 | /*#define TIMES                 /* Use times(2) time function */
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:104:18: warning: '/*' within block comment [-Wcomment]
+  104 | /*#define TIME                  /* Use time(2) time function */
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:107:18: warning: '/*' within block comment [-Wcomment]
+  107 | /*#define HZ    50              /* times(2) returns 1/50 second (europe?) */
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:109:19: warning: '/*' within block comment [-Wcomment]
+  109 | /*#define HZ    100             /* times(2) returns 1/100 second (WECo) */
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:112:17: warning: '/*' within block comment [-Wcomment]
+  112 | /*#undef GOOF                   /* Define if you want the goofed up version */
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:192:10: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+  191 |   printf("calculate floating dhrystones using doubles size %d\n",
+      |                                                            ~~
+      |                                                            %zu
+  192 |          sizeof(extended));
+      |          ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:187:5: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  187 | int main( argc, argv)
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:210:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  210 | Proc0()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:285:21: warning: passing arguments to 'Func2' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  285 |                 BoolGlob = ! Func2(String1Loc, String2Loc);
+      |                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:289:9: warning: passing arguments to 'Proc7' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  289 |                         Proc7(IntLoc1, IntLoc2, &IntLoc3);
+      |                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:292:8: warning: passing arguments to 'Proc8' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  292 |                 Proc8(Array1Glob, Array2Glob, IntLoc1, IntLoc3);
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:293:8: warning: passing arguments to 'Proc1' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  293 |                 Proc1(PtrGlb);
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:295:24: warning: passing arguments to 'Func1' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  295 |                         if (EnumLoc == Func1(CharIndex, 'C'))
+      |                                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:296:10: warning: passing arguments to 'Proc6' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  296 |                                 Proc6(Ident1, &EnumLoc);
+      |                                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:300:8: warning: passing arguments to 'Proc2' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  300 |                 Proc2(&IntLoc1);
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:337:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  337 | Proc1(PtrParIn)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:337:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:178:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  178 | int Proc1();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:361:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  361 | Proc2(IntParIO)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:361:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:179:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  179 | int Proc2();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:381:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  381 | Proc3(PtrParOut)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:388:7: warning: passing arguments to 'Proc7' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  388 |         Proc7(10, IntGlob, &PtrGlb->IntComp);
+      |              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:381:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  381 | Proc3(PtrParOut)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:180:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  180 | int Proc3();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:391:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  391 | Proc4()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:400:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  400 | Proc5()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:408:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  408 | Proc6(EnumParIn, EnumParOut)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:413:13: warning: passing arguments to 'Func3' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  413 |         if (! Func3(EnumParIn) )
+      |                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:408:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  408 | Proc6(EnumParIn, EnumParOut)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:183:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  183 | int Proc6();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:427:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  427 | Proc7(IntParI1, IntParI2, IntParOut)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:427:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:184:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  184 | int Proc7();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:438:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+  438 | Proc8(Array1Par, Array2Par, IntParI1, IntParI2)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:438:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:185:5: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  185 | int Proc8();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:458:13: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  458 | Enumeration Func1(CharPar1, CharPar2)
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:165:20: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  165 | extern Enumeration      Func1();
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:473:9: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  473 | boolean Func2(StrParI1, StrParI2)
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:166:17: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  166 | extern boolean          Func2();
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:503:9: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+  503 | boolean Func3(EnumParIn)
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Dhrystone/fldry.c:406:16: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+  406 | extern boolean Func3();
+      |                ^
+34 warnings and 9 errors generated.

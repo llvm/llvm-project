@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/iotest 
+VERIFY: %b/fpcmp-target %o %S/iotest.reference_output

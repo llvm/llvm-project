@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield.c:115:49: warning: implicit truncation from 'int' to bit-field changes value from 14916 to -1468 [-Wbitfield-constant-conversion]
+  115 | struct_2 test_struct_2 = { 20.0, 31, 407760, 1, 14916, 6712 };
+      |                                                 ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield.c:115:56: warning: implicit truncation from 'int' to bit-field changes value from 6712 to -1480 [-Wbitfield-constant-conversion]
+  115 | struct_2 test_struct_2 = { 20.0, 31, 407760, 1, 14916, 6712 };
+      |                                                        ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield.c:118:33: warning: implicit truncation from 'int' to a one-bit wide bit-field changes value from 1 to -1 [-Wsingle-bit-bitfield-constant-conversion]
+  118 | struct_5 test_struct_5 = { 909, 1, 57 };
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield.c:119:51: warning: implicit truncation from 'int' to bit-field changes value from 467 to -45 [-Wbitfield-constant-conversion]
+  119 | struct_6 test_struct_6 = { 12, 21355796, 0, 20.0, 467, 20.0 };
+      |                                                   ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield.c:121:33: warning: implicit truncation from 'int' to bit-field changes value from 1821 to -227 [-Wbitfield-constant-conversion]
+  121 | struct_8 test_struct_8 = { 126, 1821, 22, 125, 6, 0, 2432638 };
+      |                                 ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield.c:121:39: warning: implicit truncation from 'int' to bit-field changes value from 22 to -10 [-Wbitfield-constant-conversion]
+  121 | struct_8 test_struct_8 = { 126, 1821, 22, 125, 6, 0, 2432638 };
+      |                                       ^~
+6 warnings generated.

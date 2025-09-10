@@ -1,0 +1,15 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr54937.c:8:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    7 | __attribute__((noinline,noclone))
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      | int
+    8 | t(int c)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr54937.c:7:25: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    7 | __attribute__((noinline,noclone))
+      |                         ^~~~~~~
+      |                         noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr54937.c:17:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   17 | main()
+      | ^
+      | int
+1 warning and 2 errors generated.

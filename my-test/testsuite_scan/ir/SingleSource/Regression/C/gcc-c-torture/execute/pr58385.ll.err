@@ -1,0 +1,18 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58385.c:17:13: warning: & has lower precedence than >=; >= will be evaluated first [-Wparentheses]
+   17 |   ((0 || a) & foo () >= 0) <= 1 && 1;
+      |             ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58385.c:17:13: note: place parentheses around the '>=' expression to silence this warning
+   17 |   ((0 || a) & foo () >= 0) <= 1 && 1;
+      |             ^            
+      |               (          )
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58385.c:17:13: note: place parentheses around the & expression to evaluate it first
+   17 |   ((0 || a) & foo () >= 0) <= 1 && 1;
+      |             ^
+      |    (                )
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58385.c:17:33: warning: expression result unused [-Wunused-value]
+   17 |   ((0 || a) & foo () >= 0) <= 1 && 1;
+      |   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58385.c:17:28: warning: result of comparison of constant 1 with boolean expression is always true [-Wtautological-constant-compare]
+   17 |   ((0 || a) & foo () >= 0) <= 1 && 1;
+      |   ~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~
+3 warnings generated.

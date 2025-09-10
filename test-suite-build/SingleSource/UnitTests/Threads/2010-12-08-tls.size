@@ -1,0 +1,31 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Threads/2010-12-08-tls  :
+section            size     addr
+.interp              27      624
+.gnu.hash            28      656
+.dynsym             240      688
+.dynstr             148      928
+.gnu.version         20     1076
+.gnu.version_r       48     1096
+.rela.dyn           192     1144
+.rela.plt           120     1336
+.init                28     1456
+.plt                112     1488
+.text               364     1600
+.fini                24     1964
+.rodata              13     1988
+.eh_frame_hdr        68     2004
+.eh_frame           228     2072
+.note.ABI-tag        32     2300
+.note.package       112     2332
+.tdata                4   130500
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2595
+
+

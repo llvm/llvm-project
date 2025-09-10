@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2002-10-12-StructureArgs 
+VERIFY: %b/fpcmp-target %o %S/2002-10-12-StructureArgs.reference_output

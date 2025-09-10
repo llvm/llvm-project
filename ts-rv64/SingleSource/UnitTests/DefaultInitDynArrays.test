@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/DefaultInitDynArrays 
+VERIFY: %b/fpcmp-target %o %S/DefaultInitDynArrays.reference_output

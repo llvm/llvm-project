@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2006-01-23-UnionInit 
+VERIFY: %b/fpcmp-target %o %S/2006-01-23-UnionInit.reference_output

@@ -1,0 +1,13 @@
+Checking fmaxnum_start_neg_2
+Checking fmaxnum_start_min
+Checking fmaxnum_start_denorm_min
+Checking fmaxnum_start_is_nan
+Checking fmax_strict_start_neg_2
+Checking fmax_strict_start_min
+Checking fmax_strict_start_denorm_min
+Checking fmax_strict_start_nan
+Checking fmax_non_strict_start_neg_2
+Checking fmax_cmp_max_gt_start_neg_2
+Checking fmax_cmp_max_lt_start_neg_2
+Checking fmax_cmp_max_lt_start_denorm_min
+Checking fmax_cmp_max_lt_start_neg_nan

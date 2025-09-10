@@ -1,0 +1,64 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/Altivec/insert.c:1:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/Altivec/harness.h:7:
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:13:2: error: "AltiVec support not enabled"
+   13 | #error "AltiVec support not enabled"
+      |  ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:50:19: error: unknown type name 'vector'
+   50 | static __inline__ vector signed char __ATTRS_o_ai vec_perm(
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:51:5: error: unknown type name 'vector'
+   51 |     vector signed char __a, vector signed char __b, vector unsigned char __c);
+      |     ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:51:29: error: unknown type name 'vector'
+   51 |     vector signed char __a, vector signed char __b, vector unsigned char __c);
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:51:53: error: unknown type name 'vector'
+   51 |     vector signed char __a, vector signed char __b, vector unsigned char __c);
+      |                                                     ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:53:19: error: unknown type name 'vector'
+   53 | static __inline__ vector unsigned char __ATTRS_o_ai
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:54:10: error: unknown type name 'vector'
+   54 | vec_perm(vector unsigned char __a, vector unsigned char __b,
+      |          ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:54:36: error: unknown type name 'vector'
+   54 | vec_perm(vector unsigned char __a, vector unsigned char __b,
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:55:10: error: unknown type name 'vector'
+   55 |          vector unsigned char __c);
+      |          ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:57:19: error: unknown type name 'vector'
+   57 | static __inline__ vector bool char __ATTRS_o_ai
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:57:8: error: 'inline' can only appear on functions
+   57 | static __inline__ vector bool char __ATTRS_o_ai
+      |        ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:57:30: error: expected ';' after top level declarator
+   57 | static __inline__ vector bool char __ATTRS_o_ai
+      |                              ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:58:10: error: unknown type name 'vector'
+   58 | vec_perm(vector bool char __a, vector bool char __b, vector unsigned char __c);
+      |          ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:58:22: error: expected ')'
+   58 | vec_perm(vector bool char __a, vector bool char __b, vector unsigned char __c);
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:58:9: note: to match this '('
+   58 | vec_perm(vector bool char __a, vector bool char __b, vector unsigned char __c);
+      |         ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:60:19: error: unknown type name 'vector'
+   60 | static __inline__ vector short __ATTRS_o_ai vec_perm(vector signed short __a,
+      |                   ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:60:54: error: unknown type name 'vector'
+   60 | static __inline__ vector short __ATTRS_o_ai vec_perm(vector signed short __a,
+      |                                                      ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:61:54: error: unknown type name 'vector'
+   61 |                                                      vector signed short __b,
+      |                                                      ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:62:54: error: unknown type name 'vector'
+   62 |                                                      vector unsigned char __c);
+      |                                                      ^
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/altivec.h:64:19: error: unknown type name 'vector'
+   64 | static __inline__ vector unsigned short __ATTRS_o_ai
+      |                   ^
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

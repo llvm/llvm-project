@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/simul 
+VERIFY: %b/fpcmp-target %o %S/simul.reference_output

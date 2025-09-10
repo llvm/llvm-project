@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-2003-10-12-GlobalVarInitializers 
+VERIFY: %b/fpcmp-target %o %S/2003-10-12-GlobalVarInitializers.reference_output

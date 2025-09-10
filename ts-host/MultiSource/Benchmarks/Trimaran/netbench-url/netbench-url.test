@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/netbench-url medium_inputs 900
+VERIFY: %b/fpcmp-target %o %S/netbench-url.reference_output

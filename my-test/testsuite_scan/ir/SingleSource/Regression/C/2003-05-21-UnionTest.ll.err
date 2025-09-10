@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/2003-05-21-UnionTest.c:4:45: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+    4 |   union { double __d; int __i[3]; } __u = { __d: __x };
+      |                                             ^~~~
+      |                                             .__d = 
+1 warning generated.

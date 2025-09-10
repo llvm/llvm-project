@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-C++-spellcheck 
+VERIFY: %b/fpcmp-target -r 0.00000001 %o %S/spellcheck.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-2004-02-03-AggregateCopy 
+VERIFY: %b/fpcmp-target %o %S/2004-02-03-AggregateCopy.reference_output

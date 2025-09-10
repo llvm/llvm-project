@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2002-12-13-MishaTest 
+VERIFY: %b/fpcmp-target %o %S/2002-12-13-MishaTest.reference_output

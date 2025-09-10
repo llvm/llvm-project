@@ -1,0 +1,34 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Vectorizer/fmax-reduction  :
+section                size    addr
+.interp                  33     736
+.note.ABI-tag            32     772
+.note.package           120     804
+.dynsym                 720     928
+.gnu.version             60    1648
+.gnu.version_r          208    1708
+.gnu.hash                28    1920
+.dynstr                 738    1948
+.rela.dyn              1536    2688
+.rela.plt               504    4224
+.rodata                 822    4728
+.gcc_except_table      2744    5552
+.eh_frame_hdr           500    8296
+.eh_frame              1500    8800
+.text                 11078   14396
+.plt                    368   25488
+.preinit_array            8   29952
+.fini_array               8   29960
+.init_array              16   29968
+.data.rel.ro            416   29984
+.dynamic                464   30400
+.got                     56   30864
+.relro_padding         1848   30920
+.data                    16   35016
+.tm_clone_table           0   35032
+.got.plt                184   35032
+.bss                   5008   35216
+.riscv.attributes       116       0
+.comment                250       0
+Total                 29381
+
+

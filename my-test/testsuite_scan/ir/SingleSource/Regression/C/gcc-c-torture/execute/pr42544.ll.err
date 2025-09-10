@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr42544.c:11:24: warning: result of comparison of constant 4294967296 with expression of type 'unsigned int' is always false [-Wtautological-constant-out-of-range-compare]
+   11 |   if ((unsigned int) s >= 0x100000000ULL)
+      |       ~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~~~~
+1 warning generated.

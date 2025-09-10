@@ -1,0 +1,32 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/simple_types_constant_folding.cpp:97:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:15:10: warning: taking the absolute value of unsigned type 'unsigned char' has no effect [-Wabsolute-value]
+   15 |         return (abs(diff) < 1.0e-6);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:59:7: note: in instantiation of function template specialization 'tolerance_equal<unsigned char>' requested here
+   59 |         if (!tolerance_equal<T>(result,temp))
+      |              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:666:5: note: in instantiation of function template specialization 'check_shifted_sum<unsigned char, custom_two<unsigned char>>' requested here
+  666 |     check_shifted_sum<T, Shifter>(result);
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/simple_types_constant_folding.cpp:163:2: note: in instantiation of function template specialization 'test_constant<unsigned char, custom_two<unsigned char>>' requested here
+  163 |         test_constant<uint8_t, custom_two<uint8_t> >(data8unsigned,SIZE,"uint8_t constant");
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:15:10: note: remove the call to 'abs' since unsigned values cannot be negative
+   15 |         return (abs(diff) < 1.0e-6);
+      |                 ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:15:10: warning: taking the absolute value of unsigned type 'unsigned short' has no effect [-Wabsolute-value]
+   15 |         return (abs(diff) < 1.0e-6);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:59:7: note: in instantiation of function template specialization 'tolerance_equal<unsigned short>' requested here
+   59 |         if (!tolerance_equal<T>(result,temp))
+      |              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:666:5: note: in instantiation of function template specialization 'check_shifted_sum<unsigned short, custom_two<unsigned short>>' requested here
+  666 |     check_shifted_sum<T, Shifter>(result);
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/simple_types_constant_folding.cpp:259:2: note: in instantiation of function template specialization 'test_constant<unsigned short, custom_two<unsigned short>>' requested here
+  259 |         test_constant<uint16_t, custom_two<uint16_t> >(data16unsigned,SIZE,"uint16_t constant");
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Adobe-C++/benchmark_shared_tests.h:15:10: note: remove the call to 'abs' since unsigned values cannot be negative
+   15 |         return (abs(diff) < 1.0e-6);
+      |                 ^~~
+2 warnings generated.

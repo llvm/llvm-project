@@ -1,0 +1,10 @@
+ Register Allocation: 0.000000e+00 seconds
+   0.0000 (  0.0%)   0.0002 (  5.0%)   0.0002 (  3.3%)   0.0002 (  3.3%)  Live Register Matrix
+   0.0000 (  0.0%)   0.0001 (  2.9%)   0.0001 (  1.9%)   0.0001 (  1.9%)  Greedy Register Allocator
+   0.0000 (  1.9%)   0.0000 (  0.0%)   0.0000 (  0.6%)   0.0000 (  0.6%)  Register Coalescer
+   0.0000 (  0.0%)   0.0000 (  0.2%)   0.0000 (  0.2%)   0.0000 (  0.2%)  Virtual Register Rewriter
+   0.0000 (  0.2%)   0.0000 (  0.0%)   0.0000 (  0.1%)   0.0000 (  0.1%)  Rename Disconnected Subregister Components
+   0.0000 (  0.2%)   0.0000 (  0.0%)   0.0000 (  0.1%)   0.0000 (  0.1%)  Eliminate PHI nodes for register allocation
+   0.0000 (  0.1%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)  Virtual Register Map
+   0.0000 (  0.1%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)  AArch64 Dead register definitions
+   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)  Register Allocation Pass Scoring

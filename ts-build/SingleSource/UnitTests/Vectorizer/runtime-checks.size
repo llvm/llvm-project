@@ -1,0 +1,34 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Vectorizer/runtime-checks  :
+section                size    addr
+.interp                  33     736
+.note.ABI-tag            32     772
+.note.package           120     804
+.dynsym                 576     928
+.gnu.version             48    1504
+.gnu.version_r          176    1552
+.gnu.hash                28    1728
+.dynstr                 665    1756
+.rela.dyn              1632    2424
+.rela.plt               360    4056
+.rodata                2967    4416
+.gcc_except_table      4216    7384
+.eh_frame_hdr          1636   11600
+.eh_frame              4972   13240
+.text                 22506   22308
+.plt                    272   44816
+.preinit_array            8   49184
+.fini_array               8   49192
+.init_array              16   49200
+.data.rel.ro            448   49216
+.dynamic                464   49664
+.got                     56   50128
+.relro_padding         3064   50184
+.data                    16   54280
+.tm_clone_table           0   54296
+.got.plt                136   54296
+.bss                   5008   54432
+.riscv.attributes       116       0
+.comment                250       0
+Total                 49829
+
+

@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20011223-1.c:17:8: warning: overflow converting case value to switch condition type (255 to -1) [-Wswitch]
+   17 |   case 255:
+      |        ^
+1 warning generated.

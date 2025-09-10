@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-C++-hash2 
+VERIFY: %b/fpcmp-target -r 0.00000001 %o %S/hash2.reference_output

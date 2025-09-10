@@ -1,0 +1,14 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bit_select_cpp.cpp:21:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   21 | typedef int __attribute__((bitwidth(47))) BitType;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bit_select_cpp.cpp:22:19: warning: implicit conversion from 'unsigned long long' to 'const BitType' (aka 'const int') changes value from 187649984473770 to -1431655766 [-Wconstant-conversion]
+   22 | const BitType X = 0xAAAAAAAAAAAAULL;
+      |               ~   ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bit_select_cpp.cpp:38:9: error: use of undeclared identifier '__builtin_bit_select'; did you mean '__builtin_rotateleft8'?
+   38 |     if (__builtin_bit_select(&Y, i)) 
+      |         ^~~~~~~~~~~~~~~~~~~~
+      |         __builtin_rotateleft8
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bit_select_cpp.cpp:38:30: error: cannot initialize a parameter of type 'unsigned char' with an rvalue of type 'BitType *' (aka 'int *')
+   38 |     if (__builtin_bit_select(&Y, i)) 
+      |                              ^~
+2 warnings and 2 errors generated.

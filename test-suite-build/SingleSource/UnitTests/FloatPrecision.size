@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/FloatPrecision  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             148      872
+.gnu.version         20     1020
+.gnu.version_r       48     1040
+.rela.dyn           192     1088
+.rela.plt           120     1280
+.init                28     1400
+.plt                112     1440
+.text               420     1600
+.fini                24     2020
+.rodata              12     2044
+.eh_frame_hdr        68     2056
+.eh_frame           252     2128
+.note.ABI-tag        32     2380
+.note.package       112     2412
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2670
+
+

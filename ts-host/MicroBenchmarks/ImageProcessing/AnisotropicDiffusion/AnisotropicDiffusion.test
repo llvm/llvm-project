@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/AnisotropicDiffusion 
+VERIFY: %b/HashProgramOutput.sh %S/anisotropicDiffusionOutput.txt
+VERIFY: %b/fpcmp-target %S/anisotropicDiffusion.reference_output %S/anisotropicDiffusionOutput.txt

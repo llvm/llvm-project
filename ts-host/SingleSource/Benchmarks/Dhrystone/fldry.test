@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/fldry 
+VERIFY: %b/fpcmp-target %o %S/fldry.reference_output

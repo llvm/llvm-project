@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Bubblesort 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/Bubblesort.reference_output

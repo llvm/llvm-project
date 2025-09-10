@@ -1,0 +1,20 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fputs.c:47:3: error: use of unknown builtin '__builtin_fputs' [-Wimplicit-function-declaration]
+   47 |   __builtin_fputs ("", *s_ptr);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fputs.c:50:3: error: use of unknown builtin '__builtin_fputc' [-Wimplicit-function-declaration]
+   50 |   __builtin_fputc ('\n', *s_ptr);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fputs.c:51:3: error: use of unknown builtin '__builtin_fwrite' [-Wimplicit-function-declaration]
+   51 |   __builtin_fwrite ("hello\n", 1, 6, *s_ptr);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fputs.c:54:3: error: call to undeclared function 'fputs_unlocked'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   54 |   fputs_unlocked ("", *s_ptr);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fputs.c:54:3: note: did you mean 'fputc_unlocked'?
+/usr/include/aarch64-linux-gnu/bits/stdio.h:91:1: note: 'fputc_unlocked' declared here
+   91 | fputc_unlocked (int __c, FILE *__stream)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fputs.c:55:3: error: use of unknown builtin '__builtin_fputs_unlocked' [-Wimplicit-function-declaration]
+   55 |   __builtin_fputs_unlocked ("", *s_ptr);
+      |   ^
+5 errors generated.

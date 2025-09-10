@@ -95,7 +95,7 @@ define i32 @test_with_constant(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 7
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[RESULT:%.*]] = sub i32 [[X]], 7
+; CHECK-NEXT:    [[RESULT:%.*]] = add nsw i32 [[X]], -7
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    call void @abort()

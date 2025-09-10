@@ -1,0 +1,22 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:21:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   21 | typedef int __attribute__ ((bitwidth(7))) int7;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:22:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   22 | typedef int __attribute__ ((bitwidth(17))) int17;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:23:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   23 | typedef int __attribute__ ((bitwidth(32))) int32;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:24:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   24 | typedef int __attribute__ ((bitwidth(8))) int8;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:26:30: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   26 | typedef long __attribute__ ((bitwidth(33))) long33;
+      |                              ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:27:30: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   27 | typedef char __attribute__ ((bitwidth(7))) char7;
+      |                              ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/field.c:28:31: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   28 | typedef short __attribute__ ((bitwidth(17))) short17;
+      |                               ^~~~~~~~~~~~
+7 warnings generated.

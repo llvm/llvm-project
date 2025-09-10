@@ -1,0 +1,8 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strpcpy.c:35:31: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   35 |   if (stpcpy (p + 16, "vwxyz" + 1) != p + 16 + 4 || memcmp (p + 16, "wxyz", 5))
+      |                       ~~~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strpcpy.c:35:31: note: use array indexing to silence this warning
+   35 |   if (stpcpy (p + 16, "vwxyz" + 1) != p + 16 + 4 || memcmp (p + 16, "wxyz", 5))
+      |                               ^  
+      |                       &       [  ]
+1 warning generated.

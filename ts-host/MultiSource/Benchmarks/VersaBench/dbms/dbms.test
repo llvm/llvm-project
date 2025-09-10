@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/dbms -i dbms.ref.in
+VERIFY: %b/fpcmp-target %o %S/dbms.reference_output

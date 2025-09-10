@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Vector-simple 
+VERIFY: %b/fpcmp-target %o %S/simple.reference_output

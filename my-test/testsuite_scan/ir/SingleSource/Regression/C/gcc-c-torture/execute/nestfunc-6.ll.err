@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-6.c:15:3: error: function definition is not allowed here
+   15 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/nestfunc-6.c:20:23: error: use of undeclared identifier 'compare'
+   20 |   qsort (array, 3, 1, compare);
+      |                       ^~~~~~~
+2 errors generated.

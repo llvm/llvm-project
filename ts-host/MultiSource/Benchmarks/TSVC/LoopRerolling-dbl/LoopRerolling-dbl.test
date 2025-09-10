@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/LoopRerolling-dbl 5260 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/LoopRerolling-dbl.reference_output

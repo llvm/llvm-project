@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2007-04-25-weak 
+VERIFY: %b/fpcmp-target %o %S/2007-04-25-weak.reference_output

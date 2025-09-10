@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/HashRecognize/crc16.le.data32  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                120     928
+.gnu.version            10    1048
+.gnu.version_r          48    1060
+.gnu.hash               28    1112
+.dynstr                120    1140
+.rela.dyn              192    1264
+.rela.plt               24    1456
+.rodata                 36    1480
+.eh_frame_hdr           28    1516
+.eh_frame              132    1544
+.text                 2022    5772
+.plt                    48    7808
+.preinit_array           8   11952
+.fini_array              8   11960
+.init_array              8   11968
+.dynamic               416   11976
+.got                    40   12392
+.relro_padding        3952   12432
+.data                    8   16528
+.tm_clone_table          0   16536
+.got.plt                24   16536
+.bss                   514   16560
+.riscv.attributes      116       0
+.comment               250       0
+Total                 8337
+
+

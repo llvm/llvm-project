@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/runtime-checks 
+VERIFY: %b/fpcmp-target %o %S/runtime-checks.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Expansion-dbl 4160 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Expansion-dbl.reference_output

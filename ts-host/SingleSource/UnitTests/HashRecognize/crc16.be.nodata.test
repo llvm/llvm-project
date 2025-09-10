@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/crc16.be.nodata 
+VERIFY: %b/fpcmp-target %o %S/crc16.be.nodata.reference_output

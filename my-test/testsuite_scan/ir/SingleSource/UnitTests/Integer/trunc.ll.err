@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/trunc.c:15:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   15 | typedef int __attribute__ ((bitwidth(24))) int24;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/trunc.c:35:11: error: call to undeclared function 'atoi'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   35 |     num = atoi(argv[1]);
+      |           ^
+1 warning and 1 error generated.

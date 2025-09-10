@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/plot2fig 
+VERIFY: %b/fpcmp-target %o %S/plot2fig.reference_output

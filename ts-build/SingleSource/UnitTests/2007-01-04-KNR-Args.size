@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2007-01-04-KNR-Args  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 29    1536
+.eh_frame_hdr           44    1568
+.eh_frame              164    1616
+.text                  458    5876
+.plt                    64    6336
+.preinit_array           8   10496
+.fini_array              8   10504
+.init_array              8   10512
+.dynamic               416   10520
+.got                    40   10936
+.relro_padding        1312   10976
+.data                    8   15072
+.tm_clone_table          0   15080
+.got.plt                32   15080
+.bss                     1   15112
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3742
+
+

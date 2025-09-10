@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/power 
+VERIFY: %b/fpcmp-target -r 0.00001 %o %S/power.reference_output

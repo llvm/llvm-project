@@ -1,0 +1,51 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:9:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    9 | main ()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:21:7: error: call to undeclared function 'mpn_random2'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   21 |       mpn_random2 (s1, size);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:29:8: error: call to undeclared function 'mpn_mul_1'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   29 |         cyy = mpn_mul_1 (dy, s1, size);
+      |               ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:31:25: error: call to undeclared function 'mpn_cmp'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   31 |       if (cyx != cyy || mpn_cmp (dx, dy, size + 1) != 0 || dx[size] != 0x12345678)
+      |                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:33:4: error: call to undeclared function 'foo'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   33 |           foo ("", 8, cyy); mpn_print (dy, size);
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:33:22: error: call to undeclared function 'mpn_print'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   33 |           foo ("", 8, cyy); mpn_print (dy, size);
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:35:7: error: call to undeclared function 'exxit'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   35 |       exxit();
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:39:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   39 | foo (){}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:40:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   40 | mpn_mul_1(){}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:41:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   41 | mpn_print (){}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:42:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   42 | mpn_random2(){}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:43:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   43 | mpn_cmp(){}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:44:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   44 | exxit(){exit(0);}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:44:9: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   44 | exxit(){exit(0);}
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921202-1.c:44:9: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+14 errors generated.

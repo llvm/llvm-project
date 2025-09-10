@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/smallpt 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/smallpt.reference_output

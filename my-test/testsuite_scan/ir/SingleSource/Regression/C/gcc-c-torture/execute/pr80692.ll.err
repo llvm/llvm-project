@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr80692.c:4:2: error: GNU decimal type extension not supported
+    4 |         _Decimal64 d64 = -0.DD;
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr80692.c:4:22: error: invalid suffix 'DD' on floating constant
+    4 |         _Decimal64 d64 = -0.DD;
+      |                             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr80692.c:6:15: error: invalid suffix 'DD' on floating constant
+    6 |         if (d64 != 0.DD)
+      |                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr80692.c:9:16: error: invalid suffix 'DD' on floating constant
+    9 |         if (d64 != -0.DD)
+      |                       ^
+4 errors generated.

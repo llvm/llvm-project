@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-ackermann 
+VERIFY: %b/fpcmp-target %o %S/ackermann.reference_output

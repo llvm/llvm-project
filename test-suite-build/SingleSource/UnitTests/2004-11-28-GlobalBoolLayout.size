@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2004-11-28-GlobalBoolLayout  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             288      632
+.dynstr             170      920
+.gnu.version         24     1090
+.gnu.version_r       48     1120
+.rela.dyn           192     1168
+.rela.plt           168     1360
+.init                28     1528
+.plt                144     1568
+.text               400     1728
+.fini                24     2128
+.rodata              22     2152
+.eh_frame_hdr        60     2176
+.eh_frame           212     2240
+.note.ABI-tag        32     2452
+.note.package       112     2484
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             80   131048
+.data               118   131128
+.bss                  2   131246
+.comment            155        0
+Total              2878
+
+

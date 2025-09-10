@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/simple_types_loop_invariant 
+VERIFY: %b/fpcmp-target -a 0.01 %o %S/simple_types_loop_invariant.reference_output

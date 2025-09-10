@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/em3d 1024 1000 125
+VERIFY: %b/fpcmp-target %o %S/em3d.reference_output

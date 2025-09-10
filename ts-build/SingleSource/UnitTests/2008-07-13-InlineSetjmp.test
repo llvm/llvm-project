@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2008-07-13-InlineSetjmp 
+VERIFY: %b/fpcmp-target %o %S/2008-07-13-InlineSetjmp.reference_output

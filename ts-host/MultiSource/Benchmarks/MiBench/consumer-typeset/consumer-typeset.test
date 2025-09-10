@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/consumer-typeset -x -I data/include -D data/data -F data/font -C data/maps -H data/hyph large.lout
+VERIFY: %b/fpcmp-target %o %S/consumer-typeset.reference_output

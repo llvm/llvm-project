@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/himenobmtxpa 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/himenobmtxpa.reference_output

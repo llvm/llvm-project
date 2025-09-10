@@ -1,0 +1,4 @@
+[RegAlloc] Add interval-set based register allocator skeleton
+
+This adds a prototype pass `-regalloc=intervals`, which uses IntervalSet
+instead of SegmentTree. Currently only handles trivial cases.

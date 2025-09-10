@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/paq8p -4 file1.in
+VERIFY: %b/fpcmp-target %o %S/paq8p.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-2003-05-21-UnionTest 
+VERIFY: %b/fpcmp-target %o %S/2003-05-21-UnionTest.reference_output

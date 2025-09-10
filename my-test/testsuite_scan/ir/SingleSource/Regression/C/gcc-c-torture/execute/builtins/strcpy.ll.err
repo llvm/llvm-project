@@ -1,0 +1,15 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy.c:20:31: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   20 |   if (strcpy (p + 16, "vwxyz" + 1) != p + 16 || memcmp (p + 16, "wxyz", 5))
+      |                       ~~~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy.c:20:31: note: use array indexing to silence this warning
+   20 |   if (strcpy (p + 16, "vwxyz" + 1) != p + 16 || memcmp (p + 16, "wxyz", 5))
+      |                               ^  
+      |                       &       [  ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy.c:28:29: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   28 |   if (memcpy (p + 16, "VWX" + 1, 2) != p + 16 || memcmp (p + 16, "WXyz", 5))
+      |                       ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strcpy.c:28:29: note: use array indexing to silence this warning
+   28 |   if (memcpy (p + 16, "VWX" + 1, 2) != p + 16 || memcmp (p + 16, "WXyz", 5))
+      |                             ^  
+      |                       &     [  ]
+2 warnings generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ReedSolomon 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/ReedSolomon.reference_output

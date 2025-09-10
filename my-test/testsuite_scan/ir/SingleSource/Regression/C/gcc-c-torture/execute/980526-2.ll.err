@@ -1,0 +1,39 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:19:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   19 |                 exit(0);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:19:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:21:3: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   21 |                 abort();
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:21:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:28:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   28 |         a1 = (unsigned int)(filename) *5 + 1;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:29:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   29 |         a2 = (unsigned int)(filename) *6 + 2;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:30:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   30 |         a3 = (unsigned int)(filename) *7 + 3;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:31:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   31 |         a4 = (unsigned int)(filename) *8 + 4;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:32:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   32 |         a5 = (unsigned int)(filename) *9 + 5;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:33:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   33 |         a6 = (unsigned int)(filename) *10 + 5;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:34:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   34 |         a7 = (unsigned int)(filename) *11 + 5;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:35:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   35 |         a8 = (unsigned int)(filename) *12 + 5;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:36:7: warning: cast to smaller integer type 'unsigned int' from 'const char *' [-Wpointer-to-int-cast]
+   36 |         a9 = (unsigned int)(filename) *13 + 5;
+      |              ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/980526-2.c:37:9: warning: cast to 'char *' from smaller integer type 'unsigned int' [-Wint-to-pointer-cast]
+   37 |         return (char *)(a1*a2+a3*a4+a5*a6+a7*a8+a9);
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+10 warnings and 2 errors generated.

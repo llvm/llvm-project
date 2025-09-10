@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr60072.c:5:17: warning: unknown attribute 'optimize' ignored [-Wunknown-attributes]
+    5 | __attribute__ ((optimize (1)))
+      |                 ^~~~~~~~~~~~
+1 warning generated.

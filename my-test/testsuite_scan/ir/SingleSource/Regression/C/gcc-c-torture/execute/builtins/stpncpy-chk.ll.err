@@ -1,0 +1,38 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:80:34: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   80 |   if (stpncpy (dst, i++ ? "xfoo" + 1 : "bar", 4) != dst+3
+      |                           ~~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:33:33: note: expanded from macro 'stpncpy'
+   33 |   __builtin___stpncpy_chk (dst, src, len, os (dst))
+      |                                 ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:80:34: note: use array indexing to silence this warning
+   80 |   if (stpncpy (dst, i++ ? "xfoo" + 1 : "bar", 4) != dst+3
+      |                                  ^
+      |                           &      [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:33:33: note: expanded from macro 'stpncpy'
+   33 |   __builtin___stpncpy_chk (dst, src, len, os (dst))
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:215:7: error: __builtin_setjmp is not supported for the current target
+  215 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:223:7: error: __builtin_setjmp is not supported for the current target
+  223 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:230:7: error: __builtin_setjmp is not supported for the current target
+  230 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:236:7: error: __builtin_setjmp is not supported for the current target
+  236 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:232:11: warning: 'stpncpy' will always overflow; destination buffer has size 1, but size argument is 2 [-Wbuiltin-memcpy-chk-size]
+  232 |       if (stpncpy (&buf3[19], "abc", 2))
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:33:3: note: expanded from macro 'stpncpy'
+   33 |   __builtin___stpncpy_chk (dst, src, len, os (dst))
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/stpncpy-chk.c:238:11: warning: 'stpncpy' will always overflow; destination buffer has size 2, but size argument is 3 [-Wbuiltin-memcpy-chk-size]
+  238 |       if (stpncpy (&buf3[18], "", 3))
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:33:3: note: expanded from macro 'stpncpy'
+   33 |   __builtin___stpncpy_chk (dst, src, len, os (dst))
+      |   ^
+3 warnings and 4 errors generated.

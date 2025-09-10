@@ -1,0 +1,29 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:4:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    4 | g(){}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:6:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    6 | f()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:13:33: warning: too many arguments in call to 'g'
+   13 |       g(1.0, 1.0 + i / 2.0 * 3.0);
+      |       ~                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:13:8: warning: passing arguments to 'g' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   13 |       g(1.0, 1.0 + i / 2.0 * 3.0);
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:14:33: warning: too many arguments in call to 'g'
+   14 |       g(2.0, 1.0 + i / 2.0 * 3.0);
+      |       ~                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:14:8: warning: passing arguments to 'g' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   14 |       g(2.0, 1.0 + i / 2.0 * 3.0);
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:18:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   18 | main ()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:21:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   21 |   exit(0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/921208-2.c:21:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+4 warnings and 4 errors generated.

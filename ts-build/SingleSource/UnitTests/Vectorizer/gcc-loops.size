@@ -1,0 +1,33 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Vectorizer/gcc-loops  :
+section                 size    addr
+.interp                   33     736
+.note.ABI-tag             32     772
+.note.package            120     804
+.dynsym                  528     928
+.gnu.version              44    1456
+.gnu.version_r           176    1500
+.gnu.hash                 28    1680
+.dynstr                  610    1708
+.rela.dyn                240    2320
+.rela.plt                360    2560
+.rodata                  254    2920
+.gcc_except_table        408    3176
+.eh_frame_hdr            236    3584
+.eh_frame                724    3824
+.text                   5958    8644
+.plt                     272   14608
+.preinit_array             8   18976
+.fini_array                8   18984
+.init_array                8   18992
+.dynamic                 464   19000
+.got                      48   19464
+.relro_padding           968   19512
+.data                     16   23608
+.tm_clone_table            0   23624
+.got.plt                 136   23624
+.bss                  229392   23760
+.riscv.attributes        116       0
+.comment                 250       0
+Total                 241437
+
+

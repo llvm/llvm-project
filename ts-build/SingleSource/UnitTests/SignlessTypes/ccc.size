@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/SignlessTypes/ccc  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                192     928
+.gnu.version            16    1120
+.gnu.version_r          48    1136
+.gnu.hash               28    1184
+.dynstr                139    1212
+.rela.dyn              192    1352
+.rela.plt               96    1544
+.rodata                 51    1640
+.eh_frame_hdr           60    1692
+.eh_frame              180    1752
+.text                  414    6028
+.plt                    96    6448
+.preinit_array           8   10640
+.fini_array              8   10648
+.init_array              8   10656
+.dynamic               416   10664
+.got                    40   11080
+.relro_padding        1168   11120
+.data                    8   15216
+.tm_clone_table          0   15224
+.got.plt                48   15224
+.bss                    24   15272
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3791
+
+

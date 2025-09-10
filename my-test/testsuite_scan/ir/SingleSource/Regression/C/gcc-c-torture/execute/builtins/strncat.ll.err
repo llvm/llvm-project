@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat.c:28:7: warning: 'strncat' size argument is too large; destination buffer has size 64, but size argument is 100 [-Wfortify-source]
+   28 |   if (strncat (dst, "", 100) != dst || memcmp (dst, "hello world\0XXX", 15))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat.c:31:7: warning: 'strncat' size argument is too large; destination buffer has size 64, but size argument is 100 [-Wfortify-source]
+   31 |   if (strncat (dst, s2, 100) != dst || memcmp (dst, "hello world\0XXX", 15))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat.c:58:7: warning: 'strncat' size argument is too large; destination buffer has size 64, but size argument is 100 [-Wfortify-source]
+   58 |   if (strncat (dst, "foo", 100) != dst || memcmp (dst, "hello worldfoo\0XXX", 18))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat.c:61:7: warning: 'strncat' size argument is too large; destination buffer has size 64, but size argument is 100 [-Wfortify-source]
+   61 |   if (strncat (dst, s1, 100) != dst || memcmp (dst, "hello worldhello world\0XXX", 26))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat.c:79:7: warning: 'strncat' size argument is too large; destination buffer has size 64, but size argument is 100 [-Wfortify-source]
+   79 |   if (__builtin_strncat (dst, "", 100) != dst
+      |       ^
+5 warnings generated.

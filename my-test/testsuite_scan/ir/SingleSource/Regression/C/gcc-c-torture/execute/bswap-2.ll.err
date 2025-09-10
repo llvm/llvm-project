@@ -1,0 +1,25 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bswap-2.c:31:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   31 | __attribute__ ((noinline, noclone)) uint32_t
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bswap-2.c:38:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   38 | __attribute__ ((noinline, noclone)) uint32_t
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bswap-2.c:45:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   45 | __attribute__ ((noinline, noclone)) uint32_t
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bswap-2.c:58:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   58 | __attribute__ ((noinline, noclone)) uint32_t
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bswap-2.c:71:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   71 | __attribute__ ((noinline, noclone)) uint32_t
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bswap-2.c:84:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   84 | __attribute__ ((noinline, noclone)) uint32_t
+      |                           ^~~~~~~
+      |                           noinline
+6 warnings generated.

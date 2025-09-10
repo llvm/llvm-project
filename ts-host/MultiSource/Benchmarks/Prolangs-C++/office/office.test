@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/office 
+VERIFY: %b/fpcmp-target %o %S/office.reference_output

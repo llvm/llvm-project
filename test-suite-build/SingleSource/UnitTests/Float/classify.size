@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Float/classify  :
+section             size     addr
+.interp               27      568
+.gnu.hash             28      600
+.dynsym              288      632
+.dynstr              158      920
+.gnu.version          24     1078
+.gnu.version_r        48     1104
+.rela.dyn            192     1152
+.rela.plt            168     1344
+.init                 28     1512
+.plt                 144     1552
+.text              27060     1728
+.fini                 24    28788
+.rodata             1586    28816
+.eh_frame_hdr        396    30404
+.eh_frame           1952    30800
+.note.ABI-tag         32    32752
+.note.package        112    32784
+.init_array            8   130504
+.fini_array            8   130512
+.dynamic             480   130520
+.got                  48   131000
+.got.plt              80   131048
+.data                624   131136
+.bss                 304   131760
+.comment             155        0
+Total              33974
+
+

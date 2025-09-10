@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/partialsums 
+VERIFY: %b/fpcmp-target %o %S/partialsums.reference_output

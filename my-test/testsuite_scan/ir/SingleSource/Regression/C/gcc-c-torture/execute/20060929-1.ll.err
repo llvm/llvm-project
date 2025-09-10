@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20060929-1.c:15:3: warning: expression result unused [-Wunused-value]
+   15 |   *(*p++)++;
+      |   ^~~~~~~~~
+1 warning generated.

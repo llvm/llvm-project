@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/fdtd-2d 
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/fdtd-2d.reference_output

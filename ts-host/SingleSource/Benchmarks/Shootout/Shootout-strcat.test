@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-strcat 
+VERIFY: %b/fpcmp-target %o %S/strcat.reference_output

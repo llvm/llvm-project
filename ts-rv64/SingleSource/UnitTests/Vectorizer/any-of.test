@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/any-of 
+VERIFY: %b/fpcmp-target %o %S/any-of.reference_output

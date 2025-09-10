@@ -1,0 +1,49 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:372:35: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example3' may result in an unaligned pointer access [-Walign-mismatch]
+  372 |   BENCH("Example3",   example3(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:372:39: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example3' may result in an unaligned pointer access [-Walign-mismatch]
+  372 |   BENCH("Example3",   example3(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:372:35: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example3' may result in an unaligned pointer access [-Walign-mismatch]
+  372 |   BENCH("Example3",   example3(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:372:39: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example3' may result in an unaligned pointer access [-Walign-mismatch]
+  372 |   BENCH("Example3",   example3(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:373:36: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example4a' may result in an unaligned pointer access [-Walign-mismatch]
+  373 |   BENCH("Example4a",  example4a(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:373:40: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example4a' may result in an unaligned pointer access [-Walign-mismatch]
+  373 |   BENCH("Example4a",  example4a(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:373:36: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example4a' may result in an unaligned pointer access [-Walign-mismatch]
+  373 |   BENCH("Example4a",  example4a(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:373:40: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example4a' may result in an unaligned pointer access [-Walign-mismatch]
+  373 |   BENCH("Example4a",  example4a(N, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:374:39: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example4b' may result in an unaligned pointer access [-Walign-mismatch]
+  374 |   BENCH("Example4b",  example4b(N-10, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:374:43: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example4b' may result in an unaligned pointer access [-Walign-mismatch]
+  374 |   BENCH("Example4b",  example4b(N-10, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:374:39: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example4b' may result in an unaligned pointer access [-Walign-mismatch]
+  374 |   BENCH("Example4b",  example4b(N-10, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:374:43: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example4b' may result in an unaligned pointer access [-Walign-mismatch]
+  374 |   BENCH("Example4b",  example4b(N-10, ia, ib), Mi*2, digest_memory(&ia[0], &ia[N]));
+      |                                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:375:36: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example4c' may result in an unaligned pointer access [-Walign-mismatch]
+  375 |   BENCH("Example4c",  example4c(N, ia, ib), Mi*2, digest_memory(&ib[0], &ib[N]));
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:375:40: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example4c' may result in an unaligned pointer access [-Walign-mismatch]
+  375 |   BENCH("Example4c",  example4c(N, ia, ib), Mi*2, digest_memory(&ib[0], &ib[N]));
+      |                                        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:375:36: warning: passing 4-byte aligned argument to 16-byte aligned parameter 2 of 'example4c' may result in an unaligned pointer access [-Walign-mismatch]
+  375 |   BENCH("Example4c",  example4c(N, ia, ib), Mi*2, digest_memory(&ib[0], &ib[N]));
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp:375:40: warning: passing 4-byte aligned argument to 16-byte aligned parameter 3 of 'example4c' may result in an unaligned pointer access [-Walign-mismatch]
+  375 |   BENCH("Example4c",  example4c(N, ia, ib), Mi*2, digest_memory(&ib[0], &ib[N]));
+      |                                        ^
+16 warnings generated.

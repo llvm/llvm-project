@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2005-07-15-Bitfield-ABI 
+VERIFY: %b/fpcmp-target %o %S/2005-07-15-Bitfield-ABI.reference_output

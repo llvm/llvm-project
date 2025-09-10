@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/InductionVariable-dbl 9100 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/InductionVariable-dbl.reference_output

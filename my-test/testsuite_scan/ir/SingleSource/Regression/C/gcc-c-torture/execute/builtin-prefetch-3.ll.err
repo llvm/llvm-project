@@ -1,0 +1,96 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:14:8: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   14 | static stat_int_arr[100];
+      | ~~~~~~ ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:39:23: warning: passing 'volatile int[100]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   39 |   __builtin_prefetch (glob_vol_int_arr, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:41:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   41 |   __builtin_prefetch (glob_ptr_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:42:23: warning: passing 'volatile int *volatile' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   42 |   __builtin_prefetch (glob_vol_ptr_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:43:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   43 |   __builtin_prefetch (&glob_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:51:23: warning: passing 'volatile int[100]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   51 |   __builtin_prefetch (stat_vol_int_arr, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:53:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   53 |   __builtin_prefetch (stat_ptr_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:54:23: warning: passing 'volatile int *volatile' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   54 |   __builtin_prefetch (stat_vol_ptr_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:55:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   55 |   __builtin_prefetch (&stat_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:63:23: warning: passing 'volatile struct S *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   63 |   __builtin_prefetch (&vol_str, 0, 0);
+      |                       ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:64:23: warning: passing 'volatile struct S *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   64 |   __builtin_prefetch (ptr_vol_str, 0, 0);
+      |                       ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:66:23: warning: passing 'volatile struct S *volatile' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   66 |   __builtin_prefetch (vol_ptr_vol_str, 0, 0);
+      |                       ^~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:67:23: warning: passing 'volatile short *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   67 |   __builtin_prefetch (&vol_str.b, 0, 0);
+      |                       ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:68:23: warning: passing 'volatile short *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   68 |   __builtin_prefetch (&ptr_vol_str->b, 0, 0);
+      |                       ^~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:70:23: warning: passing 'volatile short *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   70 |   __builtin_prefetch (&vol_ptr_vol_str->b, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:71:23: warning: passing 'volatile char (*)[8]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   71 |   __builtin_prefetch (&vol_str.d, 0, 0);
+      |                       ^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:73:23: warning: passing 'volatile char (*)[8]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   73 |   __builtin_prefetch (&ptr_vol_str->d, 0, 0);
+      |                       ^~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:74:23: warning: passing 'volatile char (*)[8]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   74 |   __builtin_prefetch (&vol_ptr_vol_str->d, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:84:23: warning: passing 'volatile int (*)[100]' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   84 |   __builtin_prefetch (&glob_vol_int_arr, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:86:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   86 |   __builtin_prefetch (glob_ptr_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:87:23: warning: passing 'volatile int *volatile' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   87 |   __builtin_prefetch (glob_vol_ptr_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:88:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   88 |   __builtin_prefetch (&glob_vol_int_arr[2], 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:90:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   90 |   __builtin_prefetch (&glob_ptr_vol_int[3], 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:91:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   91 |   __builtin_prefetch (&glob_vol_ptr_vol_int[3], 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:92:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   92 |   __builtin_prefetch (glob_vol_int_arr+3, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:93:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   93 |   __builtin_prefetch (glob_vol_int_arr+glob_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:95:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   95 |   __builtin_prefetch (glob_ptr_vol_int+5, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:96:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   96 |   __builtin_prefetch (glob_vol_ptr_vol_int+5, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:98:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   98 |   __builtin_prefetch (glob_ptr_vol_int+glob_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:99:23: warning: passing 'volatile int *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   99 |   __builtin_prefetch (glob_vol_ptr_vol_int+glob_vol_int, 0, 0);
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:112:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  112 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtin-prefetch-3.c:112:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+29 warnings and 2 errors generated.

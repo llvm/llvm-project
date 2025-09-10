@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58662.c:16:24: warning: implicit conversion from 'int' to 'short' changes value from 35536 to -30000 [-Wconstant-conversion]
+   16 |   d = foo (a == 0, (0, 35536));
+      |                      ~ ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr58662.c:16:21: warning: left operand of comma operator has no effect [-Wunused-value]
+   16 |   d = foo (a == 0, (0, 35536));
+      |                     ^
+2 warnings generated.

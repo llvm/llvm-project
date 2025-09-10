@@ -1,0 +1,32 @@
+error: no command (or arguments) was given
+usage: ts-build/tools/timeit-target [options] command ... arguments ...
+Options:
+  -h, --help           Show this help text.
+  -p, --posix          Report time in /usr/bin/time POSIX format.
+  -t, --timeout <N>    Execute the subprocess with a timeout of N seconds.
+  -c, --chdir <PATH>   Execute the subprocess in the given working directory.
+  --summary <PATH>     Write monitored process summary (exit code and time) to PATH.
+  --redirect-output <PATH> 
+                       Redirect stdout and stderr for the target to PATH.
+  --redirect-stdout <PATH> 
+                       Redirect stdout for the target to PATH.
+  --redirect-stderr <PATH> 
+                       Redirect stderr for the target to PATH.
+  --redirect-input <PATH> 
+                       Redirect stdin for the target to PATH.
+  --limit-cpu <N>      
+                       Limit the target to N seconds of CPU time.
+  --limit-stack-size <N> 
+                       Limit the target to N bytes of stack space.
+  --limit-data-size <N> 
+                       Limit the target to N bytes of data.
+  --limit-rss-size <N> 
+                       Limit the target to N bytes of resident memory.
+  --limit-file-size <N> 
+                       Limit the target to creating files no more than N bytes.
+  --limit-core <N>     
+                       Limit the size for which core files will be generated.
+  --limit-file-count <N> 
+                       Limit the maximum number of open files the target can have.
+  --limit-subprocess-count <N> 
+                       Limit the maximum number of simultaneous processes the target can use.

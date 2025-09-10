@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/enc-md5 10
+VERIFY: %b/fpcmp-target %o %S/enc-md5.reference_output

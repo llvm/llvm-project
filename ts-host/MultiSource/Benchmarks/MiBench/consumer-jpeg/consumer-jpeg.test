@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/consumer-jpeg -dct int -ppm -outfile /dev/null input_large.jpg
+VERIFY: %b/fpcmp-target %o %S/consumer-jpeg.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/mason test.in
+VERIFY: %b/fpcmp-target %o %S/mason.reference_output

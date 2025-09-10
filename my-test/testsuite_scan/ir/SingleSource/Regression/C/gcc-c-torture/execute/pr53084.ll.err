@@ -1,0 +1,12 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr53084.c:5:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    5 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr53084.c:15:43: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   15 |   static const char *const foo[] = {"foo" + 1};
+      |                                     ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr53084.c:15:43: note: use array indexing to silence this warning
+   15 |   static const char *const foo[] = {"foo" + 1};
+      |                                           ^  
+      |                                     &     [  ]
+2 warnings generated.

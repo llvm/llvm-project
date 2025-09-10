@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/stepanov_v1p2 
+VERIFY: %b/fpcmp-target -a 0.01 %o %S/stepanov_v1p2.reference_output

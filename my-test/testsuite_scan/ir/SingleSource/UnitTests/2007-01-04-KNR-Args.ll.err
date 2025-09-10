@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2007-01-04-KNR-Args.c:3:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    3 | p1 (c, f1, s, d1, i, f2, l, d2)
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2007-01-04-KNR-Args.c:6:59: warning: format specifies type 'int' but the argument has type 'long' [-Wformat]
+    6 |   printf("%c %f %d %f %d %f %d %f\n", c, f1, s, d1,i, f2, l, d2);
+      |                             ~~                            ^
+      |                             %ld
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2007-01-04-KNR-Args.c:3:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    3 | p1 (c, f1, s, d1, i, f2, l, d2)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2007-01-04-KNR-Args.c:11:59: warning: format specifies type 'int' but the argument has type 'long' [-Wformat]
+   11 |   printf("%c %f %d %f %d %f %d %f\n", c, f1, s, d1,i, f2, l, d2);
+      |                             ~~                            ^
+      |                             %ld
+3 warnings and 1 error generated.

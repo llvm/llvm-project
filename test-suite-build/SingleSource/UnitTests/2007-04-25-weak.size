@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2007-04-25-weak  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             151      872
+.gnu.version         20     1024
+.gnu.version_r       48     1048
+.rela.dyn           216     1096
+.rela.plt           120     1312
+.init                28     1432
+.plt                112     1472
+.text               340     1600
+.fini                24     1940
+.rodata               4     1964
+.eh_frame_hdr        60     1968
+.eh_frame           208     2032
+.note.ABI-tag        32     2240
+.note.package       112     2272
+.init_array           8   130496
+.fini_array           8   130504
+.dynamic            480   130512
+.got                 56   130992
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2565
+
+

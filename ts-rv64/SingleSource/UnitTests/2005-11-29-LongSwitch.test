@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2005-11-29-LongSwitch 
+VERIFY: %b/fpcmp-target %o %S/2005-11-29-LongSwitch.reference_output

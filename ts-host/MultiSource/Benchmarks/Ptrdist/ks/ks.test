@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ks KL-4.in
+VERIFY: %b/fpcmp-target %o %S/ks.reference_output

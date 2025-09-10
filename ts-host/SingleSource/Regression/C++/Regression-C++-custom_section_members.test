@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-custom_section_members 
+VERIFY: %b/fpcmp-target %o %S/custom_section_members.reference_output

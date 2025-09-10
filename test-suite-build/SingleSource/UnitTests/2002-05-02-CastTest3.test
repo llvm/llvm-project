@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2002-05-02-CastTest3 
+VERIFY: %b/fpcmp-target %o %S/2002-05-02-CastTest3.reference_output

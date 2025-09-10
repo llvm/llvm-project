@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/evalloop 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/evalloop.reference_output

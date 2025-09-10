@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr15262-1.c:17:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   17 | main ()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr15262-1.c:32:10: error: call to undeclared library function 'malloc' with type 'void *(__size_t)' (aka 'void *(unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   32 |   locp = malloc (sizeof (*locp));
+      |          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr15262-1.c:32:10: note: include the header <stdlib.h> or explicitly provide a declaration for 'malloc'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr15262-1.c:44:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   44 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr15262-1.c:44:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+3 errors generated.

@@ -1,0 +1,6 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Shootout-C++/hash2.cpp:7:
+In file included from /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/ext/hash_map:60:
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward/backward_warning.h:32:2: warning: This file includes at least one deprecated or antiquated header which   may be removed without further notice at a future date. Please use a   non-deprecated interface with equivalent functionality instead. For a   listing of replacement headers and interfaces, consult the file   backward_warning.h. To disable this warning use -Wno-deprecated. [-W#warnings]
+   32 | #warning \
+      |  ^
+1 warning generated.

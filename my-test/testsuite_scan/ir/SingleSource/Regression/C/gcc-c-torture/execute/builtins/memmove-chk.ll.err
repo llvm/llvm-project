@@ -1,0 +1,100 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:40:30: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   40 |   if (memmove (p + 16, "VWX" + 1, 2) != p + 16
+      |                        ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:33: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |                                 ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:40:30: note: use array indexing to silence this warning
+   40 |   if (memmove (p + 16, "VWX" + 1, 2) != p + 16
+      |                              ^
+      |                        &     [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:33: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:64:19: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   64 |   memmove (p + 5, s3, 1);
+      |                   ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:118:41: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  118 |   if (memmove ((char *) buf3 + 2, "bcd" + ++i, 2) != (char *) buf1 + 2
+      |                                   ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:33: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |                                 ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:118:41: note: use array indexing to silence this warning
+  118 |   if (memmove ((char *) buf3 + 2, "bcd" + ++i, 2) != (char *) buf1 + 2
+      |                                         ^
+      |                                   &     [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:33: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:187:32: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  187 |   if (memmove (buf4 + 2, "bcd" + i++, 2) != buf2 + 2
+      |                          ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:33: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |                                 ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:187:32: note: use array indexing to silence this warning
+  187 |   if (memmove (buf4 + 2, "bcd" + i++, 2) != buf2 + 2
+      |                                ^
+      |                          &     [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:33: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |                                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:358:24: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  358 |   memmove (a.buf1 + 2, s3, l1);
+      |                        ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:359:15: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  359 |   memmove (r, s3, l1 + 1);
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:361:15: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  361 |   memmove (r, s2, l1 + 2);
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:362:19: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  362 |   memmove (r + 2, s3, l1);
+      |                   ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:375:15: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  375 |   memmove (r, s2, l1);
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:383:24: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  383 |   memmove (a.buf1 + 2, s3, 1);
+      |                        ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:384:15: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  384 |   memmove (r, s3, 2);
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:386:15: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  386 |   memmove (r, s2, 3);
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:400:15: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  400 |   memmove (r, s2, 1);
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:403:23: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  403 |   memmove (&buf3[16], s2, l);
+      |                       ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:420:7: error: __builtin_setjmp is not supported for the current target
+  420 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:422:28: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  422 |       memmove (&a.buf2[9], s2, l1 + 1);
+      |                            ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:425:7: error: __builtin_setjmp is not supported for the current target
+  425 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:427:40: warning: passing 'volatile char *' to parameter of type 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  427 |       memmove (&a.buf2[7], s3, strlen (s3) + 1);
+      |                                        ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:7:34: note: passing argument to parameter here
+    7 | extern size_t strlen(const char *);
+      |                                  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:427:28: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  427 |       memmove (&a.buf2[7], s3, strlen (s3) + 1);
+      |                            ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:431:7: error: __builtin_setjmp is not supported for the current target
+  431 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memmove-chk.c:433:7: warning: 'memmove' will always overflow; destination buffer has size 1, but size argument is 2 [-Wbuiltin-memcpy-chk-size]
+  433 |       memmove (&buf3[19], "ab", 2);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:15:3: note: expanded from macro 'memmove'
+   15 |   __builtin___memmove_chk (dst, src, len, os (dst))
+      |   ^
+18 warnings and 3 errors generated.

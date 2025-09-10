@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/list.c:18:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   18 | typedef int __attribute__ ((bitwidth(9))) int9;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/list.c:19:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   19 | typedef int __attribute__ ((bitwidth(7))) int7;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/list.c:49:7: warning: expression result unused [-Wunused-value]
+   49 |   for(i; i<cnt; ++i)
+      |       ^
+3 warnings generated.

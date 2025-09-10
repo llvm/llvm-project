@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2003-05-14-AtExit  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             264      632
+.dynstr             159      896
+.gnu.version         22     1056
+.gnu.version_r       48     1080
+.rela.dyn           192     1128
+.rela.plt           144     1320
+.init                28     1464
+.plt                128     1504
+.text               388     1664
+.fini                24     2052
+.rodata              21     2076
+.eh_frame_hdr        76     2100
+.eh_frame           264     2176
+.note.ABI-tag        32     2440
+.note.package       112     2472
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             72   131048
+.data                16   131120
+.bss                  8   131136
+.comment            155        0
+Total              2752
+
+

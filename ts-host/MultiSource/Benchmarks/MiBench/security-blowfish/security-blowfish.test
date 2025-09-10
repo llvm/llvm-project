@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/security-blowfish print_test_data
+VERIFY: %b/fpcmp-target %o %S/security-blowfish.reference_output

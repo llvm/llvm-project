@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/network-patricia large.udp
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/network-patricia.reference_output

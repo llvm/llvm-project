@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20061220-1.c:11:3: error: function definition is not allowed here
+   11 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20061220-1.c:15:3: error: call to undeclared function 'nested'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   15 |   nested ();
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20061220-1.c:30:3: error: function definition is not allowed here
+   30 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20061220-1.c:39:3: error: call to undeclared function 'nested'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   39 |   nested ();
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20061220-1.c:49:3: error: function definition is not allowed here
+   49 |   {
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20061220-1.c:63:3: error: call to undeclared function 'nested'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   63 |   nested ();
+      |   ^
+6 errors generated.

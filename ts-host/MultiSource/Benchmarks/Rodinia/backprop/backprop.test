@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/backprop 
+VERIFY: %b/fpcmp-target -a 0.00001 %o %S/backprop.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/vcirc 
+VERIFY: %b/fpcmp-target %o %S/vcirc.reference_output

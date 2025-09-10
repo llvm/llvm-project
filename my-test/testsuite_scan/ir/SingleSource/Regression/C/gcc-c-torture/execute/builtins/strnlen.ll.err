@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:19:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   19 | NOIPA void test_strnlen_str_cst (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noipa))
+      |                               ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:45:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   45 | NOIPA void test_strnlen_str_range (size_t x)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noipa))
+      |                               ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:70:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   70 | NOIPA void test_strnlen_str_range_side_effect (size_t x)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noipa))
+      |                               ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:79:22: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   79 |   A (strnlen ("1234" + i++, n) <= 3);
+      |               ~~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:14:5: note: expanded from macro 'A'
+   14 |   ((expr) ? (void)0                                             \
+      |     ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:79:22: note: use array indexing to silence this warning
+   79 |   A (strnlen ("1234" + i++, n) <= 3);
+      |                      ^
+      |               &      [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strnlen.c:14:5: note: expanded from macro 'A'
+   14 |   ((expr) ? (void)0                                             \
+      |     ^
+4 warnings generated.

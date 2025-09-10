@@ -1,0 +1,21 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030408-1.c:39:26: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   39 |   const struct foo X = { a : 'A', c : 'C', e : 'E', g : 'G', i : 'I' };
+      |                          ^~~
+      |                          .a = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030408-1.c:39:35: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   39 |   const struct foo X = { a : 'A', c : 'C', e : 'E', g : 'G', i : 'I' };
+      |                                   ^~~
+      |                                   .c = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030408-1.c:39:44: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   39 |   const struct foo X = { a : 'A', c : 'C', e : 'E', g : 'G', i : 'I' };
+      |                                            ^~~
+      |                                            .e = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030408-1.c:39:53: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   39 |   const struct foo X = { a : 'A', c : 'C', e : 'E', g : 'G', i : 'I' };
+      |                                                     ^~~
+      |                                                     .g = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030408-1.c:39:62: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   39 |   const struct foo X = { a : 'A', c : 'C', e : 'E', g : 'G', i : 'I' };
+      |                                                              ^~~
+      |                                                              .i = 
+5 warnings generated.

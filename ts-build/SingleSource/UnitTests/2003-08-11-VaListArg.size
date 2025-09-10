@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2003-08-11-VaListArg  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                361    1536
+.eh_frame_hdr           52    1900
+.eh_frame              244    1952
+.text                  902    6292
+.plt                    64    7200
+.preinit_array           8   11360
+.fini_array              8   11368
+.init_array              8   11376
+.dynamic               416   11384
+.got                    40   11800
+.relro_padding         448   11840
+.data                    8   15936
+.tm_clone_table          0   15944
+.got.plt                32   15944
+.bss                     1   15976
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3742
+
+

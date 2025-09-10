@@ -1,0 +1,13 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020506-1.c:294:10: warning: implicit conversion from 'int' to 'signed char' changes value from 255 to -1 [-Wconstant-conversion]
+  294 |   test1 (UCHAR_MAX, 1);
+      |   ~~~~~  ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/limits.h:58:37: note: expanded from macro 'UCHAR_MAX'
+   58 | #define UCHAR_MAX (__SCHAR_MAX__*2  +1)
+      |                    ~~~~~~~~~~~~~~~~~^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020506-1.c:304:10: warning: implicit conversion from 'int' to 'short' changes value from 65535 to -1 [-Wconstant-conversion]
+  304 |   test3 (USHRT_MAX, 1);
+      |   ~~~~~  ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include/limits.h:60:37: note: expanded from macro 'USHRT_MAX'
+   60 | #define USHRT_MAX (__SHRT_MAX__ * 2 + 1)
+      |                    ~~~~~~~~~~~~~~~~~^~~
+2 warnings generated.

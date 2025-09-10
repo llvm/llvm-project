@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ControlFlow-dbl 2325 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/ControlFlow-dbl.reference_output

@@ -1,0 +1,1 @@
+RUN: /usr/bin/python3 %b/test/test_not.py /home/youzhewei.linux/work/llvm-project/ts-host/tools/not /home/youzhewei.linux/work/llvm-project/ts-host/tools/test/check_env

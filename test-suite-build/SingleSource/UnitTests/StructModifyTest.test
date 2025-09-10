@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/StructModifyTest 
+VERIFY: %b/fpcmp-target %o %S/StructModifyTest.reference_output

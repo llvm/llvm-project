@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/miniFE -nx 64 -ny 64 -nz 64
+VERIFY: %b/fpcmp-target %o %S/miniFE.reference_output

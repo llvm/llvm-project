@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/hbd Sort.class
+VERIFY: %b/fpcmp-target %o %S/hbd.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/XSBench -s small -g 1250 -l 1000000
+VERIFY: %b/fpcmp-target %o %S/XSBench.reference_output

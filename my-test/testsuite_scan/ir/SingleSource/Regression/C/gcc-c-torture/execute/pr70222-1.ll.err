@@ -1,0 +1,8 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr70222-1.c:11:17: warning: self-comparison always evaluates to true [-Wtautological-compare]
+   11 |   int e = ((-(c >= c)) < b) > ((int) (-1ULL >> ((a / a) * 15)));
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr70222-1.c:15:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   15 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+2 warnings generated.

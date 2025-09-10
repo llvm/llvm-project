@@ -1,0 +1,5 @@
+File,GreedyReal(s),SegtreReal(s),Ratio(segtre/greedy)
+neon.ll,3.38,31.57,9.340
+t.ll,0.00,0.00,Inf
+t_1024.ll,1.20,1.19,0.992
+test.ll,0.00,0.00,Inf

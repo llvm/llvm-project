@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920429-1.c:3:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    3 | main(){t*p0="ab",*p1;p1=f(p0);if(p0+1!=p1)abort();exit(0);}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920429-1.c:3:10: warning: initializing 't *' (aka 'unsigned char *') with an expression of type 'char[3]' converts between pointers to integer types where one is of the unique plain 'char' type and the other is not [-Wpointer-sign]
+    3 | main(){t*p0="ab",*p1;p1=f(p0);if(p0+1!=p1)abort();exit(0);}
+      |          ^  ~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920429-1.c:3:43: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    3 | main(){t*p0="ab",*p1;p1=f(p0);if(p0+1!=p1)abort();exit(0);}
+      |                                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920429-1.c:3:43: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920429-1.c:3:51: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    3 | main(){t*p0="ab",*p1;p1=f(p0);if(p0+1!=p1)abort();exit(0);}
+      |                                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/920429-1.c:3:51: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+1 warning and 3 errors generated.

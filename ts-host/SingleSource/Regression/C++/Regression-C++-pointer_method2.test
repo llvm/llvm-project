@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-pointer_method2 
+VERIFY: %b/fpcmp-target %o %S/pointer_method2.reference_output

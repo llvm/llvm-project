@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Vector-constpool 
+VERIFY: %b/fpcmp-target %o %S/constpool.reference_output

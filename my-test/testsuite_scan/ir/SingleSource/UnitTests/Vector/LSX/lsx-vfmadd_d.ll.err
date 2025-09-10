@@ -1,0 +1,68 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:7:3: error: use of undeclared identifier '__m128i'
+    7 |   __m128i __m128i_out, __m128i_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:8:3: error: unknown type name '__m128'; did you mean '__mfp8'?
+    8 |   __m128  __m128_out, __m128_result;
+      |   ^~~~~~
+      |   __mfp8
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:9:3: error: use of undeclared identifier '__m128d'
+    9 |   __m128d __m128d_out, __m128d_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:10:3: error: use of undeclared identifier 'v2u64'
+   10 |   v2u64 v2u64_op0, v2u64_op1, v2u64_op2, v2u64_result;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:11:3: error: use of undeclared identifier 'v4i32'
+   11 |   v4i32 v4i32_op0, v4i32_op1, v4i32_op2, v4i32_result;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:19:3: error: use of undeclared identifier 'v2u64_op0'
+   19 |   v2u64_op0 = (v2u64){0x0000000000000000, 0x0000000000000000};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:19:16: error: use of undeclared identifier 'v2u64'
+   19 |   v2u64_op0 = (v2u64){0x0000000000000000, 0x0000000000000000};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:20:3: error: use of undeclared identifier 'v2u64_op1'
+   20 |   v2u64_op1 = (v2u64){0xc77c47cdc0f16549, 0x8a228acac14e440a};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:20:16: error: use of undeclared identifier 'v2u64'
+   20 |   v2u64_op1 = (v2u64){0xc77c47cdc0f16549, 0x8a228acac14e440a};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:21:3: error: use of undeclared identifier 'v2u64_op2'
+   21 |   v2u64_op2 = (v2u64){0x2711bad1e8e309ed, 0xffffffffd24271c4};
+      |   ^~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:21:16: error: use of undeclared identifier 'v2u64'
+   21 |   v2u64_op2 = (v2u64){0x2711bad1e8e309ed, 0xffffffffd24271c4};
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:22:3: error: use of undeclared identifier 'v2u64_result'
+   22 |   v2u64_result = (v2u64){0x2711bad1e8e309ed, 0xffffffffd24271c4};
+      |   ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:22:19: error: use of undeclared identifier 'v2u64'
+   22 |   v2u64_result = (v2u64){0x2711bad1e8e309ed, 0xffffffffd24271c4};
+      |                   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:23:3: error: use of undeclared identifier '__m128d_out'; did you mean '__m128_out'?
+   23 |   __m128d_out = __lsx_vfmadd_d((__m128)v2u64_op0, (__m128)v2u64_op1, (__m128)v2u64_op2);
+      |   ^~~~~~~~~~~
+      |   __m128_out
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:8:11: note: '__m128_out' declared here
+    8 |   __m128  __m128_out, __m128_result;
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:23:17: error: call to undeclared function '__lsx_vfmadd_d'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   23 |   __m128d_out = __lsx_vfmadd_d((__m128)v2u64_op0, (__m128)v2u64_op1, (__m128)v2u64_op2);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:23:33: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   23 |   __m128d_out = __lsx_vfmadd_d((__m128)v2u64_op0, (__m128)v2u64_op1, (__m128)v2u64_op2);
+      |                                 ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:23:52: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   23 |   __m128d_out = __lsx_vfmadd_d((__m128)v2u64_op0, (__m128)v2u64_op1, (__m128)v2u64_op2);
+      |                                                    ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:23:71: error: use of undeclared identifier '__m128'; did you mean '__mfp8'?
+   23 |   __m128d_out = __lsx_vfmadd_d((__m128)v2u64_op0, (__m128)v2u64_op1, (__m128)v2u64_op2);
+      |                                                                       ^~~~~~
+note: '__mfp8' declared here
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LSX/lsx-vfmadd_d.c:24:18: error: use of undeclared identifier 'v2u64_result'
+   24 |   check_lsx_out(&v2u64_result, &__m128d_out, sizeof(__m128d_out), __FILE__, __LINE__);
+      |                  ^~~~~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

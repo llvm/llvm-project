@@ -1,0 +1,59 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:7:3: error: use of undeclared identifier '__m256i'
+    7 |   __m256i __m256i_out, __m256i_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:8:3: error: use of undeclared identifier '__m256'
+    8 |   __m256 __m256_out, __m256_result;
+      |   ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:9:3: error: use of undeclared identifier '__m256d'
+    9 |   __m256d __m256d_out, __m256d_result;
+      |   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:10:3: error: use of undeclared identifier 'v4u64'
+   10 |   v4u64 v4u64_op0, v4u64_op1, v4u64_op2;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:11:3: error: use of undeclared identifier 'v8i32'
+   11 |   v8i32 v8i32_op0, v8i32_op1, v8i32_op2;
+      |   ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:20:1: error: use of undeclared identifier '__m256i_result'
+   20 | __m256i_result = (__m256i){0x0101010101010101, 0x0101010101010101,
+      | ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:20:19: error: use of undeclared identifier '__m256i'
+   20 | __m256i_result = (__m256i){0x0101010101010101, 0x0101010101010101,
+      |                   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:22:3: error: use of undeclared identifier '__m256i_out'
+   22 |   __m256i_out = __lasx_xvreplgr2vr_b(int_op0);
+      |   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:22:17: error: call to undeclared function '__lasx_xvreplgr2vr_b'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   22 |   __m256i_out = __lasx_xvreplgr2vr_b(int_op0);
+      |                 ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:23:19: error: use of undeclared identifier '__m256i_result'
+   23 |   check_lasx_out(&__m256i_result, &__m256i_out, sizeof(__m256i_out), __FILE__, __LINE__);
+      |                   ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:23:36: error: use of undeclared identifier '__m256i_out'
+   23 |   check_lasx_out(&__m256i_result, &__m256i_out, sizeof(__m256i_out), __FILE__, __LINE__);
+      |                                    ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:23:56: error: use of undeclared identifier '__m256i_out'
+   23 |   check_lasx_out(&__m256i_result, &__m256i_out, sizeof(__m256i_out), __FILE__, __LINE__);
+      |                                                        ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:26:1: error: use of undeclared identifier '__m256i_result'
+   26 | __m256i_result = (__m256i){0x0000000000000000, 0x0000000000000000,
+      | ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:26:19: error: use of undeclared identifier '__m256i'
+   26 | __m256i_result = (__m256i){0x0000000000000000, 0x0000000000000000,
+      |                   ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:28:3: error: use of undeclared identifier '__m256i_out'
+   28 |   __m256i_out = __lasx_xvreplgr2vr_b(int_op0);
+      |   ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:29:19: error: use of undeclared identifier '__m256i_result'
+   29 |   check_lasx_out(&__m256i_result, &__m256i_out, sizeof(__m256i_out), __FILE__, __LINE__);
+      |                   ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:29:36: error: use of undeclared identifier '__m256i_out'
+   29 |   check_lasx_out(&__m256i_result, &__m256i_out, sizeof(__m256i_out), __FILE__, __LINE__);
+      |                                    ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:29:56: error: use of undeclared identifier '__m256i_out'
+   29 |   check_lasx_out(&__m256i_result, &__m256i_out, sizeof(__m256i_out), __FILE__, __LINE__);
+      |                                                        ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/LASX/lasx-xvreplgr2vr.c:32:1: error: use of undeclared identifier '__m256i_result'
+   32 | __m256i_result = (__m256i){0x0000000000000000, 0x0000000000000000,
+      | ^~~~~~~~~~~~~~
+fatal error: too many errors emitted, stopping now [-ferror-limit=]
+20 errors generated.

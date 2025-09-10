@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/GlobalDataFlow-flt 3450 5
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/GlobalDataFlow-flt.reference_output

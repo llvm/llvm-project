@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/rawcaudio < clinton.pcm
+VERIFY: %b/fpcmp-target %o %S/rawcaudio.reference_output.little-endian

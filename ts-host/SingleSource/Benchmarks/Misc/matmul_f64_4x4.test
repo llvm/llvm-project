@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/matmul_f64_4x4 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/matmul_f64_4x4.reference_output

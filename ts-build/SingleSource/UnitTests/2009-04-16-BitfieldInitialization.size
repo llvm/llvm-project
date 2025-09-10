@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2009-04-16-BitfieldInitialization  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              216    1296
+.rela.plt               48    1512
+.rodata                168    1560
+.eh_frame_hdr           36    1728
+.eh_frame              168    1768
+.text                 1816    6032
+.plt                    64    7856
+.preinit_array           8   12016
+.fini_array              8   12024
+.init_array              8   12032
+.dynamic               416   12040
+.got                    40   12456
+.relro_padding        3888   12496
+.data                  193   16592
+.tm_clone_table          0   16792
+.got.plt                32   16792
+.bss                     1   16824
+.riscv.attributes      120       0
+.comment               250       0
+Total                 8024
+
+

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2005-07-17-INT-To-FP 
+VERIFY: %b/fpcmp-target %o %S/2005-07-17-INT-To-FP.reference_output

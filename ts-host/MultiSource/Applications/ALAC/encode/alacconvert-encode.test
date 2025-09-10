@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/alacconvert-encode - - < tune.wav
+VERIFY: %b/fpcmp-target %o %S/alacconvert-encode.reference_output

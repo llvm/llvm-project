@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/tsp 1024000
+VERIFY: %b/fpcmp-target %o %S/tsp.reference_output

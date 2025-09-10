@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-comp-goto-1 

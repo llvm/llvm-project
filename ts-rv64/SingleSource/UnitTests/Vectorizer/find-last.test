@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/find-last 
+VERIFY: %b/fpcmp-target %o %S/find-last.reference_output

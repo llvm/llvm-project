@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-objinst 
+VERIFY: %b/fpcmp-target %o %S/objinst.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/sqlite3 -init sqlite3rc :memory: < commands
+VERIFY: %b/fpcmp-target -r 1.0e-9 %o %S/sqlite3.reference_output

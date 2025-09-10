@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20001017-2.c:5:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    5 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20001017-2.c:5:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20001017-2.c:15:17: warning: passing 'unsigned long *' to parameter of type 'long *' converts between pointers to integer types with different sign [-Wpointer-sign]
+   15 |   fn_4parms (a, &b, &c, &d);
+      |                 ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20001017-2.c:2:35: note: passing argument to parameter 'b' here
+    2 | fn_4parms (unsigned char a, long *b, long *c, unsigned int *d)
+      |                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20001017-2.c:15:21: warning: passing 'unsigned long *' to parameter of type 'long *' converts between pointers to integer types with different sign [-Wpointer-sign]
+   15 |   fn_4parms (a, &b, &c, &d);
+      |                     ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20001017-2.c:2:44: note: passing argument to parameter 'c' here
+    2 | fn_4parms (unsigned char a, long *b, long *c, unsigned int *d)
+      |                                            ^
+2 warnings and 1 error generated.

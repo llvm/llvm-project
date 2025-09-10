@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/five11 input-file
+VERIFY: %b/fpcmp-target %o %S/five11.reference_output

@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/FloatPrecision.c:4:20: warning: implicit conversion from 'int' to 'float' changes value from 2147483647 to 2147483648 [-Wimplicit-const-int-float-conversion]
+    4 |   printf("%f\n", X*2147483647);
+      |                   ~^~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/FloatPrecision.c:5:46: warning: implicit conversion from 'int' to 'float' changes value from 2147483647 to 2147483648 [-Wimplicit-const-int-float-conversion]
+    5 |   printf("%x\n", (int)(unsigned long long)(X*2147483647));
+      |                                             ~^~~~~~~~~~
+2 warnings generated.

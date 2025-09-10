@@ -1,0 +1,31 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2020-01-06-coverage-009  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             148      872
+.gnu.version         20     1020
+.gnu.version_r       48     1040
+.rela.dyn           216     1088
+.rela.plt           120     1304
+.init                28     1424
+.plt                112     1456
+.text               648     1600
+.fini                24     2248
+.rodata              52     2272
+.eh_frame_hdr        68     2324
+.eh_frame           244     2392
+.note.ABI-tag        32     2636
+.note.package       112     2668
+.init_array           8   130496
+.fini_array           8   130504
+.data.rel.ro          8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             64   131048
+.data                17   131112
+.bss                 40   131136
+.comment            155        0
+Total              2995
+
+

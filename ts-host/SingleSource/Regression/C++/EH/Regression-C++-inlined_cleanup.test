@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-inlined_cleanup 
+VERIFY: %b/fpcmp-target %o %S/inlined_cleanup.reference_output

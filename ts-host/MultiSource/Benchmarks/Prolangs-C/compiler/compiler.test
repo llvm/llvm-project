@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/compiler 
+VERIFY: %b/fpcmp-target %o %S/compiler.reference_output

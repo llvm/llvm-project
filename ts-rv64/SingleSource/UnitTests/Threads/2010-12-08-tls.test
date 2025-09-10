@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2010-12-08-tls 
+VERIFY: %b/fpcmp-target %o %S/2010-12-08-tls.reference_output

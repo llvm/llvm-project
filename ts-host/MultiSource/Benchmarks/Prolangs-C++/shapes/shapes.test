@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/shapes 
+VERIFY: %b/fpcmp-target %o %S/shapes.reference_output

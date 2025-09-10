@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/harris 
+VERIFY: %b/HashProgramOutput.sh %S/output.txt
+VERIFY: %b/fpcmp-target %S/harris.reference_output %S/output.txt

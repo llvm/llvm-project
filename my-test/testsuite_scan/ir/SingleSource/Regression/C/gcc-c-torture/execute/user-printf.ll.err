@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/user-printf.c:12:45: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   12 | void __attribute__ ((format (printf, 1, 2), noipa))
+      |                                             ^~~~~
+1 warning generated.

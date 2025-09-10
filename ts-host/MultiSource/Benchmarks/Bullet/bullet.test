@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/bullet 
+VERIFY: %b/fpcmp-target %o %S/bullet.reference_output

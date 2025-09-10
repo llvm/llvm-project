@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991228-1.c:1:51: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+    1 | __extension__ union { double d; int i[2]; } u = { d: -0.25 };
+      |                                                   ^~
+      |                                                   .d = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991228-1.c:12:53: warning: use of GNU old-style field designator extension [-Wgnu-designator]
+   12 |   __extension__ union { double d; int i[2]; } u = { d: x };
+      |                                                     ^~
+      |                                                     .d = 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991228-1.c:19:5: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   19 |     exit(0);
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991228-1.c:19:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991228-1.c:22:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   22 |     abort();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991228-1.c:22:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+2 warnings and 2 errors generated.

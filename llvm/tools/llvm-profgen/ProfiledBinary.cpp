@@ -327,7 +327,7 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
 template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
-  const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
+  auto PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
   // FIXME: This should be the page size of the system running profiling.
   // However such info isn't available at post-processing time, assuming
   // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>

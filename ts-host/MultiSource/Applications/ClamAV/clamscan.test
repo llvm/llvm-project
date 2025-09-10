@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/clamscan --debug --exclude-dir .svn --verbose -d%S/dbdir -r inputs/clam.cab inputs/clamdoc.tar.gz inputs/clam.exe inputs/clam.exe.bz2 inputs/clam-v2.rar inputs/clam-v3.rar inputs/clam.zip inputs/README inputs/rtf-test/Doc11.rtf inputs/rtf-test/Doc1.rtf inputs/rtf-test/Doc22.rtf inputs/rtf-test/Doc2.rtf inputs/rtf-test/doc3.rtf inputs/rtf-test/docCLAMexe.rtf inputs/rtf-test/rtf1.rtf inputs/rtf-test/rtf-novirus.rtf
+VERIFY: %b/fpcmp-target %o %S/clamscan.reference_output

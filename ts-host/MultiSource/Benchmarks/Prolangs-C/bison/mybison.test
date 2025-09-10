@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/mybison parse.y.in -v
+VERIFY: %b/fpcmp-target %o %S/mybison.reference_output

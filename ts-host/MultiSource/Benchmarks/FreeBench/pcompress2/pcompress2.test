@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/pcompress2 test.in
+VERIFY: %b/fpcmp-target %o %S/pcompress2.reference_output

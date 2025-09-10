@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/almabench 
+VERIFY: %b/fpcmp-target %o %S/almabench.reference_output

@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/member-function-pointers  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             185      872
+.gnu.version         20     1058
+.gnu.version_r       48     1080
+.rela.dyn           192     1128
+.rela.plt           120     1320
+.init                28     1440
+.plt                112     1472
+.text               364     1600
+.fini                24     1964
+.rodata              20     1988
+.eh_frame_hdr        76     2008
+.eh_frame           248     2088
+.note.ABI-tag        32     2336
+.note.package       112     2368
+.init_array           8   130456
+.fini_array           8   130464
+.dynamic            528   130472
+.got                 48   131000
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2711
+
+

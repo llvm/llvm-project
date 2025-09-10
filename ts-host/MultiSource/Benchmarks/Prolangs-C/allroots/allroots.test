@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/allroots 
+VERIFY: %b/fpcmp-target %o %S/allroots.reference_output

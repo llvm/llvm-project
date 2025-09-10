@@ -1,0 +1,20 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:2:8: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    2 | double normalize(x)double x;{if(x==0)x=0;return x;}
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    3 | main(){char b[9];sprintf(b,"%g",normalize(-0.0));if(strcmp(b,"0"))abort();exit(0);}
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:53: error: call to undeclared library function 'strcmp' with type 'int (const char *, const char *)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    3 | main(){char b[9];sprintf(b,"%g",normalize(-0.0));if(strcmp(b,"0"))abort();exit(0);}
+      |                                                     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:53: note: include the header <string.h> or explicitly provide a declaration for 'strcmp'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:67: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    3 | main(){char b[9];sprintf(b,"%g",normalize(-0.0));if(strcmp(b,"0"))abort();exit(0);}
+      |                                                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:67: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:75: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    3 | main(){char b[9];sprintf(b,"%g",normalize(-0.0));if(strcmp(b,"0"))abort();exit(0);}
+      |                                                                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/ieee/920810-1.c:3:75: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+1 warning and 4 errors generated.

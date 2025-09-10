@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/vla 
+VERIFY: %b/fpcmp-target %o %S/vla.reference_output

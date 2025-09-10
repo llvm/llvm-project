@@ -1,0 +1,2080 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      The system is: Linux - 6.14.0-29-generic - aarch64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /usr/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is GNU, found in:
+        /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/3.31.6/CompilerIdC/a.out
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is GNU, found in:
+        /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/3.31.6/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-xna92v"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-xna92v"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-xna92v'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_fb19b
+        [1/2] /usr/bin/cc   -v -o CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        OFFLOAD_TARGET_NAMES=nvptx-none
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: aarch64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2,rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o' '-c' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_fb19b.dir/'
+         /usr/libexec/gcc/aarch64-linux-gnu/14/cc1 -quiet -v -imultiarch aarch64-linux-gnu /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_fb19b.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mlittle-endian -mabi=lp64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -o /tmp/ccSMw9bZ.s
+        GNU C17 (Ubuntu 14.2.0-19ubuntu2) version 14.2.0 (aarch64-linux-gnu)
+        	compiled by GNU C version 14.2.0, GMP version 6.3.0, MPFR version 4.2.2, MPC version 1.3.1, isl version isl-0.27-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring nonexistent directory "/usr/local/include/aarch64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed/aarch64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed"
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/lib/gcc/aarch64-linux-gnu/14/include
+         /usr/local/include
+         /usr/include/aarch64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 5d386f1bad2d9ffc3d69f3787a392d23
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o' '-c' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_fb19b.dir/'
+         as -v -EL -mabi=lp64 -o CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o /tmp/ccSMw9bZ.s
+        GNU assembler version 2.44 (aarch64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.44
+        COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o' '-c' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.'
+        [2/2] : && /usr/bin/cc  -v -Wl,-v CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -o cmTC_fb19b   && :
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: aarch64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2,rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) 
+        COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_fb19b' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'cmTC_fb19b.'
+         /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cc29KM12.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_fb19b /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o
+        collect2 version 14.2.0
+        /usr/bin/ld -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cc29KM12.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_fb19b /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.44
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_fb19b' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'cmTC_fb19b.'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/lib/gcc/aarch64-linux-gnu/14/include]
+          add: [/usr/local/include]
+          add: [/usr/include/aarch64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/lib/gcc/aarch64-linux-gnu/14/include] ==> [/usr/lib/gcc/aarch64-linux-gnu/14/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/aarch64-linux-gnu] ==> [/usr/include/aarch64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/lib/gcc/aarch64-linux-gnu/14/include;/usr/local/include;/usr/include/aarch64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-xna92v']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_fb19b]
+        ignore line: [[1/2] /usr/bin/cc   -v -o CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: aarch64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o' '-c' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_fb19b.dir/']
+        ignore line: [ /usr/libexec/gcc/aarch64-linux-gnu/14/cc1 -quiet -v -imultiarch aarch64-linux-gnu /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_fb19b.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mlittle-endian -mabi=lp64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -o /tmp/ccSMw9bZ.s]
+        ignore line: [GNU C17 (Ubuntu 14.2.0-19ubuntu2) version 14.2.0 (aarch64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 14.2.0  GMP version 6.3.0  MPFR version 4.2.2  MPC version 1.3.1  isl version isl-0.27-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/aarch64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed/aarch64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/lib/gcc/aarch64-linux-gnu/14/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/aarch64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 5d386f1bad2d9ffc3d69f3787a392d23]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o' '-c' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_fb19b.dir/']
+        ignore line: [ as -v -EL -mabi=lp64 -o CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o /tmp/ccSMw9bZ.s]
+        ignore line: [GNU assembler version 2.44 (aarch64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.44]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o' '-c' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.']
+        ignore line: [[2/2] : && /usr/bin/cc  -v -Wl -v CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -o cmTC_fb19b   && :]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: aarch64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) ]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_fb19b' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'cmTC_fb19b.']
+        link line: [ /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cc29KM12.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_fb19b /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o]
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cc29KM12.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-linux-aarch64.so.1] ==> ignore
+          arg [-X] ==> ignore
+          arg [-EL] ==> ignore
+          arg [-maarch64linux] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_fb19b] ==> ignore
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib]
+          arg [-L/lib/aarch64-linux-gnu] ==> dir [/lib/aarch64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/aarch64-linux-gnu] ==> dir [/usr/lib/aarch64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 14.2.0]
+        ignore line: [/usr/bin/ld -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cc29KM12.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_fb19b /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_fb19b.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o]
+        linker tool for 'C': /usr/bin/ld
+        collapse obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o] ==> [/usr/lib/aarch64-linux-gnu/Scrt1.o]
+        collapse obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o] ==> [/usr/lib/aarch64-linux-gnu/crti.o]
+        collapse obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o] ==> [/usr/lib/aarch64-linux-gnu/crtn.o]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14] ==> [/usr/lib/gcc/aarch64-linux-gnu/14]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/aarch64-linux-gnu] ==> [/lib/aarch64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> [/usr/lib]
+        implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
+        implicit objs: [/usr/lib/aarch64-linux-gnu/Scrt1.o;/usr/lib/aarch64-linux-gnu/crti.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o;/usr/lib/aarch64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/aarch64-linux-gnu/14;/usr/lib/aarch64-linux-gnu;/usr/lib;/lib/aarch64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Running the C compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.44
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-HjdCmZ"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-HjdCmZ"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-HjdCmZ'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_4964c
+        [1/2] /usr/bin/c++   -v -o CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        OFFLOAD_TARGET_NAMES=nvptx-none
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: aarch64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2,rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_4964c.dir/'
+         /usr/libexec/gcc/aarch64-linux-gnu/14/cc1plus -quiet -v -imultiarch aarch64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_4964c.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mlittle-endian -mabi=lp64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -o /tmp/ccGIyWhf.s
+        GNU C++17 (Ubuntu 14.2.0-19ubuntu2) version 14.2.0 (aarch64-linux-gnu)
+        	compiled by GNU C version 14.2.0, GMP version 6.3.0, MPFR version 4.2.2, MPC version 1.3.1, isl version isl-0.27-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring duplicate directory "/usr/include/aarch64-linux-gnu/c++/14"
+        ignoring nonexistent directory "/usr/local/include/aarch64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed/aarch64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed"
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/include/c++/14
+         /usr/include/aarch64-linux-gnu/c++/14
+         /usr/include/c++/14/backward
+         /usr/lib/gcc/aarch64-linux-gnu/14/include
+         /usr/local/include
+         /usr/include/aarch64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 6b45a98d97a77bb8221f3b8c65e29856
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_4964c.dir/'
+         as -v -EL -mabi=lp64 -o CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccGIyWhf.s
+        GNU assembler version 2.44 (aarch64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.44
+        COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.'
+        [2/2] : && /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_4964c   && :
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: aarch64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2,rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) 
+        COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_4964c' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'cmTC_4964c.'
+         /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cceeNk76.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_4964c /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o
+        collect2 version 14.2.0
+        /usr/bin/ld -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cceeNk76.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_4964c /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.44
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_4964c' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'cmTC_4964c.'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/include/c++/14]
+          add: [/usr/include/aarch64-linux-gnu/c++/14]
+          add: [/usr/include/c++/14/backward]
+          add: [/usr/lib/gcc/aarch64-linux-gnu/14/include]
+          add: [/usr/local/include]
+          add: [/usr/include/aarch64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/include/c++/14] ==> [/usr/include/c++/14]
+        collapse include dir [/usr/include/aarch64-linux-gnu/c++/14] ==> [/usr/include/aarch64-linux-gnu/c++/14]
+        collapse include dir [/usr/include/c++/14/backward] ==> [/usr/include/c++/14/backward]
+        collapse include dir [/usr/lib/gcc/aarch64-linux-gnu/14/include] ==> [/usr/lib/gcc/aarch64-linux-gnu/14/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/aarch64-linux-gnu] ==> [/usr/include/aarch64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/include/c++/14;/usr/include/aarch64-linux-gnu/c++/14;/usr/include/c++/14/backward;/usr/lib/gcc/aarch64-linux-gnu/14/include;/usr/local/include;/usr/include/aarch64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-HjdCmZ']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_4964c]
+        ignore line: [[1/2] /usr/bin/c++   -v -o CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: aarch64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_4964c.dir/']
+        ignore line: [ /usr/libexec/gcc/aarch64-linux-gnu/14/cc1plus -quiet -v -imultiarch aarch64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_4964c.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mlittle-endian -mabi=lp64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -o /tmp/ccGIyWhf.s]
+        ignore line: [GNU C++17 (Ubuntu 14.2.0-19ubuntu2) version 14.2.0 (aarch64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 14.2.0  GMP version 6.3.0  MPFR version 4.2.2  MPC version 1.3.1  isl version isl-0.27-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring duplicate directory "/usr/include/aarch64-linux-gnu/c++/14"]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/aarch64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed/aarch64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/include-fixed"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/include/c++/14]
+        ignore line: [ /usr/include/aarch64-linux-gnu/c++/14]
+        ignore line: [ /usr/include/c++/14/backward]
+        ignore line: [ /usr/lib/gcc/aarch64-linux-gnu/14/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/aarch64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 6b45a98d97a77bb8221f3b8c65e29856]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_4964c.dir/']
+        ignore line: [ as -v -EL -mabi=lp64 -o CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccGIyWhf.s]
+        ignore line: [GNU assembler version 2.44 (aarch64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.44]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [[2/2] : && /usr/bin/c++  -v -Wl -v CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_4964c   && :]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: aarch64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) ]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_4964c' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-dumpdir' 'cmTC_4964c.']
+        link line: [ /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cceeNk76.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_4964c /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o]
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cceeNk76.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-linux-aarch64.so.1] ==> ignore
+          arg [-X] ==> ignore
+          arg [-EL] ==> ignore
+          arg [-maarch64linux] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_4964c] ==> ignore
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib]
+          arg [-L/lib/aarch64-linux-gnu] ==> dir [/lib/aarch64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/aarch64-linux-gnu] ==> dir [/usr/lib/aarch64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o]
+        ignore line: [collect2 version 14.2.0]
+        ignore line: [/usr/bin/ld -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cceeNk76.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_4964c /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. -v CMakeFiles/cmTC_4964c.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o]
+        linker tool for 'CXX': /usr/bin/ld
+        collapse obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o] ==> [/usr/lib/aarch64-linux-gnu/Scrt1.o]
+        collapse obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o] ==> [/usr/lib/aarch64-linux-gnu/crti.o]
+        collapse obj [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o] ==> [/usr/lib/aarch64-linux-gnu/crtn.o]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14] ==> [/usr/lib/gcc/aarch64-linux-gnu/14]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/aarch64-linux-gnu] ==> [/lib/aarch64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/usr/lib/aarch64-linux-gnu/Scrt1.o;/usr/lib/aarch64-linux-gnu/crti.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o;/usr/lib/aarch64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/aarch64-linux-gnu/14;/usr/lib/aarch64-linux-gnu;/usr/lib;/lib/aarch64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.44
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-jPMlcx"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-jPMlcx"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-jPMlcx'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_53868
+        [1/2] /usr/bin/cc   -fopenmp -o CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-jPMlcx/OpenMPTryFlag.c
+        [2/2] : && /usr/bin/cc -fopenmp -v CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o -o cmTC_53868   && :
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: aarch64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2,rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) 
+        COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/
+        Reading specs from /usr/lib/gcc/aarch64-linux-gnu/14/libgomp.spec
+        COLLECT_GCC_OPTIONS='-fopenmp' '-v' '-o' 'cmTC_53868' '-mlittle-endian' '-mabi=lp64' '-pthread' '-dumpdir' 'cmTC_53868.'
+         /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/ccvrJ4AN.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_53868 /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadbegin.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o -lgomp -lgcc --push-state --as-needed -lgcc_s --pop-state -lpthread -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadend.o
+        COLLECT_GCC_OPTIONS='-fopenmp' '-v' '-o' 'cmTC_53868' '-mlittle-endian' '-mabi=lp64' '-pthread' '-dumpdir' 'cmTC_53868.'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:296 (message)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    message: |
+      Parsed C OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-jPMlcx']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_53868]
+        ignore line: [[1/2] /usr/bin/cc   -fopenmp -o CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-jPMlcx/OpenMPTryFlag.c]
+        ignore line: [[2/2] : && /usr/bin/cc -fopenmp -v CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o -o cmTC_53868   && :]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: aarch64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) ]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/]
+        ignore line: [Reading specs from /usr/lib/gcc/aarch64-linux-gnu/14/libgomp.spec]
+        ignore line: [COLLECT_GCC_OPTIONS='-fopenmp' '-v' '-o' 'cmTC_53868' '-mlittle-endian' '-mabi=lp64' '-pthread' '-dumpdir' 'cmTC_53868.']
+        link line: [ /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/ccvrJ4AN.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_53868 /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadbegin.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o -lgomp -lgcc --push-state --as-needed -lgcc_s --pop-state -lpthread -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadend.o]
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccvrJ4AN.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lpthread] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-linux-aarch64.so.1] ==> ignore
+          arg [-X] ==> ignore
+          arg [-EL] ==> ignore
+          arg [-maarch64linux] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_53868] ==> ignore
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib]
+          arg [-L/lib/aarch64-linux-gnu] ==> dir [/lib/aarch64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/aarch64-linux-gnu] ==> dir [/usr/lib/aarch64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..]
+          arg [CMakeFiles/cmTC_53868.dir/OpenMPTryFlag.c.o] ==> ignore
+          arg [-lgomp] ==> lib [gomp]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--push-state] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--pop-state] ==> ignore
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14] ==> [/usr/lib/gcc/aarch64-linux-gnu/14]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/aarch64-linux-gnu] ==> [/lib/aarch64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> [/usr/lib]
+        implicit libs: [gomp;gcc;gcc_s;pthread;c;gcc;gcc_s]
+        implicit objs: []
+        implicit dirs: [/usr/lib/gcc/aarch64-linux-gnu/14;/usr/lib/aarch64-linux-gnu;/usr/lib;/lib/aarch64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-pu6htK"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-pu6htK"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-pu6htK'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_70bf4
+        [1/2] /usr/bin/c++   -fopenmp -o CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-pu6htK/OpenMPTryFlag.cpp
+        [2/2] : && /usr/bin/c++ -fopenmp -v CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o -o cmTC_70bf4   && :
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: aarch64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2,rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) 
+        COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/
+        Reading specs from /usr/lib/gcc/aarch64-linux-gnu/14/libgomp.spec
+        COLLECT_GCC_OPTIONS='-fopenmp' '-v' '-o' 'cmTC_70bf4' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-pthread' '-dumpdir' 'cmTC_70bf4.'
+         /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cc6qFpuJ.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_70bf4 /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadbegin.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o -lstdc++ -lm -lgomp -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadend.o
+        COLLECT_GCC_OPTIONS='-fopenmp' '-v' '-o' 'cmTC_70bf4' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-pthread' '-dumpdir' 'cmTC_70bf4.'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:296 (message)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    message: |
+      Parsed CXX OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-pu6htK']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_70bf4]
+        ignore line: [[1/2] /usr/bin/c++   -fopenmp -o CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-pu6htK/OpenMPTryFlag.cpp]
+        ignore line: [[2/2] : && /usr/bin/c++ -fopenmp -v CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o -o cmTC_70bf4   && :]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: aarch64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 14.2.0-19ubuntu2' --with-bugurl=file:///usr/share/doc/gcc-14/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 rust --prefix=/usr --with-gcc-major-version-only --program-suffix=-14 --program-prefix=aarch64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-offload-targets=nvptx-none=/build/gcc-14-g1I132/gcc-14-14.2.0/debian/tmp-nvptx/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=aarch64-linux-gnu --host=aarch64-linux-gnu --target=aarch64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=4]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 14.2.0 (Ubuntu 14.2.0-19ubuntu2) ]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/14/:/usr/libexec/gcc/aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/aarch64-linux-gnu/14/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib/:/lib/aarch64-linux-gnu/:/lib/../lib/:/usr/lib/aarch64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/aarch64-linux-gnu/14/../../../:/lib/:/usr/lib/]
+        ignore line: [Reading specs from /usr/lib/gcc/aarch64-linux-gnu/14/libgomp.spec]
+        ignore line: [COLLECT_GCC_OPTIONS='-fopenmp' '-v' '-o' 'cmTC_70bf4' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mlittle-endian' '-mabi=lp64' '-pthread' '-dumpdir' 'cmTC_70bf4.']
+        link line: [ /usr/libexec/gcc/aarch64-linux-gnu/14/collect2 -plugin /usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper -plugin-opt=-fresolution=/tmp/cc6qFpuJ.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lpthread -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu --as-needed -dynamic-linker /lib/ld-linux-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-843419 -pie -z now -z relro -o cmTC_70bf4 /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/Scrt1.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadbegin.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu -L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib -L/lib/aarch64-linux-gnu -L/lib/../lib -L/usr/lib/aarch64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/aarch64-linux-gnu/14/../../.. CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o -lstdc++ -lm -lgomp -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu/crtn.o /usr/lib/gcc/aarch64-linux-gnu/14/crtoffloadend.o]
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/libexec/gcc/aarch64-linux-gnu/14/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/libexec/gcc/aarch64-linux-gnu/14/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cc6qFpuJ.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lpthread] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-linux-aarch64.so.1] ==> ignore
+          arg [-X] ==> ignore
+          arg [-EL] ==> ignore
+          arg [-maarch64linux] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_70bf4] ==> ignore
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib]
+          arg [-L/lib/aarch64-linux-gnu] ==> dir [/lib/aarch64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/aarch64-linux-gnu] ==> dir [/usr/lib/aarch64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..]
+          arg [CMakeFiles/cmTC_70bf4.dir/OpenMPTryFlag.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgomp] ==> lib [gomp]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14] ==> [/usr/lib/gcc/aarch64-linux-gnu/14]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/aarch64-linux-gnu] ==> [/lib/aarch64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../..] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gomp;gcc_s;gcc;pthread;c;gcc_s;gcc]
+        implicit objs: []
+        implicit dirs: [/usr/lib/gcc/aarch64-linux-gnu/14;/usr/lib/aarch64-linux-gnu;/usr/lib;/lib/aarch64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:456 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:596 (_OPENMP_GET_SPEC_DATE)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP version"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-EKS5n3"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-EKS5n3"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_SPECTEST_C_"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-EKS5n3'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e8c82
+        [1/2] /usr/bin/cc   -fopenmp -o CMakeFiles/cmTC_e8c82.dir/OpenMPCheckVersion.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-EKS5n3/OpenMPCheckVersion.c
+        [2/2] : && /usr/bin/cc -fopenmp  CMakeFiles/cmTC_e8c82.dir/OpenMPCheckVersion.c.o -o cmTC_e8c82   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:456 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:596 (_OPENMP_GET_SPEC_DATE)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP version"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-bf9TBe"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-bf9TBe"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_SPECTEST_CXX_"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-bf9TBe'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_9c239
+        [1/2] /usr/bin/c++   -fopenmp -o CMakeFiles/cmTC_9c239.dir/OpenMPCheckVersion.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-bf9TBe/OpenMPCheckVersion.cpp
+        [2/2] : && /usr/bin/c++ -fopenmp  CMakeFiles/cmTC_9c239.dir/OpenMPCheckVersion.cpp.o -o cmTC_9c239   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/DetectArchitecture.cmake:8 (try_compile)"
+      - "CMakeLists.txt:263 (detect_architecture)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_ARCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_3aa82
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_3aa82.dir/DetectArchitecture.c.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules/DetectArchitecture.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_3aa82.dir/DetectArchitecture.c.o -o cmTC_3aa82   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:135 (check_library_exists)"
+    checks:
+      - "Looking for shm_open in rt"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-43ofCc"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-43ofCc"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_LIB_RT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-43ofCc'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_cf136
+        [1/2] /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=shm_open -o CMakeFiles/cmTC_cf136.dir/CheckFunctionExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-43ofCc/CheckFunctionExists.c
+        [2/2] : && /usr/bin/cc -DCHECK_FUNCTION_EXISTS=shm_open  CMakeFiles/cmTC_cf136.dir/CheckFunctionExists.c.o -o cmTC_cf136  -lrt && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:188 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WALL"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-sLjIGH"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-sLjIGH"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WALL"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-sLjIGH'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_5e5e5
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WALL  -Wall -std=c++17   -Wall -o CMakeFiles/cmTC_5e5e5.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-sLjIGH/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  CMakeFiles/cmTC_5e5e5.dir/src.cxx.o -o cmTC_5e5e5   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:189 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WEXTRA"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-UhqEOX"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-UhqEOX"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WEXTRA"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-UhqEOX'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_a26f3
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WEXTRA  -Wall  -Wextra -std=c++17   -Wextra -o CMakeFiles/cmTC_a26f3.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-UhqEOX/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  CMakeFiles/cmTC_a26f3.dir/src.cxx.o -o cmTC_a26f3   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:190 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSHADOW"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-zQWk1h"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-zQWk1h"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSHADOW"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-zQWk1h'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_eb522
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WSHADOW  -Wall  -Wextra  -Wshadow -std=c++17   -Wshadow -o CMakeFiles/cmTC_eb522.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-zQWk1h/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  CMakeFiles/cmTC_eb522.dir/src.cxx.o -o cmTC_eb522   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:191 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WFLOAT_EQUAL"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-NnfdHK"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-NnfdHK"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WFLOAT_EQUAL"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-NnfdHK'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_3c032
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WFLOAT_EQUAL  -Wall  -Wextra  -Wshadow  -Wfloat-equal -std=c++17   -Wfloat-equal -o CMakeFiles/cmTC_3c032.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-NnfdHK/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  CMakeFiles/cmTC_3c032.dir/src.cxx.o -o cmTC_3c032   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:192 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WOLD_STYLE_CAST"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-celpJs"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-celpJs"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WOLD_STYLE_CAST"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-celpJs'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_6f934
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WOLD_STYLE_CAST  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast -std=c++17   -Wold-style-cast -o CMakeFiles/cmTC_6f934.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-celpJs/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  CMakeFiles/cmTC_6f934.dir/src.cxx.o -o cmTC_6f934   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:193 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WCONVERSION"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-S7T4W1"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-S7T4W1"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WCONVERSION"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-S7T4W1'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_678c2
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WCONVERSION  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion -std=c++17   -Wconversion -o CMakeFiles/cmTC_678c2.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-S7T4W1/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  CMakeFiles/cmTC_678c2.dir/src.cxx.o -o cmTC_678c2   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:195 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WERROR"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-TTzhLo"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-TTzhLo"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WERROR"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-TTzhLo'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_213db
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WERROR  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror -std=c++17   -Werror -o CMakeFiles/cmTC_213db.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-TTzhLo/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  CMakeFiles/cmTC_213db.dir/src.cxx.o -o cmTC_213db   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:201 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_PEDANTIC"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-s94deB"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-s94deB"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_PEDANTIC"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-s94deB'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_0a9bc
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_PEDANTIC  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic -std=c++17   -pedantic -o CMakeFiles/cmTC_0a9bc.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-s94deB/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  CMakeFiles/cmTC_0a9bc.dir/src.cxx.o -o cmTC_0a9bc   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:202 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_PEDANTIC_ERRORS"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-iJ3Jxi"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-iJ3Jxi"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_PEDANTIC_ERRORS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-iJ3Jxi'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_6753f
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_PEDANTIC_ERRORS  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors -std=c++17   -pedantic-errors -o CMakeFiles/cmTC_6753f.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-iJ3Jxi/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  CMakeFiles/cmTC_6753f.dir/src.cxx.o -o cmTC_6753f   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:203 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSHORTEN_64_TO_32"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Rgjtfw"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Rgjtfw"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSHORTEN_64_TO_32"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Rgjtfw'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_78a14
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WSHORTEN_64_TO_32  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -Wshorten-64-to-32 -std=c++17   -Wshorten-64-to-32 -o CMakeFiles/cmTC_78a14.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Rgjtfw/src.cxx
+        FAILED: CMakeFiles/cmTC_78a14.dir/src.cxx.o 
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WSHORTEN_64_TO_32  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -Wshorten-64-to-32 -std=c++17   -Wshorten-64-to-32 -o CMakeFiles/cmTC_78a14.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Rgjtfw/src.cxx
+        c++: error: unrecognized command-line option '-Wshorten-64-to-32'
+        c++: error: unrecognized command-line option '-Wshorten-64-to-32'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:204 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_FSTRICT_ALIASING"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Sijl7N"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Sijl7N"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_FSTRICT_ALIASING"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Sijl7N'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e3750
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_FSTRICT_ALIASING  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing -std=c++17   -fstrict-aliasing -o CMakeFiles/cmTC_e3750.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Sijl7N/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  CMakeFiles/cmTC_e3750.dir/src.cxx.o -o cmTC_e3750   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:207 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Z1ULxS"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Z1ULxS"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Z1ULxS'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_fc6c0
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations -std=c++17   -Wno-deprecated-declarations -o CMakeFiles/cmTC_fc6c0.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Z1ULxS/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  CMakeFiles/cmTC_fc6c0.dir/src.cxx.o -o cmTC_fc6c0   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:217 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WNO_DEPRECATED"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-g1uh92"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-g1uh92"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WNO_DEPRECATED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-g1uh92'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_550fe
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WNO_DEPRECATED  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated -std=c++17   -Wno-deprecated -o CMakeFiles/cmTC_550fe.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-g1uh92/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  CMakeFiles/cmTC_550fe.dir/src.cxx.o -o cmTC_550fe   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:225 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSTRICT_ALIASING"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-llgyFr"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-llgyFr"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSTRICT_ALIASING"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-llgyFr'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_79555
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WSTRICT_ALIASING  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing -std=c++17   -Wstrict-aliasing -o CMakeFiles/cmTC_79555.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-llgyFr/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  CMakeFiles/cmTC_79555.dir/src.cxx.o -o cmTC_79555   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:230 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WD654"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-A0PWrL"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-A0PWrL"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WD654"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-A0PWrL'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_88dd2
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WD654  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -wd654 -std=c++17   -wd654 -o CMakeFiles/cmTC_88dd2.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-A0PWrL/src.cxx
+        FAILED: CMakeFiles/cmTC_88dd2.dir/src.cxx.o 
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WD654  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -wd654 -std=c++17   -wd654 -o CMakeFiles/cmTC_88dd2.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-A0PWrL/src.cxx
+        c++: error: unrecognized command-line option '-wd654'
+        c++: error: unrecognized command-line option '-wd654'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:231 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WTHREAD_SAFETY"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-OivQx6"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-OivQx6"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WTHREAD_SAFETY"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-OivQx6'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_2d55b
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WTHREAD_SAFETY  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wthread-safety -std=c++17   -Wthread-safety -o CMakeFiles/cmTC_2d55b.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-OivQx6/src.cxx
+        FAILED: CMakeFiles/cmTC_2d55b.dir/src.cxx.o 
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WTHREAD_SAFETY  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wthread-safety -std=c++17   -Wthread-safety -o CMakeFiles/cmTC_2d55b.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-OivQx6/src.cxx
+        c++: error: unrecognized command-line option '-Wthread-safety'
+        c++: error: unrecognized command-line option '-Wthread-safety'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:282 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_COVERAGE"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-ZEefca"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-ZEefca"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_COVERAGE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-ZEefca'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_b8999
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_COVERAGE  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  --coverage -std=c++17   --coverage -o CMakeFiles/cmTC_b8999.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-ZEefca/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  --coverage  CMakeFiles/cmTC_b8999.dir/src.cxx.o -o cmTC_b8999   && :
+        
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "MicroBenchmarks/libs/benchmark/cmake/CXXFeatureCheck.cmake:57 (try_run)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:313 (cxx_feature_check)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_HAVE_GNU_POSIX_REGEX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_920c1
+        [1/2] /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -std=c++11 -o CMakeFiles/cmTC_920c1.dir/gnu_posix_regex.cpp.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/gnu_posix_regex.cpp
+        FAILED: CMakeFiles/cmTC_920c1.dir/gnu_posix_regex.cpp.o 
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -std=c++11 -o CMakeFiles/cmTC_920c1.dir/gnu_posix_regex.cpp.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/gnu_posix_regex.cpp
+        /home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/gnu_posix_regex.cpp:1:10: fatal error: gnuregex.h: No such file or directory
+            1 | #include <gnuregex.h>
+              |          ^~~~~~~~~~~~
+        compilation terminated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+    runResult:
+      variable: "RUN_HAVE_GNU_POSIX_REGEX"
+      cached: true
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "MicroBenchmarks/libs/benchmark/cmake/CXXFeatureCheck.cmake:57 (try_run)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:314 (cxx_feature_check)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_HAVE_POSIX_REGEX"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_1ba61
+        [1/2] /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -std=c++11 -o CMakeFiles/cmTC_1ba61.dir/posix_regex.cpp.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/posix_regex.cpp
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  CMakeFiles/cmTC_1ba61.dir/posix_regex.cpp.o -o cmTC_1ba61   && :
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_HAVE_POSIX_REGEX"
+      cached: true
+      stdout: |
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "MicroBenchmarks/libs/benchmark/cmake/CXXFeatureCheck.cmake:57 (try_run)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:323 (cxx_feature_check)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_HAVE_STEADY_CLOCK"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_0248e
+        [1/2] /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -std=c++11 -o CMakeFiles/cmTC_0248e.dir/steady_clock.cpp.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/steady_clock.cpp
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  CMakeFiles/cmTC_0248e.dir/steady_clock.cpp.o -o cmTC_0248e   && :
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_HAVE_STEADY_CLOCK"
+      cached: true
+      stdout: |
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/usr/share/cmake-3.31/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:326 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-kzReyn"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-kzReyn"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-kzReyn'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e026a
+        [1/2] /usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_e026a.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-kzReyn/src.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_e026a.dir/src.c.o -o cmTC_e026a   && :
+        
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "MicroBenchmarks/libs/benchmark/cmake/CXXFeatureCheck.cmake:57 (try_run)"
+      - "MicroBenchmarks/libs/benchmark/CMakeLists.txt:327 (cxx_feature_check)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_HAVE_PTHREAD_AFFINITY"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_011bf
+        [1/2] /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -std=c++11 -o CMakeFiles/cmTC_011bf.dir/pthread_affinity.cpp.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/pthread_affinity.cpp
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  CMakeFiles/cmTC_011bf.dir/pthread_affinity.cpp.o -o cmTC_011bf   && :
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_HAVE_PTHREAD_AFFINITY"
+      cached: true
+      stdout: |
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/test/CMakeLists.txt:8 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WNO_UNUSED_VARIABLE"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-YULBxh"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-YULBxh"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WNO_UNUSED_VARIABLE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-YULBxh'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_9b838
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_WNO_UNUSED_VARIABLE  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable -std=c++17   -Wno-unused-variable -o CMakeFiles/cmTC_9b838.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-YULBxh/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  CMakeFiles/cmTC_9b838.dir/src.cxx.o -o cmTC_9b838   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/test/CMakeLists.txt:33 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test BENCHMARK_HAS_O3_FLAG"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-SHxniy"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-SHxniy"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "BENCHMARK_HAS_O3_FLAG"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-SHxniy'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_41e12
+        [1/2] /usr/bin/c++ -DBENCHMARK_HAS_O3_FLAG  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  -std=c++17   -O3 -o CMakeFiles/cmTC_41e12.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-SHxniy/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  CMakeFiles/cmTC_41e12.dir/src.cxx.o -o cmTC_41e12   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/test/CMakeLists.txt:136 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test BENCHMARK_HAS_DEPRECATED_DECLARATIONS_FLAG"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7R01Qm"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7R01Qm"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "BENCHMARK_HAS_DEPRECATED_DECLARATIONS_FLAG"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7R01Qm'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_f26cf
+        [1/2] /usr/bin/c++ -DBENCHMARK_HAS_DEPRECATED_DECLARATIONS_FLAG  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  -std=c++17   -Werror=deprecated-declarations -o CMakeFiles/cmTC_f26cf.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7R01Qm/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  CMakeFiles/cmTC_f26cf.dir/src.cxx.o -o cmTC_f26cf   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/test/CMakeLists.txt:209 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test BENCHMARK_HAS_WNO_ODR"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-qeW4Vb"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-qeW4Vb"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "BENCHMARK_HAS_WNO_ODR"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-qeW4Vb'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_ac1ca
+        [1/2] /usr/bin/c++ -DBENCHMARK_HAS_WNO_ODR  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  -std=c++17   -Wno-odr -o CMakeFiles/cmTC_ac1ca.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-qeW4Vb/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  CMakeFiles/cmTC_ac1ca.dir/src.cxx.o -o cmTC_ac1ca   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/test/CMakeLists.txt:210 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test BENCHMARK_HAS_WNO_LTO_TYPE_MISMATCH"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-C5Ywyq"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-C5Ywyq"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "     -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake/Modules;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/MicroBenchmarks/libs/benchmark/cmake"
+    buildResult:
+      variable: "BENCHMARK_HAS_WNO_LTO_TYPE_MISMATCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-C5Ywyq'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_b79ed
+        [1/2] /usr/bin/c++ -DBENCHMARK_HAS_WNO_LTO_TYPE_MISMATCH  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  -std=c++17   -Wno-lto-type-mismatch -o CMakeFiles/cmTC_b79ed.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-C5Ywyq/src.cxx
+        [2/2] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Werror  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wno-deprecated  -Wstrict-aliasing  -Wno-unused-variable  CMakeFiles/cmTC_b79ed.dir/src.cxx.o -o cmTC_b79ed   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/XRay/CMakeLists.txt:3 (check_cxx_compiler_flag)"
+    checks:
+      - "Performing Test COMPILER_HAS_FXRAY_INSTRUMENT"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-PD5tPX"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-PD5tPX"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "COMPILER_HAS_FXRAY_INSTRUMENT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-PD5tPX'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_91b02
+        [1/2] /usr/bin/c++ -DCOMPILER_HAS_FXRAY_INSTRUMENT  -fxray-instrument -o CMakeFiles/cmTC_91b02.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-PD5tPX/src.cxx
+        FAILED: CMakeFiles/cmTC_91b02.dir/src.cxx.o 
+        /usr/bin/c++ -DCOMPILER_HAS_FXRAY_INSTRUMENT  -fxray-instrument -o CMakeFiles/cmTC_91b02.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-PD5tPX/src.cxx
+        c++: error: unrecognized command-line option '-fxray-instrument'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckIncludeFiles.cmake:141 (try_compile)"
+      - "MicroBenchmarks/XRay/CMakeLists.txt:4 (check_include_files)"
+    checks:
+      - "Looking for include file xray/xray_interface.h"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-wH1BKa"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-wH1BKa"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_XRAY_INTERFACE_INCLUDE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-wH1BKa'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_138f0
+        [1/2] /usr/bin/c++    -o CMakeFiles/cmTC_138f0.dir/HAVE_XRAY_INTERFACE_INCLUDE.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-wH1BKa/HAVE_XRAY_INTERFACE_INCLUDE.cpp
+        FAILED: CMakeFiles/cmTC_138f0.dir/HAVE_XRAY_INTERFACE_INCLUDE.cpp.o 
+        /usr/bin/c++    -o CMakeFiles/cmTC_138f0.dir/HAVE_XRAY_INTERFACE_INCLUDE.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-wH1BKa/HAVE_XRAY_INTERFACE_INCLUDE.cpp
+        /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-wH1BKa/HAVE_XRAY_INTERFACE_INCLUDE.cpp:2:10: fatal error: xray/xray_interface.h: No such file or directory
+            2 | #include <xray/xray_interface.h>
+              |          ^~~~~~~~~~~~~~~~~~~~~~~
+        compilation terminated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "MicroBenchmarks/libs/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "MicroBenchmarks/SLPVectorization/CMakeLists.txt:3 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_STD_CXX11"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-XpqNO6"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-XpqNO6"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_STD_CXX11"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-XpqNO6'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_55454
+        [1/2] /usr/bin/c++ -DHAVE_CXX_FLAG_STD_CXX11  -std=c++11   -std=c++11 -o CMakeFiles/cmTC_55454.dir/src.cxx.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-XpqNO6/src.cxx
+        [2/2] : && /usr/bin/c++ -std=c++11  CMakeFiles/cmTC_55454.dir/src.cxx.o -o cmTC_55454   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckCSourceCompiles.cmake:58 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/FindIntl.cmake:113 (check_c_source_compiles)"
+      - "MultiSource/Applications/ClamAV/CMakeLists.txt:178 (find_package)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-nIgNW7"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-nIgNW7"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "Intl_IS_BUILT_IN"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-nIgNW7'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_05124
+        [1/2] /usr/bin/cc -DIntl_IS_BUILT_IN   -o CMakeFiles/cmTC_05124.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-nIgNW7/src.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_05124.dir/src.c.o -o cmTC_05124   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCCompilerFlag.cmake:56 (cmake_check_compiler_flag)"
+      - "MultiSource/Applications/ClamAV/CMakeLists.txt:183 (check_c_compiler_flag)"
+    checks:
+      - "Performing Test COMPILER_HAS_NO_DEFINE_TARGET_OS_MACROS"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-5Gltbg"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-5Gltbg"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "COMPILER_HAS_NO_DEFINE_TARGET_OS_MACROS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-5Gltbg'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_87164
+        [1/2] /usr/bin/cc -DCOMPILER_HAS_NO_DEFINE_TARGET_OS_MACROS  -fno-define-target-os-macros -o CMakeFiles/cmTC_87164.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-5Gltbg/src.c
+        FAILED: CMakeFiles/cmTC_87164.dir/src.c.o 
+        /usr/bin/cc -DCOMPILER_HAS_NO_DEFINE_TARGET_OS_MACROS  -fno-define-target-os-macros -o CMakeFiles/cmTC_87164.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-5Gltbg/src.c
+        cc: error: unrecognized command-line option '-fno-define-target-os-macros'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "MultiSource/Benchmarks/Prolangs-C/plot2fig/CMakeLists.txt:2 (check_function_exists)"
+    checks:
+      - "Looking for re_comp"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7MiSvy"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7MiSvy"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_RE_COMP"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7MiSvy'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_92fcd
+        [1/2] /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=re_comp -o CMakeFiles/cmTC_92fcd.dir/CheckFunctionExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-7MiSvy/CheckFunctionExists.c
+        [2/2] : && /usr/bin/cc -DCHECK_FUNCTION_EXISTS=re_comp  CMakeFiles/cmTC_92fcd.dir/CheckFunctionExists.c.o -o cmTC_92fcd   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "SingleSource/Benchmarks/Misc/CMakeLists.txt:47 (check_symbol_exists)"
+    checks:
+      - "Looking for __init_cpu_features"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-3eS70c"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-3eS70c"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAS_AARCH64_FMV"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-3eS70c'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_88926
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_88926.dir/CheckSymbolExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-3eS70c/CheckSymbolExists.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_88926.dir/CheckSymbolExists.c.o -o cmTC_88926   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "SingleSource/UnitTests/Vector/CMakeLists.txt:8 (CHECK_SYMBOL_EXISTS)"
+    checks:
+      - "Looking for __ARM_NEON"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-uF6gwF"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-uF6gwF"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "NEON_AVAILABLE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-uF6gwF'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_35c06
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_35c06.dir/CheckSymbolExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-uF6gwF/CheckSymbolExists.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_35c06.dir/CheckSymbolExists.c.o -o cmTC_35c06   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCCompilerFlag.cmake:56 (cmake_check_compiler_flag)"
+      - "SingleSource/UnitTests/CMakeLists.txt:62 (check_c_compiler_flag)"
+    checks:
+      - "Performing Test COMPILER_HAS_MATRIX_FLAG"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-1QsPtQ"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-1QsPtQ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "COMPILER_HAS_MATRIX_FLAG"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-1QsPtQ'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_18664
+        [1/2] /usr/bin/cc -DCOMPILER_HAS_MATRIX_FLAG  -fenable-matrix -o CMakeFiles/cmTC_18664.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-1QsPtQ/src.c
+        FAILED: CMakeFiles/cmTC_18664.dir/src.c.o 
+        /usr/bin/cc -DCOMPILER_HAS_MATRIX_FLAG  -fenable-matrix -o CMakeFiles/cmTC_18664.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-1QsPtQ/src.c
+        cc1: error: unknown pass matrix specified in '-fenable'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "SingleSource/Regression/C/gcc-c-torture/execute/CMakeLists.txt:209 (CHECK_SYMBOL_EXISTS)"
+    checks:
+      - "Looking for mmap"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Cr7BRh"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Cr7BRh"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_MMAP"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Cr7BRh'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_df851
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_df851.dir/CheckSymbolExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeScratch/TryCompile-Cr7BRh/CheckSymbolExists.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_df851.dir/CheckSymbolExists.c.o -o cmTC_df851   && :
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/DetectArchitecture.cmake:8 (try_compile)"
+      - "CMakeLists.txt:263 (detect_architecture)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_ARCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_5fb07
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_5fb07.dir/DetectArchitecture.c.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules/DetectArchitecture.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_5fb07.dir/DetectArchitecture.c.o -o cmTC_5fb07   && :
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/DetectArchitecture.cmake:8 (try_compile)"
+      - "CMakeLists.txt:263 (detect_architecture)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_ARCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_8060e
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_8060e.dir/DetectArchitecture.c.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules/DetectArchitecture.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_8060e.dir/DetectArchitecture.c.o -o cmTC_8060e   && :
+        
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/DetectArchitecture.cmake:8 (try_compile)"
+      - "CMakeLists.txt:263 (detect_architecture)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_ARCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-host/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e5b01
+        [1/2] /usr/bin/cc    -o CMakeFiles/cmTC_e5b01.dir/DetectArchitecture.c.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules/DetectArchitecture.c
+        [2/2] : && /usr/bin/cc   CMakeFiles/cmTC_e5b01.dir/DetectArchitecture.c.o -o cmTC_e5b01   && :
+        
+      exitCode: 0
+...

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-compare 
+VERIFY: %b/fpcmp-target %o %S/compare.reference_output

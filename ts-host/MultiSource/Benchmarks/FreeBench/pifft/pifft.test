@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/pifft test.in
+VERIFY: %b/fpcmp-target %o %S/pifft.reference_output

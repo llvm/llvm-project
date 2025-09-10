@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-hello 
+VERIFY: %b/fpcmp-target %o %S/hello.reference_output

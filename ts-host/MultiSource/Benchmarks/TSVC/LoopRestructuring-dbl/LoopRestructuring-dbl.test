@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/LoopRestructuring-dbl 4350 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/LoopRestructuring-dbl.reference_output

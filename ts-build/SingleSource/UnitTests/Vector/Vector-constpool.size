@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Vector/Vector-constpool  :
+section                 size     addr
+.interp                   33      736
+.note.ABI-tag             32      772
+.note.package            120      804
+.dynsym                  144      928
+.gnu.version              12     1072
+.gnu.version_r            48     1084
+.gnu.hash                 28     1136
+.dynstr                  127     1164
+.rela.dyn                192     1296
+.rela.plt                 48     1488
+.rodata                17729     1536
+.eh_frame_hdr             36    19268
+.eh_frame                172    19304
+.text                 100016    23572
+.plt                      64   123600
+.preinit_array             8   127760
+.fini_array                8   127768
+.init_array                8   127776
+.dynamic                 416   127784
+.got                      40   128200
+.relro_padding          2832   128240
+.data                      8   132336
+.tm_clone_table            0   132344
+.got.plt                  32   132344
+.bss                       1   132376
+.riscv.attributes        116        0
+.comment                 250        0
+Total                 122520
+
+

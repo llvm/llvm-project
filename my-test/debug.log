@@ -1,0 +1,2 @@
+clang: error: no such file or directory: 'aarch64_neon_intrinsics.c'
+clang: error: no input files

@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <utility>
 
@@ -74,8 +75,13 @@ private:
   /// This class contains the mapping between the Values to vreg related data.
   class ValueToVRegInfo {
   public:
-    ValueToVRegInfo() = default;
-
+    ValueToVRegInfo() : HotVHead(0), HotTHead(0) {
+      for (unsigned i = 0; i < HotN; ++i) {
+        HotVRegs[i] = HotEntryV{};
+        HotOffsets[i] = HotEntryT{};
+      }
+    }
+    
     using VRegListT = SmallVector<Register, 1>;
     using OffsetListT = SmallVector<uint64_t, 1>;
 
@@ -87,19 +93,27 @@ private:
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
     VRegListT *getVRegs(const Value &V) {
+      if (auto *H = probeHotV(V)) return H;          // Check the tiny hot cache first.
       auto It = ValToVRegs.find(&V);
-      if (It != ValToVRegs.end())
+      if (It != ValToVRegs.end()) {
+        pushHotV(V, It->second);                     // Refresh hot cache on hit.
         return It->second;
-
-      return insertVRegs(V);
+      }
+      auto *P = insertVRegs(V);                      // Also refresh hot cache on insert.
+      pushHotV(V, P);
+      return P;
     }
 
     OffsetListT *getOffsets(const Value &V) {
+      if (auto *H = probeHotT(V)) return H;// Check the tiny hot cache first.
       auto It = TypeToOffsets.find(V.getType());
-      if (It != TypeToOffsets.end())
+      if (It != TypeToOffsets.end()) {
+        pushHotT(V, It->second);
         return It->second;
-
-      return insertOffsets(V);
+      }
+      auto *P = insertOffsets(V);
+      pushHotT(V, P);
+      return P;
     }
 
     const_vreg_iterator findVRegs(const Value &V) const {
@@ -113,9 +127,56 @@ private:
       TypeToOffsets.clear();
       VRegAlloc.DestroyAll();
       OffsetAlloc.DestroyAll();
+      for (unsigned i = 0; i < HotN; ++i) {
+        HotVRegs[i] = HotEntryV{};
+        HotOffsets[i] = HotEntryT{};
+      }
+      HotVHead = HotTHead = 0;
     }
 
   private:
+    // --- Tiny hot cache -----------------------------------------------------
+    // A very small ring-buffer cache to capture common hot lookups and reduce
+    // DenseMap probes on hot paths during IR translation.
+    static constexpr unsigned HotN = 8;
+    struct HotEntryV {
+      const Value *Key = nullptr;
+      VRegListT *Val = nullptr;
+    };
+    struct HotEntryT {
+      const Type *Key = nullptr;
+      OffsetListT *Val = nullptr;
+    };
+    HotEntryV HotVRegs[HotN];
+    HotEntryT HotOffsets[HotN];
+    unsigned HotVHead = 0, HotTHead = 0;
+
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    VRegListT *probeHotV(const Value &V) const {
+      // 小線性掃描即可（HotN 很小）
+      for (unsigned i = 0; i < HotN; ++i)
+        if (HotVRegs[i].Key == &V) return HotVRegs[i].Val;
+      return nullptr;
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    void pushHotV(const Value &V, VRegListT *Ptr) {
+      HotVRegs[HotVHead] = {&V, Ptr};
+      HotVHead = (HotVHead + 1) % HotN;
+    }
+
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    OffsetListT *probeHotT(const Value &V) const {
+      const Type *Ty = V.getType();
+      for (unsigned i = 0; i < HotN; ++i)
+        if (HotOffsets[i].Key == Ty) return HotOffsets[i].Val;
+      return nullptr;
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    void pushHotT(const Value &V, OffsetListT *Ptr) {
+      HotOffsets[HotTHead] = {V.getType(), Ptr};
+      HotTHead = (HotTHead + 1) % HotN;
+    }
+
     VRegListT *insertVRegs(const Value &V) {
       assert(!ValToVRegs.contains(&V) && "Value already exists");
 

@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/McGill/chomp.c:24:6: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   24 | int *copy_data(data) /* creates a duplicate of a given -data list */
+      |      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/McGill/chomp.c:96:6: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+   96 | void dump_play(play) /* and for the entire game tree */
+      |      ^
+2 warnings generated.

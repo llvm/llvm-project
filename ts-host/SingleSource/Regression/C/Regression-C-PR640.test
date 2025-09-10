@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-PR640 
+VERIFY: %b/fpcmp-target %o %S/PR640.reference_output

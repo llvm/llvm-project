@@ -1,0 +1,15 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/mempcpy-2.c:41:41: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   41 |   if (mempcpy ((char *) buf3 + 2, "bcd" + ++i, 2) != (char *) buf1 + 4
+      |                                   ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/mempcpy-2.c:41:41: note: use array indexing to silence this warning
+   41 |   if (mempcpy ((char *) buf3 + 2, "bcd" + ++i, 2) != (char *) buf1 + 4
+      |                                         ^    
+      |                                   &     [    ]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/mempcpy-2.c:106:32: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  106 |   if (mempcpy (buf4 + 2, "bcd" + i++, 2) != buf2 + 4
+      |                          ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/mempcpy-2.c:106:32: note: use array indexing to silence this warning
+  106 |   if (mempcpy (buf4 + 2, "bcd" + i++, 2) != buf2 + 4
+      |                                ^    
+      |                          &     [    ]
+2 warnings generated.

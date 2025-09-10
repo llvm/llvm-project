@@ -1,0 +1,8 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/vprintf-1.c:23:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/vprintf-1.c:47:15: warning: format string is empty [-Wformat-zero-length]
+   47 |   test (3, 0, "", (3));
+      |               ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/vprintf-1.c:47:15: warning: format string is empty [-Wformat-zero-length]
+   47 |   test (3, 0, "", (3));
+      |               ^~
+2 warnings generated.

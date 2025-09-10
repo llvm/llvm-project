@@ -1,0 +1,9 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040223-1.c:9:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    9 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040223-1.c:9:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040223-1.c:15:12: error: call to undeclared library function 'alloca' with type 'void *(__size_t)' (aka 'void *(unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   15 |   a(strcpy(alloca(100),"abc"),1234);
+      |            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040223-1.c:15:12: note: include the header <stdlib.h> or explicitly provide a declaration for 'alloca'
+2 errors generated.

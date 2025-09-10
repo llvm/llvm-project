@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/loop_unroll 
+VERIFY: %b/fpcmp-target -a 0.01 %o %S/loop_unroll.reference_output

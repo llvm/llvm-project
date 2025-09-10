@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/stmtexpr.cpp:30:38: warning: expression result unused [-Wunused-value]
+   30 |   A b = ({ A a(1); A a1(2); A a2(3); a1; a2; a; });
+      |                                      ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/stmtexpr.cpp:30:42: warning: expression result unused [-Wunused-value]
+   30 |   A b = ({ A a(1); A a1(2); A a2(3); a1; a2; a; });
+      |                                          ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/stmtexpr.cpp:33:38: warning: expression result unused [-Wunused-value]
+   33 |   A c = ({ A a(1); A a1(2); A a2(3); a1; a2; a; A a3(4); a2; a3; });
+      |                                      ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/stmtexpr.cpp:33:42: warning: expression result unused [-Wunused-value]
+   33 |   A c = ({ A a(1); A a1(2); A a2(3); a1; a2; a; A a3(4); a2; a3; });
+      |                                          ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/stmtexpr.cpp:33:46: warning: expression result unused [-Wunused-value]
+   33 |   A c = ({ A a(1); A a1(2); A a2(3); a1; a2; a; A a3(4); a2; a3; });
+      |                                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/stmtexpr.cpp:33:58: warning: expression result unused [-Wunused-value]
+   33 |   A c = ({ A a(1); A a1(2); A a2(3); a1; a2; a; A a3(4); a2; a3; });
+      |                                                          ^~
+6 warnings generated.

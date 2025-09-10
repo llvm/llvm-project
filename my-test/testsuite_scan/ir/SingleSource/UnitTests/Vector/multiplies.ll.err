@@ -1,0 +1,61 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:23:3: warning: expression does not compute the number of elements in this array; element type is 'double', not 'v16i8' (vector of 16 'char' values) [-Wsizeof-array-div]
+   23 |   ProcessArray(v16i8);
+      |   ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                           ~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:4:8: note: array 'TheArray' declared here
+    4 | double TheArray[ARRAYSIZE] __attribute__((aligned));
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:23:3: note: place parentheses around the 'sizeof(v16i8)' expression to silence this warning
+   23 |   ProcessArray(v16i8);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:24:3: warning: expression does not compute the number of elements in this array; element type is 'double', not 'v8i16' (vector of 8 'short' values) [-Wsizeof-array-div]
+   24 |   ProcessArray(v8i16);
+      |   ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                           ~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:4:8: note: array 'TheArray' declared here
+    4 | double TheArray[ARRAYSIZE] __attribute__((aligned));
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:24:3: note: place parentheses around the 'sizeof(v8i16)' expression to silence this warning
+   24 |   ProcessArray(v8i16);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:25:3: warning: expression does not compute the number of elements in this array; element type is 'double', not 'v4i32' (vector of 4 'int' values) [-Wsizeof-array-div]
+   25 |   ProcessArray(v4i32);
+      |   ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                           ~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:4:8: note: array 'TheArray' declared here
+    4 | double TheArray[ARRAYSIZE] __attribute__((aligned));
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:25:3: note: place parentheses around the 'sizeof(v4i32)' expression to silence this warning
+   25 |   ProcessArray(v4i32);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:26:3: warning: expression does not compute the number of elements in this array; element type is 'double', not 'v2i64' (vector of 4 'int' values) [-Wsizeof-array-div]
+   26 |   ProcessArray(v2i64);
+      |   ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                           ~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:4:8: note: array 'TheArray' declared here
+    4 | double TheArray[ARRAYSIZE] __attribute__((aligned));
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:26:3: note: place parentheses around the 'sizeof(v2i64)' expression to silence this warning
+   26 |   ProcessArray(v2i64);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Vector/multiplies.c:11:36: note: expanded from macro 'ProcessArray'
+   11 |   for (i = 0; i != sizeof(TheArray)/sizeof(VECTY); ++i) \
+      |                                    ^
+4 warnings generated.

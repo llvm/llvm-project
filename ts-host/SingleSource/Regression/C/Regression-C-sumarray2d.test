@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-sumarray2d 
+VERIFY: %b/fpcmp-target %o %S/sumarray2d.reference_output

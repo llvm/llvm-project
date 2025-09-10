@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/AtomicOps 
+VERIFY: %b/fpcmp-target %o %S/AtomicOps.reference_output

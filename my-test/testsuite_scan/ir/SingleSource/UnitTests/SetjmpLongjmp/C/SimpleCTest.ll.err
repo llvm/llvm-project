@@ -1,0 +1,5 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SetjmpLongjmp/C/SimpleCTest.c:5:3: error: call to undeclared library function 'printf' with type 'int (const char *, ...)'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    5 |   printf("Inside baz\n");
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SetjmpLongjmp/C/SimpleCTest.c:5:3: note: include the header <stdio.h> or explicitly provide a declaration for 'printf'
+1 error generated.

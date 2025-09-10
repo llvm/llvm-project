@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2006-12-11-LoadConstants  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                144     928
+.gnu.version            12    1072
+.gnu.version_r          48    1084
+.gnu.hash               28    1136
+.dynstr                127    1164
+.rela.dyn              192    1296
+.rela.plt               48    1488
+.rodata                 47    1536
+.eh_frame_hdr         1260    1584
+.eh_frame             3212    2848
+.text                 3332   10156
+.plt                    64   13488
+.preinit_array           8   17648
+.fini_array              8   17656
+.init_array              8   17664
+.dynamic               416   17672
+.got                    40   18088
+.relro_padding        2352   18128
+.data                    8   22224
+.tm_clone_table          0   22232
+.got.plt                32   22232
+.bss                     1   22264
+.riscv.attributes      116       0
+.comment               250       0
+Total                11938
+
+

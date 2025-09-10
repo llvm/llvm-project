@@ -1,0 +1,25 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++/stepanov_container.cpp:112:8: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+  112 |        unique(array, array + (last - first)); 
+      |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++/stepanov_container.cpp:124:8: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+  124 |        unique(&*container.begin(), &*container.end()); 
+      |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++/stepanov_container.cpp:134:8: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+  134 |        unique(container.begin(), container.end()); 
+      |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++/stepanov_container.cpp:146:9: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+  146 |         unique(container.begin(), container.end()); 
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Misc-C++/stepanov_container.cpp:237:3: warning: 'random_shuffle<double *>' is deprecated: use 'std::shuffle' instead [-Wdeprecated-declarations]
+  237 |   random_shuffle(buffer, buffer_end); 
+      |   ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/bits/stl_algo.h:4490:5: note: 'random_shuffle<double *>' has been explicitly marked deprecated here
+ 4490 |     _GLIBCXX14_DEPRECATED_SUGGEST("std::shuffle")
+      |     ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:116:45: note: expanded from macro '_GLIBCXX14_DEPRECATED_SUGGEST'
+  116 | # define _GLIBCXX14_DEPRECATED_SUGGEST(ALT) _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+      |                                             ^
+/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14/bits/c++config.h:100:19: note: expanded from macro '_GLIBCXX_DEPRECATED_SUGGEST'
+  100 |   __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+      |                   ^
+5 warnings generated.

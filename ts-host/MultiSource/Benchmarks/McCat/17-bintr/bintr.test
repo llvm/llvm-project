@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/bintr < bnchmrk.in1
+VERIFY: %b/fpcmp-target %o %S/bintr.reference_output

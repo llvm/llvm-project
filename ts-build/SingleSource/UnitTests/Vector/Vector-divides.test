@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Vector-divides 
+VERIFY: %b/fpcmp-target %o %S/divides.reference_output

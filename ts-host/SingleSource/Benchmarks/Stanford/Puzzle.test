@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Puzzle 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/Puzzle.reference_output

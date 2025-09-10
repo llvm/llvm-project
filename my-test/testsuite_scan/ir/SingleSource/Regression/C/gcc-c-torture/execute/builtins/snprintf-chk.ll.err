@@ -1,0 +1,63 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:114:24: warning: format string is not a string literal (potentially insecure) [-Wformat-security]
+  114 |   snprintf (r + 2, l1, s3 + 3);
+      |                        ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:52: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |                                                    ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:114:24: note: treat the string as an argument to avoid this
+  114 |   snprintf (r + 2, l1, s3 + 3);
+      |                        ^
+      |                        "%s", 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:52: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |                                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:127:20: warning: format string is not a string literal (potentially insecure) [-Wformat-security]
+  127 |   snprintf (r, l1, s2 + 4);
+      |                    ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:52: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |                                                    ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:127:20: note: treat the string as an argument to avoid this
+  127 |   snprintf (r, l1, s2 + 4);
+      |                    ^
+      |                    "%s", 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:52: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |                                                    ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:172:7: error: __builtin_setjmp is not supported for the current target
+  172 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:177:7: error: __builtin_setjmp is not supported for the current target
+  177 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:182:7: error: __builtin_setjmp is not supported for the current target
+  182 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:188:7: error: __builtin_setjmp is not supported for the current target
+  188 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:193:7: error: __builtin_setjmp is not supported for the current target
+  193 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:198:7: error: __builtin_setjmp is not supported for the current target
+  198 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:190:7: warning: 'snprintf' will always overflow; destination buffer has size 1, but size argument is 2 [-Wbuiltin-memcpy-chk-size]
+  190 |       snprintf (&buf3[19], 2, "a");
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:3: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:195:7: warning: 'snprintf' will always overflow; destination buffer has size 3, but size argument is 4 [-Wbuiltin-memcpy-chk-size]
+  195 |       snprintf (&buf3[17], 4, "a");
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:3: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/snprintf-chk.c:200:7: warning: 'snprintf' will always overflow; destination buffer has size 3, but size argument is 4 [-Wbuiltin-memcpy-chk-size]
+  200 |       snprintf (&buf3[17], 4, "%s", "abc");
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:45:3: note: expanded from macro 'snprintf'
+   45 |   __builtin___snprintf_chk (dst, len, 0, os (dst), __VA_ARGS__)
+      |   ^
+5 warnings and 6 errors generated.

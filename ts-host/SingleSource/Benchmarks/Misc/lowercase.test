@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/lowercase 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/lowercase.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/aarch64-acle-fmv-features 
+VERIFY: %b/fpcmp-target %o %S/acle-fmv-features.reference_output

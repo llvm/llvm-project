@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/block-copied-in-cxxobj 
+VERIFY: %b/fpcmp-target %o %S/block-copied-in-cxxobj.reference_output

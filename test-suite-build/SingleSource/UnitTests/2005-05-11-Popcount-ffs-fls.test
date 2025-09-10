@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2005-05-11-Popcount-ffs-fls 
+VERIFY: %b/fpcmp-target %o %S/2005-05-11-Popcount-ffs-fls.reference_output

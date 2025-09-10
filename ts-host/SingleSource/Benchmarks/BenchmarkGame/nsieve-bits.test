@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/nsieve-bits 
+VERIFY: %b/fpcmp-target %o %S/nsieve-bits.reference_output

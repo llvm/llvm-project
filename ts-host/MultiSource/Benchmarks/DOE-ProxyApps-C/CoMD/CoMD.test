@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/CoMD -e -x 10 -y 10 -z 10 --potDir .
+VERIFY: %b/fpcmp-target %o %S/CoMD.reference_output

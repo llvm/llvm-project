@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/sign2.c:15:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   15 | typedef int __attribute__ ((bitwidth(24))) int24;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/sign2.c:16:38: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   16 | typedef unsigned int __attribute__ ((bitwidth(24))) uint24;
+      |                                      ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/sign2.c:26:7: error: call to undeclared function 'rand'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   26 |   r = rand();
+      |       ^
+2 warnings and 1 error generated.

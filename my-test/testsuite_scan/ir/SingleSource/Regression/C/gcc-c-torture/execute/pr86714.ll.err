@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr86714.c:8:24: warning: initializer-string for char array is too long [-Wexcess-initializers]
+    8 | const char a[2][3] = { "1234", "xyz" };
+      |                        ^~~~~~
+1 warning generated.

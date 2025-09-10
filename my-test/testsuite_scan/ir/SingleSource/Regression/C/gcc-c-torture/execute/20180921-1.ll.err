@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20180921-1.c:6:20: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+    6 | int __attribute__((noipa)) dummy (const char *s, ...)
+      |                    ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20180921-1.c:9:1: warning: non-void function does not return a value [-Wreturn-type]
+    9 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20180921-1.c:142:26: warning: address of array 'a' will always evaluate to 'true' [-Wpointer-bool-conversion]
+  142 |             ay = az.c && a;
+      |                       ~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20180921-1.c:62:27: warning: array index 7 is past the end of the array (that has type 'int[7]') [-Warray-bounds]
+   62 |       if ((bc.c < g.d) <= a[7])
+      |                           ^ ~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20180921-1.c:53:5: note: array 'a' declared here
+   53 |     int a[] = {8, 2, 8, 2, 8, 2, 8};
+      |     ^
+4 warnings generated.

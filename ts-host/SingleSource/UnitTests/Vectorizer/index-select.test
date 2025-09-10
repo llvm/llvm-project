@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/index-select 
+VERIFY: %b/fpcmp-target %o %S/index-select.reference_output

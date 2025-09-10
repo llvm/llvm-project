@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-C++-sumcol 
+VERIFY: %b/fpcmp-target -r 0.00000001 %o %S/sumcol.reference_output

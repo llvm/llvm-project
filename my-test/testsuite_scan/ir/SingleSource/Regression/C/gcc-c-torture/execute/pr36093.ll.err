@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr36093.c:10:14: error: size of array element of type 'Bar' (aka 'struct Bar') (129 bytes) isn't a multiple of its alignment (128 bytes)
+   10 |       Bar bar[4];
+      |              ^
+1 error generated.

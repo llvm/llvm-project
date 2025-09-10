@@ -1,0 +1,49 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:41:7: warning: 'strncat' will always overflow; destination buffer has size 64, but size argument is 100 [-Wbuiltin-memcpy-chk-size]
+   41 |   if (strncat (dst, "", 100) != dst || strcmp (dst, s1))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:36:3: note: expanded from macro 'strncat'
+   36 |   __builtin___strncat_chk (dst, src, len, os (dst))
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:44:7: warning: 'strncat' will always overflow; destination buffer has size 64, but size argument is 100 [-Wbuiltin-memcpy-chk-size]
+   44 |   if (strncat (dst, s2, 100) != dst || strcmp (dst, s1))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:36:3: note: expanded from macro 'strncat'
+   36 |   __builtin___strncat_chk (dst, src, len, os (dst))
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:76:7: warning: 'strncat' will always overflow; destination buffer has size 64, but size argument is 100 [-Wbuiltin-memcpy-chk-size]
+   76 |   if (strncat (dst, "foo", 100) != dst || strcmp (dst, "hello worldfoo"))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:36:3: note: expanded from macro 'strncat'
+   36 |   __builtin___strncat_chk (dst, src, len, os (dst))
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:79:7: warning: 'strncat' will always overflow; destination buffer has size 64, but size argument is 100 [-Wbuiltin-memcpy-chk-size]
+   79 |   if (strncat (dst, s1, 100) != dst || strcmp (dst, "hello worldhello world"))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:36:3: note: expanded from macro 'strncat'
+   36 |   __builtin___strncat_chk (dst, src, len, os (dst))
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:107:7: warning: 'strncat' will always overflow; destination buffer has size 64, but size argument is 100 [-Wbuiltin-memcpy-chk-size]
+  107 |   if (__builtin_strncat (dst, "", 100) != dst || strcmp (dst, s1))
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:68:42: note: expanded from macro '__builtin_strncat'
+   68 | #define __builtin_strncat(dst, src, len) strncat (dst, src, len)
+      |                                          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:36:3: note: expanded from macro 'strncat'
+   36 |   __builtin___strncat_chk (dst, src, len, os (dst))
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:196:7: error: __builtin_setjmp is not supported for the current target
+  196 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:201:7: error: __builtin_setjmp is not supported for the current target
+  201 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:206:7: error: __builtin_setjmp is not supported for the current target
+  206 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/strncat-chk.c:198:7: warning: 'strncat' will always overflow; destination buffer has size 1, but size argument is 4 [-Wbuiltin-memcpy-chk-size]
+  198 |       strncat (&a.buf2[9], s2 + 3, 4);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:36:3: note: expanded from macro 'strncat'
+   36 |   __builtin___strncat_chk (dst, src, len, os (dst))
+      |   ^
+6 warnings and 3 errors generated.

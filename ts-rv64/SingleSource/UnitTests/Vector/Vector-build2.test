@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Vector-build2 
+VERIFY: %b/fpcmp-target %o %S/build2.reference_output

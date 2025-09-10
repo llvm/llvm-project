@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/tramp3d-v4 --cartvis 1.0 0.0 --rhomin 1e-8 -n 10 --domain 32 32 32
+VERIFY: %b/fpcmp-target -a 0.0000001 %o %S/tramp3d-v4.reference_output

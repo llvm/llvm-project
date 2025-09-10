@@ -1,0 +1,783 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      The system is: Linux - 6.14.0-29-generic - aarch64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /home/youzhewei.linux/work/llvm-project/build/bin/clang 
+      Build flags: -O2;-mllvm;-regalloc=greedy
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is Clang, found in:
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/3.31.6/CompilerIdC/a.out
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /home/youzhewei.linux/work/llvm-project/build/bin/clang++ 
+      Build flags: -O2;-mllvm;-regalloc=greedy
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is Clang, found in:
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/3.31.6/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_78a88
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -v -MD -MT CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)
+        Target: aarch64-unknown-linux-gnu
+        Thread model: posix
+        InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin
+        Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         (in-process)
+         "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple aarch64-unknown-linux-gnu -O2 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -enable-tlsdesc -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include -internal-externc-isystem /usr/include/aarch64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -vectorize-loops -vectorize-slp -mllvm -regalloc=greedy -target-feature +outline-atomics -target-feature -fmv -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"
+        ignoring nonexistent directory "/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include
+         /usr/local/include
+         /usr/include/aarch64-linux-gnu
+         /usr/include
+        End of search list.
+        [2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang -O2 -mllvm -regalloc=greedy -v -Wl,-v CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -o cmTC_78a88   && :
+        clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)
+        Target: aarch64-unknown-linux-gnu
+        Thread model: posix
+        InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin
+        Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+        clang: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]
+         "/usr/bin/ld" -EL -z relro --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /lib/ld-linux-aarch64.so.1 -o cmTC_78a88 /lib/aarch64-linux-gnu/Scrt1.o /lib/aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/lib/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -L/lib -L/usr/lib -v CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /lib/aarch64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.44
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+          add: [/usr/local/include]
+          add: [/usr/include/aarch64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include] ==> [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/aarch64-linux-gnu] ==> [/usr/include/aarch64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include;/usr/local/include;/usr/include/aarch64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_78a88]
+        ignore line: [[1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -v -MD -MT CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)]
+        ignore line: [Target: aarch64-unknown-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [ (in-process)]
+        ignore line: [ "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple aarch64-unknown-linux-gnu -O2 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -enable-tlsdesc -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-X4B2Zn -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include -internal-externc-isystem /usr/include/aarch64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -vectorize-loops -vectorize-slp -mllvm -regalloc=greedy -target-feature +outline-atomics -target-feature -fmv -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"]
+        ignore line: [ignoring nonexistent directory "/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/aarch64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang -O2 -mllvm -regalloc=greedy -v -Wl -v CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -o cmTC_78a88   && :]
+        ignore line: [clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)]
+        ignore line: [Target: aarch64-unknown-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [clang: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]]
+        link line: [ "/usr/bin/ld" -EL -z relro --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /lib/ld-linux-aarch64.so.1 -o cmTC_78a88 /lib/aarch64-linux-gnu/Scrt1.o /lib/aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/lib/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -L/lib -L/usr/lib -v CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /lib/aarch64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-EL] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-linux-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_78a88] ==> ignore
+          arg [/lib/aarch64-linux-gnu/Scrt1.o] ==> obj [/lib/aarch64-linux-gnu/Scrt1.o]
+          arg [/lib/aarch64-linux-gnu/crti.o] ==> obj [/lib/aarch64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14]
+          arg [-L/lib/aarch64-linux-gnu] ==> dir [/lib/aarch64-linux-gnu]
+          arg [-L/usr/lib/aarch64-linux-gnu] ==> dir [/usr/lib/aarch64-linux-gnu]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_78a88.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o]
+          arg [/lib/aarch64-linux-gnu/crtn.o] ==> obj [/lib/aarch64-linux-gnu/crtn.o]
+        linker tool for 'C': /usr/bin/ld
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14] ==> [/usr/lib/gcc/aarch64-linux-gnu/14]
+        collapse library dir [/lib/aarch64-linux-gnu] ==> [/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
+        implicit objs: [/lib/aarch64-linux-gnu/Scrt1.o;/lib/aarch64-linux-gnu/crti.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o;/lib/aarch64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/aarch64-linux-gnu/14;/lib/aarch64-linux-gnu;/usr/lib/aarch64-linux-gnu;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Running the C compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.44
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: "-O2 -mllvm -regalloc=greedy"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_0245f
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -v -MD -MT CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)
+        Target: aarch64-unknown-linux-gnu
+        Thread model: posix
+        InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin
+        Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         (in-process)
+         "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple aarch64-unknown-linux-gnu -O2 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -enable-tlsdesc -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14 -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14 -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include -internal-externc-isystem /usr/include/aarch64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -vectorize-loops -vectorize-slp -mllvm -regalloc=greedy -target-feature +outline-atomics -target-feature -fmv -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu
+        ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"
+        ignoring nonexistent directory "/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14
+         /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14
+         /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward
+         /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include
+         /usr/local/include
+         /usr/include/aarch64-linux-gnu
+         /usr/include
+        End of search list.
+        [2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang++ -O2 -mllvm -regalloc=greedy -v -Wl,-v CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_0245f   && :
+        clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)
+        Target: aarch64-unknown-linux-gnu
+        Thread model: posix
+        InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin
+        Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+        clang++: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]
+         "/usr/bin/ld" -EL -z relro --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /lib/ld-linux-aarch64.so.1 -o cmTC_0245f /lib/aarch64-linux-gnu/Scrt1.o /lib/aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/lib/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -L/lib -L/usr/lib -v CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /lib/aarch64-linux-gnu/crtn.o
+        GNU ld (GNU Binutils for Ubuntu) 2.44
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14]
+          add: [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14]
+          add: [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward]
+          add: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+          add: [/usr/local/include]
+          add: [/usr/include/aarch64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14] ==> [/usr/include/c++/14]
+        collapse include dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14] ==> [/usr/include/aarch64-linux-gnu/c++/14]
+        collapse include dir [/usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward] ==> [/usr/include/c++/14/backward]
+        collapse include dir [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include] ==> [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/aarch64-linux-gnu] ==> [/usr/include/aarch64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/include/c++/14;/usr/include/aarch64-linux-gnu/c++/14;/usr/include/c++/14/backward;/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include;/usr/local/include;/usr/include/aarch64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_0245f]
+        ignore line: [[1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -v -MD -MT CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)]
+        ignore line: [Target: aarch64-unknown-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [ (in-process)]
+        ignore line: [ "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple aarch64-unknown-linux-gnu -O2 -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -enable-tlsdesc -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-abi aapcs -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-LHVQbT -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14 -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14 -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include -internal-externc-isystem /usr/include/aarch64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -vectorize-loops -vectorize-slp -mllvm -regalloc=greedy -target-feature +outline-atomics -target-feature -fmv -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/include"]
+        ignore line: [ignoring nonexistent directory "/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14]
+        ignore line: [ /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/aarch64-linux-gnu/c++/14]
+        ignore line: [ /usr/lib/gcc/aarch64-linux-gnu/14/../../../../include/c++/14/backward]
+        ignore line: [ /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/aarch64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang++ -O2 -mllvm -regalloc=greedy -v -Wl -v CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_0245f   && :]
+        ignore line: [clang version 22.0.0git (https://github.com/steven-studio/llvm-project.git c2901ea177a93cdcea513ae5bdc6a189f274f4ca)]
+        ignore line: [Target: aarch64-unknown-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin]
+        ignore line: [Found candidate GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Selected GCC installation: /usr/lib/gcc/aarch64-linux-gnu/14]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [clang++: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]]
+        link line: [ "/usr/bin/ld" -EL -z relro --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /lib/ld-linux-aarch64.so.1 -o cmTC_0245f /lib/aarch64-linux-gnu/Scrt1.o /lib/aarch64-linux-gnu/crti.o /usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o -L/usr/lib/gcc/aarch64-linux-gnu/14 -L/lib/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu -L/lib -L/usr/lib -v CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o /lib/aarch64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-EL] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib/ld-linux-aarch64.so.1] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_0245f] ==> ignore
+          arg [/lib/aarch64-linux-gnu/Scrt1.o] ==> obj [/lib/aarch64-linux-gnu/Scrt1.o]
+          arg [/lib/aarch64-linux-gnu/crti.o] ==> obj [/lib/aarch64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o]
+          arg [-L/usr/lib/gcc/aarch64-linux-gnu/14] ==> dir [/usr/lib/gcc/aarch64-linux-gnu/14]
+          arg [-L/lib/aarch64-linux-gnu] ==> dir [/lib/aarch64-linux-gnu]
+          arg [-L/usr/lib/aarch64-linux-gnu] ==> dir [/usr/lib/aarch64-linux-gnu]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_0245f.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o] ==> obj [/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o]
+          arg [/lib/aarch64-linux-gnu/crtn.o] ==> obj [/lib/aarch64-linux-gnu/crtn.o]
+        linker tool for 'CXX': /usr/bin/ld
+        collapse library dir [/usr/lib/gcc/aarch64-linux-gnu/14] ==> [/usr/lib/gcc/aarch64-linux-gnu/14]
+        collapse library dir [/lib/aarch64-linux-gnu] ==> [/lib/aarch64-linux-gnu]
+        collapse library dir [/usr/lib/aarch64-linux-gnu] ==> [/usr/lib/aarch64-linux-gnu]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/lib/aarch64-linux-gnu/Scrt1.o;/lib/aarch64-linux-gnu/crti.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtbeginS.o;/usr/lib/gcc/aarch64-linux-gnu/14/crtendS.o;/lib/aarch64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/aarch64-linux-gnu/14;/lib/aarch64-linux-gnu;/usr/lib/aarch64-linux-gnu;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils for Ubuntu) 2.44
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-krMwy8"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-krMwy8"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-krMwy8'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_debe8
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -fopenmp=libomp -MD -MT CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-krMwy8/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -fopenmp=libomp -MD -MT CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_debe8.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-krMwy8/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-krMwy8/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-AUmnXl"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-AUmnXl"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibiomp5"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-AUmnXl'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_7d00d
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-AUmnXl/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_7d00d.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-AUmnXl/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-AUmnXl/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-Csb6px"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-Csb6px"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-Csb6px'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_2e92d
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -fopenmp -MD -MT CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-Csb6px/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -fopenmp -MD -MT CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_2e92d.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-Csb6px/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-Csb6px/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-yI7M92"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-yI7M92"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_Xclang fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-yI7M92'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_5efb0
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-yI7M92/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy    -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_5efb0.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-yI7M92/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-yI7M92/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-uIAddJ"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-uIAddJ"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-uIAddJ'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_a6a4a
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -fopenmp=libomp -MD -MT CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-uIAddJ/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -fopenmp=libomp -MD -MT CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_a6a4a.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-uIAddJ/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-uIAddJ/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-z7l3on"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-z7l3on"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibiomp5"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-z7l3on'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_e53a6
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-z7l3on/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_e53a6.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-z7l3on/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-z7l3on/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-EuZ3fU"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-EuZ3fU"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-EuZ3fU'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_681f1
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -fopenmp -MD -MT CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-EuZ3fU/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -fopenmp -MD -MT CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_681f1.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-EuZ3fU/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-EuZ3fU/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-jO2KKR"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-jO2KKR"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_Xclang fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-jO2KKR'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_29c38
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-jO2KKR/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++   -O2 -mllvm -regalloc=greedy    -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_29c38.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-jO2KKR/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-jO2KKR/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/DetectArchitecture.cmake:8 (try_compile)"
+      - "CMakeLists.txt:263 (detect_architecture)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "HAVE_ARCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_f2517
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy -MD -MT CMakeFiles/cmTC_f2517.dir/DetectArchitecture.c.o -MF CMakeFiles/cmTC_f2517.dir/DetectArchitecture.c.o.d -o CMakeFiles/cmTC_f2517.dir/DetectArchitecture.c.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules/DetectArchitecture.c
+        [2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang -O2 -mllvm -regalloc=greedy  CMakeFiles/cmTC_f2517.dir/DetectArchitecture.c.o -o cmTC_f2517   && :
+        clang: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "SingleSource/UnitTests/Vector/CMakeLists.txt:8 (CHECK_SYMBOL_EXISTS)"
+    checks:
+      - "Looking for __ARM_NEON"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-8VcTqw"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-8VcTqw"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "NEON_AVAILABLE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-8VcTqw'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_5b97a
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang   -O2 -mllvm -regalloc=greedy -MD -MT CMakeFiles/cmTC_5b97a.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_5b97a.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_5b97a.dir/CheckSymbolExists.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-8VcTqw/CheckSymbolExists.c
+        [2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang -O2 -mllvm -regalloc=greedy  CMakeFiles/cmTC_5b97a.dir/CheckSymbolExists.c.o -o cmTC_5b97a   && :
+        clang: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCCompilerFlag.cmake:56 (cmake_check_compiler_flag)"
+      - "SingleSource/UnitTests/CMakeLists.txt:62 (check_c_compiler_flag)"
+    checks:
+      - "Performing Test COMPILER_HAS_MATRIX_FLAG"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-opy87T"
+      binary: "/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-opy87T"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/home/youzhewei.linux/work/llvm-project/build/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: "-O2 -mllvm -regalloc=greedy   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+    buildResult:
+      variable: "COMPILER_HAS_MATRIX_FLAG"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-opy87T'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_275bd
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang -DCOMPILER_HAS_MATRIX_FLAG  -O2 -mllvm -regalloc=greedy       -fenable-matrix -MD -MT CMakeFiles/cmTC_275bd.dir/src.c.o -MF CMakeFiles/cmTC_275bd.dir/src.c.o.d -o CMakeFiles/cmTC_275bd.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/test-suite-build/CMakeFiles/CMakeScratch/TryCompile-opy87T/src.c
+        [2/2] : && /home/youzhewei.linux/work/llvm-project/build/bin/clang -O2 -mllvm -regalloc=greedy  CMakeFiles/cmTC_275bd.dir/src.c.o -o cmTC_275bd   && :
+        clang: warning: argument unused during compilation: '-mllvm -regalloc=greedy' [-Wunused-command-line-argument]
+        
+      exitCode: 0
+...

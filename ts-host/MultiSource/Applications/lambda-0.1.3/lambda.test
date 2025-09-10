@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/lambda < input
+VERIFY: %b/fpcmp-target %o %S/lambda.reference_output

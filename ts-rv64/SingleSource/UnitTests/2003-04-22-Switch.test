@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2003-04-22-Switch 
+VERIFY: %b/fpcmp-target %o %S/2003-04-22-Switch.reference_output

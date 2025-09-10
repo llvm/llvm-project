@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/SignlessTypes/Large/cast  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                192     928
+.gnu.version            16    1120
+.gnu.version_r          64    1136
+.gnu.hash               28    1200
+.dynstr                200    1228
+.rela.dyn              192    1432
+.rela.plt               96    1624
+.rodata                214    1720
+.eh_frame_hdr           28    1936
+.eh_frame              132    1968
+.text                 1988    6196
+.plt                    96    8192
+.preinit_array           8   12384
+.fini_array              8   12392
+.init_array              8   12400
+.dynamic               464   12408
+.got                    40   12872
+.relro_padding        3472   12912
+.data                    8   17008
+.tm_clone_table          0   17016
+.got.plt                48   17016
+.bss                     1   17064
+.riscv.attributes      116       0
+.comment               250       0
+Total                 7854
+
+

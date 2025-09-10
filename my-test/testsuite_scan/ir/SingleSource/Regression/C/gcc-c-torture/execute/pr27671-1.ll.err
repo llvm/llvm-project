@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr27671-1.c:14:1: warning: non-void function does not return a value in all control paths [-Wreturn-type]
+   14 | }
+      | ^
+1 warning generated.

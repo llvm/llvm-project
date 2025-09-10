@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/automotive-bitcount 1125000
+VERIFY: %b/fpcmp-target %o %S/automotive-bitcount.reference_output

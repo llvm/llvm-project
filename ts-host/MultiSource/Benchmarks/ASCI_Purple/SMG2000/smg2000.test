@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/smg2000 -n 100 40 100 -c 0.1 1.0 10.0
+VERIFY: %b/fpcmp-target %o %S/smg2000.reference_output

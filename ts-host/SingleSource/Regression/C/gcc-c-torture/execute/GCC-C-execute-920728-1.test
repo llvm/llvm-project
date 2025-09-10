@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-920728-1 

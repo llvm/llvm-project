@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/frame_layout 
+VERIFY: %b/fpcmp-target %o %S/frame_layout.reference_output

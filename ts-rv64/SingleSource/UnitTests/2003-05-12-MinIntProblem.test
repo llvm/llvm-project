@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2003-05-12-MinIntProblem 
+VERIFY: %b/fpcmp-target %o %S/2003-05-12-MinIntProblem.reference_output

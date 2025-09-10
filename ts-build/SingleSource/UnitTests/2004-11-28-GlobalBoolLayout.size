@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/2004-11-28-GlobalBoolLayout  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                192     928
+.gnu.version            16    1120
+.gnu.version_r          48    1136
+.gnu.hash               28    1184
+.dynstr                149    1212
+.rela.dyn              192    1368
+.rela.plt               96    1560
+.rodata                 22    1656
+.eh_frame_hdr           28    1680
+.eh_frame              108    1712
+.text                  336    5916
+.plt                    96    6256
+.preinit_array           8   10448
+.fini_array              8   10456
+.init_array              8   10464
+.dynamic               416   10472
+.got                    40   10888
+.relro_padding        1360   10928
+.data                  110   15024
+.tm_clone_table          0   15136
+.got.plt                48   15136
+.bss                     1   15184
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3861
+
+

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2006-02-04-DivRem 
+VERIFY: %b/fpcmp-target %o %S/2006-02-04-DivRem.reference_output

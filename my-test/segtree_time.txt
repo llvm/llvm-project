@@ -1,0 +1,11 @@
+ Register Allocation: 0.000000e+00 seconds
+                        Segment Tree Register Allocator
+   0.0000 (  0.0%)   0.0001 ( 13.4%)   0.0001 (  3.7%)   0.0001 (  3.7%)  Segment Tree Register Allocator
+   0.0000 (  0.0%)   0.0000 (  7.3%)   0.0000 (  2.0%)   0.0000 (  2.0%)  Live Register Matrix
+   0.0000 (  0.0%)   0.0000 (  1.9%)   0.0000 (  0.5%)   0.0000 (  0.5%)  Register Coalescer
+   0.0000 (  0.0%)   0.0000 (  0.5%)   0.0000 (  0.1%)   0.0000 (  0.2%)  Virtual Register Rewriter
+   0.0000 (  0.0%)   0.0000 (  0.3%)   0.0000 (  0.1%)   0.0000 (  0.1%)  Virtual Register Map
+   0.0000 (  0.0%)   0.0000 (  0.5%)   0.0000 (  0.1%)   0.0000 (  0.1%)  Eliminate PHI nodes for register allocation
+   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.0%)   0.0000 (  0.1%)  Register Allocation Pass Scoring
+   0.0000 (  0.0%)   0.0000 (  0.2%)   0.0000 (  0.0%)   0.0000 (  0.1%)  Rename Disconnected Subregister Components
+   0.0000 (  0.0%)   0.0000 (  0.3%)   0.0000 (  0.1%)   0.0000 (  0.1%)  AArch64 Dead register definitions

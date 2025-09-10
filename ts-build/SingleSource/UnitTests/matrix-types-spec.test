@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/matrix-types-spec 
+VERIFY: %b/fpcmp-target %o %S/matrix-types-spec.reference_output

@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-pr20187-1 

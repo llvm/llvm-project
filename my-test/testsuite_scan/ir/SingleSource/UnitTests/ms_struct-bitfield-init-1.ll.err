@@ -1,0 +1,21 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:23:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+   23 | #if HAVE_PRAGMA_MS_STRUCT
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:6:32: note: expanded from macro 'HAVE_PRAGMA_MS_STRUCT'
+    6 | #define HAVE_PRAGMA_MS_STRUCT (defined(__clang__) || defined(__MACH__))
+      |                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:23:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:6:54: note: expanded from macro 'HAVE_PRAGMA_MS_STRUCT'
+    6 | #define HAVE_PRAGMA_MS_STRUCT (defined(__clang__) || defined(__MACH__))
+      |                                                      ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:93:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+   93 | #if HAVE_PRAGMA_MS_STRUCT
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:6:32: note: expanded from macro 'HAVE_PRAGMA_MS_STRUCT'
+    6 | #define HAVE_PRAGMA_MS_STRUCT (defined(__clang__) || defined(__MACH__))
+      |                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:93:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/ms_struct-bitfield-init-1.c:6:54: note: expanded from macro 'HAVE_PRAGMA_MS_STRUCT'
+    6 | #define HAVE_PRAGMA_MS_STRUCT (defined(__clang__) || defined(__MACH__))
+      |                                                      ^
+4 warnings generated.

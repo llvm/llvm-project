@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/union2.c:21:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   21 | typedef int __attribute__ ((bitwidth(9))) int9;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/union2.c:22:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   22 | typedef int __attribute__ ((bitwidth(31))) int31;
+      |                             ^~~~~~~~~~~~
+2 warnings generated.

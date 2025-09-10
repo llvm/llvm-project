@@ -1,0 +1,45 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:13:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   13 | __attribute__((noinline, noclone)) int
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:16:36: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   16 |   __int128 v = x & (((__int128) -1 << 63) | 0x7ff);
+      |                      ~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:18:40: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   18 |   return v == 0 || v == ((__int128) -1 << 63);
+      |                          ~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:23:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   23 | __attribute__((noinline, noclone)) int
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:26:38: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   26 |   long long v = x & (((long long) -1 << 31) | 0x7ff);
+      |                       ~~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:28:41: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   28 |   return v == 0 || v == ((long long) -1 << 31);
+      |                          ~~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:41:29: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   41 |       || foo ((__int128) -1 << 63) != 1
+      |               ~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:42:30: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   42 |       || foo (((__int128) -1 << 63) | 1) != 0
+      |                ~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:43:30: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   43 |       || foo (((__int128) -1 << 63) | 0x800) != 1
+      |                ~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:44:30: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   44 |       || foo (((__int128) -1 << 63) | 0x801) != 0)
+      |                ~~~~~~~~~~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:53:20: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   53 |       || bar (-1LL << 31) != 1
+      |               ~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:54:21: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   54 |       || bar ((-1LL << 31) | 1) != 0
+      |                ~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:55:21: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   55 |       || bar ((-1LL << 31) | 0x800) != 1
+      |                ~~~~ ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr63302.c:56:21: warning: shifting a negative signed value is undefined [-Wshift-negative-value]
+   56 |       || bar ((-1LL << 31) | 0x801) != 0)
+      |                ~~~~ ^
+14 warnings generated.

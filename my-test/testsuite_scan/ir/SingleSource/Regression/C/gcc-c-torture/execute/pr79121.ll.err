@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr79121.c:11:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   11 | __attribute__ ((noinline, noclone)) unsigned long long f1 (int32_t x)
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr79121.c:16:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   16 | __attribute__ ((noinline, noclone)) long long f2 (uint32_t x)
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr79121.c:21:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   21 | __attribute__ ((noinline, noclone)) unsigned long long f3 (uint32_t x)
+      |                           ^~~~~~~
+      |                           noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr79121.c:26:27: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   26 | __attribute__ ((noinline, noclone)) long long f4 (int32_t x)
+      |                           ^~~~~~~
+      |                           noinline
+4 warnings generated.

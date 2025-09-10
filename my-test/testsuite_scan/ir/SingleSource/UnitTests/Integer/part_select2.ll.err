@@ -1,0 +1,289 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:2:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:17:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef unsigned int __attribute__((bitwidth(1))) uint1;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:18:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   18 | typedef unsigned int __attribute__((bitwidth(2))) uint2;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:19:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   19 | typedef unsigned int __attribute__((bitwidth(3))) uint3;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:20:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   20 | typedef unsigned int __attribute__((bitwidth(4))) uint4;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:21:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   21 | typedef unsigned int __attribute__((bitwidth(5))) uint5;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:22:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   22 | typedef unsigned int __attribute__((bitwidth(6))) uint6;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:23:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   23 | typedef unsigned int __attribute__((bitwidth(7))) uint7;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:24:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   24 | typedef unsigned int __attribute__((bitwidth(8))) uint8;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:25:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   25 | typedef unsigned int __attribute__((bitwidth(9))) uint9;
+      |                                     ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:26:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   26 | typedef unsigned int __attribute__((bitwidth(10))) uint10;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:27:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   27 | typedef unsigned int __attribute__((bitwidth(16))) uint16;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:28:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   28 | typedef unsigned int __attribute__((bitwidth(17))) uint17;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:29:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   29 | typedef unsigned int __attribute__((bitwidth(19))) uint19;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:30:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   30 | typedef unsigned int __attribute__((bitwidth(21))) uint21;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:31:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   31 | typedef unsigned int __attribute__((bitwidth(25))) uint25;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:32:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   32 | typedef unsigned int __attribute__((bitwidth(17))) uint32;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:33:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   33 | typedef unsigned int __attribute__((bitwidth(36))) uint36;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:34:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   34 | typedef unsigned int __attribute__((bitwidth(39))) uint39;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:35:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   35 | typedef unsigned int __attribute__((bitwidth(47))) uint47;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:36:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   36 | typedef unsigned int __attribute__((bitwidth(48))) uint48;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:37:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   37 | typedef unsigned int __attribute__((bitwidth(54))) uint54;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:38:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   38 | typedef unsigned int __attribute__((bitwidth(60))) uint60;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:39:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   39 | typedef unsigned int __attribute__((bitwidth(63))) uint63;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:40:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   40 | typedef unsigned int __attribute__((bitwidth(64))) uint64;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:41:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   41 | typedef unsigned int __attribute__((bitwidth(65))) uint65;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:42:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   42 | typedef unsigned int __attribute__((bitwidth(68))) uint68;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:43:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   43 | typedef unsigned int __attribute__((bitwidth(69))) uint69;
+      |                                     ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:44:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   44 | typedef unsigned int __attribute__((bitwidth(128))) uint128;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:45:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   45 | typedef unsigned int __attribute__((bitwidth(169))) uint169;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:46:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   46 | typedef unsigned int __attribute__((bitwidth(250))) uint250;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:47:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   47 | typedef unsigned int __attribute__((bitwidth(256))) uint256;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:48:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   48 | typedef unsigned int __attribute__((bitwidth(500))) uint500;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:49:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   49 | typedef unsigned int __attribute__((bitwidth(512))) uint512;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:50:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   50 | typedef unsigned int __attribute__((bitwidth(768))) uint768;
+      |                                     ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:51:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   51 | typedef unsigned int __attribute__((bitwidth(1000))) uint1000;
+      |                                     ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:52:37: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   52 | typedef unsigned int __attribute__((bitwidth(1024))) uint1024;
+      |                                     ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:54:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   54 | typedef int __attribute__((bitwidth(3))) int3;
+      |                            ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:55:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   55 | typedef int __attribute__((bitwidth(8)))  int8;
+      |                            ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:56:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   56 | typedef int __attribute__((bitwidth(9)))  int9;
+      |                            ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:57:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   57 | typedef int __attribute__((bitwidth(10))) int10;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:58:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   58 | typedef int __attribute__((bitwidth(21))) int21;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:59:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   59 | typedef int __attribute__((bitwidth(24))) int24;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:60:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   60 | typedef int __attribute__((bitwidth(32))) int32;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:61:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   61 | typedef int __attribute__((bitwidth(33))) int33;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:62:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   62 | typedef int __attribute__((bitwidth(54))) int54;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:63:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   63 | typedef int __attribute__((bitwidth(63))) int63;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:64:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   64 | typedef int __attribute__((bitwidth(68))) int68;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:65:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   65 | typedef int __attribute__((bitwidth(69))) int69;
+      |                            ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:66:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   66 | typedef int __attribute__((bitwidth(128))) int128;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:67:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   67 | typedef int __attribute__((bitwidth(169))) int169;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:68:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   68 | typedef int __attribute__((bitwidth(250))) int250;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:69:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   69 | typedef int __attribute__((bitwidth(256))) int256;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:70:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   70 | typedef int __attribute__((bitwidth(500))) int500;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:71:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   71 | typedef int __attribute__((bitwidth(512))) int512;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:72:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   72 | typedef int __attribute__((bitwidth(768))) int768;
+      |                            ^~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:73:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   73 | typedef int __attribute__((bitwidth(1000))) int1000;
+      |                            ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:74:28: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   74 | typedef int __attribute__((bitwidth(1024))) int1024;
+      |                            ^~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:14:3: error: call to undeclared function '__bitwidthof__'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   14 |   printBits(X);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:27: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:14:3: error: expected expression
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:42: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                                          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:14:3: error: use of unknown builtin '__builtin_bit_select' [-Wimplicit-function-declaration]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:123:9: note: expanded from macro 'printBits'
+  123 |     if (bit_select(val, bit-1)) \
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:88:3: note: expanded from macro 'bit_select'
+   88 |   __builtin_bit_select(&Val2, Bit); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:16:8: error: use of unknown builtin '__builtin_bit_part_select' [-Wimplicit-function-declaration]
+   16 |   r0 = part_select(X0, 0, 18);
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:103:3: note: expanded from macro 'part_select'
+  103 |   __builtin_bit_part_select(&Result, &Val2, Lo, Hi); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:17:7: error: use of unknown builtin '__builtin_bit_part_select' [-Wimplicit-function-declaration]
+   17 |   r = part_select(X, 0, 18);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:103:3: note: expanded from macro 'part_select'
+  103 |   __builtin_bit_part_select(&Result, &Val2, Lo, Hi); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:18:8: error: use of unknown builtin '__builtin_bit_part_select' [-Wimplicit-function-declaration]
+   18 |   r1 = part_select(X1, 0, 7);
+      |        ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:103:3: note: expanded from macro 'part_select'
+  103 |   __builtin_bit_part_select(&Result, &Val2, Lo, Hi); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:21:3: error: call to undeclared function '__bitwidthof__'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   21 |   printBits(r0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:27: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:21:3: error: expected expression
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:42: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                                          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:21:3: error: use of unknown builtin '__builtin_bit_select' [-Wimplicit-function-declaration]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:123:9: note: expanded from macro 'printBits'
+  123 |     if (bit_select(val, bit-1)) \
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:88:3: note: expanded from macro 'bit_select'
+   88 |   __builtin_bit_select(&Val2, Bit); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:24:3: error: call to undeclared function '__bitwidthof__'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   24 |   printBits(r);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:27: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:24:3: error: expected expression
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:42: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                                          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:24:3: error: use of unknown builtin '__builtin_bit_select' [-Wimplicit-function-declaration]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:123:9: note: expanded from macro 'printBits'
+  123 |     if (bit_select(val, bit-1)) \
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:88:3: note: expanded from macro 'bit_select'
+   88 |   __builtin_bit_select(&Val2, Bit); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:27:3: error: call to undeclared function '__bitwidthof__'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   27 |   printBits(r1);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:27: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:27:3: error: expected expression
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:121:13: note: expanded from macro 'printBits'
+  121 |   int bit = bitwidthof(val); \
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:76:42: note: expanded from macro 'bitwidthof'
+   76 | #define bitwidthof(TORV) (__bitwidthof__(typeof(TORV)))
+      |                                          ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:27:3: error: use of unknown builtin '__builtin_bit_select' [-Wimplicit-function-declaration]
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:123:9: note: expanded from macro 'printBits'
+  123 |     if (bit_select(val, bit-1)) \
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/bits.h:88:3: note: expanded from macro 'bit_select'
+   88 |   __builtin_bit_select(&Val2, Bit); \
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:6:14: warning: implicit conversion from 'unsigned long long' to 'int128' (aka 'int') changes value from 16032490702931603968 to -1124224512 [-Wconstant-conversion]
+    6 |   int128 X = 0xde7ed959bcfdb200ULL;
+      |          ~   ^~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/part_select2.c:7:12: warning: implicit conversion from 'unsigned long long' to 'int' changes value from 16032490702931603968 to -1124224512 [-Wconstant-conversion]
+    7 |   int X0 = 0xde7ed959bcfdb200ULL;
+      |       ~~   ^~~~~~~~~~~~~~~~~~~~~
+59 warnings and 15 errors generated.

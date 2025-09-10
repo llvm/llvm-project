@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Symbolics-dbl 9090 14
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/Symbolics-dbl.reference_output

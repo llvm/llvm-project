@@ -1,0 +1,31 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:17:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef int __attribute__ ((bitwidth(31))) int31;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:18:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   18 | typedef int __attribute__ ((bitwidth(1))) int1;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:19:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   19 | typedef int __attribute__ ((bitwidth(7))) int7;
+      |                             ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:20:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   20 | typedef int __attribute__ ((bitwidth(17))) int17;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:43:11: warning: exception of type 'int1' (aka 'int') will be caught by earlier handler [-Wexceptions]
+   43 |   } catch(int1 b){
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:41:11: note: for type 'int31' (aka 'int')
+   41 |   } catch(int31 i){
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:45:11: warning: exception of type 'int7' (aka 'int') will be caught by earlier handler [-Wexceptions]
+   45 |   } catch(int7 c){
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:41:11: note: for type 'int31' (aka 'int')
+   41 |   } catch(int31 i){
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:47:11: warning: exception of type 'int17' (aka 'int') will be caught by earlier handler [-Wexceptions]
+   47 |   } catch(int17 s){
+      |           ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/exception.cpp:41:11: note: for type 'int31' (aka 'int')
+   41 |   } catch(int31 i){
+      |           ^
+7 warnings generated.

@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-ipa-sra-1 

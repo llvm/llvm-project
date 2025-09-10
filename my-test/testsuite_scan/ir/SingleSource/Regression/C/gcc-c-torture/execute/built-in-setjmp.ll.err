@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/built-in-setjmp.c:14:3: error: __builtin_longjmp is not supported for the current target
+   14 |   __builtin_longjmp (buf, 1);
+      |   ^~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/built-in-setjmp.c:24:7: error: __builtin_setjmp is not supported for the current target
+   24 |   if (__builtin_setjmp (buf))
+      |       ^~~~~~~~~~~~~~~~~~~~~~
+2 errors generated.

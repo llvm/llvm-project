@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Vectorizer/any-of  :
+section                size     addr
+.interp                  27      568
+.gnu.hash                28      600
+.dynsym                 744      632
+.dynstr                 716     1376
+.gnu.version             62     2092
+.gnu.version_r          208     2160
+.rela.dyn              1056     2368
+.rela.plt               528     3424
+.init                    28     3952
+.plt                    384     3984
+.text                 19896     4416
+.fini                    24    24312
+.rodata                 605    24336
+.eh_frame_hdr           556    24944
+.eh_frame              2024    25504
+.gcc_except_table      1644    27528
+.note.ABI-tag            32    29172
+.note.package           112    29204
+.init_array              16   130176
+.fini_array               8   130192
+.data.rel.ro            256   130200
+.dynamic                528   130456
+.got                     64   130984
+.got.plt                200   131048
+.data                    24   131248
+.bss                   5008   131272
+.comment                155        0
+Total                 34933
+
+

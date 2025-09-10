@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/testcase-InstCombine-1  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                168     928
+.gnu.version            14    1096
+.gnu.version_r          48    1112
+.gnu.hash               28    1160
+.dynstr                135    1188
+.rela.dyn              192    1328
+.rela.plt               72    1520
+.rodata                 13    1592
+.eh_frame_hdr           28    1608
+.eh_frame              108    1640
+.text                  354    5844
+.plt                    80    6208
+.preinit_array           8   10384
+.fini_array              8   10392
+.init_array              8   10400
+.dynamic               416   10408
+.got                    40   10824
+.relro_padding        1424   10864
+.data                    8   14960
+.tm_clone_table          0   14968
+.got.plt                40   14968
+.bss                    41   15008
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3784
+
+

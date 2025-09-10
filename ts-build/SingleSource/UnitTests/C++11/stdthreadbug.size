@@ -1,0 +1,34 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/C++11/stdthreadbug  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                360     928
+.gnu.version            30    1288
+.gnu.version_r         160    1320
+.gnu.hash               28    1480
+.dynstr                479    1508
+.rela.dyn              384    1992
+.rela.plt              192    2376
+.rodata                 69    2568
+.gcc_except_table       72    2640
+.eh_frame_hdr           52    2712
+.eh_frame              204    2768
+.text                  370    7068
+.plt                   160    7440
+.preinit_array           8   11696
+.fini_array              8   11704
+.init_array              8   11712
+.data.rel.ro            64   11720
+.dynamic               464   11784
+.got                    40   12248
+.relro_padding           0   12288
+.data                   16   12288
+.tm_clone_table          0   12304
+.got.plt                80   12304
+.bss                     1   12384
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3800
+
+

@@ -1,0 +1,640 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      The target system is: Linux -  - riscv64
+      The host system is: Linux - 6.14.0-23-generic - aarch64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /home/youzhewei.linux/work/llvm-project/build/bin/clang 
+      Build flags: 
+      Id flags: -c;--target=riscv64-linux-gnu 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is Clang, found in:
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/3.31.6/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /home/youzhewei.linux/work/llvm-project/build/bin/clang++ 
+      Build flags: 
+      Id flags: -c;--target=riscv64-linux-gnu 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is Clang, found in:
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/3.31.6/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_f8fa3
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -v -MD -MT CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang version 22.0.0git (https://github.com/llvm/llvm-project.git 34109cd26ae1b317d91c061500d9828fe6ebab0b)
+        Target: riscv64-unknown-linux-gnu
+        Thread model: posix
+        InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin
+         (in-process)
+         "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple riscv64-unknown-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic-rv64 -target-feature +m -target-feature +a -target-feature +f -target-feature +d -target-feature +c -target-feature +zicsr -target-feature +zmmul -target-feature +zaamo -target-feature +zalrsc -target-feature +zca -target-feature +zcd -target-feature -b -target-feature -e -target-feature -h -target-feature -q -target-feature -sdext -target-feature -sdtrig -target-feature -sha -target-feature -shcounterenw -target-feature -shgatpa -target-feature -shlcofideleg -target-feature -shtvala -target-feature -shvsatpa -target-feature -shvstvala -target-feature -shvstvecd -target-feature -smaia -target-feature -smcdeleg -target-feature -smcntrpmf -target-feature -smcsrind -target-feature -smctr -target-feature -smdbltrp -target-feature -smepmp -target-feature -smmpm -target-feature -smnpm -target-feature -smrnmi -target-feature -smstateen -target-feature -ssaia -target-feature -ssccfg -target-feature -ssccptr -target-feature -sscofpmf -target-feature -sscounterenw -target-feature -sscsrind -target-feature -ssctr -target-feature -ssdbltrp -target-feature -ssnpm -target-feature -sspm -target-feature -ssqosid -target-feature -ssstateen -target-feature -ssstrict -target-feature -sstc -target-feature -sstvala -target-feature -sstvecd -target-feature -ssu64xl -target-feature -supm -target-feature -svade -target-feature -svadu -target-feature -svbare -target-feature -svinval -target-feature -svnapot -target-feature -svpbmt -target-feature -svvptc -target-feature -v -target-feature -xandesbfhcvt -target-feature -xandesperf -target-feature -xandesvbfhcvt -target-feature -xandesvdot -target-feature -xandesvpackfph -target-feature -xandesvsintload -target-feature -xcvalu -target-feature -xcvbi -target-feature -xcvbitmanip -target-feature -xcvelw -target-feature -xcvmac -target-feature -xcvmem -target-feature -xcvsimd -target-feature -xmipscbop -target-feature -xmipscmov -target-feature -xmipslsp -target-feature -xsfcease -target-feature -xsfmm128t -target-feature -xsfmm16t -target-feature -xsfmm32a16f -target-feature -xsfmm32a32f -target-feature -xsfmm32a8f -target-feature -xsfmm32a8i -target-feature -xsfmm32t -target-feature -xsfmm64a64f -target-feature -xsfmm64t -target-feature -xsfmmbase -target-feature -xsfvcp -target-feature -xsfvfnrclipxfqf -target-feature -xsfvfwmaccqqq -target-feature -xsfvqmaccdod -target-feature -xsfvqmaccqoq -target-feature -xsifivecdiscarddlone -target-feature -xsifivecflushdlone -target-feature -xsmtvdot -target-feature -xtheadba -target-feature -xtheadbb -target-feature -xtheadbs -target-feature -xtheadcmo -target-feature -xtheadcondmov -target-feature -xtheadfmemidx -target-feature -xtheadmac -target-feature -xtheadmemidx -target-feature -xtheadmempair -target-feature -xtheadsync -target-feature -xtheadvdot -target-feature -xventanacondops -target-feature -xwchc -target-feature -za128rs -target-feature -za64rs -target-feature -zabha -target-feature -zacas -target-feature -zama16b -target-feature -zawrs -target-feature -zba -target-feature -zbb -target-feature -zbc -target-feature -zbkb -target-feature -zbkc -target-feature -zbkx -target-feature -zbs -target-feature -zcb -target-feature -zce -target-feature -zcf -target-feature -zclsd -target-feature -zcmop -target-feature -zcmp -target-feature -zcmt -target-feature -zdinx -target-feature -zfa -target-feature -zfbfmin -target-feature -zfh -target-feature -zfhmin -target-feature -zfinx -target-feature -zhinx -target-feature -zhinxmin -target-feature -zic64b -target-feature -zicbom -target-feature -zicbop -target-feature -zicboz -target-feature -ziccamoa -target-feature -ziccamoc -target-feature -ziccif -target-feature -zicclsm -target-feature -ziccrse -target-feature -zicntr -target-feature -zicond -target-feature -zifencei -target-feature -zihintntl -target-feature -zihintpause -target-feature -zihpm -target-feature -zilsd -target-feature -zimop -target-feature -zk -target-feature -zkn -target-feature -zknd -target-feature -zkne -target-feature -zknh -target-feature -zkr -target-feature -zks -target-feature -zksed -target-feature -zksh -target-feature -zkt -target-feature -ztso -target-feature -zvbb -target-feature -zvbc -target-feature -zve32f -target-feature -zve32x -target-feature -zve64d -target-feature -zve64f -target-feature -zve64x -target-feature -zvfbfmin -target-feature -zvfbfwma -target-feature -zvfh -target-feature -zvfhmin -target-feature -zvkb -target-feature -zvkg -target-feature -zvkn -target-feature -zvknc -target-feature -zvkned -target-feature -zvkng -target-feature -zvknha -target-feature -zvknhb -target-feature -zvks -target-feature -zvksc -target-feature -zvksed -target-feature -zvksg -target-feature -zvksh -target-feature -zvkt -target-feature -zvl1024b -target-feature -zvl128b -target-feature -zvl16384b -target-feature -zvl2048b -target-feature -zvl256b -target-feature -zvl32768b -target-feature -zvl32b -target-feature -zvl4096b -target-feature -zvl512b -target-feature -zvl64b -target-feature -zvl65536b -target-feature -zvl8192b -target-feature -experimental-p -target-feature -experimental-svukte -target-feature -experimental-xqccmp -target-feature -experimental-xqcia -target-feature -experimental-xqciac -target-feature -experimental-xqcibi -target-feature -experimental-xqcibm -target-feature -experimental-xqcicli -target-feature -experimental-xqcicm -target-feature -experimental-xqcics -target-feature -experimental-xqcicsr -target-feature -experimental-xqciint -target-feature -experimental-xqciio -target-feature -experimental-xqcilb -target-feature -experimental-xqcili -target-feature -experimental-xqcilia -target-feature -experimental-xqcilo -target-feature -experimental-xqcilsm -target-feature -experimental-xqcisim -target-feature -experimental-xqcisls -target-feature -experimental-xqcisync -target-feature -experimental-xrivosvisni -target-feature -experimental-xrivosvizip -target-feature -experimental-xsfmclic -target-feature -experimental-xsfsclic -target-feature -experimental-zalasr -target-feature -experimental-zicfilp -target-feature -experimental-zicfiss -target-feature -experimental-zvbc32e -target-feature -experimental-zvkgs -target-feature -experimental-zvqdotq -target-feature +relax -target-abi lp64d -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0 -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0 -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /usr/riscv64-linux-gnu -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/riscv64-linux-gnu/usr/local/include -internal-externc-isystem /usr/riscv64-linux-gnu/include -internal-externc-isystem /usr/riscv64-linux-gnu/usr/include -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu
+        ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/local/include"
+        ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include
+         /usr/riscv64-linux-gnu/include
+        End of search list.
+        [2/2] : && /usr/bin/cmake -E rm -f libcmTC_f8fa3.a && /usr/riscv64-linux-gnu/bin/ar qc libcmTC_f8fa3.a  CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o && /usr/riscv64-linux-gnu/bin/ranlib libcmTC_f8fa3.a && :
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+          add: [/usr/riscv64-linux-gnu/include]
+        end of search list found
+        collapse include dir [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include] ==> [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        collapse include dir [/usr/riscv64-linux-gnu/include] ==> [/usr/riscv64-linux-gnu/include]
+        implicit include dirs: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include;/usr/riscv64-linux-gnu/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_f8fa3]
+        ignore line: [[1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -v -MD -MT CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang version 22.0.0git (https://github.com/llvm/llvm-project.git 34109cd26ae1b317d91c061500d9828fe6ebab0b)]
+        ignore line: [Target: riscv64-unknown-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin]
+        ignore line: [ (in-process)]
+        ignore line: [ "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple riscv64-unknown-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic-rv64 -target-feature +m -target-feature +a -target-feature +f -target-feature +d -target-feature +c -target-feature +zicsr -target-feature +zmmul -target-feature +zaamo -target-feature +zalrsc -target-feature +zca -target-feature +zcd -target-feature -b -target-feature -e -target-feature -h -target-feature -q -target-feature -sdext -target-feature -sdtrig -target-feature -sha -target-feature -shcounterenw -target-feature -shgatpa -target-feature -shlcofideleg -target-feature -shtvala -target-feature -shvsatpa -target-feature -shvstvala -target-feature -shvstvecd -target-feature -smaia -target-feature -smcdeleg -target-feature -smcntrpmf -target-feature -smcsrind -target-feature -smctr -target-feature -smdbltrp -target-feature -smepmp -target-feature -smmpm -target-feature -smnpm -target-feature -smrnmi -target-feature -smstateen -target-feature -ssaia -target-feature -ssccfg -target-feature -ssccptr -target-feature -sscofpmf -target-feature -sscounterenw -target-feature -sscsrind -target-feature -ssctr -target-feature -ssdbltrp -target-feature -ssnpm -target-feature -sspm -target-feature -ssqosid -target-feature -ssstateen -target-feature -ssstrict -target-feature -sstc -target-feature -sstvala -target-feature -sstvecd -target-feature -ssu64xl -target-feature -supm -target-feature -svade -target-feature -svadu -target-feature -svbare -target-feature -svinval -target-feature -svnapot -target-feature -svpbmt -target-feature -svvptc -target-feature -v -target-feature -xandesbfhcvt -target-feature -xandesperf -target-feature -xandesvbfhcvt -target-feature -xandesvdot -target-feature -xandesvpackfph -target-feature -xandesvsintload -target-feature -xcvalu -target-feature -xcvbi -target-feature -xcvbitmanip -target-feature -xcvelw -target-feature -xcvmac -target-feature -xcvmem -target-feature -xcvsimd -target-feature -xmipscbop -target-feature -xmipscmov -target-feature -xmipslsp -target-feature -xsfcease -target-feature -xsfmm128t -target-feature -xsfmm16t -target-feature -xsfmm32a16f -target-feature -xsfmm32a32f -target-feature -xsfmm32a8f -target-feature -xsfmm32a8i -target-feature -xsfmm32t -target-feature -xsfmm64a64f -target-feature -xsfmm64t -target-feature -xsfmmbase -target-feature -xsfvcp -target-feature -xsfvfnrclipxfqf -target-feature -xsfvfwmaccqqq -target-feature -xsfvqmaccdod -target-feature -xsfvqmaccqoq -target-feature -xsifivecdiscarddlone -target-feature -xsifivecflushdlone -target-feature -xsmtvdot -target-feature -xtheadba -target-feature -xtheadbb -target-feature -xtheadbs -target-feature -xtheadcmo -target-feature -xtheadcondmov -target-feature -xtheadfmemidx -target-feature -xtheadmac -target-feature -xtheadmemidx -target-feature -xtheadmempair -target-feature -xtheadsync -target-feature -xtheadvdot -target-feature -xventanacondops -target-feature -xwchc -target-feature -za128rs -target-feature -za64rs -target-feature -zabha -target-feature -zacas -target-feature -zama16b -target-feature -zawrs -target-feature -zba -target-feature -zbb -target-feature -zbc -target-feature -zbkb -target-feature -zbkc -target-feature -zbkx -target-feature -zbs -target-feature -zcb -target-feature -zce -target-feature -zcf -target-feature -zclsd -target-feature -zcmop -target-feature -zcmp -target-feature -zcmt -target-feature -zdinx -target-feature -zfa -target-feature -zfbfmin -target-feature -zfh -target-feature -zfhmin -target-feature -zfinx -target-feature -zhinx -target-feature -zhinxmin -target-feature -zic64b -target-feature -zicbom -target-feature -zicbop -target-feature -zicboz -target-feature -ziccamoa -target-feature -ziccamoc -target-feature -ziccif -target-feature -zicclsm -target-feature -ziccrse -target-feature -zicntr -target-feature -zicond -target-feature -zifencei -target-feature -zihintntl -target-feature -zihintpause -target-feature -zihpm -target-feature -zilsd -target-feature -zimop -target-feature -zk -target-feature -zkn -target-feature -zknd -target-feature -zkne -target-feature -zknh -target-feature -zkr -target-feature -zks -target-feature -zksed -target-feature -zksh -target-feature -zkt -target-feature -ztso -target-feature -zvbb -target-feature -zvbc -target-feature -zve32f -target-feature -zve32x -target-feature -zve64d -target-feature -zve64f -target-feature -zve64x -target-feature -zvfbfmin -target-feature -zvfbfwma -target-feature -zvfh -target-feature -zvfhmin -target-feature -zvkb -target-feature -zvkg -target-feature -zvkn -target-feature -zvknc -target-feature -zvkned -target-feature -zvkng -target-feature -zvknha -target-feature -zvknhb -target-feature -zvks -target-feature -zvksc -target-feature -zvksed -target-feature -zvksg -target-feature -zvksh -target-feature -zvkt -target-feature -zvl1024b -target-feature -zvl128b -target-feature -zvl16384b -target-feature -zvl2048b -target-feature -zvl256b -target-feature -zvl32768b -target-feature -zvl32b -target-feature -zvl4096b -target-feature -zvl512b -target-feature -zvl64b -target-feature -zvl65536b -target-feature -zvl8192b -target-feature -experimental-p -target-feature -experimental-svukte -target-feature -experimental-xqccmp -target-feature -experimental-xqcia -target-feature -experimental-xqciac -target-feature -experimental-xqcibi -target-feature -experimental-xqcibm -target-feature -experimental-xqcicli -target-feature -experimental-xqcicm -target-feature -experimental-xqcics -target-feature -experimental-xqcicsr -target-feature -experimental-xqciint -target-feature -experimental-xqciio -target-feature -experimental-xqcilb -target-feature -experimental-xqcili -target-feature -experimental-xqcilia -target-feature -experimental-xqcilo -target-feature -experimental-xqcilsm -target-feature -experimental-xqcisim -target-feature -experimental-xqcisls -target-feature -experimental-xqcisync -target-feature -experimental-xrivosvisni -target-feature -experimental-xrivosvizip -target-feature -experimental-xsfmclic -target-feature -experimental-xsfsclic -target-feature -experimental-zalasr -target-feature -experimental-zicfilp -target-feature -experimental-zicfiss -target-feature -experimental-zvbc32e -target-feature -experimental-zvkgs -target-feature -experimental-zvqdotq -target-feature +relax -target-abi lp64d -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0 -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-umF4F0 -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /usr/riscv64-linux-gnu -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/riscv64-linux-gnu/usr/local/include -internal-externc-isystem /usr/riscv64-linux-gnu/include -internal-externc-isystem /usr/riscv64-linux-gnu/usr/include -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o -x c /usr/share/cmake-3.31/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        ignore line: [ /usr/riscv64-linux-gnu/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] : && /usr/bin/cmake -E rm -f libcmTC_f8fa3.a && /usr/riscv64-linux-gnu/bin/ar qc libcmTC_f8fa3.a  CMakeFiles/cmTC_f8fa3.dir/CMakeCCompilerABI.c.o && /usr/riscv64-linux-gnu/bin/ranlib libcmTC_f8fa3.a && :]
+        ignore line: []
+        ignore line: []
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_2546a
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -v -MD -MT CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang version 22.0.0git (https://github.com/llvm/llvm-project.git 34109cd26ae1b317d91c061500d9828fe6ebab0b)
+        Target: riscv64-unknown-linux-gnu
+        Thread model: posix
+        InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin
+         (in-process)
+         "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple riscv64-unknown-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic-rv64 -target-feature +m -target-feature +a -target-feature +f -target-feature +d -target-feature +c -target-feature +zicsr -target-feature +zmmul -target-feature +zaamo -target-feature +zalrsc -target-feature +zca -target-feature +zcd -target-feature -b -target-feature -e -target-feature -h -target-feature -q -target-feature -sdext -target-feature -sdtrig -target-feature -sha -target-feature -shcounterenw -target-feature -shgatpa -target-feature -shlcofideleg -target-feature -shtvala -target-feature -shvsatpa -target-feature -shvstvala -target-feature -shvstvecd -target-feature -smaia -target-feature -smcdeleg -target-feature -smcntrpmf -target-feature -smcsrind -target-feature -smctr -target-feature -smdbltrp -target-feature -smepmp -target-feature -smmpm -target-feature -smnpm -target-feature -smrnmi -target-feature -smstateen -target-feature -ssaia -target-feature -ssccfg -target-feature -ssccptr -target-feature -sscofpmf -target-feature -sscounterenw -target-feature -sscsrind -target-feature -ssctr -target-feature -ssdbltrp -target-feature -ssnpm -target-feature -sspm -target-feature -ssqosid -target-feature -ssstateen -target-feature -ssstrict -target-feature -sstc -target-feature -sstvala -target-feature -sstvecd -target-feature -ssu64xl -target-feature -supm -target-feature -svade -target-feature -svadu -target-feature -svbare -target-feature -svinval -target-feature -svnapot -target-feature -svpbmt -target-feature -svvptc -target-feature -v -target-feature -xandesbfhcvt -target-feature -xandesperf -target-feature -xandesvbfhcvt -target-feature -xandesvdot -target-feature -xandesvpackfph -target-feature -xandesvsintload -target-feature -xcvalu -target-feature -xcvbi -target-feature -xcvbitmanip -target-feature -xcvelw -target-feature -xcvmac -target-feature -xcvmem -target-feature -xcvsimd -target-feature -xmipscbop -target-feature -xmipscmov -target-feature -xmipslsp -target-feature -xsfcease -target-feature -xsfmm128t -target-feature -xsfmm16t -target-feature -xsfmm32a16f -target-feature -xsfmm32a32f -target-feature -xsfmm32a8f -target-feature -xsfmm32a8i -target-feature -xsfmm32t -target-feature -xsfmm64a64f -target-feature -xsfmm64t -target-feature -xsfmmbase -target-feature -xsfvcp -target-feature -xsfvfnrclipxfqf -target-feature -xsfvfwmaccqqq -target-feature -xsfvqmaccdod -target-feature -xsfvqmaccqoq -target-feature -xsifivecdiscarddlone -target-feature -xsifivecflushdlone -target-feature -xsmtvdot -target-feature -xtheadba -target-feature -xtheadbb -target-feature -xtheadbs -target-feature -xtheadcmo -target-feature -xtheadcondmov -target-feature -xtheadfmemidx -target-feature -xtheadmac -target-feature -xtheadmemidx -target-feature -xtheadmempair -target-feature -xtheadsync -target-feature -xtheadvdot -target-feature -xventanacondops -target-feature -xwchc -target-feature -za128rs -target-feature -za64rs -target-feature -zabha -target-feature -zacas -target-feature -zama16b -target-feature -zawrs -target-feature -zba -target-feature -zbb -target-feature -zbc -target-feature -zbkb -target-feature -zbkc -target-feature -zbkx -target-feature -zbs -target-feature -zcb -target-feature -zce -target-feature -zcf -target-feature -zclsd -target-feature -zcmop -target-feature -zcmp -target-feature -zcmt -target-feature -zdinx -target-feature -zfa -target-feature -zfbfmin -target-feature -zfh -target-feature -zfhmin -target-feature -zfinx -target-feature -zhinx -target-feature -zhinxmin -target-feature -zic64b -target-feature -zicbom -target-feature -zicbop -target-feature -zicboz -target-feature -ziccamoa -target-feature -ziccamoc -target-feature -ziccif -target-feature -zicclsm -target-feature -ziccrse -target-feature -zicntr -target-feature -zicond -target-feature -zifencei -target-feature -zihintntl -target-feature -zihintpause -target-feature -zihpm -target-feature -zilsd -target-feature -zimop -target-feature -zk -target-feature -zkn -target-feature -zknd -target-feature -zkne -target-feature -zknh -target-feature -zkr -target-feature -zks -target-feature -zksed -target-feature -zksh -target-feature -zkt -target-feature -ztso -target-feature -zvbb -target-feature -zvbc -target-feature -zve32f -target-feature -zve32x -target-feature -zve64d -target-feature -zve64f -target-feature -zve64x -target-feature -zvfbfmin -target-feature -zvfbfwma -target-feature -zvfh -target-feature -zvfhmin -target-feature -zvkb -target-feature -zvkg -target-feature -zvkn -target-feature -zvknc -target-feature -zvkned -target-feature -zvkng -target-feature -zvknha -target-feature -zvknhb -target-feature -zvks -target-feature -zvksc -target-feature -zvksed -target-feature -zvksg -target-feature -zvksh -target-feature -zvkt -target-feature -zvl1024b -target-feature -zvl128b -target-feature -zvl16384b -target-feature -zvl2048b -target-feature -zvl256b -target-feature -zvl32768b -target-feature -zvl32b -target-feature -zvl4096b -target-feature -zvl512b -target-feature -zvl64b -target-feature -zvl65536b -target-feature -zvl8192b -target-feature -experimental-p -target-feature -experimental-svukte -target-feature -experimental-xqccmp -target-feature -experimental-xqcia -target-feature -experimental-xqciac -target-feature -experimental-xqcibi -target-feature -experimental-xqcibm -target-feature -experimental-xqcicli -target-feature -experimental-xqcicm -target-feature -experimental-xqcics -target-feature -experimental-xqcicsr -target-feature -experimental-xqciint -target-feature -experimental-xqciio -target-feature -experimental-xqcilb -target-feature -experimental-xqcili -target-feature -experimental-xqcilia -target-feature -experimental-xqcilo -target-feature -experimental-xqcilsm -target-feature -experimental-xqcisim -target-feature -experimental-xqcisls -target-feature -experimental-xqcisync -target-feature -experimental-xrivosvisni -target-feature -experimental-xrivosvizip -target-feature -experimental-xsfmclic -target-feature -experimental-xsfsclic -target-feature -experimental-zalasr -target-feature -experimental-zicfilp -target-feature -experimental-zicfiss -target-feature -experimental-zvbc32e -target-feature -experimental-zvkgs -target-feature -experimental-zvqdotq -target-feature +relax -target-abi lp64d -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /usr/riscv64-linux-gnu -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/riscv64-linux-gnu/usr/local/include -internal-externc-isystem /usr/riscv64-linux-gnu/include -internal-externc-isystem /usr/riscv64-linux-gnu/usr/include -fdeprecated-macro -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu
+        ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/local/include"
+        ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include
+         /usr/riscv64-linux-gnu/include
+        End of search list.
+        [2/2] : && /usr/bin/cmake -E rm -f libcmTC_2546a.a && /usr/riscv64-linux-gnu/bin/ar qc libcmTC_2546a.a  CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o && /usr/riscv64-linux-gnu/bin/ranlib libcmTC_2546a.a && :
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+          add: [/usr/riscv64-linux-gnu/include]
+        end of search list found
+        collapse include dir [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include] ==> [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        collapse include dir [/usr/riscv64-linux-gnu/include] ==> [/usr/riscv64-linux-gnu/include]
+        implicit include dirs: [/home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include;/usr/riscv64-linux-gnu/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
+      - "/usr/share/cmake-3.31/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:6 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
+        ignore line: [Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/ninja -v cmTC_2546a]
+        ignore line: [[1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -v -MD -MT CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang version 22.0.0git (https://github.com/llvm/llvm-project.git 34109cd26ae1b317d91c061500d9828fe6ebab0b)]
+        ignore line: [Target: riscv64-unknown-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /home/youzhewei.linux/work/llvm-project/build/bin]
+        ignore line: [ (in-process)]
+        ignore line: [ "/home/youzhewei.linux/work/llvm-project/build/bin/clang-22" -cc1 -triple riscv64-unknown-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic-rv64 -target-feature +m -target-feature +a -target-feature +f -target-feature +d -target-feature +c -target-feature +zicsr -target-feature +zmmul -target-feature +zaamo -target-feature +zalrsc -target-feature +zca -target-feature +zcd -target-feature -b -target-feature -e -target-feature -h -target-feature -q -target-feature -sdext -target-feature -sdtrig -target-feature -sha -target-feature -shcounterenw -target-feature -shgatpa -target-feature -shlcofideleg -target-feature -shtvala -target-feature -shvsatpa -target-feature -shvstvala -target-feature -shvstvecd -target-feature -smaia -target-feature -smcdeleg -target-feature -smcntrpmf -target-feature -smcsrind -target-feature -smctr -target-feature -smdbltrp -target-feature -smepmp -target-feature -smmpm -target-feature -smnpm -target-feature -smrnmi -target-feature -smstateen -target-feature -ssaia -target-feature -ssccfg -target-feature -ssccptr -target-feature -sscofpmf -target-feature -sscounterenw -target-feature -sscsrind -target-feature -ssctr -target-feature -ssdbltrp -target-feature -ssnpm -target-feature -sspm -target-feature -ssqosid -target-feature -ssstateen -target-feature -ssstrict -target-feature -sstc -target-feature -sstvala -target-feature -sstvecd -target-feature -ssu64xl -target-feature -supm -target-feature -svade -target-feature -svadu -target-feature -svbare -target-feature -svinval -target-feature -svnapot -target-feature -svpbmt -target-feature -svvptc -target-feature -v -target-feature -xandesbfhcvt -target-feature -xandesperf -target-feature -xandesvbfhcvt -target-feature -xandesvdot -target-feature -xandesvpackfph -target-feature -xandesvsintload -target-feature -xcvalu -target-feature -xcvbi -target-feature -xcvbitmanip -target-feature -xcvelw -target-feature -xcvmac -target-feature -xcvmem -target-feature -xcvsimd -target-feature -xmipscbop -target-feature -xmipscmov -target-feature -xmipslsp -target-feature -xsfcease -target-feature -xsfmm128t -target-feature -xsfmm16t -target-feature -xsfmm32a16f -target-feature -xsfmm32a32f -target-feature -xsfmm32a8f -target-feature -xsfmm32a8i -target-feature -xsfmm32t -target-feature -xsfmm64a64f -target-feature -xsfmm64t -target-feature -xsfmmbase -target-feature -xsfvcp -target-feature -xsfvfnrclipxfqf -target-feature -xsfvfwmaccqqq -target-feature -xsfvqmaccdod -target-feature -xsfvqmaccqoq -target-feature -xsifivecdiscarddlone -target-feature -xsifivecflushdlone -target-feature -xsmtvdot -target-feature -xtheadba -target-feature -xtheadbb -target-feature -xtheadbs -target-feature -xtheadcmo -target-feature -xtheadcondmov -target-feature -xtheadfmemidx -target-feature -xtheadmac -target-feature -xtheadmemidx -target-feature -xtheadmempair -target-feature -xtheadsync -target-feature -xtheadvdot -target-feature -xventanacondops -target-feature -xwchc -target-feature -za128rs -target-feature -za64rs -target-feature -zabha -target-feature -zacas -target-feature -zama16b -target-feature -zawrs -target-feature -zba -target-feature -zbb -target-feature -zbc -target-feature -zbkb -target-feature -zbkc -target-feature -zbkx -target-feature -zbs -target-feature -zcb -target-feature -zce -target-feature -zcf -target-feature -zclsd -target-feature -zcmop -target-feature -zcmp -target-feature -zcmt -target-feature -zdinx -target-feature -zfa -target-feature -zfbfmin -target-feature -zfh -target-feature -zfhmin -target-feature -zfinx -target-feature -zhinx -target-feature -zhinxmin -target-feature -zic64b -target-feature -zicbom -target-feature -zicbop -target-feature -zicboz -target-feature -ziccamoa -target-feature -ziccamoc -target-feature -ziccif -target-feature -zicclsm -target-feature -ziccrse -target-feature -zicntr -target-feature -zicond -target-feature -zifencei -target-feature -zihintntl -target-feature -zihintpause -target-feature -zihpm -target-feature -zilsd -target-feature -zimop -target-feature -zk -target-feature -zkn -target-feature -zknd -target-feature -zkne -target-feature -zknh -target-feature -zkr -target-feature -zks -target-feature -zksed -target-feature -zksh -target-feature -zkt -target-feature -ztso -target-feature -zvbb -target-feature -zvbc -target-feature -zve32f -target-feature -zve32x -target-feature -zve64d -target-feature -zve64f -target-feature -zve64x -target-feature -zvfbfmin -target-feature -zvfbfwma -target-feature -zvfh -target-feature -zvfhmin -target-feature -zvkb -target-feature -zvkg -target-feature -zvkn -target-feature -zvknc -target-feature -zvkned -target-feature -zvkng -target-feature -zvknha -target-feature -zvknhb -target-feature -zvks -target-feature -zvksc -target-feature -zvksed -target-feature -zvksg -target-feature -zvksh -target-feature -zvkt -target-feature -zvl1024b -target-feature -zvl128b -target-feature -zvl16384b -target-feature -zvl2048b -target-feature -zvl256b -target-feature -zvl32768b -target-feature -zvl32b -target-feature -zvl4096b -target-feature -zvl512b -target-feature -zvl64b -target-feature -zvl65536b -target-feature -zvl8192b -target-feature -experimental-p -target-feature -experimental-svukte -target-feature -experimental-xqccmp -target-feature -experimental-xqcia -target-feature -experimental-xqciac -target-feature -experimental-xqcibi -target-feature -experimental-xqcibm -target-feature -experimental-xqcicli -target-feature -experimental-xqcicm -target-feature -experimental-xqcics -target-feature -experimental-xqcicsr -target-feature -experimental-xqciint -target-feature -experimental-xqciio -target-feature -experimental-xqcilb -target-feature -experimental-xqcili -target-feature -experimental-xqcilia -target-feature -experimental-xqcilo -target-feature -experimental-xqcilsm -target-feature -experimental-xqcisim -target-feature -experimental-xqcisls -target-feature -experimental-xqcisync -target-feature -experimental-xrivosvisni -target-feature -experimental-xrivosvizip -target-feature -experimental-xsfmclic -target-feature -experimental-xsfsclic -target-feature -experimental-zalasr -target-feature -experimental-zicfilp -target-feature -experimental-zicfiss -target-feature -experimental-zvbc32e -target-feature -experimental-zvkgs -target-feature -experimental-zvqdotq -target-feature +relax -target-abi lp64d -debugger-tuning=gdb -fdebug-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv -v -fcoverage-compilation-dir=/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-fgM6Kv -resource-dir /home/youzhewei.linux/work/llvm-project/build/lib/clang/22 -dependency-file CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /usr/riscv64-linux-gnu -internal-isystem /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include -internal-isystem /usr/riscv64-linux-gnu/usr/local/include -internal-externc-isystem /usr/riscv64-linux-gnu/include -internal-externc-isystem /usr/riscv64-linux-gnu/usr/include -fdeprecated-macro -ferror-limit 19 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 22.0.0git based upon LLVM 22.0.0git default target aarch64-unknown-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/usr/riscv64-linux-gnu/usr/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /home/youzhewei.linux/work/llvm-project/build/lib/clang/22/include]
+        ignore line: [ /usr/riscv64-linux-gnu/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] : && /usr/bin/cmake -E rm -f libcmTC_2546a.a && /usr/riscv64-linux-gnu/bin/ar qc libcmTC_2546a.a  CMakeFiles/cmTC_2546a.dir/CMakeCXXCompilerABI.cpp.o && /usr/riscv64-linux-gnu/bin/ranlib libcmTC_2546a.a && :]
+        ignore line: []
+        ignore line: []
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xIzEMT"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xIzEMT"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xIzEMT'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_92f33
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xIzEMT/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_92f33.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xIzEMT/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xIzEMT/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-dX42Yo"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-dX42Yo"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibiomp5"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-dX42Yo'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_b9f33
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-dX42Yo/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_b9f33.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-dX42Yo/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-dX42Yo/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xhlVVW"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xhlVVW"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xhlVVW'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_af8f8
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp -MD -MT CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xhlVVW/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp -MD -MT CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_af8f8.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xhlVVW/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-xhlVVW/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-UXxvV0"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-UXxvV0"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_Xclang fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-UXxvV0'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_098c0
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-UXxvV0/OpenMPTryFlag.c
+        FAILED: CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_098c0.dir/OpenMPTryFlag.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-UXxvV0/OpenMPTryFlag.c
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-UXxvV0/OpenMPTryFlag.c:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-4vEskY"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-4vEskY"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-4vEskY'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_22949
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-4vEskY/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_22949.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-4vEskY/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-4vEskY/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-kcD5OI"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-kcD5OI"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibiomp5"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-kcD5OI'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_5b515
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-kcD5OI/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp=libiomp5 -MD -MT CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_5b515.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-kcD5OI/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-kcD5OI/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-ChTYDM"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-ChTYDM"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-ChTYDM'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_1b5db
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp -MD -MT CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-ChTYDM/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -fopenmp -MD -MT CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_1b5db.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-ChTYDM/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-ChTYDM/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:252 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindOpenMP.cmake:522 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:251 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-5T6AXn"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-5T6AXn"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_CXX_FLAGS: "   "
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_Xclang fopenmp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-5T6AXn'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_d898f
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-5T6AXn/OpenMPTryFlag.cpp
+        FAILED: CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang++ --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu   -Xclang -fopenmp -MD -MT CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_d898f.dir/OpenMPTryFlag.cpp.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-5T6AXn/OpenMPTryFlag.cpp
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-5T6AXn/OpenMPTryFlag.cpp:2:10: fatal error: 'omp.h' file not found
+            2 | #include <omp.h>
+              |          ^~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "cmake/modules/DetectArchitecture.cmake:8 (try_compile)"
+      - "CMakeLists.txt:263 (detect_architecture)"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeTmp"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "HAVE_ARCH"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_34bb2
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu    -MD -MT CMakeFiles/cmTC_34bb2.dir/DetectArchitecture.c.o -MF CMakeFiles/cmTC_34bb2.dir/DetectArchitecture.c.o.d -o CMakeFiles/cmTC_34bb2.dir/DetectArchitecture.c.o -c /home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules/DetectArchitecture.c
+        [2/2] : && /usr/bin/cmake -E rm -f libcmTC_34bb2.a && /usr/riscv64-linux-gnu/bin/ar qc libcmTC_34bb2.a  CMakeFiles/cmTC_34bb2.dir/DetectArchitecture.c.o && /usr/riscv64-linux-gnu/bin/ranlib libcmTC_34bb2.a && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:163 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/CheckSymbolExists.cmake:68 (__CHECK_SYMBOL_EXISTS_IMPL)"
+      - "SingleSource/UnitTests/Vector/CMakeLists.txt:8 (CHECK_SYMBOL_EXISTS)"
+    checks:
+      - "Looking for __ARM_NEON"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-On2iJt"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-On2iJt"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "NEON_AVAILABLE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-On2iJt'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_a9f90
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu    -MD -MT CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-On2iJt/CheckSymbolExists.c
+        FAILED: CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o 
+        /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu    -MD -MT CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o -MF CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o.d -o CMakeFiles/cmTC_a9f90.dir/CheckSymbolExists.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-On2iJt/CheckSymbolExists.c
+        /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-On2iJt/CheckSymbolExists.c:7:19: error: use of undeclared identifier '__ARM_NEON'
+            7 |   return ((int*)(&__ARM_NEON))[argc];
+              |                   ^~~~~~~~~~
+        1 error generated.
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckSourceCompiles.cmake:108 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.31/Modules/CheckCCompilerFlag.cmake:56 (cmake_check_compiler_flag)"
+      - "SingleSource/UnitTests/CMakeLists.txt:62 (check_c_compiler_flag)"
+    checks:
+      - "Performing Test COMPILER_HAS_MATRIX_FLAG"
+    directories:
+      source: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-Vuvbdk"
+      binary: "/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-Vuvbdk"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND"
+      CMAKE_CXX_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_COMPILER_TARGET: "riscv64-linux-gnu"
+      CMAKE_C_FLAGS: "   "
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-fuse-ld=lld --gcc-toolchain=/usr   "
+      CMAKE_MODULE_PATH: "/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake;/home/youzhewei.linux/work/llvm-project/llvm-test-suite/cmake/modules"
+      CMAKE_SYSROOT: "/usr/riscv64-linux-gnu"
+    buildResult:
+      variable: "COMPILER_HAS_MATRIX_FLAG"
+      cached: true
+      stdout: |
+        Change Dir: '/home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-Vuvbdk'
+        
+        Run Build Command(s): /usr/bin/ninja -v cmTC_f4cab
+        [1/2] /home/youzhewei.linux/work/llvm-project/build/bin/clang --target=riscv64-linux-gnu --sysroot=/usr/riscv64-linux-gnu -DCOMPILER_HAS_MATRIX_FLAG  -fenable-matrix -MD -MT CMakeFiles/cmTC_f4cab.dir/src.c.o -MF CMakeFiles/cmTC_f4cab.dir/src.c.o.d -o CMakeFiles/cmTC_f4cab.dir/src.c.o -c /home/youzhewei.linux/work/llvm-project/ts-rv64/CMakeFiles/CMakeScratch/TryCompile-Vuvbdk/src.c
+        [2/2] : && /usr/bin/cmake -E rm -f libcmTC_f4cab.a && /usr/riscv64-linux-gnu/bin/ar qc libcmTC_f4cab.a  CMakeFiles/cmTC_f4cab.dir/src.c.o && /usr/riscv64-linux-gnu/bin/ranlib libcmTC_f4cab.a && :
+        
+      exitCode: 0
+...

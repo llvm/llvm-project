@@ -1,0 +1,19 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:28:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   28 | main()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:30:28: warning: implicit truncation from 'long long' to bit-field changes value from 4502500384112655 to -1099243257841 [-Wbitfield-constant-conversion]
+   30 |   struct tmp tmp = {0x123, 0xFFF000FFF000FLL};
+      |                            ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:31:23: warning: implicit truncation from 'long long' to bit-field changes value from 4502500384112655 to -1099243257841 [-Wbitfield-constant-conversion]
+   31 |   struct tmp2 tmp2 = {0xFFF000FFF000FLL, 0x123};
+      |                       ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:37:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   37 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:37:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:40:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   40 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/bf64-1.c:40:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+2 warnings and 3 errors generated.

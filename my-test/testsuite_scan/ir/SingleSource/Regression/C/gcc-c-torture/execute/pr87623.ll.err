@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr87623.c:8:18: warning: unknown attribute 'scalar_storage_order' ignored [-Wunknown-attributes]
+    8 | } __attribute__((scalar_storage_order("big-endian")));
+      |                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 warning generated.

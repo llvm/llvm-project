@@ -1,0 +1,145 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:122:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  122 | T(1, , += x, opadd)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:123:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  123 | T(2, ++, , opinc)
+      | ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:124:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  124 | T(3, , ++, opinc)
+      | ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:125:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  125 | T(4, , -= x, opsub)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:126:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  126 | T(5, --, , opdec)
+      | ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:127:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  127 | T(6, , --, opdec)
+      | ^~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:128:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  128 | T(7, , &= x, opand)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:129:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  129 | T(8, , |= x, opior)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:130:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  130 | T(9, , ^= x, opxor)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:131:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  131 | T(a, , /= x, opdiv)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:132:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  132 | T(b, , %= x, oprem)
+      | ^~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:133:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  133 | T(c, , += 3, opadd3)
+      | ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:134:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  134 | T(d, , -= 7, opsub7)
+      | ^~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:135:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  135 | T(e, , &= 21, opand21)
+      | ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:136:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  136 | T(f, , |= 19, opior19)
+      | ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:137:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  137 | T(g, , ^= 37, opxor37)
+      | ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:138:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  138 | T(h, , /= 17, opdiv17)
+      | ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040705-1.c:4:
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:96:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:139:1: warning: implicit truncation from 'int' to bit-field changes value from 31278 to 558 [-Wbitfield-constant-conversion]
+  139 | T(i, , %= 19, oprem19)
+      | ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040629-1.c:70:7: note: expanded from macro 'T'
+   70 |   b.j = 31278;                                                  \
+      |       ^ ~~~~~
+18 warnings generated.

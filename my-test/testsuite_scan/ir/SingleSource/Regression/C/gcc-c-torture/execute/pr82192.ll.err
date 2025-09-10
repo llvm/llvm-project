@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr82192.c:6:26: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+    6 | __attribute__((noinline, noclone)) void
+      |                          ^~~~~~~
+      |                          noinline
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr82192.c:10:27: warning: operator '>>' has lower precedence than '-'; '-' will be evaluated first [-Wshift-op-parentheses]
+    9 |   b.m = ((unsigned) a) >> (0x644eee9667723bf7LL
+      |                        ~~ ~~~~~~~~~~~~~~~~~~~~~
+   10 |                            | a & ~0xdee27af8U) - 0x644eee9667763bd8LL;
+      |                            ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr82192.c:10:27: note: place parentheses around the '-' expression to silence this warning
+    9 |   b.m = ((unsigned) a) >> (0x644eee9667723bf7LL
+      |                           (
+   10 |                            | a & ~0xdee27af8U) - 0x644eee9667763bd8LL;
+      |                                                ^                     
+      |                                                                      )
+2 warnings generated.

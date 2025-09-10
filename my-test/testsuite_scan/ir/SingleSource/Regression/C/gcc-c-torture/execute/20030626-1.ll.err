@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20030626-1.c:8:29: warning: format string contains '\0' within the string body [-Wformat]
+    8 |   int l = sprintf (buf, "foo\0bar");
+      |                         ~~~~^~~~~~
+1 warning generated.

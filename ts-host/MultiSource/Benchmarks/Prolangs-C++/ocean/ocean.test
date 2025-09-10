@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ocean 
+VERIFY: %b/fpcmp-target %o %S/ocean.reference_output

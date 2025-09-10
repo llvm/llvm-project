@@ -1,0 +1,5 @@
+RUN: cd %S ; %S/Dither 
+VERIFY: %b/HashProgramOutput.sh %S/orderedOutput.txt
+VERIFY: %b/fpcmp-target %S/orderedDither.reference_output %S/orderedOutput.txt
+VERIFY: %b/HashProgramOutput.sh %S/floydOutput.txt
+VERIFY: %b/fpcmp-target %S/floydDither.reference_output %S/floydOutput.txt

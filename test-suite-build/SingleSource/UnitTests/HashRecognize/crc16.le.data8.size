@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/HashRecognize/crc16.le.data8  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             216      632
+.dynstr             141      848
+.gnu.version         18      990
+.gnu.version_r       48     1008
+.rela.dyn           192     1056
+.rela.plt            96     1248
+.init                28     1344
+.plt                 96     1376
+.text              2616     1472
+.fini                24     4088
+.rodata              80     4112
+.eh_frame_hdr        60     4192
+.eh_frame           228     4256
+.note.ABI-tag        32     4484
+.note.package       112     4516
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             56   131048
+.data                16   131104
+.bss                576   131136
+.comment            155        0
+Total              5389
+
+

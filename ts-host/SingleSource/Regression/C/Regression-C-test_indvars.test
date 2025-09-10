@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-test_indvars 
+VERIFY: %b/fpcmp-target %o %S/test_indvars.reference_output

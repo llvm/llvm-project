@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/fixoutput 
+VERIFY: %b/fpcmp-target %o %S/fixoutput.reference_output

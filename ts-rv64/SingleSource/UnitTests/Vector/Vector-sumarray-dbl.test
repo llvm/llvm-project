@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Vector-sumarray-dbl 
+VERIFY: %b/fpcmp-target %o %S/sumarray-dbl.reference_output

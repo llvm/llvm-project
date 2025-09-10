@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-dead_try_block 
+VERIFY: %b/fpcmp-target %o %S/dead_try_block.reference_output

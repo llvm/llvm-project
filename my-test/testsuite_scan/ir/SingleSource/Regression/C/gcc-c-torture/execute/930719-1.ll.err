@@ -1,0 +1,28 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:2:14: error: parameter 'com' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    2 | f (foo, bar, com)
+      |              ^
+    3 | {
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:2:9: error: parameter 'bar' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    2 | f (foo, bar, com)
+      |         ^
+    3 | {
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:2:4: error: parameter 'foo' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    2 | f (foo, bar, com)
+      |    ^
+    3 | {
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:2:1: warning: a function definition without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    2 | f (foo, bar, com)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:14:4: warning: indirection of non-volatile null pointer will be deleted, not trap [-Wnull-dereference]
+   14 |           *(char *) 0 = 0;
+      |           ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:14:4: note: consider using __builtin_trap() or qualifying pointer with 'volatile'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:19:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   19 | main ()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:22:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   22 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/930719-1.c:22:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+2 warnings and 5 errors generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2002-05-19-DivTest 
+VERIFY: %b/fpcmp-target %o %S/2002-05-19-DivTest.reference_output

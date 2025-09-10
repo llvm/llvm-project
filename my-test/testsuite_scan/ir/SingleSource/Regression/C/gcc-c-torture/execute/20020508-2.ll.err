@@ -1,0 +1,61 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:27:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   27 | main ()
+      | ^
+      | int
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:30:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   30 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:30:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:41:26: warning: signed shift result (0x12340000000) requires 42 bits to represent, but 'int' only has 32 bits [-Wshift-overflow]
+   41 |   if (ROR (i, shift1) != ROR (INT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:7:39: note: expanded from macro 'ROR'
+    7 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:44:26: warning: signed shift result (0x12340000000) requires 42 bits to represent, but 'int' only has 32 bits [-Wshift-overflow]
+   44 |   if (ROR (i, SHIFT1) != ROR (INT_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:7:39: note: expanded from macro 'ROR'
+    7 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:47:26: warning: signed shift result (0x12345678000000000000000) requires 90 bits to represent, but 'long' only has 64 bits [-Wshift-overflow]
+   47 |   if (ROR (l, shift1) != ROR (LONG_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:7:39: note: expanded from macro 'ROR'
+    7 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:50:26: warning: signed shift result (0x12345678000000000000000) requires 90 bits to represent, but 'long' only has 64 bits [-Wshift-overflow]
+   50 |   if (ROR (l, SHIFT1) != ROR (LONG_VALUE, SHIFT1))
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:7:39: note: expanded from macro 'ROR'
+    7 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:53:27: warning: signed shift result (0x12345678ABCDEF0000000000000000) requires 118 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   53 |   if (ROR (ll, shift1) != ROR (LL_VALUE, SHIFT1))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:7:39: note: expanded from macro 'ROR'
+    7 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:56:27: warning: signed shift result (0x12345678ABCDEF0000000000000000) requires 118 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   56 |   if (ROR (ll, SHIFT1) != ROR (LL_VALUE, SHIFT1))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:7:39: note: expanded from macro 'ROR'
+    7 | #define ROR(a,b) (((a) >> (b)) | ((a) << ((sizeof (a) * CHAR_BIT) - (b))))
+      |                                   ~~~ ^  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:95:27: warning: signed shift result (0x12345678ABCDEF0000000000000000) requires 118 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   95 |   if (ROL (ll, shift2) != ROL (LL_VALUE, SHIFT2))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:8:24: note: expanded from macro 'ROL'
+    8 | #define ROL(a,b) (((a) << (b)) | ((a) >> ((sizeof (a) * CHAR_BIT) - (b))))
+      |                    ~~~ ^  ~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:98:27: warning: signed shift result (0x12345678ABCDEF0000000000000000) requires 118 bits to represent, but 'long long' only has 64 bits [-Wshift-overflow]
+   98 |   if (ROL (ll, SHIFT2) != ROL (LL_VALUE, SHIFT2))
+      |                           ^~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:8:24: note: expanded from macro 'ROL'
+    8 | #define ROL(a,b) (((a) << (b)) | ((a) >> ((sizeof (a) * CHAR_BIT) - (b))))
+      |                    ~~~ ^  ~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:101:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  101 |   exit (0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020508-2.c:101:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+8 warnings and 3 errors generated.

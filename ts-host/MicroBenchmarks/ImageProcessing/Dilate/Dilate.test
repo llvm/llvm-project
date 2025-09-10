@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/Dilate 
+VERIFY: %b/HashProgramOutput.sh %S/dilateOutput.txt
+VERIFY: %b/fpcmp-target %S/dilate.reference_output %S/dilateOutput.txt

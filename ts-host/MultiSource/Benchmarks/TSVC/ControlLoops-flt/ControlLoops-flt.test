@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ControlLoops-flt 1640 5
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/ControlLoops-flt.reference_output

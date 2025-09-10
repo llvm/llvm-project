@@ -1,0 +1,33 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/Vectorizer/VPlanNativePath/outer-loop-vect  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                408     928
+.gnu.version            34    1336
+.gnu.version_r         160    1372
+.gnu.hash               28    1536
+.dynstr                468    1564
+.rela.dyn              288    2032
+.rela.plt              216    2320
+.rodata                165    2536
+.gcc_except_table      304    2704
+.eh_frame_hdr           52    3008
+.eh_frame              268    3064
+.text                 6778    7428
+.plt                   176   14208
+.preinit_array           8   18480
+.fini_array              8   18488
+.init_array             16   18496
+.dynamic               464   18512
+.got                    56   18976
+.relro_padding        1448   19032
+.data                   16   23128
+.tm_clone_table          0   23144
+.got.plt                88   23144
+.bss                  5008   23232
+.riscv.attributes      116       0
+.comment               250       0
+Total                17008
+
+

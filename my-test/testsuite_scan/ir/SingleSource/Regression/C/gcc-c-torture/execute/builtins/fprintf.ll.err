@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/fprintf.c:58:3: error: use of unknown builtin '__builtin_fprintf_unlocked' [-Wimplicit-function-declaration]
+   58 |   __builtin_fprintf_unlocked (*s_ptr, "");
+      |   ^
+1 error generated.

@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Vectorizer/recurrences  :
+section               size     addr
+.interp                 27      568
+.gnu.hash               28      600
+.dynsym                648      632
+.dynstr                676     1280
+.gnu.version            54     1956
+.gnu.version_r         176     2016
+.rela.dyn              576     2192
+.rela.plt              432     2768
+.init                   28     3200
+.plt                   320     3232
+.text                 3464     3584
+.fini                   24     7048
+.rodata                196     7072
+.eh_frame_hdr          196     7268
+.eh_frame              692     7464
+.gcc_except_table      168     8156
+.note.ABI-tag           32     8324
+.note.package          112     8356
+.init_array             16   130336
+.fini_array              8   130352
+.data.rel.ro            96   130360
+.dynamic               528   130456
+.got                    64   130984
+.got.plt               168   131048
+.data                   24   131216
+.bss                  5008   131240
+.comment               155        0
+Total                13916
+
+

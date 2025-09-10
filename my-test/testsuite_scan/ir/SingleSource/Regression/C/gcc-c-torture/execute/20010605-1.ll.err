@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010605-1.c:6:5: error: function definition is not allowed here
+    6 |     {
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010605-1.c:10:11: error: call to undeclared function 'fff'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   10 |   return (fff (v) != 420);
+      |           ^
+2 errors generated.

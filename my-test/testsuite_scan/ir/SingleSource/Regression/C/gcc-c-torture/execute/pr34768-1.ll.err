@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr34768-1.c:7:38: warning: 'const' attribute on function returning 'void'; attribute ignored [-Wignored-attributes]
+    7 | void __attribute__((const,noinline)) bar (void)
+      |                                      ^
+1 warning generated.

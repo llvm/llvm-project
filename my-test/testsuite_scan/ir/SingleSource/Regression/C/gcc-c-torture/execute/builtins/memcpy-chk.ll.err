@@ -1,0 +1,100 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:38:29: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+   38 |   if (memcpy (p + 16, "VWX" + 1, 2) != p + 16
+      |                       ~~~~~~^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:32: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |                                ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:38:29: note: use array indexing to silence this warning
+   38 |   if (memcpy (p + 16, "VWX" + 1, 2) != p + 16
+      |                             ^
+      |                       &     [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:32: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:62:18: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+   62 |   memcpy (p + 5, s3, 1);
+      |                  ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:115:40: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  115 |   if (memcpy ((char *) buf3 + 2, "bcd" + ++i, 2) != (char *) buf1 + 2
+      |                                  ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:32: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |                                ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:115:40: note: use array indexing to silence this warning
+  115 |   if (memcpy ((char *) buf3 + 2, "bcd" + ++i, 2) != (char *) buf1 + 2
+      |                                        ^
+      |                                  &     [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:32: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:184:31: warning: adding 'int' to a string does not append to the string [-Wstring-plus-int]
+  184 |   if (memcpy (buf4 + 2, "bcd" + i++, 2) != buf2 + 2
+      |                         ~~~~~~^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:32: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |                                ^~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:184:31: note: use array indexing to silence this warning
+  184 |   if (memcpy (buf4 + 2, "bcd" + i++, 2) != buf2 + 2
+      |                               ^
+      |                         &     [
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:32: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |                                ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:260:23: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  260 |   memcpy (a.buf1 + 2, s3, l1);
+      |                       ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:261:14: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  261 |   memcpy (r, s3, l1 + 1);
+      |              ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:263:14: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  263 |   memcpy (r, s2, l1 + 2);
+      |              ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:264:18: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  264 |   memcpy (r + 2, s3, l1);
+      |                  ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:277:14: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  277 |   memcpy (r, s2, l1);
+      |              ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:285:23: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  285 |   memcpy (a.buf1 + 2, s3, 1);
+      |                       ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:286:14: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  286 |   memcpy (r, s3, 2);
+      |              ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:288:14: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  288 |   memcpy (r, s2, 3);
+      |              ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:302:14: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  302 |   memcpy (r, s2, 1);
+      |              ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:305:22: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  305 |   memcpy (&buf3[16], s2, l);
+      |                      ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:322:7: error: __builtin_setjmp is not supported for the current target
+  322 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:324:27: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  324 |       memcpy (&a.buf2[9], s2, l1 + 1);
+      |                           ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:327:7: error: __builtin_setjmp is not supported for the current target
+  327 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:329:39: warning: passing 'volatile char *' to parameter of type 'const char *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  329 |       memcpy (&a.buf2[7], s3, strlen (s3) + 1);
+      |                                       ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:7:34: note: passing argument to parameter here
+    7 | extern size_t strlen(const char *);
+      |                                  ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:329:27: warning: passing 'volatile char *' to parameter of type 'const void *' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+  329 |       memcpy (&a.buf2[7], s3, strlen (s3) + 1);
+      |                           ^~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:333:7: error: __builtin_setjmp is not supported for the current target
+  333 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/memcpy-chk.c:335:7: warning: 'memcpy' will always overflow; destination buffer has size 1, but size argument is 2 [-Wbuiltin-memcpy-chk-size]
+  335 |       memcpy (&buf3[19], "ab", 2);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:9:3: note: expanded from macro 'memcpy'
+    9 |   __builtin___memcpy_chk (dst, src, len, os (dst))
+      |   ^
+18 warnings and 3 errors generated.

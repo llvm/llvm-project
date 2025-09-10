@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/initp1  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             185      872
+.gnu.version         20     1058
+.gnu.version_r       48     1080
+.rela.dyn           192     1128
+.rela.plt           120     1320
+.init                28     1440
+.plt                112     1472
+.text              1016     1600
+.fini                24     2616
+.rodata               4     2640
+.eh_frame_hdr        60     2644
+.eh_frame           212     2704
+.note.ABI-tag        32     2916
+.note.package       112     2948
+.init_array           8   130456
+.fini_array           8   130464
+.dynamic            528   130472
+.got                 48   131000
+.got.plt             64   131048
+.data               260   131112
+.bss                 16   131376
+.comment            155        0
+Total              3547
+
+

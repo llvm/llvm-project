@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2009-04-16-BitfieldInitialization.c:53:45: warning: implicit truncation from 'int' to bit-field changes value from 123 to 3 [-Wbitfield-constant-conversion]
+   53 | } __attribute__((packed)) t7  = { 101,  15, 123 };
+      |                                             ^~~
+1 warning generated.

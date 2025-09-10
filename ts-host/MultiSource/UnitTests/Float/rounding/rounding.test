@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/rounding 
+VERIFY: %b/fpcmp-target %o %S/rounding.reference_output

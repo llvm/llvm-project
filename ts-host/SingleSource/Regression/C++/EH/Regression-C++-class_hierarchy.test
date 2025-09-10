@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-class_hierarchy 
+VERIFY: %b/fpcmp-target %o %S/class_hierarchy.reference_output

@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2002-05-02-CastTest  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             264      632
+.dynstr             155      896
+.gnu.version         22     1052
+.gnu.version_r       48     1080
+.rela.dyn           192     1128
+.rela.plt           144     1320
+.init                28     1464
+.plt                128     1504
+.text               740     1664
+.fini                24     2404
+.rodata             327     2428
+.eh_frame_hdr        60     2756
+.eh_frame           228     2816
+.note.ABI-tag        32     3044
+.note.package       112     3076
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             72   131048
+.data                16   131120
+.bss                  8   131136
+.comment            155        0
+Total              3354
+
+

@@ -1,0 +1,134 @@
+In file included from /home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-3.c:5:
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:92:63: warning: implicit conversion from 'double' to 'unsigned short' changes value from 5.25 to 5 [-Wliteral-conversion]
+   92 | struct pck A { unsigned short i : 1, l : 1, j : 3, k : 11; }; T(A)
+      |                                                               ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:93:72: warning: implicit conversion from 'double' to 'unsigned int' changes value from 5.25 to 5 [-Wliteral-conversion]
+   93 | struct pck B { unsigned short i : 4, j : 1, k : 11; unsigned int l; }; T(B)
+      |                                                                        ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:94:72: warning: implicit conversion from 'double' to 'unsigned int' changes value from 5.25 to 5 [-Wliteral-conversion]
+   94 | struct pck C { unsigned int l; unsigned short i : 4, j : 1, k : 11; }; T(C)
+      |                                                                        ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:95:68: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+   95 | struct pck D { unsigned long long l : 6, i : 6, j : 23, k : 29; }; T(D)
+      |                                                                    ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:96:65: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+   96 | struct pck E { unsigned long long l, i : 12, j : 23, k : 29; }; T(E)
+      |                                                                 ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:97:65: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+   97 | struct pck F { unsigned long long i : 12, j : 23, k : 29, l; }; T(F)
+      |                                                                 ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:98:77: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+   98 | struct pck G { unsigned short i : 1, j : 1, k : 6; unsigned long long l; }; T(G)
+      |                                                                             ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:99:77: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+   99 | struct pck H { unsigned short i : 6, j : 2, k : 8; unsigned long long l; }; T(H)
+      |                                                                             ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:100:77: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  100 | struct pck I { unsigned short i : 1, j : 6, k : 1; unsigned long long l; }; T(I)
+      |                                                                             ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:101:73: warning: implicit conversion from 'double' to 'unsigned short' changes value from 5.25 to 5 [-Wliteral-conversion]
+  101 | struct pck J { unsigned short i : 1, j : 8, k : 7; unsigned short l; }; T(J)
+      |                                                                         ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:102:62: warning: implicit conversion from 'double' to 'unsigned int' changes value from 5.25 to 5 [-Wliteral-conversion]
+  102 | struct pck K { unsigned int k : 6, l : 1, j : 10, i : 15; }; T(K)
+      |                                                              ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:103:71: warning: implicit conversion from 'double' to 'unsigned int' changes value from 5.25 to 5 [-Wliteral-conversion]
+  103 | struct pck L { unsigned int k : 6, j : 11, i : 15; unsigned int l; }; T(L)
+      |                                                                       ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:104:73: warning: implicit conversion from 'double' to 'unsigned int' changes value from 5.25 to 5 [-Wliteral-conversion]
+  104 | struct pck M { unsigned int l; unsigned short k : 6, j : 11, i : 15; }; T(M)
+      |                                                                         ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:105:68: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  105 | struct pck N { unsigned long long l : 6, k : 6, j : 23, i : 29; }; T(N)
+      |                                                                    ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:106:65: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  106 | struct pck O { unsigned long long l, k : 12, j : 23, i : 29; }; T(O)
+      |                                                                 ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:107:65: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  107 | struct pck P { unsigned long long k : 12, j : 23, i : 29, l; }; T(P)
+      |                                                                 ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:108:78: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  108 | struct pck Q { unsigned short k : 12, j : 1, i : 3; unsigned long long l; }; T(Q)
+      |                                                                              ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:109:78: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  109 | struct pck R { unsigned short k : 2, j : 11, i : 3; unsigned long long l; }; T(R)
+      |                                                                              ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:110:77: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  110 | struct pck S { unsigned short k : 1, j : 6, i : 9; unsigned long long l; }; T(S)
+      |                                                                             ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:111:73: warning: implicit conversion from 'double' to 'unsigned short' changes value from 5.25 to 5 [-Wliteral-conversion]
+  111 | struct pck T { unsigned short k : 1, j : 8, i : 7; unsigned short l; }; T(T)
+      |                                                                         ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:112:77: warning: implicit conversion from 'double' to 'unsigned long long' changes value from 5.25 to 5 [-Wliteral-conversion]
+  112 | struct pck U { unsigned short j : 6, k : 1, i : 9; unsigned long long l; }; T(U)
+      |                                                                             ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:113:73: warning: implicit conversion from 'double' to 'unsigned short' changes value from 5.25 to 5 [-Wliteral-conversion]
+  113 | struct pck V { unsigned short j : 8, k : 1, i : 7; unsigned short l; }; T(V)
+      |                                                                         ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040709-2.c:59:14: note: expanded from macro 'T'
+   59 |     s##S.l = 5.25;                              \
+      |            ~ ^~~~
+22 warnings generated.

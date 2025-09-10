@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Vectorizer/find-last  :
+section                size     addr
+.interp                  27      568
+.gnu.hash                28      600
+.dynsym                 720      632
+.dynstr                 709     1352
+.gnu.version             60     2062
+.gnu.version_r          208     2128
+.rela.dyn              2016     2336
+.rela.plt               504     4352
+.init                    28     4856
+.plt                    368     4896
+.text                 22636     5312
+.fini                    24    27948
+.rodata                1491    27984
+.eh_frame_hdr           996    29476
+.eh_frame              2900    30472
+.gcc_except_table      1440    33372
+.note.ABI-tag            32    34812
+.note.package           112    34844
+.init_array              16   129856
+.fini_array               8   129872
+.data.rel.ro            576   129880
+.dynamic                528   130456
+.got                     64   130984
+.got.plt                192   131048
+.data                    24   131240
+.bss                   5008   131264
+.comment                155        0
+Total                 40870
+
+

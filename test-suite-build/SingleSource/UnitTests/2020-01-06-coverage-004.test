@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2020-01-06-coverage-004 
+VERIFY: %b/fpcmp-target %o %S/2020-01-06-coverage-004.reference_output

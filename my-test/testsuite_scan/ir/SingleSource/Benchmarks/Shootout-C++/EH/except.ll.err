@@ -1,0 +1,9 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Shootout-C++/EH/except.cpp:18:43: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+   18 |     const char* what() { sprintf(N, "%d", n); return N; }
+      |                                      ~~   ^
+      |                                      %zu
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Benchmarks/Shootout-C++/EH/except.cpp:26:43: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+   26 |     const char* what() { sprintf(N, "%d", n); return N; }
+      |                                      ~~   ^
+      |                                      %zu
+2 warnings generated.

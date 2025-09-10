@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/conditional-gnu-ext 
+VERIFY: %b/fpcmp-target %o %S/conditional-gnu-ext.reference_output

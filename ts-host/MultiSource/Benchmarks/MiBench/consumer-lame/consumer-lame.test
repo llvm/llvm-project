@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/consumer-lame -S large.wav /dev/null
+VERIFY: %b/fpcmp-target %o %S/consumer-lame.reference_output

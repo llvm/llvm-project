@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2003-07-06-IntOverflow 
+VERIFY: %b/fpcmp-target %o %S/2003-07-06-IntOverflow.reference_output

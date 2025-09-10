@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2003-05-07-VarArgs 
+VERIFY: %b/fpcmp-target %o %S/2003-05-07-VarArgs.reference_output

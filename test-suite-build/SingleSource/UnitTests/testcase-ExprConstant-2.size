@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/testcase-ExprConstant-2  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             240      632
+.dynstr             146      872
+.gnu.version         20     1018
+.gnu.version_r       48     1040
+.rela.dyn           192     1088
+.rela.plt           120     1280
+.init                28     1400
+.plt                112     1440
+.text               328     1600
+.fini                24     1928
+.rodata               9     1952
+.eh_frame_hdr        60     1964
+.eh_frame           208     2024
+.note.ABI-tag        32     2232
+.note.package       112     2264
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             64   131048
+.data                16   131112
+.bss                  8   131128
+.comment            155        0
+Total              2521
+
+

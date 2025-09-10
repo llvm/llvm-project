@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/anagram words 2 < input.OUT
+VERIFY: %b/fpcmp-target %o %S/anagram.reference_output

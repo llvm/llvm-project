@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/sim 8 tob.38-44 liv.42-48
+VERIFY: %b/fpcmp-target %o %S/sim.reference_output

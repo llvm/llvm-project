@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr88693.c:3:16: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+    3 | __attribute__((noipa)) void
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr88693.c:10:16: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   10 | __attribute__((noipa)) void
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr88693.c:19:16: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   19 | __attribute__((noipa)) void
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr88693.c:27:16: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   27 | __attribute__((noipa)) void
+      |                ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr88693.c:37:16: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   37 | __attribute__((noipa)) void
+      |                ^~~~~
+5 warnings generated.

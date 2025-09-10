@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr34982.c:7:12: warning: passing arguments to 'something' without a prototype is deprecated in all versions of C and is not supported in C23 [-Wdeprecated-non-prototype]
+    7 |   something(-1);
+      |            ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr34982.c:3:13: warning: a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition [-Wdeprecated-non-prototype]
+    3 | static void something();
+      |             ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr34982.c:11:13: note: conflicting prototype is here
+   11 | static void something(int i)
+      |             ^
+2 warnings generated.

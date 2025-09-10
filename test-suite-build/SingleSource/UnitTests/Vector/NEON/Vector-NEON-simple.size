@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/Vector/NEON/Vector-NEON-simple  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             288      632
+.dynstr             161      920
+.gnu.version         24     1082
+.gnu.version_r       48     1112
+.rela.dyn           192     1160
+.rela.plt           168     1352
+.init                28     1520
+.plt                144     1552
+.text              2424     1728
+.fini                24     4152
+.rodata             370     4176
+.eh_frame_hdr       124     4548
+.eh_frame           512     4672
+.note.ABI-tag        32     5184
+.note.package       112     5216
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             80   131048
+.data                16   131128
+.bss                  8   131144
+.comment            155        0
+Total              5509
+
+

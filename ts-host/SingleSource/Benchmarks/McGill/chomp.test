@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/chomp 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/chomp.reference_output

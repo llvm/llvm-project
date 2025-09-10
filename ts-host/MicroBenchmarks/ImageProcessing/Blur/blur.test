@@ -1,0 +1,5 @@
+RUN: cd %S ; %S/blur 
+VERIFY: %b/HashProgramOutput.sh %S/boxBlurOutput.txt
+VERIFY: %b/fpcmp-target %S/boxBlur.reference_output %S/boxBlurOutput.txt
+VERIFY: %b/HashProgramOutput.sh %S/gaussianBlurOutput.txt
+VERIFY: %b/fpcmp-target %S/gaussianBlur.reference_output %S/gaussianBlurOutput.txt

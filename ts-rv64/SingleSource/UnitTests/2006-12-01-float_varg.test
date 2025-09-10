@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2006-12-01-float_varg 
+VERIFY: %b/fpcmp-target %o %S/2006-12-01-float_varg.reference_output

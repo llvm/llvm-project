@@ -1,0 +1,16 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20190820-1.c:21:24: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   21 | static __attribute__ ((noipa)) void
+      |                        ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20190820-1.c:31:24: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   31 | static __attribute__ ((noipa)) unsigned
+      |                        ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20190820-1.c:39:24: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   39 | static __attribute__ ((noipa)) char *
+      |                        ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20190820-1.c:64:24: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   64 | static __attribute__ ((noipa)) char *
+      |                        ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20190820-1.c:97:24: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   97 | static __attribute__ ((noipa)) char *
+      |                        ^~~~~
+5 warnings generated.

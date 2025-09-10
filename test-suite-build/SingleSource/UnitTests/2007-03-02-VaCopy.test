@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/2007-03-02-VaCopy 
+VERIFY: %b/fpcmp-target %o %S/2007-03-02-VaCopy.reference_output

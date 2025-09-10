@@ -1,0 +1,1 @@
+RUN: %S/GCC-C-execute-ieee-920810-1 

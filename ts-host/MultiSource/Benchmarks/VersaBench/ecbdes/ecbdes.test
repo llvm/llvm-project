@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/ecbdes 16
+VERIFY: %b/fpcmp-target %o %S/ecbdes.reference_output

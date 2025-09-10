@@ -1,0 +1,15 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020307-1.c:6:1: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+    6 | FUNC(3)
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020307-1.c:4:67: note: expanded from macro 'FUNC'
+    4 | #define FUNC(N) void f##N(long j) { if ((j & MASK(N)) >= BITS(N)) abort();}
+      |                                                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020307-1.c:6:1: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020307-1.c:4:67: note: expanded from macro 'FUNC'
+    4 | #define FUNC(N) void f##N(long j) { if ((j & MASK(N)) >= BITS(N)) abort();}
+      |                                                                   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020307-1.c:68:3: error: call to undeclared library function 'exit' with type 'void (int) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   68 |   exit(0);
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20020307-1.c:68:3: note: include the header <stdlib.h> or explicitly provide a declaration for 'exit'
+2 errors generated.

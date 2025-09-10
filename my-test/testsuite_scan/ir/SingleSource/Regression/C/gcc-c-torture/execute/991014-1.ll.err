@@ -1,0 +1,17 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991014-1.c:12:13: error: array is too large (4611686018427387648 elements)
+   12 |   short buf[bufsize];
+      |             ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991014-1.c:7:17: note: expanded from macro 'bufsize'
+    7 | #define bufsize ((1L << (8 * sizeof(Size_t) - 2))-256)
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991014-1.c:22:12: error: array is too large (4611686018427387648 elements)
+   22 |   char buf[bufsize];
+      |            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991014-1.c:7:17: note: expanded from macro 'bufsize'
+    7 | #define bufsize ((1L << (8 * sizeof(Size_t) - 2))-256)
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991014-1.c:44:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   44 |     abort();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/991014-1.c:44:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+3 errors generated.

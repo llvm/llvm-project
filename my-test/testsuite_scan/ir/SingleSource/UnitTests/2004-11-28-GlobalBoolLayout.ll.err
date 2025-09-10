@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2004-11-28-GlobalBoolLayout.c:12:22: warning: format specifies type 'int *' but the argument has type '_Bool *' [-Wformat]
+   12 |           scanf("%d, %d\n", &G.X, &G.Y);
+      |                  ~~         ^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/2004-11-28-GlobalBoolLayout.c:12:28: warning: format specifies type 'int *' but the argument has type '_Bool *' [-Wformat]
+   12 |           scanf("%d, %d\n", &G.X, &G.Y);
+      |                      ~~           ^~~~
+2 warnings generated.

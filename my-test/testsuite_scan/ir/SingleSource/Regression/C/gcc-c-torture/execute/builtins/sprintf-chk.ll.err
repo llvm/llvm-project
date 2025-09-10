@@ -1,0 +1,54 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:97:19: warning: format string is not a string literal (potentially insecure) [-Wformat-security]
+   97 |   sprintf (r + 2, s3 + 3);
+      |                   ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:39:46: note: expanded from macro 'sprintf'
+   39 |   __builtin___sprintf_chk (dst, 0, os (dst), __VA_ARGS__)
+      |                                              ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:97:19: note: treat the string as an argument to avoid this
+   97 |   sprintf (r + 2, s3 + 3);
+      |                   ^
+      |                   "%s", 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:39:46: note: expanded from macro 'sprintf'
+   39 |   __builtin___sprintf_chk (dst, 0, os (dst), __VA_ARGS__)
+      |                                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:110:15: warning: format string is not a string literal (potentially insecure) [-Wformat-security]
+  110 |   sprintf (r, s2 + 4);
+      |               ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:39:46: note: expanded from macro 'sprintf'
+   39 |   __builtin___sprintf_chk (dst, 0, os (dst), __VA_ARGS__)
+      |                                              ^~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:110:15: note: treat the string as an argument to avoid this
+  110 |   sprintf (r, s2 + 4);
+      |               ^
+      |               "%s", 
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:39:46: note: expanded from macro 'sprintf'
+   39 |   __builtin___sprintf_chk (dst, 0, os (dst), __VA_ARGS__)
+      |                                              ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:154:7: error: __builtin_setjmp is not supported for the current target
+  154 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:159:7: error: __builtin_setjmp is not supported for the current target
+  159 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:164:7: error: __builtin_setjmp is not supported for the current target
+  164 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:170:7: error: __builtin_setjmp is not supported for the current target
+  170 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:175:7: error: __builtin_setjmp is not supported for the current target
+  175 |   if (__builtin_setjmp (chk_fail_buf) == 0)
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:156:7: warning: 'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2 [-Wformat-overflow]
+  156 |       sprintf (&a.buf2[9], "%c%s", s2[3], s2 + 4);
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:39:3: note: expanded from macro 'sprintf'
+   39 |   __builtin___sprintf_chk (dst, 0, os (dst), __VA_ARGS__)
+      |   ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/sprintf-chk.c:172:7: warning: 'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2 [-Wformat-overflow]
+  172 |       sprintf (&buf3[19], "a");
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/builtins/chk.h:39:3: note: expanded from macro 'sprintf'
+   39 |   __builtin___sprintf_chk (dst, 0, os (dst), __VA_ARGS__)
+      |   ^
+4 warnings and 5 errors generated.

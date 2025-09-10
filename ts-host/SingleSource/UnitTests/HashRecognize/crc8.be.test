@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/crc8.be 
+VERIFY: %b/fpcmp-target %o %S/crc8.be.reference_output

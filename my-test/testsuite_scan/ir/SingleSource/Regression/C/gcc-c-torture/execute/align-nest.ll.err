@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/align-nest.c:12:9: error: fields must have a constant size: 'variable length array in structure' extension will never be supported
+   12 |     int i[n];
+      |         ^
+1 error generated.

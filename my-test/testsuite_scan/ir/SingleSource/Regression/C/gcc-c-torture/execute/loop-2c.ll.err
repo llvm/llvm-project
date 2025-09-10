@@ -1,0 +1,10 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/loop-2c.c:19:9: warning: cast to smaller integer type 'int' from 'int *' [-Wpointer-to-int-cast]
+   19 |   f (b, (int)a);
+      |         ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/loop-2c.c:27:15: warning: cast to smaller integer type 'int' from 'int *' [-Wpointer-to-int-cast]
+   27 |   if (a[0] != (int)a || a[1] != (int)a + 3)
+      |               ^~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/loop-2c.c:27:33: warning: cast to smaller integer type 'int' from 'int *' [-Wpointer-to-int-cast]
+   27 |   if (a[0] != (int)a || a[1] != (int)a + 3)
+      |                                 ^~~~~~
+3 warnings generated.

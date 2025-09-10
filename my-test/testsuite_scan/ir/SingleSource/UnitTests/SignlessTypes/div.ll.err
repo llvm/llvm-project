@@ -1,0 +1,21 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/div.c:65:17: warning: equality comparison result unused [-Wunused-comparison]
+   65 |   return X / (X == Y, 2, 4);
+      |               ~~^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/div.c:65:17: note: use '=' to turn this equality comparison into an assignment
+   65 |   return X / (X == Y, 2, 4);
+      |                 ^~
+      |                 =
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/div.c:65:23: warning: left operand of comma operator has no effect [-Wunused-value]
+   65 |   return X / (X == Y, 2, 4);
+      |                       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/div.c:69:17: warning: equality comparison result unused [-Wunused-comparison]
+   69 |   return X / (X == Y, ((unsigned)2), ((unsigned)4));
+      |               ~~^~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/div.c:69:17: note: use '=' to turn this equality comparison into an assignment
+   69 |   return X / (X == Y, ((unsigned)2), ((unsigned)4));
+      |                 ^~
+      |                 =
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/SignlessTypes/div.c:69:24: warning: left operand of comma operator has no effect [-Wunused-value]
+   69 |   return X / (X == Y, ((unsigned)2), ((unsigned)4));
+      |                        ^         ~
+4 warnings generated.

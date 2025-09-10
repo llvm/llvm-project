@@ -1,0 +1,124 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:16:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   16 | void NOINLINE *test1 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:23:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   23 | void NOINLINE *test2 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:31:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   31 | void NOINLINE *test3 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:39:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   39 | void NOINLINE *test4 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:46:7: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   46 | void *NOINLINE test4a (char * p)
+      |       ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:53:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   53 | void NOINLINE *test5 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:60:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   60 | void NOINLINE *test5a (char * p)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:68:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   68 | void NOINLINE *test6 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:75:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   75 | void NOINLINE *test6a (char * p)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:85:8: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   85 | char * NOINLINE call_func1 (int i)
+      |        ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:88:1: warning: non-void function does not return a value [-Wreturn-type]
+   88 | }
+      | ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:96:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   96 | void NOINLINE test7 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:102:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  102 | void NOINLINE test8 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:109:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  109 | void NOINLINE test9 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:116:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  116 | void NOINLINE test10 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:123:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  123 | void NOINLINE test10a (char * p)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:129:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  129 | void NOINLINE test11 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:136:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  136 | void NOINLINE test11a (char * p)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:143:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  143 | void NOINLINE test12 (void)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:150:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  150 | void NOINLINE test12a (char * p)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:166:6: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+  166 | void NOINLINE call_func2 (int i)
+      |      ^~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20010122-1.c:9:60: note: expanded from macro 'NOINLINE'
+    9 | #define NOINLINE __attribute__((noinline)) __attribute__ ((noclone))
+      |                                                            ^~~~~~~
+21 warnings generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/IRSmk irsmk_input
+VERIFY: %b/fpcmp-target %o %S/IRSmk.reference_output

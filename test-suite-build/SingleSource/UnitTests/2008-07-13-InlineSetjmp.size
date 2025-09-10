@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/2008-07-13-InlineSetjmp  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             288      632
+.dynstr             164      920
+.gnu.version         24     1084
+.gnu.version_r       48     1112
+.rela.dyn           192     1160
+.rela.plt           168     1352
+.init                28     1520
+.plt                144     1552
+.text               424     1728
+.fini                24     2152
+.rodata               8     2176
+.eh_frame_hdr        68     2184
+.eh_frame           252     2256
+.note.ABI-tag        32     2508
+.note.package       112     2540
+.init_array           8   130504
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             80   131048
+.data                16   131128
+.bss                320   131144
+.comment            155        0
+Total              3146
+
+

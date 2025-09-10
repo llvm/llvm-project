@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/loader 
+VERIFY: %b/fpcmp-target %o %S/loader.reference_output

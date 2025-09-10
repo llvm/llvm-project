@@ -1,0 +1,109 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:26:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   26 | NOIPA char* get_max_2 (char *p)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:26:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   26 | NOIPA char* get_max_2 (char *p)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:31:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   31 | NOIPA char* get_max_3 (char *p, char *q)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:31:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   31 | NOIPA char* get_max_3 (char *p, char *q)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:40:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   40 | NOIPA char* get_min_2 (char *p)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:40:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   40 | NOIPA char* get_min_2 (char *p)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:45:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   45 | NOIPA char* get_min_3 (char *p, char *q)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:45:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   45 | NOIPA char* get_min_3 (char *p, char *q)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:51:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   51 | NOIPA void* test_max_2 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:51:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   51 | NOIPA void* test_max_2 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:61:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   61 | NOIPA void* test_max_3 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:61:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   61 | NOIPA void* test_max_3 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:72:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   72 | NOIPA void* test_min_2 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:72:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   72 | NOIPA void* test_min_2 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:82:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   82 | NOIPA void* test_min_3 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:82:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   82 | NOIPA void* test_min_3 (void)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:93:1: warning: unknown attribute 'noclone' ignored; did you mean 'noinline'? [-Wunknown-attributes]
+   93 | NOIPA void* test_min_3_phi (int i)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:31: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                               ^~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:93:1: warning: unknown attribute 'noipa' ignored [-Wunknown-attributes]
+   93 | NOIPA void* test_min_3_phi (int i)
+      | ^~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/return-addr.c:6:50: note: expanded from macro 'NOIPA'
+    6 | #define NOIPA __attribute__ ((noclone, noinline, noipa))
+      |                                                  ^~~~~
+18 warnings generated.

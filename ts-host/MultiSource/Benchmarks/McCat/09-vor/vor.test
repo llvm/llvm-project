@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/vor < vor.in3
+VERIFY: %b/fpcmp-target %o %S/vor.reference_output

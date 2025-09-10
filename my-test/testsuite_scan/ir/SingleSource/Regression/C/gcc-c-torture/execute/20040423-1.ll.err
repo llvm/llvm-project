@@ -1,0 +1,12 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040423-1.c:6:9: error: fields must have a constant size: 'variable length array in structure' extension will never be supported
+    6 |    int  c[i+2];
+      |         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040423-1.c:12:7: error: call to undeclared library function 'memcpy' with type 'void *(void *, const void *, __size_t)' (aka 'void *(void *, const void *, unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   12 |       memcpy (x, y, 10 * sizeof (int));
+      |       ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040423-1.c:12:7: note: include the header <string.h> or explicitly provide a declaration for 'memcpy'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040423-1.c:27:5: error: call to undeclared library function 'abort' with type 'void (void) __attribute__((noreturn))'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   27 |     abort ();
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/20040423-1.c:27:5: note: include the header <stdlib.h> or explicitly provide a declaration for 'abort'
+3 errors generated.

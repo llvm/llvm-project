@@ -1,0 +1,32 @@
+/home/youzhewei.linux/work/llvm-project/ts-build/SingleSource/UnitTests/block-byref-test  :
+section               size    addr
+.interp                 33     736
+.note.ABI-tag           32     772
+.note.package          120     804
+.dynsym                120     928
+.gnu.version            10    1048
+.gnu.version_r          48    1060
+.gnu.hash               28    1112
+.dynstr                120    1140
+.rela.dyn              192    1264
+.rela.plt               24    1456
+.rodata                  4    1480
+.eh_frame_hdr           28    1484
+.eh_frame               84    1512
+.text                  246    5692
+.plt                    48    5952
+.preinit_array           8   10096
+.fini_array              8   10104
+.init_array              8   10112
+.dynamic               416   10120
+.got                    40   10536
+.relro_padding        1712   10576
+.data                    8   14672
+.tm_clone_table          0   14680
+.got.plt                24   14680
+.bss                     1   14704
+.riscv.attributes      116       0
+.comment               250       0
+Total                 3728
+
+

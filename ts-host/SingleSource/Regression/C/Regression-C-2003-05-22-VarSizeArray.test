@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-2003-05-22-VarSizeArray 
+VERIFY: %b/fpcmp-target %o %S/2003-05-22-VarSizeArray.reference_output

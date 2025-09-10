@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr82210.c:9:57: error: fields must have a constant size: 'variable length array in structure' extension will never be supported
+    9 |     __attribute__((aligned (16))) struct T { short c; } a[size];
+      |                                                         ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr82210.c:10:9: error: fields must have a constant size: 'variable length array in structure' extension will never be supported
+   10 |     int b[size];
+      |         ^
+2 errors generated.

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C++-global_ctor 
+VERIFY: %b/fpcmp-target %o %S/global_ctor.reference_output

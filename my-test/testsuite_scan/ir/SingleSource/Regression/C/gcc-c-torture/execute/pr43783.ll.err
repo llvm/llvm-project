@@ -1,0 +1,4 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/pr43783.c:8:18: error: size of array element of type 'UINT192' (24 bytes) isn't a multiple of its alignment (16 bytes)
+    8 | UINT192 bid_Kx192[32];
+      |                  ^
+1 error generated.

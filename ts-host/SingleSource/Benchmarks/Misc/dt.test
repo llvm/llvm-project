@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/dt 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/dt.reference_output

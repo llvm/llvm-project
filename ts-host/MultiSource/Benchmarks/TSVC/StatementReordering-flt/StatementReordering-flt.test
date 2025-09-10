@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/StatementReordering-flt 20000 5
+VERIFY: %b/fpcmp-target -a 0.0 %o %S/StatementReordering-flt.reference_output

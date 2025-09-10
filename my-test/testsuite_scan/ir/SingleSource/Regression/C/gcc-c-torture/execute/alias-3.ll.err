@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/alias-3.c:6:8: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+    5 | __attribute__ ((noinline))
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~
+      | int
+    6 | static inc()
+      | ~~~~~~ ^
+1 error generated.

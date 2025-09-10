@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/aarch64-init-cpu-features 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/aarch64-init-cpu-features.reference_output

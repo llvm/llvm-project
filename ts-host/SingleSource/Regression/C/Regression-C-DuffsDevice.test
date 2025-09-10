@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-DuffsDevice 
+VERIFY: %b/fpcmp-target %o %S/DuffsDevice.reference_output

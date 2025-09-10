@@ -1,0 +1,8 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/union-struct.c:17:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   17 | typedef int __attribute__ ((bitwidth(31))) int31;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/union-struct.c:32:27: warning: format specifies type 'int' but the argument has type '__size_t' (aka 'unsigned long') [-Wformat]
+   32 |     printf("error: %d\n", sizeof(struct Blend_Map_Entry));
+      |                    ~~     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                    %zu
+2 warnings generated.

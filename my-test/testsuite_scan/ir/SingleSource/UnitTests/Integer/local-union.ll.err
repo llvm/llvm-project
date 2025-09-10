@@ -1,0 +1,7 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/local-union.c:15:29: warning: unknown attribute 'bitwidth' ignored [-Wunknown-attributes]
+   15 | typedef int __attribute__ ((bitwidth(33))) int33;
+      |                             ^~~~~~~~~~~~
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/UnitTests/Integer/local-union.c:22:9: warning: implicit conversion from 'unsigned long long' to 'int33' (aka 'int') changes value from 8589934591 to -1 [-Wconstant-conversion]
+   22 |   A.Y = 0x1ffffffffULL;
+      |       ~ ^~~~~~~~~~~~~~
+2 warnings generated.

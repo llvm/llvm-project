@@ -1,0 +1,3 @@
+RUN: cd %S ; %S/gemm 
+VERIFY: %b/HashProgramOutput.sh %o
+VERIFY: %b/fpcmp-target %o %S/gemm.reference_output

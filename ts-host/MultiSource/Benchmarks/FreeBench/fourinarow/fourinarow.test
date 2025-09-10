@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/fourinarow test.in
+VERIFY: %b/fpcmp-target %o %S/fourinarow.reference_output

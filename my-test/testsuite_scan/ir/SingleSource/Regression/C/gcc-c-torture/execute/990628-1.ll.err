@@ -1,0 +1,9 @@
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990628-1.c:26:5: error: call to undeclared library function 'memset' with type 'void *(void *, int, __size_t)' (aka 'void *(void *, int, unsigned long)'); ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+   26 |     memset(&data_tmp, 0x55, sizeof(data_tmp));
+      |     ^
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990628-1.c:26:5: note: include the header <string.h> or explicitly provide a declaration for 'memset'
+/home/youzhewei.linux/work/llvm-project/llvm-test-suite/SingleSource/Regression/C/gcc-c-torture/execute/990628-1.c:48:1: error: type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int [-Wimplicit-int]
+   48 | main()
+      | ^
+      | int
+2 errors generated.

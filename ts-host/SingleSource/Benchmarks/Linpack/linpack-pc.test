@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/linpack-pc 
+VERIFY: %b/fpcmp-target -r 0.0001 %o %S/linpack-pc.reference_output

@@ -1,0 +1,7 @@
+error: invalid number of arguments
+
+usage: ts-build/tools/fpcmp-target [-a VALUE] [-r VALUE] [-i] <path-A> <path-B>
+
+Search two text files for differences.
+If either -a or -r is specified (even if zero), floating numbers are parsed and considered equal if neither the absolute nor relative tolerance is exceeded.
+The -i switch also ignores whitespace differences.

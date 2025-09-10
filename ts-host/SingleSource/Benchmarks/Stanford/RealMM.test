@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/RealMM 
+VERIFY: %b/fpcmp-target -r 0.001 %o %S/RealMM.reference_output

@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Regression-C-badidx 
+VERIFY: %b/fpcmp-target %o %S/badidx.reference_output

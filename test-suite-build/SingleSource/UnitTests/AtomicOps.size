@@ -1,0 +1,30 @@
+/home/youzhewei.linux/work/llvm-project/test-suite-build/SingleSource/UnitTests/AtomicOps  :
+section            size     addr
+.interp              27      568
+.gnu.hash            28      600
+.dynsym             264      632
+.dynstr             160      896
+.gnu.version         22     1056
+.gnu.version_r       48     1080
+.rela.dyn           216     1128
+.rela.plt           144     1344
+.init                28     1488
+.plt                128     1520
+.text               988     1664
+.fini                24     2652
+.rodata              23     2676
+.eh_frame_hdr       108     2700
+.eh_frame           392     2808
+.note.ABI-tag        32     3200
+.note.package       112     3232
+.init_array          16   130496
+.fini_array           8   130512
+.dynamic            480   130520
+.got                 48   131000
+.got.plt             72   131048
+.data                16   131120
+.bss                 16   131136
+.comment            155        0
+Total              3555
+
+

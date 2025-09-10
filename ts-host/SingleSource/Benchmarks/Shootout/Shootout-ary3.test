@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-ary3 
+VERIFY: %b/fpcmp-target %o %S/ary3.reference_output

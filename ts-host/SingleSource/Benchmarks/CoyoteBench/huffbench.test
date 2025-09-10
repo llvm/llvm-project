@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/huffbench 
+VERIFY: %b/fpcmp-target %o %S/huffbench.reference_output

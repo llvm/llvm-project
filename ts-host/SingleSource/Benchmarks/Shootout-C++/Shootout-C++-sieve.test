@@ -1,0 +1,2 @@
+RUN: cd %S ; %S/Shootout-C++-sieve 
+VERIFY: %b/fpcmp-target -r 0.00000001 %o %S/sieve.reference_output
