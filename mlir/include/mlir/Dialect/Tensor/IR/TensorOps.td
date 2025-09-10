@@ -1470,7 +1470,6 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement ParallelCombiningOpInterface.
 def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,

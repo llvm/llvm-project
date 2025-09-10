@@ -1674,9 +1674,12 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
     for (OpResult result : forallOp.getResults()) {
       OpOperand *opOperand = forallOp.getTiedOpOperand(result);
       BlockArgument blockArg = forallOp.getTiedBlockArgument(opOperand);
+      SmallVector<Operation *> combiningOps =
+          forallOp.getCombiningOps(blockArg);
       if ((result.use_empty() &&
-           llvm::all_of(forallOp.getCombiningOps(blockArg),
-                        [](Operation *op) { return op->use_empty(); }))) {
+           llvm::all_of(combiningOps,
+                        [](Operation *op) { return op->use_empty(); })) ||
+          combiningOps.empty()) {
         resultToDelete.insert(result);
       } else {
         resultToReplace.push_back(result);
