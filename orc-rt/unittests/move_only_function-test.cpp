@@ -228,3 +228,21 @@ TEST(MoveOnlyFunctionTest, Constness) {
     EXPECT_EQ(Const, 1U);
   }
 }
+
+TEST(MoveOnlyFunctionTest, ShouldCopyInitialize) {
+  // Check that we don't accidentally move-initialize move_only_functions.
+  class ShouldCopy {
+  public:
+    ShouldCopy(bool &Moved) : Moved(Moved) {}
+    ShouldCopy(const ShouldCopy &) = default;
+    ShouldCopy(ShouldCopy &&Other) : Moved(Other.Moved) { Moved = true; }
+    void operator()() {}
+
+  private:
+    bool &Moved;
+  };
+  bool DidMove = false;
+  ShouldCopy SC(DidMove);
+  move_only_function<void()> F(SC);
+  EXPECT_FALSE(DidMove);
+}
