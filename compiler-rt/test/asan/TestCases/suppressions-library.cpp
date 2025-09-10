@@ -4,8 +4,6 @@
 // Check that without suppressions, we catch the issue.
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s
 
-// REQUIRES: shell
-
 // RUN: echo "interceptor_via_lib:"%xdynamiclib_filename > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
