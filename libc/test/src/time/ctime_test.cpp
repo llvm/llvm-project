@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/ctime.h"
-#include "test/src/time/TmHelper.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/time/TmHelper.h"
 
 using LlvmLibcCtime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 

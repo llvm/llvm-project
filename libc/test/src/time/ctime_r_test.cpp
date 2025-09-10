@@ -8,9 +8,9 @@
 
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
-#include "test/src/time/TmHelper.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/time/TmHelper.h"
 
 using LlvmLibcCtimeR = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
