@@ -66,7 +66,6 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
-class DbgVariableIntrinsic;
 class DbgVariableRecord;
 
 LLVM_ABI extern cl::opt<bool> EnableFSDiscriminator;
@@ -870,22 +869,22 @@ protected:
                    SizeInBits, AlignInBits, Encoding, NumExtraInhabitants,
                    Flags, Storage, ShouldCreate);
   }
-  LLVM_ABI static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                                       MDString *Name, uint64_t SizeInBits,
-                                       uint32_t AlignInBits, unsigned Encoding,
-                                       uint32_t NumExtraInhabitants,
-                                       DIFlags Flags, StorageType Storage,
-                                       bool ShouldCreate = true) {
+  static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
+                              MDString *Name, uint64_t SizeInBits,
+                              uint32_t AlignInBits, unsigned Encoding,
+                              uint32_t NumExtraInhabitants, DIFlags Flags,
+                              StorageType Storage, bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, SizeInBitsNode, AlignInBits, Encoding,
                    NumExtraInhabitants, Flags, Storage, ShouldCreate);
   }
-  static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                              MDString *Name, Metadata *SizeInBits,
-                              uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
-                              StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
+                                       MDString *Name, Metadata *SizeInBits,
+                                       uint32_t AlignInBits, unsigned Encoding,
+                                       uint32_t NumExtraInhabitants,
+                                       DIFlags Flags, StorageType Storage,
+                                       bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
@@ -1005,7 +1004,7 @@ class DIFixedPointType : public DIBasicType {
                    SizeInBits, AlignInBits, Encoding, Flags, Kind, Factor,
                    Numerator, Denominator, Storage, ShouldCreate);
   }
-  LLVM_ABI static DIFixedPointType *
+  static DIFixedPointType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
           uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
           DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
@@ -1016,7 +1015,7 @@ class DIFixedPointType : public DIBasicType {
                    Flags, Kind, Factor, Numerator, Denominator, Storage,
                    ShouldCreate);
   }
-  static DIFixedPointType *
+  LLVM_ABI static DIFixedPointType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
           Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
           DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
@@ -1127,23 +1126,23 @@ class DIStringType : public DIType {
                    StringLength, StrLenExp, StrLocationExp, SizeInBitsNode,
                    AlignInBits, Encoding, Storage, ShouldCreate);
   }
-  LLVM_ABI static DIStringType *
-  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-          Metadata *StringLength, Metadata *StrLenExp, Metadata *StrLocationExp,
-          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-          StorageType Storage, bool ShouldCreate = true) {
+  static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
+                               MDString *Name, Metadata *StringLength,
+                               Metadata *StrLenExp, Metadata *StrLocationExp,
+                               uint64_t SizeInBits, uint32_t AlignInBits,
+                               unsigned Encoding, StorageType Storage,
+                               bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, StringLength, StrLenExp, StrLocationExp,
                    SizeInBitsNode, AlignInBits, Encoding, Storage,
                    ShouldCreate);
   }
-  static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
-                               MDString *Name, Metadata *StringLength,
-                               Metadata *StrLenExp, Metadata *StrLocationExp,
-                               Metadata *SizeInBits, uint32_t AlignInBits,
-                               unsigned Encoding, StorageType Storage,
-                               bool ShouldCreate = true);
+  LLVM_ABI static DIStringType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          Metadata *StringLength, Metadata *StrLenExp, Metadata *StrLocationExp,
+          Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIStringType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
@@ -2507,10 +2506,8 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
   uint64_t AtomRank : 3;
-#endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
              unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
@@ -2540,20 +2537,8 @@ class DILocation : public MDNode {
   }
 
 public:
-  uint64_t getAtomGroup() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomGroup;
-#else
-    return 0;
-#endif
-  }
-  uint8_t getAtomRank() const {
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-    return AtomRank;
-#else
-    return 0;
-#endif
-  }
+  uint64_t getAtomGroup() const { return AtomGroup; }
+  uint8_t getAtomRank() const { return AtomRank; }
 
   const DILocation *getWithoutAtom() const {
     if (!getAtomGroup() && !getAtomRank())
@@ -4112,35 +4097,49 @@ class DILabel : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
+  unsigned Column;
+  std::optional<unsigned> CoroSuspendIdx;
+  bool IsArtificial;
+
+  DILabel(LLVMContext &C, StorageType Storage, unsigned Line, unsigned Column,
+          bool IsArtificial, std::optional<unsigned> CoroSuspendIdx,
           ArrayRef<Metadata *> Ops);
   ~DILabel() = default;
 
   static DILabel *getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
-                          DIFile *File, unsigned Line, StorageType Storage,
-                          bool ShouldCreate = true) {
+                          DIFile *File, unsigned Line, unsigned Column,
+                          bool IsArtificial,
+                          std::optional<unsigned> CoroSuspendIdx,
+                          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
-                   Line, Storage, ShouldCreate);
+                   Line, Column, IsArtificial, CoroSuspendIdx, Storage,
+                   ShouldCreate);
   }
-  LLVM_ABI static DILabel *getImpl(LLVMContext &Context, Metadata *Scope,
-                                   MDString *Name, Metadata *File,
-                                   unsigned Line, StorageType Storage,
-                                   bool ShouldCreate = true);
+  LLVM_ABI static DILabel *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
+          unsigned Line, unsigned Column, bool IsArtificial,
+          std::optional<unsigned> CoroSuspendIdx, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDILabel cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
-                        getLine());
+                        getLine(), getColumn(), isArtificial(),
+                        getCoroSuspendIdx());
   }
 
 public:
   DEFINE_MDNODE_GET(DILabel,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
-                     unsigned Line),
-                    (Scope, Name, File, Line))
+                     unsigned Line, unsigned Column, bool IsArtificial,
+                     std::optional<unsigned> CoroSuspendIdx),
+                    (Scope, Name, File, Line, Column, IsArtificial,
+                     CoroSuspendIdx))
   DEFINE_MDNODE_GET(DILabel,
                     (Metadata * Scope, MDString *Name, Metadata *File,
-                     unsigned Line),
-                    (Scope, Name, File, Line))
+                     unsigned Line, unsigned Column, bool IsArtificial,
+                     std::optional<unsigned> CoroSuspendIdx),
+                    (Scope, Name, File, Line, Column, IsArtificial,
+                     CoroSuspendIdx))
 
   TempDILabel clone() const { return cloneImpl(); }
 
@@ -4151,8 +4150,11 @@ public:
     return cast_or_null<DILocalScope>(getRawScope());
   }
   unsigned getLine() const { return SubclassData32; }
+  unsigned getColumn() const { return Column; }
   StringRef getName() const { return getStringOperand(1); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
+  bool isArtificial() const { return IsArtificial; }
+  std::optional<unsigned> getCoroSuspendIdx() const { return CoroSuspendIdx; }
 
   Metadata *getRawScope() const { return getOperand(0); }
   MDString *getRawName() const { return getOperandAs<MDString>(1); }
@@ -4596,7 +4598,6 @@ class DebugVariable {
   LLVM_ABI static const FragmentInfo DefaultFragment;
 
 public:
-  LLVM_ABI DebugVariable(const DbgVariableIntrinsic *DII);
   LLVM_ABI DebugVariable(const DbgVariableRecord *DVR);
 
   DebugVariable(const DILocalVariable *Var,
@@ -4664,7 +4665,6 @@ template <> struct DenseMapInfo<DebugVariable> {
 /// information).
 class DebugVariableAggregate : public DebugVariable {
 public:
-  LLVM_ABI DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
   DebugVariableAggregate(const DebugVariable &V)
       : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
 };

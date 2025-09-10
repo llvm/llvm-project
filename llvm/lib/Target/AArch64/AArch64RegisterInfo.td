@@ -305,7 +305,8 @@ def GPR64pi48 : RegisterOperand<GPR64, "printPostIncOperand<48>">;
 def GPR64pi64 : RegisterOperand<GPR64, "printPostIncOperand<64>">;
 
 // Condition code regclass.
-def CCR : RegisterClass<"AArch64", [i32], 32, (add NZCV)> {
+defvar FlagsVT = i32;
+def CCR : RegisterClass<"AArch64", [FlagsVT], 32, (add NZCV)> {
   let CopyCost = -1;  // Don't allow copying of status registers.
 
   // CCR is not allocatable.
@@ -982,7 +983,7 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 
 // Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
 // (without the use of the table-gen'd predicates).
-def SMEWithZPRPredicateSpills : HwMode<"", [Predicate<"false">]>;
+def SMEWithZPRPredicateSpills : HwMode<[Predicate<"false">]>;
 
 def PPRSpillFillRI : RegInfoByHwMode<
       [DefaultMode,              SMEWithZPRPredicateSpills],

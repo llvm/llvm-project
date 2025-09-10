@@ -142,6 +142,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcs_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcs_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.wcs_to_integer
+)
+
+add_libc_test(
   integer_to_string_test
   SUITE
     libc-support-tests
@@ -254,6 +265,7 @@ add_libc_test(
   SRCS
     str_to_float_comparison_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.stdio.printf
     libc.src.stdio.fopen
     libc.src.stdio.fclose

@@ -8,7 +8,7 @@
 func.func @transfer_read_0d(%m: memref<?x?x?xf32>, %idx: index) -> f32 {
   %cst = arith.constant 0.0 : f32
   %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst : memref<?x?x?xf32>, vector<f32>
-  %1 = vector.extractelement %0[] : vector<f32>
+  %1 = vector.extract %0[] : f32 from vector<f32>
   return %1 : f32
 }
 
@@ -24,7 +24,7 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
   %cst = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
   %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst {in_bounds = [true]} : memref<?x?x?xf32>, vector<5xf32>
-  %1 = vector.extractelement %0[%idx2 : index] : vector<5xf32>
+  %1 = vector.extract %0[%idx2] : f32 from vector<5xf32>
   return %1 : f32
 }
 
@@ -37,7 +37,7 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
 func.func @tensor_transfer_read_0d(%t: tensor<?x?x?xf32>, %idx: index) -> f32 {
   %cst = arith.constant 0.0 : f32
   %0 = vector.transfer_read %t[%idx, %idx, %idx], %cst : tensor<?x?x?xf32>, vector<f32>
-  %1 = vector.extractelement %0[] : vector<f32>
+  %1 = vector.extract %0[] : f32 from vector<f32>
   return %1 : f32
 }
 

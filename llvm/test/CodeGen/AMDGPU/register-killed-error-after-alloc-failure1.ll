@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR -implicit-check-not=error %s
 
 ; ERR: error: inline assembly requires more registers than available
 ; ERR-NOT: ERROR

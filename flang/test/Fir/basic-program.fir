@@ -103,9 +103,10 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: AssumedRankOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   OptimizeArrayRepacking
 // PASSES-NEXT: LowerRepackArraysPass
 // PASSES-NEXT: SimplifyFIROperations
-// PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT: 'fir.global' Pipeline
@@ -130,6 +131,7 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   SetRuntimeCallAttributes
 // PASSES-NEXT: BoxedProcedurePass
+// PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT:  'fir.global' Pipeline

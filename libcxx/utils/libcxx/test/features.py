@@ -135,11 +135,6 @@ DEFAULT_FEATURES = [
     Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
 
     Feature(
-        name="thread-safety",
-        when=lambda cfg: hasCompileFlag(cfg, "-Werror=thread-safety"),
-        actions=[AddCompileFlag("-Werror=thread-safety")],
-    ),
-    Feature(
         name="diagnose-if-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],
@@ -181,7 +176,7 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
-        name="add-latomic-workaround",  # https://github.com/llvm/llvm-project/issues/73361
+        name="add-latomic-workaround",  # https://llvm.org/PR73361
         when=lambda cfg: sourceBuilds(
             cfg, "int main(int, char**) { return 0; }", ["-latomic"]
         ),

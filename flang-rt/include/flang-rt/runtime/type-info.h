@@ -39,7 +39,7 @@ public:
     LenParameter = 3
   };
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS Fortran::common::optional<TypeParameterValue> GetValue(
+  RT_API_ATTRS common::optional<TypeParameterValue> GetValue(
       const Descriptor *) const;
 
 private:
@@ -55,7 +55,9 @@ public:
     Data = 1,
     Pointer = 2,
     Allocatable = 3,
-    Automatic = 4
+    Automatic = 4,
+    PointerDevice = 5,
+    AllocatableDevice = 6
   };
 
   RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
@@ -68,7 +70,9 @@ public:
   RT_API_ATTRS std::uint64_t offset() const { return offset_; }
   RT_API_ATTRS const Value &characterLen() const { return characterLen_; }
   RT_API_ATTRS const DerivedType *derivedType() const {
-    return derivedType_.descriptor().OffsetElement<const DerivedType>();
+    return category() == TypeCategory::Derived
+        ? derivedType_.descriptor().OffsetElement<const DerivedType>()
+        : nullptr;
   }
   RT_API_ATTRS const Value *lenValue() const {
     return lenValue_.descriptor().OffsetElement<const Value>();
@@ -141,9 +145,9 @@ public:
   // I/O procedures that are not type-bound.
   RT_API_ATTRS SpecialBinding(Which which, ProcedurePointer proc,
       std::uint8_t isArgDescSet, std::uint8_t isTypeBound,
-      std::uint8_t isArgContiguousSet)
+      std::uint8_t specialCaseFlag)
       : which_{which}, isArgDescriptorSet_{isArgDescSet},
-        isTypeBound_{isTypeBound}, isArgContiguousSet_{isArgContiguousSet},
+        isTypeBound_{isTypeBound}, specialCaseFlag_{specialCaseFlag},
         proc_{proc} {}
 
   static constexpr RT_API_ATTRS Which RankFinal(int rank) {
@@ -151,13 +155,11 @@ public:
   }
 
   RT_API_ATTRS Which which() const { return which_; }
+  RT_API_ATTRS bool specialCaseFlag() const { return specialCaseFlag_; }
   RT_API_ATTRS bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
   RT_API_ATTRS bool IsTypeBound() const { return isTypeBound_ != 0; }
-  RT_API_ATTRS bool IsArgContiguous(int zeroBasedArg) const {
-    return (isArgContiguousSet_ >> zeroBasedArg) & 1;
-  }
   template <typename PROC>
   RT_API_ATTRS PROC GetProc(const Binding *bindings = nullptr) const {
     if (bindings && isTypeBound_ > 0) {
@@ -179,7 +181,7 @@ private:
   //     The passed-object argument (usually the "to") is always passed via a
   //     a descriptor in the cases where the runtime will call a defined
   //     assignment because these calls are to type-bound generics,
-  //     not generic interfaces, and type-bound generic defined assigment
+  //     not generic interfaces, and type-bound generic defined assignment
   //     may appear only in an extensible type and requires a passed-object
   //     argument (see C774), and passed-object arguments to TBPs must be
   //     both polymorphic and scalar (C760).  The non-passed-object argument
@@ -201,10 +203,10 @@ private:
   // When a special binding is type-bound, this is its binding's index (plus 1,
   // so that 0 signifies that it's not type-bound).
   std::uint8_t isTypeBound_{0};
-  // True when a FINAL subroutine has a dummy argument that is an array that
-  // is CONTIGUOUS or neither assumed-rank nor assumed-shape.
-  std::uint8_t isArgContiguousSet_{0};
-
+  // For a FINAL subroutine, set when it has a dummy argument that is an array
+  // that is CONTIGUOUS or neither assumed-rank nor assumed-shape.
+  // For a defined I/O subroutine, set when UNIT= and IOSTAT= are INTEGER(8).
+  std::uint8_t specialCaseFlag_{0};
   ProcedurePointer proc_{nullptr};
 };
 

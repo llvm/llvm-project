@@ -433,8 +433,6 @@ extensionComplianceMap = {
       {{Extension::fp8e4m3}, {{fp8e4m3T, fp8e4m3T}}},
       {{Extension::fp8e5m2}, {{fp8e5m2T, fp8e5m2T}}},
       {{Extension::bf16}, {{bf16T, bf16T}}}}},
-    {"tosa.cond_if", {{{Extension::controlflow}, {{boolT}}}}},
-    {"tosa.while_loop", {{{Extension::controlflow}, {{boolT}}}}},
     {"tosa.variable", {{{Extension::variable}, {{i8T}, {fp16T}, {fp32T}}}}},
     {"tosa.variable_write",
      {{{Extension::variable}, {{i8T}, {fp16T}, {fp32T}}}}},

@@ -14,6 +14,7 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
+#include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2103,7 +2104,7 @@ TreePatternNodePtr TreePatternNode::clone() const {
 /// RemoveAllTypes - Recursively strip all the types of this tree.
 void TreePatternNode::RemoveAllTypes() {
   // Reset to unknown type.
-  std::fill(Types.begin(), Types.end(), TypeSetByHwMode());
+  llvm::fill(Types, TypeSetByHwMode());
   if (isLeaf())
     return;
   for (TreePatternNode &Child : children())
@@ -4122,8 +4123,7 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
 }
 
 void CodeGenDAGPatterns::InferInstructionFlags() {
-  ArrayRef<const CodeGenInstruction *> Instructions =
-      Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
 
   unsigned Errors = 0;
 
@@ -4499,13 +4499,17 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      AppendPattern(P, M, HM.Predicates);
+
+      SmallString<128> PredicateCheck;
+      raw_svector_ostream PS(PredicateCheck);
+      SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
+      AppendPattern(P, M, PredicateCheck);
 
       // Add negations of the HM's predicates to the default predicate.
       if (!DefaultCheck.empty())
         DefaultCheck += " && ";
       DefaultCheck += "!(";
-      DefaultCheck += HM.Predicates;
+      DefaultCheck.append(PredicateCheck);
       DefaultCheck += ")";
     }
 

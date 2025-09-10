@@ -1,13 +1,18 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-pointer-arithmetic %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-pointer-arithmetic -check-suffixes=,DEFAULT  %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-pointer-arithmetic %t -- \
+// RUN:   -config="{CheckOptions: {cppcoreguidelines-pro-bounds-pointer-arithmetic.AllowIncrementDecrementOperators: true}}" --
 
 enum E {
   ENUM_LITERAL = 1
 };
 
+typedef int* IntPtr;
+
 int i = 4;
 int j = 1;
 int *p = 0;
 int *q = 0;
+IntPtr ip = 0;
 
 void fail() {
   q = p + 4;
@@ -39,17 +44,43 @@ void fail() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use pointer arithmetic
 
   p++;
-  // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: do not use pointer arithmetic
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:4: warning: do not use pointer arithmetic
   ++p;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use pointer arithmetic
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:3: warning: do not use pointer arithmetic
 
   p--;
-  // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: do not use pointer arithmetic
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:4: warning: do not use pointer arithmetic
   --p;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use pointer arithmetic
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:3: warning: do not use pointer arithmetic
 
   i = p[1];
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use pointer arithmetic
+
+  p = ip + 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: do not use pointer arithmetic
+  ip++;
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:5: warning: do not use pointer arithmetic
+  i = ip[1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use pointer arithmetic
+}
+
+template <typename T>
+void template_fail() {
+  T* p;
+  T* q;
+
+  p = q + 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not use pointer arithmetic
+  q = p - 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not use pointer arithmetic
+  p++;
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:4: warning: do not use pointer arithmetic
+  i = p[1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use pointer arithmetic
+}
+
+void instantiate() {
+  template_fail<int>();
 }
 
 struct S {

@@ -140,7 +140,7 @@ void testIgnoredSmall() {
   testReturnSmall();
 }
 
-// CHECK: define{{.*}} void @_Z14testParamLarge5Large(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z14testParamLarge5Large(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5LargeD1Ev(ptr {{[^,]*}} %[[A]])
 // CHECK: ret void
 // CHECK: }
@@ -163,7 +163,7 @@ Large testReturnLarge() {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[T]])
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN5LargeC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(520) %[[T]])
-// CHECK: call void @_Z14testParamLarge5Large(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_Z14testParamLarge5Large(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK: %[[CALL2:.*]] = call noundef ptr @_ZN5LargeD1Ev(ptr {{[^,]*}} %[[T]])
 // CHECK: ret void
 // CHECK: }
@@ -176,7 +176,7 @@ void testCallLarge0() {
 // CHECK: define{{.*}} void @_Z14testCallLarge1v()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
 // CHECK: call void @_Z15testReturnLargev(ptr dead_on_unwind writable sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_TMP]])
-// CHECK: call void @_Z14testParamLarge5Large(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_Z14testParamLarge5Large(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK: ret void
 // CHECK: }
 
@@ -244,7 +244,7 @@ void testExceptionSmall() {
 // CHECK: call noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[AGG_TMP]])
 // CHECK: invoke noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[AGG_TMP1]])
 
-// CHECK: call void @_Z20calleeExceptionLarge5LargeS_(ptr noundef %[[AGG_TMP]], ptr noundef %[[AGG_TMP1]])
+// CHECK: call void @_Z20calleeExceptionLarge5LargeS_(ptr dead_on_return noundef %[[AGG_TMP]], ptr dead_on_return noundef %[[AGG_TMP1]])
 // CHECK-NEXT: ret void
 
 // CHECK: landingpad { ptr, i32 }

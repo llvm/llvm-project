@@ -70,7 +70,7 @@ static cl::opt<unsigned> PromoteAllocaToVectorMaxRegs(
     "amdgpu-promote-alloca-to-vector-max-regs",
     cl::desc(
         "Maximum vector size (in 32b registers) to use when promoting alloca"),
-    cl::init(16));
+    cl::init(32));
 
 // Use up to 1/4 of available register budget for vectorization.
 // FIXME: Increase the limit for whole function budgets? Perhaps x2?
@@ -287,8 +287,12 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
 
 void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
   // Load per function limits, overriding with global options where appropriate.
+  // R600 register tuples/aliasing are fragile with large vector promotions so
+  // apply architecture specific limit here.
+  const int R600MaxVectorRegs = 16;
   MaxVectorRegs = F.getFnAttributeAsParsedInteger(
-      "amdgpu-promote-alloca-to-vector-max-regs", PromoteAllocaToVectorMaxRegs);
+      "amdgpu-promote-alloca-to-vector-max-regs",
+      IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs);
   if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
     MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
   VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
@@ -439,9 +443,10 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return nullptr;
 
   APInt IndexQuot;
-  uint64_t Rem;
-  APInt::udivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
-  if (Rem != 0)
+  APInt Rem;
+  APInt::sdivrem(ConstOffset, APInt(ConstOffset.getBitWidth(), VecElemSize),
+                 IndexQuot, Rem);
+  if (!Rem.isZero())
     return nullptr;
   if (VarOffsets.size() == 0)
     return ConstantInt::get(GEP->getContext(), IndexQuot);
@@ -450,8 +455,10 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   const auto &VarOffset = VarOffsets.front();
   APInt OffsetQuot;
-  APInt::udivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
-  if (Rem != 0 || OffsetQuot.isZero())
+  APInt::sdivrem(VarOffset.second,
+                 APInt(VarOffset.second.getBitWidth(), VecElemSize), OffsetQuot,
+                 Rem);
+  if (!Rem.isZero() || OffsetQuot.isZero())
     return nullptr;
 
   Value *Offset = VarOffset.first;
@@ -461,7 +468,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   if (!OffsetQuot.isOne()) {
     ConstantInt *ConstMul =
-        ConstantInt::get(OffsetType, OffsetQuot.getZExtValue());
+        ConstantInt::get(OffsetType, OffsetQuot.getSExtValue());
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -470,8 +477,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return Offset;
 
   ConstantInt *ConstIndex =
-      ConstantInt::get(OffsetType, IndexQuot.getZExtValue());
-  Value *IndexAdd = Builder.CreateAdd(ConstIndex, Offset);
+      ConstantInt::get(OffsetType, IndexQuot.getSExtValue());
+  Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
   return IndexAdd;

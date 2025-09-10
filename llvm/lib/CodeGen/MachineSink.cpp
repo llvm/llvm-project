@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/PostRAMachineSink.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -2068,24 +2069,7 @@ void MachineSinking::SalvageUnsunkDebugUsersOfCopy(
 //===----------------------------------------------------------------------===//
 namespace {
 
-class PostRAMachineSinking : public MachineFunctionPass {
-public:
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  static char ID;
-  PostRAMachineSinking() : MachineFunctionPass(ID) {}
-  StringRef getPassName() const override { return "PostRA Machine Sink"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-private:
+class PostRAMachineSinkingImpl {
   /// Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
@@ -2099,13 +2083,35 @@ private:
   /// successors.
   bool tryToSinkCopy(MachineBasicBlock &BB, MachineFunction &MF,
                      const TargetRegisterInfo *TRI, const TargetInstrInfo *TII);
+
+public:
+  bool run(MachineFunction &MF);
 };
+
+class PostRAMachineSinkingLegacy : public MachineFunctionPass {
+public:
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  static char ID;
+  PostRAMachineSinkingLegacy() : MachineFunctionPass(ID) {}
+  StringRef getPassName() const override { return "PostRA Machine Sink"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
 } // namespace
 
-char PostRAMachineSinking::ID = 0;
-char &llvm::PostRAMachineSinkingID = PostRAMachineSinking::ID;
+char PostRAMachineSinkingLegacy::ID = 0;
+char &llvm::PostRAMachineSinkingID = PostRAMachineSinkingLegacy::ID;
 
-INITIALIZE_PASS(PostRAMachineSinking, "postra-machine-sink",
+INITIALIZE_PASS(PostRAMachineSinkingLegacy, "postra-machine-sink",
                 "PostRA Machine Sink", false, false)
 
 static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, Register Reg,
@@ -2226,10 +2232,10 @@ static bool hasRegisterDependency(MachineInstr *MI,
   return HasRegDependency;
 }
 
-bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
-                                         MachineFunction &MF,
-                                         const TargetRegisterInfo *TRI,
-                                         const TargetInstrInfo *TII) {
+bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
+                                             MachineFunction &MF,
+                                             const TargetRegisterInfo *TRI,
+                                             const TargetInstrInfo *TII) {
   SmallPtrSet<MachineBasicBlock *, 2> SinkableBBs;
   // FIXME: For now, we sink only to a successor which has a single predecessor
   // so that we can directly sink COPY instructions to the successor without
@@ -2354,10 +2360,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
   return Changed;
 }
 
-bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool PostRAMachineSinkingImpl::run(MachineFunction &MF) {
   bool Changed = false;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
@@ -2368,4 +2371,24 @@ bool PostRAMachineSinking::runOnMachineFunction(MachineFunction &MF) {
     Changed |= tryToSinkCopy(BB, MF, TRI, TII);
 
   return Changed;
+}
+
+bool PostRAMachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return PostRAMachineSinkingImpl().run(MF);
+}
+
+PreservedAnalyses
+PostRAMachineSinkingPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (!PostRAMachineSinkingImpl().run(MF))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

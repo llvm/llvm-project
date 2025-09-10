@@ -122,9 +122,9 @@ struct SA {
     {}
     #pragma omp target map(always, tofrom: c,f[1:2])
     {}
-    #pragma omp target map(always, tofrom: c[:],f)   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    #pragma omp target map(always, tofrom: c[:],f)   // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
-    #pragma omp target map(always, tofrom: c,f[:])   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    #pragma omp target map(always, tofrom: c,f[:])   // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
     #pragma omp target map(always)   // expected-error {{use of undeclared identifier 'always'}}
     {}
@@ -134,9 +134,9 @@ struct SA {
     {}
     #pragma omp target map(self, tofrom: c,f[1:2])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     {}
-    #pragma omp target map(self, tofrom: c[:],f)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    #pragma omp target map(self, tofrom: c[:],f)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
-    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}} 
+    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}} 
     {}
     #pragma omp target map(close, tofrom: c,f)
     {}
@@ -144,9 +144,9 @@ struct SA {
     {}
     #pragma omp target map(close, tofrom: c,f[1:2])
     {}
-    #pragma omp target map(close, tofrom: c[:],f)   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    #pragma omp target map(close, tofrom: c[:],f)   // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
-    #pragma omp target map(close, tofrom: c,f[:])   // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    #pragma omp target map(close, tofrom: c,f[:])   // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
     #pragma omp target map(close)   // expected-error {{use of undeclared identifier 'close'}}
     {}
@@ -159,11 +159,11 @@ struct SA {
     // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c,f[1:2])
     {}
-    // expected-error@+2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    // lt60-error@+2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c[:],f)
     {}
-    // expected-error@+2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    // lt60-error@+2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c,f[:])
     {}
@@ -190,14 +190,14 @@ struct SA {
     {}
     // ge60-error@+5 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'iterator', 'self}}
     // ge52-error@+4 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'iterator'}}
-    // expected-error@+3 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    // lt60-error@+3 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
     // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(ompx_hold, tofrom: c[:],f)
     {}
     // ge60-error@+5 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'iterator', 'self}}
     // ge52-error@+4 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'iterator'}}
-    // expected-error@+3 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    // lt60-error@+3 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
     // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(ompx_hold, tofrom: c,f[:])
@@ -448,7 +448,7 @@ void SAclient(int arg) {
   {}
 #pragma omp target map(mptr[:1][:2] [0:2]) // expected-error {{array section does not specify contiguous storage}}
   {}
-#pragma omp target map(mptr[:1][:] [0:2])  // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+#pragma omp target map(mptr[:1][:] [0:2])  // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   {}
 #pragma omp target map(mptr[:2][:1] [0:2]) // expected-error {{array section does not specify contiguous storage}}
   {}
@@ -517,7 +517,7 @@ void SAclient(int arg) {
   {}
 #pragma omp target map(r.S.Ptr [4:5])
   {}
-#pragma omp target map(r.S.Ptr[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+#pragma omp target map(r.S.Ptr[:]) // lt60-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   {}
 #pragma omp target map((p + 1)->A) // lt50-error {{expected expression containing only member accesses and/or array sections based on named variables}}
   {}

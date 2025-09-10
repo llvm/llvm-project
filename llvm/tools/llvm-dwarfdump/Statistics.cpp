@@ -878,7 +878,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   DenseSet<LineTuple> UniqueLines;
   DenseSet<LineTuple> UniqueNonZeroLines;
 
-  for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units()) {
+  for (const auto &CU : DICtx.compile_units()) {
     if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false)) {
       // This variable holds variable information for functions with
       // abstract_origin, but just for the current CU.

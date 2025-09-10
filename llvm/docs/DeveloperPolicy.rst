@@ -42,7 +42,7 @@ upcoming projects, new designs, enhancements, and other community business.
 First and foremost is the `LLVM Discourse forums`_, which is the successor
 to our former mailing lists (llvm-dev@, cfe-dev@, lldb-dev@, etc). This is
 probably the most vital and active communication channel to our highly
-distributed open source project. It enables long-form asyncronous text
+distributed open source project. It enables long-form asynchronous text
 communication, and this is where people tend to propose major changes or
 propose new designs in the form of RFCs (Request For Comment), which are
 described later. Please be aware that the Discourse forums are public and
@@ -296,54 +296,53 @@ Quality
 The minimum quality standards that any change must satisfy before being
 committed to the main development branch are:
 
-#. Code must adhere to the `LLVM Coding Standards <CodingStandards.html>`_.
+#. Code must adhere to the :doc:`LLVM Coding Standards <CodingStandards>`.
 
 #. Code must compile cleanly (no errors, no warnings) on at least one platform.
 
 #. Bug fixes and new features should `include a testcase`_ so we know if the
    fix/feature ever regresses in the future.
 
-#. Code must pass the ``llvm/test`` test suite.
-
-#. The code must not cause regressions on a reasonable subset of llvm-test,
-   where "reasonable" depends on the contributor's judgement and the scope of
-   the change (more invasive changes require more testing). A reasonable subset
-   might be something like "``llvm-test/MultiSource/Benchmarks``".
+#. Pull requests should build and pass premerge checks. For first-time
+   contributors, this will require an initial cursory review to run the checks.
 
 #. Ensure that links in source code and test files point to publicly available
-   resources and are used primarily to add additional information rather than
-   to supply critical context. The surrounding comments should be sufficient
-   to provide the context behind such links.
+   resources and are used primarily to add additional information rather than to
+   supply critical context. The surrounding comments should be sufficient to
+   provide the context behind such links.
 
 Additionally, the committer is responsible for addressing any problems found in
 the future that the change is responsible for.  For example:
 
-* The code should compile cleanly on all supported platforms.
+* The code needs to compile cleanly and pass tests on all stable `LLVM
+  buildbots <https://lab.llvm.org/buildbot/>`_.
 
-* The changes should not cause any correctness regressions in the ``llvm-test``
-  suite and must not cause any major performance regressions.
+* The changes should not cause any correctness regressions in the
+  `llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_
+  and must not cause any major performance regressions.
 
 * The change set should not cause performance or correctness regressions for the
-  LLVM tools.
+  LLVM tools. See `llvm-compile-time-tracker.com <https://llvm-compile-time-tracker.com>`_
 
 * The changes should not cause performance or correctness regressions in code
   compiled by LLVM on all applicable targets.
 
-* You are expected to address any `GitHub Issues <https://github.com/llvm/llvm-project/issues>`_ that
-  result from your change.
+* You are expected to address any `GitHub Issues
+  <https://github.com/llvm/llvm-project/issues>`_ that result from your change.
 
-We prefer for this to be handled before submission but understand that it isn't
-possible to test all of this for every submission.  Our build bots and nightly
-testing infrastructure normally finds these problems.  A good rule of thumb is
-to check the nightly testers for regressions the day after your change.  Build
-bots will directly email you if a group of commits that included yours caused a
+Our build bots and `nightly testing infrastructure
+<https://llvm.org/docs/lnt/intro.html>`_ find many of these issues. Build bots
+will directly email you if a group of commits that included yours caused a
 failure.  You are expected to check the build bot messages to see if they are
-your fault and, if so, fix the breakage.
+your fault and, if so, fix the breakage. However, keep in mind that if you
+receive such an email, it is highly likely that your change is not at fault.
+Changes are batched together precisely because these tests are generally too
+expensive to run continuously for every change.
 
-Commits that violate these quality standards (e.g. are very broken) may be
-reverted. This is necessary when the change blocks other developers from making
-progress. The developer is welcome to re-commit the change after the problem has
-been fixed.
+Commits that violate these quality standards may be reverted (see below). This
+is necessary when the change blocks other developers from making progress. The
+developer is welcome to re-commit the change after the problem has been fixed.
+
 
 .. _commit messages:
 
@@ -623,7 +622,7 @@ After posting a major proposal, it is common to receive lots of conflicting
 feedback from different parties, or no feedback at all, leaving authors without
 clear next steps. As a community, we are aiming for `"rough consensus"
 <https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
-desribed in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
+described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
 This requires considering and addressing all of the objections to the RFC, and
 confirming that we can all live with the tradeoffs embodied in the proposal.
 

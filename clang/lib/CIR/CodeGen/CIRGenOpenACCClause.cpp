@@ -12,7 +12,9 @@
 
 #include <type_traits>
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenACCRecipe.h"
 
 #include "clang/AST/ExprCXX.h"
 
@@ -75,26 +77,12 @@ class OpenACCClauseCIREmitter final
   void setLastDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
     lastDeviceTypeValues.clear();
 
-    llvm::for_each(clause.getArchitectures(),
-                   [this](const DeviceTypeArgument &arg) {
-                     lastDeviceTypeValues.push_back(
-                         decodeDeviceType(arg.getIdentifierInfo()));
-                   });
+    for (const DeviceTypeArgument &arg : clause.getArchitectures())
+      lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
   }
 
   mlir::Value emitIntExpr(const Expr *intExpr) {
-    mlir::Value expr = cgf.emitScalarExpr(intExpr);
-    mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
-
-    mlir::IntegerType targetType = mlir::IntegerType::get(
-        &cgf.getMLIRContext(), cgf.getContext().getIntWidth(intExpr->getType()),
-        intExpr->getType()->isSignedIntegerOrEnumerationType()
-            ? mlir::IntegerType::SignednessSemantics::Signed
-            : mlir::IntegerType::SignednessSemantics::Unsigned);
-
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, expr);
-    return conversionOp.getResult(0);
+    return cgf.emitOpenACCIntExpr(intExpr);
   }
 
   // 'condition' as an OpenACC grammar production is used for 'if' and (some
@@ -114,6 +102,7 @@ class OpenACCClauseCIREmitter final
 
   mlir::Value createConstantInt(mlir::Location loc, unsigned width,
                                 int64_t value) {
+    return cgf.createOpenACCConstantInt(loc, width, value);
     mlir::IntegerType ty = mlir::IntegerType::get(
         &cgf.getMLIRContext(), width,
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -187,105 +176,6 @@ class OpenACCClauseCIREmitter final
     dataOperands.append(computeEmitter.dataOperands);
   }
 
-  struct DataOperandInfo {
-    mlir::Location beginLoc;
-    mlir::Value varValue;
-    std::string name;
-    llvm::SmallVector<mlir::Value> bounds;
-  };
-
-  mlir::Value createBound(mlir::Location boundLoc, mlir::Value lowerBound,
-                          mlir::Value upperBound, mlir::Value extent) {
-    // Arrays always have a start-idx of 0.
-    mlir::Value startIdx = createConstantInt(boundLoc, 64, 0);
-    // Stride is always 1 in C/C++.
-    mlir::Value stride = createConstantInt(boundLoc, 64, 1);
-
-    auto bound = builder.create<mlir::acc::DataBoundsOp>(boundLoc, lowerBound,
-                                                         upperBound);
-    bound.getStartIdxMutable().assign(startIdx);
-    if (extent)
-      bound.getExtentMutable().assign(extent);
-    bound.getStrideMutable().assign(stride);
-
-    return bound;
-  }
-
-  // A helper function that gets the information from an operand to a data
-  // clause, so that it can be used to emit the data operations.
-  DataOperandInfo getDataOperandInfo(OpenACCDirectiveKind dk, const Expr *e) {
-    // TODO: OpenACC: Cache was different enough as to need a separate
-    // `ActOnCacheVar`, so we are going to need to do some investigations here
-    // when it comes to implement this for cache.
-    if (dk == OpenACCDirectiveKind::Cache) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "OpenACC data operand for 'cache' directive");
-      return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}, {}};
-    }
-
-    const Expr *curVarExpr = e->IgnoreParenImpCasts();
-
-    mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
-    llvm::SmallVector<mlir::Value> bounds;
-
-    std::string exprString;
-    llvm::raw_string_ostream os(exprString);
-    e->printPretty(os, nullptr, cgf.getContext().getPrintingPolicy());
-
-    // Assemble the list of bounds.
-    while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
-      mlir::Location boundLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
-      mlir::Value lowerBound;
-      mlir::Value upperBound;
-      mlir::Value extent;
-
-      if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr)) {
-        if (const Expr *lb = section->getLowerBound())
-          lowerBound = emitIntExpr(lb);
-        else
-          lowerBound = createConstantInt(boundLoc, 64, 0);
-
-        if (const Expr *len = section->getLength()) {
-          extent = emitIntExpr(len);
-        } else {
-          QualType baseTy = ArraySectionExpr::getBaseOriginalType(
-              section->getBase()->IgnoreParenImpCasts());
-          // We know this is the case as implicit lengths are only allowed for
-          // array types with a constant size, or a dependent size.  AND since
-          // we are codegen we know we're not dependent.
-          auto *arrayTy = cgf.getContext().getAsConstantArrayType(baseTy);
-          // Rather than trying to calculate the extent based on the
-          // lower-bound, we can just emit this as an upper bound.
-          upperBound =
-              createConstantInt(boundLoc, 64, arrayTy->getLimitedSize() - 1);
-        }
-
-        curVarExpr = section->getBase()->IgnoreParenImpCasts();
-      } else {
-        const auto *subscript = cast<ArraySubscriptExpr>(curVarExpr);
-
-        lowerBound = emitIntExpr(subscript->getIdx());
-        // Length of an array index is always 1.
-        extent = createConstantInt(boundLoc, 64, 1);
-        curVarExpr = subscript->getBase()->IgnoreParenImpCasts();
-      }
-
-      bounds.push_back(createBound(boundLoc, lowerBound, upperBound, extent));
-    }
-
-    if (const auto *memExpr = dyn_cast<MemberExpr>(curVarExpr))
-      return {exprLoc, cgf.emitMemberExpr(memExpr).getPointer(), exprString,
-              std::move(bounds)};
-
-    // Sema has made sure that only 4 types of things can get here, array
-    // subscript, array section, member expr, or DRE to a var decl (or the
-    // former 3 wrapping a var-decl), so we should be able to assume this is
-    // right.
-    const auto *dre = cast<DeclRefExpr>(curVarExpr);
-    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), exprString,
-            std::move(bounds)};
-  }
-
   mlir::acc::DataClauseModifier
   convertModifiers(OpenACCModifierKind modifiers) {
     using namespace mlir::acc;
@@ -317,7 +207,8 @@ class OpenACCClauseCIREmitter final
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       OpenACCModifierKind modifiers, bool structured,
                       bool implicit) {
-    DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
+    CIRGenFunction::OpenACCDataOperandInfo opInfo =
+        cgf.getOpenACCDataOperandInfo(varOperand);
 
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
@@ -358,7 +249,8 @@ class OpenACCClauseCIREmitter final
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       OpenACCModifierKind modifiers, bool structured,
                       bool implicit) {
-    DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
+    CIRGenFunction::OpenACCDataOperandInfo opInfo =
+        cgf.getOpenACCDataOperandInfo(varOperand);
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
                                    implicit, opInfo.name, opInfo.bounds);
@@ -511,11 +403,9 @@ public:
 
     if constexpr (isOneOfTypes<OpTy, mlir::acc::InitOp,
                                mlir::acc::ShutdownOp>) {
-      llvm::for_each(
-          clause.getArchitectures(), [this](const DeviceTypeArgument &arg) {
-            operation.addDeviceType(builder.getContext(),
-                                    decodeDeviceType(arg.getIdentifierInfo()));
-          });
+      for (const DeviceTypeArgument &arg : clause.getArchitectures())
+        operation.addDeviceType(builder.getContext(),
+                                decodeDeviceType(arg.getIdentifierInfo()));
     } else if constexpr (isOneOfTypes<OpTy, mlir::acc::SetOp>) {
       assert(!operation.getDeviceTypeAttr() && "already have device-type?");
       assert(clause.getArchitectures().size() <= 1);
@@ -1081,6 +971,139 @@ public:
       applyToComputeOp(clause);
     } else {
       llvm_unreachable("Unknown construct kind in VisitAttachClause");
+    }
+  }
+
+  void VisitPrivateClause(const OpenACCPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto privateOp = mlir::acc::PrivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        privateOp.setDataClause(mlir::acc::DataClause::acc_private);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     /*temporary=*/nullptr,
+                                     OpenACCReductionOperator::Invalid,
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType, privateOp.getResult());
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addPrivatization(builder.getContext(), privateOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitPrivateClause");
+    }
+  }
+
+  void VisitFirstPrivateClause(const OpenACCFirstPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
+                               mlir::acc::SerialOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto firstPrivateOp = mlir::acc::FirstprivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+
+        firstPrivateOp.setDataClause(mlir::acc::DataClause::acc_firstprivate);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
+                                                                    builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     varRecipe.InitFromTemporary,
+                                     OpenACCReductionOperator::Invalid,
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType,
+                                     firstPrivateOp.getResult());
+
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addFirstPrivatization(builder.getContext(), firstPrivateOp,
+                                          recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Unlike 'private', 'firstprivate' applies to the compute op, not the
+      // loop op.
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitFirstPrivateClause");
+    }
+  }
+
+  void VisitReductionClause(const OpenACCReductionClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+
+        auto reductionOp = mlir::acc::ReductionOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        reductionOp.setDataClause(mlir::acc::DataClause::acc_reduction);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     /*temporary=*/nullptr,
+                                     clause.getReductionOp(),
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType, reductionOp.getResult());
+
+          operation.addReduction(builder.getContext(), reductionOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitReductionClause");
     }
   }
 };

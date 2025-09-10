@@ -48,8 +48,8 @@ body: |
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
   ; CHECK: %6:b32 = FADD_rnf32ri %5, float 6.250000e+00
-    %6 = FADD_rnf32ri %5, float 6.250000e+00
-    %7 = FMUL_rnf32rr %6, %4
+    %6 = FADD_rnf32ri %5, float 6.250000e+00, 0
+    %7 = FMUL_rnf32rr %6, %4, 0
     ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
     Return
 ...
@@ -74,8 +74,8 @@ body: |
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
   ; CHECK: %6:b32 = FADD_rnf32ri %5, float 0x7FF8000000000000
-    %6 = FADD_rnf32ri %5, float 0x7FF8000000000000
-    %7 = FMUL_rnf32rr %6, %4
+    %6 = FADD_rnf32ri %5, float 0x7FF8000000000000, 0
+    %7 = FMUL_rnf32rr %6, %4, 0
     ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
     Return
 ...

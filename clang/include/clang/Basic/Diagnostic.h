@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
@@ -289,6 +290,9 @@ public:
 
     /// Expr *
     ak_expr,
+
+    /// AttributeCommonInfo *
+    ak_attr_info,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -892,7 +896,10 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // TODO: Deprecate this once all uses are removed from Clang.
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
@@ -1253,10 +1260,13 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
+protected:
   DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation DiagLoc,
                     unsigned DiagID);
 
-protected:
+  DiagnosticsEngine *getDiagnosticsEngine() const { return DiagObj; }
+  unsigned getDiagID() const { return DiagID; }
+
   /// Clear out the current diagnostic.
   void Clear() const {
     DiagObj = nullptr;

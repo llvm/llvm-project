@@ -4582,7 +4582,7 @@ define signext i32 @atomicrmw_and_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB56_2: # %else
-; RV64I-NEXT:    lwu a1, 0(a0)
+; RV64I-NEXT:    lw a1, 0(a0)
 ; RV64I-NEXT:    andi a2, a1, 1
 ; RV64I-NEXT:    sw a2, 0(a0)
 ; RV64I-NEXT:    sext.w a0, a1
@@ -4700,7 +4700,7 @@ define signext i32 @atomicrmw_nand_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB57_2: # %else
-; RV64I-NEXT:    lwu a1, 0(a0)
+; RV64I-NEXT:    lw a1, 0(a0)
 ; RV64I-NEXT:    andi a2, a1, 1
 ; RV64I-NEXT:    sw a2, 0(a0)
 ; RV64I-NEXT:    sext.w a0, a1

@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-LABEL: define void @smax_call_uniform(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 -68, -69
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[X]], 0
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -39,9 +39,8 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK:       [[PRED_UREM_IF5]]:
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call i64 @llvm.smax.i64(i64 0, i64 0)
 ; CHECK-NEXT:    [[TMP13:%.*]] = tail call i64 @llvm.smax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 1, i64 [[TMP12]]
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
@@ -53,12 +52,11 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[REM1:%.*]] = urem i64 [[MUL]], [[X]]

@@ -26,7 +26,6 @@ namespace llvm {
 class MCAssembler;
 class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
-class MCDataFragment;
 class MCFragment;
 class MCSection;
 class MCSymbol;
@@ -204,7 +203,7 @@ public:
   void encodeInlineLineTable(const MCAssembler &Asm,
                              MCCVInlineLineTableFragment &F);
 
-  MCFragment *
+  void
   emitDefRange(MCObjectStreamer &OS,
                ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
                StringRef FixedSizePortion);
@@ -231,7 +230,7 @@ private:
   StringMap<unsigned> StringTable;
 
   /// The fragment that ultimately holds our strings.
-  MCDataFragment *StrTabFragment = nullptr;
+  MCFragment *StrTabFragment = nullptr;
   SmallVector<char, 0> StrTab = {'\0'};
 
   /// Get a string table offset.

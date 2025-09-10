@@ -89,8 +89,8 @@ mlir::LLVM::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
   OpBuilder::InsertionGuard g(b);
   assert(!moduleOp->getRegion(0).empty() && "expected non-empty region");
   b.setInsertionPointToStart(&moduleOp->getRegion(0).front());
-  auto funcOp = b.create<LLVM::LLVMFuncOp>(
-      moduleOp->getLoc(), name,
+  auto funcOp = LLVM::LLVMFuncOp::create(
+      b, moduleOp->getLoc(), name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes, isVarArg));
 
   if (symbolTables) {

@@ -13,20 +13,16 @@ define void @pr66616(ptr %ptr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    br i1 true, label [[PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_1:%.*]]
 ; CHECK:       loop.1:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[LOOP_1]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i8 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[LOOP_1]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[LOAD]], 1
 ; CHECK-NEXT:    [[INC]] = add i8 [[IV_1]], 1

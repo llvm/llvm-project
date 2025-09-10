@@ -2041,12 +2041,6 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     break;
   }
-  case ARM::TRAPNaCl: {
-    uint32_t Val = 0xe7fedef0UL;
-    OutStreamer->AddComment("trap");
-    ATS.emitInst(Val);
-    return;
-  }
   case ARM::tTRAP: {
     // Non-Darwin binutils don't yet support the "trap" mnemonic.
     // FIXME: Remove this special case when they do.

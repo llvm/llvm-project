@@ -38,6 +38,7 @@
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
+#include "InvalidEnumDefaultInitializationCheck.h"
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
@@ -88,6 +89,7 @@
 #include "ThrowKeywordMissingCheck.h"
 #include "TooSmallLoopVariableCheck.h"
 #include "UncheckedOptionalAccessCheck.h"
+#include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
@@ -165,6 +167,8 @@ public:
     CheckFactories.registerCheck<InfiniteLoopCheck>("bugprone-infinite-loop");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
+    CheckFactories.registerCheck<InvalidEnumDefaultInitializationCheck>(
+        "bugprone-invalid-enum-default-initialization");
     CheckFactories.registerCheck<LambdaFunctionNameCheck>(
         "bugprone-lambda-function-name");
     CheckFactories.registerCheck<MacroParenthesesCheck>(
@@ -258,6 +262,8 @@ public:
         "bugprone-too-small-loop-variable");
     CheckFactories.registerCheck<UncheckedOptionalAccessCheck>(
         "bugprone-unchecked-optional-access");
+    CheckFactories.registerCheck<UncheckedStringToNumberConversionCheck>(
+        "bugprone-unchecked-string-to-number-conversion");
     CheckFactories.registerCheck<UndefinedMemoryManipulationCheck>(
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(

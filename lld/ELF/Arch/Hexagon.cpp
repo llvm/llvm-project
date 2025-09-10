@@ -7,11 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "Thunks.h"
+#include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/HexagonAttributeParser.h"
+#include "llvm/Support/HexagonAttributes.h"
+#include "llvm/Support/LEB128.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -29,6 +37,10 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
+  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void writePltHeader(uint8_t *buf) const override;
@@ -56,6 +68,8 @@ Hexagon::Hexagon(Ctx &ctx) : TargetInfo(ctx) {
   tlsGotRel = R_HEX_TPREL_32;
   tlsModuleIndexRel = R_HEX_DTPMOD_32;
   tlsOffsetRel = R_HEX_DTPREL_32;
+
+  needsThunks = true;
 }
 
 uint32_t Hexagon::calcEFlags() const {
@@ -251,6 +265,46 @@ static uint32_t findMaskR16(Ctx &ctx, uint32_t insn) {
 
 static void or32le(uint8_t *p, int32_t v) { write32le(p, read32le(p) | v); }
 
+bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
+  int64_t offset = dst - src;
+  switch (type) {
+  case llvm::ELF::R_HEX_B22_PCREL:
+  case llvm::ELF::R_HEX_PLT_B22_PCREL:
+  case llvm::ELF::R_HEX_GD_PLT_B22_PCREL:
+  case llvm::ELF::R_HEX_LD_PLT_B22_PCREL:
+    return llvm::isInt<22>(offset >> 2);
+  case llvm::ELF::R_HEX_B15_PCREL:
+    return llvm::isInt<15>(offset >> 2);
+    break;
+  case llvm::ELF::R_HEX_B13_PCREL:
+    return llvm::isInt<13>(offset >> 2);
+    break;
+  case llvm::ELF::R_HEX_B9_PCREL:
+    return llvm::isInt<9>(offset >> 2);
+  default:
+    return true;
+  }
+  llvm_unreachable("unsupported relocation");
+}
+
+bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                         uint64_t branchAddr, const Symbol &s,
+                         int64_t a) const {
+  // Only check branch range for supported branch relocation types
+  switch (type) {
+  case R_HEX_B22_PCREL:
+  case R_HEX_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_LD_PLT_B22_PCREL:
+  case R_HEX_B15_PCREL:
+  case R_HEX_B13_PCREL:
+  case R_HEX_B9_PCREL:
+    return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
+  default:
+    return false;
+  }
+}
+
 void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
                        uint64_t val) const {
   switch (rel.type) {
@@ -413,6 +467,118 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
     InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
+}
+
+namespace {
+class HexagonAttributesSection final : public SyntheticSection {
+public:
+  HexagonAttributesSection(Ctx &ctx)
+      : SyntheticSection(ctx, ".hexagon.attributes", SHT_HEXAGON_ATTRIBUTES, 0,
+                         1) {}
+
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
+
+  static constexpr StringRef vendor = "hexagon";
+  DenseMap<unsigned, unsigned> intAttr;
+  size_t size = 0;
+};
+} // namespace
+
+static HexagonAttributesSection *
+mergeAttributesSection(Ctx &ctx,
+                       const SmallVector<InputSectionBase *, 0> &sections) {
+  ctx.in.hexagonAttributes = std::make_unique<HexagonAttributesSection>(ctx);
+  auto &merged =
+      static_cast<HexagonAttributesSection &>(*ctx.in.hexagonAttributes);
+
+  // Collect all tags values from attributes section.
+  const auto &attributesTags = HexagonAttrs::getHexagonAttributeTags();
+  for (const InputSectionBase *sec : sections) {
+    HexagonAttributeParser parser;
+    if (Error e = parser.parse(sec->content(), llvm::endianness::little))
+      Warn(ctx) << sec << ": " << std::move(e);
+    for (const auto &tag : attributesTags) {
+      switch (HexagonAttrs::AttrType(tag.attr)) {
+      case HexagonAttrs::ARCH:
+      case HexagonAttrs::HVXARCH:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (!r.second)
+            if (r.first->second < *i)
+              r.first->second = *i;
+        }
+        continue;
+
+      case HexagonAttrs::HVXIEEEFP:
+      case HexagonAttrs::HVXQFLOAT:
+      case HexagonAttrs::ZREG:
+      case HexagonAttrs::AUDIO:
+      case HexagonAttrs::CABAC:
+        if (auto i = parser.getAttributeValue(tag.attr)) {
+          auto r = merged.intAttr.try_emplace(tag.attr, *i);
+          if (!r.second && r.first->second != *i) {
+            r.first->second |= *i;
+          }
+        }
+        continue;
+      }
+    }
+  }
+
+  // The total size of headers: format-version [ <section-length> "vendor-name"
+  // [ <file-tag> <size>.
+  size_t size = 5 + merged.vendor.size() + 1 + 5;
+  for (auto &attr : merged.intAttr)
+    if (attr.second != 0)
+      size += getULEB128Size(attr.first) + getULEB128Size(attr.second);
+  merged.size = size;
+  return &merged;
+}
+
+void HexagonAttributesSection::writeTo(uint8_t *buf) {
+  const size_t size = getSize();
+  uint8_t *const end = buf + size;
+  *buf = ELFAttrs::Format_Version;
+  write32(ctx, buf + 1, size - 1);
+  buf += 5;
+
+  memcpy(buf, vendor.data(), vendor.size());
+  buf += vendor.size() + 1;
+
+  *buf = ELFAttrs::File;
+  write32(ctx, buf + 1, end - buf);
+  buf += 5;
+
+  for (auto &attr : intAttr) {
+    if (attr.second == 0)
+      continue;
+    buf += encodeULEB128(attr.first, buf);
+    buf += encodeULEB128(attr.second, buf);
+  }
+}
+
+void elf::mergeHexagonAttributesSections(Ctx &ctx) {
+  // Find the first input SHT_HEXAGON_ATTRIBUTES; return if not found.
+  size_t place =
+      llvm::find_if(ctx.inputSections,
+                    [](auto *s) { return s->type == SHT_HEXAGON_ATTRIBUTES; }) -
+      ctx.inputSections.begin();
+  if (place == ctx.inputSections.size())
+    return;
+
+  // Extract all SHT_HEXAGON_ATTRIBUTES sections into `sections`.
+  SmallVector<InputSectionBase *, 0> sections;
+  llvm::erase_if(ctx.inputSections, [&](InputSectionBase *s) {
+    if (s->type != SHT_HEXAGON_ATTRIBUTES)
+      return false;
+    sections.push_back(s);
+    return true;
+  });
+
+  // Add the merged section.
+  ctx.inputSections.insert(ctx.inputSections.begin() + place,
+                           mergeAttributesSection(ctx, sections));
 }
 
 void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }

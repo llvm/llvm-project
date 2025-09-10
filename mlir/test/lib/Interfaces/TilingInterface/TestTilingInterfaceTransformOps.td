@@ -126,4 +126,28 @@ def TestFuseUsingForallOp : Op<Transform_Dialect, "test.fuse_using_forall",
   }];
 }
 
+def TestTileAndFuseOuterParallelPartialReductionOp : Op<
+    Transform_Dialect, "test.tile_and_fuse_outer_parallel_partial_reduction",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Test operation to tile an operation using partial reduction with
+    outer parallel strategy, and to fuse its producers.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$reduction_dims,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+                   OptionalAttr<DeviceMappingArrayAttr>:$mapping);
+
+  let results = (outs TransformHandleTypeInterface:$tiled_ops,
+                 Variadic<TransformHandleTypeInterface>:$loops);
+  let assemblyFormat = [{
+    $root_op (`reduction_dims` `=` $reduction_dims^)?
+    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // TEST_TILINGINTERFACE_TRANSFORM_OPS

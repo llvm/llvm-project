@@ -36,12 +36,11 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
@@ -105,7 +104,7 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   // it is a function (avoiding a grammar ambiguity).
   bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
-      llvm::isa<FunctionType>(op->getResult(0).getType()))
+      isa<FunctionType>(op->getResult(0).getType()))
     wrapped = true;
 
   if (wrapped)
@@ -2071,9 +2070,8 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
     return failure();
   });
   if (failed(verify(op))) {
-    LLVM_DEBUG(llvm::dbgs()
-               << DEBUG_TYPE << ": '" << op->getName()
-               << "' failed to verify and will be printed in generic form\n");
+    LDBG() << op->getName()
+           << "' failed to verify and will be printed in generic form";
     printerFlags.printGenericOpForm();
   }
 
@@ -2838,6 +2836,19 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<GraphType>([&](GraphType graphTy) {
+        os << '(';
+        interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
+        os << ") -> ";
+        ArrayRef<Type> results = graphTy.getResults();
+        if (results.size() == 1 && !isa<FunctionType, GraphType>(results[0])) {
+          printType(results[0]);
+        } else {
+          os << '(';
+          interleaveComma(results, [&](Type ty) { printType(ty); });
+          os << ')';
+        }
+      })
       .Default([&](Type type) { return printDialectType(type); });
 }
 

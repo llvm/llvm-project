@@ -620,7 +620,7 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
@@ -646,7 +646,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial {{.*}} {
-! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield

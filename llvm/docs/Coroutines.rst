@@ -37,7 +37,7 @@ then destroy it:
 
 .. _coroutine frame:
 
-In addition to the function stack frame which exists when a coroutine is
+In addition to the function stack frame, which exists when a coroutine is
 executing, there is an additional region of storage that contains objects that
 keep the coroutine state when a coroutine is suspended. This region of storage
 is called the **coroutine frame**. It is created when a coroutine is called
@@ -145,7 +145,7 @@ lowerings:
   yielded values.
 
   The coroutine indicates that it has run to completion by returning
-  a null continuation pointer. Any yielded values will be `undef`
+  a null continuation pointer. Any yielded values will be `undef` and
   should be ignored.
 
 - In yield-once returned-continuation lowering, the coroutine must
@@ -159,7 +159,7 @@ passed to the `coro.id` intrinsic, which guarantees a certain size
 and alignment statically. The same buffer must be passed to the
 continuation function(s). The coroutine will allocate memory if the
 buffer is insufficient, in which case it will need to store at
-least that pointer in the buffer; therefore the buffer must always
+least that pointer in the buffer; therefore, the buffer must always
 be at least pointer-sized. How the coroutine uses the buffer may
 vary between suspend points.
 
@@ -182,7 +182,7 @@ handling of control-flow must be handled explicitly by the frontend.
 In this lowering, a coroutine is assumed to take the current `async context` as
 one of its arguments (the argument position is determined by
 `llvm.coro.id.async`). It is used to marshal arguments and return values of the
-coroutine. Therefore an async coroutine returns `void`.
+coroutine. Therefore, an async coroutine returns `void`.
 
 .. code-block:: llvm
 
@@ -321,7 +321,7 @@ The `cleanup` block destroys the coroutine frame. The `coro.free`_ intrinsic,
 given the coroutine handle, returns a pointer of the memory block to be freed or
 `null` if the coroutine frame was not allocated dynamically. The `cleanup`
 block is entered when coroutine runs to completion by itself or destroyed via
-call to the `coro.destroy`_ intrinsic.
+a call to the `coro.destroy`_ intrinsic.
 
 The `suspend` block contains code to be executed when coroutine runs to
 completion or suspended. The `coro.end`_ intrinsic marks the point where
@@ -337,7 +337,7 @@ Coroutine Transformation
 ------------------------
 
 One of the steps of coroutine lowering is building the coroutine frame. The
-def-use chains are analyzed to determine which objects need be kept alive across
+def-use chains are analyzed to determine which objects need to be kept alive across
 suspend points. In the coroutine shown in the previous section, use of virtual register
 `%inc` is separated from the definition by a suspend point, therefore, it
 cannot reside on the stack frame since the latter goes away once the coroutine
@@ -532,7 +532,7 @@ as follows:
     ret void
   }
 
-If different cleanup code needs to get executed for different suspend points,
+If different cleanup code needs to be executed for different suspend points,
 a similar switch will be in the `f.destroy` function.
 
 .. note ::
@@ -740,7 +740,7 @@ looks like this:
     <SUSPEND final=true> // injected final suspend point
   }
 
-and python iterator `__next__` would look like:
+and Python iterator `__next__` would look like:
 
 .. code-block:: c++
 
@@ -829,7 +829,7 @@ A swifterror alloca or parameter can only be loaded, stored, or passed as a swif
 These rules, not coincidentally, mean that you can always perfectly model the data flow in the alloca, and LLVM CodeGen actually has to do that in order to emit code.
 
 For coroutine lowering the default treatment of allocas breaks those rules — splitting will try to replace the alloca with an entry in the coro frame, which can lead to trying to pass that as a swifterror argument.
-To pass a swifterror argument in a split function, we need to still have the alloca around; but we also potentially need the coro frame slot, since useful data can (in theory) be stored in the swifterror alloca slot across suspensions in the presplit coroutine. 
+To pass a swifterror argument in a split function, we need to still have the alloca around, but we also potentially need the coro frame slot, since useful data can (in theory) be stored in the swifterror alloca slot across suspensions in the presplit coroutine.
 When split a coroutine it is consequently necessary to keep both the frame slot as well as the alloca itself and then keep them in sync.
 
 Intrinsics
@@ -965,7 +965,7 @@ Semantics:
 Using this intrinsic on a coroutine that does not have a coroutine promise
 leads to undefined behavior. It is possible to read and modify coroutine
 promise of the coroutine which is currently executing. The coroutine author and
-a coroutine user are responsible to makes sure there is no data races.
+a coroutine user are responsible for ensuring no data races.
 
 Example:
 """"""""
@@ -1181,7 +1181,7 @@ Overview:
 """""""""
 
 The '``llvm.coro.alloc``' intrinsic returns `true` if dynamic allocation is
-required to obtain a memory for the coroutine frame and `false` otherwise.
+required to obtain memory for the coroutine frame and `false` otherwise.
 This is not supported for returned-continuation coroutines.
 
 Arguments:
@@ -1628,7 +1628,7 @@ The second argument should be `true` if this coro.end is in the block that is
 part of the unwind sequence leaving the coroutine body due to an exception and
 `false` otherwise.
 
-The third argument if present should specify a function to be called.
+The third argument, if present, should specify a function to be called.
 
 If the third argument is present, the remaining arguments are the arguments to
 the function call.
@@ -1700,7 +1700,7 @@ Semantics:
 If a coroutine that was suspended at the suspend point marked by this intrinsic
 is resumed via `coro.resume`_ the control will transfer to the basic block
 of the 0-case. If it is resumed via `coro.destroy`_, it will proceed to the
-basic block indicated by the 1-case. To suspend, coroutine proceed to the
+basic block indicated by the 1-case. To suspend, coroutine proceeds to the
 default label.
 
 If suspend intrinsic is marked as final, it can consider the `true` branch
@@ -1717,7 +1717,7 @@ unreachable and can perform optimizations that can take advantage of that fact.
 Overview:
 """""""""
 
-The '``llvm.coro.save``' marks the point where a coroutine need to update its
+The '``llvm.coro.save``' marks the point where a coroutine needs to update its
 state to prepare for resumption to be considered suspended (and thus eligible
 for resumption). It is illegal to merge two '``llvm.coro.save``' calls unless their
 '``llvm.coro.suspend``' users are also merged. So '``llvm.coro.save``' is currently
@@ -1793,7 +1793,7 @@ The fourth to six argument are the arguments for the third argument.
 Semantics:
 """"""""""
 
-The result of the intrinsic are mapped to the arguments of the resume function.
+The results of the intrinsic are mapped to the arguments of the resume function.
 Execution is suspended at this intrinsic and resumed when the resume function is
 called.
 

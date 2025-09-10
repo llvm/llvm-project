@@ -13,7 +13,6 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 #include <optional>
@@ -408,7 +407,7 @@ mlir::convertReassociationIndicesToExprs(
 }
 
 template <typename AffineExprTy>
-unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
+static unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   unsigned pos = 0;
   for (const auto &exprs : exprArrays) {
     for (auto expr : exprs) {
@@ -505,7 +504,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
         linearizedStaticShape *= dim.value();
     }
     if (foundDynamicShape) {
-      if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
+      if (ShapedType::isStatic(collapsedShape[map.index()])) {
         return emitError(
             "expected dimension " + Twine(map.index()) +
             " of collapsed type to be dynamic since one or more of the "

@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -79,8 +80,6 @@ private:
 
   /// The scalar type to convert to
   Type *const ConvertToScalar;
-  /// The set of visited Instructions
-  SmallPtrSet<Instruction *, 4> Visited;
   /// Map of Value -> Converted Value
   ValueToValueMap ValMap;
   /// Map of containing conversions from Optimal Type -> Original Type per BB.
@@ -288,6 +287,7 @@ bool LiveRegOptimizer::optimizeLiveType(
   SmallPtrSet<PHINode *, 4> PhiNodes;
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
+  SmallPtrSet<Instruction *, 4> Visited;
 
   Worklist.push_back(cast<Instruction>(I));
   while (!Worklist.empty()) {
@@ -546,7 +546,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    // Invalidates UniformityInfo
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;

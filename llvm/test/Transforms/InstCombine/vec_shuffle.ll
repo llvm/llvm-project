@@ -67,8 +67,7 @@ define float @test6(<4 x float> %X) {
 
 define float @testvscale6(<vscale x 4 x float> %X) {
 ; CHECK-LABEL: @testvscale6(
-; CHECK-NEXT:    [[T2:%.*]] = shufflevector <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[T2]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[X:%.*]], i64 0
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %X1 = bitcast <vscale x 4 x float> %X to <vscale x 4 x i32>

@@ -12,10 +12,10 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -34,13 +34,10 @@ public:
         IsLittleEndian(isLE) {}
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override;
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -53,17 +50,14 @@ public:
 MCFixupKindInfo XtensaAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[Xtensa::NumTargetFixupKinds] = {
       // name                     offset bits  flags
-      {"fixup_xtensa_branch_6", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_branch_8", 16, 8, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_branch_12", 12, 12, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_jump_18", 6, 18, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_call_18", 6, 18,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_xtensa_l32r_16", 8, 16,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_xtensa_loop_8", 16, 8, MCFixupKindInfo::FKF_IsPCRel}};
+      {"fixup_xtensa_branch_6", 0, 16, 0},
+      {"fixup_xtensa_branch_8", 16, 8, 0},
+      {"fixup_xtensa_branch_12", 12, 12, 0},
+      {"fixup_xtensa_jump_18", 6, 18, 0},
+      {"fixup_xtensa_call_18", 6, 18, 0},
+      {"fixup_xtensa_l32r_16", 8, 16, 0},
+      {"fixup_xtensa_loop_8", 16, 8, 0},
+  };
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -136,17 +130,30 @@ static unsigned getSize(unsigned Kind) {
   switch (Kind) {
   default:
     return 3;
-  case MCFixupKind::FK_Data_4:
+  case FK_Data_4:
     return 4;
   case Xtensa::fixup_xtensa_branch_6:
     return 2;
   }
 }
 
+std::optional<bool> XtensaAsmBackend::evaluateFixup(const MCFragment &F,
+                                                    MCFixup &Fixup, MCValue &,
+                                                    uint64_t &Value) {
+  // For a few PC-relative fixups, offsets need to be aligned down. We
+  // compensate here because the default handler's `Value` decrement doesn't
+  // account for this alignment.
+  switch (Fixup.getKind()) {
+  case Xtensa::fixup_xtensa_call_18:
+  case Xtensa::fixup_xtensa_l32r_16:
+    Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
+  }
+  return {};
+}
+
 void XtensaAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                  const MCValue &Target,
-                                  MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) {
+                                  const MCValue &Target, uint8_t *Data,
+                                  uint64_t Value, bool IsResolved) {
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCContext &Ctx = getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
@@ -159,21 +166,12 @@ void XtensaAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   if (!Value)
     return; // Doesn't change encoding.
 
-  unsigned Offset = Fixup.getOffset();
   unsigned FullSize = getSize(Fixup.getKind());
 
   for (unsigned i = 0; i != FullSize; ++i) {
-    Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
-
-bool XtensaAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                                         const MCSubtargetInfo &STI) const {
-  return false;
-}
-
-void XtensaAsmBackend::relaxInstruction(MCInst &Inst,
-                                        const MCSubtargetInfo &STI) const {}
 
 bool XtensaAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {

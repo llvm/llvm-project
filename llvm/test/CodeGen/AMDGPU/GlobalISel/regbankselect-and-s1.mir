@@ -14,12 +14,14 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_TRUNC %0
     %3:_(s1) = G_TRUNC %1
     %4:_(s1) = G_AND %2, %3
     %5:_(s32) = G_ANYEXT %4
+    S_ENDPGM 0, implicit %5
 ...
 
 ---
@@ -38,6 +40,7 @@ body: |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[ICMP]], [[ICMP1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_CONSTANT i32 0
@@ -45,6 +48,7 @@ body: |
     %4:_(s1) = G_ICMP intpred(eq), %1, %2
     %5:_(s1) = G_AND %3, %4
     %6:_(s32) = G_ANYEXT %5
+    S_ENDPGM 0, implicit %6
 ...
 
 ---
@@ -309,6 +313,7 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:sgpr(s32) = G_AND [[COPY2]], [[AND]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AND1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr0
@@ -318,4 +323,5 @@ body: |
     %6:_(s1) = G_AND %3, %4
     %7:_(s1) = G_AND %5, %6
     %8:_(s32) = G_ANYEXT %7
+    S_ENDPGM 0, implicit %8
 ...

@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProfCommon.h"
@@ -75,6 +76,10 @@ static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
 
+static cl::opt<bool> AnnotateStaticDataSectionPrefix(
+    "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
+    cl::desc("If true, annotate the static data section prefix"));
+
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
 STATISTIC(NumOfMemProfMismatch,
@@ -90,6 +95,14 @@ STATISTIC(NumOfMemProfMatchedAllocs,
           "Number of matched memory profile allocs.");
 STATISTIC(NumOfMemProfMatchedCallSites,
           "Number of matched memory profile callsites.");
+STATISTIC(NumOfMemProfHotGlobalVars,
+          "Number of global vars annotated with 'hot' section prefix.");
+STATISTIC(NumOfMemProfColdGlobalVars,
+          "Number of global vars annotated with 'unlikely' section prefix.");
+STATISTIC(NumOfMemProfUnknownGlobalVars,
+          "Number of global vars with unknown hotness (no section prefix).");
+STATISTIC(NumOfMemProfExplicitSectionGlobalVars,
+          "Number of global vars with user-specified section (not annotated).");
 
 static void addCallsiteMetadata(Instruction &I,
                                 ArrayRef<uint64_t> InlinedCallStack,
@@ -361,6 +374,131 @@ static void addVPMetadata(Module &M, Instruction &I,
   }
 }
 
+static void
+handleAllocSite(Instruction &I, CallBase *CI,
+                ArrayRef<uint64_t> InlinedCallStack, LLVMContext &Ctx,
+                OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize,
+                const std::set<const AllocationInfo *> &AllocInfoSet,
+                std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
+                    &FullStackIdToAllocMatchInfo) {
+  // We may match this instruction's location list to multiple MIB
+  // contexts. Add them to a Trie specialized for trimming the contexts to
+  // the minimal needed to disambiguate contexts with unique behavior.
+  CallStackTrie AllocTrie(&ORE, MaxColdSize);
+  uint64_t TotalSize = 0;
+  uint64_t TotalColdSize = 0;
+  for (auto *AllocInfo : AllocInfoSet) {
+    // Check the full inlined call stack against this one.
+    // If we found and thus matched all frames on the call, include
+    // this MIB.
+    if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
+                                           InlinedCallStack)) {
+      NumOfMemProfMatchedAllocContexts++;
+      uint64_t FullStackId = 0;
+      if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
+        FullStackId = computeFullStackId(AllocInfo->CallStack);
+      auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
+      TotalSize += AllocInfo->Info.getTotalSize();
+      if (AllocType == AllocationType::Cold)
+        TotalColdSize += AllocInfo->Info.getTotalSize();
+      // Record information about the allocation if match info printing
+      // was requested.
+      if (ClPrintMemProfMatchInfo) {
+        assert(FullStackId != 0);
+        FullStackIdToAllocMatchInfo[std::make_pair(FullStackId,
+                                                   InlinedCallStack.size())] = {
+            AllocInfo->Info.getTotalSize(), AllocType};
+      }
+    }
+  }
+  // If the threshold for the percent of cold bytes is less than 100%,
+  // and not all bytes are cold, see if we should still hint this
+  // allocation as cold without context sensitivity.
+  if (TotalColdSize < TotalSize && MinMatchedColdBytePercent < 100 &&
+      TotalColdSize * 100 >= MinMatchedColdBytePercent * TotalSize) {
+    AllocTrie.addSingleAllocTypeAttribute(CI, AllocationType::Cold, "dominant");
+    return;
+  }
+
+  // We might not have matched any to the full inlined call stack.
+  // But if we did, create and attach metadata, or a function attribute if
+  // all contexts have identical profiled behavior.
+  if (!AllocTrie.empty()) {
+    NumOfMemProfMatchedAllocs++;
+    // MemprofMDAttached will be false if a function attribute was
+    // attached.
+    bool MemprofMDAttached = AllocTrie.buildAndAttachMIBMetadata(CI);
+    assert(MemprofMDAttached == I.hasMetadata(LLVMContext::MD_memprof));
+    if (MemprofMDAttached) {
+      // Add callsite metadata for the instruction's location list so that
+      // it simpler later on to identify which part of the MIB contexts
+      // are from this particular instruction (including during inlining,
+      // when the callsite metadata will be updated appropriately).
+      // FIXME: can this be changed to strip out the matching stack
+      // context ids from the MIB contexts and not add any callsite
+      // metadata here to save space?
+      addCallsiteMetadata(I, InlinedCallStack, Ctx);
+    }
+  }
+}
+
+// Helper struct for maintaining refs to callsite data. As an alternative we
+// could store a pointer to the CallSiteInfo struct but we also need the frame
+// index. Using ArrayRefs instead makes it a little easier to read.
+struct CallSiteEntry {
+  // Subset of frames for the corresponding CallSiteInfo.
+  ArrayRef<Frame> Frames;
+  // Potential targets for indirect calls.
+  ArrayRef<GlobalValue::GUID> CalleeGuids;
+
+  // Only compare Frame contents.
+  // Use pointer-based equality instead of ArrayRef's operator== which does
+  // element-wise comparison. We want to check if it's the same slice of the
+  // underlying array, not just equivalent content.
+  bool operator==(const CallSiteEntry &Other) const {
+    return Frames.data() == Other.Frames.data() &&
+           Frames.size() == Other.Frames.size();
+  }
+};
+
+struct CallSiteEntryHash {
+  size_t operator()(const CallSiteEntry &Entry) const {
+    return computeFullStackId(Entry.Frames);
+  }
+};
+
+static void handleCallSite(
+    Instruction &I, const Function *CalledFunction,
+    ArrayRef<uint64_t> InlinedCallStack,
+    const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
+    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites) {
+  auto &Ctx = M.getContext();
+  for (const auto &CallSiteEntry : CallSiteEntries) {
+    // If we found and thus matched all frames on the call, create and
+    // attach call stack metadata.
+    if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
+                                           InlinedCallStack)) {
+      NumOfMemProfMatchedCallSites++;
+      addCallsiteMetadata(I, InlinedCallStack, Ctx);
+
+      // Try to attach indirect call metadata if possible.
+      if (!CalledFunction)
+        addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
+
+      // Only need to find one with a matching call stack and add a single
+      // callsite metadata.
+
+      // Accumulate call site matching information upon request.
+      if (ClPrintMemProfMatchInfo) {
+        std::vector<uint64_t> CallStack;
+        append_range(CallStack, InlinedCallStack);
+        MatchedCallSites.insert(std::move(CallStack));
+      }
+      break;
+    }
+  }
+}
+
 static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI,
@@ -430,31 +568,6 @@ static void readMemprof(Module &M, Function &F,
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
-
-  // Helper struct for maintaining refs to callsite data. As an alternative we
-  // could store a pointer to the CallSiteInfo struct but we also need the frame
-  // index. Using ArrayRefs instead makes it a little easier to read.
-  struct CallSiteEntry {
-    // Subset of frames for the corresponding CallSiteInfo.
-    ArrayRef<Frame> Frames;
-    // Potential targets for indirect calls.
-    ArrayRef<GlobalValue::GUID> CalleeGuids;
-
-    // Only compare Frame contents.
-    // Use pointer-based equality instead of ArrayRef's operator== which does
-    // element-wise comparison. We want to check if it's the same slice of the
-    // underlying array, not just equivalent content.
-    bool operator==(const CallSiteEntry &Other) const {
-      return Frames.data() == Other.Frames.data() &&
-             Frames.size() == Other.Frames.size();
-    }
-  };
-
-  struct CallSiteEntryHash {
-    size_t operator()(const CallSiteEntry &Entry) const {
-      return computeFullStackId(Entry.Frames);
-    }
-  };
 
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added) along with their CalleeGuids.
@@ -553,100 +666,15 @@ static void readMemprof(Module &M, Function &F,
       // allocation context with the same leaf.
       if (AllocInfoIter != LocHashToAllocInfo.end() &&
           // Only consider allocations which support hinting.
-          isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI)) {
-        // We may match this instruction's location list to multiple MIB
-        // contexts. Add them to a Trie specialized for trimming the contexts to
-        // the minimal needed to disambiguate contexts with unique behavior.
-        CallStackTrie AllocTrie(&ORE, MaxColdSize);
-        uint64_t TotalSize = 0;
-        uint64_t TotalColdSize = 0;
-        for (auto *AllocInfo : AllocInfoIter->second) {
-          // Check the full inlined call stack against this one.
-          // If we found and thus matched all frames on the call, include
-          // this MIB.
-          if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
-                                                 InlinedCallStack)) {
-            NumOfMemProfMatchedAllocContexts++;
-            uint64_t FullStackId = 0;
-            if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
-              FullStackId = computeFullStackId(AllocInfo->CallStack);
-            auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
-            TotalSize += AllocInfo->Info.getTotalSize();
-            if (AllocType == AllocationType::Cold)
-              TotalColdSize += AllocInfo->Info.getTotalSize();
-            // Record information about the allocation if match info printing
-            // was requested.
-            if (ClPrintMemProfMatchInfo) {
-              assert(FullStackId != 0);
-              FullStackIdToAllocMatchInfo[std::make_pair(
-                  FullStackId, InlinedCallStack.size())] = {
-                  AllocInfo->Info.getTotalSize(), AllocType};
-            }
-          }
-        }
-        // If the threshold for the percent of cold bytes is less than 100%,
-        // and not all bytes are cold, see if we should still hint this
-        // allocation as cold without context sensitivity.
-        if (TotalColdSize < TotalSize && MinMatchedColdBytePercent < 100 &&
-            TotalColdSize * 100 >= MinMatchedColdBytePercent * TotalSize) {
-          AllocTrie.addSingleAllocTypeAttribute(CI, AllocationType::Cold,
-                                                "dominant");
-          continue;
-        }
-
-        // We might not have matched any to the full inlined call stack.
-        // But if we did, create and attach metadata, or a function attribute if
-        // all contexts have identical profiled behavior.
-        if (!AllocTrie.empty()) {
-          NumOfMemProfMatchedAllocs++;
-          // MemprofMDAttached will be false if a function attribute was
-          // attached.
-          bool MemprofMDAttached = AllocTrie.buildAndAttachMIBMetadata(CI);
-          assert(MemprofMDAttached == I.hasMetadata(LLVMContext::MD_memprof));
-          if (MemprofMDAttached) {
-            // Add callsite metadata for the instruction's location list so that
-            // it simpler later on to identify which part of the MIB contexts
-            // are from this particular instruction (including during inlining,
-            // when the callsite metadata will be updated appropriately).
-            // FIXME: can this be changed to strip out the matching stack
-            // context ids from the MIB contexts and not add any callsite
-            // metadata here to save space?
-            addCallsiteMetadata(I, InlinedCallStack, Ctx);
-          }
-        }
-        continue;
-      }
-
-      if (CallSitesIter == LocHashToCallSites.end())
-        continue;
-
-      // Otherwise, add callsite metadata. If we reach here then we found the
-      // instruction's leaf location in the callsites map and not the allocation
-      // map.
-      for (const auto &CallSiteEntry : CallSitesIter->second) {
-        // If we found and thus matched all frames on the call, create and
-        // attach call stack metadata.
-        if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
-                                               InlinedCallStack)) {
-          NumOfMemProfMatchedCallSites++;
-          addCallsiteMetadata(I, InlinedCallStack, Ctx);
-
-          // Try to attach indirect call metadata if possible.
-          if (!CalledFunction)
-            addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
-
-          // Only need to find one with a matching call stack and add a single
-          // callsite metadata.
-
-          // Accumulate call site matching information upon request.
-          if (ClPrintMemProfMatchInfo) {
-            std::vector<uint64_t> CallStack;
-            append_range(CallStack, InlinedCallStack);
-            MatchedCallSites.insert(std::move(CallStack));
-          }
-          break;
-        }
-      }
+          isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI))
+        handleAllocSite(I, CI, InlinedCallStack, Ctx, ORE, MaxColdSize,
+                        AllocInfoIter->second, FullStackIdToAllocMatchInfo);
+      else if (CallSitesIter != LocHashToCallSites.end())
+        // Otherwise, add callsite metadata. If we reach here then we found the
+        // instruction's leaf location in the callsites map and not the
+        // allocation map.
+        handleCallSite(I, CalledFunction, InlinedCallStack,
+                       CallSitesIter->second, M, MatchedCallSites);
     }
   }
 }
@@ -659,11 +687,12 @@ MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
 }
 
 PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
-  // Return immediately if the module doesn't contain any function.
-  if (M.empty())
+  // Return immediately if the module doesn't contain any function or global
+  // variables.
+  if (M.empty() && M.globals().empty())
     return PreservedAnalyses::all();
 
-  LLVM_DEBUG(dbgs() << "Read in memory profile:");
+  LLVM_DEBUG(dbgs() << "Read in memory profile:\n");
   auto &Ctx = M.getContext();
   auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);
   if (Error E = ReaderOrErr.takeError()) {
@@ -687,6 +716,14 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
                                           "Not a memory profile"));
     return PreservedAnalyses::all();
   }
+
+  const bool Changed =
+      annotateGlobalVariables(M, MemProfReader->getDataAccessProfileData());
+
+  // If the module doesn't contain any function, return after we process all
+  // global variables.
+  if (M.empty())
+    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
@@ -736,4 +773,96 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   }
 
   return PreservedAnalyses::none();
+}
+
+// Returns true iff the global variable has custom section either by
+// __attribute__((section("name")))
+// (https://clang.llvm.org/docs/AttributeReference.html#section-declspec-allocate)
+// or #pragma clang section directives
+// (https://clang.llvm.org/docs/LanguageExtensions.html#specifying-section-names-for-global-objects-pragma-clang-section).
+static bool hasExplicitSectionName(const GlobalVariable &GVar) {
+  if (GVar.hasSection())
+    return true;
+
+  auto Attrs = GVar.getAttributes();
+  if (Attrs.hasAttribute("bss-section") || Attrs.hasAttribute("data-section") ||
+      Attrs.hasAttribute("relro-section") ||
+      Attrs.hasAttribute("rodata-section"))
+    return true;
+  return false;
+}
+
+bool MemProfUsePass::annotateGlobalVariables(
+    Module &M, const memprof::DataAccessProfData *DataAccessProf) {
+  if (!AnnotateStaticDataSectionPrefix || M.globals().empty())
+    return false;
+
+  if (!DataAccessProf) {
+    M.getContext().diagnose(DiagnosticInfoPGOProfile(
+        MemoryProfileFileName.data(),
+        StringRef("Data access profiles not found in memprof. Ignore "
+                  "-memprof-annotate-static-data-prefix."),
+        DS_Warning));
+    return false;
+  }
+
+  bool Changed = false;
+  // Iterate all global variables in the module and annotate them based on
+  // data access profiles. Note it's up to the linker to decide how to map input
+  // sections to output sections, and one conservative practice is to map
+  // unlikely-prefixed ones to unlikely output section, and map the rest
+  // (hot-prefixed or prefix-less) to the canonical output section.
+  for (GlobalVariable &GVar : M.globals()) {
+    assert(!GVar.getSectionPrefix().has_value() &&
+           "GVar shouldn't have section prefix yet");
+    if (GVar.isDeclarationForLinker())
+      continue;
+
+    if (hasExplicitSectionName(GVar)) {
+      ++NumOfMemProfExplicitSectionGlobalVars;
+      LLVM_DEBUG(dbgs() << "Global variable " << GVar.getName()
+                        << " has explicit section name. Skip annotating.\n");
+      continue;
+    }
+
+    StringRef Name = GVar.getName();
+    // Skip string literals as their mangled names don't stay stable across
+    // binary releases.
+    // TODO: Track string content hash in the profiles and compute it inside the
+    // compiler to categeorize the hotness string literals.
+    if (Name.starts_with(".str")) {
+
+      LLVM_DEBUG(dbgs() << "Skip annotating string literal " << Name << "\n");
+      continue;
+    }
+
+    // DataAccessProfRecord's get* methods will canonicalize the name under the
+    // hood before looking it up, so optimizer doesn't need to do it.
+    std::optional<DataAccessProfRecord> Record =
+        DataAccessProf->getProfileRecord(Name);
+    // Annotate a global variable as hot if it has non-zero sampled count, and
+    // annotate it as cold if it's seen in the profiled binary
+    // file but doesn't have any access sample.
+    // For logging, optimization remark emitter requires a llvm::Function, but
+    // it's not well defined how to associate a global variable with a function.
+    // So we just print out the static data section prefix in LLVM_DEBUG.
+    if (Record && Record->AccessCount > 0) {
+      ++NumOfMemProfHotGlobalVars;
+      GVar.setSectionPrefix("hot");
+      Changed = true;
+      LLVM_DEBUG(dbgs() << "Global variable " << Name
+                        << " is annotated as hot\n");
+    } else if (DataAccessProf->isKnownColdSymbol(Name)) {
+      ++NumOfMemProfColdGlobalVars;
+      GVar.setSectionPrefix("unlikely");
+      Changed = true;
+      LLVM_DEBUG(dbgs() << "Global variable " << Name
+                        << " is annotated as unlikely\n");
+    } else {
+      ++NumOfMemProfUnknownGlobalVars;
+      LLVM_DEBUG(dbgs() << "Global variable " << Name << " is not annotated\n");
+    }
+  }
+
+  return Changed;
 }

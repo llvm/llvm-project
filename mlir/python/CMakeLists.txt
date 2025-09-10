@@ -180,6 +180,15 @@ ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   DIALECT_NAME transform
   EXTENSION_NAME transform_debug_extension)
 
+declare_mlir_dialect_extension_python_bindings(
+ADD_TO_PARENT MLIRPythonSources.Dialects
+ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/TransformTuneExtensionOps.td
+  SOURCES
+    dialects/transform/tune.py
+  DIALECT_NAME transform
+  EXTENSION_NAME transform_tune_extension)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -442,6 +451,14 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TosaOps.td
   SOURCES dialects/tosa.py
   DIALECT_NAME tosa
+)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/UBOps.td
+  SOURCES dialects/ub.py
+  DIALECT_NAME ub
 )
 
 declare_mlir_dialect_python_bindings(
@@ -838,4 +855,3 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-

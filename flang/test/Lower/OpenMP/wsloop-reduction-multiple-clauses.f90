@@ -93,7 +93,7 @@ endprogram
 ! CHECK:           omp.yield(%[[VAL_2]] : f64)
 ! CHECK:         }
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEarray) : !fir.ref<!fir.array<3x3xf64>>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index

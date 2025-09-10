@@ -1127,14 +1127,14 @@ template <class _IdxSeq>
 struct __make_overloads_imp;
 
 template <size_t... _Idx>
-struct __make_overloads_imp<__tuple_indices<_Idx...> > {
+struct __make_overloads_imp<index_sequence<_Idx...> > {
   template <class... _Types>
   using _Apply _LIBCPP_NODEBUG = __all_overloads<__overload<_Types, _Idx>...>;
 };
 
 template <class... _Types>
 using _MakeOverloads _LIBCPP_NODEBUG =
-    typename __make_overloads_imp< __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
+    typename __make_overloads_imp<make_index_sequence<sizeof...(_Types)>>::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
 using __best_match_t _LIBCPP_NODEBUG = typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;

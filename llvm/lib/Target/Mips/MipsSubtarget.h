@@ -355,7 +355,6 @@ public:
 
   bool os16() const { return Os16; }
 
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
 
   bool isXRaySupported() const override { return true; }

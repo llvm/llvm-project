@@ -26,20 +26,6 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
-  omp.wsloop {
-    // expected-warning@below {{simd information on composite construct discarded}}
-    omp.simd {
-      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-        omp.yield
-      }
-    } {omp.composite}
-  } {omp.composite}
-  llvm.return
-}
-
-// -----
-
 llvm.func @distribute_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.distribute operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}

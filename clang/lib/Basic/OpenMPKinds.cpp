@@ -378,7 +378,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
       return #Name;
 #include "clang/Basic/OpenMPKinds.def"
     }
-    llvm_unreachable("Invalid OpenMP 'schedule' clause type");
+    llvm_unreachable("Invalid OpenMP 'defaultmap' clause type");
   case OMPC_atomic_default_mem_order:
     switch (Type) {
     case OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown:
@@ -717,9 +717,15 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
          Kind == OMPD_teams_loop || Kind == OMPD_target_teams_loop;
 }
 
-bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
+bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
          DKind == OMPD_interchange || DKind == OMPD_stripe;
+}
+
+bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
+  // FIXME: There will be more cases when we implement 'fuse'.
+  return isOpenMPCanonicalLoopNestTransformationDirective(DKind);
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {

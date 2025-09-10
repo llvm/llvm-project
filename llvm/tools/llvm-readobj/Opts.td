@@ -62,6 +62,8 @@ def memtag : FF<"memtag", "Display memory tagging metadata (modes, Android notes
 def needed_libs : FF<"needed-libs", "Display the needed libraries">, Group<grp_elf>;
 def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;
+def sframe_EQ : Joined<["--"], "sframe=">, HelpText<"Display SFrame section <name>">, MetaVarName<"<name>">, Group<grp_elf>;
+def sframe: FF<"sframe", "Alias for --sframe=.sframe">, Alias<sframe_EQ>, AliasArgs<[".sframe"]>, Group<grp_elf>;
 def version_info : FF<"version-info", "Display version sections">, Group<grp_elf>;
 
 // Mach-O specific options.
@@ -85,6 +87,10 @@ def coff_directives : FF<"coff-directives", "Display .drectve section">, Group<g
 def coff_exports : FF<"coff-exports", "Display export table">, Group<grp_coff>;
 def coff_imports : FF<"coff-imports", "Display import table">, Group<grp_coff>;
 def coff_load_config : FF<"coff-load-config", "Display load config">, Group<grp_coff>;
+def coff_pseudoreloc
+    : FF<"coff-pseudoreloc",
+         "Display runtime pseudo-relocations (Cygwin/MinGW specific)">,
+      Group<grp_coff>;
 def coff_resources : FF<"coff-resources", "Display .rsrc section">, Group<grp_coff>;
 def coff_tls_directory : FF<"coff-tls-directory", "Display TLS directory">, Group<grp_coff>;
 

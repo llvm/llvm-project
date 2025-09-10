@@ -34,7 +34,8 @@ define void @test(ptr %nExp, float %0, i1 %cmp, float %1) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = fmul <4 x float> [[TMP19]], zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x float> [[TMP19]], zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> [[TMP24]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP26:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> <float 0.000000e+00, float 1.000000e+00, float poison, float poison>, <2 x float> [[TMP22]], i64 2)
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x float> [[TMP22]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 1.000000e+00, float poison, float poison>, <4 x float> [[TMP28]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP27:%.*]] = fadd <4 x float> [[TMP25]], [[TMP26]]
 ; CHECK-NEXT:    store <4 x float> [[TMP27]], ptr [[CALL25]], align 4
 ; CHECK-NEXT:    ret void

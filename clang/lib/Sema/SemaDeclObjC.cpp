@@ -591,12 +591,13 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
       // The previous declaration was not a class decl. Check if we have a
       // typedef. If we do, get the underlying class type.
       if (const TypedefNameDecl *TDecl =
-          dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
+              dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
         QualType T = TDecl->getUnderlyingType();
         if (T->isObjCObjectType()) {
           if (NamedDecl *IDecl = T->castAs<ObjCObjectType>()->getInterface()) {
             SuperClassDecl = dyn_cast<ObjCInterfaceDecl>(IDecl);
-            SuperClassType = Context.getTypeDeclType(TDecl);
+            SuperClassType = Context.getTypeDeclType(
+                ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, TDecl);
 
             // This handles the following case:
             // @interface NewI @end
@@ -1389,11 +1390,9 @@ class ObjCTypeArgOrProtocolValidatorCCC final
 
         // Make sure the type is something we would accept as a type
         // argument.
-        auto type = Context.getTypeDeclType(typeDecl);
-        if (type->isObjCObjectPointerType() ||
-            type->isBlockPointerType() ||
+        if (CanQualType type = Context.getCanonicalTypeDeclType(typeDecl);
             type->isDependentType() ||
-            type->isObjCObjectType())
+            isa<ObjCObjectPointerType, BlockPointerType, ObjCObjectType>(type))
           return true;
 
         return false;
@@ -1589,7 +1588,9 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     unsigned diagID; // unused
     QualType type;
     if (auto *actualTypeDecl = dyn_cast<TypeDecl *>(typeDecl))
-      type = Context.getTypeDeclType(actualTypeDecl);
+      type =
+          Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, actualTypeDecl);
     else
       type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
     TypeSourceInfo *parsedTSInfo = Context.getTrivialTypeSourceInfo(type, loc);
@@ -3231,8 +3232,10 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   assert(lt && rt && lt != rt);
 
   if (!isa<RecordType>(lt) || !isa<RecordType>(rt)) return false;
-  RecordDecl *left = cast<RecordType>(lt)->getDecl();
-  RecordDecl *right = cast<RecordType>(rt)->getDecl();
+  RecordDecl *left =
+      cast<RecordType>(lt)->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *right =
+      cast<RecordType>(rt)->getOriginalDecl()->getDefinitionOrSelf();
 
   // Require union-hood to match.
   if (left->isUnion() != right->isUnion()) return false;
@@ -3845,8 +3848,8 @@ SemaObjC::ObjCContainerKind SemaObjC::getObjCContainerKind() const {
 static bool IsVariableSizedType(QualType T) {
   if (T->isIncompleteArrayType())
     return true;
-  const auto *RecordTy = T->getAs<RecordType>();
-  return (RecordTy && RecordTy->getDecl()->hasFlexibleArrayMember());
+  const auto *RD = T->getAsRecordDecl();
+  return RD && RD->hasFlexibleArrayMember();
 }
 
 static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
@@ -3891,13 +3894,11 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
           << ivar->getDeclName() << IvarTy
           << TagTypeKind::Class; // Use "class" for Obj-C.
       IsInvalidIvar = true;
-    } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
-      if (RecordTy->getDecl()->hasFlexibleArrayMember()) {
-        S.Diag(ivar->getLocation(),
-               diag::err_objc_variable_sized_type_not_at_end)
-            << ivar->getDeclName() << IvarTy;
-        IsInvalidIvar = true;
-      }
+    } else if (const auto *RD = IvarTy->getAsRecordDecl();
+               RD && RD->hasFlexibleArrayMember()) {
+      S.Diag(ivar->getLocation(), diag::err_objc_variable_sized_type_not_at_end)
+          << ivar->getDeclName() << IvarTy;
+      IsInvalidIvar = true;
     }
     if (IsInvalidIvar) {
       S.Diag(ivar->getNextIvar()->getLocation(),
@@ -5534,10 +5535,8 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       AllToInit.push_back(Member);
 
       // Be sure that the destructor is accessible and is marked as referenced.
-      if (const RecordType *RecordTy =
-              Context.getBaseElementType(Field->getType())
-                  ->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
+      if (auto *RD = Context.getBaseElementType(Field->getType())
+                         ->getAsCXXRecordDecl()) {
         if (CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(RD)) {
           SemaRef.MarkFunctionReferenced(Field->getLocation(), Destructor);
           SemaRef.CheckDestructorAccess(
@@ -5585,6 +5584,14 @@ Decl *SemaObjC::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
 
   TypeSourceInfo *TInfo = SemaRef.GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
+  ASTContext &Context = getASTContext();
+  if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
+      !T.getPointerAuth()) {
+    if (Context.isObjCSelType(T.getUnqualifiedType())) {
+      if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
+        T = Context.getPointerAuthType(T, PAQ);
+    }
+  }
 
   if (BitWidth) {
     // 6.7.2.1p3, 6.7.2.1p4

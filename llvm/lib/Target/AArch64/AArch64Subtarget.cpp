@@ -91,6 +91,10 @@ static cl::opt<bool> EnableZPRPredicateSpills(
     cl::desc(
         "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
 
+static cl::opt<unsigned>
+    VScaleForTuningOpt("sve-vscale-for-tuning", cl::Hidden,
+                       cl::desc("Force a vscale for tuning factor for SVE"));
+
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
 static cl::opt<bool>
@@ -270,6 +274,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   case NeoverseV2:
   case NeoverseV3:
+    CacheLineSize = 64;
     EpilogueVectorizationMinVF = 8;
     MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
@@ -363,6 +368,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
     MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
+  if (VScaleForTuningOpt.getNumOccurrences() > 0)
+    VScaleForTuning = VScaleForTuningOpt;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
@@ -533,7 +540,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 }
 
 void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                           unsigned NumRegionInstrs) const {
+                                           const SchedRegion &Region) const {
   // LNT run (at least on Cyclone) showed reasonably significant gains for
   // bi-directional scheduling. 253.perlbmk.
   Policy.OnlyTopDown = false;
@@ -662,6 +669,12 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
   // This isn't ABI, so we can always do better in the future.
   return getPointerAuthStableSipHash(
       (Twine(ParentFn.getName()) + " blockaddress").str());
+}
+
+bool AArch64Subtarget::isX16X17Safer() const {
+  // The Darwin kernel implements special protections for x16 and x17 so we
+  // should prefer to use those registers on that platform.
+  return isTargetDarwin();
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

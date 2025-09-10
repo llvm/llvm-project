@@ -162,6 +162,11 @@ bool CombinerHelper::isLegalOrBeforeLegalizer(
   return isPreLegalize() || isLegal(Query);
 }
 
+bool CombinerHelper::isLegalOrHasWidenScalar(const LegalityQuery &Query) const {
+  return isLegal(Query) ||
+         LI->getAction(Query).Action == LegalizeActions::WidenScalar;
+}
+
 bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
   if (!Ty.isVector())
     return isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {Ty}});
@@ -1816,10 +1821,29 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
       return false;
   }
 
+  // Reassociating nuw additions preserves nuw. If both original G_PTR_ADDs are
+  // inbounds, reaching the same result in one G_PTR_ADD is also inbounds.
+  // The nusw constraints are satisfied because imm1+imm2 cannot exceed the
+  // largest signed integer that fits into the index type, which is the maximum
+  // size of allocated objects according to the IR Language Reference.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned LHSPtrAddFlags = Add2Def->getFlags();
+  bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsInBounds =
+      PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::InBounds;
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsInBounds) {
+    Flags |= MachineInstr::MIFlag::InBounds;
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  }
+
   // Pass the combined immediate to the apply function.
   MatchInfo.Imm = AMNew.BaseOffs;
   MatchInfo.Base = Base;
   MatchInfo.Bank = getRegBank(Imm2);
+  MatchInfo.Flags = Flags;
   return true;
 }
 
@@ -1833,6 +1857,7 @@ void CombinerHelper::applyPtrAddImmedChain(MachineInstr &MI,
   Observer.changingInstr(MI);
   MI.getOperand(1).setReg(MatchInfo.Base);
   MI.getOperand(2).setReg(NewOffset.getReg(0));
+  MI.setFlags(MatchInfo.Flags);
   Observer.changedInstr(MI);
 }
 
@@ -4866,14 +4891,34 @@ bool CombinerHelper::matchReassocConstantInnerRHS(GPtrAdd &MI,
   if (!C2)
     return false;
 
+  // If both additions are nuw, the reassociated additions are also nuw.
+  // If the original G_PTR_ADD is additionally nusw, X and C are both not
+  // negative, so BASE+X is between BASE and BASE+(X+C). The new G_PTR_ADDs are
+  // therefore also nusw.
+  // If the original G_PTR_ADD is additionally inbounds (which implies nusw),
+  // the new G_PTR_ADDs are then also inbounds.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned AddFlags = RHS->getFlags();
+  bool IsNoUWrap = PtrAddFlags & AddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsNoUSWrap = IsNoUWrap && (PtrAddFlags & MachineInstr::MIFlag::NoUSWrap);
+  bool IsInBounds = IsNoUWrap && (PtrAddFlags & MachineInstr::MIFlag::InBounds);
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsNoUSWrap)
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  if (IsInBounds)
+    Flags |= MachineInstr::MIFlag::InBounds;
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     LLT PtrTy = MRI.getType(MI.getOperand(0).getReg());
 
     auto NewBase =
-        Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg());
+        Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg(), Flags);
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(NewBase.getReg(0));
     MI.getOperand(2).setReg(RHS->getOperand(2).getReg());
+    MI.setFlags(Flags);
     Observer.changedInstr(MI);
   };
   return !reassociationCanBreakAddressingModePattern(MI);
@@ -4892,6 +4937,25 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
     return false;
 
   auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
+
+  // Reassociating nuw additions preserves nuw. If both original G_PTR_ADDs are
+  // nuw and inbounds (which implies nusw), the offsets are both non-negative,
+  // so the new G_PTR_ADDs are also inbounds.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned LHSPtrAddFlags = LHSPtrAdd->getFlags();
+  bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsNoUSWrap = IsNoUWrap && (PtrAddFlags & LHSPtrAddFlags &
+                                  MachineInstr::MIFlag::NoUSWrap);
+  bool IsInBounds = IsNoUWrap && (PtrAddFlags & LHSPtrAddFlags &
+                                  MachineInstr::MIFlag::InBounds);
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsNoUSWrap)
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  if (IsInBounds)
+    Flags |= MachineInstr::MIFlag::InBounds;
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     // When we change LHSPtrAdd's offset register we might cause it to use a reg
     // before its def. Sink the instruction so the outer PTR_ADD to ensure this
@@ -4902,9 +4966,11 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
     auto NewCst = B.buildConstant(MRI.getType(RHSReg), LHSCstOff->Value);
     Observer.changingInstr(MI);
     MI.getOperand(2).setReg(NewCst.getReg(0));
+    MI.setFlags(Flags);
     Observer.changedInstr(MI);
     Observer.changingInstr(*LHSPtrAdd);
     LHSPtrAdd->getOperand(2).setReg(RHSReg);
+    LHSPtrAdd->setFlags(Flags);
     Observer.changedInstr(*LHSPtrAdd);
   };
   return !reassociationCanBreakAddressingModePattern(MI);
@@ -4928,11 +4994,30 @@ bool CombinerHelper::matchReassocFoldConstantsInSubTree(
   if (!C2)
     return false;
 
+  // Reassociating nuw additions preserves nuw. If both original G_PTR_ADDs are
+  // inbounds, reaching the same result in one G_PTR_ADD is also inbounds.
+  // The nusw constraints are satisfied because imm1+imm2 cannot exceed the
+  // largest signed integer that fits into the index type, which is the maximum
+  // size of allocated objects according to the IR Language Reference.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned LHSPtrAddFlags = LHSPtrAdd->getFlags();
+  bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsInBounds =
+      PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::InBounds;
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsInBounds) {
+    Flags |= MachineInstr::MIFlag::InBounds;
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  }
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     auto NewCst = B.buildConstant(MRI.getType(Src2Reg), *C1 + *C2);
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(LHSSrc1);
     MI.getOperand(2).setReg(NewCst.getReg(0));
+    MI.setFlags(Flags);
     Observer.changedInstr(MI);
   };
   return !reassociationCanBreakAddressingModePattern(MI);
@@ -5295,7 +5380,7 @@ bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
   return false;
 }
 
-MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
+MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   auto &UDivorRem = cast<GenericMachineInstr>(MI);
@@ -5463,7 +5548,7 @@ MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
   return ret;
 }
 
-bool CombinerHelper::matchUDivorURemByConst(MachineInstr &MI) const {
+bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   Register Dst = MI.getOperand(0).getReg();
@@ -5512,16 +5597,19 @@ bool CombinerHelper::matchUDivorURemByConst(MachineInstr &MI) const {
       MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
-void CombinerHelper::applyUDivorURemByConst(MachineInstr &MI) const {
-  auto *NewMI = buildUDivorURemUsingMul(MI);
+void CombinerHelper::applyUDivOrURemByConst(MachineInstr &MI) const {
+  auto *NewMI = buildUDivOrURemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
-bool CombinerHelper::matchSDivByConst(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
+bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_SREM);
   Register Dst = MI.getOperand(0).getReg();
   Register RHS = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
+  auto SizeInBits = DstTy.getScalarSizeInBits();
+  LLT WideTy = DstTy.changeElementSize(SizeInBits * 2);
 
   auto &MF = *MI.getMF();
   AttributeList Attr = MF.getFunction().getAttributes();
@@ -5536,43 +5624,63 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) const {
     return false;
 
   // If the sdiv has an 'exact' flag we can use a simpler lowering.
-  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+  if (Opcode == TargetOpcode::G_SDIV &&
+      MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
         MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
   }
 
-  // Don't support the general case for now.
-  return false;
+  auto *RHSDef = MRI.getVRegDef(RHS);
+  if (!isConstantOrConstantVector(*RHSDef, MRI))
+    return false;
+
+  // Don't do this if the types are not going to be legal.
+  if (LI) {
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
+      return false;
+    if (!isLegal({TargetOpcode::G_SMULH, {DstTy}}) &&
+        !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+      return false;
+    if (Opcode == TargetOpcode::G_SREM &&
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
+      return false;
+  }
+
+  return matchUnaryPredicate(
+      MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
-void CombinerHelper::applySDivByConst(MachineInstr &MI) const {
-  auto *NewMI = buildSDivUsingMul(MI);
+void CombinerHelper::applySDivOrSRemByConst(MachineInstr &MI) const {
+  auto *NewMI = buildSDivOrSRemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
-MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
-  auto &SDiv = cast<GenericMachineInstr>(MI);
-  Register Dst = SDiv.getReg(0);
-  Register LHS = SDiv.getReg(1);
-  Register RHS = SDiv.getReg(2);
+MachineInstr *CombinerHelper::buildSDivOrSRemUsingMul(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(MI.getOpcode() == TargetOpcode::G_SDIV ||
+         Opcode == TargetOpcode::G_SREM);
+  auto &SDivorRem = cast<GenericMachineInstr>(MI);
+  Register Dst = SDivorRem.getReg(0);
+  Register LHS = SDivorRem.getReg(1);
+  Register RHS = SDivorRem.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ScalarTy = Ty.getScalarType();
+  const unsigned EltBits = ScalarTy.getScalarSizeInBits();
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   LLT ScalarShiftAmtTy = ShiftAmtTy.getScalarType();
   auto &MIB = Builder;
 
   bool UseSRA = false;
-  SmallVector<Register, 16> Shifts, Factors;
+  SmallVector<Register, 16> ExactShifts, ExactFactors;
 
-  auto *RHSDef = cast<GenericMachineInstr>(getDefIgnoringCopies(RHS, MRI));
-  bool IsSplat = getIConstantSplatVal(*RHSDef, MRI).has_value();
+  auto *RHSDefInstr = cast<GenericMachineInstr>(getDefIgnoringCopies(RHS, MRI));
+  bool IsSplat = getIConstantSplatVal(*RHSDefInstr, MRI).has_value();
 
-  auto BuildSDIVPattern = [&](const Constant *C) {
+  auto BuildExactSDIVPattern = [&](const Constant *C) {
     // Don't recompute inverses for each splat element.
-    if (IsSplat && !Factors.empty()) {
-      Shifts.push_back(Shifts[0]);
-      Factors.push_back(Factors[0]);
+    if (IsSplat && !ExactFactors.empty()) {
+      ExactShifts.push_back(ExactShifts[0]);
+      ExactFactors.push_back(ExactFactors[0]);
       return true;
     }
 
@@ -5587,31 +5695,110 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) const {
     // Calculate the multiplicative inverse modulo BW.
     // 2^W requires W + 1 bits, so we have to extend and then truncate.
     APInt Factor = Divisor.multiplicativeInverse();
-    Shifts.push_back(MIB.buildConstant(ScalarShiftAmtTy, Shift).getReg(0));
-    Factors.push_back(MIB.buildConstant(ScalarTy, Factor).getReg(0));
+    ExactShifts.push_back(MIB.buildConstant(ScalarShiftAmtTy, Shift).getReg(0));
+    ExactFactors.push_back(MIB.buildConstant(ScalarTy, Factor).getReg(0));
     return true;
   };
 
-  // Collect all magic values from the build vector.
+  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+    // Collect all magic values from the build vector.
+    bool Matched = matchUnaryPredicate(MRI, RHS, BuildExactSDIVPattern);
+    (void)Matched;
+    assert(Matched && "Expected unary predicate match to succeed");
+
+    Register Shift, Factor;
+    if (Ty.isVector()) {
+      Shift = MIB.buildBuildVector(ShiftAmtTy, ExactShifts).getReg(0);
+      Factor = MIB.buildBuildVector(Ty, ExactFactors).getReg(0);
+    } else {
+      Shift = ExactShifts[0];
+      Factor = ExactFactors[0];
+    }
+
+    Register Res = LHS;
+
+    if (UseSRA)
+      Res = MIB.buildAShr(Ty, Res, Shift, MachineInstr::IsExact).getReg(0);
+
+    return MIB.buildMul(Ty, Res, Factor);
+  }
+
+  SmallVector<Register, 16> MagicFactors, Factors, Shifts, ShiftMasks;
+
+  auto BuildSDIVPattern = [&](const Constant *C) {
+    auto *CI = cast<ConstantInt>(C);
+    const APInt &Divisor = CI->getValue();
+
+    SignedDivisionByConstantInfo Magics =
+        SignedDivisionByConstantInfo::get(Divisor);
+    int NumeratorFactor = 0;
+    int ShiftMask = -1;
+
+    if (Divisor.isOne() || Divisor.isAllOnes()) {
+      // If d is +1/-1, we just multiply the numerator by +1/-1.
+      NumeratorFactor = Divisor.getSExtValue();
+      Magics.Magic = 0;
+      Magics.ShiftAmount = 0;
+      ShiftMask = 0;
+    } else if (Divisor.isStrictlyPositive() && Magics.Magic.isNegative()) {
+      // If d > 0 and m < 0, add the numerator.
+      NumeratorFactor = 1;
+    } else if (Divisor.isNegative() && Magics.Magic.isStrictlyPositive()) {
+      // If d < 0 and m > 0, subtract the numerator.
+      NumeratorFactor = -1;
+    }
+
+    MagicFactors.push_back(MIB.buildConstant(ScalarTy, Magics.Magic).getReg(0));
+    Factors.push_back(MIB.buildConstant(ScalarTy, NumeratorFactor).getReg(0));
+    Shifts.push_back(
+        MIB.buildConstant(ScalarShiftAmtTy, Magics.ShiftAmount).getReg(0));
+    ShiftMasks.push_back(MIB.buildConstant(ScalarTy, ShiftMask).getReg(0));
+
+    return true;
+  };
+
+  // Collect the shifts/magic values from each element.
   bool Matched = matchUnaryPredicate(MRI, RHS, BuildSDIVPattern);
   (void)Matched;
   assert(Matched && "Expected unary predicate match to succeed");
 
-  Register Shift, Factor;
-  if (Ty.isVector()) {
-    Shift = MIB.buildBuildVector(ShiftAmtTy, Shifts).getReg(0);
+  Register MagicFactor, Factor, Shift, ShiftMask;
+  auto *RHSDef = getOpcodeDef<GBuildVector>(RHS, MRI);
+  if (RHSDef) {
+    MagicFactor = MIB.buildBuildVector(Ty, MagicFactors).getReg(0);
     Factor = MIB.buildBuildVector(Ty, Factors).getReg(0);
+    Shift = MIB.buildBuildVector(ShiftAmtTy, Shifts).getReg(0);
+    ShiftMask = MIB.buildBuildVector(Ty, ShiftMasks).getReg(0);
   } else {
-    Shift = Shifts[0];
+    assert(MRI.getType(RHS).isScalar() &&
+           "Non-build_vector operation should have been a scalar");
+    MagicFactor = MagicFactors[0];
     Factor = Factors[0];
+    Shift = Shifts[0];
+    ShiftMask = ShiftMasks[0];
   }
 
-  Register Res = LHS;
+  Register Q = LHS;
+  Q = MIB.buildSMulH(Ty, LHS, MagicFactor).getReg(0);
 
-  if (UseSRA)
-    Res = MIB.buildAShr(Ty, Res, Shift, MachineInstr::IsExact).getReg(0);
+  // (Optionally) Add/subtract the numerator using Factor.
+  Factor = MIB.buildMul(Ty, LHS, Factor).getReg(0);
+  Q = MIB.buildAdd(Ty, Q, Factor).getReg(0);
 
-  return MIB.buildMul(Ty, Res, Factor);
+  // Shift right algebraic by shift value.
+  Q = MIB.buildAShr(Ty, Q, Shift).getReg(0);
+
+  // Extract the sign bit, mask it and add it to the quotient.
+  auto SignShift = MIB.buildConstant(ShiftAmtTy, EltBits - 1);
+  auto T = MIB.buildLShr(Ty, Q, SignShift);
+  T = MIB.buildAnd(Ty, T, ShiftMask);
+  auto ret = MIB.buildAdd(Ty, Q, T);
+
+  if (Opcode == TargetOpcode::G_SREM) {
+    auto Prod = MIB.buildMul(Ty, ret, RHS);
+    return MIB.buildSub(Ty, LHS, Prod);
+  }
+  return ret;
 }
 
 bool CombinerHelper::matchDivByPow2(MachineInstr &MI, bool IsSigned) const {
@@ -5737,6 +5924,96 @@ void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}}))
+    return false;
+
+  APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+  APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+  return mi_match(Src, MRI,
+                  m_GSMin(m_GSMax(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(SignedMin)),
+                          m_SpecificICstOrSplat(SignedMax))) ||
+         mi_match(Src, MRI,
+                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(SignedMax)),
+                          m_SpecificICstOrSplat(SignedMin)));
+}
+
+void CombinerHelper::applyTruncSSatS(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncSSatS(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+    return false;
+  APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
+  return mi_match(Src, MRI,
+                  m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                          m_SpecificICstOrSplat(UnsignedMax))) ||
+         mi_match(Src, MRI,
+                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(UnsignedMax)),
+                          m_SpecificICstOrSplat(0))) ||
+         mi_match(Src, MRI,
+                  m_GUMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                          m_SpecificICstOrSplat(UnsignedMax)));
+}
+
+void CombinerHelper::applyTruncSSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncSSatU(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncUSatU(MachineInstr &MI,
+                                     MachineInstr &MinMI) const {
+  Register Min = MinMI.getOperand(2).getReg();
+  Register Val = MinMI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(Val);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+    return false;
+  APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
+  return mi_match(Min, MRI, m_SpecificICstOrSplat(UnsignedMax)) &&
+         !mi_match(Val, MRI, m_GSMax(m_Reg(), m_Reg()));
+}
+
+bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
+                                                MachineInstr &SrcMI) const {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(SrcMI.getOperand(1).getReg());
+
+  return LI &&
+         isLegalOrBeforeLegalizer({TargetOpcode::G_FPTOUI_SAT, {DstTy, SrcTy}});
+}
+
 bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
                                                BuildFnTy &MatchInfo) const {
   unsigned Opc = MI.getOpcode();
@@ -5842,8 +6119,7 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   const TargetOptions &Options = MF->getTarget().Options;
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
 
-  if (CanReassociate &&
-      !(Options.UnsafeFPMath || MI.getFlag(MachineInstr::MIFlag::FmReassoc)))
+  if (CanReassociate && !MI.getFlag(MachineInstr::MIFlag::FmReassoc))
     return false;
 
   // Floating-point multiply-add with intermediate rounding.
@@ -5855,8 +6131,7 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   if (!HasFMAD && !HasFMA)
     return false;
 
-  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                        Options.UnsafeFPMath || HasFMAD;
+  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !MI.getFlag(MachineInstr::MIFlag::FmContract))
     return false;

@@ -12,7 +12,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Format.h"
 
 using namespace mlir;
 using namespace mlir::smt;

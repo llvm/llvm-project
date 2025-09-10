@@ -359,11 +359,6 @@ GetPointerBaseWithConstantOffset(const Value *Ptr, int64_t &Offset,
                                           AllowNonInbounds);
 }
 
-/// Returns true if the GEP is based on a pointer to a string (array of
-// \p CharSize integers) and is indexing into this string.
-LLVM_ABI bool isGEPBasedOnPointerToString(const GEPOperator *GEP,
-                                          unsigned CharSize = 8);
-
 /// Represents offset+length into a ConstantDataArray.
 struct ConstantDataArraySlice {
   /// ConstantDataArray pointer. nullptr indicates a zeroinitializer (a valid
@@ -726,6 +721,9 @@ LLVM_ABI bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 /// To filter out operands that raise UB on poison, you can use
 /// getGuaranteedNonPoisonOp.
 LLVM_ABI bool propagatesPoison(const Use &PoisonOp);
+
+/// Return whether this intrinsic propagates poison for all operands.
+LLVM_ABI bool intrinsicPropagatesPoison(Intrinsic::ID IID);
 
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding

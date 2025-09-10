@@ -66,6 +66,7 @@ struct PtrAddChain {
   int64_t Imm;
   Register Base;
   const RegisterBank *Bank;
+  unsigned Flags;
 };
 
 struct RegisterImmPair {
@@ -142,6 +143,10 @@ public:
   /// \return true if the combine is running prior to legalization, or if \p
   /// Query is legal on the target.
   bool isLegalOrBeforeLegalizer(const LegalityQuery &Query) const;
+
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform WidenScalar action on the target.
+  bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
@@ -696,18 +701,19 @@ public:
   /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
   /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildUDivorURemUsingMul(MachineInstr &MI) const;
+  MachineInstr *buildUDivOrURemUsingMul(MachineInstr &MI) const;
   /// Combine G_UDIV or G_UREM by constant into a multiply by magic constant.
-  bool matchUDivorURemByConst(MachineInstr &MI) const;
-  void applyUDivorURemByConst(MachineInstr &MI) const;
+  bool matchUDivOrURemByConst(MachineInstr &MI) const;
+  void applyUDivOrURemByConst(MachineInstr &MI) const;
 
-  /// Given an G_SDIV \p MI expressing a signed divide by constant, return an
-  /// expression that implements it by multiplying by a magic number.
-  /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildSDivUsingMul(MachineInstr &MI) const;
-  /// Combine G_SDIV by constant into a multiply by magic constant.
-  bool matchSDivByConst(MachineInstr &MI) const;
-  void applySDivByConst(MachineInstr &MI) const;
+  /// Given an G_SDIV \p MI or G_SREM \p MI expressing a signed divide by
+  /// constant, return an expression that implements it by multiplying by a
+  /// magic number. Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's
+  /// Guide".
+  MachineInstr *buildSDivOrSRemUsingMul(MachineInstr &MI) const;
+  /// Combine G_SDIV or G_SREM by constant into a multiply by magic constant.
+  bool matchSDivOrSRemByConst(MachineInstr &MI) const;
+  void applySDivOrSRemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
   /// return expressions that implements it by shifting.
@@ -720,6 +726,23 @@ public:
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI) const;
   void applyUMulHToLShr(MachineInstr &MI) const;
+
+  // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
+  // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
+  bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(smin(smax(x, 0), C)) -> truncssat_u(x)
+  // or      trunc(smax(smin(x, C), 0)) -> truncssat_u(x)
+  // or      trunc(umin(smax(x, 0), C)) -> truncssat_u(x)
+  bool matchTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+  void applyTruncSSatU(MachineInstr &MI, Register &MatchInfo) const;
+
+  // Combine trunc(umin(x, C)) -> truncusat_u(x).
+  bool matchTruncUSatU(MachineInstr &MI, MachineInstr &MinMI) const;
+
+  // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
+  bool matchTruncUSatUToFPTOUISat(MachineInstr &MI, MachineInstr &SrcMI) const;
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

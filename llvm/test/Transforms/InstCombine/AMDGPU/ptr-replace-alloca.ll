@@ -76,4 +76,37 @@ sink:
   ret <2 x i64> %val.sink
 }
 
+; Crashed in IC PtrReplacer because an invalid select was generated with addrspace(4) and addrspace(5)
+; operands.
+define amdgpu_kernel void @select_addr4_addr5(ptr addrspace(4) byref([12 x i8]) align 16 %arg) {
+; CHECK-LABEL: define amdgpu_kernel void @select_addr4_addr5(
+; CHECK-SAME: ptr addrspace(4) byref([12 x i8]) align 16 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca i32, i32 0, align 8, addrspace(5)
+  %alloca1 = alloca [12 x i8], align 16, addrspace(5)
+  call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) %alloca1, ptr addrspace(4) %arg, i64 0, i1 false)
+  %select = select i1 false, ptr addrspace(5) %alloca1, ptr addrspace(5) %alloca
+  call void @llvm.memcpy.p0.p5.i64(ptr null, ptr addrspace(5) %select, i64 0, i1 false)
+  ret void
+}
+
+; Same as above but with swapped operands on the select.
+define amdgpu_kernel void @select_addr4_addr5_swapped(ptr addrspace(4) byref([12 x i8]) align 16 %arg) {
+; CHECK-LABEL: define amdgpu_kernel void @select_addr4_addr5_swapped(
+; CHECK-SAME: ptr addrspace(4) byref([12 x i8]) align 16 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %alloca = alloca i32, i32 0, align 8, addrspace(5)
+  %alloca1 = alloca [12 x i8], align 16, addrspace(5)
+  call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) %alloca1, ptr addrspace(4) %arg, i64 0, i1 false)
+  %select = select i1 false, ptr addrspace(5) %alloca, ptr addrspace(5) %alloca1
+  call void @llvm.memcpy.p0.p5.i64(ptr null, ptr addrspace(5) %select, i64 0, i1 false)
+  ret void
+}
+
 declare void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noalias writeonly captures(none), ptr addrspace(4) noalias readonly captures(none), i64, i1 immarg) #0

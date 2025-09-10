@@ -1644,16 +1644,12 @@ def int_ucmp : DefaultAttrsIntrinsic<
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
-def int_lifetime_start  : DefaultAttrsIntrinsic<[],
-                                    [llvm_i64_ty, llvm_anyptr_ty],
-                                    [IntrArgMemOnly,
-                                     NoCapture<ArgIndex<1>>,
-                                     ImmArg<ArgIndex<0>>]>;
-def int_lifetime_end    : DefaultAttrsIntrinsic<[],
-                                    [llvm_i64_ty, llvm_anyptr_ty],
-                                    [IntrArgMemOnly,
-                                     NoCapture<ArgIndex<1>>,
-                                     ImmArg<ArgIndex<0>>]>;
+def int_lifetime_start
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+def int_lifetime_end
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty],
+                            [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 def int_invariant_start : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly,
@@ -1838,7 +1834,8 @@ def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrInaccessibleMemOnl
 def int_debugtrap : Intrinsic<[]>,
                     ClangBuiltin<"__builtin_debugtrap">;
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
-                              [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
+                              [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>,
+                               IntrInaccessibleMemOnly, IntrWriteMem]>;
 
 // Return true if ubsan check is allowed.
 def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
@@ -1931,6 +1928,12 @@ def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrReadMem, IntrArgMemOnly ]>;
+
+def int_vp_load_ff : DefaultAttrsIntrinsic<[ llvm_anyvector_ty, llvm_i32_ty ],
+                             [ llvm_anyptr_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
 
 def int_vp_gather: DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
                              [ LLVMVectorOfAnyPointersToElt<0>,
@@ -2417,6 +2420,16 @@ let IntrProperties = [IntrNoMem, ImmArg<ArgIndex<1>>] in {
                                     LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
                                     llvm_i32_ty]>;
 }
+
+def int_loop_dependence_raw_mask:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+
+def int_loop_dependence_war_mask:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [llvm_ptr_ty, llvm_ptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_get_active_lane_mask:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],

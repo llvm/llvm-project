@@ -12,10 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
-#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -286,8 +283,8 @@ struct WmmaLoadOpToSPIRVLowering final
 
     int64_t stride = op.getLeadDimension().getSExtValue();
     IntegerType i32Type = rewriter.getI32Type();
-    auto strideValue = rewriter.create<spirv::ConstantOp>(
-        loc, i32Type, IntegerAttr::get(i32Type, stride));
+    auto strideValue = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, IntegerAttr::get(i32Type, stride));
 
     bool isColMajor = op.getTranspose().value_or(false);
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
@@ -318,8 +315,8 @@ struct WmmaStoreOpToSPIRVLowering final
 
     int64_t stride = op.getLeadDimension().getSExtValue();
     IntegerType i32Type = rewriter.getI32Type();
-    auto strideValue = rewriter.create<spirv::ConstantOp>(
-        loc, i32Type, IntegerAttr::get(i32Type, stride));
+    auto strideValue = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, IntegerAttr::get(i32Type, stride));
 
     bool isColMajor = op.getTranspose().value_or(false);
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor

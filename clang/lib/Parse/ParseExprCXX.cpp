@@ -195,9 +195,10 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
-    QualType Type = Actions.ActOnPackIndexingType(
-        DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
-        DS.getEllipsisLoc());
+    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
+    QualType Type =
+        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
+                                      DS.getBeginLoc(), DS.getEllipsisLoc());
 
     if (Type.isNull())
       return false;
@@ -1931,15 +1932,13 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    ExprResult Expr = [&] {
-      EnterExpressionEvaluationContext Eval(
-          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
-          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
-      // Parse the expression.
-      return ParseExpression(); // expression
-    }();
+    EnterExpressionEvaluationContext Eval(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/nullptr,
+        /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+        /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
+
+    ExprResult Expr = ParseExpression();
 
     if (Expr.isInvalid())
       return Sema::ConditionError();
@@ -2357,8 +2356,10 @@ bool Parser::ParseUnqualifiedIdTemplateId(
 
   // Constructor and destructor names.
   TypeResult Type = Actions.ActOnTemplateIdType(
-      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
-      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
+      getCurScope(), ElaboratedTypeKeyword::None,
+      /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc, Template,
+      Name, NameLoc, LAngleLoc, TemplateArgsPtr, RAngleLoc,
+      /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 
@@ -3607,7 +3608,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       Result = ParseCastExpression(CastParseKind::AnyCastExpr,
                                    false /*isAddressofOperand*/, NotCastExpr,
                                    // type-id has priority.
-                                   TypeCastState::IsTypeCast);
+                                   TypoCorrectionTypeBehavior::AllowTypes);
     }
 
     // If we parsed a cast-expression, it's really a type-id, otherwise it's

@@ -49,4 +49,4 @@ CG_DATA_SECT_ENTRY(CG_merge, CG_DATA_QUOTE(CG_DATA_MERGE_COMMON),
 #endif
 
 /* Indexed codegen data format version (start from 1). */
-#define CG_DATA_INDEX_VERSION 3
+#define CG_DATA_INDEX_VERSION 4

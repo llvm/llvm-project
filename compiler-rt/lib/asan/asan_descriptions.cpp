@@ -449,10 +449,12 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
   // are put to the STACK region for unknown reasons. Check global first can
   // workaround this issue.
   // TODO: Look into whether there's a different solution to this problem.
+#if SANITIZER_AIX
   if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
     data.kind = kAddressKindGlobal;
     return;
   }
+#endif
 
   if (GetHeapAddressInformation(addr, access_size, &data.heap)) {
     data.kind = kAddressKindHeap;
@@ -470,6 +472,14 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     data.kind = kAddressKindStack;
     return;
   }
+
+// GetGlobalAddressInformation is called earlier on AIX due to a workaround
+#if !SANITIZER_AIX
+  if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
+    data.kind = kAddressKindGlobal;
+    return;
+  }
+#endif
 
   data.kind = kAddressKindWild;
   data.wild.addr = addr;

@@ -67,7 +67,7 @@ public:
     BeanInst.Opcode = 1;
     BeanInst.Size = 1;
 
-    memset(&DbgValueInst, 0, sizeof(DbgValueInst));
+    memset(&DbgValueInst, 0, sizeof(MCInstrDesc));
     DbgValueInst.Opcode = TargetOpcode::DBG_VALUE;
     DbgValueInst.Size = 1;
     DbgValueInst.Flags = 1U << MCID::Meta;

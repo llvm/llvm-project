@@ -15,7 +15,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -24,10 +23,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOpsDialect.cpp.inc"
@@ -312,8 +308,9 @@ struct SimplifyCondBranchIdenticalSuccessors
       if (std::get<0>(it) == std::get<1>(it))
         mergedOperands.push_back(std::get<0>(it));
       else
-        mergedOperands.push_back(rewriter.create<arith::SelectOp>(
-            condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
+        mergedOperands.push_back(
+            arith::SelectOp::create(rewriter, condbr.getLoc(), condition,
+                                    std::get<0>(it), std::get<1>(it)));
     }
 
     rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, mergedOperands);
@@ -412,8 +409,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantTrue)
-            constantTrue = rewriter.create<arith::ConstantOp>(
-                condbr.getLoc(), ty, rewriter.getBoolAttr(true));
+            constantTrue = arith::ConstantOp::create(
+                rewriter, condbr.getLoc(), ty, rewriter.getBoolAttr(true));
 
           rewriter.modifyOpInPlace(use.getOwner(),
                                    [&] { use.set(constantTrue); });
@@ -427,8 +424,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantFalse)
-            constantFalse = rewriter.create<arith::ConstantOp>(
-                condbr.getLoc(), ty, rewriter.getBoolAttr(false));
+            constantFalse = arith::ConstantOp::create(
+                rewriter, condbr.getLoc(), ty, rewriter.getBoolAttr(false));
 
           rewriter.modifyOpInPlace(use.getOwner(),
                                    [&] { use.set(constantFalse); });
