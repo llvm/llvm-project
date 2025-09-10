@@ -393,8 +393,10 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
   return success();
 }
 
-LogicalResult vector::unrollVectorValue(Value vector, PatternRewriter &rewriter,
-                                        SmallVector<Value> &subvectors) {
+FailureOr<SmallVector<Value>>
+vector::unrollVectorValue(TypedValue<VectorType> vector,
+                          RewriterBase &rewriter) {
+  SmallVector<Value> subvectors;
   VectorType ty = cast<VectorType>(vector.getType());
   Location loc = vector.getLoc();
   if (ty.getRank() < 2)
@@ -409,7 +411,7 @@ LogicalResult vector::unrollVectorValue(Value vector, PatternRewriter &rewriter,
     subvectors.push_back(vector::ExtractOp::create(rewriter, loc, vector, i));
   }
 
-  return success();
+  return subvectors;
 }
 
 LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,

@@ -255,15 +255,11 @@ using UnrollVectorOpFn =
 LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
                              UnrollVectorOpFn unrollFn);
 
-/// Generic utility for mapping values of type vector<nxaxbx...>
-/// to n values of type vector<axbx...>
-/// Follows the following pattern:
-/// 1. Check if already 1-D. If so, return failure.
-/// 2. Check for scalable dimensions. If so, return failure.
-/// 3. Returns the values of n vector.extract operations corresponding
-///    to the outermost dimension.
-LogicalResult unrollVectorValue(Value vector, PatternRewriter &rewriter,
-                                SmallVector<Value> &values);
+/// Generic utility for unrolling values of type vector<NxAxBx...>
+/// to N values of type vector<AxBx...> using vector.extract. If the input
+/// is rank-1 or has leading scalable dimension, failure is returned.
+FailureOr<SmallVector<Value>> unrollVectorValue(TypedValue<VectorType>,
+                                                RewriterBase &);
 
 } // namespace vector
 

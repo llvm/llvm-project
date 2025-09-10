@@ -25,10 +25,14 @@ struct UnrollToElements final : OpRewritePattern<vector::ToElementsOp> {
 
   LogicalResult matchAndRewrite(vector::ToElementsOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value> vectors;
-    if (failed(vector::unrollVectorValue(op.getSource(), rewriter, vectors))) {
+
+    TypedValue<VectorType> source = op.getSource();
+    FailureOr<SmallVector<Value>> result =
+        vector::unrollVectorValue(source, rewriter);
+    if (failed(result)) {
       return failure();
     }
+    SmallVector<Value> vectors = *result;
 
     // May be a large vector.
     SmallVector<Value, 0> results;
