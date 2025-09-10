@@ -417,16 +417,16 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
   if (auto otherLayout = dyn_cast<xegpu::LayoutAttr>(other))
     return flattenedThis.getParent() == otherLayout;
   // If other is a SliceAttr, flatten it first before comparing.
-  auto otherFlattened = dyn_cast<xegpu::SliceAttr>(other).flatten();
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
   // Both must have common parent LayoutAttr.
-  if (flattenedThis.getParent() != otherFlattened.getParent())
+  if (flattenedThis.getParent() != flattenedOther.getParent())
     return false;
   // otherFlattened's sliced dims must be a subset of flattenedThis's sliced
   // dims.
   llvm::SmallDenseSet<int64_t> thisDims(
       flattenedThis.getDims().asArrayRef().begin(),
       flattenedThis.getDims().asArrayRef().end());
-  return llvm::all_of(otherFlattened.getDims().asArrayRef(),
+  return llvm::all_of(flattenedOther.getDims().asArrayRef(),
                       [&](int64_t dim) { return thisDims.contains(dim); });
 }
 
