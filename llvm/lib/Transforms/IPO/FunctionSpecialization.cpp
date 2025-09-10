@@ -788,18 +788,23 @@ bool FunctionSpecializer::run() {
       LLVM_DEBUG(dbgs() << "FnSpecialization: Redirecting " << *Call
                         << " to call " << Clone->getName() << "\n");
       Call->setCalledFunction(S.Clone);
+      auto &BFI = GetBFI(*Call->getFunction());
       if (std::optional<uint64_t> Count =
-              GetBFI(*Call->getFunction())
-                  .getBlockProfileCount(Call->getParent())) {
-        uint64_t CallCount = *Count + Clone->getEntryCount()->getCount();
+              BFI.getBlockProfileCount(Call->getParent())) {
+        std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
+            Clone->getEntryCount();
+        assert(MaybeCloneCount && "Clone entry count was not set!");
+        uint64_t CallCount = *Count + MaybeCloneCount->getCount();
         Clone->setEntryCount(CallCount);
         if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
                 S.F->getEntryCount()) {
           uint64_t OriginalCount = MaybeOriginalCount->getCount();
-          if (OriginalCount > CallCount) {
+          if (OriginalCount >= CallCount) {
             S.F->setEntryCount(OriginalCount - CallCount);
           } else {
-            S.F->setEntryCount(0);
+            // This should generally not happen as that would mean there are
+            // more computed calls to the function than what was recorded.
+            LLVM_DEBUG(S.F->setEntryCount(0));
           }
         }
       }
