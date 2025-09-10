@@ -3,6 +3,7 @@
 import sys
 
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
