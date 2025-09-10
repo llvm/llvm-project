@@ -1169,7 +1169,7 @@ exit:
   ret void
 }
 
-; FIXME: Currently incorrectly narrows the load,
+; Make sure multiple uses of a narrowed op are handled correctly,
 ; https://github.com/llvm/llvm-project/issues/156190.
 define void @multiple_store_groups_storing_same_wide_bin_op(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; VF2-LABEL: define void @multiple_store_groups_storing_same_wide_bin_op(
@@ -1181,9 +1181,7 @@ define void @multiple_store_groups_storing_same_wide_bin_op(ptr noalias %A, ptr 
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = getelementptr { double, double }, ptr [[A]], i64 [[INDEX]]
-; VF2-NEXT:    [[TMP1:%.*]] = load double, ptr [[TMP0]], align 8
-; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
-; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; VF2-NEXT:    [[TMP2:%.*]] = fadd contract <2 x double> [[BROADCAST_SPLAT]], splat (double 2.000000e+01)
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr { double, double }, ptr [[B]], i64 [[INDEX]]
 ; VF2-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP3]], align 8
