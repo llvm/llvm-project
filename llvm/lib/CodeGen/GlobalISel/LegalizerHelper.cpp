@@ -9303,27 +9303,20 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerSADDE(MachineInstr &MI) {
   auto [Res, OvOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
   const LLT Ty = MRI.getType(Res);
-  const LLT BoolTy = MRI.getType(OvOut);
 
-  // Step 1: tmp = LHS + RHS
+  // sum = LHS + RHS + zext(CarryIn)
   auto Tmp = MIRBuilder.buildAdd(Ty, LHS, RHS);
+  auto CarryZ = MIRBuilder.buildZExt(Ty, CarryIn);
+  auto Sum = MIRBuilder.buildAdd(Ty, Tmp, CarryZ);
+  MIRBuilder.buildCopy(Res, Sum);
 
-  // ov0 = (tmp < lhs) XOR (rhs < 0)
-  auto TmpLtLHS = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Tmp, LHS);
+  // OvOut = icmp slt ((sum ^ lhs) & (sum ^ rhs)), 0
+  auto AX = MIRBuilder.buildXor(Ty, Sum, LHS);
+  auto BX = MIRBuilder.buildXor(Ty, Sum, RHS);
+  auto T = MIRBuilder.buildAnd(Ty, AX, BX);
+
   auto Zero = MIRBuilder.buildConstant(Ty, 0);
-  auto RHSLt0 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, RHS, Zero);
-  auto Ov0 = MIRBuilder.buildXor(BoolTy, TmpLtLHS, RHSLt0);
-
-  // Step 2: sum = tmp + zext(CarryIn)
-  auto CarryInZ = MIRBuilder.buildZExt(Ty, CarryIn);
-  MIRBuilder.buildAdd(Res, Tmp, CarryInZ);
-
-  // ov1 = CarryIn & (sum < tmp)
-  auto SumLtTmp = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Res, Tmp);
-  auto Ov1 = MIRBuilder.buildAnd(BoolTy, SumLtTmp, CarryIn);
-
-  // ov = ov0 | ov1
-  MIRBuilder.buildOr(OvOut, Ov0, Ov1);
+  MIRBuilder.buildICmp(CmpInst::ICMP_SLT, OvOut, T, Zero);
 
   MI.eraseFromParent();
   return Legalized;
