@@ -207,7 +207,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
                              Twine("BOLT-ERROR: ", Error));
 
   std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
+      TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return createStringError(
         make_error_code(std::errc::not_supported),
@@ -215,7 +215,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   // Set up disassembler.
   std::unique_ptr<MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
   if (!AsmInfo)
     return createStringError(
         make_error_code(std::errc::not_supported),
@@ -227,7 +227,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   AsmInfo->setAllowAtInName(true);
 
   std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", FeaturesStr));
   if (!STI)
     return createStringError(
         make_error_code(std::errc::not_supported),

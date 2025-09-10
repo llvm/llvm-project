@@ -305,62 +305,62 @@ template <typename T> struct MissingTrait;
 
 // Test if ScalarEnumerationTraits<T> is defined on type T.
 template <class T> struct has_ScalarEnumerationTraits {
-  using Signature_enumeration = void (*)(class IO &, T &);
+  using SignatureEnumeration = void (*)(class IO &, T &);
 
   template <class U>
   using check =
-      SameType<Signature_enumeration, &ScalarEnumerationTraits<U>::enumeration>;
+      SameType<SignatureEnumeration, &ScalarEnumerationTraits<U>::enumeration>;
 
   static constexpr bool value = is_detected<check, T>::value;
 };
 
 // Test if ScalarBitSetTraits<T> is defined on type T.
 template <class T> struct has_ScalarBitSetTraits {
-  using Signature_bitset = void (*)(class IO &, T &);
+  using SignatureBitset = void (*)(class IO &, T &);
 
   template <class U>
-  using check = SameType<Signature_bitset, &ScalarBitSetTraits<U>::bitset>;
+  using check = SameType<SignatureBitset, &ScalarBitSetTraits<U>::bitset>;
 
   static constexpr bool value = is_detected<check, T>::value;
 };
 
 // Test if ScalarTraits<T> is defined on type T.
 template <class T> struct has_ScalarTraits {
-  using Signature_input = StringRef (*)(StringRef, void *, T &);
-  using Signature_output = void (*)(const T &, void *, raw_ostream &);
-  using Signature_mustQuote = QuotingType (*)(StringRef);
+  using SignatureInput = StringRef (*)(StringRef, void *, T &);
+  using SignatureOutput = void (*)(const T &, void *, raw_ostream &);
+  using SignatureMustQuote = QuotingType (*)(StringRef);
 
   template <class U>
-  using check = std::tuple<SameType<Signature_input, &U::input>,
-                           SameType<Signature_output, &U::output>,
-                           SameType<Signature_mustQuote, &U::mustQuote>>;
+  using check = std::tuple<SameType<SignatureInput, &U::input>,
+                           SameType<SignatureOutput, &U::output>,
+                           SameType<SignatureMustQuote, &U::mustQuote>>;
 
   static constexpr bool value = is_detected<check, ScalarTraits<T>>::value;
 };
 
 // Test if BlockScalarTraits<T> is defined on type T.
 template <class T> struct has_BlockScalarTraits {
-  using Signature_input = StringRef (*)(StringRef, void *, T &);
-  using Signature_output = void (*)(const T &, void *, raw_ostream &);
+  using SignatureInput = StringRef (*)(StringRef, void *, T &);
+  using SignatureOutput = void (*)(const T &, void *, raw_ostream &);
 
   template <class U>
-  using check = std::tuple<SameType<Signature_input, &U::input>,
-                           SameType<Signature_output, &U::output>>;
+  using check = std::tuple<SameType<SignatureInput, &U::input>,
+                           SameType<SignatureOutput, &U::output>>;
 
   static constexpr bool value = is_detected<check, BlockScalarTraits<T>>::value;
 };
 
 // Test if TaggedScalarTraits<T> is defined on type T.
 template <class T> struct has_TaggedScalarTraits {
-  using Signature_input = StringRef (*)(StringRef, StringRef, void *, T &);
-  using Signature_output = void (*)(const T &, void *, raw_ostream &,
-                                    raw_ostream &);
-  using Signature_mustQuote = QuotingType (*)(const T &, StringRef);
+  using SignatureInput = StringRef (*)(StringRef, StringRef, void *, T &);
+  using SignatureOutput = void (*)(const T &, void *, raw_ostream &,
+                                   raw_ostream &);
+  using SignatureMustQuote = QuotingType (*)(const T &, StringRef);
 
   template <class U>
-  using check = std::tuple<SameType<Signature_input, &U::input>,
-                           SameType<Signature_output, &U::output>,
-                           SameType<Signature_mustQuote, &U::mustQuote>>;
+  using check = std::tuple<SameType<SignatureInput, &U::input>,
+                           SameType<SignatureOutput, &U::output>,
+                           SameType<SignatureMustQuote, &U::mustQuote>>;
 
   static constexpr bool value =
       is_detected<check, TaggedScalarTraits<T>>::value;
@@ -368,9 +368,9 @@ template <class T> struct has_TaggedScalarTraits {
 
 // Test if MappingContextTraits<T> is defined on type T.
 template <class T, class Context> struct has_MappingTraits {
-  using Signature_mapping = void (*)(class IO &, T &, Context &);
+  using SignatureMapping = void (*)(class IO &, T &, Context &);
 
-  template <class U> using check = SameType<Signature_mapping, &U::mapping>;
+  template <class U> using check = SameType<SignatureMapping, &U::mapping>;
 
   static constexpr bool value =
       is_detected<check, MappingContextTraits<T, Context>>::value;
@@ -378,18 +378,18 @@ template <class T, class Context> struct has_MappingTraits {
 
 // Test if MappingTraits<T> is defined on type T.
 template <class T> struct has_MappingTraits<T, EmptyContext> {
-  using Signature_mapping = void (*)(class IO &, T &);
+  using SignatureMapping = void (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_mapping, &U::mapping>;
+  template <class U> using check = SameType<SignatureMapping, &U::mapping>;
 
   static constexpr bool value = is_detected<check, MappingTraits<T>>::value;
 };
 
 // Test if MappingContextTraits<T>::validate() is defined on type T.
 template <class T, class Context> struct has_MappingValidateTraits {
-  using Signature_validate = std::string (*)(class IO &, T &, Context &);
+  using SignatureValidate = std::string (*)(class IO &, T &, Context &);
 
-  template <class U> using check = SameType<Signature_validate, &U::validate>;
+  template <class U> using check = SameType<SignatureValidate, &U::validate>;
 
   static constexpr bool value =
       is_detected<check, MappingContextTraits<T, Context>>::value;
@@ -397,18 +397,18 @@ template <class T, class Context> struct has_MappingValidateTraits {
 
 // Test if MappingTraits<T>::validate() is defined on type T.
 template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
-  using Signature_validate = std::string (*)(class IO &, T &);
+  using SignatureValidate = std::string (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_validate, &U::validate>;
+  template <class U> using check = SameType<SignatureValidate, &U::validate>;
 
   static constexpr bool value = is_detected<check, MappingTraits<T>>::value;
 };
 
 // Test if MappingContextTraits<T>::enumInput() is defined on type T.
 template <class T, class Context> struct has_MappingEnumInputTraits {
-  using Signature_validate = void (*)(class IO &, T &);
+  using SignatureEnumInput = void (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_validate, &U::enumInput>;
+  template <class U> using check = SameType<SignatureEnumInput, &U::enumInput>;
 
   static constexpr bool value =
       is_detected<check, MappingContextTraits<T, Context>>::value;
@@ -416,27 +416,27 @@ template <class T, class Context> struct has_MappingEnumInputTraits {
 
 // Test if MappingTraits<T>::enumInput() is defined on type T.
 template <class T> struct has_MappingEnumInputTraits<T, EmptyContext> {
-  using Signature_validate = void (*)(class IO &, T &);
+  using SignatureEnumInput = void (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_validate, &U::enumInput>;
+  template <class U> using check = SameType<SignatureEnumInput, &U::enumInput>;
 
   static constexpr bool value = is_detected<check, MappingTraits<T>>::value;
 };
 
 // Test if SequenceTraits<T> is defined on type T.
 template <class T> struct has_SequenceMethodTraits {
-  using Signature_size = size_t (*)(class IO &, T &);
+  using SignatureSize = size_t (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_size, &U::size>;
+  template <class U> using check = SameType<SignatureSize, &U::size>;
 
   static constexpr bool value = is_detected<check, SequenceTraits<T>>::value;
 };
 
 // Test if CustomMappingTraits<T> is defined on type T.
 template <class T> struct has_CustomMappingTraits {
-  using Signature_input = void (*)(IO &io, StringRef key, T &v);
+  using SignatureInput = void (*)(IO &io, StringRef key, T &v);
 
-  template <class U> using check = SameType<Signature_input, &U::inputOne>;
+  template <class U> using check = SameType<SignatureInput, &U::inputOne>;
 
   static constexpr bool value =
       is_detected<check, CustomMappingTraits<T>>::value;
@@ -464,18 +464,18 @@ struct has_SequenceTraits
 
 // Test if DocumentListTraits<T> is defined on type T
 template <class T> struct has_DocumentListTraits {
-  using Signature_size = size_t (*)(class IO &, T &);
+  using SignatureSize = size_t (*)(class IO &, T &);
 
-  template <class U> using check = SameType<Signature_size, &U::size>;
+  template <class U> using check = SameType<SignatureSize, &U::size>;
 
   static constexpr bool value =
       is_detected<check, DocumentListTraits<T>>::value;
 };
 
 template <class T> struct has_PolymorphicTraits {
-  using Signature_getKind = NodeKind (*)(const T &);
+  using SignatureGetKind = NodeKind (*)(const T &);
 
-  template <class U> using check = SameType<Signature_getKind, &U::getKind>;
+  template <class U> using check = SameType<SignatureGetKind, &U::getKind>;
 
   static constexpr bool value = is_detected<check, PolymorphicTraits<T>>::value;
 };
@@ -1850,39 +1850,29 @@ template <> struct IsFlowSequenceBase<true> {
   static const bool flow = true;
 };
 
-template <typename T, typename U = void>
-struct IsResizable : std::false_type {};
-
 template <typename T>
-struct IsResizable<T, std::void_t<decltype(std::declval<T>().resize(0))>>
-    : public std::true_type {};
+using check_resize_t = decltype(std::declval<T>().resize(0));
 
-template <typename T, bool B> struct IsResizableBase {
+template <typename T> struct IsResizableBase {
   using type = typename T::value_type;
 
   static type &element(IO &io, T &seq, size_t index) {
-    if (index >= seq.size())
-      seq.resize(index + 1);
-    return seq[index];
-  }
-};
-
-template <typename T> struct IsResizableBase<T, false> {
-  using type = typename T::value_type;
-
-  static type &element(IO &io, T &seq, size_t index) {
-    if (index >= seq.size()) {
-      io.setError(Twine("value sequence extends beyond static size (") +
-                  Twine(seq.size()) + ")");
-      return seq[0];
+    if constexpr (is_detected<check_resize_t, T>::value) {
+      if (index >= seq.size())
+        seq.resize(index + 1);
+    } else {
+      if (index >= seq.size()) {
+        io.setError(Twine("value sequence extends beyond static size (") +
+                    Twine(seq.size()) + ")");
+        return seq[0];
+      }
     }
     return seq[index];
   }
 };
 
 template <typename T, bool Flow>
-struct SequenceTraitsImpl : IsFlowSequenceBase<Flow>,
-                            IsResizableBase<T, IsResizable<T>::value> {
+struct SequenceTraitsImpl : IsFlowSequenceBase<Flow>, IsResizableBase<T> {
   static size_t size(IO &io, T &seq) { return seq.size(); }
 };
 

@@ -38,7 +38,9 @@ static cl::opt<bool>
     BranchRelaxation("sparc-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
-static std::string computeDataLayout(const Triple &T, bool is64Bit) {
+static std::string computeDataLayout(const Triple &T) {
+  const bool is64Bit = T.isSPARC64();
+
   // Sparc is typically big endian, but some are little.
   std::string Ret = T.getArch() == Triple::sparcel ? "e" : "E";
   Ret += "-m:e";
@@ -107,15 +109,14 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOptLevel OL, bool JIT,
-                                       bool is64bit)
+                                       CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+          T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
-          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM), is64bit,
-                                     JIT),
+          getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
+                                     TT.isSPARC64(), JIT),
           OL),
-      TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
+      TLOF(std::make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
 }
 
@@ -148,8 +149,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this,
-                                         this->is64Bit);
+    I = std::make_unique<SparcSubtarget>(CPU, TuneCPU, FS, *this);
   }
   return I.get();
 }
@@ -212,7 +212,7 @@ SparcV8TargetMachine::SparcV8TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
+    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT) {}
 
 void SparcV9TargetMachine::anchor() { }
 
@@ -222,7 +222,7 @@ SparcV9TargetMachine::SparcV9TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
+    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT) {}
 
 void SparcelTargetMachine::anchor() {}
 
@@ -232,4 +232,4 @@ SparcelTargetMachine::SparcelTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
+    : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT) {}

@@ -934,6 +934,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
+    if (getVGPREncodingMSBs(OpXRegs[CompOprIdx], MRI) !=
+        getVGPREncodingMSBs(OpYRegs[CompOprIdx], MRI))
+      return CompOprIdx;
+
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;
 

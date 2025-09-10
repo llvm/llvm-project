@@ -86,8 +86,6 @@ static cl::opt<bool> OptimizeMatchTable(
     cl::desc("Generate an optimized version of the match table"),
     cl::init(true), cl::cat(GlobalISelEmitterCat));
 
-namespace {
-
 static std::string explainPredicates(const TreePatternNode &N) {
   std::string Explanation;
   StringRef Separator = "";
@@ -167,7 +165,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
   return Explanation;
 }
 
-std::string explainOperator(const Record *Operator) {
+static std::string explainOperator(const Record *Operator) {
   if (Operator->isSubClassOf("SDNode"))
     return (" (" + Operator->getValueAsString("Opcode") + ")").str();
 
@@ -314,6 +312,7 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
   return *MaybeOpTy;
 }
 
+namespace {
 class GlobalISelEmitter final : public GlobalISelMatchTableExecutorEmitter {
 public:
   explicit GlobalISelEmitter(const RecordKeeper &RK);
@@ -493,8 +492,11 @@ private:
                        const TreePredicateFn &Predicate,
                        InstructionMatcher &InsnMatcher, bool &HasAddedMatcher);
 };
+} // namespace
 
-StringRef getPatFragPredicateEnumName(const Record *R) { return R->getName(); }
+static StringRef getPatFragPredicateEnumName(const Record *R) {
+  return R->getName();
+}
 
 void GlobalISelEmitter::gatherOpcodeValues() {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
@@ -2533,8 +2535,6 @@ void GlobalISelEmitter::declareSubtargetFeature(const Record *Predicate) {
 unsigned GlobalISelEmitter::declareHwModeCheck(StringRef HwModeFeatures) {
   return HwModes.emplace(HwModeFeatures.str(), HwModes.size()).first->second;
 }
-
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 
