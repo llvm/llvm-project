@@ -339,6 +339,63 @@ gpu.module @test {
 }
 
 // -----
+// CHECK-LABEL: gpu.func @scatter_ops_scf_yield({{.*}},
+// CHECK-SAME: %[[PREDICATE:.*]]: i1) {
+// CHECK: %[[DEFAULT:.*]] = arith.constant dense<1.200000e+01> : vector<8xf16>
+// CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
+// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
+// CHECK: %[[PREDICATED_LOAD:.*]] = scf.if %[[PREDICATE]] -> (vector<8xf16>) {
+// CHECK-NEXT: %[[LOADED:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+// CHECK-NEXT: scf.yield %[[LOADED]] : vector<8xf16>
+// CHECK-NEXT: } else {
+// CHECK-NEXT:   scf.yield %[[DEFAULT]] : vector<8xf16>
+// CHECK-NEXT: }
+// CHECK-NEXT: xegpu.store %[[PREDICATED_LOAD]], %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}> : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+gpu.module @test {
+  gpu.func @scatter_ops_scf_yield(%src: memref<256xf16>, %pred : i1) {
+    %1 = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1>: vector<16xi1>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
+    %loaded = scf.if %pred -> (vector<16x8xf16>) {
+      %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
+        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+      } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
+      scf.yield %3 : vector<16x8xf16>
+    } else {
+      %3 = arith.constant {
+        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+      } dense<12.> : vector<16x8xf16>
+      scf.yield %3 : vector<16x8xf16>
+    } { layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]> }
+    xegpu.store %loaded, %src[%offset], %1 <{chunk_size=8}> : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @scatter_ops_scf_non_yield({{.*}}) {
+// CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
+// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
+// CHECK: %[[PREDICATE:.*]] = llvm.mlir.poison : i1
+// CHECK: scf.if %[[PREDICATE]] {
+// CHECK-NEXT: %[[LOADED:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+// CHECK-NEXT: xegpu.store %[[LOADED]], %arg0[%[[OFFSET]]], %[[MASK]] <{chunk_size = 8 : i64}> : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+// CHECK-NEXT: }
+gpu.module @test {
+  gpu.func @scatter_ops_scf_non_yield(%src: memref<256xf16>) {
+    %pred = llvm.mlir.poison : i1
+    %1 = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1>: vector<16xi1>
+    %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
+    scf.if %pred  {
+      %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
+        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+      } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
+      xegpu.store %3, %src[%offset], %1 <{chunk_size=8}> : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+    }
+    gpu.return
+  }
+}
+
+// -----
 // CHECK-LABEL: gpu.func @scatter_ops({{.*}}) {
 // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1xi1>
 // CHECK-NEXT: %[[LANE_OFFSET:.*]] = arith.constant dense<12> : vector<1xindex>
