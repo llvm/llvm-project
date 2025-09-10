@@ -319,8 +319,9 @@ struct CallOpInterface
     }
 
     // 3. Create the new CallOp.
-    Operation *newCallOp = rewriter.create<func::CallOp>(
-        callOp.getLoc(), funcOp.getSymName(), resultTypes, newOperands);
+    Operation *newCallOp =
+        func::CallOp::create(rewriter, callOp.getLoc(), funcOp.getSymName(),
+                             resultTypes, newOperands);
     newCallOp->setAttrs(callOp->getAttrs());
 
     // 4. Replace the old op with the new op.
@@ -483,8 +484,8 @@ struct FuncOpInterface
 
         // Note: If `inferFunctionResultLayout = true`, casts are later folded
         // away.
-        Value toBufferOp = rewriter.create<bufferization::ToBufferOp>(
-            returnOp.getLoc(), bufferizedType, returnVal);
+        Value toBufferOp = bufferization::ToBufferOp::create(
+            rewriter, returnOp.getLoc(), bufferizedType, returnVal);
         returnValues.push_back(toBufferOp);
       }
 

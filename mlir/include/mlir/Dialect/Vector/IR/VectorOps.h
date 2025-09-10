@@ -32,6 +32,7 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Alignment.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/Vector/IR/VectorEnums.h.inc"

@@ -273,9 +273,10 @@ protected:
                      const RegClassInfo *const RCIs,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
-  virtual ~TargetRegisterInfo();
 
 public:
+  virtual ~TargetRegisterInfo();
+
   /// Return the number of registers for the function. (may overestimate)
   virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
     return getNumRegs();
@@ -1243,6 +1244,10 @@ public:
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
   }
+
+  // Whether this register should be ignored when generating CodeView debug
+  // info, because it's a known there is no mapping available.
+  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const { return false; }
 };
 
 //===----------------------------------------------------------------------===//

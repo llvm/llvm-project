@@ -103,8 +103,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  480
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: StackGuardSlot, type: default, offset: -40, size: 8, 
@@ -216,8 +216,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  480
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: StackGuardSlot, type: default, offset: -40, size: 8, 
@@ -327,8 +327,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  480
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: StackGuardSlot, type: default, offset: -40, size: 8, 

@@ -215,6 +215,8 @@ def warn_c23_compat_case_range : Warning<
   DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
+def err_c2y_labeled_break_continue : Error<
+  "named %select{'break'|'continue'}0 is only supported in C2y">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -830,6 +832,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def ext_invalid_attribute_argument
+    : Extension<"'%0' is not allowed in an attribute argument list">,
+    InGroup<DiagGroup<"attribute-preprocessor-tokens">>;
 
 def err_assume_attr_expects_cond_expr : Error<
   "use of this expression in an %0 attribute requires parentheses">;
@@ -930,6 +935,10 @@ def err_missing_dependent_template_keyword : Error<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 def warn_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
+
+def err_cxx26_template_template_params
+    : Error<"%select{variable template|concept}0 template parameter is a C++2c "
+            "extension">;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
@@ -1499,8 +1508,8 @@ def err_omp_unexpected_directive : Error<
   "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
-def warn_clause_expected_string : Warning<
-  "expected string literal in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
+def warn_clause_expected_string: Warning<
+  "expected string %select{|literal }1in 'clause %0' - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unexpected_clause : Error<
   "unexpected OpenMP clause '%0' in directive '#pragma omp %1'">;
 def err_omp_unexpected_clause_extension_only : Error<
@@ -1594,6 +1603,9 @@ def err_omp_unknown_adjust_args_op
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
+def err_omp_non_by_ref_need_device_addr_modifier_argument
+    : Error<"expected reference type argument on 'adjust_args' clause with "
+            "'need_device_addr' modifier">;
 def err_omp_declare_variant_duplicate_nested_trait : Error<
   "nested OpenMP context selector contains duplicated trait '%0'"
   " in selector '%1' and set '%2' with different score">;

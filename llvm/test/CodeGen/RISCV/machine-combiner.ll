@@ -454,7 +454,7 @@ define i32 @test_reassoc_add_sub_i32_1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_add_sub_i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    subw a2, a2, a3
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    subw a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a0, %a1
@@ -467,7 +467,7 @@ define i32 @test_reassoc_add_sub_i32_2(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_add_sub_i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    subw a2, a2, a3
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    addw a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a0, %a1

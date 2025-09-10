@@ -7,19 +7,17 @@ define void @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[IF_THEN_I_I:.*]]:
-; CHECK-NEXT:    br label %[[BB5:.*]]
+; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 false to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> <i64 0, i64 0, i64 poison, i64 poison>, <4 x i64> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    br i1 false, label %[[BB5]], label %[[BB2:.*]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i64> [ [[TMP4]], %[[BB1]] ], [ poison, %[[IF_THEN_I_I]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, i64 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    br i1 false, label %[[BB3]], label %[[BB2:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i64> [ [[TMP2]], %[[BB1]] ], [ poison, %[[IF_THEN_I_I]] ]
 ; CHECK-NEXT:    br label %[[BB2]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ [[TMP6]], %[[BB5]] ], [ [[TMP4]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ [[TMP4]], %[[BB3]] ], [ [[TMP2]], %[[BB1]] ]
 ; CHECK-NEXT:    store <4 x i64> [[TMP7]], ptr getelementptr inbounds nuw (i8, ptr null, i64 40), align 8
 ; CHECK-NEXT:    ret void
 ;

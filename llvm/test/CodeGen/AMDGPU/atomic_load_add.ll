@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=amdgcn -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -check-prefixes=R600,FUNC %s
 
 ; FUNC-LABEL: {{^}}atomic_add_local:

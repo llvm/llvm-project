@@ -239,8 +239,8 @@ body:             |
     ; NO-PREFER-W-INST-NEXT: {{  $}}
     ; NO-PREFER-W-INST-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; NO-PREFER-W-INST-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; NO-PREFER-W-INST-NEXT: [[LWU:%[0-9]+]]:gpr = LWU [[COPY]], 0
-    ; NO-PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LWU]], 1
+    ; NO-PREFER-W-INST-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0
+    ; NO-PREFER-W-INST-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LW]], 1
     ; NO-PREFER-W-INST-NEXT: $x10 = COPY [[ADDIW]]
     ; NO-PREFER-W-INST-NEXT: PseudoRET
     ;

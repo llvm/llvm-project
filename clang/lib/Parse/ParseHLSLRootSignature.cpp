@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/ParseHLSLRootSignature.h"
-
+#include "clang/AST/ASTConsumer.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Parse/Parser.h"
+#include "clang/Sema/Sema.h"
 
 using namespace llvm::hlsl::rootsig;
 
@@ -17,61 +19,104 @@ namespace hlsl {
 
 using TokenKind = RootSignatureToken::Kind;
 
+static const TokenKind RootElementKeywords[] = {
+    TokenKind::kw_RootFlags,
+    TokenKind::kw_CBV,
+    TokenKind::kw_UAV,
+    TokenKind::kw_SRV,
+    TokenKind::kw_DescriptorTable,
+    TokenKind::kw_StaticSampler,
+};
+
 RootSignatureParser::RootSignatureParser(
-    llvm::dxbc::RootSignatureVersion Version,
-    SmallVector<RootSignatureElement> &Elements, StringLiteral *Signature,
+    llvm::dxbc::RootSignatureVersion Version, StringLiteral *Signature,
     Preprocessor &PP)
-    : Version(Version), Elements(Elements), Signature(Signature),
-      Lexer(Signature->getString()), PP(PP), CurToken(0) {}
+    : Version(Version), Signature(Signature), Lexer(Signature->getString()),
+      PP(PP), CurToken(0) {}
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootSignatureElements as possible, until we hit the
   // end of the stream
+  bool HadError = false;
+  bool HasRootFlags = false;
   while (!peekExpectedToken(TokenKind::end_of_stream)) {
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
+      if (HasRootFlags) {
+        reportDiag(diag::err_hlsl_rootsig_repeat_param)
+            << TokenKind::kw_RootFlags;
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      HasRootFlags = true;
+
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Flags = parseRootFlags();
-      if (!Flags.has_value())
-        return true;
+      if (!Flags.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+
       Elements.emplace_back(ElementLoc, *Flags);
     } else if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Constants = parseRootConstants();
-      if (!Constants.has_value())
-        return true;
+      if (!Constants.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
       Elements.emplace_back(ElementLoc, *Constants);
     } else if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Table = parseDescriptorTable();
-      if (!Table.has_value())
-        return true;
+      if (!Table.has_value()) {
+        HadError = true;
+        // We are within a DescriptorTable, we will do our best to recover
+        // by skipping until we encounter the expected closing ')'.
+        skipUntilClosedParens();
+        consumeNextToken();
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
       Elements.emplace_back(ElementLoc, *Table);
     } else if (tryConsumeExpectedToken(
                    {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Descriptor = parseRootDescriptor();
-      if (!Descriptor.has_value())
-        return true;
+      if (!Descriptor.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
       Elements.emplace_back(ElementLoc, *Descriptor);
     } else if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Sampler = parseStaticSampler();
-      if (!Sampler.has_value())
-        return true;
+      if (!Sampler.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
       Elements.emplace_back(ElementLoc, *Sampler);
     } else {
+      HadError = true;
       consumeNextToken(); // let diagnostic be at the start of invalid token
       reportDiag(diag::err_hlsl_invalid_token)
           << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootSignature;
-      return true;
+      skipUntilExpectedToken(RootElementKeywords);
+      continue;
     }
 
-    // ',' denotes another element, otherwise, expected to be at end of stream
-    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma)) {
+      // ',' denotes another element, otherwise, expected to be at end of stream
       break;
+    }
   }
 
-  return consumeExpectedToken(TokenKind::end_of_stream,
+  return HadError ||
+         consumeExpectedToken(TokenKind::end_of_stream,
                               diag::err_expected_either, TokenKind::pu_comma);
 }
 
@@ -201,15 +246,15 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Descriptor.Type = DescriptorType::CBuffer;
+    Descriptor.Type = ResourceClass::CBuffer;
     ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
-    Descriptor.Type = DescriptorType::SRV;
+    Descriptor.Type = ResourceClass::SRV;
     ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
-    Descriptor.Type = DescriptorType::UAV;
+    Descriptor.Type = ResourceClass::UAV;
     ExpectedReg = TokenKind::uReg;
     break;
   }
@@ -262,8 +307,13 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       // DescriptorTableClause - CBV, SRV, UAV, or Sampler
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Clause = parseDescriptorTableClause();
-      if (!Clause.has_value())
+      if (!Clause.has_value()) {
+        // We are within a DescriptorTableClause, we will do our best to recover
+        // by skipping until we encounter the expected closing ')'
+        skipUntilExpectedToken(TokenKind::pu_r_paren);
+        consumeNextToken();
         return std::nullopt;
+      }
       Elements.emplace_back(ElementLoc, *Clause);
       Table.NumClauses++;
     } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
@@ -322,19 +372,19 @@ RootSignatureParser::parseDescriptorTableClause() {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
-    Clause.Type = ClauseType::CBuffer;
+    Clause.Type = ResourceClass::CBuffer;
     ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
-    Clause.Type = ClauseType::SRV;
+    Clause.Type = ResourceClass::SRV;
     ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
-    Clause.Type = ClauseType::UAV;
+    Clause.Type = ResourceClass::UAV;
     ExpectedReg = TokenKind::uReg;
     break;
   case TokenKind::kw_Sampler:
-    Clause.Type = ClauseType::Sampler;
+    Clause.Type = ResourceClass::Sampler;
     ExpectedReg = TokenKind::sReg;
     break;
   }
@@ -1371,9 +1421,99 @@ bool RootSignatureParser::tryConsumeExpectedToken(
   return true;
 }
 
+bool RootSignatureParser::skipUntilExpectedToken(TokenKind Expected) {
+  return skipUntilExpectedToken(ArrayRef{Expected});
+}
+
+bool RootSignatureParser::skipUntilExpectedToken(
+    ArrayRef<TokenKind> AnyExpected) {
+
+  while (!peekExpectedToken(AnyExpected)) {
+    if (peekExpectedToken(TokenKind::end_of_stream))
+      return false;
+    consumeNextToken();
+  }
+
+  return true;
+}
+
+bool RootSignatureParser::skipUntilClosedParens(uint32_t NumParens) {
+  TokenKind ParenKinds[] = {
+      TokenKind::pu_l_paren,
+      TokenKind::pu_r_paren,
+  };
+  while (skipUntilExpectedToken(ParenKinds)) {
+    consumeNextToken();
+    if (CurToken.TokKind == TokenKind::pu_r_paren)
+      NumParens--;
+    else
+      NumParens++;
+    if (NumParens == 0)
+      return true;
+  }
+
+  return false;
+}
+
 SourceLocation RootSignatureParser::getTokenLocation(RootSignatureToken Tok) {
   return Signature->getLocationOfByte(Tok.LocOffset, PP.getSourceManager(),
                                       PP.getLangOpts(), PP.getTargetInfo());
+}
+
+IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
+                                       llvm::dxbc::RootSignatureVersion Version,
+                                       StringLiteral *Signature) {
+  // Construct our identifier
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Invoke the root signature parser to construct the in-memory constructs
+    hlsl::RootSignatureParser Parser(Version, Signature,
+                                     Actions.getPreprocessor());
+    if (Parser.parse())
+      return nullptr;
+
+    // Construct the declaration.
+    Actions.HLSL().ActOnFinishRootSignatureDecl(
+        Signature->getBeginLoc(), DeclIdent, Parser.getElements());
+  }
+
+  return DeclIdent;
+}
+
+void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
+  ASTConsumer *Consumer = &S.getASTConsumer();
+
+  // Minimally initalize the parser. This does a couple things:
+  // - initializes Sema scope handling
+  // - invokes HLSLExternalSemaSource
+  // - invokes the preprocessor to lex the macros in the file
+  std::unique_ptr<Parser> P(new Parser(S.getPreprocessor(), S, true));
+  S.getPreprocessor().EnterMainSourceFile();
+
+  bool HaveLexer = S.getPreprocessor().getCurrentLexer();
+  if (HaveLexer) {
+    P->Initialize();
+    S.ActOnStartOfTranslationUnit();
+
+    // Skim through the file to parse to find the define
+    while (P->getCurToken().getKind() != tok::eof)
+      P->ConsumeAnyToken();
+
+    HLSLRootSignatureDecl *SignatureDecl =
+        S.HLSL().lookupRootSignatureOverrideDecl(
+            S.getASTContext().getTranslationUnitDecl());
+
+    if (SignatureDecl)
+      Consumer->HandleTopLevelDecl(DeclGroupRef(SignatureDecl));
+    else
+      S.getDiagnostics().Report(diag::err_hlsl_rootsignature_entry)
+          << EntryRootSig;
+  }
+
+  Consumer->HandleTranslationUnit(S.getASTContext());
 }
 
 } // namespace hlsl

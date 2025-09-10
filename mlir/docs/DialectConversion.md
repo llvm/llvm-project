@@ -202,17 +202,62 @@ struct MyConversionPattern : public ConversionPattern {
 
 #### Type Safety
 
-The types of the remapped operands provided to a conversion pattern must be of a
-type expected by the pattern. The expected types of a pattern are determined by
-a provided [TypeConverter](#type-converter). If no type converter is provided,
-the types of the remapped operands are expected to match the types of the
-original operands. If a type converter is provided, the types of the remapped
-operands are expected to be legal as determined by the converter. If the
-remapped operand types are not of an expected type, and a materialization to the
-expected type could not be performed, the pattern fails application before the
-`matchAndRewrite` hook is invoked. This ensures that patterns do not have to
-explicitly ensure type safety, or sanitize the types of the incoming remapped
-operands. More information on type conversion is detailed in the
+The types of the remapped operands provided to a conversion pattern (through
+the adaptor or `ArrayRef` of operands) depend on type conversion rules.
+
+If the pattern was initialized with a [type converter](#type-converter), the
+conversion driver passes values whose types match the legalized types of the
+operands of the matched operation as per the type converter. To that end, the
+conversion driver may insert target materializations to convert the most
+recently mapped values to the expected legalized types. The driver tries to
+reuse existing materializations on a best-effort basis, but this is not
+guaranteed by the infrastructure. If the operand types of the matched op could
+not be legalized, the pattern fails to apply before the `matchAndRewrite` hook
+is invoked.
+
+Example:
+```c++
+// Type converter that converts all FloatTypes to IntegerTypes.
+TypeConverter converter;
+converter.addConversion([](FloatType t) {
+    return IntegerType::get(t.getContext(), t.getWidth());
+});
+
+// Assuming that `MyConversionPattern` was initialized with `converter`.
+struct MyConversionPattern : public ConversionPattern {
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, /* ... */) const {
+//                                               ^^^^^^^^
+//      If `op` has a FloatType operand, the respective value in `operands`
+//      is guaranteed to have the legalized IntegerType. If another pattern
+//      previously replaced the operand SSA value with an SSA value of the
+//      legalized type (via "replaceOp" or "applySignatureConversion"), you
+//      will get that SSA value directly (unless the replacement value was
+//      also replaced). Otherwise, you will get a materialization to the
+//      legalized type.
+```
+
+If the pattern was initialized without a type converter, the conversion driver
+passes the most recently mapped values to the pattern, excluding any
+materializations. If a value with the same type as the original operand is
+desired, users can directly take the respective operand from the matched
+operation.
+
+Example: When initializing the pattern from the above example without a type
+converter, `operands` contains the most recent replacement values, regardless
+of their types.
+
+Note: When running without a type converter, materializations are intentionally
+excluded from the lookup process because their presence may depend on other
+patterns. Passing materializations would make the conversion infrastructure
+fragile and unpredictable. Moreover, there could be multiple materializations
+to different types. (This can be the case when multiple patterns are running
+with different type converters.) In such a case, it would be unclear which
+materialization to pass.
+
+The above rules ensure that patterns do not have to explicitly ensure type
+safety, or sanitize the types of the incoming remapped operands. More
+information on type conversion is detailed in the
 [dedicated section](#type-conversion) below.
 
 ## Type Conversion
@@ -234,6 +279,15 @@ A `conversion` describes how a given source `Type` should be converted to N
 target types. If the source type is converted to itself, we say it is a "legal"
 type. Type conversions are specified via the `addConversion` method described
 below.
+
+There are two kind of conversion functions: context-aware and context-unaware
+conversions. A context-unaware conversion function converts a `Type` into a
+`Type`. A context-aware conversion function converts a `Value` into a type. The
+latter allows users to customize type conversion rules based on the IR.
+
+Note: When there is at least one context-aware type conversion function, the
+result of type conversions can no longer be cached, which can increase
+compilation time. Use this feature with caution!
 
 A `materialization` describes how a list of values should be converted to a
 list of values with specific types. An important distinction from a
@@ -287,29 +341,31 @@ Several of the available hooks are detailed below:
 ```c++
 class TypeConverter {
  public:
-  /// Register a conversion function. A conversion function defines how a given
-  /// source type should be converted. A conversion function must be convertible
-  /// to any of the following forms(where `T` is a class derived from `Type`:
-  ///   * Optional<Type>(T)
+  /// Register a conversion function. A conversion function must be convertible
+  /// to any of the following forms (where `T` is `Value` or a class derived
+  /// from `Type`, including `Type` itself):
+  ///
+  ///   * std::optional<Type>(T)
   ///     - This form represents a 1-1 type conversion. It should return nullptr
-  ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned, the
-  ///       converter is allowed to try another conversion function to perform
-  ///       the conversion.
-  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &)
+  ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned,
+  ///       the converter is allowed to try another conversion function to
+  ///       perform the conversion.
+  ///   * std::optional<LogicalResult>(T, SmallVectorImpl<Type> &)
   ///     - This form represents a 1-N type conversion. It should return
-  ///       `failure` or `std::nullopt` to signify a failed conversion. If the new
-  ///       set of types is empty, the type is removed and any usages of the
+  ///       `failure` or `std::nullopt` to signify a failed conversion. If the
+  ///       new set of types is empty, the type is removed and any usages of the
   ///       existing value are expected to be removed during conversion. If
   ///       `std::nullopt` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
-  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &, ArrayRef<Type>)
-  ///     - This form represents a 1-N type conversion supporting recursive
-  ///       types. The first two arguments and the return value are the same as
-  ///       for the regular 1-N form. The third argument is contains is the
-  ///       "call stack" of the recursive conversion: it contains the list of
-  ///       types currently being converted, with the current type being the
-  ///       last one. If it is present more than once in the list, the
-  ///       conversion concerns a recursive type.
+  ///
+  /// Conversion functions that accept `Value` as the first argument are
+  /// context-aware. I.e., they can take into account IR when converting the
+  /// type of the given value. Context-unaware conversion functions accept
+  /// `Type` or a derived class as the first argument.
+  ///
+  /// Note: Context-unaware conversions are cached, but context-aware
+  /// conversions are not.
+  ///
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
   template <typename FnT,

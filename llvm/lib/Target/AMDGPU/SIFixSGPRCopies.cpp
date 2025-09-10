@@ -378,6 +378,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   default:
     return false;
   case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B32;
     break;
   case AMDGPU::V_MOV_B64_PSEUDO:
@@ -459,7 +460,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   // List of clobbering instructions.
   SmallVector<MachineInstr*, 8> Clobbers;
   // List of instructions marked for deletion.
-  SmallSet<MachineInstr*, 8> MergedInstrs;
+  SmallPtrSet<MachineInstr *, 8> MergedInstrs;
 
   bool Changed = false;
 
@@ -626,6 +627,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
 
+  // Instructions to re-legalize after changing register classes
+  SmallVector<MachineInstr *, 8> Relegalize;
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
@@ -633,6 +637,11 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
       switch (MI.getOpcode()) {
       default:
+        // scale_src has a register class restricted to low 256 VGPRs, changing
+        // registers to VGPR may not take it into acount.
+        if (TII->isWMMA(MI) &&
+            AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::scale_src0))
+          Relegalize.push_back(&MI);
         continue;
       case AMDGPU::COPY: {
         const TargetRegisterClass *SrcRC, *DstRC;
@@ -790,6 +799,9 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   for (auto *MI : PHINodes) {
     processPHINode(*MI);
   }
+  while (!Relegalize.empty())
+    TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
+
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
     hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
 
@@ -807,7 +819,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   bool AllAGPRUses = true;
   SetVector<const MachineInstr *> worklist;
-  SmallSet<const MachineInstr *, 4> Visited;
+  SmallPtrSet<const MachineInstr *, 4> Visited;
   SetVector<MachineInstr *> PHIOperands;
   worklist.insert(&MI);
   Visited.insert(&MI);
@@ -946,13 +958,18 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 
     // Copies and REG_SEQUENCE do not contribute to the final assembly
     // So, skip them but take care of the SGPR to VGPR copies bookkeeping.
-    if (Inst->isCopy() || Inst->isRegSequence()) {
-      if (TRI->isVGPR(*MRI, Inst->getOperand(0).getReg())) {
-        if (!Inst->isCopy() ||
-            !tryChangeVGPRtoSGPRinCopy(*Inst, TRI, TII)) {
-          Info.NumSVCopies++;
-          continue;
-        }
+    if (Inst->isRegSequence() &&
+        TRI->isVGPR(*MRI, Inst->getOperand(0).getReg())) {
+      Info.NumSVCopies++;
+      continue;
+    }
+    if (Inst->isCopy()) {
+      const TargetRegisterClass *SrcRC, *DstRC;
+      std::tie(SrcRC, DstRC) = getCopyRegClasses(*Inst, *TRI, *MRI);
+      if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI) &&
+          !tryChangeVGPRtoSGPRinCopy(*Inst, TRI, TII)) {
+        Info.NumSVCopies++;
+        continue;
       }
     }
 

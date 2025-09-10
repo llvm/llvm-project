@@ -250,7 +250,15 @@ void setExplicitlyUnknownBranchWeights(Instruction &I) {
                   MDB.createString(MDProfLabels::UnknownBranchWeightsMarker)));
 }
 
-bool isExplicitlyUnknownBranchWeightsMetadata(const MDNode &MD) {
+void setExplicitlyUnknownFunctionEntryCount(Function &F) {
+  MDBuilder MDB(F.getContext());
+  F.setMetadata(
+      LLVMContext::MD_prof,
+      MDNode::get(F.getContext(),
+                  MDB.createString(MDProfLabels::UnknownBranchWeightsMarker)));
+}
+
+bool isExplicitlyUnknownProfileMetadata(const MDNode &MD) {
   if (MD.getNumOperands() != 1)
     return false;
   return MD.getOperand(0).equalsStr(MDProfLabels::UnknownBranchWeightsMarker);
@@ -260,7 +268,7 @@ bool hasExplicitlyUnknownBranchWeights(const Instruction &I) {
   auto *MD = I.getMetadata(LLVMContext::MD_prof);
   if (!MD)
     return false;
-  return isExplicitlyUnknownBranchWeightsMetadata(*MD);
+  return isExplicitlyUnknownProfileMetadata(*MD);
 }
 
 void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
@@ -268,6 +276,18 @@ void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
   MDBuilder MDB(I.getContext());
   MDNode *BranchWeights = MDB.createBranchWeights(Weights, IsExpected);
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
+SmallVector<uint32_t> downscaleWeights(ArrayRef<uint64_t> Weights,
+                                       std::optional<uint64_t> KnownMaxCount) {
+  uint64_t MaxCount = KnownMaxCount.has_value() ? KnownMaxCount.value()
+                                                : *llvm::max_element(Weights);
+  assert(MaxCount > 0 && "Bad max count");
+  uint64_t Scale = calculateCountScale(MaxCount);
+  SmallVector<uint32_t> DownscaledWeights;
+  for (const auto &ECI : Weights)
+    DownscaledWeights.push_back(scaleBranchCount(ECI, Scale));
+  return DownscaledWeights;
 }
 
 void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {

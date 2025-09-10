@@ -729,9 +729,7 @@ bool FastISel::lowerCallOperands(const CallInst *CI, unsigned ArgIdx,
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
 
-    ArgListEntry Entry;
-    Entry.Val = V;
-    Entry.Ty = V->getType();
+    ArgListEntry Entry(V);
     Entry.setAttributes(CI, ArgI);
     Args.push_back(Entry);
   }
@@ -978,9 +976,7 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
 
-    ArgListEntry Entry;
-    Entry.Val = V;
-    Entry.Ty = V->getType();
+    ArgListEntry Entry(V);
     Entry.setAttributes(CI, ArgI);
     Args.push_back(Entry);
   }
@@ -1012,17 +1008,16 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
     MVT RegisterVT = TLI.getRegisterType(CLI.RetTy->getContext(), VT);
     unsigned NumRegs = TLI.getNumRegisters(CLI.RetTy->getContext(), VT);
     for (unsigned i = 0; i != NumRegs; ++i) {
-      ISD::InputArg MyFlags;
-      MyFlags.VT = RegisterVT;
-      MyFlags.ArgVT = VT;
-      MyFlags.Used = CLI.IsReturnValueUsed;
+      ISD::ArgFlagsTy Flags;
       if (CLI.RetSExt)
-        MyFlags.Flags.setSExt();
+        Flags.setSExt();
       if (CLI.RetZExt)
-        MyFlags.Flags.setZExt();
+        Flags.setZExt();
       if (CLI.IsInReg)
-        MyFlags.Flags.setInReg();
-      CLI.Ins.push_back(MyFlags);
+        Flags.setInReg();
+      ISD::InputArg Ret(Flags, RegisterVT, VT, CLI.RetTy, CLI.IsReturnValueUsed,
+                        ISD::InputArg::NoArgIndex, 0);
+      CLI.Ins.push_back(Ret);
     }
   }
 
@@ -1117,7 +1112,6 @@ bool FastISel::lowerCall(const CallInst *CI) {
   Type *RetTy = CI->getType();
 
   ArgListTy Args;
-  ArgListEntry Entry;
   Args.reserve(CI->arg_size());
 
   for (auto i = CI->arg_begin(), e = CI->arg_end(); i != e; ++i) {
@@ -1127,9 +1121,7 @@ bool FastISel::lowerCall(const CallInst *CI) {
     if (V->getType()->isEmptyTy())
       continue;
 
-    Entry.Val = V;
-    Entry.Ty = V->getType();
-
+    ArgListEntry Entry(V);
     // Skip the first return-type Attribute to get to params.
     Entry.setAttributes(CI, i - CI->arg_begin());
     Args.push_back(Entry);
@@ -1148,9 +1140,12 @@ bool FastISel::lowerCall(const CallInst *CI) {
   CLI.setCallee(RetTy, FuncTy, CI->getCalledOperand(), std::move(Args), *CI)
       .setTailCall(IsTailCall);
 
-  diagnoseDontCall(*CI);
+  if (lowerCallTo(CLI)) {
+    diagnoseDontCall(*CI);
+    return true;
+  }
 
-  return lowerCallTo(CLI);
+  return false;
 }
 
 bool FastISel::selectCall(const User *I) {

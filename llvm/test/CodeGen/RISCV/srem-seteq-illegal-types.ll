@@ -50,7 +50,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64-NEXT:    add a2, a2, a4
 ; RV64-NEXT:    slli a4, a0, 2
 ; RV64-NEXT:    add a4, a0, a4
-; RV64-NEXT:    subw a1, a1, a4
+; RV64-NEXT:    sub a1, a1, a4
 ; RV64-NEXT:    slli a4, a0, 17
 ; RV64-NEXT:    add a3, a3, a4
 ; RV64-NEXT:    slli a0, a0, 23
@@ -59,8 +59,8 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64-NEXT:    add a1, a1, a3
 ; RV64-NEXT:    lui a3, 1324
 ; RV64-NEXT:    addi a2, a2, -83
-; RV64-NEXT:    subw a0, a0, a2
-; RV64-NEXT:    subw a1, a1, a0
+; RV64-NEXT:    sub a0, a0, a2
+; RV64-NEXT:    sub a1, a1, a0
 ; RV64-NEXT:    slli a1, a1, 35
 ; RV64-NEXT:    srli a1, a1, 35
 ; RV64-NEXT:    addi a0, a3, -165
@@ -189,7 +189,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV64M-NEXT:    add a1, a1, a2
 ; RV64M-NEXT:    slli a2, a1, 3
 ; RV64M-NEXT:    slli a1, a1, 1
-; RV64M-NEXT:    subw a1, a1, a2
+; RV64M-NEXT:    sub a1, a1, a2
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    andi a0, a0, 15
 ; RV64M-NEXT:    addi a0, a0, -1
@@ -225,7 +225,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; RV64MV-NEXT:    add a1, a1, a2
 ; RV64MV-NEXT:    slli a2, a1, 3
 ; RV64MV-NEXT:    slli a1, a1, 1
-; RV64MV-NEXT:    subw a1, a1, a2
+; RV64MV-NEXT:    sub a1, a1, a2
 ; RV64MV-NEXT:    add a0, a0, a1
 ; RV64MV-NEXT:    andi a0, a0, 15
 ; RV64MV-NEXT:    addi a0, a0, -1
@@ -256,7 +256,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV64-NEXT:    srli a1, a1, 62
 ; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    andi a1, a1, 60
-; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 63
 ; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    ret
@@ -280,7 +280,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV64M-NEXT:    srli a1, a1, 62
 ; RV64M-NEXT:    add a1, a0, a1
 ; RV64M-NEXT:    andi a1, a1, 60
-; RV64M-NEXT:    subw a0, a0, a1
+; RV64M-NEXT:    sub a0, a0, a1
 ; RV64M-NEXT:    andi a0, a0, 63
 ; RV64M-NEXT:    snez a0, a0
 ; RV64M-NEXT:    ret
@@ -304,7 +304,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; RV64MV-NEXT:    srli a1, a1, 62
 ; RV64MV-NEXT:    add a1, a0, a1
 ; RV64MV-NEXT:    andi a1, a1, 60
-; RV64MV-NEXT:    subw a0, a0, a1
+; RV64MV-NEXT:    sub a0, a0, a1
 ; RV64MV-NEXT:    andi a0, a0, 63
 ; RV64MV-NEXT:    snez a0, a0
 ; RV64MV-NEXT:    ret

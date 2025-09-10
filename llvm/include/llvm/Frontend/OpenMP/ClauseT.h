@@ -242,7 +242,7 @@ ENUM(MotionExpectation, Present);
 // V5.2: [15.9.1] `task-dependence-type` modifier
 ENUM(DependenceType, Depobj, In, Inout, Inoutset, Mutexinoutset, Out, Sink,
      Source);
-ENUM(Prescriptiveness, Strict);
+ENUM(Prescriptiveness, Strict, Fallback);
 
 template <typename I, typename E> //
 struct LoopIterationT {
@@ -574,12 +574,22 @@ struct DynamicAllocatorsT {
   using EmptyTrait = std::true_type;
 };
 
+template <typename T, typename I, typename E> //
+struct DynGroupprivateT {
+  ENUM(AccessGroup, Cgroup);
+  using Prescriptiveness = type::Prescriptiveness;
+  using Size = E;
+  using TupleTrait = std::true_type;
+  std::tuple<OPT(AccessGroup), OPT(Prescriptiveness), Size> t;
+};
+
 // V5.2: [5.8.4] `enter` clause
 template <typename T, typename I, typename E> //
 struct EnterT {
   using List = ObjectListT<I, E>;
-  using WrapperTrait = std::true_type;
-  List v;
+  ENUM(Modifier, Automap);
+  using TupleTrait = std::true_type;
+  std::tuple<OPT(Modifier), List> t;
 };
 
 // V5.2: [5.6.2] `exclusive` clause
@@ -648,6 +658,18 @@ struct GrainsizeT {
   using GrainSize = E;
   using TupleTrait = std::true_type;
   std::tuple<OPT(Prescriptiveness), GrainSize> t;
+};
+
+// [6.0:438] `graph_id` clause
+template <typename T, typename I, typename E> //
+struct GraphIdT {
+  using EmptyTrait = std::true_type;
+};
+
+// [6.0:438] `graph_reset` clause
+template <typename T, typename I, typename E> //
+struct GraphResetT {
+  using EmptyTrait = std::true_type;
 };
 
 // V5.2: [5.4.9] `has_device_addr` clause
@@ -779,16 +801,17 @@ struct LinkT {
 template <typename T, typename I, typename E> //
 struct MapT {
   using LocatorList = ObjectListT<I, E>;
-  ENUM(MapType, To, From, Tofrom, Alloc, Release, Delete);
-  ENUM(MapTypeModifier, Always, Close, Present, OmpxHold);
+  ENUM(MapType, To, From, Tofrom, Storage);
+  ENUM(MapTypeModifier, Always, Close, Delete, Present, Self, OmpxHold);
+  ENUM(RefModifier, RefPtee, RefPtr, RefPtrPtee);
   // See note at the definition of the MapperT type.
   using Mappers = ListT<type::MapperT<I, E>>; // Not a spec name
   using Iterator = type::IteratorT<T, I, E>;
   using MapTypeModifiers = ListT<MapTypeModifier>; // Not a spec name
 
   using TupleTrait = std::true_type;
-  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(Mappers), OPT(Iterator),
-             LocatorList>
+  std::tuple<OPT(MapType), OPT(MapTypeModifiers), OPT(RefModifier),
+             OPT(Mappers), OPT(Iterator), LocatorList>
       t;
 };
 
@@ -1243,10 +1266,11 @@ using ExtensionClausesT =
 template <typename T, typename I, typename E>
 using EmptyClausesT = std::variant<
     AcqRelT<T, I, E>, AcquireT<T, I, E>, CaptureT<T, I, E>, CompareT<T, I, E>,
-    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, InbranchT<T, I, E>,
-    MergeableT<T, I, E>, NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>,
-    NoOpenmpT<T, I, E>, NoParallelismT<T, I, E>, NotinbranchT<T, I, E>,
-    NowaitT<T, I, E>, ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
+    DynamicAllocatorsT<T, I, E>, FullT<T, I, E>, GraphIdT<T, I, E>,
+    GraphResetT<T, I, E>, InbranchT<T, I, E>, MergeableT<T, I, E>,
+    NogroupT<T, I, E>, NoOpenmpRoutinesT<T, I, E>, NoOpenmpT<T, I, E>,
+    NoParallelismT<T, I, E>, NotinbranchT<T, I, E>, NowaitT<T, I, E>,
+    ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
     ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
     ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
@@ -1261,11 +1285,12 @@ template <typename T, typename I, typename E>
 using TupleClausesT =
     std::variant<AffinityT<T, I, E>, AlignedT<T, I, E>, AllocateT<T, I, E>,
                  DefaultmapT<T, I, E>, DeviceT<T, I, E>, DistScheduleT<T, I, E>,
-                 DoacrossT<T, I, E>, FromT<T, I, E>, GrainsizeT<T, I, E>,
-                 IfT<T, I, E>, InitT<T, I, E>, InReductionT<T, I, E>,
-                 LastprivateT<T, I, E>, LinearT<T, I, E>, MapT<T, I, E>,
-                 NumTasksT<T, I, E>, OrderT<T, I, E>, ReductionT<T, I, E>,
-                 ScheduleT<T, I, E>, TaskReductionT<T, I, E>, ToT<T, I, E>>;
+                 DoacrossT<T, I, E>, DynGroupprivateT<T, I, E>, FromT<T, I, E>,
+                 GrainsizeT<T, I, E>, IfT<T, I, E>, InitT<T, I, E>,
+                 InReductionT<T, I, E>, LastprivateT<T, I, E>, LinearT<T, I, E>,
+                 MapT<T, I, E>, NumTasksT<T, I, E>, OrderT<T, I, E>,
+                 ReductionT<T, I, E>, ScheduleT<T, I, E>,
+                 TaskReductionT<T, I, E>, ToT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using UnionClausesT = std::variant<DependT<T, I, E>>;

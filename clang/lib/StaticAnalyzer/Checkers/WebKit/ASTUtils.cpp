@@ -177,7 +177,10 @@ bool tryToFindPtrOrigin(
       E = unaryOp->getSubExpr();
       continue;
     }
-
+    if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
+      E = BoxedExpr->getSubExpr();
+      continue;
+    }
     break;
   }
   // Some other expression.
@@ -205,6 +208,8 @@ bool isASafeCallArg(const Expr *E) {
         return true;
     }
   }
+  if (isa<CXXTemporaryObjectExpr>(E))
+    return true; // A temporary lives until the end of this statement.
   if (isConstOwnerPtrMemberExpr(E))
     return true;
 

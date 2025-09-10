@@ -36,13 +36,13 @@ void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
   // emitted into the PCM (-gmodules).
   if (ModuleFormat == "raw" && !DebugTypeExtRefs) {
 #define DEBUGOPT(Name, Bits, Default, Compatibility)                           \
-  if constexpr (CK::Compatibility == CK::Affecting)                            \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
     Name = Default;
 #define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)                     \
-  if constexpr (CK::Compatibility == CK::Affecting)                            \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
     Name = Default;
 #define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)                \
-  if constexpr (CK::Compatibility == CK::Affecting)                            \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
     set##Name(Default);
 #include "clang/Basic/DebugOptions.def"
   }

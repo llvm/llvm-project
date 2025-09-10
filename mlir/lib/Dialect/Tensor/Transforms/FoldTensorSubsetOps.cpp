@@ -112,9 +112,9 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
 
-  Operation *newOp = rewriter.create<vector::TransferReadOp>(
-      readOp.getLoc(), readOp.getVectorType(), extractSliceOp.getSource(),
-      sourceIndices,
+  Operation *newOp = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(), readOp.getVectorType(),
+      extractSliceOp.getSource(), sourceIndices,
       AffineMapAttr::get(expandDimsToRank(
           readOp.getPermutationMap(), extractSliceOp.getSourceType().getRank(),
           extractSliceOp.getDroppedDims())),

@@ -179,7 +179,7 @@ define i32 @neg_abs32_multiuse(i32 %x, ptr %y) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a2, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a2
-; RV64I-NEXT:    subw a2, a0, a2
+; RV64I-NEXT:    sub a2, a0, a2
 ; RV64I-NEXT:    negw a0, a2
 ; RV64I-NEXT:    sw a2, 0(a1)
 ; RV64I-NEXT:    ret

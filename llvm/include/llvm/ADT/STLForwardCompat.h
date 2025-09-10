@@ -36,7 +36,7 @@ template <typename T>
 using remove_cvref_t // NOLINT(readability-identifier-naming)
     = typename llvm::remove_cvref<T>::type;
 
-// TODO: Remove this in favor of std::type_identity<T> once we switch to C++23.
+// TODO: Remove this in favor of std::type_identity<T> once we switch to C++20.
 template <typename T>
 struct type_identity // NOLINT(readability-identifier-naming)
 {
@@ -44,7 +44,7 @@ struct type_identity // NOLINT(readability-identifier-naming)
 };
 
 // TODO: Remove this in favor of std::type_identity_t<T> once we switch to
-// C++23.
+// C++20.
 template <typename T>
 using type_identity_t // NOLINT(readability-identifier-naming)
     = typename llvm::type_identity<T>::type;
@@ -55,21 +55,13 @@ using type_identity_t // NOLINT(readability-identifier-naming)
 
 // TODO: Remove this in favor of std::optional<T>::transform once we switch to
 // C++23.
-template <typename T, typename Function>
-auto transformOptional(const std::optional<T> &O, const Function &F)
-    -> std::optional<decltype(F(*O))> {
-  if (O)
-    return F(*O);
-  return std::nullopt;
-}
-
-// TODO: Remove this in favor of std::optional<T>::transform once we switch to
-// C++23.
-template <typename T, typename Function>
-auto transformOptional(std::optional<T> &&O, const Function &F)
-    -> std::optional<decltype(F(*std::move(O)))> {
-  if (O)
-    return F(*std::move(O));
+template <typename Optional, typename Function,
+          typename Value = typename llvm::remove_cvref_t<Optional>::value_type>
+std::optional<std::invoke_result_t<Function, Value>>
+transformOptional(Optional &&O, Function &&F) {
+  if (O) {
+    return F(*std::forward<Optional>(O));
+  }
   return std::nullopt;
 }
 

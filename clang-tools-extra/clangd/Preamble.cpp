@@ -659,7 +659,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   WallTimer PreambleTimer;
   PreambleTimer.startTimer();
   auto BuiltPreamble = PrecompiledPreamble::Build(
-      CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
+      CI, ContentsBuffer.get(), Bounds, PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
       StoreInMemory, /*StoragePath=*/"", CapturedInfo);
 

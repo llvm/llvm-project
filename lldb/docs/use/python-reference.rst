@@ -748,7 +748,7 @@ For instance, if the string you are completing is "Test" and the available compl
 
    return {"completion": "Test1", "mode" : "partial"}
 
-and then lldb will add the "1" at the curson and advance it after the added string,
+and then lldb will add the "1" at the cursor and advance it after the added string,
 waiting for more completions.  But if "Test1" is the only completion, return:
 
 .. code-block:: python
@@ -933,7 +933,7 @@ that goal:
 Using the lldb.py module in Python
 ----------------------------------
 
-LLDB has all of its core code build into a shared library which gets used by
+LLDB has all of its core code built into a shared library which gets used by
 the `lldb` command line application. On macOS this shared library is a
 framework: LLDB.framework and on other unix variants the program is a shared
 library: lldb.so. LLDB also provides an lldb.py module that contains the
@@ -956,7 +956,7 @@ For sh and bash:
 
   $ export PYTHONPATH=`lldb -P`
 
-Alternately, you can append the LLDB Python directory to the sys.path list
+Alternatively, you can append the LLDB Python directory to the sys.path list
 directly in your Python code before importing the lldb module.
 
 Now your python scripts are ready to import the lldb module. Below is a python
@@ -1093,11 +1093,11 @@ Writing Target Stop-Hooks in Python
 
 Stop hooks fire whenever the process stops just before control is returned to the
 user.  Stop hooks can either be a set of lldb command-line commands, or can
-be implemented by a suitably defined Python class.  The Python based stop-hooks
-can also be passed as set of -key -value pairs when they are added, and those
+be implemented by a suitably defined Python class.  The Python-based stop-hooks
+can also be passed as a set of -key -value pairs when they are added, and those
 will get packaged up into a SBStructuredData Dictionary and passed to the
 constructor of the Python object managing the stop hook.  This allows for
-parametrization of the stop hooks.
+parameterization of the stop hooks.
 
 To add a Python-based stop hook, first define a class with the following methods:
 

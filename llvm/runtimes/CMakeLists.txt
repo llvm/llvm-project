@@ -482,8 +482,10 @@ if(build_runtimes)
                 llvm-lto
                 llvm-jitlink
                 llvm-nm
+                llvm-strip
                 llvm-objdump
                 llvm-profdata
+                llvm-readobj
                 llvm-size
                 llvm-symbolizer
                 llvm-xray
@@ -499,6 +501,9 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    if(WIN32)
+      list(APPEND extra_deps KillTheDoctor)
+    endif()
   endif()
 
   # Forward user-provived system configuration to runtimes for requirement introspection.
@@ -514,6 +519,14 @@ if(build_runtimes)
   # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
   if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
     foreach(dep clang llvm-as llvm-link opt)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+  # Tools needed by build_symbolizer.sh.
+  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+    foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()

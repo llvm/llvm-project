@@ -48,7 +48,7 @@ static int getPrecedence(const BinaryOperator *BinOp) {
     return 0;
   }
 }
-static void addParantheses(const BinaryOperator *BinOp,
+static void addParentheses(const BinaryOperator *BinOp,
                            const BinaryOperator *ParentBinOp,
                            ClangTidyCheck *Check,
                            const clang::SourceManager &SM,
@@ -81,9 +81,9 @@ static void addParantheses(const BinaryOperator *BinOp,
     }
   }
 
-  addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
+  addParentheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
                  BinOp, Check, SM, LangOpts);
-  addParantheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
+  addParentheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
                  BinOp, Check, SM, LangOpts);
 }
 
@@ -92,7 +92,7 @@ void MathMissingParenthesesCheck::check(
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const SourceManager &SM = *Result.SourceManager;
   const clang::LangOptions &LO = Result.Context->getLangOpts();
-  addParantheses(BinOp, nullptr, this, SM, LO);
+  addParentheses(BinOp, nullptr, this, SM, LO);
 }
 
 } // namespace clang::tidy::readability

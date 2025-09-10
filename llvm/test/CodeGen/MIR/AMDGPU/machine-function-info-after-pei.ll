@@ -16,6 +16,8 @@
 ; AFTER-PEI-NEXT: waveLimiter:     false
 ; AFTER-PEI-NEXT: hasSpilledSGPRs: true
 ; AFTER-PEI-NEXT: hasSpilledVGPRs: false
+; AFTER-PEI-NEXT: numWaveDispatchSGPRs: 0
+; AFTER-PEI-NEXT: numWaveDispatchVGPRs: 0
 ; AFTER-PEI-NEXT: scratchRSrcReg:  '$sgpr68_sgpr69_sgpr70_sgpr71'
 ; AFTER-PEI-NEXT: frameOffsetReg:  '$fp_reg'
 ; AFTER-PEI-NEXT: stackPtrOffsetReg: '$sgpr32'
@@ -46,6 +48,7 @@
 ; AFTER-PEI-NEXT: hasInitWholeWave: false
 ; AFTER-PEI-NEXT: dynamicVGPRBlockSize: 0
 ; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
+; AFTER-PEI-NEXT: isWholeWaveFunction: false
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {
   %wide.sgpr0 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0

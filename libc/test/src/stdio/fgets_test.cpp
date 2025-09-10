@@ -20,7 +20,7 @@ using LlvmLibcFgetsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
-  constexpr char FILENAME[] = "testdata/fgets.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/fgets.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "123456789\n"

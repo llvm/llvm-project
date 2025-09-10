@@ -106,6 +106,7 @@ Clang-Tidy Checks
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
    :doc:`bugprone-infinite-loop <bugprone/infinite-loop>`,
    :doc:`bugprone-integer-division <bugprone/integer-division>`,
+   :doc:`bugprone-invalid-enum-default-initialization <bugprone/invalid-enum-default-initialization>`,
    :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
    :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
    :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
@@ -156,6 +157,7 @@ Clang-Tidy Checks
    :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,
    :doc:`bugprone-unchecked-optional-access <bugprone/unchecked-optional-access>`,
+   :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
@@ -172,7 +174,6 @@ Clang-Tidy Checks
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
    :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
-   :doc:`cert-err34-c <cert/err34-c>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
@@ -200,6 +201,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
    :doc:`cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
+   :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access <cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines/pro-bounds-constant-array-index>`, "Yes"
    :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines/pro-bounds-pointer-arithmetic>`,
    :doc:`cppcoreguidelines-pro-type-const-cast <cppcoreguidelines/pro-type-const-cast>`,
@@ -236,6 +238,7 @@ Clang-Tidy Checks
    :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,
    :doc:`google-readability-casting <google/readability-casting>`,
    :doc:`google-readability-todo <google/readability-todo>`,
+   :doc:`google-runtime-float <google/runtime-float>`,
    :doc:`google-runtime-int <google/runtime-int>`,
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
@@ -252,6 +255,8 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
+   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
+   :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
@@ -269,6 +274,7 @@ Clang-Tidy Checks
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
+   :doc:`misc-override-with-different-visibility <misc/override-with-different-visibility>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
@@ -432,6 +438,7 @@ Check aliases
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err61-cpp <cert/err61-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,

@@ -276,14 +276,14 @@ func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc: !tR
 
 // -----
 
-!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x8xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
 !mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
-func.func @tma_load_1(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
+func.func @tma_load_1(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x8xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
   %c0 = arith.constant 0 : index
   // Pass fine
-  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x32xf32,3>
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x8xf32,3>
   // expected-error @+1 {{Maximum 5 coordinates are supported.}}
-  nvgpu.tma.async.load %desc[%c0, %c0, %c0, %c0, %c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x32xf32,3>
+  nvgpu.tma.async.load %desc[%c0, %c0, %c0, %c0, %c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x8xf32,3>
   return
 }
 // -----
@@ -298,17 +298,17 @@ func.func @tma_load_2(%desc: !desc,  %buffer1: memref<128xf32,3>, %buffer2: memr
 }
 // -----
 
-!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x8xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
 !mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
-func.func @tma_load_3(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
+func.func @tma_load_3(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x8xf32>, %mbarrier: !mbarrier) {
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{the destination memref has incorrect address space, it must be shared memory address space}}
-  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer3 : !desc, !mbarrier -> memref<32x32xf32>
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer3 : !desc, !mbarrier -> memref<32x8xf32>
   return
 }
 // -----
 
-!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x8xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
 !mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 func.func @tma_load_4(%desc: !desc,  %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
   %c0 = arith.constant 0 : index
@@ -319,7 +319,7 @@ func.func @tma_load_4(%desc: !desc,  %buffer1: memref<128xf32,3>, %buffer2: memr
 
 // -----
 
-!desc = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf16,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf16,3>, swizzle=swizzle_128b, l2promo = none, oob = zero, interleave = none>
 func.func @tma_generate_descriptor_incorrect_last_dim(%b0 : index, %b1 : index, %mem : memref<*xf16>) {
   // expected-error @+1 {{the tensormap descriptor must have last dimension of 128 bytes but it is 256 bytes}}
   %descA = nvgpu.tma.create.descriptor %mem box[%b0, %b1] : memref<*xf16> -> !desc
@@ -328,7 +328,7 @@ func.func @tma_generate_descriptor_incorrect_last_dim(%b0 : index, %b1 : index, 
 // -----
 
 
-!desc = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<64x128xf32,3>, swizzle=swizzle_128b, l2promo = none, oob = zero, interleave = none>
 !mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 func.func @tma_generate_descriptor_incorrect_last_dim(%desc: !desc,  %buffer2: memref<64x128xf32,3>, %mbarrier: !mbarrier) {
   %c0 = arith.constant 0 : index
@@ -377,4 +377,15 @@ func.func @check_matrixC_dim(%arg0: vector<4x4xf16>, %arg1: vector<2x2xf16>, %ar
   // expected-error @+1 {{matrixC must be 2 dimensional vector}}
   %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x4xf16>, vector<2x2xf16>, vector<4xf16>) -> vector<2x2xf16>
   return %d : vector<2x2xf16>
+}
+
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x8xi8,3>, swizzle=none, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_last_dim_bytes(%desc: !desc, %buffer: memref<32x8xi8,3>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{the bytes in the last dimension of the tensor map must be a multiple of 16}}
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer : !desc, !mbarrier -> memref<32x8xi8,3>
+  return
 }

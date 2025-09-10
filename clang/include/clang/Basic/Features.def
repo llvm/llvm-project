@@ -128,6 +128,7 @@ FEATURE(attribute_overloadable, true)
 FEATURE(attribute_unavailable_with_message, true)
 FEATURE(attribute_unused_on_fields, true)
 FEATURE(attribute_diagnose_if_objc, true)
+FEATURE(ext_vector_type_boolean, true)
 FEATURE(blocks, LangOpts.Blocks)
 FEATURE(c_thread_safety_attributes, true)
 FEATURE(cxx_exceptions, LangOpts.CXXExceptions)
@@ -147,19 +148,28 @@ FEATURE(type_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Type))
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
-FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
-EXTENSION(ptrauth_qualifier, LangOpts.PointerAuthIntrinsics)
+FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics &&
+                            PP.getTargetInfo().getTriple().isOSDarwin())
+FEATURE(ptrauth_qualifier, LangOpts.PointerAuthIntrinsics &&
+                           PP.getTargetInfo().getTriple().isOSDarwin())
 FEATURE(ptrauth_calls, LangOpts.PointerAuthCalls)
 FEATURE(ptrauth_returns, LangOpts.PointerAuthReturns)
 FEATURE(ptrauth_vtable_pointer_address_discrimination, LangOpts.PointerAuthVTPtrAddressDiscrimination)
 FEATURE(ptrauth_vtable_pointer_type_discrimination, LangOpts.PointerAuthVTPtrTypeDiscrimination)
 FEATURE(ptrauth_type_info_vtable_pointer_discrimination, LangOpts.PointerAuthTypeInfoVTPtrDiscrimination)
 FEATURE(ptrauth_member_function_pointer_type_discrimination, LangOpts.PointerAuthCalls)
+FEATURE(ptrauth_signed_block_descriptors, LangOpts.PointerAuthBlockDescriptorPointers)
 FEATURE(ptrauth_function_pointer_type_discrimination, LangOpts.PointerAuthFunctionTypeDiscrimination)
 FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
 FEATURE(ptrauth_init_fini, LangOpts.PointerAuthInitFini)
 FEATURE(ptrauth_init_fini_address_discrimination, LangOpts.PointerAuthInitFiniAddressDiscrimination)
 FEATURE(ptrauth_elf_got, LangOpts.PointerAuthELFGOT)
+
+FEATURE(ptrauth_objc_isa, LangOpts.PointerAuthObjcIsa)
+FEATURE(ptrauth_objc_interface_sel, LangOpts.PointerAuthObjcInterfaceSel)
+FEATURE(ptrauth_objc_signable_class, LangOpts.PointerAuthIntrinsics)
+FEATURE(ptrauth_objc_method_list_pointer, LangOpts.PointerAuthCalls)
+
 EXTENSION(swiftcc,
   PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
   clang::TargetInfo::CCCR_OK)
@@ -297,6 +307,14 @@ FEATURE(is_trivially_assignable, LangOpts.CPlusPlus)
 FEATURE(is_trivially_constructible, LangOpts.CPlusPlus)
 FEATURE(is_trivially_copyable, LangOpts.CPlusPlus)
 FEATURE(is_union, LangOpts.CPlusPlus)
+FEATURE(cfi_sanitizer, LangOpts.Sanitize.hasOneOf(SanitizerKind::CFI))
+FEATURE(cfi_cast_strict_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFICastStrict))
+FEATURE(cfi_derived_cast_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFIDerivedCast))
+FEATURE(cfi_icall_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFIICall))
+FEATURE(cfi_mfcall_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFIMFCall))
+FEATURE(cfi_unrelated_cast_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFIUnrelatedCast))
+FEATURE(cfi_nvcall_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFINVCall))
+FEATURE(cfi_vcall_sanitizer, LangOpts.Sanitize.has(SanitizerKind::CFIVCall))
 FEATURE(kcfi, LangOpts.Sanitize.has(SanitizerKind::KCFI))
 FEATURE(kcfi_arity, LangOpts.Sanitize.has(SanitizerKind::KCFI))
 FEATURE(modules, LangOpts.Modules)
@@ -365,6 +383,9 @@ FEATURE(clang_atomic_attributes, true)
 // CUDA/HIP Features
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.OffloadImplicitHostDeviceTemplates)
+
+// C++2d type-aware allocators
+EXTENSION(cxx_type_aware_allocators, true)
 
 #undef EXTENSION
 #undef FEATURE

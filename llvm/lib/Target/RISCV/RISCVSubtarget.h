@@ -186,6 +186,12 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
+  bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
+
+  bool hasCZEROLike() const {
+    return HasStdExtZicond || HasVendorXVentanaCondOps;
+  }
+
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
@@ -395,11 +401,11 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                 unsigned NumRegionInstrs) const override;
+                                 const SchedRegion &Region) const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

@@ -73,7 +73,8 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
 
   static constexpr llvm::StringLiteral g_lldb_autogen_nspair("__lldb_autogen_nspair");
 
-  compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(g_lldb_autogen_nspair);
+  compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(
+      scratch_ts_sp->getASTContext(), g_lldb_autogen_nspair);
 
   if (!compiler_type) {
     compiler_type = scratch_ts_sp->CreateRecordType(

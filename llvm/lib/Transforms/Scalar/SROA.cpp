@@ -315,25 +315,9 @@ calculateFragment(DILocalVariable *Variable,
   return UseFrag;
 }
 
-static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
-  return DebugVariable(DVI->getVariable(), std::nullopt,
-                       DVI->getDebugLoc().getInlinedAt());
-}
 static DebugVariable getAggregateVariable(DbgVariableRecord *DVR) {
   return DebugVariable(DVR->getVariable(), std::nullopt,
                        DVR->getDebugLoc().getInlinedAt());
-}
-
-/// Helpers for handling new and old debug info modes in migrateDebugInfo.
-/// These overloads unwrap a DbgInstPtr {Instruction* | DbgRecord*} union based
-/// on the \p Unused parameter type.
-DbgVariableRecord *UnwrapDbgInstPtr(DbgInstPtr P, DbgVariableRecord *Unused) {
-  (void)Unused;
-  return static_cast<DbgVariableRecord *>(cast<DbgRecord *>(P));
-}
-DbgAssignIntrinsic *UnwrapDbgInstPtr(DbgInstPtr P, DbgAssignIntrinsic *Unused) {
-  (void)Unused;
-  return static_cast<DbgAssignIntrinsic *>(cast<Instruction *>(P));
 }
 
 /// Find linked dbg.assign and generate a new one with the correct
@@ -355,10 +339,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
                              uint64_t SliceSizeInBits, Instruction *OldInst,
                              Instruction *Inst, Value *Dest, Value *Value,
                              const DataLayout &DL) {
-  auto MarkerRange = at::getAssignmentMarkers(OldInst);
   auto DVRAssignMarkerRange = at::getDVRAssignmentMarkers(OldInst);
   // Nothing to do if OldInst has no linked dbg.assign intrinsics.
-  if (MarkerRange.empty() && DVRAssignMarkerRange.empty())
+  if (DVRAssignMarkerRange.empty())
     return;
 
   LLVM_DEBUG(dbgs() << "  migrateDebugInfo\n");
@@ -376,9 +359,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   /// Map of aggregate variables to their fragment associated with OldAlloca.
   DenseMap<DebugVariable, std::optional<DIExpression::FragmentInfo>>
       BaseFragments;
-  for (auto *DAI : at::getAssignmentMarkers(OldAlloca))
-    BaseFragments[getAggregateVariable(DAI)] =
-        DAI->getExpression()->getFragmentInfo();
   for (auto *DVR : at::getDVRAssignmentMarkers(OldAlloca))
     BaseFragments[getAggregateVariable(DVR)] =
         DVR->getExpression()->getFragmentInfo();
@@ -391,7 +371,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   DIBuilder DIB(*OldInst->getModule(), /*AllowUnresolved*/ false);
   assert(OldAlloca->isStaticAlloca());
 
-  auto MigrateDbgAssign = [&](auto *DbgAssign) {
+  auto MigrateDbgAssign = [&](DbgVariableRecord *DbgAssign) {
     LLVM_DEBUG(dbgs() << "      existing dbg.assign is: " << *DbgAssign
                       << "\n");
     auto *Expr = DbgAssign->getExpression();
@@ -445,11 +425,10 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     }
 
     ::Value *NewValue = Value ? Value : DbgAssign->getValue();
-    auto *NewAssign = UnwrapDbgInstPtr(
+    DbgVariableRecord *NewAssign = cast<DbgVariableRecord>(cast<DbgRecord *>(
         DIB.insertDbgAssign(Inst, NewValue, DbgAssign->getVariable(), Expr,
                             Dest, DIExpression::get(Expr->getContext(), {}),
-                            DbgAssign->getDebugLoc()),
-        DbgAssign);
+                            DbgAssign->getDebugLoc())));
 
     // If we've updated the value but the original dbg.assign has an arglist
     // then kill it now - we can't use the requested new value.
@@ -486,7 +465,6 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     LLVM_DEBUG(dbgs() << "Created new assign: " << *NewAssign << "\n");
   };
 
-  for_each(MarkerRange, MigrateDbgAssign);
   for_each(DVRAssignMarkerRange, MigrateDbgAssign);
 }
 
@@ -1258,8 +1236,7 @@ private:
            "Map index doesn't point back to a slice with this user.");
   }
 
-  // Disable SRoA for any intrinsics except for lifetime invariants and
-  // invariant group.
+  // Disable SRoA for any intrinsics except for lifetime invariants.
   // FIXME: What about debug intrinsics? This matches old behavior, but
   // doesn't make sense.
   void visitIntrinsicInst(IntrinsicInst &II) {
@@ -1272,16 +1249,7 @@ private:
       return PI.setAborted(&II);
 
     if (II.isLifetimeStartOrEnd()) {
-      ConstantInt *Length = cast<ConstantInt>(II.getArgOperand(0));
-      uint64_t Size = std::min(AllocSize - Offset.getLimitedValue(),
-                               Length->getLimitedValue());
-      insertUse(II, Offset, Size, true);
-      return;
-    }
-
-    if (II.isLaunderOrStripInvariantGroup()) {
       insertUse(II, Offset, AllocSize, true);
-      enqueueUsers(II);
       return;
     }
 
@@ -3253,8 +3221,7 @@ private:
       // In theory we should call migrateDebugInfo here. However, we do not
       // emit dbg.assign intrinsics for mem intrinsics storing through non-
       // constant geps, or storing a variable number of bytes.
-      assert(at::getAssignmentMarkers(&II).empty() &&
-             at::getDVRAssignmentMarkers(&II).empty() &&
+      assert(at::getDVRAssignmentMarkers(&II).empty() &&
              "AT: Unexpected link to non-const GEP");
       deleteIfTriviallyDead(OldPtr);
       return false;
@@ -3403,13 +3370,11 @@ private:
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
-        auto UpdateAssignAddress = [&](auto *DbgAssign) {
+        for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(&II)) {
           if (llvm::is_contained(DbgAssign->location_ops(), II.getDest()) ||
               DbgAssign->getAddress() == II.getDest())
             DbgAssign->replaceVariableLocationOp(II.getDest(), AdjustedPtr);
-        };
-        for_each(at::getAssignmentMarkers(&II), UpdateAssignAddress);
-        for_each(at::getDVRAssignmentMarkers(&II), UpdateAssignAddress);
+        }
         II.setDest(AdjustedPtr);
         II.setDestAlignment(SliceAlign);
       } else {
@@ -3446,8 +3411,7 @@ private:
 
       // Rewrite the size as needed.
       if (NewEndOffset != EndOffset)
-        II.setLength(ConstantInt::get(II.getLength()->getType(),
-                                      NewEndOffset - NewBeginOffset));
+        II.setLength(NewEndOffset - NewBeginOffset);
       return false;
     }
     // Record this instruction for deletion.
@@ -3618,8 +3582,7 @@ private:
   }
 
   bool visitIntrinsicInst(IntrinsicInst &II) {
-    assert((II.isLifetimeStartOrEnd() || II.isLaunderOrStripInvariantGroup() ||
-            II.isDroppable()) &&
+    assert((II.isLifetimeStartOrEnd() || II.isDroppable()) &&
            "Unexpected intrinsic!");
     LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
 
@@ -3633,33 +3596,14 @@ private:
       return true;
     }
 
-    if (II.isLaunderOrStripInvariantGroup())
-      return true;
-
-    assert(II.getArgOperand(1) == OldPtr);
-    // Lifetime intrinsics are only promotable if they cover the whole alloca.
-    // Therefore, we drop lifetime intrinsics which don't cover the whole
-    // alloca.
-    // (In theory, intrinsics which partially cover an alloca could be
-    // promoted, but PromoteMemToReg doesn't handle that case.)
-    // FIXME: Check whether the alloca is promotable before dropping the
-    // lifetime intrinsics?
-    if (NewBeginOffset != NewAllocaBeginOffset ||
-        NewEndOffset != NewAllocaEndOffset)
-      return true;
-
-    ConstantInt *Size =
-        ConstantInt::get(cast<IntegerType>(II.getArgOperand(0)->getType()),
-                         NewEndOffset - NewBeginOffset);
-    // Lifetime intrinsics always expect an i8* so directly get such a pointer
-    // for the new alloca slice.
+    assert(II.getArgOperand(0) == OldPtr);
     Type *PointerTy = IRB.getPtrTy(OldPtr->getType()->getPointerAddressSpace());
     Value *Ptr = getNewAllocaSlicePtr(IRB, PointerTy);
     Value *New;
     if (II.getIntrinsicID() == Intrinsic::lifetime_start)
-      New = IRB.CreateLifetimeStart(Ptr, Size);
+      New = IRB.CreateLifetimeStart(Ptr);
     else
-      New = IRB.CreateLifetimeEnd(Ptr, Size);
+      New = IRB.CreateLifetimeEnd(Ptr);
 
     (void)New;
     LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
@@ -4027,8 +3971,7 @@ private:
                          Store->getPointerOperand(), Store->getValueOperand(),
                          DL);
       } else {
-        assert(at::getAssignmentMarkers(Store).empty() &&
-               at::getDVRAssignmentMarkers(Store).empty() &&
+        assert(at::getDVRAssignmentMarkers(Store).empty() &&
                "AT: unexpected debug.assign linked to store through "
                "unbounded GEP");
       }
@@ -5119,34 +5062,11 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 }
 
 // There isn't a shared interface to get the "address" parts out of a
-// dbg.declare and dbg.assign, so provide some wrappers now for
-// both debug intrinsics and records.
-const Value *getAddress(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->getAddress();
-  return cast<DbgDeclareInst>(DVI)->getAddress();
-}
-
-const Value *getAddress(const DbgVariableRecord *DVR) {
-  return DVR->getAddress();
-}
-
-bool isKillAddress(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->isKillAddress();
-  return cast<DbgDeclareInst>(DVI)->isKillLocation();
-}
-
+// dbg.declare and dbg.assign, so provide some wrappers.
 bool isKillAddress(const DbgVariableRecord *DVR) {
   if (DVR->getType() == DbgVariableRecord::LocationType::Assign)
     return DVR->isKillAddress();
   return DVR->isKillLocation();
-}
-
-const DIExpression *getAddressExpression(const DbgVariableIntrinsic *DVI) {
-  if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-    return DAI->getAddressExpression();
-  return cast<DbgDeclareInst>(DVI)->getExpression();
 }
 
 const DIExpression *getAddressExpression(const DbgVariableRecord *DVR) {
@@ -5234,66 +5154,6 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
     Ops.push_back(Frag.SizeInBits);
   }
   return DIExpression::get(Expr->getContext(), Ops);
-}
-
-/// Insert a new dbg.declare.
-/// \p Orig Original to copy debug loc and variable from.
-/// \p NewAddr Location's new base address.
-/// \p NewAddrExpr New expression to apply to address.
-/// \p BeforeInst Insert position.
-/// \p NewFragment New fragment (absolute, non-relative).
-/// \p BitExtractAdjustment Offset to apply to any extract_bits op.
-static void
-insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig, AllocaInst *NewAddr,
-                 DIExpression *NewAddrExpr, Instruction *BeforeInst,
-                 std::optional<DIExpression::FragmentInfo> NewFragment,
-                 int64_t BitExtractAdjustment) {
-  if (NewFragment)
-    NewAddrExpr = createOrReplaceFragment(NewAddrExpr, *NewFragment,
-                                          BitExtractAdjustment);
-  if (!NewAddrExpr)
-    return;
-
-  DIB.insertDeclare(NewAddr, Orig->getVariable(), NewAddrExpr,
-                    Orig->getDebugLoc(), BeforeInst->getIterator());
-}
-
-/// Insert a new dbg.assign.
-/// \p Orig Original to copy debug loc, variable, value and value expression
-///    from.
-/// \p NewAddr Location's new base address.
-/// \p NewAddrExpr New expression to apply to address.
-/// \p BeforeInst Insert position.
-/// \p NewFragment New fragment (absolute, non-relative).
-/// \p BitExtractAdjustment Offset to apply to any extract_bits op.
-static void
-insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig, AllocaInst *NewAddr,
-                 DIExpression *NewAddrExpr, Instruction *BeforeInst,
-                 std::optional<DIExpression::FragmentInfo> NewFragment,
-                 int64_t BitExtractAdjustment) {
-  // DIBuilder::insertDbgAssign will insert the #dbg_assign after NewAddr.
-  (void)BeforeInst;
-
-  // A dbg.assign puts fragment info in the value expression only. The address
-  // expression has already been built: NewAddrExpr.
-  DIExpression *NewFragmentExpr = Orig->getExpression();
-  if (NewFragment)
-    NewFragmentExpr = createOrReplaceFragment(NewFragmentExpr, *NewFragment,
-                                              BitExtractAdjustment);
-  if (!NewFragmentExpr)
-    return;
-
-  // Apply a DIAssignID to the store if it doesn't already have it.
-  if (!NewAddr->hasMetadata(LLVMContext::MD_DIAssignID)) {
-    NewAddr->setMetadata(LLVMContext::MD_DIAssignID,
-                         DIAssignID::getDistinct(NewAddr->getContext()));
-  }
-
-  Instruction *NewAssign = cast<Instruction *>(DIB.insertDbgAssign(
-      NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
-      NewAddrExpr, Orig->getDebugLoc()));
-  LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
-  (void)NewAssign;
 }
 
 /// Insert a new DbgRecord.
@@ -5457,12 +5317,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  auto MigrateOne = [&](auto *DbgVariable) {
+  auto MigrateOne = [&](DbgVariableRecord *DbgVariable) {
     // Can't overlap with undef memory.
     if (isKillAddress(DbgVariable))
       return;
 
-    const Value *DbgPtr = getAddress(DbgVariable);
+    const Value *DbgPtr = DbgVariable->getAddress();
     DIExpression::FragmentInfo VarFrag =
         DbgVariable->getFragmentOrEntireVariable();
     // Get the address expression constant offset if one exists and the ops
@@ -5543,7 +5403,6 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();
       };
-      for_each(findDbgDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRDeclares(Fragment.Alloca), RemoveOne);
       for_each(findDVRValues(Fragment.Alloca), RemoveOne);
       insertNewDbgInst(DIB, DbgVariable, Fragment.Alloca, NewExpr, &AI,
@@ -5553,10 +5412,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  for_each(findDbgDeclares(&AI), MigrateOne);
   for_each(findDVRDeclares(&AI), MigrateOne);
   for_each(findDVRValues(&AI), MigrateOne);
-  for_each(at::getAssignmentMarkers(&AI), MigrateOne);
   for_each(at::getDVRAssignmentMarkers(&AI), MigrateOne);
 
   return Changed;
@@ -5777,8 +5634,6 @@ bool SROA::deleteDeadInstructions(
     // not be able to find it.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      for (DbgDeclareInst *OldDII : findDbgDeclares(AI))
-        OldDII->eraseFromParent();
       for (DbgVariableRecord *OldDII : findDVRDeclares(AI))
         OldDII->eraseFromParent();
     }

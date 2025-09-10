@@ -161,7 +161,7 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:    sltu t0, t0, a5
 ; RV64IA-NEXT:    addi t0, t0, -1
 ; RV64IA-NEXT:    and t0, t0, a1
-; RV64IA-NEXT:    subw a6, a6, t0
+; RV64IA-NEXT:    sub a6, a6, t0
 ; RV64IA-NEXT:    zext.b a6, a6
 ; RV64IA-NEXT:    sllw a6, a6, a0
 ; RV64IA-NEXT:    and a3, a3, a4
@@ -345,7 +345,7 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:    sltu t1, t1, a6
 ; RV64IA-NEXT:    addi t1, t1, -1
 ; RV64IA-NEXT:    and t1, t1, a1
-; RV64IA-NEXT:    subw a7, a7, t1
+; RV64IA-NEXT:    sub a7, a7, t1
 ; RV64IA-NEXT:    and a7, a7, a3
 ; RV64IA-NEXT:    sllw a7, a7, a0
 ; RV64IA-NEXT:    and a4, a4, a5

@@ -158,32 +158,9 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 
     // Replace MetadataAsValue(ValueAsMetadata(OrigHeaderVal)) uses in debug
     // intrinsics.
-    SmallVector<DbgValueInst *, 1> DbgValues;
     SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
-    llvm::findDbgValues(DbgValues, OrigHeaderVal, &DbgVariableRecords);
-    for (auto &DbgValue : DbgValues) {
-      // The original users in the OrigHeader are already using the original
-      // definitions.
-      BasicBlock *UserBB = DbgValue->getParent();
-      if (UserBB == OrigHeader)
-        continue;
+    llvm::findDbgValues(OrigHeaderVal, DbgVariableRecords);
 
-      // Users in the OrigPreHeader need to use the value to which the
-      // original definitions are mapped and anything else can be handled by
-      // the SSAUpdater. To avoid adding PHINodes, check if the value is
-      // available in UserBB, if not substitute poison.
-      Value *NewVal;
-      if (UserBB == OrigPreheader)
-        NewVal = OrigPreHeaderVal;
-      else if (SSA.HasValueForBlock(UserBB))
-        NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
-      else
-        NewVal = PoisonValue::get(OrigHeaderVal->getType());
-      DbgValue->replaceVariableLocationOp(OrigHeaderVal, NewVal);
-    }
-
-    // RemoveDIs: duplicate implementation for non-instruction debug-info
-    // storage in DbgVariableRecords.
     for (DbgVariableRecord *DVR : DbgVariableRecords) {
       // The original users in the OrigHeader are already using the original
       // definitions.

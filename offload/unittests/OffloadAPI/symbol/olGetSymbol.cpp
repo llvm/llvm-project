@@ -41,6 +41,14 @@ TEST_P(olGetSymbolKernelTest, Success) {
   ASSERT_NE(Kernel, nullptr);
 }
 
+TEST_P(olGetSymbolKernelTest, SuccessSamePtr) {
+  ol_symbol_handle_t KernelA = nullptr;
+  ol_symbol_handle_t KernelB = nullptr;
+  ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &KernelA));
+  ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &KernelB));
+  ASSERT_EQ(KernelA, KernelB);
+}
+
 TEST_P(olGetSymbolKernelTest, InvalidNullProgram) {
   ol_symbol_handle_t Kernel = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
@@ -70,6 +78,16 @@ TEST_P(olGetSymbolGlobalTest, Success) {
   ASSERT_SUCCESS(
       olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
   ASSERT_NE(Global, nullptr);
+}
+
+TEST_P(olGetSymbolGlobalTest, SuccessSamePtr) {
+  ol_symbol_handle_t GlobalA = nullptr;
+  ol_symbol_handle_t GlobalB = nullptr;
+  ASSERT_SUCCESS(
+      olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &GlobalA));
+  ASSERT_SUCCESS(
+      olGetSymbol(Program, "global", OL_SYMBOL_KIND_GLOBAL_VARIABLE, &GlobalB));
+  ASSERT_EQ(GlobalA, GlobalB);
 }
 
 TEST_P(olGetSymbolGlobalTest, InvalidNullProgram) {

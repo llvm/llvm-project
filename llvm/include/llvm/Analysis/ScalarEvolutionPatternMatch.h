@@ -91,6 +91,10 @@ inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
   return V;
 }
 
+inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
+  return V;
+}
+
 /// Match a specified const SCEV *.
 struct specificscev_ty {
   const SCEV *Expr;
@@ -111,6 +115,18 @@ struct is_specific_cst {
 
 /// Match an SCEV constant with a plain unsigned integer.
 inline cst_pred_ty<is_specific_cst> m_scev_SpecificInt(uint64_t V) { return V; }
+
+struct is_specific_signed_cst {
+  int64_t CV;
+  is_specific_signed_cst(int64_t C) : CV(C) {}
+  bool isValue(const APInt &C) const { return C.trySExtValue() == CV; }
+};
+
+/// Match an SCEV constant with a plain signed integer (sign-extended value will
+/// be matched)
+inline cst_pred_ty<is_specific_signed_cst> m_scev_SpecificSInt(int64_t V) {
+  return V;
+}
 
 struct bind_cst_ty {
   const APInt *&CR;
@@ -158,6 +174,12 @@ template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVZeroExtendExpr, Op0_t>
 m_scev_ZExt(const Op0_t &Op0) {
   return m_scev_Unary<SCEVZeroExtendExpr>(Op0);
+}
+
+template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>
+m_scev_PtrToInt(const Op0_t &Op0) {
+  return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
 }
 
 /// Match a binary SCEV.
