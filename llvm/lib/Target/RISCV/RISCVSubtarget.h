@@ -187,7 +187,7 @@ public:
   }
 
   bool hasCZEROLike() const {
-    return HadStdExtZicond || HasVendorXVentanaCondOps;
+    return HasStdExtZicond || HasVendorXVentanaCondOps;
   }
 
   bool hasConditionalMoveFusion() const {
