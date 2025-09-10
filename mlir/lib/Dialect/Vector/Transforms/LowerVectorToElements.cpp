@@ -20,7 +20,7 @@ using namespace mlir;
 
 namespace {
 
-struct UnrollToElements final : OpRewritePattern<vector::ToElementsOp> {
+struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ToElementsOp op,
@@ -38,7 +38,7 @@ struct UnrollToElements final : OpRewritePattern<vector::ToElementsOp> {
     SmallVector<Value, 0> results;
     for (const Value &vector : vectors) {
       auto subElements =
-          rewriter.create<vector::ToElementsOp>(op.getLoc(), vector);
+          vector::ToElementsOp::create(rewriter, op.getLoc(), vector);
       llvm::append_range(results, subElements.getResults());
     }
     rewriter.replaceOp(op, results);

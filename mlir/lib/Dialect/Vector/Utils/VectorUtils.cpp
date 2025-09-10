@@ -401,10 +401,10 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
 ///
 /// will produce the following IR changes
 ///
-///   %v0 = vector.extract %v[0] : vector<axbx...>
-///   %v1 = vector.extract %v[1] : vector<axbx...>
+///   %v0 = vector.extract %v[0] : vector<axbx...> from vector<nxaxb...>
+///   %v1 = vector.extract %v[1] : vector<axbx...> from vector<nxaxb...>
 ///   ...
-///   %vnminusone = vector.extract %v[n-1] : vector<axbx...>
+///   %vnminusone = vector.extract %v[n-1] : vector<axbx...> from ...
 ///
 /// and returns SmallVector<Value> r = {[[%v0]], [[%v1]], ..., [[%vnminusone]]}
 FailureOr<SmallVector<Value>>
