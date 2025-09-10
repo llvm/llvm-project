@@ -1249,10 +1249,33 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
         SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
     const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
     if (isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product)) {
-      // Distance greater than trip count - no dependence
-      ++StrongSIVindependence;
-      ++StrongSIVsuccesses;
-      return true;
+      // Check if this involves symbolic expressions where we might be too
+      // conservative.
+      if (isa<SCEVUnknown>(Delta) || isa<SCEVUnknown>(Coeff) ||
+          !isa<SCEVConstant>(AbsDelta) || !isa<SCEVConstant>(Product)) {
+        // For symbolic expressions, add runtime assumption rather than
+        // rejecting.
+        const SCEVPredicate *BoundPred =
+            SE->getComparePredicate(ICmpInst::ICMP_SLE, AbsDelta, Product);
+        if (UnderRuntimeAssumptions) {
+          SmallVector<const SCEVPredicate *, 4> NewPreds(
+              Assumptions.getPredicates());
+          NewPreds.push_back(BoundPred);
+          const_cast<DependenceInfo *>(this)->Assumptions =
+              SCEVUnionPredicate(NewPreds, *SE);
+          LLVM_DEBUG(dbgs() << "\t    Added runtime bound assumption\n");
+        } else {
+          // Cannot add runtime assumptions, let more complex tests try.
+          LLVM_DEBUG(dbgs() << "\t    Would need runtime bound assumption but "
+                               "not allowed. Failing this test.\n");
+          return false;
+        }
+      } else {
+        // Distance definitely greater than trip count - no dependence
+        ++StrongSIVindependence;
+        ++StrongSIVsuccesses;
+        return true;
+      }
     }
   }
 
@@ -1293,9 +1316,40 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
       Result.DV[Level].Distance = Delta; // since X/1 == X
       NewConstraint.setDistance(Delta, CurLoop);
     } else {
-      Result.Consistent = false;
-      NewConstraint.setLine(Coeff, SE->getNegativeSCEV(Coeff),
-                            SE->getNegativeSCEV(Delta), CurLoop);
+      // Try symbolic division: Distance = Delta / Coeff.
+      if (const SCEV *Distance = SE->getUDivExactExpr(Delta, Coeff)) {
+        LLVM_DEBUG(dbgs() << "\t    Symbolic distance = " << *Distance << "\n");
+        Result.DV[Level].Distance = Distance;
+        NewConstraint.setDistance(Distance, CurLoop);
+      } else {
+        // Cannot compute exact division - check if we can add runtime
+        // assumptions.
+        if (isa<SCEVUnknown>(Coeff) && !SE->isKnownNonZero(Coeff)) {
+          // Add runtime assumption that coefficient is non-zero for division.
+          const SCEV *Zero = SE->getZero(Coeff->getType());
+          const SCEVPredicate *NonZeroPred =
+              SE->getComparePredicate(ICmpInst::ICMP_NE, Coeff, Zero);
+          if (UnderRuntimeAssumptions) {
+            SmallVector<const SCEVPredicate *, 4> NewPreds(
+                Assumptions.getPredicates());
+            NewPreds.push_back(NonZeroPred);
+            const_cast<DependenceInfo *>(this)->Assumptions =
+                SCEVUnionPredicate(NewPreds, *SE);
+            LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
+                              << " != 0 for symbolic division\n");
+          } else {
+            // Cannot add runtime assumptions, this test fails.
+            LLVM_DEBUG(dbgs()
+                       << "\t    Would need runtime assumption " << *Coeff
+                       << " != 0 but not allowed. Failing this test.\n");
+            return false;
+          }
+        }
+
+        Result.Consistent = false;
+        NewConstraint.setLine(Coeff, SE->getNegativeSCEV(Coeff),
+                              SE->getNegativeSCEV(Delta), CurLoop);
+      }
     }
 
     // maybe we can get a useful direction
