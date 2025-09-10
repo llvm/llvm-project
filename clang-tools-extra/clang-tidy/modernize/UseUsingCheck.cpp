@@ -34,7 +34,7 @@ static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreExternC(Options.get("IgnoreExternC", false)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

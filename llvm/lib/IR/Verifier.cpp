@@ -119,6 +119,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -399,6 +400,7 @@ public:
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
 
   bool verify(const Function &F) {
+    llvm::TimeTraceScope timeScope("Verifier");
     assert(F.getParent() == &M &&
            "An instance of this class only works with a specific module!");
 
@@ -2822,6 +2824,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
+  llvm::TimeTraceScope timeScope("Verifier verify sibling funclet unwinds");
   SmallPtrSet<Instruction *, 8> Visited;
   SmallPtrSet<Instruction *, 8> Active;
   for (const auto &Pair : SiblingFuncletInfo) {
@@ -3182,7 +3185,7 @@ void Verifier::visitFunction(const Function &F) {
 
     // Scope and SP could be the same MDNode and we don't want to skip
     // validation in that case
-    if (SP && ((Scope != SP) && !Seen.insert(SP).second))
+    if ((Scope != SP) && !Seen.insert(SP).second)
       return;
 
     CheckDI(SP->describes(&F),

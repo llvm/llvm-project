@@ -13147,6 +13147,8 @@ def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used on
 def err_hlsl_incorrect_num_initializers: Error<
   "too %select{few|many}0 initializers in list for type %1 "
   "(expected %2 but found %3)">;
+def err_hlsl_rootsignature_entry: Error<
+   "rootsignature specified as target environment but entry, %0, was not defined">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
@@ -13195,6 +13197,9 @@ def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Litera
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
 def err_hlsl_invalid_rootsig_flag : Error< "invalid flags for version 1.%0">;
+def err_hlsl_invalid_mixed_resources: Error< "sampler and non-sampler resource mixed in descriptor table">;
+def err_hlsl_appending_onto_unbound: Error<"offset appends to unbounded descriptor range">;
+def err_hlsl_offset_overflow: Error<"descriptor range offset overflows [%0, %1]">;
 
 def subst_hlsl_format_ranges: TextSubstitution<
   "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
@@ -13204,6 +13209,9 @@ def err_hlsl_resource_range_overlap: Error<
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
+
+def err_hlsl_incomplete_resource_array_in_function_param: Error<
+  "incomplete resource array in a function parameter">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
