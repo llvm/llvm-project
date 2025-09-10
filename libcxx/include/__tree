@@ -34,6 +34,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/make_transparent.h>
 #include <__type_traits/remove_const.h>
 #include <__utility/forward.h>
 #include <__utility/lazy_synth_three_way_comparator.h>
@@ -1749,7 +1750,8 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(const _Key& __v) {
   }
 
   __node_base_pointer* __node_ptr = __root_ptr();
-  auto __comp                     = __lazy_synth_three_way_comparator<_Compare, _Key, value_type>(value_comp());
+  auto&& __transparent            = std::__as_transparent(value_comp());
+  auto __comp = __lazy_synth_three_way_comparator<__make_transparent_t<_Compare>, _Key, value_type>(__transparent);
 
   while (true) {
     auto __comp_res = __comp(__v, __nd->__get_value());
