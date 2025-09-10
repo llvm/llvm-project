@@ -646,12 +646,18 @@ public:
     }
     if (symbol->CanReplaceDetails(details)) {
       // update the existing symbol
-      CheckDuplicatedAttrs(name, *symbol, attrs);
-      SetExplicitAttrs(*symbol, attrs);
       if constexpr (std::is_same_v<SubprogramDetails, D>) {
         // Dummy argument defined by explicit interface?
         details.set_isDummy(IsDummy(*symbol));
+        if (symbol->has<ProcEntityDetails>()) {
+          // Bare "EXTERNAL" dummy replaced with explicit INTERFACE
+          context().Warn(common::LanguageFeature::RedundantAttribute, name,
+              "Dummy argument '%s' was declared earlier as EXTERNAL"_warn_en_US,
+              name);
+        }
       }
+      CheckDuplicatedAttrs(name, *symbol, attrs);
+      SetExplicitAttrs(*symbol, attrs);
       symbol->set_details(std::move(details));
       return *symbol;
     } else if constexpr (std::is_same_v<UnknownDetails, D>) {
