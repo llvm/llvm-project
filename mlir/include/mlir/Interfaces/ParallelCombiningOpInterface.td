@@ -59,31 +59,31 @@ def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
 
 def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   let description = [{
-    A parallel combining op is an operation performs parallel updates to
-    destination tensors within the context of a parent iterating operation.
+    A parallel combining op is an operation that models parallel contributions
+    to result tensors within the context of a parent iterating operation.
     
     This interface is designed for operations that need to coordinate parallel
-    insertions or updates to tensors that are being constructed or modified
-    across multiple parallel iterations. The "updated destination" refers to a
-    destination tensor that accumulates results from parallel computations,
-    where each parallel iteration may contribute a slice, element, or region
-    to the final result.
+    insertions or contributions to tensors that are being constructed across
+    multiple parallel iterations. The destination refers to a tensor value that
+    is assembled by aggregating results from parallel computations; each
+    parallel iteration may contribute a slice, element, or region to the final
+    result. No in-place mutation of tensors is implied.
 
     One significant use case for this interface is `tensor.parallel_insert_slice`
-    which allows parallel insertion of slices into a destination tensor. But with
-    this interface, other operations that perform similar parallel updates can
-    also be defined.
+    which allows parallel insertion of slices that are aggregated into a
+    destination tensor. With this interface, other operations that express
+    similar parallel contributions can also be defined.
 
-    This op works within an op  implementing the
-    `InParallelOpInterface` that specifies how the parallel results are combined.
+    This op works within an op implementing the `InParallelOpInterface` that
+    specifies how the parallel results are combined.
 
     Key semantics:
-    - The operation identifies destination tensors that will be updated
-      through the `getUpdatedDestinations` method
-    - Each parallel iteration may update elements or regions of the
-      destination tensor
+    - The operation identifies destination tensors to which iterations
+      contribute through the `getUpdatedDestinations` method
+    - Each parallel iteration may produce elements or regions that are
+      incorporated into the destination tensor
     - The parent iterating operation manages the coordination and ensures
-      proper synchronization of these updates
+      proper synchronization of these contributions
   
     Note: This interface does not verify itself, it is up to the implementing operation
     to verify the correctness of the op.
@@ -91,8 +91,8 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   let cppNamespace = "::mlir";
 
   let methods = [
-    InterfaceMethod<[{
-        Returns the list of values updated by this op.
+    InterfaceMethod<[{ 
+        Returns the list of destination values this op contributes to.
       }],
       /*retTy=*/"::mlir::MutableOperandRange",
       /*methodName=*/"getUpdatedDestinations",

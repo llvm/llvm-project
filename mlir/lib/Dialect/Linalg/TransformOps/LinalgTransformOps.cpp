@@ -4142,11 +4142,10 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
   }
 
   // If we are inside a `ParallelCombiningOp` region, temporarily set the
-  // insertion point outside: only ops implementing ParallelCombiningOpInterface are
-  // allowed in there.
-  if (isa<mlir::ParallelCombiningOpInterface>(target.getOperation())) {
+  // insertion point outside: only ops implementing ParallelCombiningOpInterface
+  // are allowed in there.
+  if (isa<mlir::ParallelCombiningOpInterface>(target.getOperation()))
     rewriter.setInsertionPoint(target->getParentOp());
-  }
 
   Value extracted = tensor::ExtractSliceOp::create(
       rewriter, target.getLoc(), target.getDest(), target.getMixedOffsets(),

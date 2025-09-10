@@ -1674,12 +1674,7 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
     for (OpResult result : forallOp.getResults()) {
       OpOperand *opOperand = forallOp.getTiedOpOperand(result);
       BlockArgument blockArg = forallOp.getTiedBlockArgument(opOperand);
-      SmallVector<Operation *> combiningOps =
-          forallOp.getCombiningOps(blockArg);
-      if ((result.use_empty() &&
-           llvm::all_of(combiningOps,
-                        [](Operation *op) { return op->use_empty(); })) ||
-          combiningOps.empty()) {
+      if (result.use_empty() || forallOp.getCombiningOps(blockArg).empty()) {
         resultToDelete.insert(result);
       } else {
         resultToReplace.push_back(result);
@@ -1981,7 +1976,8 @@ LogicalResult InParallelOp::verify() {
   for (Operation &op : getRegion().front().getOperations()) {
     auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(&op);
     if (!inParallelOp) {
-      return this->emitOpError("expected only ParallelCombiningOpInterface") << " ops";
+      return this->emitOpError("expected only ParallelCombiningOpInterface")
+             << " ops";
     }
 
     // Verify that inserts are into out block arguments.
@@ -2028,11 +2024,11 @@ OpResult InParallelOp::getParentResult(int64_t idx) {
 
 SmallVector<BlockArgument> InParallelOp::getDests() {
   SmallVector<BlockArgument> updatedDests;
-  for (auto &yieldingOp : getYieldingOps()) {
+  for (Operation &yieldingOp : getYieldingOps()) {
     auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
     if (!inParallelOp)
       continue;
-    for (auto &updatedOperand : inParallelOp.getUpdatedDestinations())
+    for (OpOperand &updatedOperand : inParallelOp.getUpdatedDestinations())
       updatedDests.push_back(cast<BlockArgument>(updatedOperand.get()));
   }
   return updatedDests;

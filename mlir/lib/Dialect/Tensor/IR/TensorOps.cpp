@@ -3846,8 +3846,7 @@ OpFoldResult PadOp::fold(FoldAdaptor) {
 //===----------------------------------------------------------------------===//
 
 OpResult ParallelInsertSliceOp::getTiedOpResult() {
-  InParallelOpInterface parallelCombiningParent =
-      getParallelCombiningParent();
+  InParallelOpInterface parallelCombiningParent = getParallelCombiningParent();
   for (const auto &it :
        llvm::enumerate(parallelCombiningParent.getYieldingOps())) {
     Operation &nextOp = it.value();
@@ -3942,8 +3941,8 @@ MutableOperandRange ParallelInsertSliceOp::getUpdatedDestinations() {
 
 Operation *ParallelInsertSliceOp::getIteratingParent() {
   // Return the parent InParallelOpInterface's parent
-  if (auto combiningOp = dyn_cast<InParallelOpInterface>(
-          getOperation()->getParentOp())) {
+  if (auto combiningOp =
+          dyn_cast<InParallelOpInterface>(getOperation()->getParentOp())) {
     return combiningOp->getParentOp();
   }
   return nullptr;
