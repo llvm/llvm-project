@@ -1261,7 +1261,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D, D.getBeginLoc(),
+  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D,
                                                 EmittingOutlinedTeams, false);
 }
 
@@ -6275,7 +6275,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
         return CGF.GenerateOpenMPCapturedStmtFunction(
-            CS, D, D.getBeginLoc(),
+            CS, D,
             /*CanHaveMultiDeviceArgs*/ true, /*IsTopKernel*/ true);
       };
 
