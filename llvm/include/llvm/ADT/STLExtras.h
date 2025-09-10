@@ -133,15 +133,6 @@ using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 template <typename T, typename... Ts>
 using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 
-namespace detail {
-template <typename T, typename... Us> struct TypesAreDistinct;
-template <typename T, typename... Us>
-struct TypesAreDistinct
-    : std::integral_constant<bool, !is_one_of<T, Us...>::value &&
-                                       TypesAreDistinct<Us...>::value> {};
-template <typename T> struct TypesAreDistinct<T> : std::true_type {};
-} // namespace detail
-
 /// Determine if all types in Ts are distinct.
 ///
 /// Useful to statically assert when Ts is intended to describe a non-multi set
@@ -151,9 +142,10 @@ template <typename T> struct TypesAreDistinct<T> : std::true_type {};
 /// asserted once per instantiation of a type which requires it.
 template <typename... Ts> struct TypesAreDistinct;
 template <> struct TypesAreDistinct<> : std::true_type {};
-template <typename... Ts>
-struct TypesAreDistinct
-    : std::integral_constant<bool, detail::TypesAreDistinct<Ts...>::value> {};
+template <typename T, typename... Us>
+struct TypesAreDistinct<T, Us...>
+    : std::conjunction<std::negation<is_one_of<T, Us...>>,
+                       TypesAreDistinct<Us...>> {};
 
 /// Find the first index where a type appears in a list of types.
 ///
@@ -543,31 +535,22 @@ public:
 
 namespace detail {
 
-template <bool is_bidirectional> struct fwd_or_bidi_tag_impl {
-  using type = std::forward_iterator_tag;
-};
-
-template <> struct fwd_or_bidi_tag_impl<true> {
-  using type = std::bidirectional_iterator_tag;
-};
-
-/// Helper which sets its type member to forward_iterator_tag if the category
-/// of \p IterT does not derive from bidirectional_iterator_tag, and to
-/// bidirectional_iterator_tag otherwise.
-template <typename IterT> struct fwd_or_bidi_tag {
-  using type = typename fwd_or_bidi_tag_impl<std::is_base_of<
-      std::bidirectional_iterator_tag,
-      typename std::iterator_traits<IterT>::iterator_category>::value>::type;
-};
+/// A type alias which is std::bidirectional_iterator_tag if the category of
+/// \p IterT derives from it, and std::forward_iterator_tag otherwise.
+template <typename IterT>
+using fwd_or_bidi_tag = std::conditional_t<
+    std::is_base_of_v<std::bidirectional_iterator_tag,
+                      typename std::iterator_traits<IterT>::iterator_category>,
+    std::bidirectional_iterator_tag, std::forward_iterator_tag>;
 
 } // namespace detail
 
 /// Defines filter_iterator to a suitable specialization of
 /// filter_iterator_impl, based on the underlying iterator's category.
 template <typename WrappedIteratorT, typename PredicateT>
-using filter_iterator = filter_iterator_impl<
-    WrappedIteratorT, PredicateT,
-    typename detail::fwd_or_bidi_tag<WrappedIteratorT>::type>;
+using filter_iterator =
+    filter_iterator_impl<WrappedIteratorT, PredicateT,
+                         detail::fwd_or_bidi_tag<WrappedIteratorT>>;
 
 /// Convenience function that takes a range of elements and a predicate,
 /// and return a new filter_iterator range.

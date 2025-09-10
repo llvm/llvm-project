@@ -603,21 +603,23 @@ void fir::factory::associateMutableBoxWithRemap(
     mlir::ValueRange lbounds, mlir::ValueRange ubounds) {
   // Compute new extents
   llvm::SmallVector<mlir::Value> extents;
-  auto idxTy = builder.getIndexType();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   if (!lbounds.empty()) {
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
     for (auto [lb, ub] : llvm::zip(lbounds, ubounds)) {
-      auto lbi = builder.createConvert(loc, idxTy, lb);
-      auto ubi = builder.createConvert(loc, idxTy, ub);
-      auto diff = mlir::arith::SubIOp::create(builder, loc, idxTy, ubi, lbi);
+
+      mlir::Value lbi = builder.createConvert(loc, idxTy, lb);
+      mlir::Value ubi = builder.createConvert(loc, idxTy, ub);
       extents.emplace_back(
-          mlir::arith::AddIOp::create(builder, loc, idxTy, diff, one));
+          fir::factory::computeExtent(builder, loc, lbi, ubi, zero, one));
     }
   } else {
     // lbounds are default. Upper bounds and extents are the same.
-    for (auto ub : ubounds) {
-      auto cast = builder.createConvert(loc, idxTy, ub);
-      extents.emplace_back(cast);
+    for (mlir::Value ub : ubounds) {
+      mlir::Value cast = builder.createConvert(loc, idxTy, ub);
+      extents.emplace_back(
+          fir::factory::genMaxWithZero(builder, loc, cast, zero));
     }
   }
   const auto newRank = extents.size();
