@@ -75,7 +75,7 @@ public:
 
   ResultType run(GeneratorType &Generator,
                  std::size_t BufferSize = DefaultBufferSize,
-                 uint32_t GroupSize = DefaultGroupSize) noexcept {
+                 uint32_t GroupSize = DefaultGroupSize) const noexcept {
     assert(BufferSize > 0 && "Buffer size must be a positive value");
     assert(GroupSize > 0 && "Group size must be a positive value");
 
@@ -128,7 +128,7 @@ private:
     return *ExpectedKernel;
   }
 
-  [[nodiscard]] auto createBuffers(std::size_t BufferSize) {
+  [[nodiscard]] auto createBuffers(std::size_t BufferSize) const {
     auto InBuffersTuple = std::apply(
         [&](auto... InTypeIdentities) {
           return std::make_tuple(
