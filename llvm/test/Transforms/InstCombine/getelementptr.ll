@@ -1947,7 +1947,8 @@ define ptr @gep_merge_nusw_add_zero(ptr %p, i64 %idx, i64 %idx2) {
 
 define ptr @gep_merge_nuw_const(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nuw_const(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[GEP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep1 = getelementptr nuw [2 x i32], ptr %p, i64 %idx
@@ -1970,7 +1971,8 @@ define ptr @gep_merge_nuw_const_neg(ptr %p, i64 %idx, i64 %idx2) {
 ; does not overflow.
 define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_merge_nusw_const(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw [2 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr [[GEP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep1 = getelementptr nusw [2 x i32], ptr %p, i64 %idx
