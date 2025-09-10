@@ -5276,7 +5276,6 @@ static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
   // For GFX12, we emit s_add_u64 and s_sub_u64.
   MachineFunction *MF = BB->getParent();
   const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
-  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   const DebugLoc &DL = MI.getDebugLoc();
