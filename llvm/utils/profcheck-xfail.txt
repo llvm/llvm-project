@@ -1867,6 +1867,7 @@ Transforms/SimplifyCFG/switch-dup-bbs.ll
 Transforms/SimplifyCFG/switch_mask.ll
 Transforms/SimplifyCFG/switch_msan.ll
 Transforms/SimplifyCFG/switch-on-const-select.ll
+Transforms/SimplifyCFG/switch-transformations-no-lut.ll
 Transforms/SimplifyCFG/switchToSelect-domtree-preservation-edgecase.ll
 Transforms/SimplifyCFG/switch-to-select-multiple-edge-per-block-phi.ll
 Transforms/SimplifyCFG/switch-to-select-two-case.ll
