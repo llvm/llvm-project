@@ -6906,7 +6906,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         return true;
 
       // The VPlan-based cost model can analyze if recipes are scalar
-      // recursively, but legacy cost model cannot.
+      // recursively, but the legacy cost model cannot.
       if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
         auto *AddrI = dyn_cast<Instruction>(
             getLoadStorePointerOperand(&WidenMemR->getIngredient()));
