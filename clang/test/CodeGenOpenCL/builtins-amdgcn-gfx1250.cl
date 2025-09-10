@@ -1064,6 +1064,174 @@ void test_sat_pk4_i4_i8(ushort *out, uint src)
   *out = __builtin_amdgcn_sat_pk4_u4_u8(src);
 }
 
+// CHECK-LABEL: @test_get_cluster_id(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[D_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[D:%.*]], ptr [[D_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[D_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    switch i32 [[TMP0]], label [[SW_DEFAULT:%.*]] [
+// CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+// CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+// CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
+// CHECK-NEXT:    ]
+// CHECK:       sw.bb:
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.id.x()
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
+// CHECK:       sw.bb1:
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cluster.id.y()
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.bb2:
+// CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.cluster.id.z()
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[TMP6]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.default:
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 0, ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.epilog:
+// CHECK-NEXT:    ret void
+//
+void test_get_cluster_id(int d, global int *out)
+{
+  switch (d) {
+  case 0: *out = __builtin_amdgcn_cluster_id_x(); break;
+  case 1: *out = __builtin_amdgcn_cluster_id_y(); break;
+  case 2: *out = __builtin_amdgcn_cluster_id_z(); break;
+  default: *out = 0;
+  }
+}
+
+// CHECK-LABEL: @test_get_cluster_group_id(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[D_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[D:%.*]], ptr [[D_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[D_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    switch i32 [[TMP0]], label [[SW_DEFAULT:%.*]] [
+// CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+// CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+// CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
+// CHECK-NEXT:    ]
+// CHECK:       sw.bb:
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.id.x()
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
+// CHECK:       sw.bb1:
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.id.y()
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.bb2:
+// CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.id.z()
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[TMP6]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.default:
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 0, ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.epilog:
+// CHECK-NEXT:    ret void
+//
+void test_get_cluster_group_id(int d, global int *out)
+{
+  switch (d) {
+  case 0: *out = __builtin_amdgcn_cluster_workgroup_id_x(); break;
+  case 1: *out = __builtin_amdgcn_cluster_workgroup_id_y(); break;
+  case 2: *out = __builtin_amdgcn_cluster_workgroup_id_z(); break;
+  default: *out = 0;
+  }
+}
+
+// CHECK-LABEL: @test_cluster_workgroup_flat_id(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cluster_workgroup_flat_id(global uint *out)
+{
+  *out = __builtin_amdgcn_cluster_workgroup_flat_id();
+}
+
+// CHECK-LABEL: @test_get_cluster_workgroups_max_id(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[D_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[D:%.*]], ptr [[D_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[D_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    switch i32 [[TMP0]], label [[SW_DEFAULT:%.*]] [
+// CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+// CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+// CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
+// CHECK-NEXT:    ]
+// CHECK:       sw.bb:
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
+// CHECK:       sw.bb1:
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.bb2:
+// CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
+// CHECK-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[TMP6]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.default:
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 0, ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    br label [[SW_EPILOG]]
+// CHECK:       sw.epilog:
+// CHECK-NEXT:    ret void
+//
+void test_get_cluster_workgroups_max_id(int d, global int *out)
+{
+  switch (d) {
+  case 0: *out = __builtin_amdgcn_cluster_workgroup_max_id_x(); break;
+  case 1: *out = __builtin_amdgcn_cluster_workgroup_max_id_y(); break;
+  case 2: *out = __builtin_amdgcn_cluster_workgroup_max_id_z(); break;
+  default: *out = 0;
+  }
+}
+
+// CHECK-LABEL: @test_get_cluster_workgroup_max_flat_id(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[TMP1]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_get_cluster_workgroup_max_flat_id(global int *out)
+{
+  *out = __builtin_amdgcn_cluster_workgroup_max_flat_id();
+}
+
 // CHECK-LABEL: @test_permlane16_swap(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)

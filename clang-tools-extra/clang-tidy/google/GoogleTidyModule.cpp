@@ -19,6 +19,7 @@
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
+#include "FloatTypesCheck.h"
 #include "FunctionNamingCheck.h"
 #include "GlobalNamesInHeadersCheck.h"
 #include "GlobalVariableDeclarationCheck.h"
@@ -57,6 +58,8 @@ public:
         "google-objc-function-naming");
     CheckFactories.registerCheck<objc::GlobalVariableDeclarationCheck>(
         "google-objc-global-variable-declaration");
+    CheckFactories.registerCheck<runtime::RuntimeFloatCheck>(
+        "google-runtime-float");
     CheckFactories.registerCheck<runtime::IntegerTypesCheck>(
         "google-runtime-int");
     CheckFactories.registerCheck<runtime::OverloadedUnaryAndCheck>(
