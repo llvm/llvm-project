@@ -20,7 +20,7 @@
 #include "../../range_adaptor_types.h"
 
 template <class Iter>
-concept canDecrement = requires(Iter it) { --it; } || requires(Iter it) { it--; };
+concept CanDecrement = requires(Iter it) { --it; } || requires(Iter it) { it--; };
 
 struct NonBidi : IntBufferView {
   using IntBufferView::IntBufferView;
@@ -119,7 +119,7 @@ constexpr bool test() {
     int buffer[3] = {4, 5, 6};
     std::ranges::concat_view v(a, NonBidi{buffer});
     using Iter = std::ranges::iterator_t<decltype(v)>;
-    static_assert(!canDecrement<Iter>);
+    static_assert(!CanDecrement<Iter>);
   }
 
   return true;
