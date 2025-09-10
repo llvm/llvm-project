@@ -70,27 +70,17 @@ TEST(LlvmLibcSIMDTest, MaskOperations) {
 }
 
 TEST(LlvmLibcSIMDTest, SplitConcat) {
-  cpp::simd<char, 8> v(1);
+  cpp::simd<char, 8> v{1, 1, 2, 2, 3, 3, 4, 4};
   auto [v1, v2, v3, v4] = cpp::split<2, 2, 2, 2>(v);
-  static_assert(cpp::simd_size_v<decltype(v1)> == 2 &&
-                    cpp::simd_size_v<decltype(v2)> == 2 &&
-                    cpp::simd_size_v<decltype(v3)> == 2 &&
-                    cpp::simd_size_v<decltype(v4)> == 2,
-                "invalid size");
+  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v1 == 1)));
+  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v2 == 2)));
+  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v3 == 3)));
+  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v4 == 4)));
 
-  v1 = cpp::simd<char, 2>(1);
-  v2 = cpp::simd<char, 2>(2);
-  v3 = cpp::simd<char, 2>(3);
-  v4 = cpp::simd<char, 2>(4);
   cpp::simd<char, 8> m = cpp::concat(v1, v2, v3, v4);
-  static_assert(cpp::simd_size_v<decltype(m)> == 8, "invalid size");
+  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(m == v)));
 
-  cpp::simd<char, 8> c = {1, 1, 2, 2, 3, 3, 4, 4};
-  for (int i = 0; i < 8; ++i)
-    EXPECT_EQ(c[i], m[i]);
-
-  cpp::simd<char, 1> c1('\0');
-  cpp::simd<char, 8> c2('\0');
-  cpp::simd<char, 9> c3 = cpp::concat(c1, c2);
-  static_assert(cpp::simd_size_v<decltype(c3)> == 9, "invalid size");
+  cpp::simd<char, 1> c(~0);
+  cpp::simd<char, 8> n = cpp::concat(c, c, c, c, c, c, c, c);
+  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(n == ~0)));
 }
