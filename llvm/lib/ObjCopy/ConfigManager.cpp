@@ -114,7 +114,7 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
     return createStringError(
         llvm::errc::invalid_argument,
         "no flags are supported yet, only basic copying is allowed");
-  }
+    }
 
   return XCOFF;
 }
