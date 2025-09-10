@@ -1,5 +1,4 @@
 // UNSUPPORTED: ios
-// REQUIRES: shell
 // REQUIRES: darwin_log_cmd
 // RUN: %clangxx_asan -fsanitize-recover=address %s -o %t
 // RUN: { %env_asan_opts=halt_on_error=0,log_to_syslog=1 %run %t > %t.process_output.txt 2>&1 & } \
