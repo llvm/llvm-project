@@ -89,19 +89,19 @@ LIBC_INLINE constexpr static auto extend(cpp::simd<T, N> x) {
 template <typename T, size_t N, size_t M, size_t... Indices>
 LIBC_INLINE constexpr static cpp::simd<T, N + M>
 concat(cpp::simd<T, N> x, cpp::simd<T, M> y, cpp::index_sequence<Indices...>) {
-  constexpr size_t Length = (N > M ? N : M);
+  constexpr size_t Size = cpp::max(N, M);
   auto remap = [](size_t idx) -> int {
     if (idx < N)
       return static_cast<int>(idx);
     if (idx < N + M)
-      return static_cast<int>((idx - N) + Length);
+      return static_cast<int>((idx - N) + Size);
     return -1;
   };
 
   // Extend the input vectors until they are the same size, then use the indices
   // to shuffle in only the indices that correspond to the original values.
-  auto x_ext = extend<T, N, Length, N>(x);
-  auto y_ext = extend<T, M, Length, M>(y);
+  auto x_ext = extend<T, N, Size, N>(x);
+  auto y_ext = extend<T, M, Size, M>(y);
   return __builtin_shufflevector(x_ext, y_ext, remap(Indices)...);
 }
 
