@@ -816,24 +816,23 @@ class stddeque_SynthProvider:
             )
 
             # check consistency
-            print("aaaaaaaaaaaaaaaaaah")
             if not map_first <= map_begin <= map_end <= map_endcap:
-                print("map pointers are not monotonic")
+                logger.write("map pointers are not monotonic")
                 return
             total_rows, junk = divmod(map_endcap - map_first, self.pointer_size)
             if junk:
-                print("endcap-first doesnt align correctly")
+                logger.write("endcap-first doesnt align correctly")
                 return
             active_rows, junk = divmod(map_end - map_begin, self.pointer_size)
             if junk:
-                print("end-begin doesnt align correctly")
+                logger.write("end-begin doesnt align correctly")
                 return
             start_row, junk = divmod(map_begin - map_first, self.pointer_size)
             if junk:
-                print("begin-first doesnt align correctly")
+                logger.write("begin-first doesnt align correctly")
                 return
 
-            print(
+            logger.write(
                 "update success: count=%r, start=%r, first=%r" % (count, start, first)
             )
             # if consistent, save all we really need:
