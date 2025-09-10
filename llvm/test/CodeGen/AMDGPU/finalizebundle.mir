@@ -16,3 +16,21 @@ body: |
     $vgpr2_vgpr3 = V_LSHLREV_B64_pseudo_e32 1, $vgpr0_vgpr1, implicit $exec
     $vgpr3_vgpr4 = V_LSHLREV_B64_pseudo_e32 1, $vgpr1_vgpr2, implicit $exec
 ...
+
+---
+name: test_dead_redef
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: test_dead_redef
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: BUNDLE implicit-def dead $vgpr1, implicit-def $vgpr0, implicit $vgpr0, implicit $exec {
+    ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 internal $vgpr1, implicit $exec
+    ; CHECK-NEXT:   dead $vgpr1 = V_MOV_B32_e32 internal $vgpr0, implicit $exec
+    ; CHECK-NEXT: }
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    dead $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+...
