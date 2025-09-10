@@ -21,6 +21,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -1440,7 +1441,6 @@ InParallelOp ForallOp::getTerminator() {
   return cast<InParallelOp>(getBody()->getTerminator());
 }
 
-
 SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   SmallVector<Operation *> storeOps;
   for (Operation *user : bbArg.getUsers()) {
@@ -1674,12 +1674,9 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
     for (OpResult result : forallOp.getResults()) {
       OpOperand *opOperand = forallOp.getTiedOpOperand(result);
       BlockArgument blockArg = forallOp.getTiedBlockArgument(opOperand);
-      SmallVector<Operation *> combiningOps =
-          forallOp.getCombiningOps(blockArg);
       if ((result.use_empty() &&
-           llvm::all_of(combiningOps,
-                        [](Operation *op) { return op->use_empty(); })) ||
-          combiningOps.empty()) {
+           llvm::all_of(forallOp.getCombiningOps(blockArg),
+                        [](Operation *op) { return op->use_empty(); }))) {
         resultToDelete.insert(result);
       } else {
         resultToReplace.push_back(result);
@@ -1917,9 +1914,9 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      auto insertSliceOp = dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-      if (insertSliceOp)
-        insertSliceOp.getDestMutable().assign(outputBlockArg);
+      auto inParallelOp = dyn_cast<InParallelOpInterface>(yieldingOp);
+      if (inParallelOp)
+        inParallelOp.getUpdatedDestinations().assign(outputBlockArg);
     }
 
     // Cast results back to the original types.
@@ -1977,6 +1974,21 @@ LogicalResult InParallelOp::verify() {
       dyn_cast<scf::ForallOp>(getOperation()->getParentOp());
   if (!forallOp)
     return this->emitOpError("expected forall op parent");
+
+  for (Operation &op : getRegion().front().getOperations()) {
+    auto inParallelOp = dyn_cast<InParallelOpInterface>(&op);
+    if (!inParallelOp) {
+      return this->emitOpError("expected only InParallelOpInterface") << " ops";
+    }
+
+    // Verify that inserts are into out block arguments.
+    MutableOperandRange dests = inParallelOp.getUpdatedDestinations();
+    ArrayRef<BlockArgument> regionOutArgs = forallOp.getRegionOutArgs();
+    for (OpOperand &dest : dests) {
+      if (!llvm::is_contained(regionOutArgs, dest.get()))
+        return op.emitOpError("may only insert into an output block argument");
+    }
+  }
 
   return success();
 }

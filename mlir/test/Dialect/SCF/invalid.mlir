@@ -628,9 +628,11 @@ func.func @invalid_insert_dest(%in: tensor<100xf32>, %out: tensor<100xf32>) {
 
   %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      // expected-error @+1 {{in_parallel interface op must have an iterating parent}}
-      tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
-        tensor<1xf32> into tensor<100xf32>
+      scf.forall.in_parallel {
+        // expected-error @+1 {{may only insert into an output block argument}}
+        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+          tensor<1xf32> into tensor<100xf32>
+      }
   }
   return
 }
@@ -643,7 +645,7 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
 
   %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      // expected-error @+1 {{expected only in_parallel interface ops}}
+      // expected-error @+1 {{expected only tensor.parallel_insert_slice ops}}
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>

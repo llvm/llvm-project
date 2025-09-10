@@ -936,29 +936,6 @@ func.func @parallel_insert_slice() -> tensor<4x2xf32> {
 
 // -----
 
-// CHECK-LABEL: func @parallel_insert_slice_no_terminator
-func.func @parallel_insert_slice_no_terminator() -> tensor<4x2xf32> {
-  %c2 = arith.constant 2 : index
-  %c4 = arith.constant 4 : index
-  %cst = arith.constant 0.000000e+00 : f32
-  %0 = tensor.empty() : tensor<4x2xf32>
-  // CHECK: scf.forall
-  %res = scf.forall (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
-    %1 = tensor.empty() : tensor<1x1xf32>
-    %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
-    //      CHECK: scf.forall.in_parallel
-    //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
-    // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>
-    scf.forall.in_parallel {
-      tensor.parallel_insert_slice %2 into %o[%arg0, %arg1] [1, 1] [1, 1] :
-        tensor<1x1xf32> into tensor<4x2xf32>
-    }
-  }
-  return %res: tensor<4x2xf32>
-}
-
-// -----
-
 #map0 = affine_map<(i, j) -> (i, j)>
 #access = [#map0, #map0]
 #trait = {

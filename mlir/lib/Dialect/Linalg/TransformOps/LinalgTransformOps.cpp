@@ -4141,14 +4141,11 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // If we are inside an ParallelCombiningOp region, temporarily set the
+  // If we are inside a `ParallelCombiningOp` region, temporarily set the
   // insertion point outside: only ops implementing InParallelOpInterface are
   // allowed in there.
   if (isa<mlir::InParallelOpInterface>(target.getOperation())) {
-    if (auto combiningParent =
-            dyn_cast<ParallelCombiningOpInterface>(target->getParentOp())) {
-      rewriter.setInsertionPoint(target->getParentOp());
-    }
+    rewriter.setInsertionPoint(target->getParentOp());
   }
 
   Value extracted = tensor::ExtractSliceOp::create(

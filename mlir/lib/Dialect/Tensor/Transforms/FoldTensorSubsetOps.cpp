@@ -216,13 +216,10 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
                                         droppedDims, resolvedSizes);
 
     // If we are inside an InParallel region, temporarily set the insertion
-    // point outside: only tensor.parallel_insert_slice ops are allowed in
+    // point outside: only ops of InParallelOpInterface are allowed in
     // there.
-    if (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-      if (auto combiningParent = dyn_cast<ParallelCombiningOpInterface>(
-              insertSliceOp->getParentOp())) {
-        rewriter.setInsertionPoint(insertSliceOp->getParentOp());
-      }  
+    if (isa<mlir::InParallelOpInterface>(insertSliceOp.getOperation())) {
+      rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     }
 
     // Resolve offsets according to source offsets and strides.

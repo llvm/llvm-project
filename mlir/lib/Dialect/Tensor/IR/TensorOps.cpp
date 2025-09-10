@@ -3901,6 +3901,10 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
 }
 
 LogicalResult ParallelInsertSliceOp::verify() {
+  if (!isa<ParallelCombiningOpInterface>(getOperation()->getParentOp()))
+    return this->emitError("expected ParallelCombiningOpInterface parent, got:")
+           << *(getOperation()->getParentOp());
+
   // Verify result type against inferred type.
   RankedTensorType expectedType;
   SliceVerificationResult result =

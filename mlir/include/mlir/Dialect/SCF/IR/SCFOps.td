@@ -679,8 +679,6 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
     OpBuilder<(ins)>,
   ];
 
-  // TODO: Add a `InParallelOpInterface` interface for ops that can
-  // appear inside in_parallel.
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();

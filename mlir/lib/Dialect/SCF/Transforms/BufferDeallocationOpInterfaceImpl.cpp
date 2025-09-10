@@ -41,8 +41,8 @@ namespace {
 /// }
 /// ```
 struct InParallelDeallocOpInterface
-    : public BufferDeallocationOpInterface::ExternalModel<InParallelDeallocOpInterface,
-                                                          scf::InParallelOp> {
+    : public BufferDeallocationOpInterface::ExternalModel<
+          InParallelDeallocOpInterface, scf::InParallelOp> {
   FailureOr<Operation *> process(Operation *op, DeallocationState &state,
                                  const DeallocationOptions &options) const {
     auto inParallelOp = cast<scf::InParallelOp>(op);

@@ -58,8 +58,34 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
 
 def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
   let description = [{
-    An in_parallel op is an operation that inserts into a shared tensor in
-    conjunction with a parent combining and iterating op.
+    An `in_parallel` op is an operation performs parallel updates to
+    destination tensors within the context of a parent iterating operation.
+    
+    This interface is designed for operations that need to coordinate parallel
+    insertions or updates to tensors that are being constructed or modified
+    across multiple parallel iterations. The "updated destination" refers to a
+    destination tensor that accumulates results from parallel computations,
+    where each parallel iteration may contribute a slice, element, or region
+    to the final result.
+
+    One significant use case for this interface is `tensor.parallel_insert_slice`
+    which allows parallel insertion of slices into a destination tensor. But with
+    this interface, other operations that perform similar parallel updates can
+    also be defined.
+
+    The in_parallel operation works within a combining operation (implementing
+    `ParallelCombiningOpInterface`) that specifies how the parallel results are combined.
+
+    Key semantics:
+    - The operation identifies destination tensors that will be updated
+      through the `getUpdatedDestinations` method
+    - Each parallel iteration may update elements or regions of the
+      destination tensor
+    - The parent iterating operation manages the coordination and ensures
+      proper synchronization of these updates
+  
+    Note: This interface does not verify itself, it is up to the implementing operation
+    to verify the correctness of the op.
   }];
   let cppNamespace = "::mlir";
 
@@ -80,9 +106,6 @@ def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
       /*args=*/(ins)
     >,
   ];
-  let verify = [{
-    return ::mlir::detail::verifyInParallelOpInterface($_op);
-  }];
 }
 
 #endif // MLIR_INTERFACES_PARALLELCOMBININGOPINTERFACE
