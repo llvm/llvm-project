@@ -14,6 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -98,6 +99,13 @@ LLVM_LIBC_FUNCTION(bfloat16, log_bf16, (bfloat16 x)) {
     // log(+inf) = +inf
     return FPBits::inf().get_val();
   }
+
+#ifndef LIBC_TARGET_CPU_HAS_FMA
+  // log(0.00000000000000171390679426508540927898138761520386)
+  //     ~= -34.00000095
+  if (LIBC_UNLIKELY(x_u == 0x26F7U))
+    return bfloat16(-34.0000009);
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
   int e = -FPBits::EXP_BIAS;
 
