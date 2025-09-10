@@ -5,15 +5,16 @@
 ! RUN:   | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
+
 program do_concurrent_basic
     implicit none
     integer :: a(10)
     integer :: i
 
-    ! CHECK-DAG: %[[I_ORIG_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i"}
+    ! CHECK: %[[I_ORIG_ALLOC:.*]] = fir.alloca i32 {bindc_name = "i"}
     ! CHECK: %[[I_ORIG_DECL:.*]]:2 = hlfir.declare %[[I_ORIG_ALLOC]]
 
-    ! CHECK-DAG: %[[A_ADDR:.*]] = fir.address_of(@_QFEa)
+    ! CHECK: %[[A_ADDR:.*]] = fir.address_of(@_QFEa)
     ! CHECK: %[[A_SHAPE:.*]] = fir.shape %[[A_EXTENT:.*]] : (index) -> !fir.shape<1>
     ! CHECK: %[[A_ORIG_DECL:.*]]:2 = hlfir.declare %[[A_ADDR]](%[[A_SHAPE]])
 
@@ -25,7 +26,7 @@ program do_concurrent_basic
     ! CHECK: %[[HOST_UB:.*]] = fir.convert %[[C10]] : (i32) -> index
     ! CHECK: %[[HOST_STEP:.*]] = arith.constant 1 : index
 
-    ! CHECK-DAG: %[[I_MAP_INFO:.*]] = omp.map.info var_ptr(%[[I_ORIG_DECL]]#1
+    ! CHECK: %[[I_MAP_INFO:.*]] = omp.map.info var_ptr(%[[I_ORIG_DECL]]#1
     ! CHECK: %[[C0:.*]] = arith.constant 0 : index
     ! CHECK: %[[UPPER_BOUND:.*]] = arith.subi %[[A_EXTENT]], %{{c1.*}} : index
 
@@ -33,7 +34,7 @@ program do_concurrent_basic
     ! CHECK-SAME: upper_bound(%[[UPPER_BOUND]] : index)
     ! CHECK-SAME: extent(%[[A_EXTENT]] : index)
 
-    ! CHECK-DAG: %[[A_MAP_INFO:.*]] = omp.map.info var_ptr(%[[A_ORIG_DECL]]#1 : {{[^(]+}})
+    ! CHECK: %[[A_MAP_INFO:.*]] = omp.map.info var_ptr(%[[A_ORIG_DECL]]#1 : {{[^(]+}})
     ! CHECK-SAME: map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[A_BOUNDS]])
 
     ! CHECK: omp.target

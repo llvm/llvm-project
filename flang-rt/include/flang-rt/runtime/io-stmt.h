@@ -455,6 +455,11 @@ public:
     inNamelistSequence_ = inNamelistSequence;
   }
 
+  RT_API_ATTRS bool eatComma() const { return eatComma_; }
+  RT_API_ATTRS void set_eatComma(bool yes) { eatComma_ = yes; }
+  RT_API_ATTRS bool hitSlash() const { return hitSlash_; }
+  RT_API_ATTRS void set_hitSlash(bool yes) { hitSlash_ = yes; }
+
 protected:
   bool inNamelistSequence_{false};
 
