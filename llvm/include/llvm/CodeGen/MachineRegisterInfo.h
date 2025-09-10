@@ -579,6 +579,10 @@ public:
   /// multiple uses.
   LLVM_ABI bool hasOneNonDBGUser(Register RegNo) const;
 
+  /// If the register has a single non-Debug use, returns it; otherwise returns
+  /// nullptr.
+  LLVM_ABI MachineOperand *getOneNonDBGUse(Register RegNo) const;
+
   /// If the register has a single non-Debug instruction using the specified
   /// register, returns it; otherwise returns nullptr.
   LLVM_ABI MachineInstr *getOneNonDBGUser(Register RegNo) const;

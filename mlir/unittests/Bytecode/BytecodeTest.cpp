@@ -10,11 +10,13 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -115,6 +117,57 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   checkResourceAttribute(*module);
   checkResourceAttribute(*roundTripModule);
+}
+
+TEST(Bytecode, AlignmentFailure) {
+  MLIRContext context;
+  Builder builder(&context);
+  ParserConfig parseConfig(&context);
+  OwningOpRef<Operation *> module =
+      parseSourceString<Operation *>(irWithResources, parseConfig);
+  ASSERT_TRUE(module);
+
+  // Write the module to bytecode.
+  MockOstream ostream;
+  EXPECT_CALL(ostream, reserveExtraSpace).WillOnce([&](uint64_t space) {
+    ostream.buffer = std::make_unique<std::byte[]>(space);
+    ostream.size = space;
+  });
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
+
+  // Create copy of buffer which is not aligned to requested resource alignment.
+  std::string buffer((char *)ostream.buffer.get(),
+                     (char *)ostream.buffer.get() + ostream.size);
+  size_t bufferSize = buffer.size();
+
+  // Increment into the buffer until we get to a power of 2 alignment that is
+  // not 32 bit aligned.
+  size_t pad = 0;
+  while (true) {
+    if (llvm::isAddrAligned(Align(2), &buffer[pad]) &&
+        !llvm::isAddrAligned(Align(32), &buffer[pad]))
+      break;
+
+    pad++;
+    buffer.reserve(bufferSize + pad);
+  }
+
+  buffer.insert(0, pad, ' ');
+  StringRef alignedBuffer(buffer.data() + pad, bufferSize);
+
+  // Attach a diagnostic handler to get the error message.
+  llvm::SmallVector<std::string> msg;
+  ScopedDiagnosticHandler handler(
+      &context, [&msg](Diagnostic &diag) { msg.push_back(diag.str()); });
+
+  // Parse it back
+  OwningOpRef<Operation *> roundTripModule =
+      parseSourceString<Operation *>(alignedBuffer, parseConfig);
+  ASSERT_FALSE(roundTripModule);
+  ASSERT_THAT(msg[0].data(), ::testing::StartsWith(
+                                 "expected section alignment 32 but bytecode "
+                                 "buffer"));
+  ASSERT_STREQ(msg[1].data(), "failed to align section ID: 5");
 }
 
 namespace {

@@ -25,6 +25,23 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
+  using namespace dxbc;
+  switch (Type) {
+  case RootParameterType::Constants32Bit:
+    return ResourceClass::CBuffer;
+  case RootParameterType::SRV:
+    return ResourceClass::SRV;
+  case RootParameterType::UAV:
+    return ResourceClass::UAV;
+  case RootParameterType::CBV:
+    return ResourceClass::CBuffer;
+  case dxbc::RootParameterType::DescriptorTable:
+    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
+  }
+  llvm_unreachable("Unknown RootParameterType");
+}
+
 static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
   for (const auto &UAV : DRM.uavs()) {
     if (UAV.CounterDirection != ResourceCounterDirection::Invalid)
@@ -88,7 +105,7 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
 
 static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
                                        ResourceInfo::ResourceBinding Binding) {
-  SmallString<128> Message;
+  SmallString<160> Message;
   raw_svector_ostream OS(Message);
   StringRef RCName = getResourceClassName(RC);
   OS << RCName << " at register " << Binding.LowerBound << " and space "
@@ -161,7 +178,7 @@ static void validateRootSignature(Module &M,
     dxbc::RootParameterType ParamType = dxbc::RootParameterType(ParamInfo.Type);
     switch (ParamType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      dxbc::RTS0::v1::RootConstants Const =
+      mcdxbc::RootConstants Const =
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister, Const.ShaderRegister,
@@ -172,7 +189,7 @@ static void validateRootSignature(Module &M,
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
     case dxbc::RootParameterType::CBV: {
-      dxbc::RTS0::v2::RootDescriptor Desc =
+      mcdxbc::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
       Builder.trackBinding(toResourceClass(ParamInfo.Type), Desc.RegisterSpace,
                            Desc.ShaderRegister, Desc.ShaderRegister,
@@ -184,16 +201,13 @@ static void validateRootSignature(Module &M,
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
 
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+      for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
         uint32_t UpperBound =
             Range.NumDescriptors == ~0U
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
-        Builder.trackBinding(
-            dxbc::toResourceClass(
-                static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
-            Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
-            &ParamInfo);
+        Builder.trackBinding(Range.RangeType, Range.RegisterSpace,
+                             Range.BaseShaderRegister, UpperBound, &ParamInfo);
       }
       break;
     }
@@ -218,13 +232,13 @@ static void validateRootSignature(Module &M,
     dxil::ResourceClass RC = RTI.getResourceClass();
     dxil::ResourceKind RK = RTI.getResourceKind();
 
-    std::optional<const llvm::hlsl::Binding *> Reg =
+    const llvm::hlsl::Binding *Reg =
         BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
                                Binding.LowerBound + Binding.Size - 1);
 
-    if (Reg.has_value()) {
+    if (Reg != nullptr) {
       const auto *ParamInfo =
-          static_cast<const mcdxbc::RootParameterInfo *>((*Reg)->Cookie);
+          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
       if (RC != ResourceClass::SRV && RC != ResourceClass::UAV)
         continue;

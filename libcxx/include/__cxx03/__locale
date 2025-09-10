@@ -582,18 +582,6 @@ public:
 #endif
   _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
   static const mask* classic_table() _NOEXCEPT;
-#if defined(__GLIBC__) || defined(__EMSCRIPTEN__)
-  static const int* __classic_upper_table() _NOEXCEPT;
-  static const int* __classic_lower_table() _NOEXCEPT;
-#endif
-#if defined(__NetBSD__)
-  static const short* __classic_upper_table() _NOEXCEPT;
-  static const short* __classic_lower_table() _NOEXCEPT;
-#endif
-#if defined(__MVS__)
-  static const unsigned short* __classic_upper_table() _NOEXCEPT;
-  static const unsigned short* __classic_lower_table() _NOEXCEPT;
-#endif
 
 protected:
   ~ctype() override;

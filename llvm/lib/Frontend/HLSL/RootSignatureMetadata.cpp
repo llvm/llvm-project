@@ -242,7 +242,7 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
-  dxbc::RTS0::v1::RootConstants Constants;
+  mcdxbc::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
@@ -296,7 +296,7 @@ Error MetadataParser::parseRootDescriptors(
   if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
-  dxbc::RTS0::v2::RootDescriptor Descriptor;
+  mcdxbc::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
     Descriptor.ShaderRegister = *Val;
   else
@@ -327,7 +327,7 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   if (RangeDescriptorNode->getNumOperands() != 6)
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
-  dxbc::RTS0::v2::DescriptorRange Range;
+  mcdxbc::DescriptorRange Range;
 
   std::optional<StringRef> ElementText =
       extractMdStringValue(RangeDescriptorNode, 0);
@@ -335,15 +335,15 @@ Error MetadataParser::parseDescriptorRange(mcdxbc::DescriptorTable &Table,
   if (!ElementText.has_value())
     return make_error<InvalidRSMetadataFormat>("Descriptor Range");
 
-  Range.RangeType =
-      StringSwitch<uint32_t>(*ElementText)
-          .Case("CBV", to_underlying(dxbc::DescriptorRangeType::CBV))
-          .Case("SRV", to_underlying(dxbc::DescriptorRangeType::SRV))
-          .Case("UAV", to_underlying(dxbc::DescriptorRangeType::UAV))
-          .Case("Sampler", to_underlying(dxbc::DescriptorRangeType::Sampler))
-          .Default(~0U);
-
-  if (Range.RangeType == ~0U)
+  if (*ElementText == "CBV")
+    Range.RangeType = dxil::ResourceClass::CBuffer;
+  else if (*ElementText == "SRV")
+    Range.RangeType = dxil::ResourceClass::SRV;
+  else if (*ElementText == "UAV")
+    Range.RangeType = dxil::ResourceClass::UAV;
+  else if (*ElementText == "Sampler")
+    Range.RangeType = dxil::ResourceClass::Sampler;
+  else
     return make_error<GenericRSMetadataError>("Invalid Descriptor Range type.",
                                               RangeDescriptorNode);
 
@@ -524,13 +524,13 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
                                           uint32_t Location) {
   bool HasSampler = false;
   bool HasOtherRangeType = false;
-  dxbc::DescriptorRangeType OtherRangeType;
+  dxil::ResourceClass OtherRangeType;
 
-  for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-    dxbc::DescriptorRangeType RangeType =
-        static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+  for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
+    dxil::ResourceClass RangeType =
+        static_cast<dxil::ResourceClass>(Range.RangeType);
 
-    if (RangeType == dxbc::DescriptorRangeType::Sampler) {
+    if (RangeType == dxil::ResourceClass::Sampler) {
       HasSampler = true;
     } else {
       HasOtherRangeType = true;
@@ -540,40 +540,41 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
 
   // Samplers cannot be mixed with other resources in a descriptor table.
   if (HasSampler && HasOtherRangeType)
-    return make_error<TableSamplerMixinError>(toResourceClass(OtherRangeType),
+    return make_error<TableSamplerMixinError>(OtherRangeType,
                                               Location);
   return Error::success();
 }
 
 Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
                                               uint32_t Location) {
-  uint64_t AppendingRegister = 0;
+  uint64_t Offset = 0;
 
-  for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-    dxbc::DescriptorRangeType RangeType =
-        static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+  for (const llvm::mcdxbc::DescriptorRange &Range : Table.Ranges) {
+    dxil::ResourceClass RangeType =
+        static_cast<dxil::ResourceClass>(Range.RangeType);
 
-    if (Range.OffsetInDescriptorsFromTableStart != ~0U)
-      AppendingRegister = Range.OffsetInDescriptorsFromTableStart;
+    if (Range.OffsetInDescriptorsFromTableStart != llvm::hlsl::rootsig::DescriptorTableOffsetAppend)
+      Offset = Range.OffsetInDescriptorsFromTableStart;
 
-    if (verifyOffsetOverflow(AppendingRegister))
-      return make_error<OffsetOverflowError>(dxbc::toResourceClass(RangeType),
+    uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
+            Offset, Range.NumDescriptors);
+    if (verifyBoundOffset(Offset))
+      return make_error<DescriptorRangeOverflowError>(
+          RangeType, Range.BaseShaderRegister,
+          Range.RegisterSpace);
+    else if (!verifyNoOverflowedOffset(Offset))
+      return make_error<OffsetOverflowError>(RangeType,
                                              Range.BaseShaderRegister,
                                              Range.RegisterSpace);
 
-    if (verifyRegisterOverflow(Range.BaseShaderRegister, Range.NumDescriptors))
+    if (!verifyNoOverflowedOffset(Range.BaseShaderRegister))
       return make_error<ShaderRegisterOverflowError>(
-          dxbc::toResourceClass(RangeType), Range.BaseShaderRegister,
+          RangeType, Range.BaseShaderRegister,
           Range.RegisterSpace);
 
-    if (verifyRegisterOverflow(AppendingRegister, Range.NumDescriptors))
-      return make_error<DescriptorRangeOverflowError>(
-          dxbc::toResourceClass(RangeType), Range.BaseShaderRegister,
-          Range.RegisterSpace);
-
-    AppendingRegister =
-        updateAppendingRegister(AppendingRegister, Range.NumDescriptors,
-                                Range.OffsetInDescriptorsFromTableStart);
+    Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
+                     ? uint32_t(RangeBound)
+                     : uint32_t(RangeBound + 1);
   }
 
   return Error::success();
@@ -605,7 +606,7 @@ Error MetadataParser::validateRootSignature(
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::UAV:
     case dxbc::RootParameterType::SRV: {
-      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+      const mcdxbc::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
       if (!hlsl::rootsig::verifyRegisterValue(Descriptor.ShaderRegister))
         DeferredErrs =
@@ -632,13 +633,7 @@ Error MetadataParser::validateRootSignature(
     case dxbc::RootParameterType::DescriptorTable: {
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
-        if (!hlsl::rootsig::verifyRangeType(Range.RangeType))
-          DeferredErrs =
-              joinErrors(std::move(DeferredErrs),
-                         make_error<RootSignatureValidationError<uint32_t>>(
-                             "RangeType", Range.RangeType));
-
+      for (const mcdxbc::DescriptorRange &Range : Table) {
         if (!hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
@@ -652,7 +647,8 @@ Error MetadataParser::validateRootSignature(
                              "NumDescriptors", Range.NumDescriptors));
 
         if (!hlsl::rootsig::verifyDescriptorRangeFlag(
-                RSD.Version, Range.RangeType, Range.Flags))
+                RSD.Version, Range.RangeType,
+                dxbc::DescriptorRangeFlags(Range.Flags)))
           DeferredErrs =
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(

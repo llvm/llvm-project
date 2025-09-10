@@ -286,7 +286,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         case dxbc::RootParameterType::Constants32Bit: {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);
-          dxbc::RTS0::v1::RootConstants Constants;
+          mcdxbc::RootConstants Constants;
 
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
@@ -300,7 +300,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
               P.RootSignature->Parameters.getOrInsertDescriptor(L);
 
-          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          mcdxbc::RootDescriptor Descriptor;
           Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
           Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)
@@ -313,9 +313,10 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
               P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
-
-            dxbc::RTS0::v2::DescriptorRange Range;
-            Range.RangeType = R.RangeType;
+            assert(dxbc::isValidRangeType(R.RangeType) &&
+                   "Invalid Descriptor Range Type");
+            mcdxbc::DescriptorRange Range;
+            Range.RangeType = dxil::ResourceClass(R.RangeType);
             Range.NumDescriptors = R.NumDescriptors;
             Range.BaseShaderRegister = R.BaseShaderRegister;
             Range.RegisterSpace = R.RegisterSpace;
