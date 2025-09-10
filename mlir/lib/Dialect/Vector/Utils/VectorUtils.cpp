@@ -393,6 +393,20 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
   return success();
 }
 
+/// Takes a 2+ dimensional vector as an input
+/// returns n vector values produced by n vector.extract operations.
+/// I.e. calling unrollVectorValue([[%v]], rewriter) such that
+///
+///   %v : vector<nxaxb...>
+///
+/// will produce the following IR changes
+///
+///   %v0 = vector.extract %v[0] : vector<axbx...>
+///   %v1 = vector.extract %v[1] : vector<axbx...>
+///   ...
+///   %vnminusone = vector.extract %v[n-1] : vector<axbx...>
+///
+/// and returns SmallVector<Value> r = {[[%v0]], [[%v1]], ..., [[%vnminusone]]}
 FailureOr<SmallVector<Value>>
 vector::unrollVectorValue(TypedValue<VectorType> vector,
                           RewriterBase &rewriter) {
