@@ -558,6 +558,7 @@ tools/UpdateTestChecks/update_test_checks/stable_ir_values5.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values6.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values_funcs.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values.test
+tools/UpdateTestChecks/update_test_checks/tbaa-semantics-checks.test
 tools/UpdateTestChecks/update_test_checks/various_ir_values_dbgrecords.test
 Transforms/AggressiveInstCombine/inline-strcmp-debugloc.ll
 Transforms/AggressiveInstCombine/lower-table-based-cttz-basics.ll
