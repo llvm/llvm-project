@@ -1,9 +1,6 @@
 // RUN: rm -rf %t-dir && mkdir -p %t-dir
 // RUN: %clangxx_asan %s -o %t-dir/verbose-log-path_test-binary
 
-// The glob below requires bash.
-// REQUIRES: shell
-
 // Good log_path.
 // RUN: rm -f %t-dir/asan.log.*
 // RUN: %env_asan_opts=log_path=%t-dir/asan.log:log_exe_name=1 not %run %t-dir/verbose-log-path_test-binary 2> %t.out
