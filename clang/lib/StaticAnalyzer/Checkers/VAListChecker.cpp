@@ -370,7 +370,6 @@ void VAListChecker::checkVAListEndCall(const CallEvent &Call,
     reportUninitializedAccess(Arg, Msg, C);
     return;
   }
-  // FIXME: Add a note tag that describes the state change.
   State = State->set<VAListStateMap>(Arg, VAListState::Released);
   C.addTransition(State);
 }
