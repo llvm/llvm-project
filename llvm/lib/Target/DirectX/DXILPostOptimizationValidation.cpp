@@ -120,7 +120,7 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
 
 static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
                                        ResourceInfo::ResourceBinding Binding) {
-  SmallString<128> Message;
+  SmallString<160> Message;
   raw_svector_ostream OS(Message);
   StringRef RCName = getResourceClassName(RC);
   OS << RCName << " at register " << Binding.LowerBound << " and space "
