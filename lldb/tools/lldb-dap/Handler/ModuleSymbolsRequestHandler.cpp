@@ -79,7 +79,8 @@ ModuleSymbolsRequestHandler::Run(const ModuleSymbolsArguments &args) const {
     }
 
     dap_symbol.size = symbol.GetSize();
-    dap_symbol.name = symbol.GetName();
+    if (const char *symbol_name = symbol.GetName())
+      dap_symbol.name = symbol_name;
     symbols.push_back(std::move(dap_symbol));
   }
 

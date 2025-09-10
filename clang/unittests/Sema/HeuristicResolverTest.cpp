@@ -8,6 +8,7 @@
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -41,7 +42,19 @@ template <typename InputNode, typename ParamT, typename InputMatcher,
           typename... OutputMatchers>
 void expectResolution(llvm::StringRef Code, ResolveFnT<ParamT> ResolveFn,
                       const InputMatcher &IM, const OutputMatchers &...OMS) {
-  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  auto TU = tooling::buildASTFromCodeWithArgs(
+      Code, {"-std=c++23"}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(),
+      tooling::FileContentMappings(), nullptr, llvm::vfs::getRealFileSystem(),
+      CaptureDiagsKind::All);
+
+  for (const auto &D : TU->storedDiagnostics()) {
+    EXPECT_TRUE(D.getLevel() < DiagnosticsEngine::Error)
+        << "Unexpected error diagnostic while building AST for test code: "
+        << D.getMessage();
+  }
+
   auto &Ctx = TU->getASTContext();
   auto InputMatches = match(IM, Ctx);
   ASSERT_EQ(1u, InputMatches.size());
@@ -447,6 +460,23 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
       cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_ExplicitObjectParameter) {
+  std::string Code = R"cpp(
+    struct Foo {
+      int m_int;
+
+      int bar(this auto&& self) {
+        return self.m_int;
+      }
+    };
+  )cpp";
+  // Test resolution of "m_int" in "self.m_int()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("m_int")).bind("input"),
+      fieldDecl(hasName("m_int")).bind("output"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {

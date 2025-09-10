@@ -1322,7 +1322,7 @@ struct spirv::detail::TensorArmTypeStorage final : TypeStorage {
   }
 
   TensorArmTypeStorage(ArrayRef<int64_t> shape, Type elementType)
-      : shape(std::move(shape)), elementType(std::move(elementType)) {}
+      : shape(shape), elementType(elementType) {}
 
   ArrayRef<int64_t> shape;
   Type elementType;

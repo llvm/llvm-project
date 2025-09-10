@@ -113,6 +113,7 @@ def FeatureFMA     : SubtargetFeature<"fma", "HasFMA", "true",
 def FeatureF16C    : SubtargetFeature<"f16c", "HasF16C", "true",
                        "Support 16-bit floating point conversion instructions",
                        [FeatureAVX]>;
+// Deprecated feature. Keep it here to suppress warnings in old IRs.
 def FeatureEVEX512  : SubtargetFeature<"evex512", "HasEVEX512", "true",
                         "Support ZMM and 64-bit mask instructions">;
 def FeatureAVX512   : SubtargetFeature<"avx512f", "X86SSELevel", "AVX512",
@@ -329,20 +330,22 @@ def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
                                        "Support movdiri instruction (direct store integer)">;
 def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
                                         "Support movdir64b instruction (direct store 64 bytes)">;
-def FeatureAVX10_1 : SubtargetFeature<"avx10.1-256", "HasAVX10_1", "true",
-                                      "Support AVX10.1 up to 256-bit instruction",
+def FeatureAVX10_1 : SubtargetFeature<"avx10.1", "HasAVX10_1", "true",
+                                      "Support AVX10.1 instruction",
                                       [FeatureCDI, FeatureVBMI, FeatureIFMA, FeatureVNNI,
                                        FeatureBF16, FeatureVPOPCNTDQ, FeatureVBMI2, FeatureBITALG,
                                        FeatureFP16, FeatureVLX, FeatureDQI]>;
+// Deprecated feature. Keep it here to suppress warnings in old IRs.
 def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true",
-                                          "Support AVX10.1 up to 512-bit instruction",
-                                          [FeatureAVX10_1, FeatureEVEX512]>;
-def FeatureAVX10_2 : SubtargetFeature<"avx10.2-256", "HasAVX10_2", "true",
-                                      "Support AVX10.2 up to 256-bit instruction",
+                                          "Support AVX10.1 instruction",
+                                          [FeatureAVX10_1]>;
+def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
+                                      "Support AVX10.2 instruction",
                                       [FeatureAVX10_1]>;
+// Deprecated feature. Keep it here to suppress warnings in old IRs.
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
-                                          "Support AVX10.2 up to 512-bit instruction",
-                                          [FeatureAVX10_2, FeatureAVX10_1_512]>;
+                                          "Support AVX10.2 instruction",
+                                          [FeatureAVX10_2]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
@@ -871,7 +874,6 @@ def ProcessorFeatures {
   ];
 
   list<SubtargetFeature> X86_64V4Features = !listconcat(X86_64V3Features, [
-    FeatureEVEX512,
     FeatureBWI,
     FeatureCDI,
     FeatureDQI,
@@ -996,7 +998,6 @@ def ProcessorFeatures {
                                                   FeatureXSAVES,
                                                   FeatureCLFLUSHOPT,
                                                   FeatureAVX512,
-                                                  FeatureEVEX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,
@@ -1039,7 +1040,6 @@ def ProcessorFeatures {
 
   // Cannonlake
   list<SubtargetFeature> CNLAdditionalFeatures = [FeatureAVX512,
-                                                  FeatureEVEX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,
@@ -1155,7 +1155,7 @@ def ProcessorFeatures {
     !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
   // Diamond Rapids
-  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
+  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2,
                                                   FeatureSM4,
                                                   FeatureCMPCCXADD,
                                                   FeatureAVXIFMA,
@@ -1368,7 +1368,6 @@ def ProcessorFeatures {
                                         FeatureF16C,
                                         FeatureFSGSBase,
                                         FeatureAVX512,
-                                        FeatureEVEX512,
                                         FeatureCDI,
                                         FeatureADX,
                                         FeatureRDSEED,
@@ -1586,7 +1585,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
-                                                  FeatureEVEX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
                                                   FeatureBWI,

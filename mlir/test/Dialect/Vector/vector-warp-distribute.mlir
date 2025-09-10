@@ -1824,3 +1824,35 @@ func.func @warp_propagate_duplicated_operands_in_yield(%laneid: index)  {
 // CHECK-PROP       :   }
 // CHECK-PROP       :   %[T1:.*] = math.exp %[[W]] : vector<1xf32>
 // CHECK-PROP       :   "some_use"(%[[T1]]) : (vector<1xf32>) -> ()
+
+// -----
+
+func.func @warp_step_distribute(%buffer: memref<128xindex>)  {
+  %laneid = gpu.lane_id
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xindex>) {
+    %seq = vector.step : vector<32xindex>
+    gpu.yield %seq : vector<32xindex>
+  }
+  vector.transfer_write %r, %buffer[%laneid] : vector<1xindex>, memref<128xindex>
+  return
+}
+
+// CHECK-PROP-LABEL: func.func @warp_step_distribute(
+//       CHECK-PROP:   %[[LANE_ID:.*]] = gpu.lane_id
+//       CHECK-PROP:   %[[LANE_ID_VEC:.*]] = vector.broadcast %[[LANE_ID]] : index to vector<1xindex>
+//       CHECK-PROP:   vector.transfer_write %[[LANE_ID_VEC]], %{{.*}} : vector<1xindex>, memref<128xindex>
+
+// -----
+
+func.func @negative_warp_step_more_than_warp_size(%laneid: index, %buffer: memref<128xindex>)  {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<2xindex>) {
+    %seq = vector.step : vector<64xindex>
+    gpu.yield %seq : vector<64xindex>
+  }
+  vector.transfer_write %r, %buffer[%laneid] : vector<2xindex>, memref<128xindex>
+  return
+}
+
+// CHECK-PROP-LABEL: @negative_warp_step_more_than_warp_size
+// CHECK-PROP-NOT: vector.broadcast
+// CHECK-PROP: vector.step : vector<64xindex>

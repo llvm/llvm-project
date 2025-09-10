@@ -255,6 +255,10 @@ private:
   /// available for this variable in the current scope.
   llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
+  /// If this scope belongs to a loop or switch statement, the label that
+  /// directly precedes it, if any.
+  LabelDecl *PrecedingLabel;
+
   void setFlags(Scope *Parent, unsigned F);
 
 public:
@@ -267,6 +271,14 @@ public:
   unsigned getFlags() const { return Flags; }
 
   void setFlags(unsigned F) { setFlags(getParent(), F); }
+
+  /// Get the label that precedes this scope.
+  LabelDecl *getPrecedingLabel() const { return PrecedingLabel; }
+  void setPrecedingLabel(LabelDecl *LD) {
+    assert((Flags & BreakScope || Flags & ContinueScope) &&
+           "not a loop or switch");
+    PrecedingLabel = LD;
+  }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
@@ -581,6 +593,12 @@ public:
   /// continue statements embedded into it.
   bool isContinueScope() const {
     return getFlags() & ScopeFlags::ContinueScope;
+  }
+
+  /// Determine whether this is a scope which can have 'break' or 'continue'
+  /// statements embedded into it.
+  bool isBreakOrContinueScope() const {
+    return getFlags() & (ContinueScope | BreakScope);
   }
 
   /// Determine whether this scope is a C++ 'try' block.

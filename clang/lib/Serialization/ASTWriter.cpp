@@ -8547,6 +8547,7 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getMessageString());
   Record.AddSourceLocation(C->getLParenLoc());
 }
@@ -8750,8 +8751,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
 
-    for (VarDecl *VD : PC->getInitRecipes())
-      AddDeclRef(VD);
+    for (const OpenACCPrivateRecipe &R : PC->getInitRecipes()) {
+      static_assert(sizeof(R) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
+    }
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8772,7 +8776,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
 
     for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(R) == 3 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
       AddDeclRef(R.InitFromTemporary);
     }
     return;
@@ -8894,8 +8900,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
 
     for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
     }
     return;
   }

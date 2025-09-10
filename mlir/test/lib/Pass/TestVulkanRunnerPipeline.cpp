@@ -29,7 +29,7 @@ using namespace mlir;
 namespace mlir::test {
 std::unique_ptr<Pass> createTestConvertToSPIRVPass(bool convertGPUModules,
                                                    bool nestInGPUModule);
-}
+} // namespace mlir::test
 
 namespace {
 

@@ -22,7 +22,6 @@ float foo(float a, float b) {
 // NOFINITEONLY:    define{{.*}} float @foo(float noundef %{{.*}}, float noundef %{{.*}}){{.*}} [[ATTRS:#[0-9]+]]
 
 // CHECK:              attributes [[ATTRS]] = {
-// CHECK-SAME:           "approx-func-fp-math"="true"
 // CHECK-SAME:           "no-signed-zeros-fp-math"="true"
 // CHECK-SAME:           "no-trapping-math"="true"
 // CHECK-UNSAFE-SAME:    "unsafe-fp-math"="true"

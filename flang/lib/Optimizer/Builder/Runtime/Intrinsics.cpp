@@ -276,6 +276,23 @@ void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::CallOp::create(builder, loc, runtimeFunc, args);
 }
 
+mlir::Value fir::runtime::genSecnds(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value refTime) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(Secnds)>(loc, builder);
+
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
+
+  llvm::SmallVector<mlir::Value> args = {refTime, sourceFile, sourceLine};
+  args = fir::runtime::createArguments(builder, loc, runtimeFuncTy, args);
+
+  return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
+}
+
 /// generate runtime call to time intrinsic
 mlir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
                                   mlir::Location loc) {

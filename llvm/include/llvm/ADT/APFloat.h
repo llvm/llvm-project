@@ -460,12 +460,6 @@ public:
   LLVM_ABI opStatus convertToInteger(MutableArrayRef<integerPart>, unsigned int,
                                      bool, roundingMode, bool *) const;
   LLVM_ABI opStatus convertFromAPInt(const APInt &, bool, roundingMode);
-  LLVM_ABI opStatus convertFromSignExtendedInteger(const integerPart *,
-                                                   unsigned int, bool,
-                                                   roundingMode);
-  LLVM_ABI opStatus convertFromZeroExtendedInteger(const integerPart *,
-                                                   unsigned int, bool,
-                                                   roundingMode);
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   LLVM_ABI APInt bitcastToAPInt() const;
   LLVM_ABI double convertToDouble() const;
@@ -805,6 +799,16 @@ class DoubleAPFloat final {
                                         unsigned int Width, bool IsSigned,
                                         roundingMode RM, bool *IsExact) const;
 
+  // Convert an unsigned integer Src to a floating point number,
+  // rounding according to RM.  The sign of the floating point number is not
+  // modified.
+  opStatus convertFromUnsignedParts(const integerPart *Src,
+                                    unsigned int SrcCount, roundingMode RM);
+
+  // Handle overflow.  Sign is preserved.  We either become infinity or
+  // the largest finite number.
+  opStatus handleOverflow(roundingMode RM);
+
 public:
   LLVM_ABI DoubleAPFloat(const fltSemantics &S);
   LLVM_ABI DoubleAPFloat(const fltSemantics &S, uninitializedTag);
@@ -860,14 +864,6 @@ public:
                                      roundingMode RM, bool *IsExact) const;
   LLVM_ABI opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
                                      roundingMode RM);
-  LLVM_ABI opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                                   unsigned int InputSize,
-                                                   bool IsSigned,
-                                                   roundingMode RM);
-  LLVM_ABI opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                                   unsigned int InputSize,
-                                                   bool IsSigned,
-                                                   roundingMode RM);
   LLVM_ABI unsigned int convertToHexString(char *DST, unsigned int HexDigits,
                                            bool UpperCase,
                                            roundingMode RM) const;
@@ -1045,6 +1041,8 @@ class APFloat : public APFloatBase {
   explicit APFloat(DoubleAPFloat F, const fltSemantics &S)
       : U(std::move(F), S) {}
 
+  // Compares the absolute value of this APFloat with another.  Both operands
+  // must be finite non-zero.
   cmpResult compareAbsoluteValue(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
@@ -1342,22 +1340,15 @@ public:
   // the precision of the conversion.
   LLVM_ABI opStatus convertToInteger(APSInt &Result, roundingMode RM,
                                      bool *IsExact) const;
+
+  // Convert a two's complement integer Input to a floating point number,
+  // rounding according to RM.  IsSigned is true if the integer is signed,
+  // in which case it must be sign-extended.
   opStatus convertFromAPInt(const APInt &Input, bool IsSigned,
                             roundingMode RM) {
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
-  opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM) {
-    APFLOAT_DISPATCH_ON_SEMANTICS(
-        convertFromSignExtendedInteger(Input, InputSize, IsSigned, RM));
-  }
-  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM) {
-    APFLOAT_DISPATCH_ON_SEMANTICS(
-        convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM));
-  }
+
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
@@ -1408,6 +1399,8 @@ public:
     return Res == cmpGreaterThan || Res == cmpEqual;
   }
 
+  // IEEE comparison with another floating point number (NaNs compare unordered,
+  // 0==-0).
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
            "Should only compare APFloats with the same semantics");
