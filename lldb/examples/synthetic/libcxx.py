@@ -108,6 +108,8 @@ def get_buffer_endcap(parent, buffer, begin, has_compressed_pair_layout, is_size
         map_endcap = buffer.GetChildMemberWithName("__cap_")
         if not map_endcap.IsValid():
             map_endcap = buffer.GetChildMemberWithName("__end_cap_")
+        if not map_endcap.IsValid():
+            map_endcap = buffer.GetChildMemberWithName("__back_cap_")
         map_endcap = map_endcap.GetValueAsUnsigned(0)
 
     if is_size_based:
@@ -804,6 +806,9 @@ class stddeque_SynthProvider:
             first = map_.GetChildMemberWithName("__first_")
             map_first = first.GetValueAsUnsigned(0)
             self.map_begin = map_.GetChildMemberWithName("__begin_")
+            # LLVM 22 renames __map_.__begin_ to __map_.__front_cap_
+            if not self.map_begin:
+                self.map_begin = map_.GetChildMemberWithName("__front_cap_")
             map_begin = self.map_begin.GetValueAsUnsigned(0)
             map_end = get_buffer_end(map_, map_begin)
             map_endcap = get_buffer_endcap(
@@ -811,23 +816,24 @@ class stddeque_SynthProvider:
             )
 
             # check consistency
+            print("aaaaaaaaaaaaaaaaaah")
             if not map_first <= map_begin <= map_end <= map_endcap:
-                logger.write("map pointers are not monotonic")
+                print("map pointers are not monotonic")
                 return
             total_rows, junk = divmod(map_endcap - map_first, self.pointer_size)
             if junk:
-                logger.write("endcap-first doesnt align correctly")
+                print("endcap-first doesnt align correctly")
                 return
             active_rows, junk = divmod(map_end - map_begin, self.pointer_size)
             if junk:
-                logger.write("end-begin doesnt align correctly")
+                print("end-begin doesnt align correctly")
                 return
             start_row, junk = divmod(map_begin - map_first, self.pointer_size)
             if junk:
-                logger.write("begin-first doesnt align correctly")
+                print("begin-first doesnt align correctly")
                 return
 
-            logger.write(
+            print(
                 "update success: count=%r, start=%r, first=%r" % (count, start, first)
             )
             # if consistent, save all we really need:
