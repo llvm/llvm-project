@@ -30,23 +30,28 @@ class I<dag out_ops, dag in_ops> : Instruction {
   let OutOperandList = out_ops;
 }
 
-// CHECK:      /* 0 */  MCD::OPC_ExtractField, 12, 4,                // Inst{15-12} ...
-// CHECK-NEXT: /* 3 */  MCD::OPC_FilterValue, 0, 14, 0,              // Skip to: 21
-// CHECK-NEXT: /* 7 */  MCD::OPC_CheckField, 6, 6, 0, 4, 0,          // Skip to: 17
-// CHECK-NEXT: /* 13 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0,           // Opcode: {{.*}}:NOP
-// CHECK-NEXT: /* 17 */ MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, 2, 1,
-// CHECK-NEXT: /* 21 */ MCD::OPC_FilterValue, 1, 14, 0,              // Skip to: 39
-// CHECK-NEXT: /* 25 */ MCD::OPC_CheckField, 6, 6, 0, 4, 0,          // Skip to: 35
-// CHECK-NEXT: /* 31 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0,           // Opcode: {{.*}}:NOP
-// CHECK-NEXT: /* 35 */ MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, 2, 1,
-// CHECK-NEXT: /* 39 */ MCD::OPC_FilterValue, 2, 14, 0,              // Skip to: 57
-// CHECK-NEXT: /* 43 */ MCD::OPC_CheckField, 6, 6, 0, 4, 0,          // Skip to: 53
-// CHECK-NEXT: /* 49 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0,           // Opcode: {{.*}}:NOP
-// CHECK-NEXT: /* 53 */ MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, 2, 1,
-// CHECK-NEXT: /* 57 */ MCD::OPC_FilterValueOrFail, 3,
-// CHECK-NEXT: /* 59 */ MCD::OPC_CheckField, 6, 6, 0, 4, 0,          // Skip to: 69
-// CHECK-NEXT: /* 65 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0,           // Opcode: {{.*}}:NOP
-// CHECK-NEXT: /* 69 */ MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, 2, 1,
+// CHECK:      /* 0 */  MCD::OPC_ExtractField, 12, 4,  // Inst{15-12} ...
+// CHECK-NEXT: /* 3 */  MCD::OPC_FilterValueOrSkip, 0, 15, 0, // Skip to: 22
+// CHECK-NEXT: /* 7 */  MCD::OPC_Scope, 8, 0, // Skip to: 18
+// CHECK-NEXT: /* 10 */ MCD::OPC_CheckField, 6, 6, 0,
+// CHECK-NEXT: /* 14 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0, // Opcode: {{.*}}:NOP, DecodeIdx: 0
+// CHECK-NEXT: /* 18 */ MCD::OPC_TryDecode, 187, 2, 1,
+// CHECK-NEXT: /* 22 */ MCD::OPC_FilterValueOrSkip, 1, 15, 0, // Skip to: 41
+// CHECK-NEXT: /* 26 */ MCD::OPC_Scope, 8, 0, // Skip to: 37
+// CHECK-NEXT: /* 29 */ MCD::OPC_CheckField, 6, 6, 0,
+// CHECK-NEXT: /* 33 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0, // Opcode: {{.*}}:NOP, DecodeIdx: 0
+// CHECK-NEXT: /* 37 */ MCD::OPC_TryDecode, 188, 2, 1,
+// CHECK-NEXT: /* 41 */ MCD::OPC_FilterValueOrSkip, 2, 15, 0, // Skip to: 60
+// CHECK-NEXT: /* 45 */ MCD::OPC_Scope, 8, 0, // Skip to: 56
+// CHECK-NEXT: /* 48 */ MCD::OPC_CheckField, 6, 6, 0,
+// CHECK-NEXT: /* 52 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0, // Opcode: {{.*}}:NOP, DecodeIdx: 0
+// CHECK-NEXT: /* 56 */ MCD::OPC_TryDecode, 189, 2, 1,
+// CHECK-NEXT: /* 60 */ MCD::OPC_FilterValue, 3,
+// CHECK-NEXT: /* 62 */ MCD::OPC_Scope, 8, 0, // Skip to: 73
+// CHECK-NEXT: /* 65 */ MCD::OPC_CheckField, 6, 6, 0,
+// CHECK-NEXT: /* 69 */ MCD::OPC_Decode, {{[0-9]+}}, 2, 0, // Opcode: {{.*}}:NOP, DecodeIdx: 0
+// CHECK-NEXT: /* 73 */ MCD::OPC_TryDecode, 190, 2, 1,
+
 
 class SHIFT<bits<2> opc> : I<(outs), (ins ShAmtOp:$shamt)>, EncSHIFT<opc>;
 def SHIFT0 : SHIFT<0>;

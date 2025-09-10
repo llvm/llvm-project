@@ -178,8 +178,20 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
   return Log2EEW;
 }
 
-static std::optional<unsigned>
-getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+#define VSEG_CASES(Prefix, EEW)                                                \
+  RISCV::Prefix##SEG2E##EEW##_V:                                               \
+  case RISCV::Prefix##SEG3E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG4E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG5E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG6E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG7E##EEW##_V:                                          \
+  case RISCV::Prefix##SEG8E##EEW##_V
+#define VSSEG_CASES(EEW)    VSEG_CASES(VS, EEW)
+#define VSSSEG_CASES(EEW)   VSEG_CASES(VSS, EEW)
+#define VSUXSEG_CASES(EEW)  VSEG_CASES(VSUX, I##EEW)
+#define VSOXSEG_CASES(EEW)  VSEG_CASES(VSOX, I##EEW)
+
+static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();
   const MCInstrDesc &Desc = MI.getDesc();
   const RISCVVPseudosTable::PseudoInfo *RVV =
@@ -225,21 +237,29 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VSE8_V:
   case RISCV::VLSE8_V:
   case RISCV::VSSE8_V:
+  case VSSEG_CASES(8):
+  case VSSSEG_CASES(8):
     return 3;
   case RISCV::VLE16_V:
   case RISCV::VSE16_V:
   case RISCV::VLSE16_V:
   case RISCV::VSSE16_V:
+  case VSSEG_CASES(16):
+  case VSSSEG_CASES(16):
     return 4;
   case RISCV::VLE32_V:
   case RISCV::VSE32_V:
   case RISCV::VLSE32_V:
   case RISCV::VSSE32_V:
+  case VSSEG_CASES(32):
+  case VSSSEG_CASES(32):
     return 5;
   case RISCV::VLE64_V:
   case RISCV::VSE64_V:
   case RISCV::VLSE64_V:
   case RISCV::VSSE64_V:
+  case VSSEG_CASES(64):
+  case VSSSEG_CASES(64):
     return 6;
 
   // Vector Indexed Instructions
@@ -248,7 +268,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI8_V:
   case RISCV::VLOXEI8_V:
   case RISCV::VSUXEI8_V:
-  case RISCV::VSOXEI8_V: {
+  case RISCV::VSOXEI8_V:
+  case VSUXSEG_CASES(8):
+  case VSOXSEG_CASES(8): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 3;
@@ -256,7 +278,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI16_V:
   case RISCV::VLOXEI16_V:
   case RISCV::VSUXEI16_V:
-  case RISCV::VSOXEI16_V: {
+  case RISCV::VSOXEI16_V:
+  case VSUXSEG_CASES(16):
+  case VSOXSEG_CASES(16): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 4;
@@ -264,7 +288,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI32_V:
   case RISCV::VLOXEI32_V:
   case RISCV::VSUXEI32_V:
-  case RISCV::VSOXEI32_V: {
+  case RISCV::VSOXEI32_V:
+  case VSUXSEG_CASES(32):
+  case VSOXSEG_CASES(32): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 5;
@@ -272,7 +298,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VLUXEI64_V:
   case RISCV::VLOXEI64_V:
   case RISCV::VSUXEI64_V:
-  case RISCV::VSOXEI64_V: {
+  case RISCV::VSOXEI64_V:
+  case VSUXSEG_CASES(64):
+  case VSOXSEG_CASES(64): {
     if (MO.getOperandNo() == 0)
       return MILog2SEW;
     return 6;
@@ -781,14 +809,13 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   }
 }
 
-static std::optional<OperandInfo>
-getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   assert(RVV && "Could not find MI in PseudoTable");
 
-  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO, MRI);
+  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO);
   if (!Log2EEW)
     return std::nullopt;
 
@@ -1375,6 +1402,54 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   return VLOp;
 }
 
+/// Return true if MI is an instruction used for assembling registers
+/// for segmented store instructions, namely, RISCVISD::TUPLE_INSERT.
+/// Currently it's lowered to INSERT_SUBREG.
+static bool isTupleInsertInstr(const MachineInstr &MI) {
+  if (!MI.isInsertSubreg())
+    return false;
+
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const TargetRegisterClass *DstRC = MRI.getRegClass(MI.getOperand(0).getReg());
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  if (!RISCVRI::isVRegClass(DstRC->TSFlags))
+    return false;
+  unsigned NF = RISCVRI::getNF(DstRC->TSFlags);
+  if (NF < 2)
+    return false;
+
+  // Check whether INSERT_SUBREG has the correct subreg index for tuple inserts.
+  auto VLMul = RISCVRI::getLMul(DstRC->TSFlags);
+  unsigned SubRegIdx = MI.getOperand(3).getImm();
+  [[maybe_unused]] auto [LMul, IsFractional] = RISCVVType::decodeVLMUL(VLMul);
+  assert(!IsFractional && "unexpected LMUL for tuple register classes");
+  return TRI->getSubRegIdxSize(SubRegIdx) == RISCV::RVVBitsPerBlock * LMul;
+}
+
+static bool isSegmentedStoreInstr(const MachineInstr &MI) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  case VSSEG_CASES(8):
+  case VSSSEG_CASES(8):
+  case VSUXSEG_CASES(8):
+  case VSOXSEG_CASES(8):
+  case VSSEG_CASES(16):
+  case VSSSEG_CASES(16):
+  case VSUXSEG_CASES(16):
+  case VSOXSEG_CASES(16):
+  case VSSEG_CASES(32):
+  case VSSSEG_CASES(32):
+  case VSUXSEG_CASES(32):
+  case VSOXSEG_CASES(32):
+  case VSSEG_CASES(64):
+  case VSSSEG_CASES(64):
+  case VSUXSEG_CASES(64):
+  case VSOXSEG_CASES(64):
+    return true;
+  default:
+    return false;
+  }
+}
+
 std::optional<MachineOperand>
 RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   std::optional<MachineOperand> CommonVL;
@@ -1392,6 +1467,23 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
       Worklist.insert_range(llvm::make_pointer_range(
           MRI->use_operands(UserMI.getOperand(0).getReg())));
+      continue;
+    }
+
+    if (isTupleInsertInstr(UserMI)) {
+      LLVM_DEBUG(dbgs().indent(4) << "Peeking through uses of INSERT_SUBREG\n");
+      for (MachineOperand &UseOp :
+           MRI->use_operands(UserMI.getOperand(0).getReg())) {
+        const MachineInstr &CandidateMI = *UseOp.getParent();
+        // We should not propagate the VL if the user is not a segmented store
+        // or another INSERT_SUBREG, since VL just works differently
+        // between segmented operations (per-field) v.s. other RVV ops (on the
+        // whole register group).
+        if (!isTupleInsertInstr(CandidateMI) &&
+            !isSegmentedStoreInstr(CandidateMI))
+          return std::nullopt;
+        Worklist.insert(&UseOp);
+      }
       continue;
     }
 
@@ -1424,9 +1516,8 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       return std::nullopt;
     }
 
-    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp, MRI);
-    std::optional<OperandInfo> ProducerInfo =
-        getOperandInfo(MI.getOperand(0), MRI);
+    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp);
+    std::optional<OperandInfo> ProducerInfo = getOperandInfo(MI.getOperand(0));
     if (!ConsumerInfo || !ProducerInfo) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");

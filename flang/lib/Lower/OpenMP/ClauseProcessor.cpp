@@ -273,10 +273,15 @@ bool ClauseProcessor::processCancelDirectiveName(
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::LoopRelatedClauseOps &result,
+    mlir::omp::LoopRelatedClauseOps &loopResult,
+    mlir::omp::CollapseClauseOps &collapseResult,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
-  return collectLoopRelatedInfo(converter, currentLocation, eval, clauses,
-                                result, iv);
+
+  int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               clauses, loopResult, iv);
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
+  return numCollapse > 1;
 }
 
 bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
@@ -520,6 +525,13 @@ bool ClauseProcessor::processProcBind(
     return true;
   }
   return false;
+}
+
+bool ClauseProcessor::processTileSizes(
+    lower::pft::Evaluation &eval, mlir::omp::LoopNestOperands &result) const {
+  auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
+  collectTileSizesFromOpenMPConstruct(ompCons, result.tileSizes, semaCtx);
+  return !result.tileSizes.empty();
 }
 
 bool ClauseProcessor::processSafelen(
@@ -845,10 +857,12 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   }
   auto declDst = hlfir::DeclareOp::create(
       builder, loc, dst, copyFuncName + "_dst", shape, typeparams,
-      /*dummy_scope=*/nullptr, attrs);
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, attrs);
   auto declSrc = hlfir::DeclareOp::create(
       builder, loc, src, copyFuncName + "_src", shape, typeparams,
-      /*dummy_scope=*/nullptr, attrs);
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   mlir::func::ReturnOp::create(builder, loc);
   return funcOp;

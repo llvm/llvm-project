@@ -91,6 +91,10 @@ static cl::opt<bool> EnableZPRPredicateSpills(
     cl::desc(
         "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
 
+static cl::opt<unsigned>
+    VScaleForTuningOpt("sve-vscale-for-tuning", cl::Hidden,
+                       cl::desc("Force a vscale for tuning factor for SVE"));
+
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
 static cl::opt<bool>
@@ -364,6 +368,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
     MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
+  if (VScaleForTuningOpt.getNumOccurrences() > 0)
+    VScaleForTuning = VScaleForTuningOpt;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
