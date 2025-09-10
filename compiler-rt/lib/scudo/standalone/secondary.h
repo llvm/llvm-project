@@ -580,7 +580,7 @@ private:
   }
 
   void releaseOlderThan(u64 Time) REQUIRES(Mutex) {
-    SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThan());
+    SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThanTraceName());
 
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;

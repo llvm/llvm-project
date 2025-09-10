@@ -41,7 +41,9 @@ static inline const char *GetSecondaryReleaseToOSTraceName(scudo::ReleaseToOS) {
 }
 
 // Create a trace name for the call to releaseOlderThan in the secondary.
-static inline const char *GetSecondaryReleaseOlderThan() { return nullptr; }
+static inline const char *GetSecondaryReleaseOlderThanTraceName() {
+  return nullptr;
+}
 
 #endif
 
