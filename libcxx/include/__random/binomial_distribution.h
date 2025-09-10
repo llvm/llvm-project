@@ -101,6 +101,8 @@ public:
 #if defined(_LIBCPP_GLIBC_PREREQ)
 #  if _LIBCPP_GLIBC_PREREQ(2, 8)
 #    define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
+#  else
+#    define _LIBCPP_LGAMMA_R_NOEXCEPT
 #  endif
 #elif defined(__LLVM_LIBC__)
 #  define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
