@@ -134,6 +134,8 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
+      .addCreateFromBinding()
+      .addCreateFromImplicitBinding()
       .addHandleConstructorFromBinding()
       .addHandleConstructorFromImplicitBinding();
 }
