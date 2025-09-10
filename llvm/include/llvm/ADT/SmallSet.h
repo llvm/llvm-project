@@ -36,7 +36,6 @@ class SmallSetIterator
 private:
   using SetIterTy = typename std::set<T, C>::const_iterator;
   using VecIterTy = typename SmallVector<T, N>::const_iterator;
-  using SelfTy = SmallSetIterator<T, N, C>;
 
   /// Iterators to the parts of the SmallSet containing the data. They are set
   /// depending on isSmall.
@@ -268,17 +267,8 @@ private:
 
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
-///
-/// We use this middleman class DeprecatedSmallSet so that the deprecation
-/// warning works.  Placing LLVM_DEPRECATED just before SmallSet below won't
-/// work.
-template <typename PointerType, unsigned N>
-class LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-    DeprecatedSmallSet : public SmallPtrSet<PointerType, N> {};
-
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType *, N> : public DeprecatedSmallSet<PointeeType *, N> {
-};
+class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {};
 
 /// Equality comparison for SmallSet.
 ///

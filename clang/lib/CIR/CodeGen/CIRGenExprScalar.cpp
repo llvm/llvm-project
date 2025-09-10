@@ -92,6 +92,10 @@ public:
                                             mlir::Value value, CastKind kind,
                                             QualType destTy);
 
+  mlir::Value emitNullValue(QualType ty, mlir::Location loc) {
+    return cgf.cgm.emitNullConstant(ty, loc);
+  }
+
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
     return builder.createFloatingCast(result, cgf.convertType(promotionType));
   }
@@ -180,6 +184,13 @@ public:
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
+  }
+
+  mlir::Value VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *e) {
+    if (e->getType()->isVoidType())
+      return {};
+
+    return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
@@ -650,11 +661,21 @@ public:
 
   mlir::Value VisitUnaryImag(const UnaryOperator *e);
 
+  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
+    return Visit(die->getExpr());
+  }
+
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
     return cgf.emitCXXNewExpr(e);
+  }
+
+  mlir::Value VisitCXXThrowExpr(const CXXThrowExpr *e) {
+    cgf.emitCXXThrowExpr(e);
+    return {};
   }
 
   /// Emit a conversion from the specified type to the specified destination
@@ -1966,11 +1987,9 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
         cgf.getLoc(e->getSourceRange()), vectorType, elements);
   }
 
-  if (numInitElements == 0) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "InitListExpr Non VectorType with 0 init elements");
-    return {};
-  }
+  // C++11 value-initialization for the scalar.
+  if (numInitElements == 0)
+    return emitNullValue(e->getType(), cgf.getLoc(e->getExprLoc()));
 
   return Visit(e->getInit(0));
 }

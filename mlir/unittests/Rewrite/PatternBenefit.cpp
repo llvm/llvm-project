@@ -66,12 +66,7 @@ TEST(PatternBenefitTest, BenefitOrder) {
   PatternApplicator pa(frozenPatterns);
   pa.applyDefaultCostModel();
 
-  class MyPatternRewriter : public PatternRewriter {
-  public:
-    MyPatternRewriter(MLIRContext *ctx) : PatternRewriter(ctx) {}
-  };
-
-  MyPatternRewriter rewriter(&context);
+  PatternRewriter rewriter(&context);
   (void)pa.matchAndRewrite(*module, rewriter);
 
   EXPECT_TRUE(called1);

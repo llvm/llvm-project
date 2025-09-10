@@ -35,7 +35,7 @@ def STVM512rii : Pseudo<
 
 // LVM/SVM instructions using VM512
 let hasSideEffects = 0, isCodeGenOnly = 1 in {
-  let Constraints = "$vx = $vd", DisableEncoding = "$vd" in {
+  let Constraints = "$vx = $vd" in {
     def LVMyir_y : Pseudo<(outs VM512:$vx), (ins uimm3:$sy, I64:$sz, VM512:$vd),
                           "# pseudo LVM $vx, $sy, $sz, $vd">;
     def LVMyim_y : Pseudo<(outs VM512:$vx),
@@ -51,7 +51,7 @@ let hasSideEffects = 0, isCodeGenOnly = 1 in {
 }
 
 // VFMK/VFMKW/VFMKS instructions using VM512
-let hasSideEffects = 0, isCodeGenOnly = 1, DisableEncoding = "$vl" in {
+let hasSideEffects = 0, isCodeGenOnly = 1 in {
   def VFMKyal : Pseudo<(outs VM512:$vmx), (ins I32:$vl),
                        "# pseudo-vfmk.at $vmx">;
   def VFMKynal : Pseudo<(outs VM512:$vmx), (ins I32:$vl),
@@ -126,21 +126,18 @@ let hasSideEffects = 0, isCodeGenOnly = 1 in {
 
 // Multiclass for VLD instructions
 let mayLoad = 1, hasSideEffects = 0, Uses = [VL] in
-multiclass VLDbm<string opcStr, bits<8>opc, RegisterClass RC, dag dag_in,
-                 string disEnc = ""> {
-  let DisableEncoding = disEnc in
+multiclass VLDbm<string opcStr, bits<8>opc, RegisterClass RC, dag dag_in> {
   def "" : RVM<opc, (outs RC:$vx), dag_in,
                !strconcat(opcStr, " $vx, $sy, $sz")>;
-  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
-      isCodeGenOnly = 1 in
+  let Constraints = "$vx = $base", isCodeGenOnly = 1 in
   def _v : RVM<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
                !strconcat(opcStr, " $vx, $sy, $sz")>;
 }
 multiclass VLDlm<string opcStr, bits<8>opc, RegisterClass RC, dag dag_in> {
   defm "" : VLDbm<opcStr, opc, RC, dag_in>;
   let isCodeGenOnly = 1, VE_VLInUse = 1 in {
-    defm l : VLDbm<opcStr, opc, RC, !con(dag_in, (ins I32:$vl)), "$vl,">;
-    defm L : VLDbm<opcStr, opc, RC, !con(dag_in, (ins VLS:$vl)), "$vl,">;
+    defm l : VLDbm<opcStr, opc, RC, !con(dag_in, (ins I32:$vl))>;
+    defm L : VLDbm<opcStr, opc, RC, !con(dag_in, (ins VLS:$vl))>;
   }
 }
 let VE_VLIndex = 3 in
@@ -182,7 +179,7 @@ let cx = 1 in defm VLDL2DZX : VLDm<"vldl2d.zx", 0xc3, V64>;
 let mayStore = 1, hasSideEffects = 0, Uses = [VL] in
 multiclass VSTbm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
   def "" : RVM<opc, (outs), dag_in, !strconcat(opcStr, argStr)>;
-  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
     def l : RVM<opc, (outs), !con(dag_in, (ins I32:$vl)),
                 !strconcat(opcStr, argStr)>;
     def L : RVM<opc, (outs), !con(dag_in, (ins VLS:$vl)),
@@ -232,12 +229,10 @@ defm VSTL2D : VSTm<"vstl2d", 0xd3, V64>;
 // Multiclass for VGT instructions
 let mayLoad = 1, hasSideEffects = 0, Uses = [VL] in
 multiclass VGTbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
-                 dag dag_in, string disEnc = ""> {
-  let DisableEncoding = disEnc in
+                 dag dag_in> {
   def "" : RVM<opc, (outs RC:$vx), dag_in,
                !strconcat(opcStr, " $vx, ", argStr)>;
-  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
-      isCodeGenOnly = 1 in
+  let Constraints = "$vx = $base", isCodeGenOnly = 1 in
   def _v : RVM<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
                !strconcat(opcStr, " $vx, ", argStr)>;
 }
@@ -245,10 +240,8 @@ multiclass VGTlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
                  dag dag_in> {
   defm "" : VGTbm<opcStr, argStr, opc, RC, dag_in>;
   let isCodeGenOnly = 1, VE_VLInUse = 1 in {
-    defm l : VGTbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
-                   "$vl,">;
-    defm L : VGTbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
-                   "$vl,">;
+    defm l : VGTbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl))>;
+    defm L : VGTbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl))>;
   }
 }
 multiclass VGTmm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
@@ -297,7 +290,7 @@ def : MnemonicAlias<"vgtl.nc", "vgtl.zx.nc">;
 let mayStore = 1, hasSideEffects = 0, Uses = [VL] in
 multiclass VSCbm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
   def "" : RVM<opc, (outs), dag_in, !strconcat(opcStr, argStr)>;
-  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
     def l : RVM<opc, (outs), !con(dag_in, (ins I32:$vl)),
                 !strconcat(opcStr, argStr)>;
     def L : RVM<opc, (outs), !con(dag_in, (ins VLS:$vl)),
@@ -348,7 +341,7 @@ defm VSCL : VSCm<"vscl", 0xb3, V64>;
 let Uses = [VL] in
 multiclass PFCHVbm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
   def "" : RVM<opc, (outs), dag_in, !strconcat(opcStr, argStr)>;
-  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
     def l : RVM<opc, (outs), !con(dag_in, (ins I32:$vl)),
                 !strconcat(opcStr, argStr)>;
     def L : RVM<opc, (outs), !con(dag_in, (ins VLS:$vl)),
@@ -373,8 +366,7 @@ let sx = 0, vx = ?, hasSideEffects = 0 in
 multiclass LSVbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
                  dag dag_in> {
   def "" : RR<opc, (outs RC:$vx), dag_in, !strconcat(opcStr, " ${vx}", argStr)>;
-  let Constraints = "$vx = $base", DisableEncoding = "$base",
-      isCodeGenOnly = 1 in
+  let Constraints = "$vx = $base", isCodeGenOnly = 1 in
   def _v : RR<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
                !strconcat(opcStr, " ${vx}", argStr)>;
 }
@@ -406,8 +398,7 @@ multiclass LVMbm<string opcStr, string argStr, bits<8>opc, RegisterClass RCM,
                  dag dag_in> {
   def "" : RR<opc, (outs RCM:$vx), dag_in,
               !strconcat(opcStr, " $vx, ", argStr)>;
-  let Constraints = "$vx = $base", DisableEncoding = "$base",
-      isCodeGenOnly = 1 in {
+  let Constraints = "$vx = $base", isCodeGenOnly = 1 in {
     def _m : RR<opc, (outs RCM:$vx), !con(dag_in, (ins RCM:$base)),
                 !strconcat(opcStr, " $vx, ", argStr)>;
   }
@@ -440,11 +431,10 @@ defm SVM : SVMm<"svm", 0xa7, VM>;
 // Section 8.9.24 - VBRD (Vector Broadcast)
 let vx = ?, hasSideEffects = 0, Uses = [VL] in
 multiclass VBRDbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
-                  dag dag_in, string disEnc = ""> {
-  let DisableEncoding = disEnc in
+                  dag dag_in> {
   def "" : RV<opc, (outs RC:$vx), dag_in,
               !strconcat(opcStr, " $vx, ", argStr)>;
-  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
+  let Constraints = "$vx = $base",
       isCodeGenOnly = 1 in
   def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
               !strconcat(opcStr, " $vx, ", argStr)>;
@@ -453,10 +443,8 @@ multiclass VBRDlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
                   dag dag_in> {
   defm "" : VBRDbm<opcStr, argStr, opc, RC, dag_in>;
   let isCodeGenOnly = 1, VE_VLInUse = 1 in {
-    defm l : VBRDbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
-                   "$vl,">;
-    defm L : VBRDbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
-                   "$vl,">;
+    defm l : VBRDbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl))>;
+    defm L : VBRDbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl))>;
   }
 }
 multiclass VBRDmm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
@@ -484,11 +472,10 @@ defm PVBRD : VBRDm<"pvbrd", 0x8c, V64, I64, VM512>;
 // Section 8.9.25 - VMV (Vector Move)
 let vx = ?, vz = ?, hasSideEffects = 0, Uses = [VL] in
 multiclass VMVbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
-                 dag dag_in, string disEnc = ""> {
-  let DisableEncoding = disEnc in
+                 dag dag_in> {
   def "" : RV<opc, (outs RC:$vx), dag_in,
               !strconcat(opcStr, " $vx, ", argStr)>;
-  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
+  let Constraints = "$vx = $base",
       isCodeGenOnly = 1 in
   def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
               !strconcat(opcStr, " $vx, ", argStr)>;
@@ -497,10 +484,8 @@ multiclass VMVlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
                  dag dag_in> {
   defm "" : VMVbm<opcStr, argStr, opc, RC, dag_in>;
   let isCodeGenOnly = 1, VE_VLInUse = 1 in {
-    defm l : VMVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
-                   "$vl,">;
-    defm L : VMVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
-                   "$vl,">;
+    defm l : VMVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl))>;
+    defm L : VMVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl))>;
   }
 }
 multiclass VMVmm<string opcStr, bits<8>opc, RegisterClass RC,
@@ -525,12 +510,10 @@ defm VMV : VMVm<"vmv", 0x9c, V64, VM>;
 // Multiclass for generic vector calculation
 let vx = ?, hasSideEffects = 0, Uses = [VL] in
 multiclass RVbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
-                dag dag_in, string disEnc = ""> {
-  let DisableEncoding = disEnc in
+                dag dag_in> {
   def "" : RV<opc, (outs RC:$vx), dag_in,
               !strconcat(opcStr, " $vx", argStr)>;
-  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
-      isCodeGenOnly = 1 in
+  let Constraints = "$vx = $base", isCodeGenOnly = 1 in
   def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
               !strconcat(opcStr, " $vx", argStr)>;
 }
@@ -538,10 +521,8 @@ multiclass RVlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
                 dag dag_in> {
   defm "" : RVbm<opcStr, argStr, opc, RC, dag_in>;
   let isCodeGenOnly = 1, VE_VLInUse = 1 in {
-    defm l : RVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
-                  "$vl,">;
-    defm L : RVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
-                  "$vl,">;
+    defm l : RVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl))>;
+    defm L : RVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl))>;
   }
 }
 multiclass RVmm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
@@ -688,11 +669,10 @@ multiclass RVFIXm<string opcStr, bits<8> opc, RegisterClass RC,
 // Multiclass for generic iterative vector calculation
 let vx = ?, hasSideEffects = 0, Uses = [VL] in
 multiclass RVIbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
-                dag dag_in, string disEnc = ""> {
-  let DisableEncoding = disEnc in
+                dag dag_in> {
   def "" : RV<opc, (outs RC:$vx), dag_in,
               !strconcat(opcStr, " $vx", argStr)>;
-  let isCodeGenOnly = 1, Constraints = "$vx = $base", DisableEncoding = disEnc#"$base" in
+  let isCodeGenOnly = 1, Constraints = "$vx = $base" in
   def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
               !strconcat(opcStr, " $vx", argStr)>;
 }
@@ -700,10 +680,8 @@ multiclass RVIlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
                  dag dag_in> {
   defm "" : RVIbm<opcStr, argStr, opc, RC, dag_in>;
   let isCodeGenOnly = 1, VE_VLInUse = 1 in {
-    defm l : RVIbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
-                   "$vl,">;
-    defm L : RVIbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
-                   "$vl,">;
+    defm l : RVIbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl))>;
+    defm L : RVIbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl))>;
   }
 }
 // Generic RV multiclass for iterative operation with 2 argument.
@@ -743,7 +721,7 @@ let vx = ?, hasSideEffects = 0, Uses = [VL] in
 multiclass RVMKbm<string opcStr, string argStr, bits<8>opc, dag dag_out,
                   dag dag_in> {
   def "" : RV<opc, dag_out, dag_in, !strconcat(opcStr, argStr)>;
-  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
     def l : RV<opc, dag_out, !con(dag_in, (ins I32:$vl)),
                !strconcat(opcStr, argStr)>;
     def L : RV<opc, dag_out, !con(dag_in, (ins VLS:$vl)),
@@ -796,7 +774,7 @@ multiclass RVMSbm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
     bits<7> sx;
     let Inst{54-48} = sx;
   }
-  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
     def l : RV<opc, (outs I64:$sx), !con(dag_in, (ins I32:$vl)),
                !strconcat(opcStr, " $sx,", argStr)> {
       bits<7> sx;

@@ -119,6 +119,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -399,6 +400,7 @@ public:
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
 
   bool verify(const Function &F) {
+    llvm::TimeTraceScope timeScope("Verifier");
     assert(F.getParent() == &M &&
            "An instance of this class only works with a specific module!");
 
@@ -526,6 +528,7 @@ private:
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
+  void visitNofreeMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
@@ -1298,9 +1301,11 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   if (N.getTag() == dwarf::DW_TAG_set_type) {
     if (auto *T = N.getRawBaseType()) {
       auto *Enum = dyn_cast_or_null<DICompositeType>(T);
+      auto *Subrange = dyn_cast_or_null<DISubrangeType>(T);
       auto *Basic = dyn_cast_or_null<DIBasicType>(T);
       CheckDI(
           (Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type) ||
+              (Subrange && Subrange->getTag() == dwarf::DW_TAG_subrange_type) ||
               (Basic && (Basic->getEncoding() == dwarf::DW_ATE_unsigned ||
                          Basic->getEncoding() == dwarf::DW_ATE_signed ||
                          Basic->getEncoding() == dwarf::DW_ATE_unsigned_char ||
@@ -2443,16 +2448,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
-  // Check EVEX512 feature.
-  if (TT.isX86() && MaxParameterWidth >= 512) {
-    Attribute TargetFeaturesAttr = Attrs.getFnAttr("target-features");
-    if (TargetFeaturesAttr.isValid()) {
-      StringRef TF = TargetFeaturesAttr.getValueAsString();
-      Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
-            "512-bit vector arguments require 'evex512' for AVX512", V);
-    }
-  }
-
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   if (Attrs.hasFnAttr("patchable-function-entry-section"))
@@ -2526,12 +2521,11 @@ void Verifier::verifyFunctionMetadata(
   for (const auto &Pair : MDs) {
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
-      if (isExplicitlyUnknownBranchWeightsMetadata(*MD)) {
-        CheckFailed("'unknown' !prof metadata should appear only on "
-                    "instructions supporting the 'branch_weights' metadata",
-                    MD);
+      // We may have functions that are synthesized by the compiler, e.g. in
+      // WPD, that we can't currently determine the entry count.
+      if (isExplicitlyUnknownProfileMetadata(*MD))
         continue;
-      }
+
       Check(MD->getNumOperands() >= 2,
             "!prof annotations should have no less than 2 operands", MD);
 
@@ -2830,6 +2824,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
+  llvm::TimeTraceScope timeScope("Verifier verify sibling funclet unwinds");
   SmallPtrSet<Instruction *, 8> Visited;
   SmallPtrSet<Instruction *, 8> Active;
   for (const auto &Pair : SiblingFuncletInfo) {
@@ -3006,7 +3001,7 @@ void Verifier::visitFunction(const Function &F) {
     if (!IsIntrinsic) {
       Check(!Arg.getType()->isMetadataTy(),
             "Function takes metadata but isn't an intrinsic", &Arg, &F);
-      Check(!Arg.getType()->isTokenTy(),
+      Check(!Arg.getType()->isTokenLikeTy(),
             "Function takes token but isn't an intrinsic", &Arg, &F);
       Check(!Arg.getType()->isX86_AMXTy(),
             "Function takes x86_amx but isn't an intrinsic", &Arg, &F);
@@ -3020,7 +3015,7 @@ void Verifier::visitFunction(const Function &F) {
   }
 
   if (!IsIntrinsic) {
-    Check(!F.getReturnType()->isTokenTy(),
+    Check(!F.getReturnType()->isTokenLikeTy(),
           "Function returns a token but isn't an intrinsic", &F);
     Check(!F.getReturnType()->isX86_AMXTy(),
           "Function returns a x86_amx but isn't an intrinsic", &F);
@@ -3190,7 +3185,7 @@ void Verifier::visitFunction(const Function &F) {
 
     // Scope and SP could be the same MDNode and we don't want to skip
     // validation in that case
-    if (SP && ((Scope != SP) && !Seen.insert(SP).second))
+    if ((Scope != SP) && !Seen.insert(SP).second)
       return;
 
     CheckDI(SP->describes(&F),
@@ -3634,7 +3629,7 @@ void Verifier::visitPHINode(PHINode &PN) {
         "PHI nodes not grouped at top of basic block!", &PN, PN.getParent());
 
   // Check that a PHI doesn't yield a Token.
-  Check(!PN.getType()->isTokenTy(), "PHI nodes cannot have token type!");
+  Check(!PN.getType()->isTokenLikeTy(), "PHI nodes cannot have token type!");
 
   // Check that all of the values of the PHI node have the same type as the
   // result.
@@ -3839,14 +3834,14 @@ void Verifier::visitCallBase(CallBase &Call) {
     for (Type *ParamTy : FTy->params()) {
       Check(!ParamTy->isMetadataTy(),
             "Function has metadata parameter but isn't an intrinsic", Call);
-      Check(!ParamTy->isTokenTy(),
+      Check(!ParamTy->isTokenLikeTy(),
             "Function has token parameter but isn't an intrinsic", Call);
     }
   }
 
   // Verify that indirect calls don't return tokens.
   if (!Call.getCalledFunction()) {
-    Check(!FTy->getReturnType()->isTokenTy(),
+    Check(!FTy->getReturnType()->isTokenLikeTy(),
           "Return type cannot be token for indirect call!");
     Check(!FTy->getReturnType()->isX86_AMXTy(),
           "Return type cannot be x86_amx for indirect call!");
@@ -5021,6 +5016,13 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         &I);
 }
 
+void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
+  Check(I.getType()->isPointerTy(), "nofree applies only to pointer types", &I);
+  Check((isa<IntToPtrInst>(I)), "nofree applies only to inttoptr instruction",
+        &I);
+  Check(MD->getNumOperands() == 0, "nofree metadata must be empty", &I);
+}
+
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   auto GetBranchingTerminatorNumOperands = [&]() {
     unsigned ExpectedNumOperands = 0;
@@ -5495,6 +5497,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable_or_null))
     visitDereferenceableMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofree))
+    visitNofreeMetadata(I, MD);
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(I, TBAA);
@@ -6724,7 +6729,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
     break;
   }
-  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4: {
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
     Value *Src0 = Call.getArgOperand(1);
     Value *Src1 = Call.getArgOperand(3);
 
@@ -6770,6 +6777,28 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src0, Call.getArgOperand(0));
     Check(Src1Ty->getNumElements() >= getFormatNumRegs(FmtB),
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(2));
+    break;
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    // Check we only use this intrinsic on the FLAT or GLOBAL address spaces.
+    Value *PtrArg = Call.getArgOperand(0);
+    const unsigned AS = PtrArg->getType()->getPointerAddressSpace();
+    Check(AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::GLOBAL_ADDRESS,
+          "cooperative atomic intrinsics require a generic or global pointer",
+          &Call, PtrArg);
+
+    // Last argument must be a MD string
+    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    MDNode *MD = cast<MDNode>(Op->getMetadata());
+    Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+          "cooperative atomic intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
