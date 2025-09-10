@@ -18945,7 +18945,8 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
-      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())) {
+      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps() ||
+       Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
