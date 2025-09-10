@@ -2097,8 +2097,8 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
 bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
                                             LshrOfTruncOfLshr &MatchInfo,
                                             MachineInstr &ShiftMI) const {
-  unsigned ShiftOpcode = MI.getOpcode();
-  assert(ShiftOpcode == TargetOpcode::G_LSHR);
+  //unsigned ShiftOpcode = MI.getOpcode();
+  assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a G_LSHR");
 
   Register N0 = MI.getOperand(1).getReg();
   Register N1 = MI.getOperand(2).getReg();
@@ -2138,8 +2138,8 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
 void CombinerHelper::applyLshrOfTruncOfLshr(
     MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo) const {
-  unsigned ShiftOpcode = MI.getOpcode();
-  assert(ShiftOpcode == TargetOpcode::G_LSHR);
+  //unsigned ShiftOpcode = MI.getOpcode();
+  assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a G_LSHR");
 
   Register Dst = MI.getOperand(0).getReg();
   auto ShiftAmt =
@@ -2150,7 +2150,7 @@ void CombinerHelper::applyLshrOfTruncOfLshr(
     APInt MaskVal =
         APInt::getLowBitsSet(MatchInfo.InnerShiftTy.getScalarSizeInBits(),
                              MatchInfo.MaskVal.getZExtValue());
-    auto Mask = Builder.buildConstant(MatchInfo.ShiftAmtTy, MaskVal);
+    auto Mask = Builder.buildConstant(MatchInfo.InnerShiftTy, MaskVal);
     auto And = Builder.buildAnd(MatchInfo.InnerShiftTy, Shift, Mask);
     Builder.buildTrunc(Dst, And);
   } else
