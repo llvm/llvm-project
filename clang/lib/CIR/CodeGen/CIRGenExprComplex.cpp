@@ -201,9 +201,8 @@ public:
     return {};
   }
   mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
-    cgf.cgm.errorNYI(die->getExprLoc(),
-                     "ComplexExprEmitter VisitCXXDefaultInitExpr");
-    return {};
+    CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
+    return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
     cgf.cgm.errorNYI(e->getExprLoc(),

@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
 #include <optional>
@@ -4969,6 +4970,23 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (!L->getExitBlock())
     return;
 
+  // Check if the loop contains any reductions that could be parallelized when
+  // unrolling. If so, enable partial unrolling, if the trip count is know to be
+  // a multiple of 2.
+  bool HasParellelizableReductions =
+      L->getNumBlocks() == 1 &&
+      any_of(L->getHeader()->phis(),
+             [&SE, L](PHINode &Phi) {
+               return canParallelizeReductionWhenUnrolling(Phi, L, &SE);
+             }) &&
+      isLoopSizeWithinBudget(L, TTI, 12, nullptr);
+  if (HasParellelizableReductions &&
+      SE.getSmallConstantTripMultiple(L, L->getExitingBlock()) % 2 == 0) {
+    UP.Partial = true;
+    UP.MaxCount = 4;
+    UP.AddAdditionalAccumulators = true;
+  }
+
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
@@ -4983,6 +5001,12 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
+
+  if (HasParellelizableReductions) {
+    UP.Runtime = true;
+    UP.DefaultUnrollRuntimeCount = 4;
+    UP.AddAdditionalAccumulators = true;
+  }
 
   // Try to unroll small loops, of few-blocks with low budget, if they have
   // load/store dependencies, to expose more parallel memory access streams,
