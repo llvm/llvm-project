@@ -7096,9 +7096,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
         D.Diag(diag::err_drv_option_requires_option)
           << "-ftrap-function-returns" << "-ftrap-function=";
     }
-
-  Args.addOptInFlag(CmdArgs, options::OPT_funique_traps,
-                    options::OPT_fno_unique_traps);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both

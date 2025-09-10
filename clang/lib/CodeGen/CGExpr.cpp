@@ -4625,7 +4625,6 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   /*TO_UPSTREAM(BoundsSafety) ON*/
   NoMerge |= CGM.getCodeGenOpts().TrapFuncReturns;
-  NoMerge |= CGM.getCodeGenOpts().UniqueTrapBlocks;
   /*TO_UPSTREAM(BoundsSafety) OFF*/
 
   if (TrapBB && !NoMerge) {
@@ -4654,11 +4653,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     /* TO_UPSTREAM(BoundsSafety) OFF*/
   } else {
     /*TO_UPSTREAM(BoundsSafety) ON*/
-    if (CGM.getCodeGenOpts().UniqueTrapBlocks &&
-        !CGM.getCodeGenOpts().TrapFuncReturns)
-      TrapBB = createUnmergeableBasicBlock("trap");
-    else
-      TrapBB = createBasicBlock("trap");
+    TrapBB = createBasicBlock("trap");
     auto *BrInst = Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
 

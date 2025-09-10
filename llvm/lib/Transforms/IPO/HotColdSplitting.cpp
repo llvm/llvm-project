@@ -37,9 +37,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-/* TO_UPSTREAM(BoundsSafety) ON*/
-#include "llvm/IR/Constants.h"
-/* TO_UPSTREAM(BoundsSafety) OFF*/
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -137,27 +134,6 @@ void analyzeProfMetadata(BasicBlock *BB,
     AnnotatedColdBlocks.insert(CondBr->getSuccessor(1));
 }
 
-/* TO_UPSTREAM(BoundsSafety) ON*/
-bool isBoundsSafetyTrapCall(const CallBase *CB) {
-  const auto *CF = CB->getCalledFunction();
-  if (!CF)
-    return false;
-  if (!CF->isIntrinsic())
-    return false;
-  if (CF->getIntrinsicID() != Intrinsic::ubsantrap)
-    return false;
-
-  assert(CB->arg_size() == 1);
-  const auto *Arg = CB->getArgOperand(0);
-  const auto *ConstArg = cast<ConstantInt>(Arg);
-
-  auto ArgValue = ConstArg->getZExtValue();
-  assert(ArgValue <= UINT8_MAX);
-  // FIXME: Don't hardcode this value
-  return ArgValue == 0x19;
-}
-/* TO_UPSTREAM(BoundsSafety) OFF*/
-
 bool unlikelyExecuted(BasicBlock &BB) {
   // Exception handling blocks are unlikely executed.
   if (BB.isEHPad() || isa<ResumeInst>(BB.getTerminator()))
@@ -168,10 +144,7 @@ bool unlikelyExecuted(BasicBlock &BB) {
   for (Instruction &I : BB)
     if (auto *CB = dyn_cast<CallBase>(&I))
       if (CB->hasFnAttr(Attribute::Cold) &&
-          !CB->getMetadata(LLVMContext::MD_nosanitize) &&
-          /* TO_UPSTREAM(BoundsSafety) ON*/
-          !isBoundsSafetyTrapCall(CB)
-          /* TO_UPSTREAM(BoundsSafety) OFF*/)
+          !CB->getMetadata(LLVMContext::MD_nosanitize))
         return true;
 
   // The block is cold if it has an unreachable terminator, unless it's

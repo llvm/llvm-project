@@ -2659,13 +2659,6 @@ public:
     return llvm::BasicBlock::Create(getLLVMContext(), name, parent, before);
   }
 
-  /* TO_UPSTREM(BoundsSafety) ON*/
-  llvm::BasicBlock *
-  createUnmergeableBasicBlock(const Twine &name = "",
-                              llvm::Function *parent = nullptr,
-                              llvm::BasicBlock *before = nullptr);
-  /* TO_UPSTREM(BoundsSafety) OFF*/
-
   /// getBasicBlockForLabel - Return the LLVM basicblock that the specified
   /// label maps to.
   JumpDest getJumpDestForLabel(const LabelDecl *S);

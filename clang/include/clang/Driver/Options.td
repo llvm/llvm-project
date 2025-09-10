@@ -4396,16 +4396,6 @@ defm trap_function_returns : BoolFOption<"trap-function-returns",
           "The trap function specified by -ftrap-function may return normally">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "The trap function specified by -ftrap-function never returns">>;
-defm unique_traps : BoolFOption<"unique-traps",
-  CodeGenOpts<"UniqueTrapBlocks">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option],
-    "Make trap instructions unique by preventing traps from being merged by the"
-    " optimizer. This is useful for preserving the debug information on traps "
-    "in optimized code. This makes it easier to debug programs at the cost of "
-    "increased code size">,
-  NegFlag<SetFalse, [], [CC1Option],
-    "Don't try to make trap instructions unique. This allows trap instructions "
-    "to be merged by the optimizer.">>;
 /* TO_UPSTREAM(BoundsSafety) OFF */
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;

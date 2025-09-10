@@ -332,10 +332,6 @@ CODEGENOPT(ProfileSampleAccurate, 1, 0, Benign) ///< Sample profile is accurate.
 /* TO_UPSTREAM(BoundsSafety) ON*/
 CODEGENOPT(TrapFuncReturns   , 1, 0, Benign) ///< When true, the function specified with
                                              ///< -ftrap-function may return normally
-CODEGENOPT(
-    UniqueTrapBlocks, 1,
-    0, Benign) ///< When true, basic blocks that contain traps they will be prevented
-               ///< from being merged by optimization passes and the backends.
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
 /// Treat loops as finite: language, always, never.
