@@ -93,6 +93,12 @@ void initializeRISCVPushPopOptPass(PassRegistry &);
 FunctionPass *createRISCVLoadStoreOptPass();
 void initializeRISCVLoadStoreOptPass(PassRegistry &);
 
+FunctionPass *createRISCVPreAllocZilsdOptPass();
+void initializeRISCVPreAllocZilsdOptPass(PassRegistry &);
+
+FunctionPass *createRISCVPostAllocZilsdOptPass();
+void initializeRISCVPostAllocZilsdOptPass(PassRegistry &);
+
 FunctionPass *createRISCVZacasABIFixPass();
 void initializeRISCVZacasABIFixPass(PassRegistry &);
 
