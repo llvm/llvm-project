@@ -1270,11 +1270,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  VPInstruction *OpVPI;
-  if (match(Def, m_ExtractLastElement(m_VPInstruction(OpVPI))) &&
-      OpVPI->isVectorToScalar()) {
-    Def->replaceAllUsesWith(OpVPI);
-    return;
+  if (match(Def,
+            m_VPInstruction<VPInstruction::ExtractLastElement>(m_VPValue(A))) &&
+      vputils::isSingleScalar(A) && all_of(A->users(), [Def, A](VPUser *U) {
+        return U->usesScalars(A) || Def == U;
+      })) {
+    return Def->replaceAllUsesWith(A);
   }
 }
 
@@ -1311,7 +1312,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !vputils::onlyScalarValuesUsed(RepOrWidenR))
+          !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
+            return U->usesScalars(RepOrWidenR) ||
+                   match(cast<VPRecipeBase>(U),
+                         m_ExtractLastElement(m_VPValue()));
+          }))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),

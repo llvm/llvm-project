@@ -6026,6 +6026,8 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
   //                  ::= CI2 <type> # base inheriting constructor
   //
   // In addition, C5 is a comdat name with C1 and C2 in it.
+  // C4 represents a ctor declaration and is used by debuggers to look up
+  // the various ctor variants.
   Out << 'C';
   if (InheritedFrom)
     Out << 'I';
@@ -6035,6 +6037,9 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
     break;
   case Ctor_Base:
     Out << '2';
+    break;
+  case Ctor_Unified:
+    Out << '4';
     break;
   case Ctor_Comdat:
     Out << '5';
@@ -6053,6 +6058,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   //                  ::= D2  # base object destructor
   //
   // In addition, D5 is a comdat name with D1, D2 and, if virtual, D0 in it.
+  // D4 represents a dtor declaration and is used by debuggers to look up
+  // the various dtor variants.
   switch (T) {
   case Dtor_Deleting:
     Out << "D0";
@@ -6062,6 +6069,9 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
     break;
   case Dtor_Base:
     Out << "D2";
+    break;
+  case Dtor_Unified:
+    Out << "D4";
     break;
   case Dtor_Comdat:
     Out << "D5";

@@ -1639,8 +1639,8 @@ transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
           return a.size() < b.size();
         })->size();
 
-    for (size_t argIdx = 0; argIdx < payloads.size(); argIdx++)
-      payloads[argIdx].resize(numIterations);
+    for (auto &payload : payloads)
+      payload.resize(numIterations);
   }
 
   // As we will be "zipping" over them, check all payloads have the same size.
