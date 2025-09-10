@@ -1802,6 +1802,12 @@ public:
   /// This recipe generates a GEP instruction.
   unsigned getOpcode() const { return Instruction::GetElementPtr; }
 
+  /// Get the source element type of the underlying GEP.
+  Type *getIndexedType() const {
+    return cast<GetElementPtrInst>(getUnderlyingInstr())
+        ->getSourceElementType();
+  }
+
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
 

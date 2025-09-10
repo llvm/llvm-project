@@ -2022,6 +2022,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
       return hash_combine(Result, VPR->getIndexedType());
+    if (auto *WideGEP = dyn_cast<VPWidenGEPRecipe>(Def))
+      return hash_combine(Result, WideGEP->getIndexedType());
     return Result;
   }
 
@@ -2042,6 +2044,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(L))
       if (VPR->getIndexedType() !=
           cast<VPVectorPointerRecipe>(R)->getIndexedType())
+        return false;
+    if (auto *WideGEP = dyn_cast<VPWidenGEPRecipe>(L))
+      if (WideGEP->getIndexedType() !=
+          cast<VPWidenGEPRecipe>(R)->getIndexedType())
         return false;
     const VPlan *Plan = L->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
