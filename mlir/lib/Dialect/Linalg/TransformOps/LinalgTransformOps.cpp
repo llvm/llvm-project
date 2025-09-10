@@ -4141,10 +4141,10 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // If we are inside a `ParallelCombiningOp` region, temporarily set the
-  // insertion point outside: only ops implementing InParallelOpInterface are
+  // If we are inside a `InParallelOp` region, temporarily set the
+  // insertion point outside: only ops implementing ParallelCombiningOpInterface are
   // allowed in there.
-  if (isa<mlir::InParallelOpInterface>(target.getOperation())) {
+  if (isa<mlir::ParallelCombiningOpInterface>(target.getOperation())) {
     rewriter.setInsertionPoint(target->getParentOp());
   }
 

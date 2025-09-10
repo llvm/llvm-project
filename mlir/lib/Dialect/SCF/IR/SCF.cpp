@@ -1444,7 +1444,7 @@ InParallelOp ForallOp::getTerminator() {
 SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   SmallVector<Operation *> storeOps;
   for (Operation *user : bbArg.getUsers()) {
-    if (auto parallelOp = dyn_cast<InParallelOpInterface>(user)) {
+    if (auto parallelOp = dyn_cast<ParallelCombiningOpInterface>(user)) {
       storeOps.push_back(parallelOp);
     }
   }
@@ -1914,7 +1914,7 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      auto inParallelOp = dyn_cast<InParallelOpInterface>(yieldingOp);
+      auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(yieldingOp);
       if (inParallelOp)
         inParallelOp.getUpdatedDestinations().assign(outputBlockArg);
     }
@@ -1976,9 +1976,9 @@ LogicalResult InParallelOp::verify() {
     return this->emitOpError("expected forall op parent");
 
   for (Operation &op : getRegion().front().getOperations()) {
-    auto inParallelOp = dyn_cast<InParallelOpInterface>(&op);
+    auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(&op);
     if (!inParallelOp) {
-      return this->emitOpError("expected only InParallelOpInterface") << " ops";
+      return this->emitOpError("expected only ParallelCombiningOpInterface") << " ops";
     }
 
     // Verify that inserts are into out block arguments.
@@ -2026,7 +2026,7 @@ OpResult InParallelOp::getParentResult(int64_t idx) {
 SmallVector<BlockArgument> InParallelOp::getDests() {
   SmallVector<BlockArgument> updatedDests;
   for (auto &yieldingOp : getYieldingOps()) {
-    auto inParallelOp = dyn_cast<InParallelOpInterface>(&yieldingOp);
+    auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
     if (!inParallelOp)
       continue;
     for (auto &updatedOperand : inParallelOp.getUpdatedDestinations())

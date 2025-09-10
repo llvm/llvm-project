@@ -15,7 +15,7 @@
 
 include "mlir/IR/OpBase.td"
 
-def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
+def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
   let description = [{
     A parallel combining op is an op with a region.
 
@@ -52,11 +52,11 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   ];
   // TODO: Single region single block interface on interfaces ?
   let verify = [{
-    return verifyParallelCombiningOpInterface($_op);
+    return verifyInParallelOpInterface($_op);
   }];
 }
 
-def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
+def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   let description = [{
     An `in_parallel` op is an operation performs parallel updates to
     destination tensors within the context of a parent iterating operation.

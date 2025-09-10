@@ -216,9 +216,9 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
                                         droppedDims, resolvedSizes);
 
     // If we are inside an InParallel region, temporarily set the insertion
-    // point outside: only ops of InParallelOpInterface are allowed in
+    // point outside: only ops of ParallelCombiningOpInterface are allowed in
     // there.
-    if (isa<mlir::InParallelOpInterface>(insertSliceOp.getOperation())) {
+    if (isa<mlir::ParallelCombiningOpInterface>(insertSliceOp.getOperation())) {
       rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     }
 

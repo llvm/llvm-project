@@ -16,7 +16,7 @@ using namespace mlir::bufferization;
 namespace {
 /// The `scf.forall.in_parallel` terminator is special in a few ways:
 /// * It does not implement the BranchOpInterface or
-///   RegionBranchTerminatorOpInterface, but the ParallelCombiningOpInterface
+///   RegionBranchTerminatorOpInterface, but the InParallelOpInterface
 ///   which is not supported by BufferDeallocation.
 /// * It has a graph-like region which only allows one specific tensor op
 /// * After bufferization the nested region is always empty

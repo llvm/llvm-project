@@ -2978,7 +2978,7 @@ public:
       // The only difference between InsertSliceOp and ParallelInsertSliceOp
       // is that the insertion point is just before the ParallelCombiningOp in
       // the parallel case.
-      if (isa<ParallelCombiningOpInterface>(insertSliceOp->getParentOp()))
+      if (isa<InParallelOpInterface>(insertSliceOp->getParentOp()))
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
       toInsert = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
                                         sourceType, toInsert);
@@ -3846,7 +3846,7 @@ OpFoldResult PadOp::fold(FoldAdaptor) {
 //===----------------------------------------------------------------------===//
 
 OpResult ParallelInsertSliceOp::getTiedOpResult() {
-  ParallelCombiningOpInterface parallelCombiningParent =
+  InParallelOpInterface parallelCombiningParent =
       getParallelCombiningParent();
   for (const auto &it :
        llvm::enumerate(parallelCombiningParent.getYieldingOps())) {
@@ -3901,8 +3901,8 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
 }
 
 LogicalResult ParallelInsertSliceOp::verify() {
-  if (!isa<ParallelCombiningOpInterface>(getOperation()->getParentOp()))
-    return this->emitError("expected ParallelCombiningOpInterface parent, got:")
+  if (!isa<InParallelOpInterface>(getOperation()->getParentOp()))
+    return this->emitError("expected InParallelOpInterface parent, got:")
            << *(getOperation()->getParentOp());
 
   // Verify result type against inferred type.
@@ -3935,14 +3935,14 @@ llvm::SmallBitVector ParallelInsertSliceOp::getDroppedDims() {
   return ::getDroppedDims(getSourceType().getShape(), getMixedSizes());
 }
 
-// InParallelOpInterface implementation
+// ParallelCombiningOpInterface implementation
 MutableOperandRange ParallelInsertSliceOp::getUpdatedDestinations() {
   return getDestMutable();
 }
 
 Operation *ParallelInsertSliceOp::getIteratingParent() {
-  // Return the parent ParallelCombiningOpInterface's parent
-  if (auto combiningOp = dyn_cast<ParallelCombiningOpInterface>(
+  // Return the parent InParallelOpInterface's parent
+  if (auto combiningOp = dyn_cast<InParallelOpInterface>(
           getOperation()->getParentOp())) {
     return combiningOp->getParentOp();
   }

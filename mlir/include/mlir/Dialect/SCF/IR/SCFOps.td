@@ -654,7 +654,7 @@ def ForallOp : SCF_Op<"forall", [
 def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
-       DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
+       DeclareOpInterfaceMethods<InParallelOpInterface>,
        HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `forall` block";

@@ -970,7 +970,7 @@ struct ParallelInsertSliceOpInterface
                           BufferizationState &state) const {
     OpBuilder::InsertionGuard g(rewriter);
     auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
-    ParallelCombiningOpInterface parallelCombiningParent =
+    InParallelOpInterface parallelCombiningParent =
         parallelInsertSliceOp.getParallelCombiningParent();
 
     // Bufferize the op outside of the parallel combining terminator.
