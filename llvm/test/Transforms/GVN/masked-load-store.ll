@@ -184,16 +184,3 @@ define <vscale x 4 x float> @store_mask_differs(ptr %0, ptr %1, <vscale x 4 x fl
   %load.1.0 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr %1, i32 1, <vscale x 4 x i1> %mask0, <vscale x 4 x float> %passthrough)
   ret <vscale x 4 x float> %load.1.0
 }
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-declare <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr captures(none), i32 immarg, <vscale x 4 x i1>, <vscale x 4 x float>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
-declare void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float>, ptr captures(none), i32 immarg, <vscale x 4 x i1>) #2
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32) #3
-
-declare <128 x i8> @llvm.masked.load.v128i8.p0(ptr, i32, <128 x i1>, <128 x i8>)
-declare void @llvm.masked.store.v128i8.p0(<128 x i8>, ptr, i32, <128 x i1>)
-
