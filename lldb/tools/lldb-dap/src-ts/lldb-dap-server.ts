@@ -33,8 +33,19 @@ export class LLDBDapServer implements vscode.Disposable {
     dapPath: string,
     args: string[],
     options?: child_process.SpawnOptionsWithoutStdio,
+    connectionTimeoutSeconds?: number,
   ): Promise<{ host: string; port: number } | undefined> {
-    const dapArgs = [...args, "--connection", "listen://localhost:0"];
+    // Both the --connection and --connection-timeout arguments are subject to the shouldContinueStartup() check.
+    const connectionTimeoutArgs =
+      connectionTimeoutSeconds && connectionTimeoutSeconds > 0
+        ? ["--connection-timeout", `${connectionTimeoutSeconds}`]
+        : [];
+    const dapArgs = [
+      ...args,
+      "--connection",
+      "listen://localhost:0",
+      ...connectionTimeoutArgs,
+    ];
     if (!(await this.shouldContinueStartup(dapPath, dapArgs, options?.env))) {
       return undefined;
     }
