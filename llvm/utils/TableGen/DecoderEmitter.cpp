@@ -116,6 +116,11 @@ static cl::opt<bool> IgnoreFullyDefinedOperands(
         "Do not automatically decode operands with no '?' in their encoding."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> ResolveConflictsTryAll(
+    "resolve-conflicts-try-all",
+    cl::desc("Resolve conflicts by attempting to decode all candidates."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -188,6 +193,9 @@ class InstructionEncoding {
   /// The namespace in which this encoding exists.
   StringRef DecoderNamespace;
 
+  /// The decoder order.
+  int64_t DecodeOrder;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
@@ -223,6 +231,9 @@ public:
 
   /// Returns the namespace in which this encoding exists.
   StringRef getDecoderNamespace() const { return DecoderNamespace; }
+
+  /// Returns the decoder order for this encoding.
+  int64_t getDecodeOrder() const { return DecodeOrder; }
 
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
@@ -263,16 +274,20 @@ private:
   void parseFixedLenOperands(const BitsInit &Bits);
 };
 
-/// Sorting predicate to sort encoding IDs by encoding width.
-class LessEncodingIDByWidth {
+/// Sorting predicate to sort encoding IDs by encoding width. Within the same
+/// width, sort them by their decode order.
+class LessEncodingID {
   ArrayRef<InstructionEncoding> Encodings;
 
 public:
-  explicit LessEncodingIDByWidth(ArrayRef<InstructionEncoding> Encodings)
+  explicit LessEncodingID(ArrayRef<InstructionEncoding> Encodings)
       : Encodings(Encodings) {}
 
   bool operator()(unsigned ID1, unsigned ID2) const {
-    return Encodings[ID1].getBitWidth() < Encodings[ID2].getBitWidth();
+    const InstructionEncoding &E1 = Encodings[ID1];
+    const InstructionEncoding &E2 = Encodings[ID2];
+    return std::tuple(E1.getBitWidth(), E1.getDecodeOrder()) <
+           std::tuple(E2.getBitWidth(), E2.getDecodeOrder());
   }
 };
 
@@ -517,6 +532,13 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  /// Per decode order filter choosers. Applicable when the set of candidates
+  /// have more than 1 decode order.
+  SmallVector<std::unique_ptr<const FilterChooser>> PerDecodeOrderChoosers;
+
+  /// Handle this chooser by attempting to decode all endodings.
+  bool AttemptAll = false;
+
   /// Set to true if decoding conflict was encountered.
   bool HasConflict = false;
 
@@ -532,7 +554,7 @@ public:
                 ArrayRef<unsigned> EncodingIDs)
       : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr) {
     // Sort encoding IDs once.
-    stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
+    stable_sort(this->EncodingIDs, LessEncodingID(Encodings));
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
     FilterBits = KnownBits(FilterWidth);
@@ -545,7 +567,7 @@ public:
                 const FilterChooser &Parent)
       : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
-    assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
+    assert(is_sorted(EncodingIDs, LessEncodingID(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
@@ -583,6 +605,17 @@ private:
   // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
   // decoded bits in order to verify that the instruction matches the Opcode.
   std::vector<Island> getIslands(const KnownBits &EncodingBits) const;
+
+  int64_t getDecodeOrder(unsigned ID) const {
+    return Encodings[ID].getDecodeOrder();
+  }
+
+  /// Returns true if the set of encoding IDs have more than one decode order.
+  bool hasMultipleDecodeOrders() const;
+
+  // Split the set of candidate encodings into one bucket per decode order and
+  // create inferior FilterChoosers per bucket.
+  void splitByDecodeOrder();
 
   /// Scans the well-known encoding bits of the encodings and, builds up a list
   /// of candidate filters, and then returns the best one, if any.
@@ -684,6 +717,44 @@ void FilterChooser::applyFilter(const Filter &F) {
   StartBit = F.StartBit;
   NumBits = F.NumBits;
   assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
+
+  // When a filter has both fixed and variable encodings, we give priority to
+  // the fixed encoding (FilteredIDs) and if that fails, we attempt the variable
+  // encodings. See DecoderTableBuilder::emitTableEntries. This order may not be
+  // the right order for certain backends. To control this, they can use the
+  // DecodeOrder. If we have multiple decode orders, the filter chooser will
+  // attempt the fixed-then-variable encoding per decode order, so if we want
+  // certain variable encoding to be prioritized over fixed ones, the fixed ones
+  // can get a larger decode order.
+
+  // If we have multiple decode order, we want to attempt decoding in the
+  // following order: fixed0, variable0, fixed1, variable1 etc.
+  // If we do not split, we will attempt to decode as: fixed, variable.
+  // That may be ok if all fixed IDs have decode order <= all variable IDs, that
+  // is max(fixed decode order) <= min(variable decode order). Otherwise we
+  // split per decode order.
+  if (hasMultipleDecodeOrders() && !F.VariableIDs.empty() &&
+      !F.FilteredIDs.empty()) {
+    auto LessDecodeOrder = [&](unsigned A, unsigned B) {
+      return getDecodeOrder(A) < getDecodeOrder(B);
+    };
+
+    int64_t MaxFixedOrder = std::numeric_limits<int64_t>::min();
+    for (ArrayRef<unsigned> InferiorEncodingIDs :
+         make_second_range(F.FilteredIDs)) {
+      auto MaxIt = llvm::max_element(InferiorEncodingIDs, LessDecodeOrder);
+      int64_t CurrentMax = getDecodeOrder(*MaxIt);
+      MaxFixedOrder = std::max(MaxFixedOrder, CurrentMax);
+    }
+
+    auto MinIt = llvm::min_element(F.VariableIDs, LessDecodeOrder);
+    int64_t MinVariableOrder = getDecodeOrder(*MinIt);
+
+    if (MaxFixedOrder > MinVariableOrder) {
+      splitByDecodeOrder();
+      return;
+    }
+  }
 
   if (!F.VariableIDs.empty()) {
     // Delegates to an inferior filter chooser for further processing on this
@@ -1580,6 +1651,42 @@ std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
   return nullptr;
 }
 
+bool FilterChooser::hasMultipleDecodeOrders() const {
+  if (EncodingIDs.size() <= 1)
+    return false;
+  // Encodings are sorted by decoder order, so there are multiple decode orders
+  // if the first and last decode order do not match.
+  return getDecodeOrder(EncodingIDs.front()) !=
+         getDecodeOrder(EncodingIDs.back());
+}
+
+void FilterChooser::splitByDecodeOrder() {
+  if (!hasMultipleDecodeOrders())
+    PrintFatalError("Cannot split by decode orders for a single decode order");
+
+  // Create one inferior FilterChooser per decode order span.
+  ArrayRef<unsigned> IDs = ArrayRef(EncodingIDs);
+  int64_t LastOrder = getDecodeOrder(IDs.front());
+  size_t LastIndex = 0;
+  // Note: first iteration here is redundant, but this allows us to keep Idx
+  // value correct.
+  for (const auto &[Idx, ID] : enumerate(IDs)) {
+    int64_t CurrentOrder = getDecodeOrder(ID);
+    if (CurrentOrder != LastOrder) {
+      ArrayRef<unsigned> SubIDs = IDs.slice(LastIndex, Idx - LastIndex);
+      PerDecodeOrderChoosers.push_back(std::make_unique<FilterChooser>(
+          Encodings, SubIDs, FilterBits, *this));
+      LastOrder = CurrentOrder;
+      LastIndex = Idx;
+    }
+  }
+
+  // Finish the last span.
+  ArrayRef<unsigned> SubIDs = IDs.slice(LastIndex, IDs.size() - LastIndex);
+  PerDecodeOrderChoosers.push_back(
+      std::make_unique<FilterChooser>(Encodings, SubIDs, FilterBits, *this));
+}
+
 // Decides on the best configuration of filter(s) to use in order to decode
 // the instructions.  A conflict of instructions may occur, in which case we
 // dump the conflict set to the standard error.
@@ -1595,6 +1702,18 @@ void FilterChooser::doFilter() {
   std::unique_ptr<Filter> BestFilter = findBestFilter();
   if (BestFilter) {
     applyFilter(*BestFilter);
+    return;
+  }
+
+  // If there are multiple decode orders, then splin the candidates by decode
+  // order if we are unable to find a filter.
+  if (hasMultipleDecodeOrders()) {
+    splitByDecodeOrder();
+    return;
+  }
+
+  if (ResolveConflictsTryAll) {
+    AttemptAll = true;
     return;
   }
 
@@ -1626,10 +1745,10 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
-  size_t FixupLoc = 0;
+  size_t VarScopeFixupLoc = 0;
   if (FC.VariableFC) {
     Table.insertOpcode(MCD::OPC_Scope);
-    FixupLoc = Table.insertNumToSkip();
+    VarScopeFixupLoc = Table.insertNumToSkip();
   }
 
   if (FC.SingletonEncodingID) {
@@ -1649,7 +1768,7 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
     // Emit table entries for the only case.
     emitTableEntries(*Delegate);
-  } else {
+  } else if (FC.FilterChooserMap.size() > 1) {
     // The general case: emit a switch over the field value.
     Table.insertOpcode(MCD::OPC_ExtractField);
     Table.insertULEB128(FC.StartBit);
@@ -1676,10 +1795,34 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
     // Emit table entries for the last case.
     emitTableEntries(*Delegate);
+  } else if (FC.PerDecodeOrderChoosers.size() > 1) {
+    // Attempt to decode all inferior choosers and allow them to fail, except
+    // the last one.
+    for (const auto &Delegate : drop_end(FC.PerDecodeOrderChoosers)) {
+      Table.insertOpcode(MCD::OPC_Scope);
+      unsigned FixupLoc = Table.insertNumToSkip();
+      emitTableEntries(*Delegate);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+    emitTableEntries(*FC.PerDecodeOrderChoosers.back());
+  } else if (FC.AttemptAll) {
+    // Attempt all encoding and allow them to fail, except the last one.
+    for (const auto ID : drop_end(FC.EncodingIDs)) {
+      Table.insertOpcode(MCD::OPC_Scope);
+      unsigned FixupLoc = Table.insertNumToSkip();
+      FilterChooser SingletonFC(FC.Encodings, ID, FC.FilterBits, *FC.Parent);
+      emitSingletonTableEntry(SingletonFC);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+    FilterChooser LastSingletonFC(FC.Encodings, FC.EncodingIDs.back(),
+                                  FC.FilterBits, *FC.Parent);
+    emitSingletonTableEntry(LastSingletonFC);
+  } else {
+    llvm_unreachable("FilterChooser not setup to do any filtering");
   }
 
   if (FC.VariableFC) {
-    Table.patchNumToSkip(FixupLoc, Table.size());
+    Table.patchNumToSkip(VarScopeFixupLoc, Table.size());
     emitTableEntries(*FC.VariableFC);
   }
 }
@@ -2070,6 +2213,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   Name.append(InstDef->getName());
 
   DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
+  DecodeOrder = EncodingDef->getValueAsInt("DecodeOrder");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");

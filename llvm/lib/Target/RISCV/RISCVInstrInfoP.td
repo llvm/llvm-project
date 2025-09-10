@@ -382,9 +382,9 @@ let Predicates = [HasStdExtP] in {
   def PSLLI_H  : RVPShiftH_ri<0b000, 0b010, "pslli.h">;
   def PSSLAI_H : RVPShiftH_ri<0b101, 0b010, "psslai.h">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def SSLAI    : RVPShiftW_ri<0b101, 0b010, "sslai">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSLLI_W  : RVPShiftW_ri<0b000, 0b010, "pslli.w">;
   def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
@@ -431,7 +431,7 @@ let Predicates = [HasStdExtP] in {
 
   def PSSHAR_HS : RVPBinaryScalar_rr<0b111, 0b00, 0b010, "psshar.hs">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def SSHA      : RVPBinaryScalar_rr<0b110, 0b01, 0b010, "ssha">;
 
   def SSHAR     : RVPBinaryScalar_rr<0b111, 0b01, 0b010, "sshar">;
@@ -461,7 +461,7 @@ let Predicates = [HasStdExtP] in {
 
   def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def USATI_RV32 : RVPShiftW_ri<0b010, 0b100, "usati">;
 
   def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
@@ -542,7 +542,7 @@ let Predicates = [HasStdExtP] in {
   def PASUBU_H : RVPBinary_rr<0b1111, 0b00, 0b000, "pasubu.h">;
   def PASUBU_B : RVPBinary_rr<0b1111, 0b10, 0b000, "pasubu.b">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def SADD     : RVPBinary_rr<0b0010, 0b01, 0b000, "sadd">;
 
   def AADD     : RVPBinary_rr<0b0011, 0b01, 0b000, "aadd">;
@@ -558,7 +558,7 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def SSUBU    : RVPBinary_rr<0b1110, 0b01, 0b000, "ssubu">;
 
   def ASUBU    : RVPBinary_rr<0b1111, 0b01, 0b000, "asubu">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PADD_W   : RVPBinary_rr<0b0000, 0b01, 0b000, "padd.w">;
 
@@ -596,7 +596,7 @@ let Predicates = [HasStdExtP] in {
 
   def PDIFSUMAU_B  : RVPTernary_rrr<0b0111, 0b10, 0b001, "pdifsumau.b">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def MUL_H01      : RVPBinary_rr<0b0010, 0b01, 0b001, "mul.h01">;
 
   def MACC_H01     : RVPTernary_rrr<0b0011, 0b01, 0b001, "macc.h01">;
@@ -604,7 +604,7 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MULU_H01     : RVPBinary_rr<0b0110, 0b01, 0b001, "mulu.h01">;
 
   def MACCU_H01    : RVPTernary_rrr<0b0111, 0b01, 0b001, "maccu.h01">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PMUL_W_H01   : RVPBinary_rr<0b0010, 0b01, 0b001, "pmul.w.h01">;
   def MUL_W01      : RVPBinary_rr<0b0010, 0b11, 0b001, "mul.w01">;
@@ -626,9 +626,9 @@ let Predicates = [HasStdExtP] in {
 
   def PSSH1SADD_H : RVPBinary_rr<0b0110, 0b00, 0b010, "pssh1sadd.h">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def SSH1SADD    : RVPBinary_rr<0b0110, 0b01, 0b010, "ssh1sadd">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSH1ADD_W   : RVPBinary_rr<0b0100, 0b01, 0b010, "psh1add.w">;
 
@@ -658,7 +658,7 @@ let Predicates = [HasStdExtP] in {
 
   def PMULSU_H_B11  : RVPBinary_rr<0b1110, 0b00, 0b011, "pmulsu.h.b11">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def MUL_H00       : RVPBinary_rr<0b0000, 0b01, 0b011, "mul.h00">;
 
   def MACC_H00      : RVPTernary_rrr<0b0001, 0b01, 0b011, "macc.h00">;
@@ -682,7 +682,7 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MULSU_H11     : RVPBinary_rr<0b1110, 0b01, 0b011, "mulsu.h11">;
 
   def MACCSU_H11    : RVPTernary_rrr<0b1111, 0b01, 0b011, "maccsu.h11">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PMUL_W_H00    : RVPBinary_rr<0b0000, 0b01, 0b011, "pmul.w.h00">;
   def MUL_W00       : RVPBinary_rr<0b0000, 0b11, 0b011, "mul.w00">;
@@ -732,13 +732,13 @@ let Predicates = [HasStdExtP] in {
 
   def PPACKT_H    : RVPBinary_rr<0b0110, 0b00, 0b100, "ppackt.h">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def PACKBT_RV32 : RVPBinary_rr<0b0010, 0b01, 0b100, "packbt">;
 
   def PACKTB_RV32 : RVPBinary_rr<0b0100, 0b01, 0b100, "packtb">;
 
   def PACKT_RV32  : RVPBinary_rr<0b0110, 0b01, 0b100, "packt">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PPACK_W     : RVPBinary_rr<0b0000, 0b01, 0b100, "ppack.w">;
 
@@ -791,10 +791,10 @@ let Predicates = [HasStdExtP] in {
   def PM2ADDASU_H : RVPBinary_rr<0b1101, 0b00, 0b101, "pm2addasu.h">;
   def PM4ADDASU_B : RVPBinary_rr<0b1101, 0b10, 0b101, "pm4addasu.b">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def MQACC_H01  : RVPTernary_rrr<0b1111, 0b00, 0b101, "mqacc.h01">;
   def MQRACC_H01 : RVPTernary_rrr<0b1111, 0b10, 0b101, "mqracc.h01">;
-} // // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PM2ADD_W      : RVPBinary_rr<0b0000, 0b01, 0b101, "pm2add.w">;
   def PM4ADD_H      : RVPBinary_rr<0b0000, 0b11, 0b101, "pm4add.h">;
@@ -870,13 +870,13 @@ let Predicates = [HasStdExtP] in {
   def PMAXU_H  : RVPBinary_rr<0b1111, 0b00, 0b110, "pmaxu.h">;
   def PMAXU_B  : RVPBinary_rr<0b1111, 0b10, 0b110, "pmaxu.b">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def MSEQ  : RVPBinary_rr<0b1000, 0b01, 0b110, "mseq">;
 
   def MSLT  : RVPBinary_rr<0b1010, 0b01, 0b110, "mslt">;
 
   def MSLTU : RVPBinary_rr<0b1011, 0b01, 0b110, "msltu">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 let Predicates = [HasStdExtP, IsRV64] in {
   def PAS_WX   : RVPBinary_rr<0b0000, 0b01, 0b110, "pas.wx">;
   def PSA_WX   : RVPBinary_rr<0b0000, 0b11, 0b110, "psa.wx">;
@@ -936,7 +936,7 @@ let Predicates = [HasStdExtP] in {
   def PMULQ_H       : RVPBinary_rr<0b1010, 0b00, 0b111, "pmulq.h">;
   def PMULQR_H      : RVPBinary_rr<0b1010, 0b10, 0b111, "pmulqr.h">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
   def MULHR      : RVPBinary_rr<0b0000, 0b11, 0b111, "mulhr">;
 
   def MHACC      : RVPTernary_rrr<0b0001, 0b01, 0b111, "mhacc">;
@@ -972,7 +972,7 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
 
   def MQACC_H11  : RVPTernary_rrr<0b1111, 0b00, 0b111, "mqacc.h11">;
   def MQRACC_H11 : RVPTernary_rrr<0b1111, 0b10, 0b111, "mqracc.h11">;
-} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in
+} // Predicates = [HasStdExtP, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in
 let Predicates = [HasStdExtP, IsRV64] in {
   def PMULH_W       : RVPBinary_rr<0b0000, 0b01, 0b111, "pmulh.w">;
   def PMULHR_W      : RVPBinary_rr<0b0000, 0b11, 0b111, "pmulhr.w">;

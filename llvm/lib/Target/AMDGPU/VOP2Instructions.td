@@ -127,8 +127,8 @@ class VOP2_Real_Gen <VOP2_Pseudo ps, GFXGen Gen, string real_name = ps.Mnemonic>
   VOP2_Real <ps, Gen.Subtarget, real_name> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
-  let DecoderNamespace = Gen.DecoderNamespace#
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
+  let DecoderNamespace = Gen.DecoderNamespace;
+  let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
 }
 
 class VOP2_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -1517,8 +1517,8 @@ class VOP2_DPP16_Gen<bits<6> op, VOP2_DPP_Pseudo ps, GFXGen Gen,
     VOP2_DPP16<op, ps, Gen.Subtarget, opName, p> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
-  let DecoderNamespace = Gen.DecoderNamespace#
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
+  let DecoderNamespace = Gen.DecoderNamespace;
+  let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
 }
 
 class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
@@ -1547,8 +1547,8 @@ class VOP2_DPP8_Gen<bits<6> op, VOP2_Pseudo ps, GFXGen Gen,
     VOP2_DPP8<op, ps, p> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
-  let DecoderNamespace = Gen.DecoderNamespace#
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
+  let DecoderNamespace = Gen.DecoderNamespace;
+  let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
 }
 
 //===----------------------------------------------------------------------===//

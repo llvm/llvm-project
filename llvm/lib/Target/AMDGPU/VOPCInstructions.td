@@ -310,6 +310,7 @@ class VOPCInstAlias <VOP3_Pseudo ps, Instruction inst,
   let SubtargetPredicate = AssemblerPredicate;
 
   string DecoderNamespace; // dummy
+  int DecodeOrder; // dummy
 }
 
 multiclass VOPCInstAliases <string old_name, string Arch, string real_name = old_name, string mnemonic_from = real_name> {
@@ -1677,7 +1678,8 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
                                                      pseudo_mnemonic),
                               asm_name, ps64.AsmVariantName>;
 
-    let DecoderNamespace = Gen.DecoderNamespace # !if(ps32.Pfl.IsRealTrue16, "", "_FAKE16") in {
+    let DecoderNamespace = Gen.DecoderNamespace,
+        DecodeOrder = !if(ps32.Pfl.IsRealTrue16, 0, 1) in {
       def _e32#Gen.Suffix :
         // 32 and 64 bit forms of the instruction have _e32 and _e64
         // respectively appended to their assembly mnemonic.
@@ -1753,7 +1755,7 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
           def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name>;
         }
       } // end if ps64.Pfl.HasExtVOP3DPP
-    } // End DecoderNamespace
+    } // End DecoderOrder
   } // End AssemblerPredicate
 }
 
@@ -1824,7 +1826,8 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
                                                      pseudo_mnemonic),
                               asm_name, ps64.AsmVariantName>;
 
-    let DecoderNamespace = Gen.DecoderNamespace # !if(ps32.Pfl.IsRealTrue16, "", "_FAKE16") in {
+    let DecoderNamespace = Gen.DecoderNamespace,
+        DecodeOrder = !if(ps32.Pfl.IsRealTrue16, 0, 1) in {
       def _e32#Gen.Suffix
           : VOPC_Real<ps32, Gen.Subtarget, asm_name>,
             VOPCe<op{7-0}> {
@@ -1880,7 +1883,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
           }
         }
       } // End if ps64.Pfl.HasExtVOP3DPP
-    } // End DecoderNamespace
+    } // End DecodeOrder
   } // End AssemblerPredicate
 }
 

@@ -10712,8 +10712,8 @@ def RPRFM:
   let hasSideEffects = 1;
   // RPRFM overlaps with PRFM (reg), when the decoder method of PRFM returns
   // Fail, the decoder should attempt to decode RPRFM. This requires setting
-  // the decoder namespace to "Fallback".
-  let DecoderNamespace = "Fallback";
+  // the decode order for RPRFM to be 1 ( > decode order for PRFM).
+  let DecodeOrder = 1;
 }
 
 //===----------------------------------------------------------------------===//

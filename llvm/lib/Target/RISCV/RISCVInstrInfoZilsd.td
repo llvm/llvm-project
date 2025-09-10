@@ -33,11 +33,11 @@ def riscv_st_rv32 : RVSDNode<"SD_RV32", SDT_RISCV_SD_RV32,
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only" in {
+let Predicates = [HasStdExtZilsd, IsRV32], DecodeOrder = DecodeOrderRV32Only32 in {
 def LD_RV32 : Load_ri<0b011, "ld", GPRPairRV32>, Sched<[WriteLDD, ReadMemBase]>;
 def SD_RV32 : Store_rri<0b011, "sd", GPRPairRV32>,
               Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
-} // Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only"
+} // Predicates = [HasStdExtZilsd, IsRV32], DecodeOrder = DecodeOrderRV32Only32
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

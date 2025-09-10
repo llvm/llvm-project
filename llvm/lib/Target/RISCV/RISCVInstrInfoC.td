@@ -379,7 +379,7 @@ def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, simm6:$imm),
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
-    DecoderNamespace = "RV32Only", Defs = [X1],
+    DecodeOrder = DecodeOrderRV32Only16, Defs = [X1],
     Predicates = [HasStdExtZca, IsRV32]  in
 def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins bare_simm12_lsb0:$offset),
                        "c.jal", "$offset">, Sched<[WriteJal]>;
@@ -542,7 +542,7 @@ def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther>,
 
 } // Predicates = [HasStdExtZca]
 
-let DecoderNamespace = "RV32Only",
+let DecodeOrder = DecodeOrderRV32Only16,
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
   def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
                Sched<[WriteFLD32, ReadFMemBase]> {
@@ -569,7 +569,7 @@ let DecoderNamespace = "RV32Only",
                  Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
     let Inst{8-7}  = imm{7-6};
   }
-} // DecoderNamespace = "RV32Only", Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]
+} // DecodeOrder = DecodeOrderRV32Only16
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
   def C_FLD  : CLoad_ri<0b001, "c.fld", FPR64C, uimm8_lsb000>,

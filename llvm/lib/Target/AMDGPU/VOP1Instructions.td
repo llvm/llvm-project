@@ -940,8 +940,8 @@ multiclass VOP1_Real_e32_with_name<GFXGen Gen, bits<9> op, string opName,
                                    string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
   let AsmString = asmName # ps.AsmOperands,
-      DecoderNamespace = Gen.DecoderNamespace #
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
+      DecoderNamespace = Gen.DecoderNamespace,
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1) in {
     defm NAME : VOP1_Real_e32<Gen, op, opName>;
   }
 }
@@ -961,8 +961,8 @@ multiclass VOP1_Real_dpp_with_name<GFXGen Gen, bits<9> op, string opName,
                                    string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
   let AsmString = asmName # ps.Pfl.AsmDPP16,
-      DecoderNamespace = Gen.DecoderNamespace #
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
+      DecoderNamespace = Gen.DecoderNamespace,
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1) in {
     defm NAME : VOP1_Real_dpp<Gen, op, opName>;
   }
 }
@@ -977,8 +977,8 @@ multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
                                     string asmName> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
   let AsmString = asmName # ps.Pfl.AsmDPP8,
-      DecoderNamespace = Gen.DecoderNamespace #
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
+      DecoderNamespace = Gen.DecoderNamespace,
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1) in {
     if !not(ps.Pfl.HasExt64BitDPP) then
       defm NAME : VOP1_Real_dpp8<Gen, op, opName>;
   }

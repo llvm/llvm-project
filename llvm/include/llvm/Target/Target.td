@@ -551,6 +551,10 @@ class InstructionEncoding {
   // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
+  // Within a namespace, DecodeOrder is used to order instructions when we need
+  // to attempt multiple encoding.
+  int DecodeOrder = 0;
+
   // List of predicates which will be turned into isel matching code.
   list<Predicate> Predicates = [];
 

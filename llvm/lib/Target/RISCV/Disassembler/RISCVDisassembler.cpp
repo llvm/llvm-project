@@ -689,9 +689,14 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXMIPS32, XMIPSGroup, "Mips extensions"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
-    // Standard Extensions
+
+    // Standard Extensions.
+    // The decoder order within this table is as follows:
+    // standard 32-bit instructions : 0
+    // RV32-only standard 32-bit instructions : 1
+    // Zfinx (Float in Integer) : 2 (TBD)
+    // RV32-only Zdinx (Double in Integer) : 3 (TBD)
     {DecoderTable32, {}, "standard 32-bit instructions"},
-    {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
     {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
@@ -739,15 +744,16 @@ static constexpr DecoderListEntry DecoderList16[]{
      {RISCV::FeatureVendorXqccmp},
      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)"},
     {DecoderTableXwchc16, {RISCV::FeatureVendorXwchc}, "WCH QingKe XW"},
+
     // Standard Extensions
+    // Instructions in this table have the following decoding order:
+    // Zicfiss (Shadow Stack 16-bit) : -1
+    // standard 16-bit instructions : 0
+    // RV32-only 16-bit instructions : 1
+    // ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd): 2
+
     // DecoderTableZicfiss16 must be checked before DecoderTable16.
-    {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
     {DecoderTable16, {}, "standard 16-bit instructions"},
-    {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
-    // Zc* instructions incompatible with Zcf or Zcd
-    {DecoderTableZcOverlap16,
-     {},
-     "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)"},
 };
 
 DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,

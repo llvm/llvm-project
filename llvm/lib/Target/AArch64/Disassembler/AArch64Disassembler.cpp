@@ -1578,43 +1578,37 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   uint32_t Insn =
       (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | (Bytes[0] << 0);
 
-  const uint8_t *Tables[] = {DecoderTable32, DecoderTableFallback32};
+  DecodeStatus Result =
+      decodeInstruction(DecoderTable32, MI, Insn, Address, this, STI);
+  if (Result != Success)
+    return Result;
 
-  for (const auto *Table : Tables) {
-    DecodeStatus Result =
-        decodeInstruction(Table, MI, Insn, Address, this, STI);
+  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
 
-    const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
-
-    // For Scalable Matrix Extension (SME) instructions that have an implicit
-    // operand for the accumulator (ZA) or implicit immediate zero which isn't
-    // encoded, manually insert operand.
-    for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
-      if (Desc.operands()[i].OperandType == MCOI::OPERAND_REGISTER) {
-        switch (Desc.operands()[i].RegClass) {
-        default:
-          break;
-        case AArch64::MPRRegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZA));
-          break;
-        case AArch64::MPR8RegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
-          break;
-        case AArch64::ZTRRegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
-          break;
-        }
-      } else if (Desc.operands()[i].OperandType ==
-                 AArch64::OPERAND_IMPLICIT_IMM_0) {
-        MI.insert(MI.begin() + i, MCOperand::createImm(0));
+  // For Scalable Matrix Extension (SME) instructions that have an implicit
+  // operand for the accumulator (ZA) or implicit immediate zero which isn't
+  // encoded, manually insert operand.
+  for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
+    if (Desc.operands()[i].OperandType == MCOI::OPERAND_REGISTER) {
+      switch (Desc.operands()[i].RegClass) {
+      default:
+        break;
+      case AArch64::MPRRegClassID:
+        MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZA));
+        break;
+      case AArch64::MPR8RegClassID:
+        MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
+        break;
+      case AArch64::ZTRRegClassID:
+        MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
+        break;
       }
+    } else if (Desc.operands()[i].OperandType ==
+               AArch64::OPERAND_IMPLICIT_IMM_0) {
+      MI.insert(MI.begin() + i, MCOperand::createImm(0));
     }
-
-    if (Result != MCDisassembler::Fail)
-      return Result;
   }
-
-  return MCDisassembler::Fail;
+  return Success;
 }
 
 uint64_t AArch64Disassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,

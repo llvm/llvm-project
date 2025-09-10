@@ -204,8 +204,8 @@ class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
   VOP3_Real <ps, Gen.Subtarget, asm_name> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
-  let DecoderNamespace = Gen.DecoderNamespace#
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
+  let DecoderNamespace = Gen.DecoderNamespace;
+  let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
 }
 
 // XXX - Is there any reason to distinguish this from regular VOP3
@@ -1705,8 +1705,8 @@ class VOP3_DPP16_Gen_t16<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
   let True16Predicate =
       !if (ps.Pfl.IsRealTrue16, UseRealTrue16Insts, NoTrue16Predicate);
   let AssemblerPredicate = Gen.AssemblerPredicate;
-  let DecoderNamespace =
-      Gen.DecoderNamespace #!if (ps.Pfl.IsRealTrue16, "", "_FAKE16");
+  let DecoderNamespace = Gen.DecoderNamespace;
+  let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
 }
 
 class Base_VOP3_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1816,7 +1816,8 @@ multiclass VOP3Dot_Real_Base<GFXGen Gen, bits<10> op, string asmName, string opN
                              bit isSingle = 0> {
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let AsmString = asmName # ps.AsmOperands,
-      DecoderNamespace = Gen.DecoderNamespace # !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
+      DecoderNamespace = Gen.DecoderNamespace,
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1),
       IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
     def _e64#Gen.Suffix :
       VOP3_Real_Gen<ps, Gen>,
@@ -1886,8 +1887,8 @@ multiclass VOP3Dot_Real_dpp_Base<GFXGen Gen, bits<10> op, string asmName, string
   def _e64_dpp#Gen.Suffix :
     VOP3_DPP16_Gen_t16<op, ps, Gen> {
       let AsmString = asmName # ps.Pfl.AsmVOP3DPP16;
-      let DecoderNamespace = Gen.DecoderNamespace
-                             # !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
+      let DecoderNamespace = Gen.DecoderNamespace;
+      let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
       let Inst{11} = ?;
       let Inst{12} = ?;
     }
@@ -1915,8 +1916,8 @@ multiclass VOP3Dot_Real_dpp8_Base<GFXGen Gen, bits<10> op, string asmName, strin
     let Inst{11} = ?;
     let Inst{12} = ?;
     let AsmString = asmName # ps.Pfl.AsmVOP3DPP8;
-    let DecoderNamespace = Gen.DecoderNamespace
-                           # !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
+    let DecoderNamespace = Gen.DecoderNamespace;
+    let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
@@ -1925,8 +1926,8 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
                                     string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
   let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
-      DecoderNamespace = Gen.DecoderNamespace#
-                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
+      DecoderNamespace = Gen.DecoderNamespace,
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1),
       True16Predicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
                             NoTrue16Predicate) in {
     defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
@@ -2006,8 +2007,8 @@ multiclass VOP3_BITOP3_Real_dpp_Base<GFXGen Gen, bits<10> op, string asmName> {
 multiclass VOP3_BITOP3_Real_dpp8_Base<GFXGen Gen, bits<10> op, string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(NAME#"_e64");
   def _e64_dpp8#Gen.Suffix : VOP3_BITOP3_DPP8<op, ps, asmName> {
-    let DecoderNamespace =
-      Gen.DecoderNamespace #!if (ps.Pfl.IsRealTrue16, "", "_FAKE16");
+    let DecoderNamespace = Gen.DecoderNamespace;
+    let DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1);
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
