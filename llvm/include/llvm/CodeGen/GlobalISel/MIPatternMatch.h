@@ -193,7 +193,7 @@ m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   APInt RequestedVal;
-  SpecificConstantMatch(const APInt RequestedVal)
+  SpecificConstantMatch(const APInt &RequestedVal)
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     APInt MatchedVal;
