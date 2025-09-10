@@ -3949,7 +3949,7 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
 // Double precision variant of SECNDS (PGI extension)
 fir::ExtendedValue
 IntrinsicLibrary::genDsecnds(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1 && "DSECNDS expects one argument");
 
   mlir::Value refTime = fir::getBase(args[0]);

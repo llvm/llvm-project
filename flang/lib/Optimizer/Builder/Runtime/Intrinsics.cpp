@@ -107,7 +107,7 @@ void fir::runtime::genDateAndTime(fir::FirOpBuilder &builder,
 }
 
 mlir::Value fir::runtime::genDsecnds(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, mlir::Value refTime) {
+                                     mlir::Location loc, mlir::Value refTime) {
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Dsecnds)>(loc, builder);
 

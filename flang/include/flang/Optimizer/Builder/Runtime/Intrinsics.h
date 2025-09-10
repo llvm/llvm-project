@@ -46,7 +46,7 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
 
 mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value refTime);
+                       mlir::Value refTime);
 
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);

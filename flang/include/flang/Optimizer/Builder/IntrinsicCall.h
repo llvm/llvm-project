@@ -250,7 +250,7 @@ struct IntrinsicLibrary {
   mlir::Value genCospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genDsecnds(mlir::Type resultType,
-                               llvm::ArrayRef<fir::ExtendedValue> args);
+                                llvm::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
