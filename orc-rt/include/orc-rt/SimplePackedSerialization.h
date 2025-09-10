@@ -599,15 +599,11 @@ template <typename SPSTagT> class SPSExpected;
 /// See SPSSerializableError for more details.
 template <typename T> struct SPSSerializableExpected {
   SPSSerializableExpected() = default;
-  SPSSerializableExpected(Expected<T> E) {
+  explicit SPSSerializableExpected(Expected<T> E) {
     if (E)
       Val = decltype(Val)(std::in_place_index<0>, std::move(*E));
     else
       Val = decltype(Val)(std::in_place_index<1>, toString(E.takeError()));
-  }
-  SPSSerializableExpected(Error E) {
-    assert(E && "Cannot create Expected from Error::success()");
-    Val = decltype(Val)(std::in_place_index<1>, toString(std::move(E)));
   }
 
   Expected<T> toExpected() {
@@ -621,12 +617,17 @@ template <typename T> struct SPSSerializableExpected {
 
 template <typename T>
 SPSSerializableExpected<T> toSPSSerializableExpected(Expected<T> E) {
-  return std::move(E);
+  return SPSSerializableExpected<T>(std::move(E));
+}
+
+template <typename T>
+SPSSerializableExpected<T> toSPSSerializableExpected(T Val) {
+  return SPSSerializableExpected<T>(std::move(Val));
 }
 
 template <typename T>
 SPSSerializableExpected<T> toSPSSerializableExpected(Error E) {
-  return std::move(E);
+  return SPSSerializableExpected<T>(std::move(E));
 }
 
 template <typename SPSTagT, typename T>
