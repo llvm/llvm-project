@@ -373,8 +373,8 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 
 /// Given a warpOp that contains ops with regions, the corresponding op's
 /// "inner" region and the distributionMapFn, get all values used by the op's
-/// region that are defined within the warpOp. Return the set of values, their
-/// types and their distributed types.
+/// region that are defined within the warpOp, but outside the inner region.
+/// Return the set of values, their types and their distributed types.
 std::tuple<llvm::SmallSetVector<Value, 32>, SmallVector<Type>,
            SmallVector<Type>>
 getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
@@ -383,7 +383,8 @@ getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
   SmallVector<Type> escapingValueTypes;
   SmallVector<Type> escapingValueDistTypes; // to yield from the new warpOp
   if (innerRegion.empty())
-    return {escapingValues, escapingValueTypes, escapingValueDistTypes};
+    return {std::move(escapingValues), std::move(escapingValueTypes),
+            std::move(escapingValueDistTypes)};
   mlir::visitUsedValuesDefinedAbove(innerRegion, [&](OpOperand *operand) {
     Operation *parent = operand->get().getParentRegion()->getParentOp();
     if (warpOp->isAncestor(parent)) {
@@ -398,7 +399,8 @@ getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
       escapingValueDistTypes.push_back(distType);
     }
   });
-  return {escapingValues, escapingValueTypes, escapingValueDistTypes};
+  return {std::move(escapingValues), std::move(escapingValueTypes),
+          std::move(escapingValueDistTypes)};
 }
 
 /// Distribute transfer_write ops based on the affine map returned by
@@ -1998,25 +2000,9 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       return failure();
     // Collect Values that come from the `WarpOp` but are outside the `ForOp`.
     // Those Values need to be returned by the new warp op.
-    llvm::SmallSetVector<Value, 32> escapingValues;
-    SmallVector<Type> escapingValueInputTypes;
-    SmallVector<Type> escapingValueDistTypes;
-    mlir::visitUsedValuesDefinedAbove(
-        forOp.getBodyRegion(), [&](OpOperand *operand) {
-          Operation *parent = operand->get().getParentRegion()->getParentOp();
-          if (warpOp->isAncestor(parent)) {
-            if (!escapingValues.insert(operand->get()))
-              return;
-            Type distType = operand->get().getType();
-            if (auto vecType = dyn_cast<VectorType>(distType)) {
-              AffineMap map = distributionMapFn(operand->get());
-              distType = getDistributedType(vecType, map, warpOp.getWarpSize());
-            }
-            escapingValueInputTypes.push_back(operand->get().getType());
-            escapingValueDistTypes.push_back(distType);
-          }
-        });
-
+    auto [escapingValues, escapingValueInputTypes, escapingValueDistTypes] =
+        getInnerRegionEscapingValues(warpOp, forOp.getBodyRegion(),
+                                     distributionMapFn);
     if (llvm::is_contained(escapingValueDistTypes, Type{}))
       return failure();
     // `WarpOp` can yield two types of values:
