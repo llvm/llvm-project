@@ -2020,6 +2020,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
+    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
+      return hash_combine(Result, VPR->getIndexedType());
     return Result;
   }
 
@@ -2036,6 +2038,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
+        return false;
+    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(L))
+      if (VPR->getIndexedType() !=
+          cast<VPVectorPointerRecipe>(R)->getIndexedType())
         return false;
     const VPlan *Plan = L->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
