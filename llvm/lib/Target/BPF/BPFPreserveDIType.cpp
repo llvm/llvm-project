@@ -58,7 +58,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
       if (GV->getName().starts_with("llvm.bpf.btf.type.id")) {
         if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
-          report_fatal_error(
+          reportFatalUsageError(
               "Missing metadata for llvm.bpf.btf.type.id intrinsic");
         PreserveDITypeCalls.push_back(Call);
       }
@@ -76,7 +76,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     uint64_t FlagValue = Flag->getValue().getZExtValue();
 
     if (FlagValue >= BPFCoreSharedInfo::MAX_BTF_TYPE_ID_FLAG)
-      report_fatal_error("Incorrect flag for llvm.bpf.btf.type.id intrinsic");
+      reportFatalUsageError(
+          "Incorrect flag for llvm.bpf.btf.type.id intrinsic");
 
     MDNode *MD = Call->getMetadata(LLVMContext::MD_preserve_access_index);
 
@@ -97,10 +98,10 @@ static bool BPFPreserveDITypeImpl(Function &F) {
     if (Reloc == BTF::BTF_TYPE_ID_REMOTE) {
       if (Ty->getName().empty()) {
         if (isa<DISubroutineType>(Ty))
-          report_fatal_error(
+          reportFatalUsageError(
               "SubroutineType not supported for BTF_TYPE_ID_REMOTE reloc");
         else
-          report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
+          reportFatalUsageError("Empty type name for BTF_TYPE_ID_REMOTE reloc");
       }
     }
     MD = Ty;
