@@ -2015,7 +2015,6 @@ add_fp_unittest(
   SRCS
     logf_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.logf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -2087,7 +2086,6 @@ add_fp_unittest(
   SRCS
     log10f_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.log10f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -2136,7 +2134,7 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
@@ -2153,7 +2151,7 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
