@@ -118,3 +118,12 @@ define <vscale x 16 x i1> @whilelo_nxv16i1.i8_const() {
   %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i8(i8 0, i8 16)
   ret <vscale x 16 x i1> %mask
 }
+
+define <vscale x 16 x i1> @whilelo_nxv16i1_0_0.i8_const() {
+; CHECK-LABEL: define <vscale x 16 x i1> @whilelo_nxv16i1_0_0.i8_const() {
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i8(i8 0, i8 0)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[MASK]]
+;
+  %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.whilelo.nxv16i1.i8(i8 0, i8 0)
+  ret <vscale x 16 x i1> %mask
+}
