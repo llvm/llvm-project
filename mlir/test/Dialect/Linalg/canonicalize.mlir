@@ -432,6 +432,20 @@ func.func @fold_fill_extract(%arg0 : i1) -> i1 {
 
 // -----
 
+func.func @fold_fill_extract_slice() -> tensor<2x1920x64x66xf32> {
+  %c0 = arith.constant 0. : f32
+  %0 = tensor.empty() : tensor<2x1920x66x66xf32>
+  %1 = linalg.fill ins(%c0 : f32) outs(%0 : tensor<2x1920x66x66xf32>) -> tensor<2x1920x66x66xf32>
+  %extracted_slice = tensor.extract_slice %1[0, 0, 1, 0] [2, 1920, 64, 66] [1, 1, 1, 1] : tensor<2x1920x66x66xf32> to tensor<2x1920x64x66xf32>
+  return %extracted_slice : tensor<2x1920x64x66xf32>
+}
+// CHECK-LABEL: func.func @fold_fill_extract_slice
+// CHECK:         %[[EMPTY_TENSOR:.+]] = tensor.empty() : tensor<2x1920x64x66xf32>
+// CHECK:         %[[FILL:.+]] = linalg.fill ins(%{{.+}}) outs(%[[EMPTY_TENSOR]]
+// CHECK:         return %[[FILL]]
+
+// -----
+
 func.func @fill_pack() -> tensor<24x32x16x16xf32> {
   %dest = tensor.empty() : tensor<384x512xf32>
   %cst = arith.constant 0.000000e+00 : f32
