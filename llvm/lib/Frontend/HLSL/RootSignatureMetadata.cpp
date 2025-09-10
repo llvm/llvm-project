@@ -237,7 +237,7 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
   if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
-  dxbc::RTS0::v1::RootConstants Constants;
+  mcdxbc::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
@@ -291,7 +291,7 @@ Error MetadataParser::parseRootDescriptors(
   if (auto E = Visibility.takeError())
     return Error(std::move(E));
 
-  dxbc::RTS0::v2::RootDescriptor Descriptor;
+  mcdxbc::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
     Descriptor.ShaderRegister = *Val;
   else
@@ -541,7 +541,7 @@ Error MetadataParser::validateRootSignature(
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::UAV:
     case dxbc::RootParameterType::SRV: {
-      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+      const mcdxbc::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
       if (!hlsl::rootsig::verifyRegisterValue(Descriptor.ShaderRegister))
         DeferredErrs =

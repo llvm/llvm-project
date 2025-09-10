@@ -2695,9 +2695,16 @@ void ArraySpecVisitor::PostAttrSpec() {
 
 FuncResultStack::~FuncResultStack() { CHECK(stack_.empty()); }
 
+// True when either type is absent, or if they are both present and are
+// equivalent for interface compatibility purposes.
 static bool TypesMismatchIfNonNull(
     const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
-  return type1 && type2 && *type1 != *type2;
+  if (auto t1{evaluate::DynamicType::From(type1)}) {
+    if (auto t2{evaluate::DynamicType::From(type2)}) {
+      return !t1->IsEquivalentTo(*t2);
+    }
+  }
+  return false;
 }
 
 void FuncResultStack::CompleteFunctionResultType() {

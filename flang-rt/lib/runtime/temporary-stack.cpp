@@ -16,8 +16,11 @@
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 namespace {
 
+using namespace Fortran;
 using namespace Fortran::runtime;
 
 // the number of elements to allocate when first creating the vector
@@ -97,7 +100,7 @@ void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
   // Avoid passing a null pointer, since it would result in an undefined
   // behavior.
   if (data_ != nullptr) {
-    memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
+    runtime::memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
     FreeMemory(data_);
   }
   data_ = newData;
@@ -181,8 +184,11 @@ inline static DescriptorStack *getDescriptorStorage(void *opaquePtr) {
   return static_cast<DescriptorStack *>(opaquePtr);
 }
 
+RT_OFFLOAD_API_GROUP_END
+
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 void *RTNAME(CreateValueStack)(const char *sourceFile, int line) {
   return ValueStack::allocate(sourceFile, line);
 }
@@ -222,6 +228,6 @@ void RTNAME(DescriptorAt)(void *opaquePtr, uint64_t i, Descriptor &value) {
 void RTNAME(DestroyDescriptorStack)(void *opaquePtr) {
   DescriptorStack::destroy(getDescriptorStorage(opaquePtr));
 }
-
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

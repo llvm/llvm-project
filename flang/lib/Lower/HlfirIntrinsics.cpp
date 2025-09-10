@@ -159,6 +159,18 @@ protected:
   hlfir::CharExtremumPredicate pred;
 };
 
+class HlfirCharTrimLowering : public HlfirTransformationalIntrinsic {
+public:
+  HlfirCharTrimLowering(fir::FirOpBuilder &builder, mlir::Location loc)
+      : HlfirTransformationalIntrinsic(builder, loc) {}
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 class HlfirCShiftLowering : public HlfirTransformationalIntrinsic {
 public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
@@ -421,6 +433,15 @@ mlir::Value HlfirCharExtremumLowering::lowerImpl(
   return createOp<hlfir::CharExtremumOp>(pred, mlir::ValueRange{operands});
 }
 
+mlir::Value HlfirCharTrimLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 1);
+  return createOp<hlfir::CharTrimOp>(operands[0]);
+}
+
 mlir::Value HlfirCShiftLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
@@ -555,6 +576,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
       return HlfirCharExtremumLowering{builder, loc,
                                        hlfir::CharExtremumPredicate::max}
           .lower(loweredActuals, argLowering, stmtResultType);
+    if (name == "trim")
+      return HlfirCharTrimLowering{builder, loc}.lower(
+          loweredActuals, argLowering, stmtResultType);
   }
   return std::nullopt;
 }

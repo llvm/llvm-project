@@ -26,6 +26,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -173,6 +174,26 @@ SCEVExpander::findInsertPointAfter(Instruction *I,
     ++IP;
 
   return IP;
+}
+
+void SCEVExpander::eraseDeadInstructions(Value *Root) {
+  SmallVector<Value *> WorkList;
+  SmallPtrSet<Value *, 8> DeletedValues;
+  append_range(WorkList, getAllInsertedInstructions());
+  while (!WorkList.empty()) {
+    Value *V = WorkList.pop_back_val();
+    if (DeletedValues.contains(V))
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || I == Root || !isInsertedInstruction(I) ||
+        !isInstructionTriviallyDead(I))
+      continue;
+    append_range(WorkList, I->operands());
+    InsertedValues.erase(I);
+    InsertedPostIncValues.erase(I);
+    DeletedValues.insert(I);
+    I->eraseFromParent();
+  }
 }
 
 BasicBlock::iterator
@@ -2187,8 +2208,15 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Checking <u 0 is always false.
-    if (!Signed && Start->isZero() && SE.isKnownPositive(Step))
+    // Checking <u 0 is always false, if (Step * trunc ExitCount) does not wrap.
+    // TODO: Predicates that can be proven true/false should be discarded when
+    // the predicates are created, not late during expansion.
+    if (!Signed && Start->isZero() && SE.isKnownPositive(Step) &&
+        DstBits < SrcBits &&
+        ExitCount == SE.getZeroExtendExpr(SE.getTruncateExpr(ExitCount, ARTy),
+                                          ExitCount->getType()) &&
+        SE.willNotOverflow(Instruction::Mul, Signed, Step,
+                           SE.getTruncateExpr(ExitCount, ARTy)))
       return ConstantInt::getFalse(Loc->getContext());
 
     // Get the backedge taken count and truncate or extended to the AR type.

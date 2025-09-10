@@ -102,12 +102,14 @@ define i32 @gep_distance_test(ptr %A) {
 ; cannot alias, even if there is a variable offset between them...
 define i32 @gep_distance_test2(ptr %A, i64 %distance) {
 ; NO_ASSUME-LABEL: @gep_distance_test2(
-; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]], i32 1
+; NO_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
+; NO_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[B_SPLIT]], i64 4
 ; NO_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test2(
-; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]], i32 1
+; USE_ASSUME-NEXT:    [[B_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[DISTANCE:%.*]]
+; USE_ASSUME-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[B_SPLIT]], i64 4
 ; USE_ASSUME-NEXT:    store i32 7, ptr [[B]], align 4
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4), "nonnull"(ptr [[A]]), "align"(ptr [[A]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
