@@ -6,8 +6,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1-LABEL: define void @switch4_default_common_dest_with_case(
 ; IC1-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; IC1-NEXT:  [[ENTRY:.*]]:
-; IC1-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; IC1-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; IC1-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; IC1-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; IC1-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -99,8 +99,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2-LABEL: define void @switch4_default_common_dest_with_case(
 ; IC2-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
-; IC2-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; IC2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; IC2-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; IC2-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -338,21 +338,21 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:  [[ENTRY:.*]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC1:       [[LOOP_HEADER]]:
-; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN:.*]] ]
+; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC1-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC1-NEXT:      i64 120, label %[[IF_THEN]]
+; IC1-NEXT:      i64 120, label %[[IF_THEN1]]
 ; IC1-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC1-NEXT:    ]
-; IC1:       [[IF_THEN]]:
+; IC1:       [[IF_THEN1]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER]]
-; IC1:       [[IF_THEN1:.*:]]
+; IC1:       [[IF_THEN:.*:]]
 ; IC1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
 ; IC1-NEXT:    store i64 42, ptr [[GEP]], align 1
 ; IC1-NEXT:    unreachable
 ; IC1:       [[LOOP_LATCH]]:
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN]]
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -361,21 +361,21 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC2:       [[LOOP_HEADER]]:
-; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN:.*]] ]
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC2-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC2-NEXT:      i64 120, label %[[IF_THEN]]
+; IC2-NEXT:      i64 120, label %[[IF_THEN1]]
 ; IC2-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC2-NEXT:    ]
-; IC2:       [[IF_THEN]]:
+; IC2:       [[IF_THEN1]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER]]
-; IC2:       [[IF_THEN1:.*:]]
+; IC2:       [[IF_THEN:.*:]]
 ; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
 ; IC2-NEXT:    store i64 42, ptr [[GEP]], align 1
 ; IC2-NEXT:    unreachable
 ; IC2:       [[LOOP_LATCH]]:
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN]]
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;

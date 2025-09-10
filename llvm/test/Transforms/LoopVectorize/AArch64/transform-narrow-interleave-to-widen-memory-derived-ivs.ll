@@ -131,10 +131,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-LABEL: define void @derived_pointer_ivs(
 ; VF2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    [[A5:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; VF2-NEXT:    [[A5:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2-NEXT:    [[END4:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -16
 ; VF2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A5]]
 ; VF2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
@@ -180,10 +180,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-LABEL: define void @derived_pointer_ivs(
 ; VF2IC2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    [[A5:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2IC2-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2IC2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; VF2IC2-NEXT:    [[A5:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2IC2-NEXT:    [[END4:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2IC2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -16
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A5]]
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
@@ -235,10 +235,10 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-LABEL: define void @derived_pointer_ivs(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    [[A5:%.*]] = ptrtoint ptr [[A]] to i64
-; VF4-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; VF4-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; VF4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; VF4-NEXT:    [[A5:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF4-NEXT:    [[END4:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF4-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -16
 ; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[A5]]
 ; VF4-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
@@ -271,15 +271,15 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[OFFSET_IDX6:%.*]] = mul i64 [[INDEX]], 16
 ; VF4-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX6]]
-; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[NEXT_GEP]], align 8
+; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META4:![0-9]+]]
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; VF4-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; VF4-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[STRIDED_VEC]], <4 x double> [[STRIDED_VEC8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP7]], align 8
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP7]], align 8, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF4-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; VF4-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -376,7 +376,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
-; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
 ; VF4:       [[SCALAR_PH]]:

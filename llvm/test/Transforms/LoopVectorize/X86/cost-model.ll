@@ -439,8 +439,8 @@ exit:
 define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-LABEL: @any_of_cost(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 40
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -531,7 +531,7 @@ exit:
 define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK-LABEL: @cost_assume(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -9
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 9
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
