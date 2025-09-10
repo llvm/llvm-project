@@ -39,7 +39,7 @@ namespace {
 //   - LoopCounterName: The entire for loop (as ForStmt).
 //   - LoopParentName: The body of function f (as CompoundStmt).
 //   - VectorVarDeclName: 'v' (as VarDecl).
-//   - VectorVarDeclStmatName: The entire 'std::vector<T> v;' statement (as
+//   - VectorVarDeclStmtName: The entire 'std::vector<T> v;' statement (as
 //     DeclStmt).
 //   - PushBackOrEmplaceBackCallName: 'v.push_back(i)' (as cxxMemberCallExpr).
 //   - LoopInitVarName: 'i' (as VarDecl).
