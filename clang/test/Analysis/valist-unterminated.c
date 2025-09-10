@@ -101,8 +101,8 @@ void recopy(int fst, ...) {
   va_list va, va2;
   va_start(va, fst);
   va_copy(va2, va); // expected-note{{Initialized va_list}}
-  va_copy(va2, va); // expected-warning{{Initialized va_list 'va2' is initialized again}}
-  // expected-note@-1{{Initialized va_list 'va2' is initialized again}}
+  va_copy(va2, va); // expected-warning{{Initialized va_list 'va2' is overwritten by another initialized one}}
+  // expected-note@-1{{Initialized va_list 'va2' is overwritten by another initialized one}}
   va_end(va);
   va_end(va2);
 }
