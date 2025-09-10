@@ -142,7 +142,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!(__simple_view<_Views> && ...))
   {
-    if constexpr (common_range<__maybe_const<false, __extract_last<_Views...>>>) {
+    if constexpr (__all_forward<false, _Views...> && common_range<__maybe_const<false, __extract_last<_Views...>>>) {
       constexpr auto __n = sizeof...(_Views);
       return __iterator<false>(this, in_place_index<__n - 1>, ranges::end(std::get<__n - 1>(__views_)));
     } else {
@@ -153,7 +153,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires(range<const _Views> && ...)
   {
-    if constexpr (common_range<__maybe_const<true, __extract_last<_Views...>>>) {
+    if constexpr (__all_forward<true, _Views...> && common_range<__maybe_const<true, __extract_last<_Views...>>>) {
       constexpr auto __n = sizeof...(_Views);
       return __iterator<true>(this, in_place_index<__n - 1>, ranges::end(std::get<__n - 1>(__views_)));
     } else {
