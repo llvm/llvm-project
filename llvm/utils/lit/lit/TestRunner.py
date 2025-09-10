@@ -954,6 +954,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # setting the limits in process as we cannot reraise the limits back to
         # their defaults without elevated permissions.
         if cmd_shenv.ulimit:
+            executable = sys.executable
             args.insert(0, sys.executable)
             args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
             for limit in cmd_shenv.ulimit:
