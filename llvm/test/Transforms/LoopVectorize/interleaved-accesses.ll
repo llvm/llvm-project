@@ -582,10 +582,14 @@ define void @load_gap_reverse(ptr noalias nocapture %P1, ptr noalias nocapture %
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P1]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P1]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P1]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2:%.*]], i64 [[OFFSET_IDX]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2]], i64 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2]], i64 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2]], i64 [[TMP2]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
+; CHECK-NEXT:    [[DOTSPLIT1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT1]], i64 8
+; CHECK-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT2]], i64 8
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P2]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP10]], align 8
@@ -909,10 +913,14 @@ define void @PR27626_0(ptr %p, i32 %z, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
+; CHECK-NEXT:    [[DOTSPLIT1:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT1]], i64 4
+; CHECK-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT2]], i64 4
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 4
 ; CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP7]], align 4
@@ -937,7 +945,8 @@ define void @PR27626_0(ptr %p, i32 %z, i64 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[P_I_X:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]], i32 1
+; CHECK-NEXT:    [[P_I_Y_SPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds nuw i8, ptr [[P_I_Y_SPLIT]], i64 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[P_I_X]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[P_I_Y]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -990,14 +999,15 @@ define i32 @PR27626_1(ptr %p, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP4]], i64 12
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP19]], i64 20
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP20]], i64 28
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP6]], align 4
@@ -1024,7 +1034,8 @@ define i32 @PR27626_1(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[TMP18:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[P_I_X:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]], i32 1
+; CHECK-NEXT:    [[P_I_Y_SPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds nuw i8, ptr [[P_I_Y_SPLIT]], i64 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[P_I_X]], align 4
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[P_I_Y]], align 4
 ; CHECK-NEXT:    [[TMP18]] = add nsw i32 [[TMP17]], [[S]]
@@ -1087,10 +1098,14 @@ define void @PR27626_2(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
+; CHECK-NEXT:    [[DOTSPLIT1:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT1]], i64 4
+; CHECK-NEXT:    [[DOTSPLIT2:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT2]], i64 4
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 4
 ; CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[TMP7]], align 4
@@ -1116,7 +1131,8 @@ define void @PR27626_2(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[P_I_X:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[P_I_MINUS_1_X:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 -8
-; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]], i32 1
+; CHECK-NEXT:    [[P_I_Y_SPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds nuw i8, ptr [[P_I_Y_SPLIT]], i64 4
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[P_I_X]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[P_I_MINUS_1_X]], align 4
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[P_I_Y]], align 4
@@ -1174,15 +1190,20 @@ define i32 @PR27626_3(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP5]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP7]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT4]], i64 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP2]], i64 2
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP9]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT5:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT5]], i64 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP2]], i64 3
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP11]], i32 1
+; CHECK-NEXT:    [[DOTSPLIT6:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT6]], i64 4
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[WIDE_VEC]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[TMP6]], align 4
@@ -1209,10 +1230,11 @@ define i32 @PR27626_3(ptr %p, i64 %n, i32 %z) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[TMP22:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[I_PLUS_1:%.*]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[P_I_X:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]], i32 1
-; CHECK-NEXT:    [[P_I_PLUS_1_Y:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I_PLUS_1]], i32 1
+; CHECK-NEXT:    [[P_I_Y_SPLIT:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[P_I_Y:%.*]] = getelementptr inbounds nuw i8, ptr [[P_I_Y_SPLIT]], i64 4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr [[PAIR_I32]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[P_I_PLUS_1_Y:%.*]] = getelementptr i8, ptr [[TMP23]], i64 12
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[P_I_X]], align 4
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[P_I_PLUS_1_Y]], align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[P_I_Y]], align 4
