@@ -110,13 +110,18 @@ public:
   void dump() const;
 #endif
 
-  unsigned getNumUsers() const { return Users.size(); }
+  /// Returns the number of uses of this VPValue. The same user could appear
+  /// more than once in the list due to this value being used for multiple
+  /// operands in a recipe.
+  unsigned getNumUses() const { return Users.size(); }
+
+  /// Adds a user of this value to the list.
   void addUser(VPUser &User) { Users.push_back(&User); }
 
-  /// Remove a single \p User from the list of users.
-  void removeUser(VPUser &User) {
+  /// Remove the first instance of \p User from the list of uses.
+  void removeFirstUse(VPUser &User) {
     // The same user can be added multiple times, e.g. because the same VPValue
-    // is used twice by the same VPUser. Remove a single one.
+    // is used twice by the same VPUser. Remove the first one.
     auto *I = find(Users, &User);
     if (I != Users.end())
       Users.erase(I);
@@ -138,7 +143,7 @@ public:
 
   /// Returns true if the value has more than one unique user.
   bool hasMoreThanOneUniqueUser() const {
-    if (getNumUsers() == 0)
+    if (getNumUses() == 0)
       return false;
 
     // Check if all users match the first user.
@@ -203,7 +208,7 @@ class VPUser {
   /// Removes the operand at index \p Idx. This also removes the VPUser from the
   /// use-list of the operand.
   void removeOperand(unsigned Idx) {
-    getOperand(Idx)->removeUser(*this);
+    getOperand(Idx)->removeFirstUse(*this);
     Operands.erase(Operands.begin() + Idx);
   }
 
@@ -224,7 +229,7 @@ public:
   VPUser &operator=(const VPUser &) = delete;
   virtual ~VPUser() {
     for (VPValue *Op : operands())
-      Op->removeUser(*this);
+      Op->removeFirstUse(*this);
   }
 
   void addOperand(VPValue *Operand) {
@@ -239,7 +244,7 @@ public:
   }
 
   void setOperand(unsigned I, VPValue *New) {
-    Operands[I]->removeUser(*this);
+    Operands[I]->removeFirstUse(*this);
     Operands[I] = New;
     New->addUser(*this);
   }
@@ -383,7 +388,7 @@ public:
     for (VPValue *D : make_early_inc_range(DefinedValues)) {
       assert(D->Def == this &&
              "all defined VPValues should point to the containing VPDef");
-      assert(D->getNumUsers() == 0 &&
+      assert(D->getNumUses() == 0 &&
              "all defined VPValues should have no more users");
       D->Def = nullptr;
       delete D;
