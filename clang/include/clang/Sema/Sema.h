@@ -845,9 +845,16 @@ enum AttrName { Target, TargetClones, TargetVersion };
 
 void inferNoReturnAttr(Sema &S, const Decl *D);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
