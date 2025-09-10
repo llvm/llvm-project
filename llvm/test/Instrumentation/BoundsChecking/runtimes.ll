@@ -182,7 +182,7 @@ define void @f1(i64 %x) nounwind {
 ; RT: attributes #[[ATTR0]] = { nounwind }
 ;.
 ; TR-NOMERGE: attributes #[[ATTR0]] = { nounwind }
-; TR-NOMERGE: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind }
+; TR-NOMERGE: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ; TR-NOMERGE: attributes #[[ATTR2]] = { nomerge noreturn nounwind }
 ;.
 ; RT-NOMERGE: attributes #[[ATTR0]] = { nounwind }
@@ -201,7 +201,7 @@ define void @f1(i64 %x) nounwind {
 ;.
 ; TR-GUARD: attributes #[[ATTR0]] = { nounwind }
 ; TR-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; TR-GUARD: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind }
+; TR-GUARD: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 ; TR-GUARD: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 ;.
 ; RT-GUARD: attributes #[[ATTR0]] = { nounwind }
