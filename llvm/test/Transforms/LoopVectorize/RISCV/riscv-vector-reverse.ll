@@ -193,7 +193,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
 ; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
 ; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
@@ -330,7 +329,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-UF2-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
@@ -448,7 +446,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
 ; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
 ; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
@@ -585,7 +582,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
 ; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-UF2-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295

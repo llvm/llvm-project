@@ -350,6 +350,8 @@ Bug Fixes to C++ Support
   authentication enabled. (#GH152601)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in
   cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Fix an assertion failure when a ``constexpr`` variable is only referenced through
+  ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

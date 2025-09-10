@@ -1,0 +1,32 @@
+
+// RUN: cir-opt %s | FileCheck %s
+
+!u64i = !cir.int<u, 64>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+module {
+  cir.func dso_local @_Z11test_allocam(%arg0: !u64i) -> !cir.ptr<!void> {
+    %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["n", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__retval"] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !u64i, !cir.ptr<!u64i>
+    %2 = cir.load align(8) %0 : !cir.ptr<!u64i>, !u64i
+    // Dynamically sized alloca
+    %3 = cir.alloca !u8i, !cir.ptr<!u8i>, %2 : !u64i, ["bi_alloca"] {alignment = 16 : i64}
+    %4 = cir.cast(bitcast, %3 : !cir.ptr<!u8i>), !cir.ptr<!void>
+    cir.store %4, %1 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+    %5 = cir.load %1 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+    cir.return %5 : !cir.ptr<!void>
+  }
+
+  // CHECK: cir.func dso_local @_Z11test_allocam(%arg0: !u64i) -> !cir.ptr<!void> {
+  // CHECK:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["n", init] {alignment = 8 : i64}
+  // CHECK:   %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__retval"] {alignment = 8 : i64}
+  // CHECK:   cir.store %arg0, %0 : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %2 = cir.load align(8) %0 : !cir.ptr<!u64i>, !u64i
+  // CHECK:   %3 = cir.alloca !u8i, !cir.ptr<!u8i>, %2 : !u64i, ["bi_alloca"] {alignment = 16 : i64}
+  // CHECK:   %4 = cir.cast(bitcast, %3 : !cir.ptr<!u8i>), !cir.ptr<!void>
+  // CHECK:   cir.store %4, %1 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  // CHECK:   %5 = cir.load %1 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CHECK:   cir.return %5 : !cir.ptr<!void>
+  // CHECK: }
+}
