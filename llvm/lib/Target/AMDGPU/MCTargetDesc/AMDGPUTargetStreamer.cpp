@@ -448,11 +448,6 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
       ".amdhsa_user_sgpr_private_segment_size");
-  if (isGFX1250(STI))
-    PrintField(KD.kernel_code_properties,
-               amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES_SHIFT,
-               amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES,
-               ".amdhsa_uses_cu_stores");
   if (IVersion.Major >= 10)
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,

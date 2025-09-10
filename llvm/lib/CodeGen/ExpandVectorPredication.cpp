@@ -581,6 +581,14 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
     replaceOperation(*NewNegOp, VPI);
     return NewNegOp;
   }
+  case Intrinsic::vp_select:
+  case Intrinsic::vp_merge: {
+    assert(maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam());
+    Value *NewSelectOp = Builder.CreateSelect(
+        VPI.getOperand(0), VPI.getOperand(1), VPI.getOperand(2), VPI.getName());
+    replaceOperation(*NewSelectOp, VPI);
+    return NewSelectOp;
+  }
   case Intrinsic::vp_abs:
   case Intrinsic::vp_smax:
   case Intrinsic::vp_smin:

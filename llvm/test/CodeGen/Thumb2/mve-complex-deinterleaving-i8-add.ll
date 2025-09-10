@@ -31,24 +31,19 @@ entry:
 define arm_aapcs_vfpcc <4 x i8> @complex_add_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: complex_add_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vrev64.32 q2, q0
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    vmov r0, s10
-; CHECK-NEXT:    vrev64.32 q3, q1
-; CHECK-NEXT:    vmov r2, s4
-; CHECK-NEXT:    subs r0, r1, r0
-; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    vmov r12, r1, d1
+; CHECK-NEXT:    vmov r2, lr, d3
+; CHECK-NEXT:    vmov r3, r4, d2
 ; CHECK-NEXT:    subs r1, r2, r1
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
-; CHECK-NEXT:    vmov r0, s14
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    add r0, r1
-; CHECK-NEXT:    vmov r1, s12
-; CHECK-NEXT:    add r1, r2
-; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
-; CHECK-NEXT:    vmov q0, q2
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    vmov r2, r0, d0
+; CHECK-NEXT:    subs r0, r3, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
+; CHECK-NEXT:    add.w r0, lr, r12
+; CHECK-NEXT:    adds r1, r4, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %a.real = shufflevector <4 x i8> %a, <4 x i8> zeroinitializer, <2 x i32> <i32 0, i32 2>
   %a.imag = shufflevector <4 x i8> %a, <4 x i8> zeroinitializer, <2 x i32> <i32 1, i32 3>

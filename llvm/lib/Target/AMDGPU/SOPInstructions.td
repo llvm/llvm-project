@@ -1653,6 +1653,11 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+
+let SubtargetPredicate = HasWaitXcnt in {
+  def S_WAIT_XCNT_soft : SOPP_Pseudo<"", (ins s16imm:$simm16), "$simm16">;
+}
+
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.
 // Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
 

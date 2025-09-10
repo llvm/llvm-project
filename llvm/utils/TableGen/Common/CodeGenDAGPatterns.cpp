@@ -14,6 +14,7 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
+#include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -4498,13 +4499,17 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      AppendPattern(P, M, HM.Predicates);
+
+      SmallString<128> PredicateCheck;
+      raw_svector_ostream PS(PredicateCheck);
+      SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
+      AppendPattern(P, M, PredicateCheck);
 
       // Add negations of the HM's predicates to the default predicate.
       if (!DefaultCheck.empty())
         DefaultCheck += " && ";
       DefaultCheck += "!(";
-      DefaultCheck += HM.Predicates;
+      DefaultCheck.append(PredicateCheck);
       DefaultCheck += ")";
     }
 

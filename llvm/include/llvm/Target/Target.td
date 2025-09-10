@@ -20,15 +20,20 @@ class Predicate; // Forward def
 // Register file description - These classes are used to fill in the target
 // description classes.
 
-class HwMode<string FS, list<Predicate> Ps> {
-  // A string representing subtarget features that turn on this HW mode.
-  // For example, "+feat1,-feat2" will indicate that the mode is active
-  // when "feat1" is enabled and "feat2" is disabled at the same time.
-  // Any other features are not checked.
-  // When multiple modes are used, they should be mutually exclusive,
-  // otherwise the results are unpredictable.
-  string Features = FS;
+// Code that will be inserted at the start of the generated
+// `*GenSubtargetInfo::getHwModeSet()` method. It is expected to define
+// variables used in Predicate::CondString. If this class is never instantiated,
+// the default
+//
+//   [[maybe_unused]] const auto *Subtarget =
+//        static_cast<const <TargetName>Subtarget *>(this);
+//
+// will be inserted, where <TargetName> is the name of the Target record.
+class HwModePredicateProlog<code c> {
+  code Code = c;
+}
 
+class HwMode<list<Predicate> Ps> {
   // A list of predicates that turn on this HW mode.
   list<Predicate> Predicates = Ps;
 }
@@ -36,7 +41,7 @@ class HwMode<string FS, list<Predicate> Ps> {
 // A special mode recognized by tablegen. This mode is considered active
 // when no other mode is active. For targets that do not use specific hw
 // modes, this is the only mode.
-def DefaultMode : HwMode<"", []>;
+def DefaultMode : HwMode<[]>;
 
 // A class used to associate objects with HW modes. It is only intended to
 // be used as a base class, where the derived class should contain a member
