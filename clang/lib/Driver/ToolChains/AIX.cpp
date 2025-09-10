@@ -147,26 +147,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bforceimprw");
   }
 
-  // PGO instrumentation generates symbols belonging to special sections, and
-  // the linker needs to place all symbols in a particular section together in
-  // memory; the AIX linker does that under an option.
-  if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
-                    false) ||
-       Args.hasFlag(options::OPT_fprofile_generate,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_generate_EQ,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_instr_generate,
-                    options::OPT_fno_profile_instr_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_instr_generate_EQ,
-                    options::OPT_fno_profile_instr_generate, false) ||
-       Args.hasFlag(options::OPT_fcs_profile_generate,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fcs_profile_generate_EQ,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasArg(options::OPT_fcreate_profile) ||
-       Args.hasArg(options::OPT_coverage))
-    CmdArgs.push_back("-bdbg:namedsects:ss");
+  // ifunc support, which is ON by default, generates named sections.
+  CmdArgs.push_back("-bdbg:namedsects:ss");
+
 
   if (Arg *A = Args.getLastArg(options::OPT_mxcoff_build_id_EQ)) {
     StringRef BuildId = A->getValue();
