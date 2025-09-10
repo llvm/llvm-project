@@ -156,8 +156,7 @@ bool VPlanSlp::areVectorizable(ArrayRef<VPValue *> Operands) const {
     return false;
   }
 
-  if (any_of(Operands,
-             [](VPValue *Op) { return Op->hasMoreThanOneUniqueUser(); })) {
+  if (any_of(Operands, [](VPValue *Op) { return !Op->hasNoOrOneUser(); })) {
     LLVM_DEBUG(dbgs() << "VPSLP: Some operands have multiple users.\n");
     return false;
   }
