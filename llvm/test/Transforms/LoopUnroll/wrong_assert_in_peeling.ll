@@ -9,58 +9,29 @@ define i32 @test() {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ -147, [[BB:%.*]] ], [ [[TMP14:%.*]], [[BB13:%.*]] ]
-; CHECK-NEXT:    br label [[BB2_PEEL_BEGIN:%.*]]
-; CHECK:       bb2.peel.begin:
-; CHECK-NEXT:    br label [[BB2_PEEL:%.*]]
-; CHECK:       bb2.peel:
-; CHECK-NEXT:    [[TMP4_PEEL:%.*]] = add nsw i32 undef, [[TMP]]
-; CHECK-NEXT:    br label [[BB5_PEEL:%.*]]
-; CHECK:       bb5.peel:
-; CHECK-NEXT:    [[TMP6_PEEL:%.*]] = icmp eq i32 undef, 33
-; CHECK-NEXT:    br i1 [[TMP6_PEEL]], label [[BB7_PEEL:%.*]], label [[BB15_LOOPEXIT2:%.*]]
-; CHECK:       bb7.peel:
-; CHECK-NEXT:    [[TMP8_PEEL:%.*]] = sub nsw i32 undef, undef
-; CHECK-NEXT:    [[TMP9_PEEL:%.*]] = icmp eq i32 [[TMP8_PEEL]], 0
-; CHECK-NEXT:    br i1 [[TMP9_PEEL]], label [[BB10_PEEL:%.*]], label [[BB10_PEEL]]
-; CHECK:       bb10.peel:
-; CHECK-NEXT:    [[TMP11_PEEL:%.*]] = icmp eq i8 undef, 0
-; CHECK-NEXT:    br i1 [[TMP11_PEEL]], label [[BB12_PEEL:%.*]], label [[BB17_LOOPEXIT3:%.*]]
-; CHECK:       bb12.peel:
-; CHECK-NEXT:    br i1 false, label [[BB13]], label [[BB2_PEEL_NEXT:%.*]]
-; CHECK:       bb2.peel.next:
-; CHECK-NEXT:    br label [[BB2_PEEL_NEXT1:%.*]]
-; CHECK:       bb2.peel.next1:
-; CHECK-NEXT:    br label [[BB1_PEEL_NEWPH:%.*]]
-; CHECK:       bb1.peel.newph:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP4_PEEL]], [[BB1_PEEL_NEWPH]] ], [ [[TMP4:%.*]], [[BB12:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ undef, [[BB1]] ], [ [[TMP4:%.*]], [[BB12:%.*]] ]
 ; CHECK-NEXT:    [[TMP4]] = add nsw i32 [[TMP3]], [[TMP]]
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB15_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 undef, 33
+; CHECK-NEXT:    br i1 [[TMP6]], label [[BB7:%.*]], label [[BB15:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB10]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw i32 [[TMP3]], undef
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10:%.*]], label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    br i1 undef, label [[BB12]], label [[BB17_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i8 undef, 0
+; CHECK-NEXT:    br i1 [[TMP11]], label [[BB12]], label [[BB17:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    br i1 false, label [[BB13_LOOPEXIT:%.*]], label [[BB2]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       bb13.loopexit:
-; CHECK-NEXT:    br label [[BB13]]
+; CHECK-NEXT:    br i1 false, label [[BB13]], label [[BB2]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    [[TMP14]] = add nsw i32 [[TMP]], -1
 ; CHECK-NEXT:    br label [[BB1]]
-; CHECK:       bb15.loopexit:
-; CHECK-NEXT:    br label [[BB15:%.*]]
-; CHECK:       bb15.loopexit2:
-; CHECK-NEXT:    br label [[BB15]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 17) [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[TMP16]]
-; CHECK:       bb17.loopexit:
-; CHECK-NEXT:    br label [[BB17:%.*]]
-; CHECK:       bb17.loopexit3:
-; CHECK-NEXT:    br label [[BB17]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 6) [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[TMP18]]
