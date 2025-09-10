@@ -462,7 +462,7 @@ define i1 @load_vs_array_type_mismatch_offset2(i32 %idx) {
 
 define i1 @offset_larger_than_stride(i32 %idx) {
 ; CHECK-LABEL: @offset_larger_than_stride(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i16], ptr @g_i16_1, i32 1, i32 [[TMP1:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr getelementptr inbounds nuw (i8, ptr @g_i16_1, i32 4), i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -554,7 +554,7 @@ entry:
 define i1 @cmp_load_constant_additional_positive_offset(i32 %x) {
 ; CHECK-LABEL: @cmp_load_constant_additional_positive_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 5, i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw (i8, ptr @CG_CLEAR, i32 20), i32 [[X:%.*]]
 ; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], 5
 ; CHECK-NEXT:    ret i1 [[COND]]
@@ -569,7 +569,8 @@ entry:
 define i1 @cmp_load_constant_additional_negative_offset(i32 %x) {
 ; CHECK-LABEL: @cmp_load_constant_additional_negative_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 [[X:%.*]], i32 -5
+; CHECK-NEXT:    [[ISOK_PTR_SPLIT:%.*]] = getelementptr inbounds [1 x i32], ptr @CG_CLEAR, i32 [[X:%.*]]
+; CHECK-NEXT:    [[ISOK_PTR:%.*]] = getelementptr inbounds i8, ptr [[ISOK_PTR_SPLIT]], i32 -20
 ; CHECK-NEXT:    [[ISOK:%.*]] = load i32, ptr [[ISOK_PTR]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ISOK]], 5
 ; CHECK-NEXT:    ret i1 [[COND]]
