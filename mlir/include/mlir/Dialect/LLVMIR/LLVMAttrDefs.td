@@ -1233,11 +1233,7 @@ def LLVM_TBAATagArrayAttr
 }
 
 //===----------------------------------------------------------------------===//
-// Memory Model Relaxation Annations (mmra) Attributes
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// MMRATagAttr - single MMRA tag
+// MMRATagAttr
 //===----------------------------------------------------------------------===//
 
 def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
@@ -1260,6 +1256,14 @@ def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
     #mmra_tag1 = #llvm.mmra_tag<"foo":"bar">
     ```
 
+    Either one MMRA tag or an array of them may be added to any LLVM
+    operation that operates on memory.
+
+    ```mlir
+    %v = llvm.load %ptr {llvm.mmra = #mmra_tag} : !llvm.ptr -> i8
+    llvm.store %v, %ptr2 {llvm.mmra [#mmra_tag, #mmra_tag1]} : i8, !llvm.ptr
+    ```
+
     See the following link for more details:
     https://llvm.org/docs/MemoryModelRelaxationAnnotations.html
   }];
@@ -1268,10 +1272,6 @@ def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
 
   let genMnemonicAlias = 1;
 }
-
-def LLVM_MMRATagArrayAttr : TypedArrayAttrBase<
-    LLVM_MMRATagAttr,
-    LLVM_MMRATagAttr.summary # " array">;
 
 //===----------------------------------------------------------------------===//
 // ConstantRangeAttr
