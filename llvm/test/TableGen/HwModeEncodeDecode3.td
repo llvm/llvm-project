@@ -22,9 +22,9 @@ def Myi32 : Operand<i32> {
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>; // Mode 1
-def ModeB : HwMode<"+b", [HasB]>; // Mode 2
-def ModeC : HwMode<"+c", []>;     // Mode 3
+def ModeA : HwMode<[HasA]>; // Mode 1
+def ModeB : HwMode<[HasB]>; // Mode 2
+def ModeC : HwMode<[]>;     // Mode 3
 
 
 def fooTypeEncDefault : InstructionEncoding {
