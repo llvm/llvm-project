@@ -221,17 +221,6 @@ extends:
                 displayName: Publish packages
                 condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
 
-          - job: Source_Build_AlmaLinux_8_Portable
-            displayName: Source-Build (AlmaLinux_8_Portable)
-            pool:
-              name: $(DncEngInternalBuildPool)
-              image: 1es-ubuntu-2204
-              os: linux
-            container: mariner2crossamd64
-            steps:
-            - bash: echo 'Hello World'
-              displayName: 'Hello World'
-
     ############ POST BUILD ARCADE LOGIC ############
     - template: /eng/common/templates-official/post-build/post-build.yml@self
       parameters:
