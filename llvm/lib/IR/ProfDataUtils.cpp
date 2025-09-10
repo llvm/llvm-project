@@ -242,24 +242,26 @@ bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalVal) {
   return extractProfTotalWeight(I.getMetadata(LLVMContext::MD_prof), TotalVal);
 }
 
-void setExplicitlyUnknownBranchWeights(Instruction &I) {
+void setExplicitlyUnknownBranchWeights(Instruction &I, StringRef PassName) {
   MDBuilder MDB(I.getContext());
   I.setMetadata(
       LLVMContext::MD_prof,
       MDNode::get(I.getContext(),
-                  MDB.createString(MDProfLabels::UnknownBranchWeightsMarker)));
+                  {MDB.createString(MDProfLabels::UnknownBranchWeightsMarker),
+                   MDB.createString(PassName)}));
 }
 
-void setExplicitlyUnknownFunctionEntryCount(Function &F) {
+void setExplicitlyUnknownFunctionEntryCount(Function &F, StringRef PassName) {
   MDBuilder MDB(F.getContext());
   F.setMetadata(
       LLVMContext::MD_prof,
       MDNode::get(F.getContext(),
-                  MDB.createString(MDProfLabels::UnknownBranchWeightsMarker)));
+                  {MDB.createString(MDProfLabels::UnknownBranchWeightsMarker),
+                   MDB.createString(PassName)}));
 }
 
 bool isExplicitlyUnknownProfileMetadata(const MDNode &MD) {
-  if (MD.getNumOperands() != 1)
+  if (MD.getNumOperands() != 2)
     return false;
   return MD.getOperand(0).equalsStr(MDProfLabels::UnknownBranchWeightsMarker);
 }

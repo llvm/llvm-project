@@ -177,12 +177,15 @@ inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
 /// do not accidentally drop profile info, and this API is called in cases where
 /// the pass explicitly cannot provide that info. Defaulting it in would hide
 /// bugs where the pass forgets to transfer over or otherwise specify profile
-/// info.
-LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I);
+/// info. Use `PassName` to capture the pass name (i.e. DEBUG_TYPE) for
+/// debuggability.
+LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
+                                                StringRef PassName);
 
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.
-LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F);
+LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,
+                                                     StringRef PassName);
 
 LLVM_ABI bool isExplicitlyUnknownProfileMetadata(const MDNode &MD);
 LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
