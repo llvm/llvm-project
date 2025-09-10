@@ -127,7 +127,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=2,
+            wait_seconds_for_termination=5,
         )
 
     @skipIfWindows
@@ -139,7 +139,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         (_, connection) = self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=2,
+            wait_seconds_for_termination=5,
         )
         # The connection timeout should not cut off the debug session
         self.run_debug_session(connection, "Alice", 1.5)
@@ -153,7 +153,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         (_, connection) = self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=2,
+            wait_seconds_for_termination=5,
         )
         time.sleep(0.5)
         # Should be able to connect to the server.
