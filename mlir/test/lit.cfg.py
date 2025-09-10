@@ -383,3 +383,6 @@ if config.arm_emulator_executable:
 
 if sys.version_info >= (3, 11):
     config.available_features.add("python-ge-311")
+
+if "GITHUB_ACTIONS" in os.environ:
+    config.available_features.add("github-actions")
