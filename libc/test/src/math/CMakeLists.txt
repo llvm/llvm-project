@@ -2327,7 +2327,6 @@ add_fp_unittest(
   SRCS
     asinhf_test.cpp
   DEPENDS
-    libc.hdr.errno_macros
     libc.src.math.asinhf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -2467,7 +2466,6 @@ add_fp_unittest(
   SRCS
     atanf_test.cpp
   DEPENDS
-    libc.hdr.errno_macros
     libc.src.math.atanf
     libc.src.__support.FPUtil.fp_bits
 )
