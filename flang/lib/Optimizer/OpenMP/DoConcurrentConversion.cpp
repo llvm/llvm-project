@@ -6,31 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Support/OpenMP-utils.h"
 #include "flang/Utils/OpenMP.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-
-#include <memory>
-#include <utility>
 
 namespace flangomp {
 #define GEN_PASS_DEF_DOCONCURRENTCONVERSIONPASS
@@ -49,7 +41,6 @@ struct InductionVariableInfo {
                         mlir::Value inductionVar) {
     populateInfo(loop, inductionVar);
   }
-
   /// The operation allocating memory for iteration variable.
   mlir::Operation *iterVarMemDef;
   /// the operation(s) updating the iteration variable with the current
@@ -126,7 +117,7 @@ using InductionVariableInfos = llvm::SmallVector<InductionVariableInfo>;
 void collectLoopLiveIns(fir::DoConcurrentLoopOp loop,
                         llvm::SmallVectorImpl<mlir::Value> &liveIns) {
   llvm::SmallDenseSet<mlir::Value> seenValues;
-  llvm::SmallDenseSet<mlir::Operation *> seenOps;
+  llvm::SmallPtrSet<mlir::Operation *, 8> seenOps;
 
   for (auto [lb, ub, st] : llvm::zip_equal(
            loop.getLowerBound(), loop.getUpperBound(), loop.getStep())) {
@@ -210,6 +201,52 @@ static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
 
 class DoConcurrentConversion
     : public mlir::OpConversionPattern<fir::DoConcurrentOp> {
+private:
+  struct TargetDeclareShapeCreationInfo {
+    // Note: We use `std::vector` (rather than `llvm::SmallVector` as usual) to
+    // interface more easily `ShapeShiftOp::getOrigins()` which returns
+    // `std::vector`.
+    std::vector<mlir::Value> startIndices;
+    std::vector<mlir::Value> extents;
+
+    TargetDeclareShapeCreationInfo(mlir::Value liveIn) {
+      mlir::Value shape = nullptr;
+      mlir::Operation *liveInDefiningOp = liveIn.getDefiningOp();
+      auto declareOp =
+          mlir::dyn_cast_if_present<hlfir::DeclareOp>(liveInDefiningOp);
+
+      if (declareOp != nullptr)
+        shape = declareOp.getShape();
+
+      if (!shape)
+        return;
+
+      auto shapeOp =
+          mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
+      auto shapeShiftOp =
+          mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
+
+      if (!shapeOp && !shapeShiftOp)
+        TODO(liveIn.getLoc(),
+             "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are"
+             "not supported yet.");
+
+      if (shapeShiftOp != nullptr)
+        startIndices = shapeShiftOp.getOrigins();
+
+      extents = shapeOp != nullptr
+                    ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
+                                               shapeOp.getExtents().end())
+                    : shapeShiftOp.getExtents();
+    }
+
+    bool isShapedValue() const { return !extents.empty(); }
+    bool isShapeShiftedValue() const { return !startIndices.empty(); }
+  };
+
+  using LiveInShapeInfoMap =
+      llvm::DenseMap<mlir::Value, TargetDeclareShapeCreationInfo>;
+
 public:
   using mlir::OpConversionPattern<fir::DoConcurrentOp>::OpConversionPattern;
 
@@ -285,6 +322,7 @@ public:
 
     mlir::omp::ParallelOp parallelOp =
         genParallelOp(doLoop.getLoc(), rewriter, ivInfos, mapper);
+
     // Only set as composite when part of `distribute parallel do`.
     parallelOp.setComposite(mapToDevice);
 
@@ -333,51 +371,6 @@ public:
   }
 
 private:
-  struct TargetDeclareShapeCreationInfo {
-    // Note: We use `std::vector` (rather than `llvm::SmallVector` as usual) to
-    // interface more easily `ShapeShiftOp::getOrigins()` which returns
-    // `std::vector`.
-    std::vector<mlir::Value> startIndices{};
-    std::vector<mlir::Value> extents{};
-
-    TargetDeclareShapeCreationInfo(mlir::Value liveIn) {
-      mlir::Value shape = nullptr;
-      mlir::Operation *liveInDefiningOp = liveIn.getDefiningOp();
-      auto declareOp =
-          mlir::dyn_cast_if_present<hlfir::DeclareOp>(liveInDefiningOp);
-
-      if (declareOp != nullptr)
-        shape = declareOp.getShape();
-
-      if (shape == nullptr)
-        return;
-
-      auto shapeOp =
-          mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
-      auto shapeShiftOp =
-          mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
-
-      if (shapeOp == nullptr && shapeShiftOp == nullptr)
-        TODO(liveIn.getLoc(),
-             "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are"
-             "not supported yet.");
-
-      if (shapeShiftOp != nullptr)
-        startIndices = shapeShiftOp.getOrigins();
-
-      extents = shapeOp != nullptr
-                    ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
-                                               shapeOp.getExtents().end())
-                    : shapeShiftOp.getExtents();
-    }
-
-    bool isShapedValue() const { return !extents.empty(); }
-    bool isShapeShiftedValue() const { return !startIndices.empty(); }
-  };
-
-  using LiveInShapeInfoMap =
-      llvm::DenseMap<mlir::Value, TargetDeclareShapeCreationInfo>;
-
   mlir::omp::ParallelOp
   genParallelOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
                 looputils::InductionVariableInfos &ivInfos,
@@ -435,6 +428,8 @@ private:
                                llvm::SmallVectorImpl<mlir::Value> &bounds) {
       populateBounds(var, bounds);
 
+      // Ensure that loop-nest bounds are evaluated in the host and forwarded to
+      // the nested omp constructs when we map to the device.
       if (targetClauseOps)
         targetClauseOps->hostEvalVars.push_back(var);
     };
@@ -616,6 +611,7 @@ private:
     }
 
     if (!llvm::isa<mlir::omp::PointerLikeType>(rawAddr.getType())) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointAfter(liveInDefiningOp);
       auto copyVal = builder.createTemporary(liveIn.getLoc(), liveIn.getType());
       builder.createStoreWithConvert(copyVal.getLoc(), liveIn, copyVal);
@@ -678,8 +674,8 @@ private:
         rewriter,
         fir::getKindMapping(targetOp->getParentOfType<mlir::ModuleOp>()));
 
-    // Within the loop, it possible that we discover other values that need to
-    // mapped to the target region (the shape info values for arrays, for
+    // Within the loop, it is possible that we discover other values that need
+    // to be mapped to the target region (the shape info values for arrays, for
     // example). Therefore, the map block args might be extended and resized.
     // Hence, we invoke `argIface.getMapBlockArgs()` every iteration to make
     // sure we access the proper vector of data.
@@ -692,10 +688,13 @@ private:
                            miOp, liveInShapeInfoMap.at(mappedVar));
       ++idx;
 
-      // TODO If `mappedVar.getDefiningOp()` is a `fir::BoxAddrOp`, we probably
+      // If `mappedVar.getDefiningOp()` is a `fir::BoxAddrOp`, we probably
       // need to "unpack" the box by getting the defining op of it's value.
       // However, we did not hit this case in reality yet so leaving it as a
       // todo for now.
+      if (mlir::isa<fir::BoxAddrOp>(mappedVar.getDefiningOp()))
+        TODO(mappedVar.getLoc(),
+             "Mapped variabled defined by `BoxAddrOp` are not supported yet");
 
       auto mapHostValueToDevice = [&](mlir::Value hostValue,
                                       mlir::Value deviceValue) {
