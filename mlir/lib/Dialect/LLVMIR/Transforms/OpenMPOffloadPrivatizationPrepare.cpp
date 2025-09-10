@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-//#include "mlir/Dialect/LLVMIR/Transforms/OpenMPOffloadPrivatizationPrepare.h"
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/OpenMPOffloadPrivatizationPrepare.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -17,6 +16,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/DebugLog.h"
 #include <cstdint>
 #include <utility>
 
@@ -95,15 +95,31 @@ class PrepareForOMPOffloadPrivatizationPass
 
         // Allocate heap memory that corresponds to the type of memory
         // pointed to by varPtr
-        // TODO: For boxchars this likely wont be a pointer.
+        // For boxchars this won't be a pointer. But, MapsForPrivatizedSymbols
+        // should have mapped the pointer the boxchar so use that as varPtr.
         Value varPtr = privVar;
-        Value heapMem = allocateHeapMem(targetOp, privVar, mod, rewriter);
-        if (!heapMem)
-          targetOp.emitError("Unable to allocate heap memory when try to move "
-                             "a private variable out of the stack and into the "
-                             "heap for use by a deferred target task");
+        if (!isa<LLVM::LLVMPointerType>(privVar.getType()))
+          varPtr = mapInfoOp.getVarPtr();
 
-        newPrivVars.push_back(heapMem);
+        assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
+        Value heapMem = allocateHeapMem(targetOp, varPtr, mod, rewriter);
+        if (!heapMem)
+          targetOp.emitError(
+              "Unable to allocate heap memory when trying to move "
+              "a private variable out of the stack and into the "
+              "heap for use by a deferred target task");
+
+        // The types of private vars should match before and after the
+        // transformation. In particular, if the type is a pointer,
+        // simply record the newly allocated malloc location as the
+        // new private variable. If, however, the type is not a pointer
+        // then, we need to load the value from the newly allocated
+        // location. We'll inser that load later after we have updated
+        // the malloc'd location with the contents of the original
+        // variable.
+        if (isa<LLVM::LLVMPointerType>(privVar.getType()))
+          newPrivVars.push_back(heapMem);
+
         // Find the earliest insertion point for the copy. This will be before
         // the first in the list of omp::MapInfoOp instances that use varPtr.
         // After the copy these omp::MapInfoOp instances will refer to heapMem
@@ -250,6 +266,18 @@ class PrepareForOMPOffloadPrivatizationPass
           });
           rewriter.eraseOp(origOp);
         }
+
+        // If the type of the private variable is not a pointer,
+        // which is typically the case with !fir.boxchar types, then
+        // we need to ensure that the new private variable is also
+        // not a pointer. Insert a load from heapMem right before
+        // targetOp.
+        if (!isa<LLVM::LLVMPointerType>(privVar.getType())) {
+          rewriter.setInsertionPoint(targetOp);
+          auto newPrivVar = rewriter.create<LLVM::LoadOp>(mapInfoOp.getLoc(),
+                                                          varType, heapMem);
+          newPrivVars.push_back(newPrivVar);
+        }
       }
       assert(newPrivVars.size() == privateVars.size() &&
              "The number of private variables must match before and after "
@@ -358,7 +386,7 @@ private:
 
   template <typename OpTy>
   Value allocateHeapMem(OpTy targetOp, Value privVar, ModuleOp mod,
-                              IRRewriter &rewriter) const {
+                        IRRewriter &rewriter) const {
     Value varPtr = privVar;
     Operation *definingOp = varPtr.getDefiningOp();
     OpBuilder::InsertionGuard guard(rewriter);
