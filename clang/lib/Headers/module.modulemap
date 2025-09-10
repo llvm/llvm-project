@@ -329,13 +329,13 @@ module _Builtin_unwind [system] {
 }
 // End -fbuiltin-headers-in-system-modules affected modules
 
-module opencl_c {
+module opencl_c [system] {
   requires opencl
   header "opencl-c.h"
   header "opencl-c-base.h"
 }
 
-module ptrauth {
+module ptrauth [system] {
   header "ptrauth.h"
   export *
 }

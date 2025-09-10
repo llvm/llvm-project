@@ -405,7 +405,8 @@ std::unique_ptr<MPIImplTraits> MPIImplTraits::get(ModuleOp &moduleOp) {
     return std::make_unique<OMPIImplTraits>(moduleOp);
   if (!strAttr || strAttr.getValue() != "MPICH")
     moduleOp.emitWarning() << "Unknown \"MPI:Implementation\" value in DLTI ("
-                           << strAttr.getValue() << "), defaulting to MPICH";
+                           << (strAttr ? strAttr.getValue() : "<NULL>")
+                           << "), defaulting to MPICH";
   return std::make_unique<MPICHImplTraits>(moduleOp);
 }
 

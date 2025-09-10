@@ -62,7 +62,6 @@ struct MissingFeatures {
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
-  static bool opAllocaDynAllocSize() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
@@ -245,6 +244,7 @@ struct MissingFeatures {
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }

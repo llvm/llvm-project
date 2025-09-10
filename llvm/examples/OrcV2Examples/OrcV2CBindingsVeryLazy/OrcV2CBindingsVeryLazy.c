@@ -91,7 +91,8 @@ LLVMErrorRef parseExampleModule(const char *Source, size_t Len,
   }
 
   // Create a new ThreadSafeContext to hold the context.
-  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
+  LLVMOrcThreadSafeContextRef TSCtx =
+      LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
 
   // Our module is now complete. Wrap it and our ThreadSafeContext in a
   // ThreadSafeModule.
