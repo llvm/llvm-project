@@ -374,9 +374,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:  Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.0:
-; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
-; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = logical-and vp<[[NOT1]]>, vp<[[NOT2]]>
-; CHECK-NEXT:    BLEND ir<%ysd.0> = vp<[[PHI]]> ir<%psd>/vp<[[SEL2]]>
+; CHECK-NEXT:    BLEND ir<%ysd.0> = ir<%psd> vp<[[PHI]]>/vp<[[OR1]]>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%isd>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%ysd.0>
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
