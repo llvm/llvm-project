@@ -754,6 +754,7 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
 
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   // FIXME: Is PackSubstitutionIndex correct?
+  // TODO: We might want to cache the substitution of fold expanded constraints.
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
@@ -832,6 +833,8 @@ ExprResult CalculateConstraintSatisfaction::Calculate(
   if (Satisfaction.IsSatisfied)
     return E;
 
+  // TODO: We might want to cache the substitution of concept id constraints
+  // as it can be slow in the SFINAE case.
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
