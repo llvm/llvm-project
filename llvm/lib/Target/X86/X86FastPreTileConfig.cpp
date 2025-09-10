@@ -564,8 +564,17 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       MachineBasicBlock::iterator I;
       if (LastShapeMI && dominates(MBB, MI, LastShapeMI))
         I = ++LastShapeMI->getIterator();
-      else
-        I = ++MI.getIterator();
+      else {
+        // Call can overwrite registers like rax, ensure the tile config
+        // instruction is sinked closer to first instruction that uses tile.
+        auto UseIt = MI.getIterator();
+        while (UseIt != MBB.end()) {
+          if (HasTileOperand(MRI, *UseIt))
+            break;
+          ++UseIt;
+        }
+        I = UseIt;
+      }
       Config(*I);
       HasUnconfigTile = false;
       continue;
