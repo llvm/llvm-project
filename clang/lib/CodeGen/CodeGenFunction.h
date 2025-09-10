@@ -3763,7 +3763,7 @@ public:
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
   llvm::Function *GenerateOpenMPCapturedStmtFunction(
       const CapturedStmt &S, const OMPExecutableDirective &D,
-      SourceLocation Loc, bool TopLevel, bool IsTopKernel);
+      bool TopLevel, bool IsTopKernel);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars,
                                   const Stmt *XteamRedNestKey);
