@@ -563,7 +563,7 @@ public:
   }
 
   /// Returns true if any decoding conflicts were encountered.
-  bool getHasConflict() const { return HasConflict; }
+  bool hasConflict() const { return HasConflict; }
 
 private:
   /// Applies the given filter to the set of encodings this FilterChooser
@@ -2586,7 +2586,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
 
       // Emit the decoder for this (namespace, hwmode, width) combination.
       FilterChooser FC(Encodings, EncodingIDs);
-      HasConflict |= FC.getHasConflict();
+      HasConflict |= FC.hasConflict();
       // Skip emitting table entries if a conflict has been detected.
       if (HasConflict)
         continue;
