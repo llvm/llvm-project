@@ -28,10 +28,13 @@ struct __size_difference_type_traits;
 
 template <class _StoragePointer>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__fill_masked_range(_StoragePointer __word, unsigned __ctz, unsigned __clz, bool __fill_val);
+__fill_masked_range(_StoragePointer __word, unsigned __clz, unsigned __ctz, bool __fill_val);
 
 template <class _StorageType>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __trailing_mask(unsigned __clz);
+
+template <class _StorageType>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __leading_mask(unsigned __ctz);
 
 template <class _StorageType>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(unsigned __clz, unsigned __ctz);

@@ -165,7 +165,7 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* OpenCLC Unsupported */
   if (!LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES))
     return false;
-  /* OopenCL GAS Unsupported */
+  /* OpenCL GAS Unsupported */
   if (!LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS))
     return false;
   /* OpenCL Pipe Unsupported */
@@ -190,6 +190,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
     return false;
   /* consteval Unsupported */
   if (!LangOpts.CPlusPlus20 && strchr(AttributesStr.data(), 'G') != nullptr)
+    return false;
+  /* C23 unsupported */
+  if (!LangOpts.C23 && BuiltinInfo.Langs == C23_LANG)
     return false;
   return true;
 }

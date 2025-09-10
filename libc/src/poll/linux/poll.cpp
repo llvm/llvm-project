@@ -13,8 +13,8 @@
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/OSUtil/syscall.h" // syscall_impl
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 #include <sys/syscall.h> // SYS_poll, SYS_ppoll
 
@@ -23,9 +23,9 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
   int ret = 0;
 
-#ifdef SYS_poll
+#if defined(SYS_poll)
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
-#elif defined(SYS_ppoll)
+#else // no SYS_poll
   timespec ts, *tsp;
   if (timeout >= 0) {
     ts.tv_sec = timeout / 1000;
@@ -34,12 +34,16 @@ LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
   } else {
     tsp = nullptr;
   }
+#if defined(SYS_ppoll)
   ret =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
+#elif defined(SYS_ppoll_time64)
+  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll_time64, fds, nfds, tsp,
+                                          nullptr, 0);
 #else
-// TODO: https://github.com/llvm/llvm-project/issues/125940
-#error "SYS_ppoll_time64?"
-#endif
+#error "poll, ppoll, ppoll_time64 syscalls not available."
+#endif // defined(SYS_ppoll) || defined(SYS_ppoll_time64)
+#endif // defined(SYS_poll)
 
   if (ret < 0) {
     libc_errno = -ret;

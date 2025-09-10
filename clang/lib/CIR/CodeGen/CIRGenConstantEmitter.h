@@ -20,7 +20,6 @@
 
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace clang::CIRGen {
 
@@ -32,6 +31,19 @@ public:
 private:
   bool abstract = false;
 
+#ifndef NDEBUG
+  // Variables used for asserting state consistency.
+
+  /// Whether non-abstract components of the emitter have been initialized.
+  bool initializedNonAbstract = false;
+
+  /// Whether the emitter has been finalized.
+  bool finalized = false;
+
+  /// Whether the constant-emission failed.
+  bool failed = false;
+#endif // NDEBUG
+
   /// Whether we're in a constant context.
   bool inConstantContext = false;
 
@@ -41,8 +53,19 @@ public:
   /// block addresses or PredefinedExprs.
   ConstantEmitter(CIRGenFunction &cgf) : cgm(cgf.cgm), cgf(&cgf) {}
 
+  ConstantEmitter(CIRGenModule &cgm, CIRGenFunction *cgf = nullptr)
+      : cgm(cgm), cgf(cgf) {}
+
   ConstantEmitter(const ConstantEmitter &other) = delete;
   ConstantEmitter &operator=(const ConstantEmitter &other) = delete;
+
+  ~ConstantEmitter();
+
+  /// Try to emit the initializer of the given declaration as an abstract
+  /// constant.  If this succeeds, the emission must be finalized.
+  mlir::Attribute tryEmitForInitializer(const VarDecl &d);
+
+  void finalize(cir::GlobalOp gv);
 
   // All of the "abstract" emission methods below permit the emission to
   // be immediately discarded without finalizing anything.  Therefore, they
@@ -57,16 +80,29 @@ public:
   //     initializer or to propagate to another context; for example,
   //     side effects, or emitting an initialization that requires a
   //     reference to its current location.
-  mlir::Attribute emitForMemory(mlir::Attribute c, QualType t);
+  mlir::Attribute emitForMemory(mlir::Attribute c, QualType destType);
+  static mlir::Attribute emitForMemory(CIRGenModule &cgm, mlir::Attribute c,
+                                       clang::QualType destTy);
+
+  mlir::Attribute emitNullForMemory(mlir::Location loc, QualType t) {
+    return emitNullForMemory(loc, cgm, t);
+  }
+  static mlir::Attribute emitNullForMemory(mlir::Location loc,
+                                           CIRGenModule &cgm, QualType t);
+
+  /// Try to emit the initializer of the given declaration as an abstract
+  /// constant.
+  mlir::Attribute tryEmitAbstractForInitializer(const VarDecl &d);
 
   /// Emit the result of the given expression as an abstract constant,
   /// asserting that it succeeded.  This is only safe to do when the
   /// expression is known to be a constant expression with either a fairly
   /// simple type or a known simple form.
+  mlir::Attribute emitAbstract(const Expr *e, QualType destType);
   mlir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
-                               QualType t);
+                               QualType destType);
 
-  mlir::Attribute tryEmitConstantExpr(const ConstantExpr *CE);
+  mlir::Attribute tryEmitConstantExpr(const ConstantExpr *ce);
 
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
@@ -74,14 +110,29 @@ public:
 
   mlir::Attribute tryEmitPrivateForVarInit(const VarDecl &d);
 
+  mlir::TypedAttr tryEmitPrivate(const Expr *e, QualType destType);
   mlir::Attribute tryEmitPrivate(const APValue &value, QualType destType);
-  mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType t);
-
-  /// Try to emit the initializer of the given declaration as an abstract
-  /// constant.
-  mlir::Attribute tryEmitAbstractForInitializer(const VarDecl &d);
+  mlir::Attribute tryEmitPrivateForMemory(const Expr *e, QualType destTy);
+  mlir::Attribute tryEmitPrivateForMemory(const APValue &value,
+                                          QualType destTy);
 
 private:
+#ifndef NDEBUG
+  void initializeNonAbstract() {
+    assert(!initializedNonAbstract);
+    initializedNonAbstract = true;
+    assert(!cir::MissingFeatures::addressSpace());
+  }
+  mlir::Attribute markIfFailed(mlir::Attribute init) {
+    if (!init)
+      failed = true;
+    return init;
+  }
+#else
+  void initializeNonAbstract() {}
+  mlir::Attribute markIfFailed(mlir::Attribute init) { return init; }
+#endif // NDEBUG
+
   class AbstractStateRAII {
     ConstantEmitter &emitter;
     bool oldValue;

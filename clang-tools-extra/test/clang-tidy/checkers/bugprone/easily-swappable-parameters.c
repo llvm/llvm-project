@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-easily-swappable-parameters %t \
+// RUN: %check_clang_tidy -std=c99,c11,c17 -check-suffixes=,BEFORE-23 %s bugprone-easily-swappable-parameters %t \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
 // RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \
@@ -7,7 +7,18 @@
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
 // RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
-// RUN:  }}' -- -Wno-strict-prototypes -x c
+// RUN:  }}' -- -Wno-strict-prototypes
+//
+// RUN: %check_clang_tidy -std=c23-or-later %s bugprone-easily-swappable-parameters %t \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
+// RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \
+// RUN:     bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes: "bool;MyBool;struct U;MAKE_LOGICAL_TYPE(int)", \
+// RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
+// RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
+// RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:  }}' -- -Wno-strict-prototypes
 
 #define bool _Bool
 #define true 1
@@ -45,8 +56,11 @@ void pointerConversion(int *IP, long *LP) {}
 
 void testVariadicsCall() {
   int IVal = 1;
+
+#if __STDC_VERSION__ < 202311L
   decl(IVal); // NO-WARN: Particular calls to "variadics" are like template
               // instantiations, and we do not model them.
+#endif
 
   variadic(IVal);          // NO-WARN.
   variadic(IVal, 2, 3, 4); // NO-WARN.
@@ -64,13 +78,15 @@ void taggedTypes2(struct S SVar1, struct S SVar2) {}
 
 void wrappers(struct { int I; } I1, struct { int I; } I2) {} // NO-WARN: Distinct anonymous types.
 
+#if __STDC_VERSION__ < 202311L
 void knr(I, J)
   int I;
   int J;
 {}
-// CHECK-MESSAGES: :[[@LINE-3]]:3: warning: 2 adjacent parameters of 'knr' of similar type ('int')
-// CHECK-MESSAGES: :[[@LINE-4]]:7: note: the first parameter in the range is 'I'
-// CHECK-MESSAGES: :[[@LINE-4]]:7: note: the last parameter in the range is 'J'
+// CHECK-MESSAGES-BEFORE-23: :[[@LINE-3]]:3: warning: 2 adjacent parameters of 'knr' of similar type ('int')
+// CHECK-MESSAGES-BEFORE-23: :[[@LINE-4]]:7: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES-BEFORE-23: :[[@LINE-4]]:7: note: the last parameter in the range is 'J'
+#endif
 
 void boolAsWritten(bool B1, bool B2) {} // NO-WARN: The type name is ignored.
 // Note that "bool" is a macro that expands to "_Bool" internally, but it is
@@ -145,7 +161,7 @@ void thisIsGettingRidiculous(MAKE_PRIMITIVE_WRAPPER(int) I1,
 void macroMagic3(MAKE_LOGICAL_TYPE(char) B1, MAKE_LOGICAL_TYPE(long) B2) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 2 adjacent parameters of 'macroMagic3' of similar type ('bool')
 // CHECK-MESSAGES: :[[@LINE-4]]:30: note: expanded from macro 'MAKE_LOGICAL_TYPE'
-// CHECK-MESSAGES: :[[@LINE-136]]:14: note: expanded from macro 'bool'
+// CHECK-MESSAGES: :[[@LINE-141]]:14: note: expanded from macro 'bool'
 // CHECK-MESSAGES: :[[@LINE-4]]:42: note: the first parameter in the range is 'B1'
 // CHECK-MESSAGES: :[[@LINE-5]]:70: note: the last parameter in the range is 'B2'
 

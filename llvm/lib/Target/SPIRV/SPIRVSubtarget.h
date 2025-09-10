@@ -36,6 +36,10 @@ class StringRef;
 class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
+public:
+  // Enum for the SPIR-V environment: Kernel, Shader or Unknown.
+  enum SPIRVEnvType { Kernel, Shader, Unknown };
+
 private:
   const unsigned PointerSize;
   VersionTuple SPIRVVersion;
@@ -49,6 +53,7 @@ private:
   SPIRVFrameLowering FrameLowering;
   SPIRVTargetLowering TLInfo;
   Triple TargetTriple;
+  SPIRVEnvType Env;
 
   // GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
@@ -78,14 +83,24 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
-  // TODO: this environment is not implemented in Triple, we need to decide
-  // how to standardize its support. For now, let's assume SPIR-V with physical
-  // addressing is OpenCL, and Logical addressing is Vulkan.
-  bool isOpenCLEnv() const {
+  void setEnv(SPIRVEnvType E) {
+    if (E == Unknown)
+      report_fatal_error("Unknown environment is not allowed.");
+    if (Env != Unknown)
+      report_fatal_error("Environment is already set.");
+
+    Env = E;
+  }
+  SPIRVEnvType getEnv() const { return Env; }
+  bool isKernel() const { return getEnv() == Kernel; }
+  bool isShader() const { return getEnv() == Shader; }
+  bool isLogicalSPIRV() const {
+    return TargetTriple.getArch() == Triple::spirv;
+  }
+  bool isPhysicalSPIRV() const {
     return TargetTriple.getArch() == Triple::spirv32 ||
            TargetTriple.getArch() == Triple::spirv64;
   }
-  bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;

@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti  -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=SI,GCN,SICIVI,SICI,SIVIGFX9_10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=CI,GCN,SICIVI,SICI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga   -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=VI,GCN,SICIVI,VIGFX9_10,SIVIGFX9_10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefixes=GFX10,GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti  -show-mc-encoding < %s | FileCheck --check-prefixes=SI,GCN,SICIVI,SICI,SIVIGFX9_10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=CI,GCN,SICIVI,SICI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga   -show-mc-encoding < %s | FileCheck --check-prefixes=VI,GCN,SICIVI,VIGFX9_10,SIVIGFX9_10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -show-mc-encoding < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding < %s | FileCheck --check-prefixes=GFX10,GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:
@@ -687,9 +687,10 @@ exit:
 ; GCN: buffer_load_dword v0, v0,
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: ; return to shader part epilog
-define amdgpu_cs float @arg_divergence(i32 inreg %unused, <3 x i32> %arg4) #0 {
+define amdgpu_cs float @arg_divergence(i32 inreg %cmp, <3 x i32> %arg4) #0 {
 main_body:
-  br i1 undef, label %if1, label %endif1
+  %uniform.cond = icmp eq i32 %cmp, 0
+  br i1 %uniform.cond, label %endif1, label %if1
 
 if1:                                              ; preds = %main_body
   store i32 0, ptr addrspace(3) poison, align 4

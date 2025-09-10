@@ -1016,6 +1016,42 @@ TEST(STLExtrasTest, hasSingleElement) {
   EXPECT_FALSE(hasSingleElement(S));
 }
 
+TEST(STLExtrasTest, getSingleElement) {
+  // Test const and non-const containers.
+  const std::vector<int> V1 = {7};
+  EXPECT_EQ(getSingleElement(V1), 7);
+  std::vector<int> V2 = {8};
+  EXPECT_EQ(getSingleElement(V2), 8);
+
+  // Test LLVM container.
+  SmallVector<int> V3{9};
+  EXPECT_EQ(getSingleElement(V3), 9);
+
+  // Test that the returned element is a reference.
+  getSingleElement(V3) = 11;
+  EXPECT_EQ(V3[0], 11);
+
+  // Test non-random access container.
+  std::list<int> L1 = {10};
+  EXPECT_EQ(getSingleElement(L1), 10);
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S;
+  S.data = V2;
+  EXPECT_EQ(getSingleElement(S), 8);
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  // Make sure that we crash on empty or too many elements.
+  SmallVector<int> V4;
+  EXPECT_DEATH(getSingleElement(V4), "expected container with single element");
+  SmallVector<int> V5{12, 13, 14};
+  EXPECT_DEATH(getSingleElement(V5), "expected container with single element");
+  std::list<int> L2;
+  EXPECT_DEATH(getSingleElement(L2), "expected container with single element");
+#endif
+}
+
 TEST(STLExtrasTest, hasNItems) {
   const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
   const std::list<int> V3 = {1, 3, 5};
@@ -1529,6 +1565,41 @@ TEST(STLExtrasTest, Mismatch) {
     EXPECT_EQ(MMFirst, First.begin());
     EXPECT_EQ(MMEmpty, Empty.begin());
   }
+}
+
+TEST(STLExtrasTest, Includes) {
+  {
+    std::vector<int> V1 = {1, 2};
+    std::vector<int> V2;
+    EXPECT_TRUE(includes(V1, V2));
+    EXPECT_FALSE(includes(V2, V1));
+    V2.push_back(1);
+    EXPECT_TRUE(includes(V1, V2));
+    V2.push_back(3);
+    EXPECT_FALSE(includes(V1, V2));
+  }
+
+  {
+    std::vector<int> V1 = {3, 2, 1};
+    std::vector<int> V2;
+    EXPECT_TRUE(includes(V1, V2, std::greater<>()));
+    EXPECT_FALSE(includes(V2, V1, std::greater<>()));
+    V2.push_back(3);
+    EXPECT_TRUE(includes(V1, V2, std::greater<>()));
+    V2.push_back(0);
+    EXPECT_FALSE(includes(V1, V2, std::greater<>()));
+  }
+}
+
+TEST(STLExtrasTest, Fill) {
+  std::vector<int> V1 = {1, 2, 3};
+  std::vector<int> V2;
+  int Val = 4;
+  fill(V1, Val);
+  EXPECT_THAT(V1, ElementsAre(Val, Val, Val));
+  V2.resize(4);
+  fill(V2, Val);
+  EXPECT_THAT(V2, ElementsAre(Val, Val, Val, Val));
 }
 
 struct Foo;

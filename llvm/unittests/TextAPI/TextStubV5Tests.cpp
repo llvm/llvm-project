@@ -1167,6 +1167,33 @@ TEST(TBDv5, InvalidMinOS) {
   EXPECT_EQ("invalid min_deployment section\n", ErrorMessage);
 }
 
+TEST(TBDv5, RISCV) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "riscv32-ios",
+      "min_deployment": "34.1" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_riscv32, PLATFORM_IOS, VersionTuple(34, 1));
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+}
+
 TEST(TBDv5, SimSupport) {
   static const char TBDv5File[] = R"({ 
 "tapi_tbd_version": 5,

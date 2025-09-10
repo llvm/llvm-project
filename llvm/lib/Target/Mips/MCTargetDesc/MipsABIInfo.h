@@ -46,7 +46,7 @@ public:
   ArrayRef<MCPhysReg> GetByValArgRegs() const;
 
   /// The registers to use for the variable argument list.
-  ArrayRef<MCPhysReg> GetVarArgRegs() const;
+  ArrayRef<MCPhysReg> getVarArgRegs(bool isGP64bit) const;
 
   /// Obtain the size of the area allocated by the callee for arguments.
   /// CallingConv::FastCall affects the value for O32.

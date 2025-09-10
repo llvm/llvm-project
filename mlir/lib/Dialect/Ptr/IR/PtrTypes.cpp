@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Ptr/IR/PtrTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
@@ -28,7 +27,7 @@ constexpr const static unsigned kDefaultPointerAlignmentBits = 8;
 /// Searches the data layout for the pointer spec, returns nullptr if it is not
 /// found.
 static SpecAttr getPointerSpec(DataLayoutEntryListRef params, PtrType type,
-                               Attribute defaultMemorySpace) {
+                               MemorySpaceAttrInterface defaultMemorySpace) {
   for (DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
@@ -38,9 +37,11 @@ static SpecAttr getPointerSpec(DataLayoutEntryListRef params, PtrType type,
         return spec;
     }
   }
-  // If not found, and this is the pointer to the default memory space, assume
-  // 64-bit pointers.
-  if (type.getMemorySpace() == defaultMemorySpace)
+  // If not found, and this is the pointer to the default memory space or if
+  // `defaultMemorySpace` is null, assume 64-bit pointers. `defaultMemorySpace`
+  // might be null if the data layout doesn't define the default memory space.
+  if (type.getMemorySpace() == defaultMemorySpace ||
+      defaultMemorySpace == nullptr)
     return SpecAttr::get(type.getContext(), kDefaultPointerSizeBits,
                          kDefaultPointerAlignmentBits,
                          kDefaultPointerAlignmentBits, kDefaultPointerSizeBits);
@@ -93,44 +94,47 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
 
 uint64_t PtrType::getABIAlignment(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  Attribute defaultMemorySpace = dataLayout.getDefaultMemorySpace();
+  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+      dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace))
     return spec.getAbi() / kBitsInByte;
 
-  return dataLayout.getTypeABIAlignment(get(getContext(), defaultMemorySpace));
+  return dataLayout.getTypeABIAlignment(get(defaultMemorySpace));
 }
 
 std::optional<uint64_t>
 PtrType::getIndexBitwidth(const DataLayout &dataLayout,
                           DataLayoutEntryListRef params) const {
-  Attribute defaultMemorySpace = dataLayout.getDefaultMemorySpace();
+  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+      dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace)) {
     return spec.getIndex() == SpecAttr::kOptionalSpecValue ? spec.getSize()
                                                            : spec.getIndex();
   }
 
-  return dataLayout.getTypeIndexBitwidth(get(getContext(), defaultMemorySpace));
+  return dataLayout.getTypeIndexBitwidth(get(defaultMemorySpace));
 }
 
 llvm::TypeSize PtrType::getTypeSizeInBits(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  Attribute defaultMemorySpace = dataLayout.getDefaultMemorySpace();
+  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+      dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace))
     return llvm::TypeSize::getFixed(spec.getSize());
 
   // For other memory spaces, use the size of the pointer to the default memory
   // space.
-  return dataLayout.getTypeSizeInBits(get(getContext(), defaultMemorySpace));
+  return dataLayout.getTypeSizeInBits(get(defaultMemorySpace));
 }
 
 uint64_t PtrType::getPreferredAlignment(const DataLayout &dataLayout,
                                         DataLayoutEntryListRef params) const {
-  Attribute defaultMemorySpace = dataLayout.getDefaultMemorySpace();
+  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+      dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace))
     return spec.getPreferred() / kBitsInByte;
 
-  return dataLayout.getTypePreferredAlignment(
-      get(getContext(), defaultMemorySpace));
+  return dataLayout.getTypePreferredAlignment(get(defaultMemorySpace));
 }
 
 LogicalResult PtrType::verifyEntries(DataLayoutEntryListRef entries,
@@ -144,5 +148,17 @@ LogicalResult PtrType::verifyEntries(DataLayoutEntryListRef entries,
                             << " to be a #ptr.spec attribute";
     }
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Pointer metadata
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+PtrMetadataType::verify(function_ref<InFlightDiagnostic()> emitError,
+                        PtrLikeTypeInterface type) {
+  if (!type.hasPtrMetadata())
+    return emitError() << "the ptr-like type has no metadata";
   return success();
 }

@@ -2,13 +2,13 @@
 Test lldb-dap start-debugging reverse requests.
 """
 
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
 class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_startDebugging(self):
         """
         Tests the "startDebugging" reverse request. It makes sure that the IDE can

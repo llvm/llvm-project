@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -27,6 +28,8 @@ using namespace llvm;
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTarget() {
   // Register the target.
   RegisterTargetMachine<XtensaTargetMachine> A(getTheXtensaTarget());
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeXtensaAsmPrinterPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -104,6 +107,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addIRPasses() override;
   void addPreEmitPass() override;
 };
 } // end anonymous namespace
@@ -111,6 +115,11 @@ public:
 bool XtensaPassConfig::addInstSelector() {
   addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
   return false;
+}
+
+void XtensaPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+  TargetPassConfig::addIRPasses();
 }
 
 void XtensaPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }

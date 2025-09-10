@@ -97,6 +97,41 @@ core.DivideZero (C, C++, ObjC)
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
 
+.. _core-FixedAddressDereference:
+
+core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+
 .. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
@@ -543,6 +578,42 @@ Do not attempt to create a std::string from a null pointer
    }
  }
 
+.. _cplusplus-PureVirtualCall:
+
+cplusplus.PureVirtualCall (C++)
+"""""""""""""""""""""""""""""""
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+This checker reports situations where this restricted polymorphism causes a
+call to a pure virtual method, which is undefined behavior. (See also the
+related checker :ref:`optin-cplusplus-VirtualCall` which reports situations
+where the restricted polymorphism affects a call and the called method is not
+pure virtual – but may be still surprising for the programmer.)
+
+.. code-block:: cpp
+
+ struct A {
+   virtual int getKind() = 0;
+
+   A() {
+     // warn: This calls the pure virtual method A::getKind().
+     log << "Constructing " << getKind();
+   }
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can call the pure virtual method A::getKind() when this is
+     // called from the destructor.
+     callSomeFunction(getKind());
+   }
+ };
+
 .. _deadcode-checkers:
 
 deadcode
@@ -702,7 +773,11 @@ enumerators at all.
 **Limitations**
 
 This checker does not accept the coding pattern where an enum type is used to
-store combinations of flag values:
+store combinations of flag values.
+Such enums should be annotated with the `__attribute__((flag_enum))` or by the
+`[[clang::flag_enum]]` attribute to signal this intent. Refer to the
+`documentation <https://clang.llvm.org/docs/AttributeReference.html#flag-enum>`_
+of this Clang attribute.
 
 .. code-block:: cpp
 
@@ -833,24 +908,40 @@ This checker has several options which can be set from command line (e.g.
 
 optin.cplusplus.VirtualCall (C++)
 """""""""""""""""""""""""""""""""
-Check virtual function calls during construction or destruction.
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+Although this behavior is well-defined, it can surprise the programmer and
+cause unintended behavior, so this checker reports calls that appear to be
+virtual calls but can be affected by this restricted polymorphism.
+
+Note that situations where this restricted polymorphism causes a call to a pure
+virtual method (which is definitely invalid, triggers undefined behavior) are
+**reported by another checker:** :ref:`cplusplus-PureVirtualCall` and **this
+checker does not report them**.
 
 .. code-block:: cpp
 
- class A {
- public:
-   A() {
-     f(); // warn
-   }
-   virtual void f();
- };
+ struct A {
+   virtual int getKind();
 
- class A {
- public:
-   ~A() {
-     this->f(); // warn
+   A() {
+     // warn: This calls A::getKind() even if we are constructing an instance
+     // of a different class that is derived from A.
+     log << "Constructing " << getKind();
    }
-   virtual void f();
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can be called within ~A() and calls A::getKind() even if
+     // we are destructing a class that is derived from A.
+     callSomeFunction(getKind());
+   }
  };
 
 .. _optin-mpi-MPI-Checker:
@@ -1012,7 +1103,16 @@ To override this threshold to e.g. 4 bytes, use the
 
 optin.portability.UnixAPI
 """""""""""""""""""""""""
-Finds implementation-defined behavior in UNIX/Posix functions.
+Reports situations where 0 is passed as the "size" argument of various
+allocation functions ( ``calloc``, ``malloc``, ``realloc``, ``reallocf``,
+``alloca``, ``__builtin_alloca``, ``__builtin_alloca_with_align``, ``valloc``).
+
+Note that similar functionality is also supported by :ref:`unix-Malloc` which
+reports code that *uses* memory allocated with size zero.
+
+(The name of this checker is motivated by the fact that it was originally
+introduced with the vague goal that it "Finds implementation-defined behavior
+in UNIX/Posix functions.")
 
 
 optin.taint
@@ -1373,7 +1473,7 @@ overflow occurs), the checker assumes that the the index (more precisely, the
 memory offeset) is within bounds.
 
 However, if :ref:`optin-taint-GenericTaint` is enabled and the index/offset is
-tainted (i.e. it is influenced by an untrusted souce), then this checker
+tainted (i.e. it is influenced by an untrusted source), then this checker
 reports the potential out of bounds access:
 
 .. code-block:: c
@@ -1758,6 +1858,27 @@ avoid code like ``setgid(getuid())`` (this checker does not detect bugs like
 this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
+
+.. _security-VAList:
+
+security.VAList (C, C++)
+""""""""""""""""""""""""
+Reports use of uninitialized (or already released) ``va_list`` objects and
+situations where a ``va_start`` call is not followed by ``va_end``.
+
+.. code-block:: c
+
+ int test_use_after_release(int x, ...) {
+   va_list va;
+   va_start(va, x);
+   va_end(va);
+   return va_arg(va, int); // warn: va is uninitialized
+ }
+
+ void test_leak(int x, ...) {
+   va_list va;
+   va_start(va, x);
+ } // warn: va is leaked
 
 .. _unix-checkers:
 
@@ -2623,7 +2744,7 @@ Check for proper uses of CFNumber APIs.
 
  CFNumberRef test(unsigned char x) {
    return CFNumberCreate(0, kCFNumberSInt16Type, &x);
-    // warn: 8 bit integer is used to initialize a 16 bit integer
+    // warn: 8-bit integer is used to initialize a 16-bit integer
  }
 
 .. _osx-coreFoundation-CFRetainRelease:
@@ -2832,18 +2953,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CastSize:
-
-alpha.core.CastSize (C)
-"""""""""""""""""""""""
-Check when casting a malloc'ed type ``T``, whether the size is a multiple of the size of ``T``.
-
-.. code-block:: c
-
- void test() {
-   int *x = (int *) malloc(11); // warn
- }
-
 .. _alpha-core-CastToStruct:
 
 alpha.core.CastToStruct (C, C++)
@@ -2919,41 +3028,6 @@ Check for assignment of a fixed address to a pointer.
    p = (int *) 0x10000; // warn
  }
 
-.. _alpha-core-FixedAddressDereference:
-
-alpha.core.FixedAddressDereference (C, C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""
-Check for dereferences of fixed addresses.
-
-A pointer contains a fixed address if it was set to a hard-coded value or it
-becomes otherwise obvious that at that point it can have only a single specific
-value.
-
-.. code-block:: c
-
- void test1() {
-   int *p = (int *)0x020;
-   int x = p[0]; // warn
- }
-
- void test2(int *p) {
-   if (p == (int *)-1)
-     *p = 0; // warn
- }
-
- void test3() {
-   int (*p_function)(char, char);
-   p_function = (int (*)(char, char))0x04080;
-   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
- }
-
-If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
-to true (the default value), then this checker never reports dereference of
-pointers with a specified address space. If the option is set to false, then
-reports from the specific x86 address spaces 256, 257 and 258 are still
-suppressed, but fixed address dereferences from other address spaces are
-reported.
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -3020,6 +3094,23 @@ Either the comparison is useless or there is division by zero.
    var = 77 / x;
    if (x == 0) { } // warn
  }
+
+.. _alpha-core-StoreToImmutable:
+
+alpha.core.StoreToImmutable (C, C++)
+""""""""""""""""""""""""""""""""""""
+Check for writes to immutable memory regions. This implements part of SEI CERT Rule ENV30-C.
+
+This checker detects attempts to write to memory regions that are marked as immutable,
+including const variables, string literals, and other const-qualified memory.
+
+.. literalinclude:: checkers/storetoimmutable_example.cpp
+    :language: cpp
+
+**Solution**
+
+Avoid writing to const-qualified memory regions. If you need to modify the data,
+remove the const qualifier from the original declaration or use a mutable copy.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^

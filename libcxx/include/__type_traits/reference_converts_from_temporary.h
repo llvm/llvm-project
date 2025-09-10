@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23 && __has_builtin(__reference_converts_from_temporary)
 
 template <class _Tp, class _Up>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS reference_converts_from_temporary
+struct _LIBCPP_NO_SPECIALIZATIONS reference_converts_from_temporary
     : public bool_constant<__reference_converts_from_temporary(_Tp, _Up)> {};
 
 template <class _Tp, class _Up>

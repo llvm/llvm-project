@@ -35,7 +35,7 @@ function(add_unittest_framework_library name)
   else()
     _get_common_test_compile_options(compile_options "" "")
     target_compile_options(${name}.unit PRIVATE ${compile_options})
-endif()
+  endif()
 
   _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
@@ -69,6 +69,7 @@ add_unittest_framework_library(
     Test.h
     TestLogger.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string
@@ -91,12 +92,16 @@ add_unittest_framework_library(
     ${libc_death_test_srcs}
   HDRS
     ExecuteFunction.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_unittest_framework_library(
   LibcHermeticTestSupport
   SRCS
     HermeticTestUtils.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -120,6 +125,7 @@ add_unittest_framework_library(
     RoundingModeUtils.h
   DEPENDS
     LibcTest
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.string_utils
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -160,6 +166,7 @@ add_unittest_framework_library(
     PrintfMatcher.h
   DEPENDS
     LibcTest
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.printf_core.core_structs
     libc.test.UnitTest.string_utils
@@ -173,6 +180,7 @@ add_unittest_framework_library(
     ScanfMatcher.h
   DEPENDS
     LibcTest
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
     libc.test.UnitTest.string_utils
@@ -186,5 +194,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.StringUtil.error_to_string
+    libc.src.errno.errno
+)
+
+add_header_library(
+  ErrnoCheckingTest
+  HDRS
+    ErrnoCheckingTest.h
+  DEPENDS
+    libc.src.__support.common
     libc.src.errno.errno
 )

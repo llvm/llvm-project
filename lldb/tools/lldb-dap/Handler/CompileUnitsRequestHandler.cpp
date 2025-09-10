@@ -60,7 +60,8 @@ void CompileUnitsRequestHandler::operator()(
   llvm::json::Object body;
   llvm::json::Array units;
   const auto *arguments = request.getObject("arguments");
-  std::string module_id = std::string(GetString(arguments, "moduleId"));
+  const std::string module_id =
+      GetString(arguments, "moduleId").value_or("").str();
   int num_modules = dap.target.GetNumModules();
   for (int i = 0; i < num_modules; i++) {
     auto curr_module = dap.target.GetModuleAtIndex(i);

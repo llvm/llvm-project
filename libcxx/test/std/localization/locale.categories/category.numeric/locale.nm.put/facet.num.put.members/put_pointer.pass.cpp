@@ -36,7 +36,7 @@ int main(int, char**) {
     cpp17_output_iterator<char*> iter = f.put(cpp17_output_iterator<char*>(str), ios, '*', v);
     std::string ex(str, base(iter));
     assert(!ex.empty());
-    LIBCPP_ASSERT(ex == "0x0");
+    LIBCPP_ASSERT(ex == "0");
   }
 
   return 0;

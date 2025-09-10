@@ -11,10 +11,10 @@
 namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
-    const Type *ExceptionType) {
+    const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
   assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
-  ThrownExceptions.insert(ExceptionType);
+  ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
 
 void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
@@ -22,7 +22,7 @@ void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
   if (Exceptions.empty())
     return;
   Behaviour = State::Throwing;
-  ThrownExceptions.insert(Exceptions.begin(), Exceptions.end());
+  ThrownExceptions.insert_range(Exceptions);
 }
 
 ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
@@ -39,8 +39,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
-  ThrownExceptions.insert(Other.ThrownExceptions.begin(),
-                          Other.ThrownExceptions.end());
+  ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
 
@@ -178,7 +177,9 @@ bool isFunctionPointerConvertible(QualType From, QualType To) {
 
     // Note: converting Derived::* to Base::* is a different kind of conversion,
     // called Pointer-to-member conversion.
-    return FromMember->getClass() == ToMember->getClass() &&
+    return FromMember->getQualifier() == ToMember->getQualifier() &&
+           FromMember->getMostRecentCXXRecordDecl() ==
+               ToMember->getMostRecentCXXRecordDecl() &&
            FromMember->getPointeeType() == ToMember->getPointeeType();
   }
 
@@ -208,19 +209,21 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
   // cv-decomposition of T, that is, cv_1, cv_2, ... , cv_n, is called the
   // cv-qualification signature of T.
 
-  auto isValidP_i = [](QualType P) {
+  // NOLINTNEXTLINE (readability-identifier-naming): Preserve original notation
+  auto IsValidP_i = [](QualType P) {
     return P->isPointerType() || P->isMemberPointerType() ||
            P->isConstantArrayType() || P->isIncompleteArrayType();
   };
 
-  auto isSameP_i = [](QualType P1, QualType P2) {
+  // NOLINTNEXTLINE (readability-identifier-naming): Preserve original notation
+  auto IsSameP_i = [](QualType P1, QualType P2) {
     if (P1->isPointerType())
       return P2->isPointerType();
 
     if (P1->isMemberPointerType())
       return P2->isMemberPointerType() &&
-             P1->getAs<MemberPointerType>()->getClass() ==
-                 P2->getAs<MemberPointerType>()->getClass();
+             P1->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl() ==
+                 P2->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
 
     if (P1->isConstantArrayType())
       return P2->isConstantArrayType() &&
@@ -272,7 +275,7 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
     return true;
   };
 
-  while (isValidP_i(From) && isValidP_i(To)) {
+  while (IsValidP_i(From) && IsValidP_i(To)) {
     // Remove every sugar.
     From = From.getCanonicalType();
     To = To.getCanonicalType();
@@ -280,7 +283,7 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
     if (!SatisfiesCVRules(From, To))
       return false;
 
-    if (!isSameP_i(From, To)) {
+    if (!IsSameP_i(From, To)) {
       if (LangOpts.CPlusPlus20) {
         if (From->isConstantArrayType() && !To->isIncompleteArrayType())
           return false;
@@ -308,7 +311,7 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
   }
 
   // In this case the length (n) of From and To are not the same.
-  if (isValidP_i(From) || isValidP_i(To))
+  if (IsValidP_i(From) || IsValidP_i(To))
     return false;
 
   // We hit U.
@@ -336,7 +339,7 @@ static bool canThrow(const FunctionDecl *Func) {
   case CT_Dependent: {
     const Expr *NoexceptExpr = FunProto->getNoexceptExpr();
     if (!NoexceptExpr)
-      return true; // no noexept - can throw
+      return true; // no noexcept - can throw
 
     if (NoexceptExpr->isValueDependent())
       return true; // depend on template - some instance can throw
@@ -353,10 +356,12 @@ static bool canThrow(const FunctionDecl *Func) {
   };
 }
 
-bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
-    const Type *HandlerTy, const ASTContext &Context) {
+ExceptionAnalyzer::ExceptionInfo::Throwables
+ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
+                                                const ASTContext &Context) {
   llvm::SmallVector<const Type *, 8> TypesToDelete;
-  for (const Type *ExceptionTy : ThrownExceptions) {
+  for (const auto &ThrownException : ThrownExceptions) {
+    const Type *ExceptionTy = ThrownException.getFirst();
     CanQualType ExceptionCanTy = ExceptionTy->getCanonicalTypeUnqualified();
     CanQualType HandlerCanTy = HandlerTy->getCanonicalTypeUnqualified();
 
@@ -406,11 +411,18 @@ bool ExceptionAnalyzer::ExceptionInfo::filterByCatch(
     }
   }
 
-  for (const Type *T : TypesToDelete)
-    ThrownExceptions.erase(T);
+  Throwables DeletedExceptions;
+
+  for (const Type *TypeToDelete : TypesToDelete) {
+    const auto DeleteIt = ThrownExceptions.find(TypeToDelete);
+    if (DeleteIt != ThrownExceptions.end()) {
+      DeletedExceptions.insert(*DeleteIt);
+      ThrownExceptions.erase(DeleteIt);
+    }
+  }
 
   reevaluateBehaviour();
-  return !TypesToDelete.empty();
+  return DeletedExceptions;
 }
 
 ExceptionAnalyzer::ExceptionInfo &
@@ -419,7 +431,8 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
   llvm::SmallVector<const Type *, 8> TypesToDelete;
   // Note: Using a 'SmallSet' with 'llvm::remove_if()' is not possible.
   // Therefore this slightly hacky implementation is required.
-  for (const Type *T : ThrownExceptions) {
+  for (const auto &ThrownException : ThrownExceptions) {
+    const Type *T = ThrownException.getFirst();
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -451,16 +464,15 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
   else
     Behaviour = State::Throwing;
 }
-
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
-    llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
+    CallStack &CallStack, SourceLocation CallLoc) {
   if (!Func || CallStack.contains(Func) ||
       (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
-    CallStack.insert(Func);
+    CallStack.insert({Func, CallLoc});
     ExceptionInfo Result = throwsException(Body, Caught, CallStack);
 
     // For a constructor, we also have to check the initializers.
@@ -478,17 +490,23 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
 
   auto Result = ExceptionInfo::createUnknown();
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
-    for (const QualType &Ex : FPT->exceptions())
-      Result.registerException(Ex.getTypePtr());
+    for (const QualType &Ex : FPT->exceptions()) {
+      CallStack.insert({Func, CallLoc});
+      Result.registerException(
+          Ex.getTypePtr(),
+          {Func->getExceptionSpecSourceRange().getBegin(), CallStack});
+      CallStack.erase(Func);
+    }
   }
   return Result;
 }
 
 /// Analyzes a single statement on it's throwing behaviour. This is in principle
 /// possible except some 'Unknown' functions are called.
-ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
-    const Stmt *St, const ExceptionInfo::Throwables &Caught,
-    llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
+ExceptionAnalyzer::ExceptionInfo
+ExceptionAnalyzer::throwsException(const Stmt *St,
+                                   const ExceptionInfo::Throwables &Caught,
+                                   CallStack &CallStack) {
   auto Results = ExceptionInfo::createNonThrowing();
   if (!St)
     return Results;
@@ -502,7 +520,8 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
                          ->getPointeeType()
                          ->getUnqualifiedDesugaredType();
       Results.registerException(
-          ThrownExpr->getType()->getUnqualifiedDesugaredType());
+          ThrownExpr->getType()->getUnqualifiedDesugaredType(),
+          {Throw->getBeginLoc(), CallStack});
     } else
       // A rethrow of a caught exception happens which makes it possible
       // to throw all exception that are caught in the 'catch' clause of
@@ -517,7 +536,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
         ExceptionInfo Rethrown = throwsException(
-            Catch->getHandlerBlock(), Uncaught.getExceptionTypes(), CallStack);
+            Catch->getHandlerBlock(), Uncaught.getExceptions(), CallStack);
         Results.merge(Rethrown);
         Uncaught.clear();
       } else {
@@ -533,12 +552,12 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
         // thrown types (because it's sensitive to inheritance) the throwing
         // situation changes. First of all filter the exception types and
         // analyze if the baseclass-exception is rethrown.
-        if (Uncaught.filterByCatch(
-                CaughtType, Catch->getExceptionDecl()->getASTContext())) {
-          ExceptionInfo::Throwables CaughtExceptions;
-          CaughtExceptions.insert(CaughtType);
-          ExceptionInfo Rethrown = throwsException(Catch->getHandlerBlock(),
-                                                   CaughtExceptions, CallStack);
+        const ExceptionInfo::Throwables FilteredExceptions =
+            Uncaught.filterByCatch(CaughtType,
+                                   Catch->getExceptionDecl()->getASTContext());
+        if (!FilteredExceptions.empty()) {
+          ExceptionInfo Rethrown = throwsException(
+              Catch->getHandlerBlock(), FilteredExceptions, CallStack);
           Results.merge(Rethrown);
         }
       }
@@ -546,12 +565,13 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     Results.merge(Uncaught);
   } else if (const auto *Call = dyn_cast<CallExpr>(St)) {
     if (const FunctionDecl *Func = Call->getDirectCallee()) {
-      ExceptionInfo Excs = throwsException(Func, Caught, CallStack);
+      ExceptionInfo Excs =
+          throwsException(Func, Caught, CallStack, Call->getBeginLoc());
       Results.merge(Excs);
     }
   } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-    ExceptionInfo Excs =
-        throwsException(Construct->getConstructor(), Caught, CallStack);
+    ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
+                                         CallStack, Construct->getBeginLoc());
     Results.merge(Excs);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
     ExceptionInfo Excs =
@@ -566,11 +586,12 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     }
     ExceptionInfo Excs = throwsException(Coro->getBody(), Caught, CallStack);
     Results.merge(throwsException(Coro->getExceptionHandler(),
-                                  Excs.getExceptionTypes(), CallStack));
-    for (const Type *Throwable : Excs.getExceptionTypes()) {
-      if (const auto ThrowableRec = Throwable->getAsCXXRecordDecl()) {
-        ExceptionInfo DestructorExcs =
-            throwsException(ThrowableRec->getDestructor(), Caught, CallStack);
+                                  Excs.getExceptions(), CallStack));
+    for (const auto &Exception : Excs.getExceptions()) {
+      const Type *ExcType = Exception.getFirst();
+      if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
+        ExceptionInfo DestructorExcs = throwsException(
+            ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});
         Results.merge(DestructorExcs);
       }
     }
@@ -590,9 +611,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
   // Check if the function has already been analyzed and reuse that result.
   const auto CacheEntry = FunctionCache.find(Func);
   if (CacheEntry == FunctionCache.end()) {
-    llvm::SmallSet<const FunctionDecl *, 32> CallStack;
-    ExceptionList =
-        throwsException(Func, ExceptionInfo::Throwables(), CallStack);
+    CallStack CallStack;
+    ExceptionList = throwsException(Func, ExceptionInfo::Throwables(),
+                                    CallStack, Func->getLocation());
 
     // Cache the result of the analysis. This is done prior to filtering
     // because it is best to keep as much information as possible.
@@ -607,7 +628,7 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
 
 ExceptionAnalyzer::ExceptionInfo
 ExceptionAnalyzer::analyzeImpl(const Stmt *Stmt) {
-  llvm::SmallSet<const FunctionDecl *, 32> CallStack;
+  CallStack CallStack;
   return throwsException(Stmt, ExceptionInfo::Throwables(), CallStack);
 }
 

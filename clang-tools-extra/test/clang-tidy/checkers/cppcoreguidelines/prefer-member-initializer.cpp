@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer %t -- -- -fcxx-exceptions
+// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-prefer-member-initializer %t -- -- -fcxx-exceptions
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,
     unsigned int __line, __const char *__function)
@@ -650,3 +650,16 @@ struct InitFromBindingDecl {
   }
 };
 } // namespace GH82970
+
+struct A {
+  int m;
+};
+
+struct B : A {
+  B() { m = 0; }
+};
+
+template <class T>
+struct C : A {
+  C() { m = 0; }
+};

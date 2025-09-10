@@ -14,7 +14,6 @@
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_RNBREMOTE_H
 
 #include "DNB.h"
-#include "PThreadMutex.h"
 #include "RNBContext.h"
 #include "RNBDefs.h"
 #include "RNBSocket.h"
@@ -25,7 +24,6 @@
 
 class RNBSocket;
 class RNBContext;
-class PThreadEvents;
 
 enum event_loop_mode { debug_nub, gdb_remote_protocol, done };
 
@@ -46,8 +44,6 @@ public:
     cont,                          // 'c'
     continue_with_sig,             // 'C'
     detach,                        // 'D'
-    read_general_regs,             // 'g'
-    write_general_regs,            // 'G'
     set_thread,                    // 'H'
     step_inferior_one_cycle,       // 'i'
     signal_and_step_inf_one_cycle, // 'I'
@@ -221,8 +217,6 @@ public:
   rnb_err_t HandlePacket_M(const char *p);
   rnb_err_t HandlePacket_x(const char *p);
   rnb_err_t HandlePacket_X(const char *p);
-  rnb_err_t HandlePacket_g(const char *p);
-  rnb_err_t HandlePacket_G(const char *p);
   rnb_err_t HandlePacket_z(const char *p);
   rnb_err_t HandlePacket_T(const char *p);
   rnb_err_t HandlePacket_p(const char *p);
@@ -383,7 +377,7 @@ protected:
   std::string m_arch;
   nub_thread_t m_continue_thread; // thread to continue; 0 for any, -1 for all
   nub_thread_t m_thread;          // thread for other ops; 0 for any, -1 for all
-  PThreadMutex m_mutex;           // Mutex that protects
+  std::mutex m_mutex;             // Mutex that protects
   DispatchQueueOffsets m_dispatch_queue_offsets;
   nub_addr_t m_dispatch_queue_offsets_addr;
   uint32_t m_qSymbol_index;

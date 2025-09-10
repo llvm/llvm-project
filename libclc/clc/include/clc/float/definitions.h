@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #define MAXFLOAT 0x1.fffffep127f
 #define HUGE_VALF __builtin_huge_valf()
 #define INFINITY __builtin_inff()
@@ -61,10 +69,6 @@
 #define M_2_SQRTPI 0x1.20dd750429b6dp+0
 #define M_SQRT2 0x1.6a09e667f3bcdp+0
 #define M_SQRT1_2 0x1.6a09e667f3bcdp-1
-
-#ifdef __CLC_INTERNAL
-#define M_LOG210 0x1.a934f0979a371p+1
-#endif
 
 #endif
 

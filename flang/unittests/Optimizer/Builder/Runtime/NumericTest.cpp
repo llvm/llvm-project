@@ -15,7 +15,7 @@ using namespace mlir;
 void testGenExponent(fir::FirOpBuilder &builder, mlir::Type resultType,
     mlir::Type xType, llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = builder.create<fir::UndefOp>(loc, xType);
+  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
   mlir::Value exp = fir::runtime::genExponent(builder, loc, resultType, x);
   checkCallOp(exp.getDefiningOp(), fctName, 1, /*addLocArg=*/false);
 }
@@ -35,7 +35,7 @@ void testGenX(fir::FirOpBuilder &builder, mlir::Type xType,
     mlir::Value (*genFct)(fir::FirOpBuilder &, Location, mlir::Value),
     llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = builder.create<fir::UndefOp>(loc, xType);
+  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
   mlir::Value val = genFct(builder, loc, x);
   checkCallOp(val.getDefiningOp(), fctName, 1, /*addLocArg=*/false);
 }
@@ -52,8 +52,8 @@ TEST_F(RuntimeCallTest, genFractionTest) {
 void testGenNearest(fir::FirOpBuilder &builder, mlir::Type xType,
     mlir::Type sType, llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = builder.create<fir::UndefOp>(loc, xType);
-  mlir::Value s = builder.create<fir::UndefOp>(loc, sType);
+  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
+  mlir::Value s = fir::UndefOp::create(builder, loc, sType);
   mlir::Value nearest = fir::runtime::genNearest(builder, loc, x, s);
   checkCallOp(nearest.getDefiningOp(), fctName, 2, /*addLocArg=*/false);
 }
@@ -81,8 +81,8 @@ void testGenXI(fir::FirOpBuilder &builder, mlir::Type xType, mlir::Type iType,
         fir::FirOpBuilder &, Location, mlir::Value, mlir::Value),
     llvm::StringRef fctName) {
   auto loc = builder.getUnknownLoc();
-  mlir::Value x = builder.create<fir::UndefOp>(loc, xType);
-  mlir::Value i = builder.create<fir::UndefOp>(loc, iType);
+  mlir::Value x = fir::UndefOp::create(builder, loc, xType);
+  mlir::Value i = fir::UndefOp::create(builder, loc, iType);
   mlir::Value val = genFct(builder, loc, x, i);
   checkCallOp(val.getDefiningOp(), fctName, 2, /*addLocArg=*/false);
 }

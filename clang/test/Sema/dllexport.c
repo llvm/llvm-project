@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -triple x86_64-win32   -fsyntax-only -fms-extensions -verify -std=c11 %s
 // RUN: %clang_cc1 -triple i686-mingw32   -fsyntax-only -fms-extensions -verify -std=c11 %s
 // RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify -std=c99 %s
+// RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c99 %s
+// RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c11 %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fms-extensions -verify -std=c99 %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fms-extensions -verify -std=c11 %s
 
 // Invalid usage.
 __declspec(dllexport) typedef int typedef1;

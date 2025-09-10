@@ -17,9 +17,6 @@
 #include <fstream>
 #include <map>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 
 class CleanupInstaller;
@@ -386,9 +383,7 @@ struct AddrBasedCtxKey : public ContextKey {
     return Context == Other->Context;
   }
 
-  void genHashCode() override {
-    HashCode = hash_combine_range(Context.begin(), Context.end());
-  }
+  void genHashCode() override { HashCode = hash_combine_range(Context); }
 };
 
 // The counter of branch samples for one function indexed by the branch,

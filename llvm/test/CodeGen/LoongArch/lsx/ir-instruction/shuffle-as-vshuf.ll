@@ -42,10 +42,7 @@ define <4 x i32> @shufflevector_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @shufflevector_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: shufflevector_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    vshuf.d $vr2, $vr1, $vr0
-; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 12
 ; CHECK-NEXT:    ret
     %c = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 3>
     ret <2 x i64> %c
@@ -68,10 +65,7 @@ define <4 x float> @shufflevector_v4f32(<4 x float> %a, <4 x float> %b) {
 define <2 x double> @shufflevector_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: shufflevector_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    vshuf.d $vr2, $vr1, $vr0
-; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    vshuf4i.d $vr0, $vr1, 12
 ; CHECK-NEXT:    ret
     %c = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 0, i32 3>
     ret <2 x double> %c

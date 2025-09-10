@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx810 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; Testing for failures in divergence calculations when divergent intrinsic is lowered during instruction selection
 
@@ -9,13 +9,13 @@
 ; GCN-LABEL: {{^}}_amdgpu_ps_main:
 ; GCN-NOT: v_readfirstlane
 ; PRE-GFX9: flat_load_dword
-; GFX9: global_load 
+; GFX9: global_load
 define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 inreg %arg) local_unnamed_addr #0 {
 .entry:
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %arg) #1
   %tmp1 = bitcast float %tmp to i32
   %tmp2 = srem i32 %tmp1, 4
-  %tmp3 = select i1 false, i32 undef, i32 %tmp2
+  %tmp3 = select i1 false, i32 poison, i32 %tmp2
   %tmp4 = sext i32 %tmp3 to i64
   %tmp5 = getelementptr [4 x <4 x float>], ptr addrspace(4) @0, i64 0, i64 %tmp4
   %tmp6 = load <4 x float>, ptr addrspace(4) %tmp5, align 16

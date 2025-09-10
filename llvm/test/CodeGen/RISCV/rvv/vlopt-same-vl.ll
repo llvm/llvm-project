@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-enable-vl-optimizer \
+; RUN: llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs -debug-only=riscv-vl-optimizer -o - 2>&1 %s | FileCheck %s 
 
 ; REQUIRES: asserts

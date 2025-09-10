@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; XUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck -check-prefix=GCN %s
+; XUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Note: breaking up large PHIs is disabled to prevent some testcases from becoming
 ;  branchless.
@@ -386,7 +386,7 @@ done:
 ; GCN-NEXT: s_cselect_b32 s{{[0-9]+}}, 0, 1{{$}}
 define amdgpu_kernel void @ifcvt_undef_scc(i32 %cond, ptr addrspace(1) %out) {
 entry:
-  br i1 undef, label %else, label %if
+  br i1 poison, label %else, label %if
 
 if:
   br label %done

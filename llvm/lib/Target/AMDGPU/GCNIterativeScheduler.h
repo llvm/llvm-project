@@ -77,6 +77,8 @@ protected:
   const StrategyKind Strategy;
   mutable GCNUpwardRPTracker UPTracker;
 
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
   class BuildDAG;
   class OverrideLegacyStrategy;
 
@@ -91,6 +93,7 @@ protected:
     return getRegionPressure(R.Begin, R.End);
   }
 
+  void swapIGLPMutations(const Region &R, bool IsReentry);
   void setBestSchedule(Region &R,
                        ScheduleRef Schedule,
                        const GCNRegPressure &MaxRP = GCNRegPressure());

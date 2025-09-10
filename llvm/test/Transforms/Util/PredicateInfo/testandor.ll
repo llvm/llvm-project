@@ -10,11 +10,11 @@ define void @test_or(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[XZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XZ]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[YZ]])
-; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[Y]])
+; CHECK:         [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
+; CHECK:         [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
 ; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER:%.*]]
 ; CHECK:       oneof:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
@@ -55,11 +55,11 @@ define void @test_or_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 true, i1 [[YZ]]
-; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[XZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XZ]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[YZ]])
-; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[Y]])
+; CHECK:         [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
+; CHECK:         [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
 ; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER:%.*]]
 ; CHECK:       oneof:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
@@ -100,11 +100,11 @@ define void @test_and(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = and i1 [[XZ]], [[YZ]]
-; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[XZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XZ]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[YZ]])
-; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[Y]])
+; CHECK:         [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
+; CHECK:         [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
 ; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
@@ -145,11 +145,11 @@ define void @test_and_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 [[YZ]], i1 false
-; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[XZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XZ]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; CHECK:         [[YZ_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[YZ]])
-; CHECK:         [[Y_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[Y]])
+; CHECK:         [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
+; CHECK:         [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
 ; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
@@ -190,11 +190,11 @@ define void @testandsame(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XGT:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[XLT:%.*]] = icmp slt i32 [[X]], 100
 ; CHECK-NEXT:    [[Z:%.*]] = and i1 [[XGT]], [[XLT]]
-; CHECK:         [[Z_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[XGT_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XGT]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; CHECK:         [[X_0_1:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X_0]])
-; CHECK:         [[XLT_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XLT]])
+; CHECK:         [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[XGT_0:%.*]] = bitcast i1 [[XGT]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[X_0_1:%.*]] = bitcast i32 [[X_0]] to i32
+; CHECK:         [[XLT_0:%.*]] = bitcast i1 [[XLT]] to i1
 ; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XGT_0]])
@@ -229,16 +229,16 @@ define void @testandassume(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = and i1 [[XZ]], [[YZ]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
-; CHECK:         [[TMP1:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[Y]])
-; CHECK:         [[TMP2:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[YZ]])
-; CHECK:         [[TMP3:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; CHECK:         [[TMP4:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[XZ]])
-; CHECK:         [[TMP5:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[DOT0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[TMP5]])
-; CHECK:         [[DOT01:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[TMP4]])
-; CHECK:         [[DOT02:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[TMP3]])
-; CHECK:         [[DOT03:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[TMP2]])
-; CHECK:         [[DOT04:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[TMP1]])
+; CHECK:         [[TMP1:%.*]] = bitcast i32 [[Y]] to i32
+; CHECK:         [[TMP2:%.*]] = bitcast i1 [[YZ]] to i1
+; CHECK:         [[TMP3:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[TMP4:%.*]] = bitcast i1 [[XZ]] to i1
+; CHECK:         [[TMP5:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[DOT0:%.*]] = bitcast i1 [[TMP5]] to i1
+; CHECK:         [[DOT01:%.*]] = bitcast i1 [[TMP4]] to i1
+; CHECK:         [[DOT02:%.*]] = bitcast i32 [[TMP3]] to i32
+; CHECK:         [[DOT03:%.*]] = bitcast i1 [[TMP2]] to i1
+; CHECK:         [[DOT04:%.*]] = bitcast i32 [[TMP1]] to i32
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[DOT01]])
@@ -274,8 +274,8 @@ define void @testorassume(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = or i1 [[XZ]], [[YZ]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
-; CHECK:         [[TMP1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[Z]])
-; CHECK:         [[DOT0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[TMP1]])
+; CHECK:         [[TMP1:%.*]] = bitcast i1 [[Z]] to i1
+; CHECK:         [[DOT0:%.*]] = bitcast i1 [[TMP1]] to i1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
@@ -307,11 +307,11 @@ define void @test_and_one_unknown_cond(i32 %x, i1 %c1) {
 ; CHECK-LABEL: @test_and_one_unknown_cond(
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[A:%.*]] = and i1 [[C1:%.*]], [[C2]]
-; CHECK:         [[A_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[A_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[C1_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C1]])
-; CHECK:         [[C2_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C2]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
+; CHECK:         [[A_0:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[A_1:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[C1_0:%.*]] = bitcast i1 [[C1]] to i1
+; CHECK:         [[C2_0:%.*]] = bitcast i1 [[C2]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    br i1 [[A]], label [[BOTH:%.*]], label [[NOPE:%.*]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @bar(i32 [[X_0]])
@@ -349,11 +349,11 @@ define void @test_or_one_unknown_cond(i32 %x, i1 %c1) {
 ; CHECK-LABEL: @test_or_one_unknown_cond(
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[A:%.*]] = or i1 [[C1:%.*]], [[C2]]
-; CHECK:         [[A_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[A_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[C1_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C1]])
-; CHECK:         [[C2_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C2]])
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
+; CHECK:         [[A_0:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[A_1:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[C1_0:%.*]] = bitcast i1 [[C1]] to i1
+; CHECK:         [[C2_0:%.*]] = bitcast i1 [[C2]] to i1
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    br i1 [[A]], label [[NOPE:%.*]], label [[BOTH_INVERTED:%.*]]
 ; CHECK:       both_inverted:
 ; CHECK-NEXT:    call void @bar(i32 [[X_0]])
@@ -391,12 +391,12 @@ define void @test_and_chain(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test_and_chain(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C:%.*]]
-; CHECK:         [[AND2_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND2]])
-; CHECK:         [[AND2_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND2]])
-; CHECK:         [[AND1_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND1]])
-; CHECK:         [[A_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[B_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[B]])
-; CHECK:         [[C_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C]])
+; CHECK:         [[AND2_0:%.*]] = bitcast i1 [[AND2]] to i1
+; CHECK:         [[AND2_1:%.*]] = bitcast i1 [[AND2]] to i1
+; CHECK:         [[AND1_0:%.*]] = bitcast i1 [[AND1]] to i1
+; CHECK:         [[A_0:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[B_0:%.*]] = bitcast i1 [[B]] to i1
+; CHECK:         [[C_0:%.*]] = bitcast i1 [[C]] to i1
 ; CHECK-NEXT:    br i1 [[AND2]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A_0]])
@@ -438,12 +438,12 @@ define void @test_or_chain(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test_or_chain(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C:%.*]]
-; CHECK:         [[OR2_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[OR2]])
-; CHECK:         [[OR2_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[OR2]])
-; CHECK:         [[OR1_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[OR1]])
-; CHECK:         [[A_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[B_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[B]])
-; CHECK:         [[C_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C]])
+; CHECK:         [[OR2_0:%.*]] = bitcast i1 [[OR2]] to i1
+; CHECK:         [[OR2_1:%.*]] = bitcast i1 [[OR2]] to i1
+; CHECK:         [[OR1_0:%.*]] = bitcast i1 [[OR1]] to i1
+; CHECK:         [[A_0:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[B_0:%.*]] = bitcast i1 [[B]] to i1
+; CHECK:         [[C_0:%.*]] = bitcast i1 [[C]] to i1
 ; CHECK-NEXT:    br i1 [[OR2]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A]])
@@ -485,10 +485,10 @@ define void @test_and_or_mixed(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test_and_or_mixed(
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[OR]], [[C:%.*]]
-; CHECK:         [[AND_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND]])
-; CHECK:         [[AND_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND]])
-; CHECK:         [[OR_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[OR]])
-; CHECK:         [[C_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C]])
+; CHECK:         [[AND_0:%.*]] = bitcast i1 [[AND]] to i1
+; CHECK:         [[AND_1:%.*]] = bitcast i1 [[AND]] to i1
+; CHECK:         [[OR_0:%.*]] = bitcast i1 [[OR]] to i1
+; CHECK:         [[C_0:%.*]] = bitcast i1 [[C]] to i1
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A]])
@@ -542,15 +542,15 @@ define void @test_deep_and_chain(i1 %a1) {
 ; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], true
 ; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], true
 ; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], true
-; CHECK:         [[A15_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
-; CHECK:         [[A15_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
-; CHECK:         [[A14_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A14]])
-; CHECK:         [[A13_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A13]])
-; CHECK:         [[A12_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A12]])
-; CHECK:         [[A11_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A11]])
-; CHECK:         [[A10_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A10]])
-; CHECK:         [[A9_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A9]])
-; CHECK:         [[A8_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A8]])
+; CHECK:         [[A15_0:%.*]] = bitcast i1 [[A15]] to i1
+; CHECK:         [[A15_1:%.*]] = bitcast i1 [[A15]] to i1
+; CHECK:         [[A14_0:%.*]] = bitcast i1 [[A14]] to i1
+; CHECK:         [[A13_0:%.*]] = bitcast i1 [[A13]] to i1
+; CHECK:         [[A12_0:%.*]] = bitcast i1 [[A12]] to i1
+; CHECK:         [[A11_0:%.*]] = bitcast i1 [[A11]] to i1
+; CHECK:         [[A10_0:%.*]] = bitcast i1 [[A10]] to i1
+; CHECK:         [[A9_0:%.*]] = bitcast i1 [[A9]] to i1
+; CHECK:         [[A8_0:%.*]] = bitcast i1 [[A8]] to i1
 ; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
@@ -656,15 +656,15 @@ define void @test_deep_and_tree(i1 %a1) {
 ; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], [[A12]]
 ; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], [[A13]]
 ; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], [[A14]]
-; CHECK:         [[A15_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
-; CHECK:         [[A15_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
-; CHECK:         [[A14_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A14]])
-; CHECK:         [[A13_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A13]])
-; CHECK:         [[A12_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A12]])
-; CHECK:         [[A11_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A11]])
-; CHECK:         [[A10_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A10]])
-; CHECK:         [[A9_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A9]])
-; CHECK:         [[A8_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A8]])
+; CHECK:         [[A15_0:%.*]] = bitcast i1 [[A15]] to i1
+; CHECK:         [[A15_1:%.*]] = bitcast i1 [[A15]] to i1
+; CHECK:         [[A14_0:%.*]] = bitcast i1 [[A14]] to i1
+; CHECK:         [[A13_0:%.*]] = bitcast i1 [[A13]] to i1
+; CHECK:         [[A12_0:%.*]] = bitcast i1 [[A12]] to i1
+; CHECK:         [[A11_0:%.*]] = bitcast i1 [[A11]] to i1
+; CHECK:         [[A10_0:%.*]] = bitcast i1 [[A10]] to i1
+; CHECK:         [[A9_0:%.*]] = bitcast i1 [[A9]] to i1
+; CHECK:         [[A8_0:%.*]] = bitcast i1 [[A8]] to i1
 ; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
@@ -770,15 +770,15 @@ define void @test_deep_or_tree(i1 %a1) {
 ; CHECK-NEXT:    [[A13:%.*]] = or i1 [[A12]], [[A12]]
 ; CHECK-NEXT:    [[A14:%.*]] = or i1 [[A13]], [[A13]]
 ; CHECK-NEXT:    [[A15:%.*]] = or i1 [[A14]], [[A14]]
-; CHECK:         [[A15_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
-; CHECK:         [[A15_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
-; CHECK:         [[A14_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A14]])
-; CHECK:         [[A13_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A13]])
-; CHECK:         [[A12_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A12]])
-; CHECK:         [[A11_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A11]])
-; CHECK:         [[A10_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A10]])
-; CHECK:         [[A9_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A9]])
-; CHECK:         [[A8_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A8]])
+; CHECK:         [[A15_0:%.*]] = bitcast i1 [[A15]] to i1
+; CHECK:         [[A15_1:%.*]] = bitcast i1 [[A15]] to i1
+; CHECK:         [[A14_0:%.*]] = bitcast i1 [[A14]] to i1
+; CHECK:         [[A13_0:%.*]] = bitcast i1 [[A13]] to i1
+; CHECK:         [[A12_0:%.*]] = bitcast i1 [[A12]] to i1
+; CHECK:         [[A11_0:%.*]] = bitcast i1 [[A11]] to i1
+; CHECK:         [[A10_0:%.*]] = bitcast i1 [[A10]] to i1
+; CHECK:         [[A9_0:%.*]] = bitcast i1 [[A9]] to i1
+; CHECK:         [[A8_0:%.*]] = bitcast i1 [[A8]] to i1
 ; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
@@ -873,11 +873,11 @@ define void @test_assume_and_chain(i1 %a, i1 %b, i1 %c) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[AND2]])
-; CHECK:         [[TMP1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[C]])
-; CHECK:         [[TMP2:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[B]])
-; CHECK:         [[TMP3:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A]])
-; CHECK:         [[TMP4:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND1]])
-; CHECK:         [[TMP5:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[AND2]])
+; CHECK:         [[TMP1:%.*]] = bitcast i1 [[C]] to i1
+; CHECK:         [[TMP2:%.*]] = bitcast i1 [[B]] to i1
+; CHECK:         [[TMP3:%.*]] = bitcast i1 [[A]] to i1
+; CHECK:         [[TMP4:%.*]] = bitcast i1 [[AND1]] to i1
+; CHECK:         [[TMP5:%.*]] = bitcast i1 [[AND2]] to i1
 ; CHECK-NEXT:    call void @foo(i1 [[TMP3]])
 ; CHECK-NEXT:    call void @foo(i1 [[TMP2]])
 ; CHECK-NEXT:    call void @foo(i1 [[TMP1]])
@@ -901,7 +901,7 @@ define void @test_assume_or_chain(i1 %a, i1 %b, i1 %c) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OR2]])
-; CHECK:         [[TMP1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[OR2]])
+; CHECK:         [[TMP1:%.*]] = bitcast i1 [[OR2]] to i1
 ; CHECK-NEXT:    call void @foo(i1 [[A]])
 ; CHECK-NEXT:    call void @foo(i1 [[B]])
 ; CHECK-NEXT:    call void @foo(i1 [[C]])
@@ -937,14 +937,14 @@ define void @test_assume_deep_and_tree(i1 %a1) {
 ; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], [[A13]]
 ; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], [[A14]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A15]])
-; CHECK:         [[TMP1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A8]])
-; CHECK:         [[TMP2:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A9]])
-; CHECK:         [[TMP3:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A10]])
-; CHECK:         [[TMP4:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A11]])
-; CHECK:         [[TMP5:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A12]])
-; CHECK:         [[TMP6:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A13]])
-; CHECK:         [[TMP7:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A14]])
-; CHECK:         [[TMP8:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[A15]])
+; CHECK:         [[TMP1:%.*]] = bitcast i1 [[A8]] to i1
+; CHECK:         [[TMP2:%.*]] = bitcast i1 [[A9]] to i1
+; CHECK:         [[TMP3:%.*]] = bitcast i1 [[A10]] to i1
+; CHECK:         [[TMP4:%.*]] = bitcast i1 [[A11]] to i1
+; CHECK:         [[TMP5:%.*]] = bitcast i1 [[A12]] to i1
+; CHECK:         [[TMP6:%.*]] = bitcast i1 [[A13]] to i1
+; CHECK:         [[TMP7:%.*]] = bitcast i1 [[A14]] to i1
+; CHECK:         [[TMP8:%.*]] = bitcast i1 [[A15]] to i1
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
 ; CHECK-NEXT:    call void @foo(i1 [[A2]])
 ; CHECK-NEXT:    call void @foo(i1 [[A3]])

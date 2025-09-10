@@ -11,6 +11,14 @@ void SameFunc();
 #pragma acc routine(SameFunc) seq
 void SameFunc();
 
+namespace NS {
+void DifferentFunc();
+};
+// expected-warning@+2{{OpenACC 'routine' directive with a name refers to a function with the same name as the function on the following line; this may be unintended}}
+// expected-note@-3{{'DifferentFunc' declared here}}
+#pragma acc routine(NS::DifferentFunc) seq
+void DifferentFunc();
+
 void NoMagicStatic() {
   static int F = 1;
 }
@@ -26,6 +34,21 @@ void NoMagicStatic2() {
   static int F = 1;
 }
 
+#pragma acc routine seq
+void NoMagicStatic3() {
+  // expected-error@+2{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+  // expected-note@-3{{'routine' construct is here}}
+  static int F = 1;
+}
+
+#pragma acc routine seq
+void NoMagicStatic4();
+void NoMagicStatic4() {
+  // expected-error@+2{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+  // expected-note@-4{{'routine' construct is here}}
+  static int F = 1;
+}
+
 void HasMagicStaticLambda() {
   auto MSLambda = []() {
     static int I = 5;
@@ -33,16 +56,48 @@ void HasMagicStaticLambda() {
 // expected-error@-2{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
 // expected-note@+1{{'routine' construct is here}}
 #pragma acc routine (MSLambda) seq
+
+// expected-error@+4{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+// expected-note@+1{{'routine' construct is here}}
+#pragma acc routine seq
+  auto MSLambda2 = []() {
+    static int I = 5;
+  };
+
+// Properly handle error recovery.
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  auto MSLambda2 = [](auto) {
+    // expected-error@-1{{redefinition of 'MSLambda2'}}
+    // expected-note@-9{{previous definition is here}}
+    static int I = 5;
+  };
+// expected-error@+4{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+// expected-note@+1{{'routine' construct is here}}
+#pragma acc routine seq
+  auto MSLambda3 = [](auto) {
+    static int I = 5;
+  };
 }
 
 auto Lambda = [](){};
 #pragma acc routine(Lambda) seq
+
+#pragma acc routine seq
+auto Lambda2 = [](){};
 auto GenLambda = [](auto){};
 // expected-error@+1{{OpenACC routine name 'GenLambda' names a set of overloads}}
 #pragma acc routine(GenLambda) seq
+
+#pragma acc routine seq
+auto GenLambda2 = [](auto){};
+
 // Variable?
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
 int Variable;
 // Plain function
+#pragma acc routine seq
 int function();
 
 #pragma acc routine (function) seq
@@ -50,6 +105,8 @@ int function();
 #pragma acc routine (Variable) seq
 
 // Var template?
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
 template<typename T>
 T VarTempl = 0;
 // expected-error@+2{{use of variable template 'VarTempl' requires template arguments}}
@@ -72,6 +129,11 @@ int ambig_func(int);
 // expected-error@+1{{OpenACC routine name 'ambig_func' names a set of overloads}}
 #pragma acc routine (ambig_func) seq
 
+#pragma acc routine seq
+int ambig_func2();
+#pragma acc routine seq
+int ambig_func2(int);
+
 // Ambiguous in NS
 namespace NS {
 int ambig_func();
@@ -83,6 +145,9 @@ int ambig_func(int);
 // function template
 template<typename T, typename U>
 void templ_func();
+#pragma acc routine seq
+template<typename T, typename U>
+void templ_func2();
 
 // expected-error@+1{{OpenACC routine name 'templ_func' names a set of overloads}}
 #pragma acc routine(templ_func) seq
@@ -93,11 +158,21 @@ void templ_func();
 
 struct S {
   void MemFunc();
+#pragma acc routine seq
+  void MemFunc2();
   static void StaticMemFunc();
+#pragma acc routine seq
+  static void StaticMemFunc2();
   template<typename U>
   void TemplMemFunc();
+#pragma acc routine seq
+  template<typename U>
+  void TemplMemFunc2();
   template<typename U>
   static void TemplStaticMemFunc();
+#pragma acc routine seq
+  template<typename U>
+  static void TemplStaticMemFunc2();
 
   void MemFuncAmbig();
   void MemFuncAmbig(int);
@@ -109,6 +184,10 @@ struct S {
   int Field;
 
   constexpr static auto Lambda = [](){};
+#pragma acc routine seq
+  constexpr static auto Lambda2 = [](){};
+#pragma acc routine seq
+  constexpr static auto Lambda3 = [](auto){};
 
 #pragma acc routine(S::MemFunc) seq
 #pragma acc routine(S::StaticMemFunc) seq
@@ -151,6 +230,21 @@ struct S {
 // expected-error@+1{{OpenACC routine name 'S::Field' does not name a function}}
 #pragma acc routine(S::Field) seq
 
+constexpr auto getLambda() {
+  return [](){};
+}
+template<typename T>
+constexpr auto getTemplLambda() {
+  return [](T){};
+}
+constexpr auto getDepLambda() {
+  return [](auto){};
+}
+template<typename T>
+constexpr auto getTemplDepLambda() {
+  return [](auto){};
+}
+
 template<typename T>
 struct DepS { // #DEPS
   void MemFunc();
@@ -173,6 +267,37 @@ struct DepS { // #DEPS
   // expected-error@+2{{non-const static data member must be initialized out of line}}
   // expected-note@#DEPSInst{{in instantiation of template class}}
   static auto LambdaBroken = [](){};
+
+#pragma acc routine seq
+  constexpr static auto LambdaKinda = getLambda();
+  // FIXME: We can't really handle this/things like this, see comment in
+  // SemaOpenACC.cpp's LegalizeNextParsedDecl.
+  // expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  constexpr static auto LambdaKinda2 = getTemplLambda<T>();
+#pragma acc routine seq
+  constexpr static auto DepLambdaKinda = getDepLambda();
+  // expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  constexpr static auto DepLambdaKinda2 = getTemplDepLambda<T>();
+
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  constexpr static auto Bad = T{};
+
+#pragma acc routine seq
+  constexpr static auto LambdaHasMagicStatic = []() {
+  // expected-error@+2{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+  // expected-note@-3{{'routine' construct is here}}
+    static int F = 1;
+  };
+
+  void HasMagicStatic() {
+    static int F = 1; // #HasMagicStaticFunc
+  }
+  void HasMagicStatic2() {
+    static int F = 1; // #HasMagicStaticFunc2
+  }
 
 #pragma acc routine(DepS::MemFunc) seq
 #pragma acc routine(DepS::StaticMemFunc) seq
@@ -215,10 +340,38 @@ struct DepS { // #DEPS
 #pragma acc routine(DepS<T>::template TemplMemFuncAmbig<int>) seq
 // expected-error@+1{{OpenACC routine name 'DepS<T>::Field' does not name a function}}
 #pragma acc routine(DepS<T>::Field) seq
+
+// FIXME: We could do better about suppressing this double diagnostic, but we
+// don't want to invalidate the vardecl for openacc, so we don't have a good
+// way to do this in the AST.
+// expected-error@#HasMagicStaticFunc 2{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+// expected-note@+2 2{{'routine' construct is here}}
+// expected-note@+1{{in instantiation of member function}}}
+#pragma acc routine(DepS<T>::HasMagicStatic) seq
 };
+
+template<typename T>
+void DepF() {
+#pragma acc routine seq
+  auto LambdaKinda = getLambda();
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  auto LambdaKinda2 = getTemplLambda<T>();
+#pragma acc routine seq
+  auto DepLambdaKinda = getDepLambda();
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  auto DepLambdaKinda2 = getTemplDepLambda<T>();
+
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+  constexpr static auto Bad = T{};
+}
 
 void Inst() {
   DepS<int> S; // #DEPSInst
+  S.HasMagicStatic2();
+  DepF<int>(); // #DEPFInst
 }
 
 
@@ -299,6 +452,11 @@ void Inst() {
 #pragma acc routine(DepS<int>::TemplMemFuncAmbig<int>) seq
 // expected-error@+1{{OpenACC routine name 'DepS<int>::Field' does not name a function}}
 #pragma acc routine(DepS<int>::Field) seq
+
+// expected-error@#HasMagicStaticFunc2{{function static variables are not permitted in functions to which an OpenACC 'routine' directive applies}}
+// expected-note@+2{{'routine' construct is here}}
+// expected-note@+1{{in instantiation of member function}}}
+#pragma acc routine(DepS<int>::HasMagicStatic2) seq
 
 template<typename T>
 void TemplFunc() {
@@ -388,6 +546,13 @@ struct DepRefersToT {
 #pragma acc routine(T::template TemplMemFuncAmbig<int>) seq
 // expected-error@+1{{OpenACC routine name 'S::Field' does not name a function}}
 #pragma acc routine(T::Field) seq
+
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+   auto L = getTemplLambda<U>();
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine seq
+   auto L2 = getTemplDepLambda<U>();
   }
 
 };
@@ -398,3 +563,60 @@ void inst() {
   s.MemFunc(); // expected-note{{in instantiation of}}
   s.TemplMemFunc<S>(); // expected-note{{in instantiation of}}
 }
+
+// A.3.4 tests:
+
+void DiffFuncs(); // #GLOBALDIFFFUNCS
+namespace NS {
+// expected-warning@+2{{OpenACC 'routine' directive with a name refers to a function with the same name as the function on the following line; this may be unintended}}
+// expected-note@#GLOBALDIFFFUNCS{{'DiffFuncs' declared here}}
+#pragma acc routine(DiffFuncs) seq
+void DiffFuncs();
+}
+
+void has_diff_func() {
+// expected-warning@+2{{OpenACC 'routine' directive with a name refers to a function with the same name as the function on the following line; this may be unintended}}
+// expected-note@#GLOBALDIFFFUNCS{{'DiffFuncs' declared here}}
+#pragma acc routine(DiffFuncs) seq
+auto DiffFuncs = [](){};
+}
+
+template<typename T>
+void has_diff_func_templ() {
+// expected-warning@+3{{OpenACC 'routine' directive with a name refers to a function with the same name as the function on the following line; this may be unintended}}
+// expected-note@#GLOBALDIFFFUNCS{{'DiffFuncs' declared here}}
+// expected-note@#HDFT_INST{{in instantiation of function template specialization}}
+#pragma acc routine(DiffFuncs) seq
+auto DiffFuncs = [](){};
+}
+
+void inst_diff() {
+  has_diff_func_templ<int>();// #HDFT_INST
+}
+
+struct SDiff {
+// expected-warning@+2{{OpenACC 'routine' directive with a name refers to a function with the same name as the function on the following line; this may be unintended}}
+// expected-note@#GLOBALDIFFFUNCS{{'DiffFuncs' declared here}}
+#pragma acc routine(DiffFuncs) seq
+  void DiffFuncs();
+};
+template<typename T>
+struct TemplSDiff {
+// expected-warning@+2{{OpenACC 'routine' directive with a name refers to a function with the same name as the function on the following line; this may be unintended}}
+// expected-note@#GLOBALDIFFFUNCS{{'DiffFuncs' declared here}}
+#pragma acc routine(DiffFuncs) seq
+  void DiffFuncs();
+};
+
+struct SOperator {
+#pragma acc routine(DiffFuncs) seq
+  bool operator==(const S&);
+};
+
+namespace NS2 {
+  // Shouldn't diagnose.
+#pragma acc routine(DiffFuncs) seq
+#pragma acc routine seq
+  void DiffFuncs();
+};
+

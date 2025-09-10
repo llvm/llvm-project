@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 // RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=operator new" "-DDELETE=operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+
 constexpr bool alloc_from_user_code() {
   void *p = NEW(sizeof(int)); // expected-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
   DELETE(p);
@@ -241,4 +246,68 @@ void f() {
     test<string().size()>();
 }
 
+}
+
+namespace GH134820 {
+struct S {
+    char* c = new char;
+    constexpr ~S() {
+        delete c;
+    }
+    int i = 0;
+};
+
+int f() {
+    if constexpr((S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(S s; (S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(S s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = S{}.i; true) {
+        return 1;
+    }
+    return 0;
+}
+
+template <typename T>
+int f2() {
+    if constexpr((T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = T{}.i; true) {
+        return 1;
+    }
+    return 0;
+}
+
+void test() {
+  f2<S>(); // expected-note {{in instantiation}}
+}
+
+}
+namespace GH120197{
+struct NonTrivialDtor {
+  NonTrivialDtor() = default;
+  NonTrivialDtor(const NonTrivialDtor&) = default;
+  NonTrivialDtor(NonTrivialDtor&&) = default;
+  NonTrivialDtor& operator=(const NonTrivialDtor&)  = default;
+  NonTrivialDtor& operator=(NonTrivialDtor&&) = default;
+  constexpr ~NonTrivialDtor() noexcept {}
+};
+
+static_assert(((void)NonTrivialDtor{}, true)); // passes
+
+void f() {
+  if constexpr ((void)NonTrivialDtor{}, true) {}
+}
 }

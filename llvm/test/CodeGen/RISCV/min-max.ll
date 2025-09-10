@@ -642,7 +642,7 @@ define signext i32 @smin_i32_negone(i32 signext %a) {
 define i64 @smin_i64_negone(i64 %a) {
 ; RV32I-LABEL: smin_i64_negone:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slti a2, a1, 0
+; RV32I-NEXT:    srli a2, a1, 31
 ; RV32I-NEXT:    addi a2, a2, -1
 ; RV32I-NEXT:    or a0, a2, a0
 ; RV32I-NEXT:    slti a2, a1, -1
@@ -661,7 +661,7 @@ define i64 @smin_i64_negone(i64 %a) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    li a2, -1
 ; RV32ZBB-NEXT:    min a2, a1, a2
-; RV32ZBB-NEXT:    slti a1, a1, 0
+; RV32ZBB-NEXT:    srli a1, a1, 31
 ; RV32ZBB-NEXT:    addi a1, a1, -1
 ; RV32ZBB-NEXT:    or a0, a1, a0
 ; RV32ZBB-NEXT:    mv a1, a2

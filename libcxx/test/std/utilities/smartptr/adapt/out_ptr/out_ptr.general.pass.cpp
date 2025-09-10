@@ -49,7 +49,7 @@ void test_get_int_p() {
 
     get_int_p(std::out_ptr(uPtr, std::move(del)));
     assert(*uPtr == 84);
-    assert(uPtr.get_deleter().wasMoveInitilized == true);
+    assert(uPtr.get_deleter().wasMoveInitialized == true);
   }
 
   // std::shared_ptr

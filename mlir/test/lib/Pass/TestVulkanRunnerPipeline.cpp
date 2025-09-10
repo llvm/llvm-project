@@ -29,7 +29,7 @@ using namespace mlir;
 namespace mlir::test {
 std::unique_ptr<Pass> createTestConvertToSPIRVPass(bool convertGPUModules,
                                                    bool nestInGPUModule);
-}
+} // namespace mlir::test
 
 namespace {
 
@@ -65,7 +65,8 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
   passManager.addPass(createGpuModuleToBinaryPass());
 
   passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
-  passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
+  passManager.nest<func::FuncOp>().addPass(
+      LLVM::createLLVMRequestCWrappersPass());
   // VulkanRuntimeWrappers.cpp requires these calling convention options.
   GpuToLLVMConversionPassOptions opt;
   opt.hostBarePtrCallConv = false;

@@ -2,7 +2,7 @@
 // RUN: %flang_fc1 -mmlir -disable-external-name-interop  -emit-llvm %s -o -| FileCheck %s
 
 
-// CHECK-LABEL: define void @_QPtest_callee(ptr %0)
+// CHECK-LABEL: define void @_QPtest_callee(
 func.func @_QPtest_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
   return
 }
@@ -29,7 +29,7 @@ func.func @_QPtest_slice() {
   return
 }
 
-// CHECK-LABEL: define void @_QPtest_dt_callee(ptr %0)
+// CHECK-LABEL: define void @_QPtest_dt_callee(
 func.func @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
   return
 }
@@ -63,7 +63,7 @@ func.func @_QPtest_dt_slice() {
 func.func private @takesRank2CharBox(!fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 
 // CHECK-LABEL: define void @emboxSubstring(
-// CHECK-SAME: ptr captures(none) %[[arg0:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[arg0:.*]])
 func.func @emboxSubstring(%arg0: !fir.ref<!fir.array<2x3x!fir.char<1,4>>>) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -84,7 +84,7 @@ func.func @emboxSubstring(%arg0: !fir.ref<!fir.array<2x3x!fir.char<1,4>>>) {
 
 func.func private @do_something(!fir.box<!fir.array<?xf32>>) -> ()
 // CHECK: define void @fir_dev_issue_1416
-// CHECK-SAME: ptr captures(none) %[[base_addr:.*]], i64 %[[low:.*]], i64 %[[up:.*]], i64 %[[at:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[base_addr:.*]], i64 %[[low:.*]], i64 %[[up:.*]], i64 %[[at:.*]])
 func.func @fir_dev_issue_1416(%arg0: !fir.ref<!fir.array<40x?xf32>>, %low: index, %up: index, %at : index) {
     // Test fir.embox with a constant interior array shape.
     %c1 = arith.constant 1 : index

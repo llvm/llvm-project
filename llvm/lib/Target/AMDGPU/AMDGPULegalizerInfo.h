@@ -208,6 +208,9 @@ public:
   bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
                                         MachineIRBuilder &B) const;
 
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
+
   bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
                       Intrinsic::ID IID) const;
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -enable-var-scope %s
 
 ; On gfx9 and later, a HS is a merged shader, in which s0-s7 are reserved by the
 ; hardware, so the PAL puts the GIT (global information table) in s8 rather
@@ -12,7 +12,7 @@
 define amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 inreg %arg7, <6 x i32> inreg %arg8) {
 .entry:
   %__llpc_global_proxy_7.i = alloca [3 x <4 x float>], align 16, addrspace(5)
-  %tmp = icmp ult i32 undef, undef
+  %tmp = icmp ult i32 %arg, 0
   br i1 %tmp, label %.beginls, label %.endls
 
 .beginls:                                         ; preds = %.entry

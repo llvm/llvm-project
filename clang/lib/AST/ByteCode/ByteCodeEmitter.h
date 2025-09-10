@@ -31,8 +31,7 @@ protected:
 
 public:
   /// Compiles the function into the module.
-  Function *compileFunc(const FunctionDecl *FuncDecl);
-  Function *compileObjCBlock(const BlockExpr *BE);
+  void compileFunc(const FunctionDecl *FuncDecl, Function *Func = nullptr);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}
@@ -61,6 +60,7 @@ protected:
 
   /// We're always emitting bytecode.
   bool isActive() const { return true; }
+  bool checkingForUndefinedBehavior() const { return false; }
 
   /// Callback for local registration.
   Local createLocal(Descriptor *D);
@@ -73,6 +73,7 @@ protected:
   ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:
   /// Current compilation context.
@@ -88,7 +89,7 @@ private:
   /// Location of label relocations.
   llvm::DenseMap<LabelTy, llvm::SmallVector<unsigned, 5>> LabelRelocs;
   /// Program code.
-  std::vector<std::byte> Code;
+  llvm::SmallVector<std::byte> Code;
   /// Opcode to expression mapping.
   SourceMap SrcMap;
 

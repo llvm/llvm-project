@@ -8,7 +8,6 @@
 
 #include "NoInternalDependenciesCheck.h"
 #include "AbseilMatcher.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -28,7 +27,8 @@ void NoInternalDependenciesCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void NoInternalDependenciesCheck::check(const MatchFinder::MatchResult &Result) {
+void NoInternalDependenciesCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *InternalDependency =
       Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("InternalDep");
 

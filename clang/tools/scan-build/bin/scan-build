@@ -1898,7 +1898,7 @@ if ($Clang !~ /\+\+(\.exe)?$/) {
   # Determine operating system under which this copy of Perl was built.
   my $IsWinBuild = ($^O =~/msys|cygwin|MSWin32/);
   if($IsWinBuild) {
-    $ClangCXX =~ s/.exe$/++.exe/;
+    $ClangCXX =~ s/\-\d+(\.\d+)?.exe$/++.exe/;
   }
   else {
     $ClangCXX =~ s/\-\d+(\.\d+)?$//;

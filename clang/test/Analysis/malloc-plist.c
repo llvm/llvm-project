@@ -46,7 +46,7 @@ void test_wrapper(void) {
   (void) buf;
 }//expected-warning{{Potential leak}}
 
-// Test what happens when the same call frees and allocated memory.
+// Test what happens when the same call releases and allocated memory.
 // Also tests the stack hint for parameters, when they are passed directly or via pointer.
 void my_free(void *x) {
     free(x);
@@ -60,7 +60,7 @@ void my_malloc_and_free(void **x) {
 void *test_double_action_call(void) {
     void *buf;
     my_malloc_and_free(&buf);
-    return buf; //expected-warning{{Use of memory after it is freed}}
+    return buf; //expected-warning{{Use of memory after it is released}}
 }
 
 // Test stack hint for 'reallocation failed'.
@@ -98,7 +98,7 @@ void call_myfree_takingblock(void) {
 
   int *p = malloc(sizeof(int));
   myfree_takingblock(some_block, p);
-  *p = 3;//expected-warning{{Use of memory after it is freed}}
+  *p = 3;//expected-warning{{Use of memory after it is released}}
 }
 
 // Test that we refer to the last symbol used in the leak diagnostic.

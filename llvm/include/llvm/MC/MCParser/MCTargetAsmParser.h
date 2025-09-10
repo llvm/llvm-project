@@ -15,6 +15,7 @@
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
@@ -331,7 +332,7 @@ private:
 };
 
 /// MCTargetAsmParser - Generic interface to target specific assembly parsers.
-class MCTargetAsmParser : public MCAsmParserExtension {
+class LLVM_ABI MCTargetAsmParser : public MCAsmParserExtension {
 public:
   enum MatchResultTy {
     Match_InvalidOperand,
@@ -395,6 +396,12 @@ public:
   // Target-specific parsing of expression.
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
+  }
+  // Parse an expression in a data directive, possibly with a relocation
+  // specifier.
+  virtual bool parseDataExpr(const MCExpr *&Res) {
+    SMLoc EndLoc;
+    return getParser().parseExpression(Res, EndLoc);
   }
 
   virtual bool parseRegister(MCRegister &Reg, SMLoc &StartLoc,
@@ -502,12 +509,13 @@ public:
   virtual bool equalIsAsmAssignment() { return true; };
   // Return whether this start of statement identifier is a label
   virtual bool isLabel(AsmToken &Token) { return true; };
-  // Return whether this parser accept star as start of statement
-  virtual bool starIsStartOfStatement() { return false; };
+  // Return whether this parser accepts the given token as start of statement.
+  virtual bool tokenIsStartOfStatement(AsmToken::TokenKind Token) {
+    return false;
+  }
 
-  virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
-                                            MCSymbolRefExpr::VariantKind,
-                                            MCContext &Ctx) {
+  virtual const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
+                                       MCContext &Ctx) {
     return nullptr;
   }
 

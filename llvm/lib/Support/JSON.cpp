@@ -84,16 +84,7 @@ json::Array *Object::getArray(StringRef K) {
     return V->getAsArray();
   return nullptr;
 }
-bool operator==(const Object &LHS, const Object &RHS) {
-  if (LHS.size() != RHS.size())
-    return false;
-  for (const auto &L : LHS) {
-    auto R = RHS.find(L.first);
-    if (R == RHS.end() || L.second != R->second)
-      return false;
-  }
-  return true;
-}
+bool operator==(const Object &LHS, const Object &RHS) { return LHS.M == RHS.M; }
 
 Array::Array(std::initializer_list<Value> Elements) {
   V.reserve(Elements.size());
@@ -182,9 +173,7 @@ void Value::destroy() {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Value::print(llvm::raw_ostream &OS) const { OS << *this; }
-#endif // !NDEBUG || LLVM_ENABLE_DUMP
 
 bool operator==(const Value &L, const Value &R) {
   if (L.kind() != R.kind())
@@ -518,7 +507,7 @@ bool Parser::parseNumber(char First, Value &Out) {
   errno = 0;
   int64_t I = std::strtoll(S.c_str(), &End, 10);
   if (End == S.end() && errno != ERANGE) {
-    Out = int64_t(I);
+    Out = I;
     return true;
   }
   // strtroull has a special handling for negative numbers, but in this

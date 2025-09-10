@@ -275,7 +275,7 @@ template <bool Invert> struct Process {
   }
 };
 
-/// Invokes a function accross every active buffer across the total lane size.
+/// Invokes a function across every active buffer across the total lane size.
 template <typename F>
 RPC_ATTRS static void invoke_rpc(F &&fn, uint32_t lane_size, uint64_t lane_mask,
                                  Buffer *slot) {
@@ -375,8 +375,8 @@ struct Server {
                                          uint32_t start = 0);
   RPC_ATTRS Port open(uint32_t lane_size);
 
-  RPC_ATTRS static uint64_t allocation_size(uint32_t lane_size,
-                                            uint32_t port_count) {
+  RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t lane_size,
+                                                      uint32_t port_count) {
     return Process<true>::allocation_size(port_count, lane_size);
   }
 
@@ -551,6 +551,9 @@ template <uint32_t opcode> RPC_ATTRS Client::Port Client::open() {
 /// port if it has a pending receive operation
 RPC_ATTRS rpc::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
+  if (rpc::get_lane_id() >= lane_size)
+    return rpc::nullopt;
+
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
     uint64_t lane_mask = rpc::get_lane_mask();

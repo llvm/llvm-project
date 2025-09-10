@@ -39,6 +39,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/Linker.h"
@@ -272,8 +273,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
     std::move(*OptRecordFileOrErr);
 
-  if (OptRecordFile &&
-      CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
+  if (OptRecordFile && CodeGenOpts.getProfileUse() !=
+                           llvm::driver::ProfileInstrKind::ProfileNone)
     Ctx.setDiagnosticsHotnessRequested(true);
 
   if (CodeGenOpts.MisExpect) {
@@ -907,6 +908,8 @@ bool CodeGenAction::loadLinkModules(CompilerInstance &CI) {
 bool CodeGenAction::hasIRSupport() const { return true; }
 
 void CodeGenAction::EndSourceFileAction() {
+  ASTFrontendAction::EndSourceFileAction();
+
   // If the consumer creation failed, do nothing.
   if (!getCompilerInstance().hasASTConsumer())
     return;
@@ -931,7 +934,7 @@ CodeGenerator *CodeGenAction::getCodeGenerator() const {
 bool CodeGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (CI.getFrontendOpts().GenReducedBMI)
     CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
-  return true;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
 static std::unique_ptr<raw_pwrite_stream>
@@ -975,7 +978,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      CI, BA, &CI.getVirtualFileSystem(), *VMContext, std::move(LinkModules),
+      CI, BA, CI.getVirtualFileSystemPtr(), *VMContext, std::move(LinkModules),
       InFile, std::move(OS), CoverageInfo));
   BEConsumer = Result.get();
 
@@ -994,7 +997,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     std::vector<std::unique_ptr<ASTConsumer>> Consumers(2);
     Consumers[0] = std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath);
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts());
     Consumers[1] = std::move(Result);
     return std::make_unique<MultiplexConsumer>(std::move(Consumers));
   }
@@ -1048,8 +1051,17 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 
   // Handle textual IR and bitcode file with one single module.
   llvm::SMDiagnostic Err;
-  if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext))
+  if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext)) {
+    // For LLVM IR files, always verify the input and report the error in a way
+    // that does not ask people to report an issue for it.
+    std::string VerifierErr;
+    raw_string_ostream VerifierErrStream(VerifierErr);
+    if (llvm::verifyModule(*M, &VerifierErrStream)) {
+      CI.getDiagnostics().Report(diag::err_invalid_llvm_ir) << VerifierErr;
+      return {};
+    }
     return M;
+  }
 
   // If MBRef is a bitcode with multiple modules (e.g., -fsplit-lto-unit
   // output), place the extra modules (actually only one, a regular LTO module)
@@ -1144,7 +1156,7 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), *VMContext,
+  BackendConsumer Result(CI, BA, CI.getVirtualFileSystemPtr(), *VMContext,
                          std::move(LinkModules), "", nullptr, nullptr,
                          TheModule.get());
 

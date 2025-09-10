@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 import sys, os, re, urllib.request
 
-latest_release = 19
+latest_release = 20
 
 clang_www_dir = os.path.dirname(__file__)
 default_issue_list_path = os.path.join(clang_www_dir, 'cwg_index.html')
@@ -39,7 +39,7 @@ def collect_tests():
       continue
     test_cpp = os.path.join(dr_test_dir, test_cpp)
     found_any = False;
-    for match in re.finditer(status_re, open(test_cpp, 'r').read()):
+    for match in re.finditer(status_re, open(test_cpp, 'r', encoding="utf-8").read()):
       dr_number = int(match.group(1))
       if dr_number in status_map:
         print("error: Comment for cwg{} encountered more than once. Duplicate found in {}".format(dr_number, test_cpp))
@@ -318,6 +318,22 @@ out_html.append('''\
 </html>
 ''')
 
-out_file = open(output, 'w')
+# Make an effort to remain consistent with the existing file.
+# We can't pick one newline style and use it on Windows,
+# because we can't be compatible with all 'autocrlf' modes at once.
+def detect_newline_style(file_path):
+  if not os.path.exists(file_path):
+    return '\n'
+  f = open(file_path)
+  f.readline()
+  if f.newlines is None:
+    return '\n'
+  if isinstance(f.newlines, str):
+    return f.newlines
+  newline = f.newlines[0]
+  print(f"Existing '{file_path}' has inconsistent newlines; picking '{newline.encode('unicode_escape').decode('utf-8')}'")
+  return newline
+    
+out_file = open(output, 'w', newline=detect_newline_style(output))
 out_file.write(''.join(out_html))
 out_file.close()

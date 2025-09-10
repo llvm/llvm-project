@@ -58,8 +58,7 @@ public:
     // TODO: We could move this closer to regalloc, out of SSA, which would
     // allow scheduling past mask operands. We would need to preserve live
     // intervals.
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -79,9 +78,6 @@ static bool isVMV0(const MCOperandInfo &MCOI) {
 }
 
 bool RISCVVMV0Elimination::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget *ST = &MF.getSubtarget<RISCVSubtarget>();
   if (!ST->hasVInstructions())

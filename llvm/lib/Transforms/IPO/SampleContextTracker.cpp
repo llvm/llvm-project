@@ -189,8 +189,9 @@ ContextTrieNode *ContextTrieNode::getOrCreateChildContext(
   if (!AllowCreate)
     return nullptr;
 
-  AllChildContext[Hash] = ContextTrieNode(this, CalleeName, nullptr, CallSite);
-  return &AllChildContext[Hash];
+  ContextTrieNode &ACC = AllChildContext[Hash];
+  ACC = ContextTrieNode(this, CalleeName, nullptr, CallSite);
+  return &ACC;
 }
 
 // Profiler tracker than manages profiles and its associated context

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) #1
@@ -444,7 +444,7 @@ define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %
 ; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0x40200000
 ; SI: v_div_scale_f64 v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s[[[K_LO]]:[[K_HI]]], v[0:1], s[[[K_LO]]:[[K_HI]]]
 define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %out) #0 {
-  %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double undef, i1 false)
+  %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double poison, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, ptr addrspace(1) %out, align 8
   ret void
