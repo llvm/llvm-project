@@ -248,7 +248,9 @@ static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
 
 static cl::opt<bool> StringOps(
     "inline-memcpy",
-    cl::desc("inline memcpy using 'rep movsb' instruction (X86-only)"),
+    cl::desc(
+        "inline memcpy using size-specific optimized instructions "
+        "(X86: 'rep movsb', AArch64: width-optimized register operations)"),
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool> StripRepRet(

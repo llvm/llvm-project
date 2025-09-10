@@ -48,6 +48,10 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
+/// Mark the MMO of cooperative load/store atomics.
+static const MachineMemOperand::Flags MOCooperative =
+    MachineMemOperand::MOTargetFlag3;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -1051,6 +1055,8 @@ public:
       return AMDGPU::S_WAIT_DSCNT;
     case AMDGPU::S_WAIT_KMCNT_soft:
       return AMDGPU::S_WAIT_KMCNT;
+    case AMDGPU::S_WAIT_XCNT_soft:
+      return AMDGPU::S_WAIT_XCNT;
     default:
       return Opcode;
     }

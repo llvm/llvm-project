@@ -1802,13 +1802,13 @@ CommandObject *CommandInterpreter::BuildAliasResult(
 
         // Make sure we aren't going outside the bounds of the cmd string:
         if (strpos < start_fudge) {
-          result.AppendError("Unmatched quote at command beginning.");
+          result.AppendError("unmatched quote at command beginning");
           return nullptr;
         }
         llvm::StringRef arg_text = entry.ref();
         if (strpos - start_fudge + arg_text.size() + len_fudge >
             raw_input_string.size()) {
-          result.AppendError("Unmatched quote at command end.");
+          result.AppendError("unmatched quote at command end");
           return nullptr;
         }
         raw_input_string = raw_input_string.erase(
@@ -2091,7 +2091,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     command_string = command_line;
     original_command_string = command_line;
     if (m_repeat_command.empty()) {
-      result.AppendError("No auto repeat.");
+      result.AppendError("no auto repeat");
       return false;
     }
 
