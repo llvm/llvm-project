@@ -234,7 +234,15 @@ def TargetRegionFlagsNoLoop : I32BitEnumAttrCaseBit<"no_loop", 3>;
 
 def TargetRegionFlags : OpenMP_BitEnumAttr<
     "TargetRegionFlags",
-    "target region property flags", [
+    "These flags describe properties of the target kernel. "
+    "TargetRegionFlagsGeneric - denotes generic kernel. "
+    "TargetRegionFlagsSpmd - denotes SPMD kernel. "
+    "TargetRegionFlagsNoLoop - denotes kernel where "
+    "num_teams * num_threads >= loop_trip_count. It allows the conversion "
+    "of loops into sequential code by ensuring that each team/thread "
+    "executes at most one iteration. "
+    "TargetRegionFlagsTripCount - checks if the loop trip count should be "
+    "calculated.", [
       TargetRegionFlagsNone,
       TargetRegionFlagsGeneric,
       TargetRegionFlagsSpmd,

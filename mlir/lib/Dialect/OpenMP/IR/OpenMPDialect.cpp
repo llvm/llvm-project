@@ -2112,11 +2112,13 @@ static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
   // num_teams clause can break no-loop teams/threads assumption.
   if (teamsOp.getNumTeamsUpper())
     return false;
+
   // Reduction kernels are slower in no-loop mode.
   if (teamsOp.getNumReductionVars())
     return false;
   if (wsLoopOp->getNumReductionVars())
     return false;
+
   // Check if the user allows the promotion of kernels to no-loop mode.
   OffloadModuleInterface offloadMod =
       capturedOp->getParentOfType<omp::OffloadModuleInterface>();

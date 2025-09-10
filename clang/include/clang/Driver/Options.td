@@ -3836,18 +3836,21 @@ let Group = f_Group in {
 
 def fopenmp_target_debug_EQ : Joined<["-"], "fopenmp-target-debug=">;
 def fopenmp_assume_teams_oversubscription : Flag<["-"], "fopenmp-assume-teams-oversubscription">,
-  HelpText<"Allow enforcement to ensure there are enough teams to cover the "
-           "loop iteration space. It may ignore environment variables. "
-           "If the fopenmp-assume-teams-oversubscription and "
-           "fopenmp-assume-threads-oversubscription flags are set, Flang may "
-           "generate more optimized OpenMP kernels for target teams distribute "
-           "parallel do pragmas.">;
+  HelpText<"Allow the optimizer to discretely increase the number of "
+           "teams. May cause ignore environment variables that set "
+           "the number of teams to be ignored. The combination of "
+           "-fopenmp-assume-teams-oversubscription "
+           "and -fopenmp-assume-threads-oversubscription "
+           "may allow the conversion of loops into sequential code by "
+           "ensuring that each team/thread executes at most one iteration.">;
 def fopenmp_assume_threads_oversubscription : Flag<["-"], "fopenmp-assume-threads-oversubscription">,
-  HelpText<"Assume threads oversubscription. If the "
-           "fopenmp-assume-teams-oversubscription and "
-           "fopenmp-assume-threads-oversubscription flags are set, Flang may "
-           "generate more optimized OpenMP kernels for target teams distribute "
-           "parallel do pragmas.">;
+  HelpText<"Allow the optimizer to discretely increase the number of "
+           "threads. May cause ignore environment variables that set "
+           "the number of threads to be ignored. The combination of "
+           "-fopenmp-assume-teams-oversubscription "
+           "and -fopenmp-assume-threads-oversubscription "
+           "may allow the conversion of loops into sequential code by "
+           "ensuring that each team/thread executes at most one iteration.">;
 def fno_openmp_assume_teams_oversubscription : Flag<["-"], "fno-openmp-assume-teams-oversubscription">,
   HelpText<"Do not assume teams oversubscription.">;
 def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-threads-oversubscription">,
