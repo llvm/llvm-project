@@ -8,13 +8,12 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
-
 #include <array>
 #include <cassert>
+#include <ranges>
+
 #include "test_iterators.h"
 #include "test_range.h"
-
 #include "../types.h"
 
 template <class Iterator>

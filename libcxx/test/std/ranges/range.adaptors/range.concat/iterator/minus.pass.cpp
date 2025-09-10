@@ -8,11 +8,27 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
+// friend constexpr iterator operator-(const iterator& it, difference_type n)
+//         requires concat-is-random-access<Const, Views...>;
+
+// friend constexpr difference_type operator-(const iterator& x, const iterator& y)
+//     requires concat-is-random-access<Const, Views...>;
+
+// friend constexpr difference_type operator-(default_sentinel_t, const __iterator& __x)
+//     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
+//              ...) &&
+//             (__all_but_first_model_sized_range<_Const, _Views...>::value)
+
+// friend constexpr difference_type operator-(const __iterator& __x, default_sentinel_t)
+//     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
+//              ...) &&
+//             (__all_but_first_model_sized_range<_Const, _Views...>::value)
 
 #include <array>
 #include <cassert>
 #include <iterator>
+#include <ranges>
+
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../types.h"

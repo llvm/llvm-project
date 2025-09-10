@@ -8,9 +8,9 @@
 
 // REQUIRES: std-at-least-c++26
 
+#include <cassert>
 #include <ranges>
 
-#include <cassert>
 #include "test_iterators.h"
 #include "types.h"
 

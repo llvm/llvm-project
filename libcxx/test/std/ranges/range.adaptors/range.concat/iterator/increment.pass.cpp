@@ -8,15 +8,20 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
+// friend constexpr __iterator operator+(const __iterator& __it, difference_type __n)
+//     requires __concat_is_random_access<_Const, _Views...>
+
+// friend constexpr __iterator operator+(difference_type __n, const __iterator& __it)
+//     requires __concat_is_random_access<_Const, _Views...>
 
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <ranges>
 #include <type_traits>
 #include <utility>
-#include "test_iterators.h"
 
+#include "test_iterators.h"
 #include "../../range_adaptor_types.h"
 
 struct InputRange : IntBufferView {

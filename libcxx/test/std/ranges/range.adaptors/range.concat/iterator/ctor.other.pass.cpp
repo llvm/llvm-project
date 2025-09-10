@@ -8,8 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
 
 #include "../../range_adaptor_types.h"
 

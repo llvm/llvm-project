@@ -8,9 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
-
 #include <cassert>
+#include <ranges>
 #include <type_traits>
 #include <vector>
 

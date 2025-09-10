@@ -12,6 +12,7 @@
 #include <ranges>
 #include <string>
 #include <vector>
+
 #include "test_macros.h"
 
 struct NoSizeRange : std::ranges::view_base {

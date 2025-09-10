@@ -13,7 +13,6 @@
 #include <tuple>
 
 #include "test_iterators.h"
-
 #include "../../range_adaptor_types.h"
 
 template <class T>

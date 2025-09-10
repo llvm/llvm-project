@@ -8,10 +8,14 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
+// constexpr __iterator& operator--()
+
+// constexpr __iterator operator--(int)
 
 #include <array>
 #include <cassert>
+#include <ranges>
+
 #include "test_macros.h"
 #include "../../range_adaptor_types.h"
 

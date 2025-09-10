@@ -6,14 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
+// friend constexpr void iter_swap(const __iterator& __x, const __iterator& __y)
+//     noexcept((noexcept(ranges::swap(*__x, *__y))) &&
+//               (noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_Const, _Views>>>(),
+//                                           std::declval<const iterator_t<__maybe_const<_Const, _Views>>>())) &&
+//               ...))
 
-#include <ranges>
+// REQUIRES: std-at-least-c++26
 
 #include <array>
 #include <cassert>
 #include <iterator>
+#include <ranges>
 #include <utility>
+
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../types.h"

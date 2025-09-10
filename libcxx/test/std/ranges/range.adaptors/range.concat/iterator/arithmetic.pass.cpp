@@ -8,11 +8,10 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
-
 #include <array>
 #include <concepts>
 #include <functional>
+#include <ranges>
 
 #include "../../range_adaptor_types.h"
 

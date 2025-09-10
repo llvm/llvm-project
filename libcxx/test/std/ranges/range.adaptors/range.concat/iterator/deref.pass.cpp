@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
+// constexpr decltype(auto) operator*() const
 
-#include <ranges>
+// REQUIRES: std-at-least-c++26
 
 #include <array>
 #include <cassert>
+#include <ranges>
+
 #include "test_iterators.h"
 #include "../types.h"
 

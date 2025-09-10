@@ -8,10 +8,10 @@
 
 // REQUIRES: std-at-least-c++26
 
-#include <ranges>
-
 #include <cassert>
+#include <ranges>
 #include <type_traits>
+
 #include "test_iterators.h"
 
 struct View : std::ranges::view_base {
