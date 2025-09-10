@@ -5407,15 +5407,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       RetBB = &BB;
       break;
     }
-    case AMDGPU::V_CMP_LT_U64_e64:   // umin
-    case AMDGPU::V_CMP_LT_I64_e64:   // min
-    case AMDGPU::V_CMP_GT_U64_e64:   // umax
-    case AMDGPU::V_CMP_GT_I64_e64: { // max
-      // Idempotent operations.
-      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64), DstReg).addReg(SrcReg);
-      RetBB = &BB;
-      break;
-    }
     case AMDGPU::S_XOR_B32:
     case AMDGPU::S_ADD_I32:
     case AMDGPU::S_ADD_U64_PSEUDO:

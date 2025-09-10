@@ -1269,21 +1269,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX8DAGISEL-LABEL: divergent_value_i64:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX8DAGISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX8DAGISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX8DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-=======
-; GFX8DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX8DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX8DAGISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX8DAGISEL-NEXT:    s_mov_b32 s4, 0
-; GFX8DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX8DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX8DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1306,21 +1294,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX8GISEL-LABEL: divergent_value_i64:
 ; GFX8GISEL:       ; %bb.0: ; %entry
 ; GFX8GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX8GISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX8GISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX8GISEL-NEXT:    s_mov_b64 s[6:7], exec
-=======
-; GFX8GISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX8GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX8GISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX8GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX8GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX8GISEL-NEXT:    s_mov_b64 s[6:7], exec
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX8GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1343,21 +1319,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX9DAGISEL-LABEL: divergent_value_i64:
 ; GFX9DAGISEL:       ; %bb.0: ; %entry
 ; GFX9DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX9DAGISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX9DAGISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX9DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-=======
-; GFX9DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX9DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX9DAGISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX9DAGISEL-NEXT:    s_mov_b32 s4, 0
-; GFX9DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX9DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX9DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1380,21 +1344,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX9GISEL-LABEL: divergent_value_i64:
 ; GFX9GISEL:       ; %bb.0: ; %entry
 ; GFX9GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX9GISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX9GISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX9GISEL-NEXT:    s_mov_b64 s[6:7], exec
-=======
-; GFX9GISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX9GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX9GISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX9GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX9GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX9GISEL-NEXT:    s_mov_b64 s[6:7], exec
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX9GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1417,21 +1369,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1064DAGISEL-LABEL: divergent_value_i64:
 ; GFX1064DAGISEL:       ; %bb.0: ; %entry
 ; GFX1064DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1064DAGISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX1064DAGISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX1064DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-=======
-; GFX1064DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX1064DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1064DAGISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1064DAGISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1064DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1064DAGISEL-NEXT:    s_mov_b64 s[6:7], exec
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1064DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1064DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX1064DAGISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1453,21 +1393,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1064GISEL-LABEL: divergent_value_i64:
 ; GFX1064GISEL:       ; %bb.0: ; %entry
 ; GFX1064GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1064GISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX1064GISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX1064GISEL-NEXT:    s_mov_b64 s[6:7], exec
-=======
-; GFX1064GISEL-NEXT:    s_mov_b64 s[6:7], exec
-; GFX1064GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1064GISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1064GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1064GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1064GISEL-NEXT:    s_mov_b64 s[6:7], exec
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1064GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1064GISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX1064GISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1489,21 +1417,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1032DAGISEL-LABEL: divergent_value_i64:
 ; GFX1032DAGISEL:       ; %bb.0: ; %entry
 ; GFX1032DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1032DAGISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX1032DAGISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX1032DAGISEL-NEXT:    s_mov_b32 s6, exec_lo
-=======
-; GFX1032DAGISEL-NEXT:    s_mov_b32 s6, exec_lo
-; GFX1032DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1032DAGISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1032DAGISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1032DAGISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1032DAGISEL-NEXT:    s_mov_b32 s6, exec_lo
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1032DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1032DAGISEL-NEXT:    s_ff1_i32_b32 s7, s6
 ; GFX1032DAGISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1525,21 +1441,9 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1032GISEL-LABEL: divergent_value_i64:
 ; GFX1032GISEL:       ; %bb.0: ; %entry
 ; GFX1032GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1032GISEL-NEXT:    s_mov_b32 s4, 0
 ; GFX1032GISEL-NEXT:    s_brev_b32 s5, 1
 ; GFX1032GISEL-NEXT:    s_mov_b32 s6, exec_lo
-=======
-; GFX1032GISEL-NEXT:    s_mov_b32 s6, exec_lo
-; GFX1032GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1032GISEL-NEXT:    s_mov_b32 s4, 0
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1032GISEL-NEXT:    s_mov_b32 s4, 0
-; GFX1032GISEL-NEXT:    s_brev_b32 s5, 1
-; GFX1032GISEL-NEXT:    s_mov_b32 s6, exec_lo
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1032GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1032GISEL-NEXT:    s_ff1_i32_b32 s7, s6
 ; GFX1032GISEL-NEXT:    v_mov_b32_e32 v4, s4
@@ -1561,39 +1465,16 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1164DAGISEL-LABEL: divergent_value_i64:
 ; GFX1164DAGISEL:       ; %bb.0: ; %entry
 ; GFX1164DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1164DAGISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX1164DAGISEL-NEXT:    s_brev_b32 s1, 1
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-=======
-; GFX1164DAGISEL-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1164DAGISEL-NEXT:    s_brev_b32 s1, 1
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
-; GFX1164DAGISEL-NEXT:    s_mov_b32 s0, 0
-; GFX1164DAGISEL-NEXT:    s_brev_b32 s1, 1
-; GFX1164DAGISEL-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1164DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-<<<<<<< HEAD
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1164DAGISEL-NEXT:    s_ctz_i32_b64 s8, s[2:3]
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s4, v2, s8
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s5, v3, s8
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1164DAGISEL-NEXT:    v_cmp_gt_i64_e32 vcc, s[4:5], v[4:5]
 ; GFX1164DAGISEL-NEXT:    s_and_b64 s[6:7], vcc, s[2:3]
 ; GFX1164DAGISEL-NEXT:    s_bitset0_b64 s[2:3], s8
@@ -1609,39 +1490,16 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1164GISEL-LABEL: divergent_value_i64:
 ; GFX1164GISEL:       ; %bb.0: ; %entry
 ; GFX1164GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1164GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX1164GISEL-NEXT:    s_brev_b32 s1, 1
 ; GFX1164GISEL-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1164GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-=======
-; GFX1164GISEL-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1164GISEL-NEXT:    s_brev_b32 s1, 1
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
-; GFX1164GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX1164GISEL-NEXT:    s_brev_b32 s1, 1
-; GFX1164GISEL-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1164GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-<<<<<<< HEAD
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1164GISEL-NEXT:    s_ctz_i32_b64 s8, s[2:3]
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s4, v2, s8
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s5, v3, s8
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1164GISEL-NEXT:    v_cmp_gt_i64_e32 vcc, s[4:5], v[4:5]
 ; GFX1164GISEL-NEXT:    s_and_b64 s[6:7], vcc, s[2:3]
 ; GFX1164GISEL-NEXT:    s_bitset0_b64 s[2:3], s8
@@ -1657,38 +1515,15 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1132DAGISEL-LABEL: divergent_value_i64:
 ; GFX1132DAGISEL:       ; %bb.0: ; %entry
 ; GFX1132DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX1132DAGISEL-NEXT:    s_brev_b32 s1, 1
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1132DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-=======
-; GFX1132DAGISEL-NEXT:    s_mov_b32 s2, exec_lo
-; GFX1132DAGISEL-NEXT:    s_brev_b32 s1, 1
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
-; GFX1132DAGISEL-NEXT:    s_mov_b32 s0, 0
-; GFX1132DAGISEL-NEXT:    s_brev_b32 s1, 1
-; GFX1132DAGISEL-NEXT:    s_mov_b32 s2, exec_lo
-; GFX1132DAGISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-<<<<<<< HEAD
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1132DAGISEL-NEXT:    s_ctz_i32_b32 s3, s2
 ; GFX1132DAGISEL-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
 ; GFX1132DAGISEL-NEXT:    v_readlane_b32 s4, v2, s3
 ; GFX1132DAGISEL-NEXT:    v_readlane_b32 s5, v3, s3
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1132DAGISEL-NEXT:    v_cmp_gt_i64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX1132DAGISEL-NEXT:    s_and_b32 s6, vcc_lo, s2
 ; GFX1132DAGISEL-NEXT:    s_bitset0_b32 s2, s3
@@ -1703,38 +1538,15 @@ define void @divergent_value_i64(ptr addrspace(1) %out, i64 %id.x) {
 ; GFX1132GISEL-LABEL: divergent_value_i64:
 ; GFX1132GISEL:       ; %bb.0: ; %entry
 ; GFX1132GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-<<<<<<< HEAD
-<<<<<<< HEAD
 ; GFX1132GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX1132GISEL-NEXT:    s_brev_b32 s1, 1
 ; GFX1132GISEL-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1132GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1132GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-=======
-; GFX1132GISEL-NEXT:    s_mov_b32 s2, exec_lo
-; GFX1132GISEL-NEXT:    s_brev_b32 s1, 1
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
-; GFX1132GISEL-NEXT:    s_mov_b32 s0, 0
-; GFX1132GISEL-NEXT:    s_brev_b32 s1, 1
-; GFX1132GISEL-NEXT:    s_mov_b32 s2, exec_lo
-; GFX1132GISEL-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-<<<<<<< HEAD
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1132GISEL-NEXT:    s_ctz_i32_b32 s3, s2
 ; GFX1132GISEL-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
 ; GFX1132GISEL-NEXT:    v_readlane_b32 s4, v2, s3
 ; GFX1132GISEL-NEXT:    v_readlane_b32 s5, v3, s3
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
->>>>>>> 381cb9fada25 ([AMDGPU] Extending wave reduction intrinsics for `i64` types - 1)
-=======
->>>>>>> 4d2b4133488e (Using `S_MOV_B64_IMM_PSEUDO` instead of dealing with legality concerns.)
 ; GFX1132GISEL-NEXT:    v_cmp_gt_i64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX1132GISEL-NEXT:    s_and_b32 s6, vcc_lo, s2
 ; GFX1132GISEL-NEXT:    s_bitset0_b32 s2, s3
