@@ -232,7 +232,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
         V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
-        ValueInfo AliaseeVI(/*IsAnalysis=*/false, &*V.find(*GVSum.Aliasee));
+        ValueInfo AliaseeVI(/*IsAnalysis=*/false, &*V.find(*GVSum.Aliasee), &V);
         // Note: Aliasee cannot be filled until all summaries are loaded.
         // This is done in fixAliaseeLinks() which is called in
         // MappingTraits<ModuleSummaryIndex>::mapping().
@@ -244,7 +244,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       Refs.reserve(GVSum.Refs.size());
       for (auto &RefGUID : GVSum.Refs) {
         auto It = V.try_emplace(RefGUID, /*IsAnalysis=*/false).first;
-        Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*It));
+        Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*It, &V));
       }
       Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
           GVFlags, /*NumInsts=*/0, FunctionSummary::FFlags{}, std::move(Refs),
@@ -324,10 +324,10 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
 
 template <> struct MappingTraits<ModuleSummaryIndex> {
   static void mapping(IO &io, ModuleSummaryIndex& index) {
-    io.mapOptional("GlobalValueMap", index.GlobalValueMap);
+    io.mapOptional("GlobalValueMap", *index.GlobalValueMap);
     if (!io.outputting())
       CustomMappingTraits<GlobalValueSummaryMapTy>::fixAliaseeLinks(
-          index.GlobalValueMap);
+          *index.GlobalValueMap);
 
     if (io.outputting()) {
       io.mapOptional("TypeIdMap", index.TypeIdMap);
