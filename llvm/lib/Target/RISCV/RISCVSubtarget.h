@@ -186,9 +186,7 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  bool hasBEXTILike() const {
-    return HasStdExtZbs || HasVendorXTHeadBs;
-  }
+  bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
   bool hasCZEROLike() const {
     return HasStdExtZicond || HasVendorXVentanaCondOps;
