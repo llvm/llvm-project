@@ -181,23 +181,6 @@ uint64_t computeRangeBound(uint32_t Offset, uint32_t Size) {
 
   return uint64_t(Offset) + uint64_t(Size) - 1;
 }
-
-bool verifyOffsetOverflow(uint64_t Register) { return Register > ~0U; }
-
-bool verifyRegisterOverflow(uint64_t Register, uint32_t NumDescriptors) {
-  if (NumDescriptors == ~0U)
-    return false;
-
-  uint64_t UpperBound =
-      (uint64_t)Register + (uint64_t)NumDescriptors - (uint64_t)1U;
-  return UpperBound > ~0U;
-}
-
-uint64_t updateAppendingRegister(uint64_t AppendingRegister,
-                                 uint64_t NumDescriptors, uint64_t Offset) {
-  return Offset == ~0U ? AppendingRegister + NumDescriptors
-                       : Offset + NumDescriptors;
-}
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

@@ -68,6 +68,11 @@ extractShaderVisibility(MDNode *Node, unsigned int OpId) {
   return make_error<InvalidRSMetadataValue>("ShaderVisibility");
 }
 
+static uint64_t updateOngoingOffset(uint64_t CurOfset, uint64_t NumDescriptors,
+                                    uint64_t Offset) {
+  return Offset == ~0U ? CurOfset + NumDescriptors : Offset + NumDescriptors;
+}
+
 namespace {
 
 // We use the OverloadVisit with std::visit to ensure the compiler catches if a
@@ -549,32 +554,40 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
                                               uint32_t Location) {
   uint64_t Offset = 0;
 
-  for (const llvm::mcdxbc::DescriptorRange &Range : Table.Ranges) {
+  for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
+    // Errors for this check should be emitted before this point.
+    if (Range.NumDescriptors <= 0)
+      continue;
     dxil::ResourceClass RangeType =
         static_cast<dxil::ResourceClass>(Range.RangeType);
 
-    if (Range.OffsetInDescriptorsFromTableStart != llvm::hlsl::rootsig::DescriptorTableOffsetAppend)
+    if (Range.OffsetInDescriptorsFromTableStart != DescriptorTableOffsetAppend)
       Offset = Range.OffsetInDescriptorsFromTableStart;
 
-    uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
-            Offset, Range.NumDescriptors);
-    if (verifyBoundOffset(Offset))
-      return make_error<DescriptorRangeOverflowError>(
-          RangeType, Range.BaseShaderRegister,
-          Range.RegisterSpace);
-    else if (!verifyNoOverflowedOffset(Offset))
+    if (!verifyNoOverflowedOffset(Offset))
       return make_error<OffsetOverflowError>(RangeType,
                                              Range.BaseShaderRegister,
                                              Range.RegisterSpace);
 
-    if (!verifyNoOverflowedOffset(Range.BaseShaderRegister))
+    const uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
+        Range.BaseShaderRegister, Range.NumDescriptors);
+
+    if (!verifyNoOverflowedOffset(RangeBound))
       return make_error<ShaderRegisterOverflowError>(
           RangeType, Range.BaseShaderRegister,
           Range.RegisterSpace);
 
-    Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
-                     ? uint32_t(RangeBound)
-                     : uint32_t(RangeBound + 1);
+    const uint64_t OffsetBound =
+        llvm::hlsl::rootsig::computeRangeBound(Offset, Range.NumDescriptors);
+
+    if (!verifyNoOverflowedOffset(OffsetBound))
+      return make_error<DescriptorRangeOverflowError>(
+          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+
+    // Append to the current offset if DescriptorTableOffsetAppend, otherwise
+    // calculate the new Offset.
+    Offset = updateOngoingOffset(Offset, Range.NumDescriptors,
+                                 Range.OffsetInDescriptorsFromTableStart);
   }
 
   return Error::success();
