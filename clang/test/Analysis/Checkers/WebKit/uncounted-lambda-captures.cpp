@@ -449,3 +449,26 @@ void ranges_for_each(RefCountable* obj) {
     ++(*static_cast<unsigned*>(item));
   });
 }
+
+class RefCountedObj {
+public:
+  void ref();
+  void deref();
+
+  void call() const;
+  void callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const;
+  void doSomeWork() const;
+};
+
+void RefCountedObj::callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const
+{
+    callback();
+}
+
+void RefCountedObj::call() const
+{
+    auto lambda = [&] {
+        doSomeWork();
+    };
+    callLambda(lambda);
+}

@@ -2905,6 +2905,65 @@ static bool isWorthFoldingAdd(SDValue Add) {
   return true;
 }
 
+bool isRegImmLoadOrStore(SDNode *User, SDValue Add) {
+  switch (User->getOpcode()) {
+  default:
+    return false;
+  case ISD::LOAD:
+  case RISCVISD::LD_RV32:
+  case ISD::ATOMIC_LOAD:
+    break;
+  case ISD::STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<StoreSDNode>(User)->getValue() == Add)
+      return false;
+    break;
+  case RISCVISD::SD_RV32:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (User->getOperand(0) == Add || User->getOperand(1) == Add)
+      return false;
+    break;
+  case ISD::ATOMIC_STORE:
+    // Don't allow stores of Add. It must only be used as the address.
+    if (cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    break;
+  }
+
+  return true;
+}
+
+// To prevent SelectAddrRegImm from folding offsets that conflict with the
+// fusion of PseudoMovAddr, check if the offset of every use of a given address
+// is within the alignment.
+bool RISCVDAGToDAGISel::areOffsetsWithinAlignment(SDValue Addr,
+                                                  Align Alignment) {
+  assert(Addr->getOpcode() == RISCVISD::ADD_LO);
+  for (auto *User : Addr->users()) {
+    // If the user is a load or store, then the offset is 0 which is always
+    // within alignment.
+    if (isRegImmLoadOrStore(User, Addr))
+      continue;
+
+    if (CurDAG->isBaseWithConstantOffset(SDValue(User, 0))) {
+      int64_t CVal = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (!isInt<12>(CVal) || Alignment <= CVal)
+        return false;
+
+      // Make sure all uses are foldable load/stores.
+      for (auto *AddUser : User->users())
+        if (!isRegImmLoadOrStore(AddUser, SDValue(User, 0)))
+          return false;
+
+      continue;
+    }
+
+    return false;
+  }
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
@@ -2914,9 +2973,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    Base = Addr.getOperand(0);
-    Offset = Addr.getOperand(1);
-    return true;
+    bool CanFold = true;
+    // Unconditionally fold if operand 1 is not a global address (e.g.
+    // externsymbol)
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
+      const DataLayout &DL = CurDAG->getDataLayout();
+      Align Alignment = commonAlignment(
+          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
+      if (!areOffsetsWithinAlignment(Addr, Alignment))
+        CanFold = false;
+    }
+    if (CanFold) {
+      Base = Addr.getOperand(0);
+      Offset = Addr.getOperand(1);
+      return true;
+    }
   }
 
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
@@ -2934,7 +3005,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal)) {
+          if ((CVal == 0 || Alignment > CVal) &&
+              areOffsetsWithinAlignment(Base, Alignment)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
