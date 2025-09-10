@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -show-mc-encoding -start-before=amdgpu-resource-usage -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: {{^}}high_vgprs:
+---
+name:            high_vgprs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+    ; GCN: v_mov_b32_e32 v0 /*v256*/, v255 /*v511*/           ; encoding: [0xff,0x03,0x00,0x7e]
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr511, implicit $exec
+
+    ; GCN: v_mov_b32_e32 v0, v255      ; encoding: [0xff,0x03,0x00,0x7e]
+    $vgpr0 = V_MOV_B32_e32 undef $vgpr255, implicit $exec
+
+    ; GCN: v_fma_f32 v3 /*v259*/, v4 /*v260*/, v5 /*v261*/, v6 /*v262*/    ; encoding: [0x03,0x00,0x13,0xd6,0x04,0x0b,0x1a,0x04]
+    $vgpr259 = V_FMA_F32_e64 0, undef $vgpr260, 0, undef $vgpr261, 0, undef $vgpr262, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN: v_fma_f32 v3, v4, v5, v6    ; encoding: [0x03,0x00,0x13,0xd6,0x04,0x0b,0x1a,0x04]
+    $vgpr3 = V_FMA_F32_e64 0, undef $vgpr4, 0, undef $vgpr5, 0, undef $vgpr6, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN: v_mqsad_u32_u8 v[254:257], v[0:1] /*v[256:257]*/, v0 /*v256*/, v[244:247] /*v[500:503]*/   ; encoding: [0xfe,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
+    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr256_vgpr257, $vgpr256, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
+
+    ; GCN: v_mqsad_u32_u8 v[254:257], v[0:1], v0, v[244:247]   ; encoding: [0xfe,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
+    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr0_vgpr1, $vgpr0, undef $vgpr244_vgpr245_vgpr246_vgpr247, 0, implicit $exec
+
+    ; GCN: v_mqsad_u32_u8 v[0:3] /*v[256:259]*/, v[0:1] /*v[256:257]*/, v0 /*v256*/, v[244:247] /*v[500:503]*/   ; encoding: [0x00,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
+    $vgpr256_vgpr257_vgpr258_vgpr259 = V_MQSAD_U32_U8_e64 $vgpr256_vgpr257, $vgpr256, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
+
+    ; GCN: v_mqsad_u32_u8 v[0:3], v[0:1], v0, v[244:247]   ; encoding: [0x00,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MQSAD_U32_U8_e64 $vgpr0_vgpr1, $vgpr0, undef $vgpr244_vgpr245_vgpr246_vgpr247, 0, implicit $exec
+
+    ; GCN: v_mul_f32_e64 v0 /*v256*/, -v1 /*v257*/, |v2 /*v258*/| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x20]
+    $vgpr256 = V_MUL_F32_e64 1, $vgpr257, 2, $vgpr258, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN: v_mul_f32_e64 v0, -v1, |v2| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x20]
+    $vgpr0 = V_MUL_F32_e64 1, $vgpr1, 2, $vgpr2, 0, 0, implicit $exec, implicit $mode
+
+    ; GCN: NumVgprs: 512
+...

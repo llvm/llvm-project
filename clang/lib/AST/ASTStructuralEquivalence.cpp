@@ -878,10 +878,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // Treat the enumeration as its underlying type and use the builtin type
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
-        T1 = T1->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
+        T1 = cast<EnumType>(T1)->getOriginalDecl()->getIntegerType();
         assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
       } else if (T2->getTypeClass() == Type::Enum) {
-        T2 = T2->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
+        T2 = cast<EnumType>(T2)->getOriginalDecl()->getIntegerType();
         assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
       }
       TC = Type::Builtin;

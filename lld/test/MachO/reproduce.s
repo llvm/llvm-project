@@ -1,4 +1,6 @@
-# REQUIRES: x86, shell
+# REQUIRES: x86
+# Unsupported on Windows due to maximum path length limitations.
+# UNSUPPORTED: system-windows
 
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir/build1

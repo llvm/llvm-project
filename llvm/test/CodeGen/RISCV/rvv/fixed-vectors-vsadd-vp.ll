@@ -422,9 +422,10 @@ define <256 x i8> @vsadd_vi_v258i8_unmasked(<256 x i8> %va, i32 zeroext %evl) {
 define <256 x i8> @vsadd_vi_v258i8_evl129(<256 x i8> %va, <256 x i1> %m) {
 ; CHECK-LABEL: vsadd_vi_v258i8_evl129:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a0)
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vsadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
