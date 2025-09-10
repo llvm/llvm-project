@@ -554,7 +554,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// t^num / \prod_j (1 - t^dens[j]).
 /// v represents the affine functions whose floors are multiplied by the
 /// generators, and ds represents the list of generators.
-std::pair<QuasiPolynomial, std::vector<Fraction>>
+static std::pair<QuasiPolynomial, std::vector<Fraction>>
 substituteMuInTerm(unsigned numParams, const ParamPoint &v,
                    const std::vector<Point> &ds, const Point &mu) {
   unsigned numDims = mu.size();
@@ -606,8 +606,8 @@ substituteMuInTerm(unsigned numParams, const ParamPoint &v,
 /// Here, sign = ± 1,
 /// num is a QuasiPolynomial, and
 /// each dens[j] is a Fraction.
-void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
-                                   std::vector<Fraction> &dens) {
+static void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
+                                          std::vector<Fraction> &dens) {
   // We track the number of exponents that are negative in the
   // denominator, and convert them to their absolute values.
   unsigned numNegExps = 0;
@@ -634,8 +634,8 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<QuasiPolynomial> getBinomialCoefficients(const QuasiPolynomial &n,
-                                                     unsigned r) {
+static std::vector<QuasiPolynomial>
+getBinomialCoefficients(const QuasiPolynomial &n, unsigned r) {
   unsigned numParams = n.getNumInputs();
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(r + 1);
@@ -651,8 +651,8 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(const QuasiPolynomial &n,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<Fraction> getBinomialCoefficients(const Fraction &n,
-                                              const Fraction &r) {
+static std::vector<Fraction> getBinomialCoefficients(const Fraction &n,
+                                                     const Fraction &r) {
   std::vector<Fraction> coefficients;
   coefficients.reserve((int64_t)floor(r));
   coefficients.emplace_back(1);

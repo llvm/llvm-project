@@ -697,26 +697,26 @@ define void @test39_atomic(ptr %P, ptr %Q, ptr %R) {
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
 declare void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i32)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 define void @test40(ptr noalias %Pp, ptr noalias %Q)  {
 ; CHECK-LABEL: @test40(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    [[PC:%.*]] = load ptr, ptr [[PP:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 [[A]], ptr align 4 [[Q:%.*]], i64 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[PC]], ptr nonnull align 4 [[A]], i64 4, i1 true)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %A = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %A)
+  call void @llvm.lifetime.start.p0(ptr nonnull %A)
   %Pc = load ptr, ptr %Pp, align 8
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %A, ptr align 4 %Q, i64 4, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %Pc, ptr nonnull align 4 %A, i64 4, i1 true)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %A)
+  call void @llvm.lifetime.end.p0(ptr nonnull %A)
   ret void
 }
 

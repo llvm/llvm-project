@@ -57,6 +57,19 @@ not.
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
+
+Parameter Attributes
+--------------------
+
+``"nvvm.grid_constant"``
+    This attribute may be attached to a ``byval`` parameter of a kernel function
+    to indicate that the parameter should be lowered as a direct reference to
+    the grid-constant memory of the parameter, as opposed to a copy of the
+    parameter in local memory. Writing to a grid-constant parameter is
+    undefined behavior. Unlike a normal ``byval`` parameter, the address of a
+    grid-constant parameter is not unique to a given function invocation but
+    instead is shared by all kernels in the grid.
+
 .. _nvptx_fnattrs:
 
 Function Attributes
@@ -91,6 +104,12 @@ Function Attributes
     The total number of CTAs is the product of the number of CTAs in each 
     dimension. Specifying a different cluster dimension at launch will result in
     a runtime error or kernel launch failure. Only supported for Hopper+.
+
+``"nvvm.blocksareclusters"``
+    This attribute implies that the grid launch configuration for the corresponding
+    kernel function is specifying the number of clusters instead of the number of thread
+    blocks. This attribute is only allowed for kernel functions and requires
+    ``nvvm.reqntid`` and ``nvvm.cluster_dim`` attributes.
 
 .. _address_spaces:
 
@@ -971,6 +990,10 @@ Syntax:
   declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
   declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
   
+  declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)  
+  
   declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
   declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
 
@@ -983,7 +1006,10 @@ The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
 correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
 The '``prefetch.*``' instructions bring the cache line containing the
 specified address in global or local memory address space into the 
-specified cache level (L1 or L2). The '`prefetchu.*``' instruction brings the cache line 
+specified cache level (L1 or L2). If the '``.tensormap``' qualifier is specified then the 
+prefetch instruction brings the cache line containing the specified address in the 
+'``.const``' or '``.param memory``' state space for subsequent use by the '``cp.async.bulk.tensor``' 
+instruction. The '`prefetchu.*``' instruction brings the cache line 
 containing the specified generic address into the specified uniform cache level.
 If no address space is specified, it is assumed to be generic address. The intrinsic 
 uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
@@ -2276,9 +2302,9 @@ The Kernel
   ; Intrinsic to read X component of thread ID
   declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2300,9 +2326,6 @@ The Kernel
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -2427,34 +2450,6 @@ instructions. Intrinsics are provided to convert pointers between the generic
 and non-generic address spaces.
 
 See :ref:`address_spaces` and :ref:`nvptx_intrinsics` for more information.
-
-
-Kernel Metadata
-^^^^^^^^^^^^^^^
-
-In PTX, a function can be either a `kernel` function (callable from the host
-program), or a `device` function (callable only from GPU code). You can think
-of `kernel` functions as entry-points in the GPU program. To mark an LLVM IR
-function as a `kernel` function, we make use of special LLVM metadata. The
-NVPTX back-end will look for a named metadata node called
-``nvvm.annotations``. This named metadata must contain a list of metadata that
-describe the IR. For our purposes, we need to declare a metadata node that
-assigns the "kernel" attribute to the LLVM IR function that should be emitted
-as a PTX `kernel` function. These metadata nodes take the form:
-
-.. code-block:: text
-
-  !{<function ref>, metadata !"kernel", i32 1}
-
-For the previous example, we have:
-
-.. code-block:: llvm
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
-
-Here, we have a single metadata declaration in ``nvvm.annotations``. This
-metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
 
 
 Running the Kernel
@@ -2656,9 +2651,9 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   ; libdevice function
   declare float @__nv_powf(float, float)
 
-  define void @kernel(ptr addrspace(1) %A,
-                      ptr addrspace(1) %B,
-                      ptr addrspace(1) %C) {
+  define ptx_kernel void @kernel(ptr addrspace(1) %A,
+                                 ptr addrspace(1) %B,
+                                 ptr addrspace(1) %C) {
   entry:
     ; What is my ID?
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
@@ -2680,9 +2675,6 @@ Libdevice provides an ``__nv_powf`` function that we will use.
 
     ret void
   }
-
-  !nvvm.annotations = !{!0}
-  !0 = !{ptr @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

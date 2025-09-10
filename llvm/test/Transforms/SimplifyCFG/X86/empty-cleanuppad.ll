@@ -437,7 +437,7 @@ define i32 @f9() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[S]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S]])
 ; CHECK-NEXT:    invoke void @"\01??1S2@@QEAA@XZ"(ptr [[S]])
 ; CHECK-NEXT:            to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
@@ -450,13 +450,13 @@ define i32 @f9() personality ptr @__CxxFrameHandler3 {
 ;
 entry:
   %s = alloca i8, align 1
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %s)
+  call void @llvm.lifetime.start.p0(ptr nonnull %s)
   invoke void @"\01??1S2@@QEAA@XZ"(ptr %s)
   to label %try.cont unwind label %ehcleanup
 
 ehcleanup:
   %cleanup.pad = cleanuppad within none []
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %s)
+  call void @llvm.lifetime.end.p0(ptr nonnull %s)
   cleanupret from %cleanup.pad unwind label %catch.dispatch
 
 catch.dispatch:
@@ -534,7 +534,7 @@ invoke.cont2:                                     ; preds = %invoke.cont
 
 ehcleanup:                                        ; preds = %invoke.cont, %entry
   %0 = cleanuppad within none []
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   cleanupret from %0 unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %ehcleanup, %invoke.cont
@@ -556,8 +556,8 @@ declare void @use_x(i32 %x)
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

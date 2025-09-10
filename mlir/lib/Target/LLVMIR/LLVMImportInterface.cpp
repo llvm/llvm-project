@@ -33,7 +33,9 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
   SmallVector<Value> mlirOperands;
   SmallVector<NamedAttribute> mlirAttrs;
   if (failed(moduleImport.convertIntrinsicArguments(
-          llvmOperands, llvmOpBundles, false, {}, {}, mlirOperands, mlirAttrs)))
+          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false,
+          /*immArgPositions=*/{}, /*immArgAttrNames=*/{}, mlirOperands,
+          mlirAttrs)))
     return failure();
 
   Type resultType = moduleImport.convertType(inst->getType());
@@ -44,11 +46,7 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
       ValueRange{mlirOperands}, FastmathFlagsAttr{});
 
   moduleImport.setFastmathFlagsAttr(inst, op);
-
-  ArrayAttr argsAttr, resAttr;
-  moduleImport.convertParameterAttributes(inst, argsAttr, resAttr, builder);
-  op.setArgAttrsAttr(argsAttr);
-  op.setResAttrsAttr(resAttr);
+  moduleImport.convertArgAndResultAttrs(inst, op);
 
   // Update importer tracking of results.
   unsigned numRes = op.getNumResults();

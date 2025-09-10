@@ -1163,7 +1163,7 @@ AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
     resolver_sp = std::make_shared<BreakpointResolverName>(
         bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
-        eLazyBoolNo);
+        /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: We don't do catch breakpoints for ObjC yet.
   // Should there be some way for the runtime to specify what it can do in this
   // regard?
@@ -3462,7 +3462,7 @@ public:
         *exception, eValueTypeVariableArgument);
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
 
-    m_arguments = ValueObjectListSP(new ValueObjectList());
+    m_arguments = std::make_shared<ValueObjectList>();
     m_arguments->Append(exception);
 
     m_stop_desc = "hit Objective-C exception";

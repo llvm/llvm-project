@@ -29,7 +29,9 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Casting.h"
+
 #include <optional>
 
 using namespace mlir;
@@ -245,8 +247,10 @@ public:
     MemRefType memRefTy = loadOrStoreOp.getMemRefType();
 
     // Resolve alignment.
-    unsigned align;
-    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
+    // Explicit alignment takes priority over use-vector-alignment.
+    unsigned align = loadOrStoreOp.getAlignment().value_or(0);
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
                                         memRefTy, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(loadOrStoreOp,
                                          "could not resolve alignment");
@@ -296,18 +300,20 @@ public:
     }
 
     // Resolve alignment.
-    unsigned align;
-    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
+    // Explicit alignment takes priority over use-vector-alignment.
+    unsigned align = gather.getAlignment().value_or(0);
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
                                         memRefType, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(gather, "could not resolve alignment");
 
     // Resolve address.
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
-                                     adaptor.getBase(), adaptor.getIndices());
+                                     adaptor.getBase(), adaptor.getOffsets());
     Value base = adaptor.getBase();
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                       base, ptr, adaptor.getIndexVec(), vType);
+                       base, ptr, adaptor.getIndices(), vType);
 
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
@@ -351,18 +357,20 @@ public:
     }
 
     // Resolve alignment.
-    unsigned align;
-    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
+    // Explicit alignment takes priority over use-vector-alignment.
+    unsigned align = scatter.getAlignment().value_or(0);
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vType,
                                         memRefType, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(scatter,
                                          "could not resolve alignment");
 
     // Resolve address.
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
-                                     adaptor.getBase(), adaptor.getIndices());
+                                     adaptor.getBase(), adaptor.getOffsets());
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
-                       adaptor.getBase(), ptr, adaptor.getIndexVec(), vType);
+                       adaptor.getBase(), ptr, adaptor.getIndices(), vType);
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
@@ -396,8 +404,14 @@ public:
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
                                      adaptor.getBase(), adaptor.getIndices());
 
+    // From:
+    // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+    //   The pointer alignment defaults to 1.
+    uint64_t alignment = expand.getAlignment().value_or(1);
+
     rewriter.replaceOpWithNewOp<LLVM::masked_expandload>(
-        expand, vtype, ptr, adaptor.getMask(), adaptor.getPassThru());
+        expand, vtype, ptr, adaptor.getMask(), adaptor.getPassThru(),
+        alignment);
     return success();
   }
 };
@@ -418,8 +432,13 @@ public:
     Value ptr = getStridedElementPtr(rewriter, loc, memRefType,
                                      adaptor.getBase(), adaptor.getIndices());
 
+    // From:
+    // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+    //   The pointer alignment defaults to 1.
+    uint64_t alignment = compress.getAlignment().value_or(1);
+
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
-        compress, adaptor.getValueToStore(), ptr, adaptor.getMask());
+        compress, adaptor.getValueToStore(), ptr, adaptor.getMask(), alignment);
     return success();
   }
 };
@@ -1068,39 +1087,6 @@ public:
   }
 };
 
-class VectorExtractElementOpConversion
-    : public ConvertOpToLLVMPattern<vector::ExtractElementOp> {
-public:
-  using ConvertOpToLLVMPattern<
-      vector::ExtractElementOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::ExtractElementOp extractEltOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto vectorType = extractEltOp.getSourceVectorType();
-    auto llvmType = typeConverter->convertType(vectorType.getElementType());
-
-    // Bail if result type cannot be lowered.
-    if (!llvmType)
-      return failure();
-
-    if (vectorType.getRank() == 0) {
-      Location loc = extractEltOp.getLoc();
-      auto idxType = rewriter.getIndexType();
-      auto zero = LLVM::ConstantOp::create(rewriter, loc,
-                                           typeConverter->convertType(idxType),
-                                           rewriter.getIntegerAttr(idxType, 0));
-      rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
-          extractEltOp, llvmType, adaptor.getVector(), zero);
-      return success();
-    }
-
-    rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
-        extractEltOp, llvmType, adaptor.getVector(), adaptor.getPosition());
-    return success();
-  }
-};
-
 class VectorExtractOpConversion
     : public ConvertOpToLLVMPattern<vector::ExtractOp> {
 public:
@@ -1200,39 +1186,6 @@ public:
 
     rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
-    return success();
-  }
-};
-
-class VectorInsertElementOpConversion
-    : public ConvertOpToLLVMPattern<vector::InsertElementOp> {
-public:
-  using ConvertOpToLLVMPattern<vector::InsertElementOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::InsertElementOp insertEltOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto vectorType = insertEltOp.getDestVectorType();
-    auto llvmType = typeConverter->convertType(vectorType);
-
-    // Bail if result type cannot be lowered.
-    if (!llvmType)
-      return failure();
-
-    if (vectorType.getRank() == 0) {
-      Location loc = insertEltOp.getLoc();
-      auto idxType = rewriter.getIndexType();
-      auto zero = LLVM::ConstantOp::create(rewriter, loc,
-                                           typeConverter->convertType(idxType),
-                                           rewriter.getIntegerAttr(idxType, 0));
-      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-          insertEltOp, llvmType, adaptor.getDest(), adaptor.getSource(), zero);
-      return success();
-    }
-
-    rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-        insertEltOp, llvmType, adaptor.getDest(), adaptor.getSource(),
-        adaptor.getPosition());
     return success();
   }
 };
@@ -1900,7 +1853,7 @@ struct VectorDeinterleaveOpLowering
                                          "DeinterleaveOp not rank 1");
 
     if (resultType.isScalable()) {
-      auto llvmTypeConverter = this->getTypeConverter();
+      const auto *llvmTypeConverter = this->getTypeConverter();
       auto deinterleaveResults = deinterleaveOp.getResultTypes();
       auto packedOpResults =
           llvmTypeConverter->packOperationResults(deinterleaveResults);
@@ -1954,15 +1907,21 @@ struct VectorFromElementsLowering
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = fromElementsOp.getLoc();
     VectorType vectorType = fromElementsOp.getType();
-    // TODO: Multi-dimensional vectors lower to !llvm.array<... x vector<>>.
-    // Such ops should be handled in the same way as vector.insert.
+    // Only support 1-D vectors. Multi-dimensional vectors should have been
+    // transformed to 1-D vectors by the vector-to-vector transformations before
+    // this.
     if (vectorType.getRank() > 1)
       return rewriter.notifyMatchFailure(fromElementsOp,
                                          "rank > 1 vectors are not supported");
     Type llvmType = typeConverter->convertType(vectorType);
+    Type llvmIndexType = typeConverter->convertType(rewriter.getIndexType());
     Value result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
-    for (auto [idx, val] : llvm::enumerate(adaptor.getElements()))
-      result = vector::InsertOp::create(rewriter, loc, val, result, idx);
+    for (auto [idx, val] : llvm::enumerate(adaptor.getElements())) {
+      auto constIdx =
+          LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, idx);
+      result = LLVM::InsertElementOp::create(rewriter, loc, llvmType, result,
+                                             val, constIdx);
+    }
     rewriter.replaceOp(fromElementsOp, result);
     return success();
   }
@@ -2242,8 +2201,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
-               VectorExtractElementOpConversion, VectorExtractOpConversion,
-               VectorFMAOp1DConversion, VectorInsertElementOpConversion,
+               VectorExtractOpConversion, VectorFMAOp1DConversion,
                VectorInsertOpConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,

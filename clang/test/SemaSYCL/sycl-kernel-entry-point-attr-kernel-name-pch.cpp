@@ -25,12 +25,12 @@ template void pch_test2<KN<2>>();
 
 
 #--- test.cpp
-// expected-error@+3 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@pch.h:4 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void test1() {}
 
-// expected-error@+3 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@pch.h:8 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<2>)]]
 void test2() {}

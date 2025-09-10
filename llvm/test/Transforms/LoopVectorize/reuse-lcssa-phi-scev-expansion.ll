@@ -131,10 +131,8 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_IV_1_LCSSA]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[SEL_DST_LCSSA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <2 x i8> [[WIDE_LOAD]], ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP4]], align 1
+; CHECK-NEXT:    store <2 x i8> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1022
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -236,8 +234,7 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[IV_1_LCSSA]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP12]], align 4
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -322,15 +319,13 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[OFFSET_IDX5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[SRC]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
+; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], -2
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 1, %[[LOOP_3_PREHEADER]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[TMP1]], %[[LOOP_3_PREHEADER]] ], [ [[TMP1]], %[[VECTOR_MEMCHECK]] ]
@@ -345,7 +340,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    store i64 [[L]], ptr [[PTR_IV_3]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_2]] = add i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_NEXT_2]], 0
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT]], label %[[LOOP_3]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP_3]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -381,6 +376,89 @@ loop.3:
   %iv.next.2 = add i64 %iv.2, 1
   %ec.3 = icmp eq i64 %iv.next.2, 0
   br i1 %ec.3, label %exit, label %loop.3
+
+exit:
+  ret void
+}
+
+
+declare i1 @cond()
+
+define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
+; CHECK-LABEL: define void @scev_exp_reuse_const_add(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    br label %[[LOOP_1:.*]]
+; CHECK:       [[LOOP_1]]:
+; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[PTR_IV_1_NEXT]] = getelementptr i8, ptr [[PTR_IV_1]], i64 2
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_2_PH:.*]], label %[[LOOP_1]]
+; CHECK:       [[LOOP_2_PH]]:
+; CHECK-NEXT:    [[PTR_IV_1_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_IV_1_NEXT]], %[[LOOP_1]] ]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 -2, [[SRC2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR_IV_1_NEXT_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR_IV_1_NEXT_LCSSA]], i64 80
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_IV_1_NEXT_LCSSA]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP4]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    store <2 x i16> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 40
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 40, %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_2_PH]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[PTR_IV_1_NEXT_LCSSA]], %[[LOOP_2_PH]] ], [ [[PTR_IV_1_NEXT_LCSSA]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP_2:.*]]
+; CHECK:       [[LOOP_2]]:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2_NEXT]] = add i64 [[IV_1]], 1
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV_2_NEXT]]
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP_SRC_1]], align 2
+; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i64 2
+; CHECK-NEXT:    store i16 [[L]], ptr [[PTR_IV_2]], align 2
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_1]], 40
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_2]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %ptr.iv.1 = phi ptr [ %dst, %entry ], [ %ptr.iv.1.next, %loop.1 ]
+  %ptr.iv.1.next = getelementptr i8, ptr %ptr.iv.1, i64 2
+  %c = call i1 @cond()
+  br i1 %c, label %loop.2.ph, label %loop.1
+
+loop.2.ph:
+  br label %loop.2
+
+loop.2:
+  %iv.1 = phi i64 [ 0, %loop.2.ph ], [ %iv.2.next, %loop.2 ]
+  %ptr.iv.2 = phi ptr [ %ptr.iv.1.next, %loop.2.ph ], [ %ptr.iv.2.next, %loop.2 ]
+  %iv.2.next = add i64 %iv.1, 1
+  %gep.src.1 = getelementptr i16, ptr %src, i64 %iv.2.next
+  %l = load i16, ptr %gep.src.1, align 2
+  %ptr.iv.2.next = getelementptr i8, ptr %ptr.iv.2, i64 2
+  store i16 %l, ptr %ptr.iv.2, align 2
+  %ec = icmp eq i64 %iv.1, 40
+  br i1 %ec, label %exit, label %loop.2
 
 exit:
   ret void

@@ -1853,6 +1853,14 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
   }
 #endif
 
+#if ENABLE_LIBOMPTARGET
+  // Give an opportunity to the offload runtime to make progress and create
+  // proxy tasks if necessary
+  if (UNLIKELY(kmp_target_sync_cb != NULL))
+    (*kmp_target_sync_cb)(
+        NULL, gtid, KMP_TASKDATA_TO_TASK(this_thr->th.th_current_task), NULL);
+#endif
+
   if (!team->t.t_serialized) {
 #if USE_ITT_BUILD
     // This value will be used in itt notify events below.

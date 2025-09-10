@@ -132,6 +132,10 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
   return BuiltinTypeDeclBuilder(S, Decl)
       .addHandleMember(RC, IsROV, RawBuffer)
       .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addCreateFromBinding()
+      .addCreateFromImplicitBinding()
       .addHandleConstructorFromBinding()
       .addHandleConstructorFromImplicitBinding();
 }

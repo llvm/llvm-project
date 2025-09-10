@@ -87,8 +87,12 @@ add_or_sub(InType x, InType y) {
       return OutFPBits::inf(x_bits.sign()).get_val();
     }
 
-    if (y_bits.is_inf())
-      return OutFPBits::inf(y_bits.sign()).get_val();
+    if (y_bits.is_inf()) {
+      if constexpr (IsSub)
+        return OutFPBits::inf(y_bits.sign().negate()).get_val();
+      else
+        return OutFPBits::inf(y_bits.sign()).get_val();
+    }
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
@@ -100,13 +104,22 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      // volatile prevents Clang from converting tmp to OutType and then
-      // immediately back to InType before negating it, resulting in double
-      // rounding.
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return cast<OutType>(tmp);
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>) {
+        OutFPBits y_bits(y);
+        if constexpr (IsSub)
+          y_bits.set_sign(y_bits.sign().negate());
+        return y_bits.get_val();
+      } else {
+
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+        volatile InType tmp = y;
+        if constexpr (IsSub)
+          tmp = -tmp;
+        return cast<OutType>(tmp);
+      }
     }
 
     if (y_bits.is_zero())
@@ -161,8 +174,8 @@ add_or_sub(InType x, InType y) {
     int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
                     (min_bits.get_biased_exponent() - min_bits.is_normal());
 
-    InStorageType aligned_min_mant =
-        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN);
+    InStorageType aligned_min_mant = static_cast<InStorageType>(
+        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN));
     bool aligned_min_mant_sticky;
 
     if (alignment <= GUARD_BITS_LEN)

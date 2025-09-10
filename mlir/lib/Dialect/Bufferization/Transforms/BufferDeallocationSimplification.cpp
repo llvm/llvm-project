@@ -37,8 +37,12 @@ using namespace mlir::bufferization;
 /// Given a memref value, return the "base" value by skipping over all
 /// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
 static Value getViewBase(Value value) {
-  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>()) {
+    if (value != viewLikeOp.getViewDest()) {
+      break;
+    }
     value = viewLikeOp.getViewSource();
+  }
   return value;
 }
 

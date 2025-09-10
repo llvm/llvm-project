@@ -130,6 +130,7 @@ typedef void* dispatch_queue_t;
 typedef void* dispatch_source_t;
 typedef u64 dispatch_time_t;
 typedef void (*dispatch_function_t)(void *block);
+typedef void (*dispatch_apply_function_t)(void *, size_t);
 typedef void* (*worker_t)(void *block);
 typedef unsigned long dispatch_mach_reason;
 typedef void *dispatch_mach_msg_t;
@@ -149,7 +150,11 @@ typedef void (^dispatch_mach_handler_t)(dispatch_mach_reason reason,
 // A wrapper for the ObjC blocks used to support libdispatch.
 typedef struct {
   void *block;
-  dispatch_function_t func;
+  union {
+    dispatch_function_t dispatch_func;
+    dispatch_apply_function_t dispatch_apply_func;
+    static_assert(sizeof(dispatch_func) == sizeof(dispatch_apply_func));
+  };
   u32 parent_tid;
 } asan_block_context_t;
 
@@ -177,7 +182,7 @@ void asan_dispatch_call_block_and_release(void *block) {
           block, (void*)pthread_self());
   asan_register_worker_thread(context->parent_tid, &stack);
   // Call the original dispatcher for the block.
-  context->func(context->block);
+  context->dispatch_func(context->block);
   asan_free(context, &stack);
 }
 
@@ -193,7 +198,7 @@ asan_block_context_t *alloc_asan_context(void *ctxt, dispatch_function_t func,
   asan_block_context_t *asan_ctxt =
       (asan_block_context_t*) asan_malloc(sizeof(asan_block_context_t), stack);
   asan_ctxt->block = ctxt;
-  asan_ctxt->func = func;
+  asan_ctxt->dispatch_func = func;
   asan_ctxt->parent_tid = GetCurrentTidOrInvalid();
   return asan_ctxt;
 }
@@ -249,14 +254,17 @@ extern "C" void asan_dispatch_apply_f_work(void *context, size_t iteration) {
   GET_STACK_TRACE_THREAD;
   asan_block_context_t *asan_ctxt = (asan_block_context_t *)context;
   asan_register_worker_thread(asan_ctxt->parent_tid, &stack);
-  ((void (*)(void *, size_t))asan_ctxt->func)(asan_ctxt->block, iteration);
+  asan_ctxt->dispatch_apply_func(asan_ctxt->block, iteration);
 }
 
 INTERCEPTOR(void, dispatch_apply_f, size_t iterations, dispatch_queue_t queue,
-            void *ctxt, void (*work)(void *, size_t)) {
+            void *ctxt, dispatch_apply_function_t work) {
   GET_STACK_TRACE_THREAD;
   asan_block_context_t *asan_ctxt =
-      alloc_asan_context(ctxt, (dispatch_function_t)work, &stack);
+      (asan_block_context_t *)asan_malloc(sizeof(asan_block_context_t), &stack);
+  asan_ctxt->block = ctxt;
+  asan_ctxt->dispatch_apply_func = work;
+  asan_ctxt->parent_tid = GetCurrentTidOrInvalid();
   REAL(dispatch_apply_f)(iterations, queue, (void *)asan_ctxt,
                          asan_dispatch_apply_f_work);
 }

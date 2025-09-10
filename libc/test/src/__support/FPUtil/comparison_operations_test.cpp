@@ -25,28 +25,15 @@ template <typename T>
 class ComparisonOperationsTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  // TODO: Make these constexpr once quick_get_round is made constexpr.
-  T normal1;
-  T neg_normal1;
-  T normal2;
-  T small;
-  T neg_small;
-  T large;
-  T neg_large;
+  static constexpr T normal1 = T(3.14);
+  static constexpr T neg_normal1 = T(-3.14);
+  static constexpr T normal2 = T(2.71);
+  static constexpr T small = T(0.1);
+  static constexpr T neg_small = T(-0.1);
+  static constexpr T large = T(10000.0);
+  static constexpr T neg_large = T(-10000.0);
 
 public:
-  void SetUp() override {
-    with_fenv_preserved([this]() {
-      normal1 = T(3.14);
-      neg_normal1 = T(-3.14);
-      normal2 = T(2.71);
-      small = T(0.1);
-      neg_small = T(-0.1);
-      large = T(10000.0);
-      neg_large = T(-10000.0);
-    });
-  }
-
   void test_equals() {
     EXPECT_TRUE(equals(neg_zero, neg_zero));
     EXPECT_TRUE(equals(zero, neg_zero));

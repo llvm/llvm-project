@@ -36,10 +36,6 @@ body:             |
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W64-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W64-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W64-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W64-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; W64-NEXT: {{  $}}
@@ -81,10 +77,6 @@ body:             |
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W32-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W32-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W32-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
     ; W32-NEXT: {{  $}}
@@ -151,10 +143,6 @@ body:             |
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W64-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W64-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W64-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W64-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; W64-NEXT: {{  $}}
@@ -196,10 +184,6 @@ body:             |
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W32-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W32-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W32-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
     ; W32-NEXT: {{  $}}
@@ -266,10 +250,6 @@ body:             |
     ; W64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W64-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W64-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W64-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W64-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; W64-NEXT: {{  $}}
@@ -311,10 +291,6 @@ body:             |
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W32-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W32-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W32-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
     ; W32-NEXT: {{  $}}
@@ -380,10 +356,6 @@ body:             |
     ; ADDR64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; ADDR64-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; ADDR64-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; ADDR64-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; ADDR64-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; ADDR64-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; ADDR64-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; ADDR64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; ADDR64-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
     ; ADDR64-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
@@ -407,10 +379,6 @@ body:             |
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W32-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W32-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W32-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W32-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
     ; W32-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
@@ -460,10 +428,6 @@ body:             |
     ; ADDR64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; ADDR64-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; ADDR64-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; ADDR64-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; ADDR64-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; ADDR64-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; ADDR64-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; ADDR64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; ADDR64-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
     ; ADDR64-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
@@ -486,10 +450,6 @@ body:             |
     ; W64-NO-ADDR64-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W64-NO-ADDR64-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W64-NO-ADDR64-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W64-NO-ADDR64-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NO-ADDR64-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NO-ADDR64-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W64-NO-ADDR64-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W64-NO-ADDR64-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W64-NO-ADDR64-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; W64-NO-ADDR64-NEXT: {{  $}}
@@ -531,10 +491,6 @@ body:             |
     ; W32-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; W32-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; W32-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; W32-NEXT: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-    ; W32-NEXT: [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; W32-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3
     ; W32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
     ; W32-NEXT: {{  $}}

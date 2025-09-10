@@ -2,22 +2,87 @@
 ; Verify whether the generated assembly for the following function includes the mtvsrbmi instruction.
 ; vector unsigned char v00FF()
 ; {
-; vector unsigned char x = { 0xFF, 0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
-; return x;
+;   vector unsigned char x = { 0xFF, 0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
+;   return x;
+; }
+; vector unsigned short short00FF()
+; {
+;   vector unsigned short x = { 0xFF, 0,0,0, 0,0,0,0};
+;   return x;
+; }
+; vector unsigned int int00FF()
+; {
+;   vector unsigned int x = { 0xFF, 0,0,0};
+;   return x;
+; }
+; vector unsigned long long  longlong00FF()
+; {
+;   vector unsigned long long x = { 0xFF, 0};
+;   return x;
 ; }
 
 ; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc-ibm-aix -mcpu=pwr10  -verify-machineinstrs \
-; RUN:   | FileCheck %s --check-prefix=CHECK
+; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+
+; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc64le-unknown-gnu-linux -mcpu=pwr10  -verify-machineinstrs \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+
+; CHECK-NOT:   .byte   255
+; CHECK-NOT:   .byte   0
 
 define dso_local noundef range(i8 -1, 1) <16 x i8> @_Z5v00FFv() {
-; CHECK-NOT:      L..CPI0_0:
-; CHECK-NOT:   .byte   255                             # 0xff
-; CHECK-NOT:   .byte   0                               # 0x0
+; CHECK-BE-LABEL: _Z5v00FFv:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mtvsrbmi v2, 32768
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-LABEL: _Z5v00FFv:
+; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    mtvsrbmi v2, 1
+; CHECK-LE-NEXT:    blr
 
-; CHECK-LABEL: _Z5v00FFv:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrbmi v2, 1
-; CHECK-NEXT:    blr
 entry:
   ret <16 x i8> <i8 -1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+}
+
+define dso_local noundef range(i16 0, 256) <8 x i16> @_Z9short00FFv() {
+; CHECK-BE-LABEL: _Z9short00FFv:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mtvsrbmi v2, 16384
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-LABEL: _Z9short00FFv:
+; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    mtvsrbmi v2, 1
+; CHECK-LE-NEXT:    blr
+entry:
+	  ret <8 x i16> <i16 255, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+}
+
+define dso_local noundef range(i32 0, 256) <4 x i32> @_Z7int00FFv() {
+; CHECK-BE-LABEL: _Z7int00FFv:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mtvsrbmi v2, 4096
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-LABEL: _Z7int00FFv:
+; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    mtvsrbmi v2, 1
+; CHECK-LE-NEXT:    blr
+entry:
+	  ret <4 x i32> <i32 255, i32 0, i32 0, i32 0>
+}
+
+define dso_local noundef range(i64 0, 256) <2 x i64> @_Z12longlong00FFv() {
+; CHECK-BE-LABEL: _Z12longlong00FFv:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mtvsrbmi v2, 256
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-LE-LABEL: _Z12longlong00FFv:
+; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    mtvsrbmi v2, 1
+; CHECK-LE-NEXT:    blr
+entry:
+	  ret <2 x i64> <i64 255, i64 0>
 }

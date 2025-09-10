@@ -96,9 +96,8 @@ static Value getStride(Location loc, MemRefType mType, Value base,
     MemRefDescriptor memrefDescriptor(base);
     auto attr = rewriter.getI64IntegerAttr(bytes);
     Value scale = LLVM::ConstantOp::create(rewriter, loc, llvmInt64Type, attr);
-    return rewriter
-        .create<LLVM::MulOp>(loc, llvmInt64Type, scale,
-                             memrefDescriptor.stride(rewriter, loc, preLast))
+    return LLVM::MulOp::create(rewriter, loc, llvmInt64Type, scale,
+                               memrefDescriptor.stride(rewriter, loc, preLast))
         .getResult();
   }
   // Use direct constant for static stride.
@@ -272,7 +271,9 @@ Type amx::TileType::parse(AsmParser &parser) {
   if (parser.parseGreater())
     return nullptr;
 
-  return TileType::get(shape, elementType);
+  return TileType::getChecked(
+      [&] { return parser.emitError(parser.getNameLoc()); }, shape,
+      elementType);
 }
 
 void amx::TileType::print(AsmPrinter &os) const {

@@ -424,6 +424,15 @@ protected:
 
   ArrayRef<Elf_Word> getShndxTable(const Elf_Shdr *Symtab) const;
 
+  void printSFrameHeader(const SFrameParser<ELFT::Endianness> &Parser);
+  void printSFrameFDEs(const SFrameParser<ELFT::Endianness> &Parser,
+                       ArrayRef<Relocation<ELFT>> Relocations,
+                       const Elf_Shdr *RelocSymTab);
+  uint64_t getAndPrintSFrameFDEStartAddress(
+      const SFrameParser<ELFT::Endianness> &Parser,
+      const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
+      ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
+
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 };
@@ -1680,7 +1689,9 @@ const EnumEntry<unsigned> ElfHeaderNVPTXFlags[] = {
     ENUM_ENT(EF_CUDA_SM75, "sm_75"),   ENUM_ENT(EF_CUDA_SM80, "sm_80"),
     ENUM_ENT(EF_CUDA_SM86, "sm_86"),   ENUM_ENT(EF_CUDA_SM87, "sm_87"),
     ENUM_ENT(EF_CUDA_SM89, "sm_89"),   ENUM_ENT(EF_CUDA_SM90, "sm_90"),
-    ENUM_ENT(EF_CUDA_SM100, "sm_100"), ENUM_ENT(EF_CUDA_SM120, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM100, "sm_100"), ENUM_ENT(EF_CUDA_SM101, "sm_101"),
+    ENUM_ENT(EF_CUDA_SM103, "sm_103"), ENUM_ENT(EF_CUDA_SM120, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM121, "sm_121"),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
@@ -2210,7 +2221,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
     const uint64_t FileSize = Obj.getBufSize();
     const uint64_t DerivedSize =
         (uint64_t)HashTable->nchain * DynSymRegion->EntSize;
-    const uint64_t Offset = (const uint8_t *)DynSymRegion->Addr - Obj.base();
+    const uint64_t Offset = DynSymRegion->Addr - Obj.base();
     if (DerivedSize > FileSize - Offset)
       reportUniqueWarning(
           "the size (0x" + Twine::utohexstr(DerivedSize) +
@@ -3590,7 +3601,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   OS.PadToColumn(2u);
   OS << "Version:";
   OS.PadToColumn(37u);
-  OS << utohexstr(e.e_ident[ELF::EI_VERSION]);
+  OS << utohexstr(e.e_ident[ELF::EI_VERSION], /*LowerCase=*/true);
   if (e.e_version == ELF::EV_CURRENT)
     OS << " (current)";
   OS << "\n";
@@ -3627,9 +3638,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
 
   Str = enumToString(e.e_machine, ArrayRef(ElfMachineType));
   printFields(OS, "Machine:", Str);
-  Str = "0x" + utohexstr(e.e_version);
+  Str = "0x" + utohexstr(e.e_version, /*LowerCase=*/true);
   printFields(OS, "Version:", Str);
-  Str = "0x" + utohexstr(e.e_entry);
+  Str = "0x" + utohexstr(e.e_entry, /*LowerCase=*/true);
   printFields(OS, "Entry point address:", Str);
   Str = to_string(e.e_phoff) + " (bytes into file)";
   printFields(OS, "Start of program headers:", Str);
@@ -3656,8 +3667,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                           unsigned(ELF::EF_XTENSA_MACH));
   else if (e.e_machine == EM_CUDA) {
-    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
-                          unsigned(ELF::EF_CUDA_SM));
+    unsigned Mask = e.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1
+                        ? ELF::EF_CUDA_SM
+                        : ELF::EF_CUDA_SM_MASK;
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags), Mask);
     if (e.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1 &&
         (e.e_flags & ELF::EF_CUDA_ACCELERATORS_V1))
       ElfFlags += "a";
@@ -3698,7 +3711,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
     } break;
     }
   }
-  Str = "0x" + utohexstr(e.e_flags);
+  Str = "0x" + utohexstr(e.e_flags, /*LowerCase=*/true);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
   printFields(OS, "Flags:", Str);
@@ -4075,12 +4088,12 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
 // returned as '<unknown>' followed by the type value.
 static std::string getSectionTypeOffsetString(unsigned Type) {
   if (Type >= SHT_LOOS && Type <= SHT_HIOS)
-    return "LOOS+0x" + utohexstr(Type - SHT_LOOS);
+    return "LOOS+0x" + utohexstr(Type - SHT_LOOS, /*LowerCase=*/true);
   else if (Type >= SHT_LOPROC && Type <= SHT_HIPROC)
-    return "LOPROC+0x" + utohexstr(Type - SHT_LOPROC);
+    return "LOPROC+0x" + utohexstr(Type - SHT_LOPROC, /*LowerCase=*/true);
   else if (Type >= SHT_LOUSER && Type <= SHT_HIUSER)
-    return "LOUSER+0x" + utohexstr(Type - SHT_LOUSER);
-  return "0x" + utohexstr(Type) + ": <unknown>";
+    return "LOUSER+0x" + utohexstr(Type - SHT_LOUSER, /*LowerCase=*/true);
+  return "0x" + utohexstr(Type, /*LowerCase=*/true) + ": <unknown>";
 }
 
 static std::string getSectionTypeString(unsigned Machine, unsigned Type) {
@@ -5709,9 +5722,9 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
     if (FlagsStr.empty())
-      OS << "0x" << utohexstr(Value);
+      OS << "0x" << utohexstr(Value, /*LowerCase=*/true);
     else
-      OS << "(0x" << utohexstr(Value) << ")";
+      OS << "(0x" << utohexstr(Value, /*LowerCase=*/true) << ")";
     return FreeBSDNote{"Feature flags", FlagsStr};
   }
   default:
@@ -6440,8 +6453,159 @@ template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
 }
 
 template <typename ELFT>
+void ELFDumper<ELFT>::printSFrameHeader(
+    const SFrameParser<ELFT::Endianness> &Parser) {
+  DictScope HeaderScope(W, "Header");
+
+  const sframe::Preamble<ELFT::Endianness> &Preamble = Parser.getPreamble();
+  W.printHex("Magic", Preamble.Magic.value());
+  W.printEnum("Version", Preamble.Version.value(), sframe::getVersions());
+  W.printFlags("Flags", Preamble.Flags.value(), sframe::getFlags());
+
+  const sframe::Header<ELFT::Endianness> &Header = Parser.getHeader();
+  W.printEnum("ABI", Header.ABIArch.value(), sframe::getABIs());
+
+  W.printNumber(("CFA fixed FP offset" +
+                 Twine(Parser.usesFixedFPOffset() ? "" : " (unused)"))
+                    .str(),
+                Header.CFAFixedFPOffset.value());
+
+  W.printNumber(("CFA fixed RA offset" +
+                 Twine(Parser.usesFixedRAOffset() ? "" : " (unused)"))
+                    .str(),
+                Header.CFAFixedRAOffset.value());
+
+  W.printNumber("Auxiliary header length", Header.AuxHdrLen.value());
+  W.printNumber("Num FDEs", Header.NumFDEs.value());
+  W.printNumber("Num FREs", Header.NumFREs.value());
+  W.printNumber("FRE subsection length", Header.FRELen.value());
+  W.printNumber("FDE subsection offset", Header.FDEOff.value());
+  W.printNumber("FRE subsection offset", Header.FREOff.value());
+
+  if (Expected<ArrayRef<uint8_t>> Aux = Parser.getAuxHeader())
+    W.printHexList("Auxiliary header", *Aux);
+  else
+    reportUniqueWarning(Aux.takeError());
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::printSFrameFDEs(
+    const SFrameParser<ELFT::Endianness> &Parser,
+    ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab) {
+  typename SFrameParser<ELFT::Endianness>::FDERange FDEs;
+  if (Error Err = Parser.fdes().moveInto(FDEs)) {
+    reportUniqueWarning(std::move(Err));
+    return;
+  }
+
+  ListScope IndexScope(W, "Function Index");
+  for (auto It = FDEs.begin(); It != FDEs.end(); ++It) {
+    DictScope FDEScope(
+        W,
+        formatv("FuncDescEntry [{0}]", std::distance(FDEs.begin(), It)).str());
+
+    uint64_t FDEStartAddress =
+        getAndPrintSFrameFDEStartAddress(Parser, It, Relocations, RelocSymTab);
+    W.printHex("Size", It->Size);
+    W.printHex("Start FRE Offset", It->StartFREOff);
+    W.printNumber("Num FREs", It->NumFREs);
+
+    {
+      DictScope InfoScope(W, "Info");
+      W.printEnum("FRE Type", It->Info.getFREType(), sframe::getFRETypes());
+      W.printEnum("FDE Type", It->Info.getFDEType(), sframe::getFDETypes());
+      switch (Parser.getHeader().ABIArch) {
+      case sframe::ABI::AArch64EndianBig:
+      case sframe::ABI::AArch64EndianLittle:
+        W.printEnum("PAuth Key",
+                    sframe::AArch64PAuthKey(It->Info.getPAuthKey()),
+                    sframe::getAArch64PAuthKeys());
+        break;
+      case sframe::ABI::AMD64EndianLittle:
+        // unused
+        break;
+      }
+
+      W.printHex("Raw", It->Info.Info);
+    }
+
+    W.printHex(
+        ("Repetitive block size" +
+         Twine(It->Info.getFDEType() == sframe::FDEType::PCMask ? ""
+                                                                : " (unused)"))
+            .str(),
+        It->RepSize);
+
+    W.printHex("Padding2", It->Padding2);
+
+    ListScope FREListScope(W, "FREs");
+    Error Err = Error::success();
+    for (const typename SFrameParser<ELFT::Endianness>::FrameRowEntry &FRE :
+         Parser.fres(*It, Err)) {
+      DictScope FREScope(W, "Frame Row Entry");
+      W.printHex("Start Address",
+                 (It->Info.getFDEType() == sframe::FDEType::PCInc
+                      ? FDEStartAddress
+                      : 0) +
+                     FRE.StartAddress);
+      W.printBoolean("Return Address Signed", FRE.Info.isReturnAddressSigned());
+      W.printEnum("Offset Size", FRE.Info.getOffsetSize(),
+                  sframe::getFREOffsets());
+      W.printEnum("Base Register", FRE.Info.getBaseRegister(),
+                  sframe::getBaseRegisters());
+      if (std::optional<int32_t> Off = Parser.getCFAOffset(FRE))
+        W.printNumber("CFA Offset", *Off);
+      if (std::optional<int32_t> Off = Parser.getRAOffset(FRE))
+        W.printNumber("RA Offset", *Off);
+      if (std::optional<int32_t> Off = Parser.getFPOffset(FRE))
+        W.printNumber("FP Offset", *Off);
+      if (ArrayRef<int32_t> Offs = Parser.getExtraOffsets(FRE); !Offs.empty())
+        W.printList("Extra Offsets", Offs);
+    }
+    if (Err)
+      reportUniqueWarning(std::move(Err));
+  }
+}
+
+template <typename ELFT>
+uint64_t ELFDumper<ELFT>::getAndPrintSFrameFDEStartAddress(
+    const SFrameParser<ELFT::Endianness> &Parser,
+    const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
+    ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab) {
+  uint64_t Address = Parser.getAbsoluteStartAddress(FDE);
+  uint64_t Offset = Parser.offsetOf(FDE);
+
+  auto Reloc = llvm::lower_bound(
+      Relocations, Offset, [](auto R, uint64_t O) { return R.Offset < O; });
+  if (Reloc == Relocations.end() || Reloc->Offset != Offset) {
+    W.printHex("PC", Address);
+  } else if (std::next(Reloc) != Relocations.end() &&
+             std::next(Reloc)->Offset == Offset) {
+    reportUniqueWarning(
+        formatv("more than one relocation at offset {0:x+}", Offset));
+    W.printHex("PC", Address);
+  } else if (Expected<RelSymbol<ELFT>> RelSym =
+                 getRelocationTarget(*Reloc, RelocSymTab);
+             !RelSym) {
+    reportUniqueWarning(RelSym.takeError());
+    W.printHex("PC", Address);
+  } else {
+    // Exactly one relocation at the given offset. Print it.
+    DictScope PCScope(W, "PC");
+    SmallString<32> RelocName;
+    Obj.getRelocationTypeName(Reloc->Type, RelocName);
+    W.printString("Relocation", RelocName);
+    W.printString("Symbol Name", RelSym->Name);
+    Address = FDE->StartAddress + Reloc->Addend.value_or(0);
+    W.printHex("Start Address", Address);
+  }
+  return Address;
+}
+
+template <typename ELFT>
 void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
   constexpr endianness E = ELFT::Endianness;
+
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(ObjF, Sections)) {
     // Validity of sections names checked in getSectionRefsByNameOrIndex.
@@ -6452,45 +6616,42 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
 
     StringRef SectionContent;
     if (Error Err = Section.getContents().moveInto(SectionContent)) {
-      reportWarning(std::move(Err), FileName);
+      reportUniqueWarning(std::move(Err));
       continue;
     }
 
-    Expected<object::SFrameParser<E>> Parser =
-        object::SFrameParser<E>::create(arrayRefFromStringRef(SectionContent));
+    Expected<object::SFrameParser<E>> Parser = object::SFrameParser<E>::create(
+        arrayRefFromStringRef(SectionContent), Section.getAddress());
     if (!Parser) {
-      reportWarning(createError("invalid sframe section: " +
-                                toString(Parser.takeError())),
-                    FileName);
+      reportUniqueWarning("invalid sframe section: " +
+                          toString(Parser.takeError()));
       continue;
     }
 
-    DictScope HeaderScope(W, "Header");
+    const Elf_Shdr *ELFSection = ObjF.getSection(Section.getRawDataRefImpl());
+    MapVector<const Elf_Shdr *, const Elf_Shdr *> RelocationMap;
+    if (Error Err = Obj.getSectionAndRelocations(
+                           [&](const Elf_Shdr &S) { return &S == ELFSection; })
+                        .moveInto(RelocationMap)) {
+      reportUniqueWarning(std::move(Err));
+    }
 
-    const sframe::Preamble<E> &Preamble = Parser->getPreamble();
-    W.printHex("Magic", Preamble.Magic.value());
-    W.printEnum("Version", Preamble.Version.value(), sframe::getVersions());
-    W.printFlags("Flags", Preamble.Flags.value(), sframe::getFlags());
+    std::vector<Relocation<ELFT>> Relocations;
+    const Elf_Shdr *RelocSymTab = nullptr;
+    if (const Elf_Shdr *RelocSection = RelocationMap.lookup(ELFSection)) {
+      forEachRelocationDo(*RelocSection,
+                          [&](const Relocation<ELFT> &R, unsigned Ndx,
+                              const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
+                            RelocSymTab = SymTab;
+                            Relocations.push_back(R);
+                          });
+      llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
+        return LHS.Offset < RHS.Offset;
+      });
+    }
 
-    const sframe::Header<E> &Header = Parser->getHeader();
-    W.printEnum("ABI", Header.ABIArch.value(), sframe::getABIs());
-
-    W.printNumber(("CFA fixed FP offset" +
-                   Twine(Parser->usesFixedFPOffset() ? "" : " (unused)"))
-                      .str(),
-                  Header.CFAFixedFPOffset.value());
-
-    W.printNumber(("CFA fixed RA offset" +
-                   Twine(Parser->usesFixedRAOffset() ? "" : " (unused)"))
-                      .str(),
-                  Header.CFAFixedRAOffset.value());
-
-    W.printNumber("Auxiliary header length", Header.AuxHdrLen.value());
-    W.printNumber("Num FDEs", Header.NumFDEs.value());
-    W.printNumber("Num FREs", Header.NumFREs.value());
-    W.printNumber("FRE subsection length", Header.FRELen.value());
-    W.printNumber("FDE subsection offset", Header.FDEOff.value());
-    W.printNumber("FRE subsection offset", Header.FREOff.value());
+    printSFrameHeader(*Parser);
+    printSFrameFDEs(*Parser, Relocations, RelocSymTab);
   }
 }
 
@@ -7188,7 +7349,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       else
         TypeStr = "Unknown";
     }
-    W.printString("Type", TypeStr + " (0x" + utohexstr(E.e_type) + ")");
+    W.printString("Type", TypeStr + " (0x" +
+                              utohexstr(E.e_type, /*LowerCase=*/true) + ")");
 
     W.printEnum("Machine", E.e_machine, ArrayRef(ElfMachineType));
     W.printNumber("Version", E.e_version);
@@ -7945,8 +8107,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             DictScope BBED(W);
             W.printNumber("ID", BBE.ID);
             W.printHex("Offset", BBE.Offset);
-            if (!BBE.CallsiteOffsets.empty())
-              W.printList("Callsite Offsets", BBE.CallsiteOffsets);
+            if (!BBE.CallsiteEndOffsets.empty())
+              W.printList("Callsite End Offsets", BBE.CallsiteEndOffsets);
             W.printHex("Size", BBE.Size);
             W.printBoolean("HasReturn", BBE.hasReturn());
             W.printBoolean("HasTailCall", BBE.hasTailCall());
@@ -8085,7 +8247,7 @@ void LLVMELFDumper<ELFT>::printMemtag(
   {
     ListScope L(W, "Memtag Global Descriptors:");
     for (const auto &[Addr, BytesToTag] : Descriptors) {
-      W.printHex("0x" + utohexstr(Addr), BytesToTag);
+      W.printHex("0x" + utohexstr(Addr, /*LowerCase=*/true), BytesToTag);
     }
   }
 }

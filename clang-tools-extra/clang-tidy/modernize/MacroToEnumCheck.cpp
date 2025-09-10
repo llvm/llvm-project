@@ -395,16 +395,12 @@ void MacroToEnumCallbacks::Endif(SourceLocation Loc, SourceLocation IfLoc) {
   --CurrentFile->ConditionScopes;
 }
 
-namespace {
-
 template <size_t N>
-bool textEquals(const char (&Needle)[N], const char *HayStack) {
+static bool textEquals(const char (&Needle)[N], const char *HayStack) {
   return StringRef{HayStack, N - 1} == Needle;
 }
 
-template <size_t N> size_t len(const char (&)[N]) { return N - 1; }
-
-} // namespace
+template <size_t N> static size_t len(const char (&)[N]) { return N - 1; }
 
 void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
                                            PragmaIntroducerKind Introducer) {

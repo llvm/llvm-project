@@ -10,19 +10,20 @@ declare {float, float} @bars({float, float} %input)
 define void @test_v2f32(<2 x float> %input, ptr %output) {
 ; CHECK-LABEL: test_v2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_v2f32_param_0];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_v2f32_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
-; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    .param .align 8 .b8 retval0[8];
+; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NEXT:    call.uni (retval0), barv, (param0);
-; CHECK-NEXT:    ld.param.b64 %rd2, [retval0];
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [retval0];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    ld.param.b64 %rd4, [test_v2f32_param_1];
-; CHECK-NEXT:    st.b64 [%rd4], %rd2;
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_v2f32_param_1];
+; CHECK-NEXT:    st.v2.b32 [%rd1], {%r3, %r4};
 ; CHECK-NEXT:    ret;
   %call = tail call <2 x float> @barv(<2 x float> %input)
   store <2 x float> %call, ptr %output, align 8
@@ -32,24 +33,28 @@ define void @test_v2f32(<2 x float> %input, ptr %output) {
 define void @test_v3f32(<3 x float> %input, ptr %output) {
 ; CHECK-LABEL: test_v3f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<10>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_v3f32_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r3, [test_v3f32_param_0+8];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
-; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
-; CHECK-NEXT:    st.param.b32 [param0+8], %r3;
 ; CHECK-NEXT:    .param .align 16 .b8 retval0[16];
+; CHECK-NEXT:    st.param.b32 [param0+8], %r3;
+; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NEXT:    call.uni (retval0), barv3, (param0);
-; CHECK-NEXT:    ld.param.v2.b32 {%r4, %r5}, [retval0];
-; CHECK-NEXT:    ld.param.b32 %r6, [retval0+8];
+; CHECK-NEXT:    ld.param.b32 %r4, [retval0+8];
+; CHECK-NEXT:    ld.param.v2.b32 {%r5, %r6}, [retval0];
 ; CHECK-NEXT:    } // callseq 1
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_v3f32_param_1];
-; CHECK-NEXT:    st.v2.b32 [%rd1], {%r4, %r5};
-; CHECK-NEXT:    st.b32 [%rd1+8], %r6;
+; CHECK-NEXT:    cvt.u64.u32 %rd1, %r5;
+; CHECK-NEXT:    cvt.u64.u32 %rd2, %r6;
+; CHECK-NEXT:    shl.b64 %rd3, %rd2, 32;
+; CHECK-NEXT:    or.b64 %rd4, %rd1, %rd3;
+; CHECK-NEXT:    ld.param.b64 %rd5, [test_v3f32_param_1];
+; CHECK-NEXT:    st.b32 [%rd5+8], %r4;
+; CHECK-NEXT:    st.b64 [%rd5], %rd4;
 ; CHECK-NEXT:    ret;
   %call = tail call <3 x float> @barv3(<3 x float> %input)
 ; Make sure we don't load more values than than we need to.
@@ -60,7 +65,7 @@ define void @test_v3f32(<3 x float> %input, ptr %output) {
 define void @test_a2f32([2 x float] %input, ptr %output) {
 ; CHECK-LABEL: test_a2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -68,16 +73,16 @@ define void @test_a2f32([2 x float] %input, ptr %output) {
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_a2f32_param_0+4];
 ; CHECK-NEXT:    { // callseq 2, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[8];
-; CHECK-NEXT:    st.param.b32 [param0], %r1;
-; CHECK-NEXT:    st.param.b32 [param0+4], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[8];
+; CHECK-NEXT:    st.param.b32 [param0+4], %r2;
+; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    call.uni (retval0), bara, (param0);
-; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
-; CHECK-NEXT:    ld.param.b32 %r4, [retval0+4];
+; CHECK-NEXT:    ld.param.b32 %r3, [retval0+4];
+; CHECK-NEXT:    ld.param.b32 %r4, [retval0];
 ; CHECK-NEXT:    } // callseq 2
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_a2f32_param_1];
-; CHECK-NEXT:    st.b32 [%rd1+4], %r4;
-; CHECK-NEXT:    st.b32 [%rd1], %r3;
+; CHECK-NEXT:    st.b32 [%rd1+4], %r3;
+; CHECK-NEXT:    st.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
   %call = tail call [2 x float] @bara([2 x float] %input)
   store [2 x float] %call, ptr %output, align 4
@@ -87,7 +92,7 @@ define void @test_a2f32([2 x float] %input, ptr %output) {
 define void @test_s2f32({float, float} %input, ptr %output) {
 ; CHECK-LABEL: test_s2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -95,16 +100,16 @@ define void @test_s2f32({float, float} %input, ptr %output) {
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_s2f32_param_0+4];
 ; CHECK-NEXT:    { // callseq 3, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[8];
-; CHECK-NEXT:    st.param.b32 [param0], %r1;
-; CHECK-NEXT:    st.param.b32 [param0+4], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[8];
+; CHECK-NEXT:    st.param.b32 [param0+4], %r2;
+; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    call.uni (retval0), bars, (param0);
-; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
-; CHECK-NEXT:    ld.param.b32 %r4, [retval0+4];
+; CHECK-NEXT:    ld.param.b32 %r3, [retval0+4];
+; CHECK-NEXT:    ld.param.b32 %r4, [retval0];
 ; CHECK-NEXT:    } // callseq 3
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_s2f32_param_1];
-; CHECK-NEXT:    st.b32 [%rd1+4], %r4;
-; CHECK-NEXT:    st.b32 [%rd1], %r3;
+; CHECK-NEXT:    st.b32 [%rd1+4], %r3;
+; CHECK-NEXT:    st.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
   %call = tail call {float, float} @bars({float, float} %input)
   store {float, float} %call, ptr %output, align 4

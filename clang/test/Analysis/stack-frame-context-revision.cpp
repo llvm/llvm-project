@@ -31,7 +31,7 @@ void test(Node *N) {
     delete N;
 
     N = Next.getPointer();
-    // no-warning: 'Use of memory after it is freed' was here as the same
+    // no-warning: 'Use of memory after it is released' was here as the same
     //             'StackArgumentsSpaceRegion' purged out twice as 'P'.
   }
 }

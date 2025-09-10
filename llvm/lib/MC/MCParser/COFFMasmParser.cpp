@@ -18,7 +18,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <utility>
@@ -460,7 +459,8 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       nextLoc = getTok().getLoc();
     }
   }
-  MCSymbolCOFF *Sym = cast<MCSymbolCOFF>(getContext().getOrCreateSymbol(Label));
+  auto *Sym =
+      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Label));
 
   // Define symbol as simple external function
   Sym->setExternal(true);

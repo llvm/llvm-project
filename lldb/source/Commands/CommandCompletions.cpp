@@ -571,7 +571,7 @@ void CommandCompletions::ModuleUUIDs(CommandInterpreter &interpreter,
                                lldb::eDescriptionLevelInitial);
         request.TryCompleteCurrentArg(module->GetUUID().GetAsString(),
                                       strm.GetString());
-        return true;
+        return IterationAction::Continue;
       });
 }
 

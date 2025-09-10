@@ -645,7 +645,7 @@ Driver Options
 
   Save internal code generation (LLVM) statistics to a file in the current
   directory (:option:`-save-stats`/"-save-stats=cwd") or the directory
-  of the output file ("-save-state=obj").
+  of the output file ("-save-stats=obj").
 
   You can also use environment variables to control the statistics reporting.
   Setting ``CC_PRINT_INTERNAL_STAT`` to ``1`` enables the feature, the report

@@ -442,6 +442,7 @@ public:
   // or parenthesized constant expression that produces this value.
   llvm::raw_ostream &AsFortran(
       llvm::raw_ostream &, int kind, bool minimal = false) const;
+  std::string AsFortran(int kind, bool minimal = false) const;
 
 private:
   using Significand = Integer<significandBits>; // no implicit bit

@@ -1,0 +1,20 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+;
+; RUN: llvm-readtapi %t/many-targets.tbd
+;
+; Check that tbds containing symbols with many targets parse correctly (and in
+; particular parse without leaks).
+
+;--- many-targets.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ x86_64-macos, x86_64-maccatalyst, arm64-macos, arm64-maccatalyst,
+                   arm64e-macos, arm64e-maccatalyst, arm64-ios, arm64e-ios ]
+install-name:    '/usr/lib/foo.dylib'
+current-version: 1
+exports:
+  - targets:         [ x86_64-macos, x86_64-maccatalyst, arm64-macos, arm64-maccatalyst,
+                       arm64e-macos, arm64e-maccatalyst, arm64-ios, arm64e-ios ]
+    symbols:         [ 'foo' ]
+...

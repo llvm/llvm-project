@@ -8,6 +8,7 @@ add_mlir_library(MLIRTargetLLVM
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitWriter
   Core
   IPO
   IRReader
@@ -209,3 +210,27 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
   )
 endif()
 
+if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(SPIRV_LIBS
+    SPIRVCodeGen
+    SPIRVDesc
+    SPIRVInfo
+  )
+endif()
+
+add_mlir_dialect_library(MLIRXeVMTarget
+  XeVM/Target.cpp
+
+  OBJECT
+
+  LINK_COMPONENTS
+  ${SPIRV_LIBS}
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRExecutionEngineUtils
+  MLIRSupport
+  MLIRGPUDialect
+  MLIRTargetLLVM
+  MLIRXeVMToLLVMIRTranslation
+)

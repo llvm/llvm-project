@@ -81,3 +81,17 @@ void test_cleanup_nested() {
 // CHECK:   }
 // CHECK:   cir.call @_ZN5StrukD1Ev(%[[OUTER]]) nothrow : (!cir.ptr<!rec_Struk>) -> ()
 // CHECK:   cir.return
+
+void use_ref(const Struk &);
+
+void test_expr_with_cleanup() {
+  use_ref(Struk{});
+}
+
+// CHECK: cir.func{{.*}} @_Z22test_expr_with_cleanupv()
+// CHECK:   cir.scope {
+// CHECK:     %[[S:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>
+// CHECK:     cir.call @_Z7use_refRK5Struk(%[[S]])
+// CHECK:     cir.call @_ZN5StrukD1Ev(%[[S]]) nothrow : (!cir.ptr<!rec_Struk>) -> ()
+// CHECK:   }
+// CHECK:   cir.return

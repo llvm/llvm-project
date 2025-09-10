@@ -294,7 +294,8 @@ void RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
       BasePlusOffset = Base;
     } else {
       auto Offset = B.buildConstant({PtrRB, OffsetTy}, ByteOffset);
-      BasePlusOffset = B.buildPtrAdd({PtrRB, PtrTy}, Base, Offset).getReg(0);
+      BasePlusOffset =
+          B.buildObjectPtrOffset({PtrRB, PtrTy}, Base, Offset).getReg(0);
     }
     auto *OffsetMMO = MF.getMachineMemOperand(&BaseMMO, ByteOffset, PartTy);
     auto LoadPart = B.buildLoad({DstRB, PartTy}, BasePlusOffset, *OffsetMMO);

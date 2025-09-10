@@ -1,5 +1,6 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/symtab-sorted-by-size.out
-# RUN: %lldb %T/symtab-sorted-by-size.out -o "target symbols add -s symtab-sorted-by-size.out %S/Inputs/symtab.syms" \
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %t.dir/symtab-sorted-by-size.out
+# RUN: %lldb %t.dir/symtab-sorted-by-size.out -o "target symbols add -s symtab-sorted-by-size.out %S/Inputs/symtab.syms" \
 # RUN:   -s %s | FileCheck %s
 
 # CHECK: num_symbols = 4 (sorted by size):

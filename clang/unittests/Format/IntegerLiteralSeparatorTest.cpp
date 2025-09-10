@@ -83,6 +83,9 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
                "d = 5678_km;\n"
                "h = 0xDEF_u16;",
                Style);
+
+  Style.Standard = FormatStyle::LS_Cpp11;
+  verifyFormat("ld = 1234L;", Style);
 }
 
 TEST_F(IntegerLiteralSeparatorTest, UnderscoreAsSeparator) {

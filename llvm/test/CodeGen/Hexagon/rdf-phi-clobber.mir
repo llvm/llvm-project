@@ -63,8 +63,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 entry_values:    []
 callSites:       []
 debugValueSubstitutions: []

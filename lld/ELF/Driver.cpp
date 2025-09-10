@@ -3140,6 +3140,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->insert(arg->getValue())->traced = true;
 
   ctx.internalFile = createInternalFile(ctx, "<internal>");
+  ctx.dummySym = make<Undefined>(ctx.internalFile, "", STB_LOCAL, 0, 0);
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.

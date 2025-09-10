@@ -14,6 +14,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO(@izaakschroeder): https://github.com/llvm/llvm-project/issues/97920
-LLVM_LIBC_FUNCTION(void *, dlsym, (void *, const char *)) { return nullptr; }
+LLVM_LIBC_FUNCTION(void *, dlsym, (void *__restrict, const char *__restrict)) {
+  return nullptr;
+}
 
 } // namespace LIBC_NAMESPACE_DECL
