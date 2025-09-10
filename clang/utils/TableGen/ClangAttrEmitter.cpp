@@ -5209,6 +5209,14 @@ public:
                              Other.Spellings[Kind].end());
     }
   }
+
+  unsigned getSpellingCount() const {
+    unsigned Count = 0;
+    for (const auto &Item : Spellings)
+      if (Item.size() != 0)
+        ++Count;
+    return Count;
+  }
 };
 
 class DocumentationData {
@@ -5246,11 +5254,22 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
   // documentation. This may not be a limiting factor since the spellings
   // should generally be consistently applied across the category.
 
+  if (Cat == "HLSL Semantics") {
+    if (!Attribute.getName().starts_with("HLSL"))
+      PrintFatalError(Attribute.getLoc(),
+                      "HLSL semantic attribute name must start with HLSL");
+
+    assert(Attribute.getName().size() > 4);
+    std::string Name = Attribute.getName().substr(4).str();
+    return std::make_pair(std::move(Name), SpellingList());
+  }
+
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attribute);
-  if (Spellings.empty())
+  if (Spellings.empty()) {
     PrintFatalError(Attribute.getLoc(),
                     "Attribute has no supported spellings; cannot be "
                     "documented");
+  }
 
   // Determine the heading to be used for this attribute.
   std::string Heading = Documentation.getValueAsString("Heading").str();
@@ -5296,36 +5315,38 @@ static void WriteDocumentation(const RecordKeeper &Records,
     OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
-  // List what spelling syntaxes the attribute supports.
-  // Note: "#pragma clang attribute" is handled outside the spelling kinds loop
-  // so it must be last.
-  OS << ".. csv-table:: Supported Syntaxes\n";
-  OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
-  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
-        "clang ";
-  OS << "attribute``\"\n\n   \"";
-  for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
-    SpellingKind K = (SpellingKind)Kind;
-    // TODO: List Microsoft (IDL-style attribute) spellings once we fully
-    // support them.
-    if (K == SpellingKind::Microsoft)
-      continue;
+  if (Doc.SupportedSpellings.getSpellingCount() > 0) {
+    // List what spelling syntaxes the attribute supports.
+    // Note: "#pragma clang attribute" is handled outside the spelling kinds
+    // loop so it must be last.
+    OS << ".. csv-table:: Supported Syntaxes\n";
+    OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
+    OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
+          "clang ";
+    OS << "attribute``\"\n\n   \"";
+    for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
+      SpellingKind K = (SpellingKind)Kind;
+      // TODO: List Microsoft (IDL-style attribute) spellings once we fully
+      // support them.
+      if (K == SpellingKind::Microsoft)
+        continue;
 
-    bool PrintedAny = false;
-    for (StringRef Spelling : Doc.SupportedSpellings[K]) {
-      if (PrintedAny)
-        OS << " |br| ";
-      OS << "``" << Spelling << "``";
-      PrintedAny = true;
+      bool PrintedAny = false;
+      for (StringRef Spelling : Doc.SupportedSpellings[K]) {
+        if (PrintedAny)
+          OS << " |br| ";
+        OS << "``" << Spelling << "``";
+        PrintedAny = true;
+      }
+
+      OS << "\",\"";
     }
 
-    OS << "\",\"";
+    if (getPragmaAttributeSupport(Records).isAttributedSupported(
+            *Doc.Attribute))
+      OS << "Yes";
+    OS << "\"\n\n";
   }
-
-  if (getPragmaAttributeSupport(Records).isAttributedSupported(
-          *Doc.Attribute))
-    OS << "Yes";
-  OS << "\"\n\n";
 
   // If the attribute is deprecated, print a message about it, and possibly
   // provide a replacement attribute.
