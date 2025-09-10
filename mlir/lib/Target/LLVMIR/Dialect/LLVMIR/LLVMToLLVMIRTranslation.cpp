@@ -24,6 +24,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -723,6 +725,40 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   return failure();
 }
 
+static LogicalResult
+amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
+                   NamedAttribute attribute,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  StringRef name = attribute.getName();
+  if (name == LLVMDialect::getMmraAttrName()) {
+    SmallVector<llvm::MMRAMetadata::TagT> tags;
+    if (auto oneTag = dyn_cast<LLVM::MMRATagAttr>(attribute.getValue())) {
+      tags.emplace_back(oneTag.getPrefix(), oneTag.getSuffix());
+    } else if (auto manyTags = dyn_cast<ArrayAttr>(attribute.getValue())) {
+      for (Attribute attr : manyTags) {
+        auto tag = dyn_cast<MMRATagAttr>(attr);
+        if (!tag)
+          return op.emitOpError(
+              "MMRA annotations array contains value that isn't an MMRA tag");
+        tags.emplace_back(tag.getPrefix(), tag.getSuffix());
+      }
+    } else {
+      return op.emitOpError(
+          "llvm.mmra is something other than an MMRA tag or an array of them");
+    }
+    llvm::MDTuple *mmraMd =
+        llvm::MMRAMetadata::getMD(moduleTranslation.getLLVMContext(), tags);
+    if (!mmraMd) {
+      // Empty list, canonicalizes to nothing
+      return success();
+    }
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata(llvm::LLVMContext::MD_mmra, mmraMd);
+    return success();
+  }
+  return success();
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the LLVM dialect to LLVM IR.
@@ -737,6 +773,14 @@ public:
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
     return convertOperationImpl(*op, builder, moduleTranslation);
+  }
+
+  /// Handle some metadata that is represented as a discardable attribute.
+  LogicalResult
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final {
+    return amendOperationImpl(*op, instructions, attribute, moduleTranslation);
   }
 };
 } // namespace
