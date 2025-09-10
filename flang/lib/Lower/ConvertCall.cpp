@@ -151,17 +151,6 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
       if (actualType != dummyType &&
           !fir::ConvertOp::canBeConverted(actualType, dummyType))
         return true;
-
-  // For %VAL arguments with implicit interfaces, we need to force an indirect
-  // call to ensure consistent behavior regardless of whether the procedure
-  // is defined in the same compilation unit or not. Check for mismatches
-  // where a by-value call site expects a reference type in the actual
-  // function definition.
-  for (auto [actualType, dummyType] :
-       llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
-    if (!fir::isa_ref_type(actualType) && fir::isa_ref_type(dummyType) &&
-        fir::dyn_cast_ptrEleTy(dummyType) == actualType)
-      return true;
   return false;
 }
 
