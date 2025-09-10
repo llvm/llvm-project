@@ -29,6 +29,22 @@ RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
 #endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
+// Optional callback routines to be invoked pre and post execution
+// environment setup.
+// RTNAME(RegisterConfigureEnv) will return true if callback function(s)
+// is(are) successfully added to small array of pointers.  False if more
+// than nConfigEnvCallback registrations for either pre or post functions.
+
+static int nPreConfigEnvCallback{0};
+static void (*PreConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
+static int nPostConfigEnvCallback{0};
+static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
     return;
@@ -77,6 +93,15 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   argc = ac;
   argv = av;
   SetEnvironmentDefaults(envDefaults);
+
+  if (0 != nPreConfigEnvCallback) {
+    // Run an optional callback function after the core of the
+    // ExecutionEnvironment() logic.
+    for (int i{0}; i != nPreConfigEnvCallback; ++i) {
+      PreConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
+  }
+
 #ifdef _WIN32
   envp = _environ;
 #else
@@ -172,6 +197,14 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   }
 
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
+
+  if (0 != nPostConfigEnvCallback) {
+    // Run an optional callback function in reverse order of registration
+    // after the core of the ExecutionEnvironment() logic.
+    for (int i{0}; i != nPostConfigEnvCallback; ++i) {
+      PostConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
+  }
 }
 
 const char *ExecutionEnvironment::GetEnv(
@@ -247,5 +280,37 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
   return status;
 }
+
+extern "C" {
+
+// User supplied callback functions to further customize the configuration
+// of the runtime environment.
+// The pre and post callback functions are called upon entry and exit
+// of ExecutionEnvironment::Configure() respectively.
+
+bool RTNAME(RegisterConfigureEnv)(
+    ExecutionEnvironment::ConfigEnvCallbackPtr pre,
+    ExecutionEnvironment::ConfigEnvCallbackPtr post) {
+  bool ret{true};
+
+  if (nullptr != pre) {
+    if (nPreConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PreConfigEnvCallback[nPreConfigEnvCallback++] = pre;
+    } else {
+      ret = false;
+    }
+  }
+
+  if (ret && nullptr != post) {
+    if (nPostConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PostConfigEnvCallback[nPostConfigEnvCallback++] = post;
+    } else {
+      ret = false;
+    }
+  }
+
+  return ret;
+}
+} // extern "C"
 
 } // namespace Fortran::runtime
