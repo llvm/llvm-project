@@ -1154,8 +1154,6 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   }
 
   // Match: (A > B) ? (A - B) : (0 - (A - B)) --> abs(A - B)
-  // Also handles commuted cases like (B < A), (A >= B), (B <= A) after
-  // normalization
   if (Pred == CmpInst::ICMP_SGT &&
       match(TI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
       match(FI, m_Neg(m_Specific(TI)))) {
@@ -1164,27 +1162,22 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   }
 
   // Match: (A < B) ? (0 - (A - B)) : (A - B) --> abs(A - B)
-  // This handles cases like (A <= B) after normalization
   if (Pred == CmpInst::ICMP_SLT &&
-      match(TI, m_Neg(m_NSWSub(m_Specific(A), m_Specific(B)))) &&
-      match(FI, m_NSWSub(m_Specific(A), m_Specific(B)))) {
+      match(FI, m_NSWSub(m_Specific(A), m_Specific(B))) &&
+      match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A > B) ? (0 - (B - A)) : (B - A) --> abs(B - A)
-  // This handles cases like (B <= A) after normalization where the subtraction
-  // operands are swapped
   if (Pred == CmpInst::ICMP_SGT &&
-      match(TI, m_Neg(m_NSWSub(m_Specific(B), m_Specific(A)))) &&
-      match(FI, m_NSWSub(m_Specific(B), m_Specific(A)))) {
+      match(FI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
+      match(TI, m_Neg(m_Specific(FI)))) {
     return Builder.CreateBinaryIntrinsic(Intrinsic::abs, FI,
                                          Builder.getFalse());
   }
 
   // Match: (A < B) ? (B - A) : (0 - (B - A)) --> abs(B - A)
-  // This handles cases where comparison operands are swapped relative to
-  // subtraction
   if (Pred == CmpInst::ICMP_SLT &&
       match(TI, m_NSWSub(m_Specific(B), m_Specific(A))) &&
       match(FI, m_Neg(m_Specific(TI)))) {
