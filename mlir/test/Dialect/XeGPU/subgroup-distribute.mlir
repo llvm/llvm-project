@@ -341,8 +341,8 @@ gpu.module @test {
 gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction() {
   %0 = "some_def"() : () -> !xegpu.tensor_desc<1x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   %src = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}  : () -> (vector<16x32xf32>)
-  %acc = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0.0>  : vector<32xf32>
-  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}  [0]
+  %acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} dense<0.0>  : vector<32xf32>
+  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}  [0]
     : vector<16x32xf32> to vector<32xf32>
   %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : vector<32xf32> to vector<1x32xf32>
@@ -394,10 +394,10 @@ gpu.module @test {
 gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction() {
   %0 = "some_def"() : () -> !xegpu.tensor_desc<32x1xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
   %src = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}  : () -> (vector<32x16xf32>)
-  %acc = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<0.0>  : vector<32xf32>
-  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}  [1]
+  %acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>} dense<0.0>  : vector<32xf32>
+  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>}  [1]
     : vector<32x16xf32> to vector<32xf32>
-  %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+  %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
     : vector<32xf32> to vector<32x1xf32>
   xegpu.store_nd %3, %0 : vector<32x1xf32>, !xegpu.tensor_desc<32x1xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
   gpu.return
