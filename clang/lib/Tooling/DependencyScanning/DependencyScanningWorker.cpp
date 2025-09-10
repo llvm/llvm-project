@@ -127,9 +127,10 @@ public:
   /// For each input file discovered, check whether it's external path is in a
   /// stable directory. Traversal is stopped if the current module is not
   /// considered stable.
-  bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                      bool isSystem, bool isOverridden,
-                      bool isExplicitModule) override {
+  bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                 StringRef Filename, bool isSystem,
+                                 bool isOverridden,
+                                 bool isExplicitModule) override {
     if (StableDirs.empty())
       return false;
     auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);

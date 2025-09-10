@@ -259,7 +259,7 @@ class UpdateNdOffsetToXeVMPattern
     // Only 2D offsets are supported for now.
     if (mixedOffsets.size() != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D offsets.");
-    auto tdesc = adaptor.getTensorDesc();
+    auto payload = adaptor.getTensorDesc();
     // Utility for updating payload offset values from op fold result.
     auto updateOffset = [&](unsigned idx, int payloadPos) -> Value {
       Value offset =
@@ -267,15 +267,15 @@ class UpdateNdOffsetToXeVMPattern
       offset = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                rewriter.getI32Type(), offset);
       Value oldOffset =
-          vector::ExtractOp::create(rewriter, loc, tdesc, payloadPos);
+          vector::ExtractOp::create(rewriter, loc, payload, payloadPos);
       Value newOffset = arith::AddIOp::create(rewriter, loc, oldOffset, offset);
-      return vector::InsertOp::create(rewriter, loc, newOffset, tdesc,
+      return vector::InsertOp::create(rewriter, loc, newOffset, payload,
                                       payloadPos);
     };
     // Update offsets in the payload.
-    auto val = updateOffset(0, static_cast<int>(NdTdescOffset::TensorOffsetH));
-    val = updateOffset(1, static_cast<int>(NdTdescOffset::TensorOffsetW));
-    rewriter.replaceOp(op, val);
+    payload = updateOffset(0, static_cast<int>(NdTdescOffset::TensorOffsetH));
+    payload = updateOffset(1, static_cast<int>(NdTdescOffset::TensorOffsetW));
+    rewriter.replaceOp(op, payload);
     return success();
   }
 };
@@ -354,18 +354,23 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     auto tileH = tdescTy.getDimSize(0);
     int32_t vblocks = tdescTy.getArrayLength();
     if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
-      VectorType srcVecTy = dyn_cast<VectorType>(adaptor.getValue().getType());
+      Value src = adaptor.getValue();
+      // If store value is a scalar, get value from op instead of adaptor.
+      // Adaptor might have optimized away single element vector
+      if (src.getType().isIntOrFloat()) {
+        src = op.getValue();
+      }
+      VectorType srcVecTy = dyn_cast<VectorType>(src.getType());
       if (!srcVecTy)
         return rewriter.notifyMatchFailure(
             op, "Expected store value to be a vector type.");
-      auto storeCacheControl =
-          translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
-      Value src = adaptor.getValue();
       // Get flat vector type of integer type with matching element bit size.
       VectorType newSrcVecTy =
           encodeVectorTypeTo(srcVecTy, rewriter.getIntegerType(elemBitSize));
       if (srcVecTy != newSrcVecTy)
         src = vector::BitCastOp::create(rewriter, loc, newSrcVecTy, src);
+      auto storeCacheControl =
+          translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
       xevm::BlockStore2dOp::create(
           rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW, offsetW,
           offsetH, elemBitSize, tileW, tileH, src,

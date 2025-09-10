@@ -362,3 +362,9 @@ void bar() { // pedantic-warning {{a function declaration without a prototype}}
   int x;
   x = foo(); // all-warning {{too few arguments}}
 }
+
+int *_b = &a;
+void discardedCmp(void)
+{
+    (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
+}

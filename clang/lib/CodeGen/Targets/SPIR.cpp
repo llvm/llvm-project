@@ -132,13 +132,14 @@ ABIArgInfo SPIRVABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().CUDAIsDevice) {
+  if (getContext().getLangOpts().isTargetDevice()) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for HIPSPV/CUDASPV. When the language mode is HIP/CUDA, the
-    // SPIRTargetInfo maps cuda_device to SPIR-V's CrossWorkGroup address space.
+    // pointers for target devices as default address space kernel arguments
+    // are not allowed. We use the opencl_global language address space which
+    // always maps to CrossWorkGroup.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
+    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
     auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
     if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
       LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
@@ -513,14 +514,65 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
   return nullptr;
 }
 
+static unsigned
+getImageFormat(const LangOptions &LangOpts,
+               const HLSLAttributedResourceType::Attributes &attributes,
+               llvm::Type *SampledType, QualType Ty, unsigned NumChannels) {
+  // For images with `Sampled` operand equal to 2, there are restrictions on
+  // using the Unknown image format. To avoid these restrictions in common
+  // cases, we guess an image format for them based on the sampled type and the
+  // number of channels. This is intended to match the behaviour of DXC.
+  if (LangOpts.HLSLSpvUseUnknownImageFormat ||
+      attributes.ResourceClass != llvm::dxil::ResourceClass::UAV) {
+    return 0; // Unknown
+  }
+
+  if (SampledType->isIntegerTy(32)) {
+    if (Ty->isSignedIntegerType()) {
+      if (NumChannels == 1)
+        return 24; // R32i
+      if (NumChannels == 2)
+        return 25; // Rg32i
+      if (NumChannels == 4)
+        return 21; // Rgba32i
+    } else {
+      if (NumChannels == 1)
+        return 33; // R32ui
+      if (NumChannels == 2)
+        return 35; // Rg32ui
+      if (NumChannels == 4)
+        return 30; // Rgba32ui
+    }
+  } else if (SampledType->isIntegerTy(64)) {
+    if (NumChannels == 1) {
+      if (Ty->isSignedIntegerType()) {
+        return 41; // R64i
+      }
+      return 40; // R64ui
+    }
+  } else if (SampledType->isFloatTy()) {
+    if (NumChannels == 1)
+      return 3; // R32f
+    if (NumChannels == 2)
+      return 6; // Rg32f
+    if (NumChannels == 4)
+      return 1; // Rgba32f
+  }
+
+  return 0; // Unknown
+}
+
 llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
     const HLSLAttributedResourceType::Attributes &attributes, QualType Ty,
     CodeGenModule &CGM) const {
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
+  unsigned NumChannels = 1;
   Ty = Ty->getCanonicalTypeUnqualified();
-  if (const VectorType *V = dyn_cast<VectorType>(Ty))
+  if (const VectorType *V = dyn_cast<VectorType>(Ty)) {
+    NumChannels = V->getNumElements();
     Ty = V->getElementType();
+  }
   assert(!Ty->isVectorType() && "We still have a vector type.");
 
   llvm::Type *SampledType = CGM.getTypes().ConvertTypeForMem(Ty);
@@ -556,8 +608,8 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
       attributes.ResourceClass == llvm::dxil::ResourceClass::UAV ? 2 : 1;
 
   // Image format.
-  // Setting to unknown for now.
-  IntParams[5] = 0;
+  IntParams[5] = getImageFormat(CGM.getLangOpts(), attributes, SampledType, Ty,
+                                NumChannels);
 
   llvm::TargetExtType *ImageType =
       llvm::TargetExtType::get(Ctx, Name, {SampledType}, IntParams);

@@ -178,7 +178,7 @@ public:
   bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
 
   void emitEnumEntry(raw_ostream &OS) const {
-    OS << "RTLIB::" << TheDef->getName();
+    OS << "RTLIB::impl_" << this->getName();
   }
 
   void emitSetImplCall(raw_ostream &OS) const {
@@ -305,14 +305,15 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
         "enum LibcallImpl : unsigned short {\n"
         "  Unsupported = 0,\n";
 
-  // FIXME: Emit this in a different namespace. And maybe use enum class.
   for (const RuntimeLibcallImpl &LibCall : RuntimeLibcallImplDefList) {
-    OS << "  " << LibCall.getName() << " = " << LibCall.getEnumVal() << ", // "
-       << LibCall.getLibcallFuncName() << '\n';
+    OS << "  impl_" << LibCall.getName() << " = " << LibCall.getEnumVal()
+       << ", // " << LibCall.getLibcallFuncName() << '\n';
   }
 
-  OS << "  NumLibcallImpls = " << RuntimeLibcallImplDefList.size() + 1
-     << "\n};\n"
+  OS << "};\n"
+     << "constexpr size_t NumLibcallImpls = "
+     << RuntimeLibcallImplDefList.size() + 1
+     << ";\n"
         "} // End namespace RTLIB\n"
         "} // End namespace llvm\n"
         "#endif\n\n";

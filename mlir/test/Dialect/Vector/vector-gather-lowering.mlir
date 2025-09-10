@@ -100,6 +100,18 @@ func.func @scalable_gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x[3]xin
  return %0 : vector<2x[3]xf32>
 }
 
+// CHECK-LABEL: @scalable_gather_memref_2d_with_alignment
+// CHECK:         vector.gather
+// CHECK-SAME:    {alignment = 8 : i64}
+// CHECK:         vector.gather
+// CHECK-SAME:    {alignment = 8 : i64}
+func.func @scalable_gather_memref_2d_with_alignment(%base: memref<?x?xf32>, %v: vector<2x[3]xindex>, %mask: vector<2x[3]xi1>, %pass_thru: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
+ %c0 = arith.constant 0 : index
+ %c1 = arith.constant 1 : index
+ %0 = vector.gather %base[%c0, %c1][%v], %mask, %pass_thru {alignment = 8} : memref<?x?xf32>, vector<2x[3]xindex>, vector<2x[3]xi1>, vector<2x[3]xf32> into vector<2x[3]xf32>
+ return %0 : vector<2x[3]xf32>
+}
+
 // CHECK-LABEL: @scalable_gather_cant_unroll
 // CHECK-NOT: extract
 // CHECK: vector.gather
@@ -234,7 +246,7 @@ func.func @strided_gather(%base : memref<100x3xf32>,
   %mask = arith.constant dense<true> : vector<4xi1>
   %pass_thru = arith.constant dense<0.000000e+00> : vector<4xf32>
   // Gather of a strided MemRef
-  %res = vector.gather %subview[%c0] [%idxs], %mask, %pass_thru : memref<100xf32, strided<[3]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  %res = vector.gather %subview[%c0] [%idxs], %mask, %pass_thru {alignment = 8} : memref<100xf32, strided<[3]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
   return %res : vector<4xf32>
 }
 // CHECK-LABEL:   func.func @strided_gather(
@@ -250,22 +262,22 @@ func.func @strided_gather(%base : memref<100x3xf32>,
 
 // CHECK:           %[[IDX_0:.*]] = vector.extract %[[NEW_IDXS]][0] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_0:.*]] = vector.load %[[COLLAPSED]][%[[IDX_0]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_0:.*]] = vector.load %[[COLLAPSED]][%[[IDX_0]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_0:.*]] = vector.extract %[[M_0]][0] : f32 from vector<1xf32>
 
 // CHECK:           %[[IDX_1:.*]] = vector.extract %[[NEW_IDXS]][1] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_1:.*]] = vector.load %[[COLLAPSED]][%[[IDX_1]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_1:.*]] = vector.load %[[COLLAPSED]][%[[IDX_1]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_1:.*]] = vector.extract %[[M_1]][0] : f32 from vector<1xf32>
 
 // CHECK:           %[[IDX_2:.*]] = vector.extract %[[NEW_IDXS]][2] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_2:.*]] = vector.load %[[COLLAPSED]][%[[IDX_2]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_2:.*]] = vector.load %[[COLLAPSED]][%[[IDX_2]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_2:.*]] = vector.extract %[[M_2]][0] : f32 from vector<1xf32>
 
 // CHECK:           %[[IDX_3:.*]] = vector.extract %[[NEW_IDXS]][3] : index from vector<4xindex>
 // CHECK:           scf.if %[[TRUE]] -> (vector<4xf32>)
-// CHECK:             %[[M_3:.*]] = vector.load %[[COLLAPSED]][%[[IDX_3]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_3:.*]] = vector.load %[[COLLAPSED]][%[[IDX_3]]] {alignment = 8 : i64} : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_3:.*]] = vector.extract %[[M_3]][0] : f32 from vector<1xf32>
 
 // CHECK-LABEL: @scalable_gather_1d
