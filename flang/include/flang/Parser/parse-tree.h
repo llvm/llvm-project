@@ -4443,8 +4443,7 @@ struct OmpGraphIdClause {
 // graph_reset-clause ->
 //    GRAPH_RESET[(graph-reset-expression)]         // since 6.0
 struct OmpGraphResetClause {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpGraphResetClause, std::optional<common::Indirection<Expr>>);
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, common::Indirection<Expr>);
 };
 
 // Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
