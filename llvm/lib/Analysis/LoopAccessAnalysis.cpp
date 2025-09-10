@@ -628,9 +628,9 @@ void RuntimePointerChecking::groupChecks(
   //
   // In the above case, we have a non-constant distance and an Unknown
   // dependence between accesses to the same underlying object, and could retry
-  // with runtime checks. Therefore UseDependencies is false. In this case we
-  // will use the fallback path and create separate checking groups for all
-  // pointers.
+  // with runtime checks without dependency information being available. In this
+  // case we will use the fallback path and create separate checking groups for
+  // accesses not present in DepCands.
 
   unsigned TotalComparisons = 0;
 
@@ -840,8 +840,7 @@ public:
   /// loop, but if \p AllowPartial is set then we will have checks for those
   /// pointers we could analyze. \p DepChecker is used to remove unknown
   /// dependences from DepCands.
-  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
-                       Loop *TheLoop,
+  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
                        Value *&UncomputablePtr, bool AllowPartial,
                        const MemoryDepChecker &DepChecker);
@@ -1310,7 +1309,7 @@ bool AccessAnalysis::createCheckForAccess(
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(
-    RuntimePointerChecking &RtCheck, ScalarEvolution *SE, Loop *TheLoop,
+    RuntimePointerChecking &RtCheck, Loop *TheLoop,
     const DenseMap<Value *, const SCEV *> &StridesMap, Value *&UncomputablePtr,
     bool AllowPartial, const MemoryDepChecker &DepChecker) {
   // Find pointers with computable bounds. We are going to use this information
@@ -2742,9 +2741,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
-  HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
-      *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr,
-      AllowPartial, getDepChecker());
+  HasCompletePtrRtChecking =
+      Accesses.canCheckPtrAtRT(*PtrRtChecking, TheLoop, SymbolicStrides,
+                               UncomputablePtr, AllowPartial, getDepChecker());
   if (!HasCompletePtrRtChecking) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
@@ -2771,8 +2770,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
       UncomputablePtr = nullptr;
       HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
-          *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides,
-          UncomputablePtr, AllowPartial, getDepChecker());
+          *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr,
+          AllowPartial, getDepChecker());
 
       // Check that we found the bounds for the pointer.
       if (!HasCompletePtrRtChecking) {
