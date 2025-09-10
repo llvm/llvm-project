@@ -79,6 +79,5 @@ add_mlir_python_modules(StandalonePythonModules
     MLIRPythonSources.Dialects.builtin
   COMMON_CAPI_LINK_LIBS
     StandalonePythonCAPI
-  GENERATE_TYPE_STUBS
   PACKAGE_PREFIX "${MLIR_PYTHON_PACKAGE_PREFIX}"
 )
