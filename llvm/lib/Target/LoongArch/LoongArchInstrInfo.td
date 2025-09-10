@@ -31,6 +31,10 @@ def SDT_LoongArchSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                                  SDTCisSameAs<0, 4>,
                                                  SDTCisSameAs<4, 5>]>;
 
+def SDT_LoongArchBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                             SDTCisVT<2, OtherVT>,
+                                             SDTCisVT<3, OtherVT>]>;
+
 def SDT_LoongArchBStrIns: SDTypeProfile<1, 4, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<3>,
   SDTCisSameAs<3, 4>
@@ -94,6 +98,8 @@ def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                    SDNPVariadic]>;
 def loongarch_selectcc : SDNode<"LoongArchISD::SELECT_CC", SDT_LoongArchSelectCC>;
+def loongarch_brcc : SDNode<"LoongArchISD::BR_CC", SDT_LoongArchBrCC,
+                            [SDNPHasChain]>;
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
@@ -1537,47 +1543,29 @@ def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
 
 /// Branches and jumps
 
-class BccPat<PatFrag CondOp, LAInst Inst>
-    : Pat<(brcond (GRLenVT (CondOp GPR:$rj, GPR:$rd)), bb:$imm16),
-          (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
-
-def : BccPat<seteq, BEQ>;
-def : BccPat<setne, BNE>;
-def : BccPat<setlt, BLT>;
-def : BccPat<setge, BGE>;
-def : BccPat<setult, BLTU>;
-def : BccPat<setuge, BGEU>;
-
-class BccSwapPat<PatFrag CondOp, LAInst InstBcc>
-    : Pat<(brcond (GRLenVT (CondOp GPR:$rd, GPR:$rj)), bb:$imm16),
-          (InstBcc GPR:$rj, GPR:$rd, bb:$imm16)>;
-
-// Condition codes that don't have matching LoongArch branch instructions, but
-// are trivially supported by swapping the two input operands.
-def : BccSwapPat<setgt, BLT>;
-def : BccSwapPat<setle, BGE>;
-def : BccSwapPat<setugt, BLTU>;
-def : BccSwapPat<setule, BGEU>;
-
 let Predicates = [Has32S] in {
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
-// condition was calculated elsewhere).
-def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
+class BccZeroPat<CondCode Cond, LAInst Inst>
+    : Pat<(loongarch_brcc (GRLenVT GPR:$rj), 0, Cond, bb:$imm21),
+           (Inst GPR:$rj, bb:$imm21)>;
 
-def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm21),
-          (BEQZ GPR:$rj, bb:$imm21)>;
-def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm21),
-          (BNEZ GPR:$rj, bb:$imm21)>;
+def : BccZeroPat<SETEQ, BEQZ>;
+def : BccZeroPat<SETNE, BNEZ>;
 } // Predicates = [Has32S]
 
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
-// condition was calculated elsewhere).
-def : Pat<(brcond GPR:$rj, bb:$imm16), (BNE GPR:$rj, R0, bb:$imm16)>;
+multiclass BccPat<CondCode Cond, LAInst Inst> {
+  def : Pat<(loongarch_brcc (GRLenVT GPR:$rj), GPR:$rd, Cond, bb:$imm16),
+            (Inst GPR:$rj, GPR:$rd, bb:$imm16)>;
+  // Explicitly select 0 to R0. The register coalescer doesn't always do it.
+  def : Pat<(loongarch_brcc (GRLenVT GPR:$rj), 0, Cond, bb:$imm16),
+            (Inst GPR:$rj, (GRLenVT R0), bb:$imm16)>;
+}
 
-def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm16),
-          (BEQ GPR:$rj, R0, bb:$imm16)>;
-def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm16),
-          (BNE GPR:$rj, R0, bb:$imm16)>;
+defm : BccPat<SETEQ, BEQ>;
+defm : BccPat<SETNE, BNE>;
+defm : BccPat<SETLT, BLT>;
+defm : BccPat<SETGE, BGE>;
+defm : BccPat<SETULT, BLTU>;
+defm : BccPat<SETUGE, BGEU>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,

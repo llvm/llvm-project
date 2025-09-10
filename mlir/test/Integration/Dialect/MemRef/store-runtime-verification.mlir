@@ -5,6 +5,14 @@
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
+// RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -test-cf-assert \
+// RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -reconcile-unrealized-casts | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
+// RUN: FileCheck %s
+
 func.func @store_dynamic(%memref: memref<?xf32>, %index: index) {
   %cst = arith.constant 1.0 : f32
   memref.store %cst, %memref[%index] :  memref<?xf32>

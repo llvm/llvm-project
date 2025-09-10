@@ -447,9 +447,8 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
                                                      rewriter.getI1Type()),
                             {runtimeAttr});
     }
-    cmp = rewriter
-              .create<fir::CallOp>(loc, callee,
-                                   mlir::ValueRange{descSelector, typeDesc})
+    cmp = fir::CallOp::create(rewriter, loc, callee,
+                              mlir::ValueRange{descSelector, typeDesc})
               .getResult(0);
   }
 

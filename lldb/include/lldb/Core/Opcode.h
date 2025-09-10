@@ -12,7 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/ADT/bit.h"
 
 #include <cassert>
 #include <cstdint>
@@ -211,7 +211,7 @@ public:
     if (bytes != nullptr && length > 0) {
       m_type = type;
       m_data.inst.length = length;
-      assert(length < sizeof(m_data.inst.bytes));
+      assert(length <= sizeof(m_data.inst.bytes));
       memcpy(m_data.inst.bytes, bytes, length);
       m_byte_order = order;
     } else {

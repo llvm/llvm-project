@@ -3099,6 +3099,23 @@ public:
   }
 };
 
+class VPLoadFFSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  VPLoadFFSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs, EVT MemVT,
+                 MachineMemOperand *MMO)
+      : MemSDNode(ISD::VP_LOAD_FF, Order, DL, VTs, MemVT, MMO) {}
+
+  const SDValue &getBasePtr() const { return getOperand(1); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getVectorLength() const { return getOperand(3); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::VP_LOAD_FF;
+  }
+};
+
 class FPStateAccessSDNode : public MemSDNode {
 public:
   friend class SelectionDAG;
@@ -3319,6 +3336,22 @@ namespace ISD {
   inline bool isUNINDEXEDStore(const SDNode *N) {
     auto *St = dyn_cast<StoreSDNode>(N);
     return St && St->getAddressingMode() == ISD::UNINDEXED;
+  }
+
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked load.
+  inline bool isNormalMaskedLoad(const SDNode *N) {
+    auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
+    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
+           Ld->getAddressingMode() == ISD::UNINDEXED;
+  }
+
+  /// Returns true if the specified node is a non-extending and unindexed
+  /// masked store.
+  inline bool isNormalMaskedStore(const SDNode *N) {
+    auto *St = dyn_cast<MaskedStoreSDNode>(N);
+    return St && !St->isTruncatingStore() &&
+           St->getAddressingMode() == ISD::UNINDEXED;
   }
 
   /// Attempt to match a unary predicate against a scalar/splat constant or

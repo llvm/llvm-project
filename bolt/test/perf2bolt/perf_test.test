@@ -2,7 +2,7 @@
 
 REQUIRES: system-linux, perf
 
-RUN: %clang %S/Inputs/perf_test.c -fuse-ld=lld -Wl,--script=%S/Inputs/perf_test.lds -o %t
+RUN: %clang %S/Inputs/perf_test.c -fuse-ld=lld -pie -Wl,--script=%S/Inputs/perf_test.lds -o %t
 RUN: perf record -Fmax -e cycles:u -o %t2 -- %t
 RUN: perf2bolt %t -p=%t2 -o %t3 -nl -ignore-build-id --show-density \
 RUN:   --heatmap %t.hm 2>&1 | FileCheck %s

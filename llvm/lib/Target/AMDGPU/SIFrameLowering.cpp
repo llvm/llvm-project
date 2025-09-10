@@ -983,6 +983,7 @@ void SIFrameLowering::emitCSRSpillStores(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Spill Whole-Wave Mode VGPRs. Save only the inactive lanes of the scratch
   // registers. However, save all lanes of callee-saved VGPRs. Due to this, we
@@ -1005,6 +1006,12 @@ void SIFrameLowering::emitCSRSpillStores(
         }
       };
 
+  for (const Register Reg : make_first_range(WWMScratchRegs)) {
+    if (!MRI.isReserved(Reg)) {
+      MRI.addLiveIn(Reg);
+      MBB.addLiveIn(Reg);
+    }
+  }
   StoreWWMRegisters(WWMScratchRegs);
 
   auto EnableAllLanes = [&]() {
@@ -1125,9 +1132,18 @@ void SIFrameLowering::emitCSRSpillRestores(
     RestoreWWMRegisters(WWMCalleeSavedRegs);
 
     // The original EXEC is the first operand of the return instruction.
-    const MachineInstr &Return = MBB.instr_back();
-    assert(Return.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN &&
-           "Unexpected return inst");
+    MachineInstr &Return = MBB.instr_back();
+    unsigned Opcode = Return.getOpcode();
+    switch (Opcode) {
+    case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
+      Opcode = AMDGPU::SI_RETURN;
+      break;
+    case AMDGPU::SI_TCRETURN_GFX_WholeWave:
+      Opcode = AMDGPU::SI_TCRETURN_GFX;
+      break;
+    default:
+      llvm_unreachable("Unexpected return inst");
+    }
     Register OrigExec = Return.getOperand(0).getReg();
 
     if (!WWMScratchRegs.empty()) {
@@ -1141,6 +1157,11 @@ void SIFrameLowering::emitCSRSpillRestores(
     // Restore original EXEC.
     unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addReg(OrigExec);
+
+    // Drop the first operand and update the opcode.
+    Return.removeOperand(0);
+    Return.setDesc(TII->get(Opcode));
+
     return;
   }
 
@@ -1721,7 +1742,9 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
            "Whole wave functions can use the reg mapped for their i1 argument");
 
     // FIXME: Be more efficient!
-    for (MCRegister Reg : AMDGPU::VGPR_32RegClass)
+    unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+    for (MCRegister Reg :
+         AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs))
       if (MF.getRegInfo().isPhysRegModified(Reg)) {
         MFI->reserveWWMRegister(Reg);
         MF.begin()->addLiveIn(Reg);

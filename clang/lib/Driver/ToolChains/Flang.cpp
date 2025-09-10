@@ -178,6 +178,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+  if (Args.hasArg(clang::driver::options::OPT_fcoarray))
+    CmdArgs.push_back("-fcoarray");
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -532,7 +534,14 @@ void Flang::addTargetOptions(const ArgList &Args,
   }
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
+                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
+                   options::OPT_fatomic_ignore_denormal_mode,
+                   options::OPT_fno_atomic_ignore_denormal_mode,
+                   options::OPT_fatomic_fine_grained_memory,
+                   options::OPT_fno_atomic_fine_grained_memory,
+                   options::OPT_fatomic_remote_memory,
+                   options::OPT_fno_atomic_remote_memory,
+                   options::OPT_munsafe_fp_atomics});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -937,6 +946,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
+      Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                      options::OPT_fno_openmp_simd);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -952,6 +963,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << A->getValue();
       break;
     }
+  } else {
+    Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
+                    options::OPT_fno_openmp_simd);
   }
 
   // Pass the path to compiler resource files.

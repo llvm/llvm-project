@@ -315,9 +315,8 @@ public:
       mlir::Value tempStorage = builder.createHeapTemporary(
           loc, declaredType, tempName, extents, lengths);
       mlir::Value shape = builder.genShape(loc, extents);
-      declare = hlfir::DeclareOp::create(
-          builder, loc, tempStorage, tempName, shape, lengths,
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      declare = hlfir::DeclareOp::create(builder, loc, tempStorage, tempName,
+                                         shape, lengths);
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
                             /*slice=*/mlir::Value{}, lengths, /*tdesc=*/{});
@@ -795,7 +794,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
   // Insert the clean-up for the created hlfir.expr.
   fir::FirOpBuilder *bldr = &builder;
   stmtCtx.attachCleanup(
-      [=]() { bldr->create<hlfir::DestroyOp>(loc, hlfirExpr); });
+      [=]() { hlfir::DestroyOp::create(*bldr, loc, hlfirExpr); });
   return hlfir::EntityWithAttributes{hlfirExpr};
 }
 

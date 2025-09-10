@@ -3,6 +3,15 @@
 
 ; Separate from ldexp.ll test because this errors on half cases
 
+; ARM64EC-LABEL: ldexp_f16 =
+; ARM64EC: fcvt d0, h0
+; ARM64EC: bl "#ldexp"
+; ARM64EC: fcvt h0, d0
+define half @ldexp_f16(half %val, i32 %a) {
+  %call = call half @llvm.ldexp.f16(half %val, i32 %a)
+  ret half %call
+}
+
 ; ARM64EC-LABEL: ldexp_f32 =
 ; ARM64EC: fcvt d0, s0
 ; ARM64EC: bl "#ldexp"

@@ -1497,3 +1497,16 @@ namespace GH67317 {
                               // expected-note {{subobject of type 'const unsigned char' is not initialized}}
     __builtin_bit_cast(unsigned char, *new char[3][1]);
 };
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // expected-error {{constant expression}}
+}

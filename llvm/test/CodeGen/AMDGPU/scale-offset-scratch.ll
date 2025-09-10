@@ -9,7 +9,7 @@ define amdgpu_ps float @scratch_load_b32_alloca_idxprom(i32 %idx) {
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-  %p = alloca [32 x i32], align 4, addrspace(5)
+  %p = alloca [64 x i32], align 4, addrspace(5)
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr addrspace(5) %p, i64 %idxprom
   %ret = load float, ptr addrspace(5) %arrayidx, align 4

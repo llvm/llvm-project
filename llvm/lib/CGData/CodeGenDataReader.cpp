@@ -26,6 +26,12 @@ static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
              "disabled to save memory and time for final consumption of the "
              "indexed CodeGenData in production."));
 
+cl::opt<bool> IndexedCodeGenDataLazyLoading(
+    "indexed-codegen-data-lazy-loading", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Lazily load indexed CodeGenData. Enable to save memory and time "
+        "for final consumption of the indexed CodeGenData in production."));
+
 namespace llvm {
 
 static Expected<std::unique_ptr<MemoryBuffer>>
@@ -109,11 +115,20 @@ Error IndexedCodeGenDataReader::read() {
       return error(cgdata_error::eof);
     HashTreeRecord.deserialize(Ptr);
   }
+
+  // TODO: lazy loading support for outlined hash tree.
+  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
   if (hasStableFunctionMap()) {
     const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
     if (Ptr >= End)
       return error(cgdata_error::eof);
-    FunctionMapRecord.deserialize(Ptr, IndexedCodeGenDataReadFunctionMapNames);
+    FunctionMapRecord.setReadStableFunctionMapNames(
+        IndexedCodeGenDataReadFunctionMapNames);
+    if (IndexedCodeGenDataLazyLoading)
+      FunctionMapRecord.lazyDeserialize(SharedDataBuffer,
+                                        Header.StableFunctionMapOffset);
+    else
+      FunctionMapRecord.deserialize(Ptr);
   }
 
   return success();

@@ -328,7 +328,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
   const char *CPU = 0;
 
   switch (Family) {
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -626,7 +626,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
-  case 19:
+  case 0x13:
     switch (Model) {
     // Diamond Rapids:
     case 0x01:

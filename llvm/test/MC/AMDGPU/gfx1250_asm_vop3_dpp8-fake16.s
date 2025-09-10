@@ -170,6 +170,18 @@ v_cvt_pk_bf16_f32_e64_dpp v255, -|v255|, v255 clamp div:2 dpp8:[0,0,0,0,0,0,0,0]
 // GFX1250: v_cvt_pk_bf16_f32_e64_dpp v255, -|v255|, v255 clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x81,0x6d,0xd7,0xe9,0xfe,0x03,0x38,0xff,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
+v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1]
+// GFX1250: v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1] ; encoding: [0x05,0x80,0x69,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0xa9,0x21]
+// GFX12-ERR: :[[@LINE-2]]:37: error: invalid operand for instruction
+
+v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 op_sel:[0,0,1] clamp dpp8:[7,6,5,4,2,3,0,1]
+// GFX1250: v_cvt_pk_fp8_f32_e64_dpp v5, v1, v2 op_sel:[0,0,1] clamp dpp8:[7,6,5,4,2,3,0,1] ; encoding: [0x05,0xc0,0x69,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0xa9,0x21]
+// GFX12-ERR: :[[@LINE-2]]:58: error: not a valid operand.
+
+v_cvt_sr_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1]
+// GFX1250: v_cvt_sr_fp8_f32_e64_dpp v5, v1, v2 clamp dpp8:[7,6,5,4,2,3,0,1] ; encoding: [0x05,0x80,0x6b,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0xa9,0x21]
+// GFX12-ERR: :[[@LINE-2]]:37: error: invalid operand for instruction
+
 v_cvt_sr_pk_bf16_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX1250: v_cvt_sr_pk_bf16_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6e,0xd7,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU

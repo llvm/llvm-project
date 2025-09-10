@@ -1133,9 +1133,6 @@ static bool
 optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
                          const DataLayout &DL,
                          function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  // Ignore no-op GEPs and bitcasts.
-  StoredOnceVal = StoredOnceVal->stripPointerCasts();
-
   // If we are dealing with a pointer global that is initialized to null and
   // only has one (non-null) value stored into it, then we can optimize any
   // users of the loaded value (often calls and loads) that would trap if the
@@ -2554,7 +2551,8 @@ static bool OptimizeNonTrivialIFuncs(
         }))
       continue;
 
-    assert(!Callees.empty() && "Expecting successful collection of versions");
+    if (Callees.empty())
+      continue;
 
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << Resolver->getName() << "\n");

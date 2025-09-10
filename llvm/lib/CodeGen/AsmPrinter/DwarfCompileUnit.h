@@ -289,7 +289,8 @@ public:
   /// the \p CallReg is set to 0.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
                                  bool IsTail, const MCSymbol *PCAddr,
-                                 const MCSymbol *CallAddr, unsigned CallReg);
+                                 const MCSymbol *CallAddr, unsigned CallReg,
+                                 DIType *AllocSiteTy);
   /// Construct call site parameter DIEs for the \p CallSiteDIE. The \p Params
   /// were collected by the \ref collectCallSiteParameters.
   /// Note: The order of parameters does not matter, since debuggers recognize

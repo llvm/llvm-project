@@ -14,7 +14,7 @@
 
 namespace Fortran::runtime {
 
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
 // FLANG_RT_DEBUG code is disabled when false.
 static constexpr bool enableDebugOutput{false};
 #endif
@@ -79,7 +79,7 @@ RT_API_ATTRS Ticket &WorkQueue::StartTicket() {
     last_ = newTicket;
   }
   newTicket->ticket.begun = false;
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
   if (enableDebugOutput &&
       (executionEnvironment.internalDebugging &
           ExecutionEnvironment::WorkQueue)) {
@@ -93,7 +93,7 @@ RT_API_ATTRS int WorkQueue::Run() {
   while (last_) {
     TicketList *at{last_};
     insertAfter_ = last_;
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
     if (enableDebugOutput &&
         (executionEnvironment.internalDebugging &
             ExecutionEnvironment::WorkQueue)) {
@@ -102,7 +102,7 @@ RT_API_ATTRS int WorkQueue::Run() {
     }
 #endif
     int stat{at->ticket.Continue(*this)};
-#if !defined(RT_DEVICE_COMPILATION)
+#if !defined(RT_DEVICE_COMPILATION) && !defined(OMP_OFFLOAD_BUILD)
     if (enableDebugOutput &&
         (executionEnvironment.internalDebugging &
             ExecutionEnvironment::WorkQueue)) {

@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
-#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <cstddef>
@@ -32,7 +31,7 @@ template <bool Signed> class IntegralAP;
 template <unsigned Bits, bool Signed> class Integral;
 
 /// Enumeration of the primitive types of the VM.
-enum PrimType : unsigned {
+enum PrimType : uint8_t {
   PT_Sint8 = 0,
   PT_Uint8 = 1,
   PT_Sint16 = 2,
@@ -52,14 +51,15 @@ enum PrimType : unsigned {
 
 // Like std::optional<PrimType>, but only sizeof(PrimType).
 class OptPrimType final {
-  unsigned V = ~0u;
+  static constexpr uint8_t None = 0xFF;
+  uint8_t V = None;
 
 public:
   OptPrimType() = default;
   OptPrimType(std::nullopt_t) {}
   OptPrimType(PrimType T) : V(static_cast<unsigned>(T)) {}
 
-  explicit constexpr operator bool() const { return V != ~0u; }
+  explicit constexpr operator bool() const { return V != None; }
   PrimType operator*() const {
     assert(operator bool());
     return static_cast<PrimType>(V);
@@ -84,6 +84,19 @@ static_assert(sizeof(OptPrimType) == sizeof(PrimType));
 
 inline constexpr bool isPtrType(PrimType T) {
   return T == PT_Ptr || T == PT_MemberPtr;
+}
+
+inline constexpr bool isSignedType(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+  case PT_Sint16:
+  case PT_Sint32:
+  case PT_Sint64:
+    return true;
+  default:
+    return false;
+  }
+  return false;
 }
 
 enum class CastKind : uint8_t {
@@ -259,14 +272,4 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
-#define COMPOSITE_TYPE_SWITCH(Expr, B, D)                                      \
-  do {                                                                         \
-    switch (Expr) {                                                            \
-      TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-    default: {                                                                 \
-      D;                                                                       \
-      break;                                                                   \
-    }                                                                          \
-    }                                                                          \
-  } while (0)
 #endif

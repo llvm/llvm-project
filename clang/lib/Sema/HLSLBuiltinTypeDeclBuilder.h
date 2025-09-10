@@ -64,7 +64,7 @@ public:
 
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                   ConceptDecl *CD);
-  CXXRecordDecl *finalizeForwardDeclaration();
+  CXXRecordDecl *finalizeForwardDeclaration() { return Record; }
   BuiltinTypeDeclBuilder &completeDefinition();
 
   BuiltinTypeDeclBuilder &
@@ -80,6 +80,12 @@ public:
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
   BuiltinTypeDeclBuilder &addHandleConstructorFromBinding();
   BuiltinTypeDeclBuilder &addHandleConstructorFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addCopyConstructor();
+  BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
+
+  // Static create methods
+  BuiltinTypeDeclBuilder &addCreateFromBinding();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();

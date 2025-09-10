@@ -48,16 +48,15 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
     return a_bits.get_val();
   }
 
-  // TODO: Investigate why replacing the return line below with:
-  //   return x_bits.get_val() + y_bits.get_val();
-  // fails the hypotf16 smoke tests.
+  float af = fputil::cast<float>(a_bits.get_val());
+  float bf = fputil::cast<float>(b_bits.get_val());
+
+  // Compiler runtime basic operations for float16 might not be correctly
+  // rounded for all rounding modes.
   if (LIBC_UNLIKELY(a_u - b_u >=
                     static_cast<uint16_t>((FPBits::FRACTION_LEN + 2)
                                           << FPBits::FRACTION_LEN)))
-    return a_bits.get_val() + b_bits.get_val();
-
-  float af = fputil::cast<float>(a_bits.get_val());
-  float bf = fputil::cast<float>(b_bits.get_val());
+    return fputil::cast<float16>(af + bf);
 
   // These squares are exact.
   float a_sq = af * af;

@@ -2784,14 +2784,24 @@ TEST(GetNonLocalDeclRefs, All) {
 
 TEST(DocumentLinks, All) {
   Annotations MainCpp(R"cpp(
+      #define HEADER_AA "faa.h"
+      #define HEADER_BB "fbb.h"
+      #define GET_HEADER(X) HEADER_ ## X 
+
       #/*comments*/include /*comments*/ $foo[["foo.h"]] //more comments
       int end_of_preamble = 0;
       #include $bar[[<bar.h>]]
+      #include $AA[[GET_HEADER]](AA) // Some comment !
+      # /* What about */ \
+      include /* multiple line */ \
+      $BB[[GET_HEADER]]( /* statements ? */ \
+      BB /* :) */ )
     )cpp");
 
   TestTU TU;
   TU.Code = std::string(MainCpp.code());
-  TU.AdditionalFiles = {{"foo.h", ""}, {"bar.h", ""}};
+  TU.AdditionalFiles = {
+      {"faa.h", ""}, {"fbb.h", ""}, {"foo.h", ""}, {"bar.h", ""}};
   TU.ExtraArgs = {"-isystem."};
   auto AST = TU.build();
 
@@ -2801,7 +2811,11 @@ TEST(DocumentLinks, All) {
           DocumentLink({MainCpp.range("foo"),
                         URIForFile::canonicalize(testPath("foo.h"), "")}),
           DocumentLink({MainCpp.range("bar"),
-                        URIForFile::canonicalize(testPath("bar.h"), "")})));
+                        URIForFile::canonicalize(testPath("bar.h"), "")}),
+          DocumentLink({MainCpp.range("AA"),
+                        URIForFile::canonicalize(testPath("faa.h"), "")}),
+          DocumentLink({MainCpp.range("BB"),
+                        URIForFile::canonicalize(testPath("fbb.h"), "")})));
 }
 
 } // namespace

@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+def NotBoolXor : PatFrags<(ops node:$val),
+                          [(xor node:$val, -1), (xor node:$val, 1)]>;
+
 //===----------------------------------------------------------------------===//
 // LoongArch specific DAG Nodes.
 //===----------------------------------------------------------------------===//
@@ -22,6 +25,9 @@ def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 def SDT_LoongArchFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 
+// ISD::BRCOND is custom-lowered to LoongArchISD::BRCOND for floating-point
+// comparisons to prevent recursive lowering.
+def loongarch_brcond : SDNode<"LoongArchISD::BRCOND", SDTBrcond, [SDNPHasChain]>;
 def loongarch_movgr2fr_w_la64
     : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
 def loongarch_movfr2gr_s_la64
@@ -208,16 +214,18 @@ def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
 def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
 
 multiclass PatFPBrcond<CondCode cc, LAInst CmpInst, RegisterClass RegTy> {
-  def : Pat<(brcond (xor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), -1),
-                     bb:$imm21),
+  def : Pat<(loongarch_brcond (NotBoolXor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc))),
+                              bb:$imm21),
             (BCEQZ (CmpInst RegTy:$fj, RegTy:$fk), bb:$imm21)>;
-  def : Pat<(brcond (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), bb:$imm21),
+  def : Pat<(loongarch_brcond (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), bb:$imm21),
             (BCNEZ (CmpInst RegTy:$fj, RegTy:$fk), bb:$imm21)>;
 }
 
 defm : PatFPBrcond<SETOEQ, FCMP_CEQ_S, FPR32>;
+defm : PatFPBrcond<SETEQ , FCMP_CEQ_S, FPR32>;
 defm : PatFPBrcond<SETOLT, FCMP_CLT_S, FPR32>;
 defm : PatFPBrcond<SETOLE, FCMP_CLE_S, FPR32>;
+defm : PatFPBrcond<SETLE,  FCMP_CLE_S, FPR32>;
 defm : PatFPBrcond<SETONE, FCMP_CNE_S, FPR32>;
 defm : PatFPBrcond<SETO,   FCMP_COR_S, FPR32>;
 defm : PatFPBrcond<SETUEQ, FCMP_CUEQ_S, FPR32>;

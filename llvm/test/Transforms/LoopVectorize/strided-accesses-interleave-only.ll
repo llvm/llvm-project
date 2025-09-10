@@ -23,10 +23,9 @@ define void @test_variable_stride(ptr %dst, i32 %scale) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = mul i32 [[IV]], [[SCALE]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[DST]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[GEP]], align 2

@@ -688,11 +688,20 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   case ELF::EF_CUDA_SM100:
     return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_100a"
                                                           : "sm_100";
+  case ELF::EF_CUDA_SM101:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_101a"
+                                                          : "sm_101";
+  case ELF::EF_CUDA_SM103:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_103a"
+                                                          : "sm_103";
 
   // Rubin architecture.
   case ELF::EF_CUDA_SM120:
     return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_120a"
                                                           : "sm_120";
+  case ELF::EF_CUDA_SM121:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_121a"
+                                                          : "sm_121";
   default:
     llvm_unreachable("Unknown EF_CUDA_SM value");
   }

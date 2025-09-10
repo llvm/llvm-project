@@ -52,7 +52,7 @@ MCSymbol *
 WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   const GlobalValue *Global = MO.getGlobal();
   if (!isa<Function>(Global)) {
-    auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(Printer.getSymbol(Global));
     // If the symbol doesn't have an explicit WasmSymbolType yet and the
     // GlobalValue is actually a WebAssembly global, then ensure the symbol is a
     // WASM_SYMBOL_TYPE_GLOBAL.
@@ -123,7 +123,7 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
 
   if (MO.getOffset() != 0) {
-    const auto *WasmSym = cast<MCSymbolWasm>(Sym);
+    const auto *WasmSym = static_cast<const MCSymbolWasm *>(Sym);
     if (TargetFlags == WebAssemblyII::MO_GOT)
       report_fatal_error("GOT symbol references do not support offsets");
     if (WasmSym->isFunction())
@@ -148,12 +148,12 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   auto Signature = Ctx.createWasmSignature();
   Signature->Returns = std::move(Returns);
   Signature->Params = std::move(Params);
-  MCSymbol *Sym = Printer.createTempSymbol("typeindex");
-  auto *WasmSym = cast<MCSymbolWasm>(Sym);
-  WasmSym->setSignature(Signature);
-  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+  auto *Sym =
+      static_cast<MCSymbolWasm *>(Printer.createTempSymbol("typeindex"));
+  Sym->setSignature(Signature);
+  Sym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   const MCExpr *Expr =
-      MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
+      MCSymbolRefExpr::create(Sym, WebAssembly::S_TYPEINDEX, Ctx);
   return MCOperand::createExpr(Expr);
 }
 

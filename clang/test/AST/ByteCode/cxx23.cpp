@@ -83,6 +83,11 @@ constexpr int k(int n) {
 }
 constexpr int k0 = k(0);
 
+namespace ThreadLocalStore {
+  thread_local int &&a = 0;
+  void store() { a = 42; }
+}
+
 #if __cplusplus >= 202302L
 constexpr int &b = b; // all-error {{must be initialized by a constant expression}} \
                       // all-note {{initializer of 'b' is not a constant expression}} \
@@ -309,15 +314,14 @@ namespace NonLiteralDtorInParam {
     ~NonLiteral() {} // all23-note {{declared here}}
   };
   constexpr int F2(NonLiteral N) { // all20-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}} \
-                                   // ref23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+                                   // all23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
     return 8;
   }
 
 
   void test() {
     NonLiteral L;
-    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
-                              // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}}
   }
 }
 

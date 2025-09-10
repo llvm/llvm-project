@@ -271,8 +271,6 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             mlir::Value extent = val;
             mlir::Value upperbound =
                 mlir::arith::SubIOp::create(builder, loc, extent, one);
-            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
-                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;
@@ -552,10 +550,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
 
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
-    return hlfir::DeclareOp::create(
-        firBuilder, loc, alloca, varName, /*shape=*/nullptr,
-        llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+    return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
   };
 
   if (fir::isa_trivial(unwrappedTy)) {
@@ -576,10 +571,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       }
       auto alloca = fir::AllocaOp::create(
           firBuilder, loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = hlfir::DeclareOp::create(
-          firBuilder, loc, alloca, varName, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto declareOp =
+          hlfir::DeclareOp::create(firBuilder, loc, alloca, varName, shape);
 
       if (initVal) {
         mlir::Type idxTy = firBuilder.getIndexType();
@@ -591,7 +584,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
           hlfir::AssignOp::create(firBuilder, loc, initVal,
                                   declareOp.getBase());
         } else {
-          for (auto ext : seqTy.getShape()) {
+          // Generate loop nest from slowest to fastest running dimension
+          for (auto ext : llvm::reverse(seqTy.getShape())) {
             auto lb = firBuilder.createIntegerConstant(loc, idxTy, 0);
             auto ub = firBuilder.createIntegerConstant(loc, idxTy, ext - 1);
             auto step = firBuilder.createIntegerConstant(loc, idxTy, 1);
@@ -614,6 +608,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     if (fir::isa_trivial(innerTy)) {
       retVal = getDeclareOpForType(unwrappedTy).getBase();
+      mlir::Value allocatedScalar =
+          fir::AllocMemOp::create(builder, loc, innerTy);
+      mlir::Value firClass =
+          fir::EmboxOp::create(builder, loc, boxTy, allocatedScalar);
+      fir::StoreOp::create(builder, loc, firClass, retVal);
     } else if (mlir::isa<fir::SequenceType>(innerTy)) {
       hlfir::Entity source = hlfir::Entity{var};
       auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);

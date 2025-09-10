@@ -600,8 +600,8 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
 ; X86-NEXT:    vpinsrd $1, (%edi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $2, (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, (%edx), %xmm0, %xmm0
-; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%ecx)
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-NEXT:    vmovdqa %xmm1, (%ecx)
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
@@ -616,8 +616,8 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
 ; X64-NEXT:    vpinsrd $2, (%rdx), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rcx), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vmovdqa %xmm0, (%r9)
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm1
+; X64-NEXT:    vmovdqa %xmm1, (%r9)
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%r8)

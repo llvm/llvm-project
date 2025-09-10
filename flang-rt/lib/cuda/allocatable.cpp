@@ -44,13 +44,6 @@ int RTDEF(CUFAllocatableAllocateSync)(Descriptor &desc, int64_t *stream,
 int RTDEF(CUFAllocatableAllocate)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
-  if (desc.HasAddendum()) {
-    Terminator terminator{sourceFile, sourceLine};
-    // TODO: This require a bit more work to set the correct type descriptor
-    // address
-    terminator.Crash(
-        "not yet implemented: CUDA descriptor allocation with addendum");
-  }
   // Perform the standard allocation.
   int stat{RTNAME(AllocatableAllocate)(
       desc, stream, hasStat, errMsg, sourceFile, sourceLine)};

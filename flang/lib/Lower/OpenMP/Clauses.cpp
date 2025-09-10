@@ -221,6 +221,8 @@ MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
 MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
+MAKE_EMPTY_CLASS(GraphId, GraphId);
+MAKE_EMPTY_CLASS(GraphReset, GraphReset);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
@@ -396,6 +398,8 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
+  case parser::OmpPrescriptiveness::Value::Fallback:
+    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -769,6 +773,27 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 }
 
 // DynamicAllocators: empty
+
+DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
+                     semantics::SemanticsContext &semaCtx) {
+  // imp.v -> OmpDyngroupprivateClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAccessGroup::Value, DynGroupprivate::AccessGroup,
+      // clang-format off
+      MS(Cgroup,  Cgroup)
+      // clang-format on
+  );
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAccessGroup>(mods);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
+  auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
+
+  return DynGroupprivate{
+      {/*AccessGroup=*/maybeApplyToV(convert, m0),
+       /*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m1),
+       /*Size=*/makeExpr(size, semaCtx)}};
+}
 
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {

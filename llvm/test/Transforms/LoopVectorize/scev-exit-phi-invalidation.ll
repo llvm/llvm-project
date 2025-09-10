@@ -21,10 +21,9 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT_1:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
-; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP_1_LATCH]], label [[LOOP_1_LATCH]]
 ; CHECK:       loop.1.latch:
@@ -65,10 +64,10 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_2:%.*]], label [[SCALAR_PH2]]
 ; CHECK:       scalar.ph2:
-; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i8 [ [[TMP9]], [[MIDDLE_BLOCK7]] ], [ 0, [[EXIT_1]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[TMP9]], [[MIDDLE_BLOCK7]] ], [ 0, [[EXIT_1]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL8]], [[SCALAR_PH2]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH2]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_2]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i8 [[IV_2]], 1
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i8 [[IV_2_NEXT]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_A]], align 1

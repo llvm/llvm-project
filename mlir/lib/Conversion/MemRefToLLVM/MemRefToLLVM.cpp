@@ -895,8 +895,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                                          adaptor.getMemref(),
                                          adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
-        loadOp, typeConverter->convertType(type.getElementType()), dataPtr, 0,
-        false, loadOp.getNontemporal());
+        loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
+        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
     return success();
   }
 };
@@ -918,7 +918,8 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
         getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
                              adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               0, false, op.getNontemporal());
+                                               op.getAlignment().value_or(0),
+                                               false, op.getNontemporal());
     return success();
   }
 };
@@ -1245,10 +1246,8 @@ struct MemorySpaceCastOpLowering
       auto result = UnrankedMemRefDescriptor::poison(
           rewriter, loc, typeConverter->convertType(resultTypeU));
       result.setRank(rewriter, loc, rank);
-      SmallVector<Value, 1> sizes;
-      UnrankedMemRefDescriptor::computeSizes(rewriter, loc, *getTypeConverter(),
-                                             result, resultAddrSpace, sizes);
-      Value resultUnderlyingSize = sizes.front();
+      Value resultUnderlyingSize = UnrankedMemRefDescriptor::computeSize(
+          rewriter, loc, *getTypeConverter(), result, resultAddrSpace);
       Value resultUnderlyingDesc =
           LLVM::AllocaOp::create(rewriter, loc, getPtrType(),
                                  rewriter.getI8Type(), resultUnderlyingSize);
@@ -1529,12 +1528,11 @@ private:
     auto targetDesc = UnrankedMemRefDescriptor::poison(
         rewriter, loc, typeConverter->convertType(targetType));
     targetDesc.setRank(rewriter, loc, resultRank);
-    SmallVector<Value, 4> sizes;
-    UnrankedMemRefDescriptor::computeSizes(rewriter, loc, *getTypeConverter(),
-                                           targetDesc, addressSpace, sizes);
+    Value allocationSize = UnrankedMemRefDescriptor::computeSize(
+        rewriter, loc, *getTypeConverter(), targetDesc, addressSpace);
     Value underlyingDescPtr = LLVM::AllocaOp::create(
         rewriter, loc, getPtrType(), IntegerType::get(getContext(), 8),
-        sizes.front());
+        allocationSize);
     targetDesc.setMemRefDescPtr(rewriter, loc, underlyingDescPtr);
 
     // Extract pointers and offset from the source memref.
@@ -1871,6 +1869,8 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::umin;
   case arith::AtomicRMWKind::ori:
     return LLVM::AtomicBinOp::_or;
+  case arith::AtomicRMWKind::xori:
+    return LLVM::AtomicBinOp::_xor;
   case arith::AtomicRMWKind::andi:
     return LLVM::AtomicBinOp::_and;
   default:

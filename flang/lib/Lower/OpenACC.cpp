@@ -61,6 +61,11 @@ static llvm::cl::opt<bool> strideIncludeLowerExtent(
         "Whether to include the lower dimensions extents in the stride."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool> lowerDoLoopToAccLoop(
+    "openacc-do-loop-to-acc-loop",
+    llvm::cl::desc("Whether to lower do loops as `acc.loop` operations."),
+    llvm::cl::init(true));
+
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -383,7 +388,7 @@ static inline void
 genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
                           mlir::Value fromAddress, mlir::Value toAddress,
                           mlir::Type elementType, mlir::Location loc) {
-  // Generate `atomic.read` operation for atomic assigment statements
+  // Generate `atomic.read` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   mlir::acc::AtomicReadOp::create(firOpBuilder, loc, fromAddress, toAddress,
@@ -1212,12 +1217,10 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
 
     auto leftDeclOp = hlfir::DeclareOp::create(
         builder, loc, recipe.getCopyRegion().getArgument(0), llvm::StringRef{},
-        shape, llvm::ArrayRef<mlir::Value>{}, /*dummy_scope=*/nullptr,
-        fir::FortranVariableFlagsAttr{});
+        shape);
     auto rightDeclOp = hlfir::DeclareOp::create(
         builder, loc, recipe.getCopyRegion().getArgument(1), llvm::StringRef{},
-        shape, llvm::ArrayRef<mlir::Value>{}, /*dummy_scope=*/nullptr,
-        fir::FortranVariableFlagsAttr{});
+        shape);
 
     hlfir::DesignateOp::Subscripts triplets =
         getSubscriptsFromArgs(recipe.getCopyRegion().getArguments());
@@ -1523,14 +1526,10 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       auto shape =
           genShapeFromBoundsOrArgs(loc, builder, seqTy, bounds,
                                    recipe.getCombinerRegion().getArguments());
-      auto v1DeclareOp = hlfir::DeclareOp::create(
-          builder, loc, value1, llvm::StringRef{}, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-      auto v2DeclareOp = hlfir::DeclareOp::create(
-          builder, loc, value2, llvm::StringRef{}, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto v1DeclareOp = hlfir::DeclareOp::create(builder, loc, value1,
+                                                  llvm::StringRef{}, shape);
+      auto v2DeclareOp = hlfir::DeclareOp::create(builder, loc, value2,
+                                                  llvm::StringRef{}, shape);
       hlfir::DesignateOp::Subscripts triplets = getTripletsFromArgs(recipe);
 
       llvm::SmallVector<mlir::Value> lenParamsLeft;
@@ -1575,7 +1574,7 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     if (bounds.empty()) {
       llvm::SmallVector<mlir::Value> extents;
       mlir::Type idxTy = builder.getIndexType();
-      for (auto extent : seqTy.getShape()) {
+      for (auto extent : llvm::reverse(seqTy.getShape())) {
         mlir::Value lb = mlir::arith::ConstantOp::create(
             builder, loc, idxTy, builder.getIntegerAttr(idxTy, 0));
         mlir::Value ub = mlir::arith::ConstantOp::create(
@@ -1607,12 +1606,11 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       }
     } else {
       // Lowerbound, upperbound and step are passed as block arguments.
-      [[maybe_unused]] unsigned nbRangeArgs =
+      unsigned nbRangeArgs =
           recipe.getCombinerRegion().getArguments().size() - 2;
       assert((nbRangeArgs / 3 == seqTy.getDimension()) &&
              "Expect 3 block arguments per dimension");
-      for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
-           i += 3) {
+      for (int i = nbRangeArgs - 1; i >= 2; i -= 3) {
         mlir::Value lb = recipe.getCombinerRegion().getArgument(i);
         mlir::Value ub = recipe.getCombinerRegion().getArgument(i + 1);
         mlir::Value step = recipe.getCombinerRegion().getArgument(i + 2);
@@ -1623,8 +1621,11 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
         ivs.push_back(loop.getInductionVar());
       }
     }
-    auto addr1 = fir::CoordinateOp::create(builder, loc, refTy, value1, ivs);
-    auto addr2 = fir::CoordinateOp::create(builder, loc, refTy, value2, ivs);
+    llvm::SmallVector<mlir::Value> reversedIvs(ivs.rbegin(), ivs.rend());
+    auto addr1 =
+        fir::CoordinateOp::create(builder, loc, refTy, value1, reversedIvs);
+    auto addr2 =
+        fir::CoordinateOp::create(builder, loc, refTy, value2, reversedIvs);
     auto load1 = fir::LoadOp::create(builder, loc, addr1);
     auto load2 = fir::LoadOp::create(builder, loc, addr2);
     mlir::Value res =
@@ -5009,6 +5010,9 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,
     const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
+  if (!lowerDoLoopToAccLoop)
+    return nullptr;
+
   // Only convert loops which have induction variables that need privatized.
   if (!doConstruct.IsDoNormal() && !doConstruct.IsDoConcurrent())
     return nullptr;
@@ -5030,10 +5034,6 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
            "unstructured do loop in acc kernels");
     return nullptr;
   }
-
-  // Open up a new scope for the loop variables.
-  localSymbols.pushScope();
-  auto scopeGuard = llvm::make_scope_exit([&]() { localSymbols.popScope(); });
 
   // Prepare empty operand vectors since there are no associated `acc loop`
   // clauses with the Fortran do loops being handled here.

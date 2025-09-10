@@ -90,9 +90,6 @@ LTO:
   - llvm/lib/Transforms/*/FunctionImport*
   - llvm/tools/gold/**
 
-mc:
-  - llvm/*/MC/**
-
 clang:driver:
   - clang/*/Driver/**
 
@@ -621,6 +618,12 @@ llvm:adt:
 llvm:support:
   - llvm/**/Support/**
 
+# Skip llvm/test/MC and llvm/unittests/MC, which includes target-specific directories.
+llvm:mc:
+  - llvm/include/llvm/MC/**
+  - llvm/lib/MC/**
+  - llvm/tools/llvm-mc/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
@@ -1086,6 +1089,14 @@ clang:openmp:
   - llvm/include/llvm/Transforms/IPO/OpenMPOpt.h
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
+
+clang:temporal-safety:
+  - clang/include/clang/Analysis/Analyses/LifetimeSafety*
+  - clang/lib/Analysis/LifetimeSafety*
+  - clang/unittests/Analysis/LifetimeSafety*
+  - clang/test/Sema/*lifetime-safety*
+  - clang/test/Sema/*lifetime-analysis*
+  - clang/test/Analysis/LifetimeSafety/**
 
 clang:as-a-library:
   - clang/tools/libclang/**

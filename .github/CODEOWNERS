@@ -17,6 +17,7 @@
 /runtimes/ @llvm/reviewers-libcxx
 
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
+/llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
@@ -111,6 +112,9 @@
 # MLIR NVGPU Dialect
 /mlir/**/NVGPU*/ @grypp
 /mlir/test/**/CUDA/ @grypp
+
+# MLIR GPU Dialect
+/mlir/**/GPU*/ @fabianmcg
 
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp

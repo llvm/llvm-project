@@ -1,0 +1,29 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+# CHECK: error: Specified StaticSamplersOffset does not match computed value: 48.
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            24
+    RootSignature:
+      Version: 2
+      NumRootParameters: 0
+      RootParametersOffset: 24
+      NumStaticSamplers: 0
+      StaticSamplersOffset: 0
+      Parameters:
+      - ParameterType: 2
+        ShaderVisibility: 3
+        Descriptor:
+          ShaderRegister: 31
+          RegisterSpace: 32
+          DATA_STATIC_WHILE_SET_AT_EXECUTE: true

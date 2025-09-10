@@ -316,7 +316,7 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 
 # [PR8833] LLP64-incompatible tests
 if not re.match(
-    r"^(aarch64|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
+    r"^(aarch64|arm64ec|x86_64).*-(windows-msvc|windows-gnu)$", config.target_triple
 ):
     config.available_features.add("LP64")
 
@@ -410,3 +410,13 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)

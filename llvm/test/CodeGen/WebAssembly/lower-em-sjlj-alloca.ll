@@ -18,7 +18,7 @@ define void @test_static() {
 ; CHECK-NEXT:      i32 1, label %[[ENTRY_SPLIT_SPLIT:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[ENTRY_SPLIT]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]])
 ; CHECK-NEXT:    call void @__wasm_setjmp(ptr @buf, i32 1, ptr [[FUNCTIONINVOCATIONID]])
 ; CHECK-NEXT:    br label %[[ENTRY_SPLIT_SPLIT]]
 ; CHECK:       [[ENTRY_SPLIT_SPLIT]]:
@@ -31,7 +31,7 @@ define void @test_static() {
 ; CHECK:       [[_NOEXC:.*:]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CATCH_DISPATCH_LONGJMP]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch.longjmp] unwind to caller
@@ -53,7 +53,7 @@ define void @test_static() {
 ;
 entry:
   %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
   %call = call i32 @setjmp(ptr @buf) returns_twice
   %cmp = icmp eq i32 %call, 0
   br i1 %cmp, label %if, label %else
@@ -63,7 +63,7 @@ if:
   ret void
 
 else:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   ret void
 }
 
@@ -114,7 +114,7 @@ define void @test_dynamic(i32 %size) {
 ;
 entry:
   %x = alloca i32, i32 %size, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
   %call = call i32 @setjmp(ptr @buf) returns_twice
   %cmp = icmp eq i32 %call, 0
   br i1 %cmp, label %if, label %else
@@ -124,6 +124,6 @@ if:
   ret void
 
 else:
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   ret void
 }
