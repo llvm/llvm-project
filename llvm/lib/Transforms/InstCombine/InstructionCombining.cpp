@@ -5036,9 +5036,15 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
       SmallPtrSet<BasicBlock *, 8> VisitedBBs;
       for (Use &U : PN->incoming_values()) {
         BasicBlock *InBB = PN->getIncomingBlock(U);
+        // We can't move freeze if the start value is the result of a
+        // terminator (e.g. an invoke).
+        if (auto *OpI = dyn_cast<Instruction>(U)) {
+          if (OpI->isTerminator())
+            return false;
+        }
+
         if (DT.dominates(BB, InBB) || isBackEdge(InBB, BB) ||
-            isa<InvokeInst>(U) || VisitedBBs.contains(InBB) ||
-            match(U.get(), m_Undef()))
+            VisitedBBs.contains(InBB) || match(U.get(), m_Undef()))
           return false;
         VisitedBBs.insert(InBB);
       }
