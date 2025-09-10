@@ -1613,6 +1613,9 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
               ConstOps.size() > 4 ? ConstOps[4]
                                   : ConstantPointerNull::get(cast<PointerType>(
                                         ConstOps[3]->getType()));
+          if (DeactivationSymbol->getType()->isPointerTy())
+            return error(
+                "ptrauth deactivation symbol operand must be a pointer");
 
           C = ConstantPtrAuth::get(ConstOps[0], Key, Disc, ConstOps[3],
                                    DeactivationSymbol);
