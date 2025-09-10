@@ -652,7 +652,6 @@ struct CUFDataTransferOpConversion
         // Initialization of an array from a scalar value should be implemented
         // via a kernel launch. Use the flang runtime via the Assign function
         // until we have more infrastructure.
-
         mlir::Value src = emboxSrc(rewriter, op, symtab);
         mlir::Value dst = emboxDst(rewriter, op, symtab);
         mlir::func::FuncOp func =
