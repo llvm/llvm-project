@@ -64,10 +64,10 @@ bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
 
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
 
-_CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
+_CLC_OVERLOAD _CLC_INLINE float __clc_soft_flush_denormal(float x) {
   // Avoid calling __clc_fp32_subnormals_supported here: it uses
   // llvm.canonicalize, which quiets sNaN.
-  return __builtin_fabsf(x) < 0x1p-149f
+  return __builtin_elementwise_abs(x) < 0x1p-149f
              ? __builtin_elementwise_copysign(0.0f, x)
              : x;
 }
