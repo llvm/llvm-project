@@ -131,6 +131,8 @@ public:
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
+  bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
+                          SourceLocation Loc);
   void DiagnoseAttrStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
