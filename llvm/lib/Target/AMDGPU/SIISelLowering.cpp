@@ -5270,7 +5270,58 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
-static uint32_t getIdentityValueForWaveReduction(unsigned Opc) {
+static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
+                                                      MachineBasicBlock *BB) {
+  // For targets older than GFX12, we emit a sequence of 32-bit operations.
+  // For GFX12, we emit s_add_u64 and s_sub_u64.
+  MachineFunction *MF = BB->getParent();
+  const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineOperand &Dest = MI.getOperand(0);
+  MachineOperand &Src0 = MI.getOperand(1);
+  MachineOperand &Src1 = MI.getOperand(2);
+  bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
+  if (ST.hasScalarAddSub64()) {
+    unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
+    // clang-format off
+    BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
+        .add(Src0)
+        .add(Src1);
+    // clang-format on
+  } else {
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const TargetRegisterClass *BoolRC = TRI->getBoolRC();
+
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+    unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+    unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
+    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+        .addReg(DestSub0)
+        .addImm(AMDGPU::sub0)
+        .addReg(DestSub1)
+        .addImm(AMDGPU::sub1);
+  }
+  MI.eraseFromParent();
+  return BB;
+}
+
+static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::S_MIN_U32:
     return std::numeric_limits<uint32_t>::max();
@@ -5288,8 +5339,40 @@ static uint32_t getIdentityValueForWaveReduction(unsigned Opc) {
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   default:
-    llvm_unreachable("Unexpected opcode in getIdentityValueForWaveReduction");
+    llvm_unreachable(
+        "Unexpected opcode in getIdentityValueFor32BitWaveReduction");
   }
+}
+
+static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_CMP_LT_U64_e64: // umin.u64
+    return std::numeric_limits<uint64_t>::max();
+  case AMDGPU::V_CMP_LT_I64_e64: // min.i64
+    return std::numeric_limits<int64_t>::max();
+  case AMDGPU::V_CMP_GT_U64_e64: // umax.u64
+    return std::numeric_limits<uint64_t>::min();
+  case AMDGPU::V_CMP_GT_I64_e64: // max.i64
+    return std::numeric_limits<int64_t>::min();
+  case AMDGPU::S_ADD_U64_PSEUDO:
+  case AMDGPU::S_SUB_U64_PSEUDO:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_XOR_B64:
+    return std::numeric_limits<uint64_t>::min();
+  case AMDGPU::S_AND_B64:
+    return std::numeric_limits<uint64_t>::max();
+  default:
+    llvm_unreachable(
+        "Unexpected opcode in getIdentityValueFor64BitWaveReduction");
+  }
+}
+
+static bool is32bitWaveReduceOperation(unsigned Opc) {
+  return Opc == AMDGPU::S_MIN_U32 || Opc == AMDGPU::S_MIN_I32 ||
+         Opc == AMDGPU::S_MAX_U32 || Opc == AMDGPU::S_MAX_I32 ||
+         Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_SUB_I32 ||
+         Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_OR_B32 ||
+         Opc == AMDGPU::S_XOR_B32;
 }
 
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
@@ -5319,53 +5402,99 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       RetBB = &BB;
       break;
     }
+    case AMDGPU::V_CMP_LT_U64_e64: // umin
+    case AMDGPU::V_CMP_LT_I64_e64: // min
+    case AMDGPU::V_CMP_GT_U64_e64: // umax
+    case AMDGPU::V_CMP_GT_I64_e64: // max
+    case AMDGPU::S_AND_B64:
+    case AMDGPU::S_OR_B64: {
+      // Idempotent operations.
+      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64), DstReg).addReg(SrcReg);
+      RetBB = &BB;
+      break;
+    }
     case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_XOR_B64:
     case AMDGPU::S_ADD_I32:
-    case AMDGPU::S_SUB_I32: {
+    case AMDGPU::S_ADD_U64_PSEUDO:
+    case AMDGPU::S_SUB_I32:
+    case AMDGPU::S_SUB_U64_PSEUDO: {
       const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
       const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
       Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
-      Register ActiveLanes = MRI.createVirtualRegister(DstRegClass);
+      Register NumActiveLanes =
+          MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
       bool IsWave32 = ST.isWave32();
       unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
       MCRegister ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      unsigned CountReg =
+      unsigned BitCountOpc =
           IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
 
-      auto Exec =
-          BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
+      BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
 
-      auto NewAccumulator = BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
-                                .addReg(Exec->getOperand(0).getReg());
+      auto NewAccumulator =
+          BuildMI(BB, MI, DL, TII->get(BitCountOpc), NumActiveLanes)
+              .addReg(ExecMask);
 
       switch (Opc) {
-      case AMDGPU::S_XOR_B32: {
+      case AMDGPU::S_XOR_B32:
+      case AMDGPU::S_XOR_B64: {
         // Performing an XOR operation on a uniform value
         // depends on the parity of the number of active lanes.
         // For even parity, the result will be 0, for odd
         // parity the result will be the same as the input value.
-        Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
+        Register ParityRegister =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-        auto ParityReg =
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
-                .addReg(NewAccumulator->getOperand(0).getReg())
-                .addImm(1);
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-            .addReg(SrcReg)
-            .addReg(ParityReg->getOperand(0).getReg());
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
+            .addReg(NewAccumulator->getOperand(0).getReg())
+            .addImm(1)
+            .setOperandDead(3); // Dead scc
+        if (Opc == AMDGPU::S_XOR_B32) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+              .addReg(SrcReg)
+              .addReg(ParityRegister);
+        } else {
+          Register DestSub0 =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          Register DestSub1 =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+          const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+          const TargetRegisterClass *SrcSubRC =
+              TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
+
+          MachineOperand Op1L = TII->buildExtractSubRegOrImm(
+              MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub0, SrcSubRC);
+          MachineOperand Op1H = TII->buildExtractSubRegOrImm(
+              MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
+
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
+              .add(Op1L)
+              .addReg(ParityRegister);
+
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub1)
+              .add(Op1H)
+              .addReg(ParityRegister);
+
+          BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
+              .addReg(DestSub0)
+              .addImm(AMDGPU::sub0)
+              .addReg(DestSub1)
+              .addImm(AMDGPU::sub1);
+        }
         break;
       }
       case AMDGPU::S_SUB_I32: {
         Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
 
         // Take the negation of the source operand.
-        auto InvertedValReg =
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal)
-                .addImm(-1)
-                .addReg(SrcReg);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedVal)
+            .addImm(0)
+            .addReg(SrcReg);
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-            .addReg(InvertedValReg->getOperand(0).getReg())
+            .addReg(NegatedVal)
             .addReg(NewAccumulator->getOperand(0).getReg());
         break;
       }
@@ -5373,6 +5502,75 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
             .addReg(SrcReg)
             .addReg(NewAccumulator->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_ADD_U64_PSEUDO:
+      case AMDGPU::S_SUB_U64_PSEUDO: {
+        Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register Op1H_Op0L_Reg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register Op1L_Op0H_Reg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register CarryReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register AddReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register NegatedValLo =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register NegatedValHi =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+        const TargetRegisterClass *Src1RC = MRI.getRegClass(SrcReg);
+        const TargetRegisterClass *Src1SubRC =
+            TRI->getSubRegisterClass(Src1RC, AMDGPU::sub0);
+
+        MachineOperand Op1L = TII->buildExtractSubRegOrImm(
+            MI, MRI, MI.getOperand(1), Src1RC, AMDGPU::sub0, Src1SubRC);
+        MachineOperand Op1H = TII->buildExtractSubRegOrImm(
+            MI, MRI, MI.getOperand(1), Src1RC, AMDGPU::sub1, Src1SubRC);
+
+        if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedValLo)
+              .addImm(0)
+              .addReg(NewAccumulator->getOperand(0).getReg())
+              .setOperandDead(3); // Dead scc
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ASHR_I32), NegatedValHi)
+              .addReg(NegatedValLo)
+              .addImm(31)
+              .setOperandDead(3); // Dead scc
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1L_Op0H_Reg)
+              .add(Op1L)
+              .addReg(NegatedValHi);
+        }
+        Register LowOpcode = Opc == AMDGPU::S_SUB_U64_PSEUDO
+                                 ? NegatedValLo
+                                 : NewAccumulator->getOperand(0).getReg();
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
+            .add(Op1L)
+            .addReg(LowOpcode);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
+            .add(Op1L)
+            .addReg(LowOpcode);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1H_Op0L_Reg)
+            .add(Op1H)
+            .addReg(LowOpcode);
+
+        Register HiVal = Opc == AMDGPU::S_SUB_U64_PSEUDO ? AddReg : DestSub1;
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ADD_U32), HiVal)
+            .addReg(CarryReg)
+            .addReg(Op1H_Op0L_Reg)
+            .setOperandDead(3); // Dead scc
+
+        if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ADD_U32), DestSub1)
+              .addReg(HiVal)
+              .addReg(Op1L_Op0H_Reg)
+              .setOperandDead(3); // Dead scc
+        }
+        BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
+            .addReg(DestSub0)
+            .addImm(AMDGPU::sub0)
+            .addReg(DestSub1)
+            .addImm(AMDGPU::sub1);
         break;
       }
       }
@@ -5391,6 +5589,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     // so that we will get the next active lane for next iteration.
     MachineBasicBlock::iterator I = BB.end();
     Register SrcReg = MI.getOperand(1).getReg();
+    bool is32BitOpc = is32bitWaveReduceOperation(Opc);
 
     // Create Control flow for loop
     // Split MI's Machine Basic block into For loop
@@ -5400,73 +5599,160 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
     const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
     Register LoopIterator = MRI.createVirtualRegister(WaveMaskRegClass);
-    Register InitalValReg = MRI.createVirtualRegister(DstRegClass);
-
+    Register IdentityValReg = MRI.createVirtualRegister(DstRegClass);
     Register AccumulatorReg = MRI.createVirtualRegister(DstRegClass);
     Register ActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
     Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
-
-    Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
-    Register LaneValueReg =
-        MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    Register FF1Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register LaneValueReg = MRI.createVirtualRegister(DstRegClass);
 
     bool IsWave32 = ST.isWave32();
-    unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    unsigned MovOpcForExec = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
     // Create initial values of induction variable from Exec, Accumulator and
     // insert branch instr to newly created ComputeBlock
-    uint32_t InitalValue = getIdentityValueForWaveReduction(Opc);
-    auto TmpSReg =
-        BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
-    BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
-        .addImm(InitalValue);
+    BuildMI(BB, I, DL, TII->get(MovOpcForExec), LoopIterator).addReg(ExecReg);
+    if (is32BitOpc) {
+      uint32_t IdentityValue = getIdentityValueFor32BitWaveReduction(Opc);
+      BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), IdentityValReg)
+          .addImm(IdentityValue);
+    } else {
+      uint64_t IdentityValue = getIdentityValueFor64BitWaveReduction(Opc);
+      BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B64_IMM_PSEUDO), IdentityValReg)
+          .addImm(IdentityValue);
+    }
     // clang-format off
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
         .addMBB(ComputeLoop);
     // clang-format on
 
     // Start constructing ComputeLoop
-    I = ComputeLoop->end();
+    I = ComputeLoop->begin();
     auto Accumulator =
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), AccumulatorReg)
-            .addReg(InitalValReg)
+            .addReg(IdentityValReg)
             .addMBB(&BB);
     auto ActiveBits =
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), ActiveBitsReg)
-            .addReg(TmpSReg->getOperand(0).getReg())
+            .addReg(LoopIterator)
             .addMBB(&BB);
 
+    I = ComputeLoop->end();
+    MachineInstr *NewAccumulator;
     // Perform the computations
     unsigned SFFOpc = IsWave32 ? AMDGPU::S_FF1_I32_B32 : AMDGPU::S_FF1_I32_B64;
-    auto FF1 = BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
-                   .addReg(ActiveBits->getOperand(0).getReg());
-    auto LaneValue = BuildMI(*ComputeLoop, I, DL,
-                             TII->get(AMDGPU::V_READLANE_B32), LaneValueReg)
-                         .addReg(SrcReg)
-                         .addReg(FF1->getOperand(0).getReg());
-    auto NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
-                              .addReg(Accumulator->getOperand(0).getReg())
-                              .addReg(LaneValue->getOperand(0).getReg());
+    BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
+        .addReg(ActiveBitsReg);
+    if (is32BitOpc) {
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueReg)
+          .addReg(SrcReg)
+          .addReg(FF1Reg);
+      NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                           .addReg(Accumulator->getOperand(0).getReg())
+                           .addReg(LaneValueReg);
+    } else {
+      Register LaneValueLoReg =
+          MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      Register LaneValueHiReg =
+          MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      Register LaneValReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *SrcSubRC =
+          TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
+      MachineOperand Op1L = TII->buildExtractSubRegOrImm(
+          MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub0, SrcSubRC);
+      MachineOperand Op1H = TII->buildExtractSubRegOrImm(
+          MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
+      // lane value input should be in an sgpr
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueLoReg)
+          .add(Op1L)
+          .addReg(FF1Reg);
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueHiReg)
+          .add(Op1H)
+          .addReg(FF1Reg);
+      auto LaneValue = BuildMI(*ComputeLoop, I, DL,
+                               TII->get(TargetOpcode::REG_SEQUENCE), LaneValReg)
+                           .addReg(LaneValueLoReg)
+                           .addImm(AMDGPU::sub0)
+                           .addReg(LaneValueHiReg)
+                           .addImm(AMDGPU::sub1);
+      switch (Opc) {
+      case AMDGPU::S_OR_B64:
+      case AMDGPU::S_AND_B64:
+      case AMDGPU::S_XOR_B64: {
+        NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                             .addReg(Accumulator->getOperand(0).getReg())
+                             .addReg(LaneValue->getOperand(0).getReg())
+                             .setOperandDead(3); // Dead scc
+        break;
+      }
+      case AMDGPU::V_CMP_GT_I64_e64:
+      case AMDGPU::V_CMP_GT_U64_e64:
+      case AMDGPU::V_CMP_LT_I64_e64:
+      case AMDGPU::V_CMP_LT_U64_e64: {
+        Register LaneMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+        Register ComparisonResultReg =
+            MRI.createVirtualRegister(WaveMaskRegClass);
+        const TargetRegisterClass *VregClass = TRI->getVGPR64Class();
+        const TargetRegisterClass *VSubRegClass =
+            TRI->getSubRegisterClass(VregClass, AMDGPU::sub0);
+        Register AccumulatorVReg = MRI.createVirtualRegister(VregClass);
+        MachineOperand SrcReg0Sub0 =
+            TII->buildExtractSubRegOrImm(MI, MRI, Accumulator->getOperand(0),
+                                         VregClass, AMDGPU::sub0, VSubRegClass);
+        MachineOperand SrcReg0Sub1 =
+            TII->buildExtractSubRegOrImm(MI, MRI, Accumulator->getOperand(0),
+                                         VregClass, AMDGPU::sub1, VSubRegClass);
+        BuildMI(*ComputeLoop, I, DL, TII->get(TargetOpcode::REG_SEQUENCE),
+                AccumulatorVReg)
+            .add(SrcReg0Sub0)
+            .addImm(AMDGPU::sub0)
+            .add(SrcReg0Sub1)
+            .addImm(AMDGPU::sub1);
+        BuildMI(*ComputeLoop, I, DL, TII->get(Opc), LaneMaskReg)
+            .addReg(LaneValue->getOperand(0).getReg())
+            .addReg(AccumulatorVReg);
 
+        unsigned AndOpc = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+        BuildMI(*ComputeLoop, I, DL, TII->get(AndOpc), ComparisonResultReg)
+            .addReg(LaneMaskReg)
+            .addReg(ActiveBitsReg);
+
+        NewAccumulator = BuildMI(*ComputeLoop, I, DL,
+                                 TII->get(AMDGPU::S_CSELECT_B64), DstReg)
+                             .addReg(LaneValue->getOperand(0).getReg())
+                             .addReg(Accumulator->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_ADD_U64_PSEUDO:
+      case AMDGPU::S_SUB_U64_PSEUDO: {
+        NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                             .addReg(Accumulator->getOperand(0).getReg())
+                             .addReg(LaneValue->getOperand(0).getReg());
+        ComputeLoop = Expand64BitScalarArithmetic(*NewAccumulator, ComputeLoop);
+        break;
+      }
+      }
+    }
     // Manipulate the iterator to get the next active lane
     unsigned BITSETOpc =
         IsWave32 ? AMDGPU::S_BITSET0_B32 : AMDGPU::S_BITSET0_B64;
-    auto NewActiveBits =
-        BuildMI(*ComputeLoop, I, DL, TII->get(BITSETOpc), NewActiveBitsReg)
-            .addReg(FF1->getOperand(0).getReg())
-            .addReg(ActiveBits->getOperand(0).getReg());
+    BuildMI(*ComputeLoop, I, DL, TII->get(BITSETOpc), NewActiveBitsReg)
+        .addReg(FF1Reg)
+        .addReg(ActiveBitsReg);
 
     // Add phi nodes
-    Accumulator.addReg(NewAccumulator->getOperand(0).getReg())
-        .addMBB(ComputeLoop);
-    ActiveBits.addReg(NewActiveBits->getOperand(0).getReg())
-        .addMBB(ComputeLoop);
+    Accumulator.addReg(DstReg).addMBB(ComputeLoop);
+    ActiveBits.addReg(NewActiveBitsReg).addMBB(ComputeLoop);
 
     // Creating branching
     unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
     BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc))
-        .addReg(NewActiveBits->getOperand(0).getReg())
+        .addReg(NewActiveBitsReg)
         .addImm(0);
     BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
         .addMBB(ComputeLoop);
@@ -5488,22 +5774,40 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
+  case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_LT_U64_e64);
   case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_I32);
+  case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_LT_I64_e64);
   case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
+  case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_GT_U64_e64);
   case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_I32);
+  case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_GT_I64_e64);
   case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
+  case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_U64_PSEUDO);
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
+  case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_U64_PSEUDO);
   case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B32);
+  case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B64);
   case AMDGPU::WAVE_REDUCE_OR_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_OR_B32);
+  case AMDGPU::WAVE_REDUCE_OR_PSEUDO_B64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_OR_B64);
   case AMDGPU::WAVE_REDUCE_XOR_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B32);
+  case AMDGPU::WAVE_REDUCE_XOR_PSEUDO_B64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B64);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
     const DebugLoc &DL = MI.getDebugLoc();
@@ -5530,55 +5834,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
-    // For targets older than GFX12, we emit a sequence of 32-bit operations.
-    // For GFX12, we emit s_add_u64 and s_sub_u64.
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const DebugLoc &DL = MI.getDebugLoc();
-    MachineOperand &Dest = MI.getOperand(0);
-    MachineOperand &Src0 = MI.getOperand(1);
-    MachineOperand &Src1 = MI.getOperand(2);
-    bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
-    if (Subtarget->hasScalarAddSub64()) {
-      unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
-      // clang-format off
-      BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
-          .add(Src0)
-          .add(Src1);
-      // clang-format on
-    } else {
-      const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      const TargetRegisterClass *BoolRC = TRI->getBoolRC();
-
-      Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-      Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-      MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-      MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-      MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-      MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-      unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
-      unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-      BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
-          .add(Src0Sub0)
-          .add(Src1Sub0);
-      BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
-          .add(Src0Sub1)
-          .add(Src1Sub1);
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-          .addReg(DestSub0)
-          .addImm(AMDGPU::sub0)
-          .addReg(DestSub1)
-          .addImm(AMDGPU::sub1);
-    }
-    MI.eraseFromParent();
-    return BB;
+    return Expand64BitScalarArithmetic(MI, BB);
   }
   case AMDGPU::V_ADD_U64_PSEUDO:
   case AMDGPU::V_SUB_U64_PSEUDO: {
