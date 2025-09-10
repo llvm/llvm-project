@@ -47,7 +47,8 @@ public:
   ManagedBuffer &operator=(const ManagedBuffer &) = delete;
 
   ManagedBuffer(ManagedBuffer &&Other) noexcept
-      : Address(Other.Address), Size(Other.Size) {
+      : Platform(Other.Platform), Address(Other.Address), Size(Other.Size) {
+    Other.Platform = nullptr;
     Other.Address = nullptr;
     Other.Size = 0;
   }
@@ -59,9 +60,11 @@ public:
     if (Address)
       detail::freeDeviceMemory(Platform, Address);
 
+    Platform = Other.Platform;
     Address = Other.Address;
     Size = Other.Size;
 
+    Other.Platform = nullptr;
     Other.Address = nullptr;
     Other.Size = 0;
 
@@ -89,7 +92,7 @@ private:
                          std::size_t Size) noexcept
       : Platform(Platform), Address(Address), Size(Size) {}
 
-  ol_platform_handle_t Platform;
+  ol_platform_handle_t Platform = nullptr;
   T *Address = nullptr;
   std::size_t Size = 0;
 };

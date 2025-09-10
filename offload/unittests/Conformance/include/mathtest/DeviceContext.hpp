@@ -57,13 +57,13 @@ public:
   explicit DeviceContext(llvm::StringRef Platform, std::size_t DeviceId = 0);
 
   template <typename T>
-  ManagedBuffer<T> createManagedBuffer(std::size_t Size) noexcept {
+  ManagedBuffer<T> createManagedBuffer(std::size_t Size) const noexcept {
     void *UntypedAddress = nullptr;
 
     detail::allocManagedMemory(DeviceHandle, Size * sizeof(T), &UntypedAddress);
     T *TypedAddress = static_cast<T *>(UntypedAddress);
 
-    return ManagedBuffer<T>(getPlatformHandle(), TypedAddress, Size);
+    return ManagedBuffer<T>(PlatformHandle, TypedAddress, Size);
   }
 
   [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
@@ -120,9 +120,6 @@ public:
 
   [[nodiscard]] llvm::StringRef getPlatform() const noexcept;
 
-  [[nodiscard]] llvm::Expected<ol_platform_handle_t>
-  getPlatformHandle() noexcept;
-
 private:
   [[nodiscard]] llvm::Expected<ol_symbol_handle_t>
   getKernelHandle(ol_program_handle_t ProgramHandle,
@@ -134,7 +131,7 @@ private:
 
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
-  ol_platform_handle_t PlatformHandle = nullptr;
+  ol_platform_handle_t PlatformHandle;
 };
 } // namespace mathtest
 
