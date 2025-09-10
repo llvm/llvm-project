@@ -83,7 +83,7 @@ int usesself_ref() {
     size_t b = (size_t)self_ref();
     return (int)b;
 }
-// CHECK: define dso_local noundef i32 @_Z12usesself_refv() #0 {
+// CHECK: define dso_local noundef i32 @_Z12usesself_refv()
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   %b = alloca i64, align 8
 // CHECK-NEXT:   store i64 ptrtoint (ptr @_ZZ8self_refvE1b to i64), ptr %b, align 8
@@ -91,3 +91,5 @@ int usesself_ref() {
 // CHECK-NEXT:   %conv = trunc i64 %0 to i32
 // CHECK-NEXT:   ret i32 %conv
 // CHECK-NEXT: }
+
+// CHECK-NOT: declare noundef ptr @_Z8self_refv()
