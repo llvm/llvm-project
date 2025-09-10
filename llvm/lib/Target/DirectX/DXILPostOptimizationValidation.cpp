@@ -250,13 +250,13 @@ static void validateRootSignature(Module &M,
     dxil::ResourceClass RC = RTI.getResourceClass();
     dxil::ResourceKind RK = RTI.getResourceKind();
 
-    std::optional<const llvm::hlsl::Binding *> Reg =
+    const llvm::hlsl::Binding *Reg =
         BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
                                Binding.LowerBound + Binding.Size - 1);
 
-    if (Reg.has_value()) {
+    if (Reg != nullptr) {
       const auto *ParamInfo =
-          static_cast<const mcdxbc::RootParameterInfo *>((*Reg)->Cookie);
+          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
       if (RC != ResourceClass::SRV && RC != ResourceClass::UAV)
         continue;
