@@ -2095,3 +2095,10 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   }
   return path::convert_to_slash(Filename);
 }
+
+void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                                     SmallVectorImpl<char> &NormalizedPath) {
+  NormalizedPath.assign(Path.begin(), Path.end());
+  FileMgr.makeAbsolutePath(NormalizedPath);
+  llvm::sys::path::remove_dots(NormalizedPath);
+}
