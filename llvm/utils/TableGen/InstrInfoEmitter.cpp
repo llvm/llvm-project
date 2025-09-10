@@ -1070,7 +1070,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "namespace llvm {\n";
   OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
      << "  explicit " << ClassName
-     << "(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u, "
+     << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode = ~0u, "
+        "unsigned CFDestroyOpcode = ~0u, "
         "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
      << "  ~" << ClassName << "() override = default;\n";
 
@@ -1104,8 +1105,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     OS << "extern const MCInstrInfo::ComplexDeprecationPredicate " << TargetName
        << "InstrComplexDeprecationInfos[];\n";
   OS << ClassName << "::" << ClassName
-     << "(unsigned CFSetupOpcode, unsigned CFDestroyOpcode, unsigned "
-        "CatchRetOpcode, unsigned ReturnOpcode)\n"
+     << "(const TargetSubtargetInfo &STI, unsigned CFSetupOpcode, unsigned "
+        "CFDestroyOpcode, unsigned CatchRetOpcode, unsigned ReturnOpcode)\n"
      << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
         "ReturnOpcode) {\n"
      << "  InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName
@@ -1273,16 +1274,12 @@ void InstrInfoEmitter::emitRecord(
   const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
   if (!TSF)
     PrintFatalError(Inst.TheDef->getLoc(), "no TSFlags?");
-  uint64_t Value = 0;
-  for (unsigned i = 0, e = TSF->getNumBits(); i != e; ++i) {
-    if (const auto *Bit = dyn_cast<BitInit>(TSF->getBit(i)))
-      Value |= uint64_t(Bit->getValue()) << i;
-    else
-      PrintFatalError(Inst.TheDef->getLoc(),
-                      "Invalid TSFlags bit in " + Inst.getName());
-  }
+  std::optional<uint64_t> Value = TSF->convertInitializerToInt();
+  if (!Value)
+    PrintFatalError(Inst.TheDef, "Invalid TSFlags bit in " + Inst.getName());
+
   OS << ", 0x";
-  OS.write_hex(Value);
+  OS.write_hex(*Value);
   OS << "ULL";
 
   OS << " },  // " << Inst.getName() << '\n';

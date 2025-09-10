@@ -392,6 +392,42 @@ void VPPartialReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
+  assert(OpType == Other.OpType && "OpType must match");
+  switch (OpType) {
+  case OperationType::OverflowingBinOp:
+    WrapFlags.HasNUW &= Other.WrapFlags.HasNUW;
+    WrapFlags.HasNSW &= Other.WrapFlags.HasNSW;
+    break;
+  case OperationType::Trunc:
+    TruncFlags.HasNUW &= Other.TruncFlags.HasNUW;
+    TruncFlags.HasNSW &= Other.TruncFlags.HasNSW;
+    break;
+  case OperationType::DisjointOp:
+    DisjointFlags.IsDisjoint &= Other.DisjointFlags.IsDisjoint;
+    break;
+  case OperationType::PossiblyExactOp:
+    ExactFlags.IsExact &= Other.ExactFlags.IsExact;
+    break;
+  case OperationType::GEPOp:
+    GEPFlags &= Other.GEPFlags;
+    break;
+  case OperationType::FPMathOp:
+    FMFs.NoNaNs &= Other.FMFs.NoNaNs;
+    FMFs.NoInfs &= Other.FMFs.NoInfs;
+    break;
+  case OperationType::NonNegOp:
+    NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
+    break;
+  case OperationType::Cmp:
+    assert(CmpPredicate == Other.CmpPredicate && "Cannot drop CmpPredicate");
+    break;
+  case OperationType::Other:
+    assert(AllFlags == Other.AllFlags && "Cannot drop other flags");
+    break;
+  }
+}
+
 FastMathFlags VPIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -3158,6 +3194,24 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return *getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                        Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
+  case Instruction::Load:
+  case Instruction::Store: {
+    if (isSingleScalar()) {
+      bool IsLoad = UI->getOpcode() == Instruction::Load;
+      Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
+      Type *ScalarPtrTy = Ctx.Types.inferScalarType(getOperand(IsLoad ? 0 : 1));
+      const Align Alignment = getLoadStoreAlignment(UI);
+      unsigned AS = getLoadStoreAddressSpace(UI);
+      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
+      InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
+          UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo, UI);
+      return ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
+                                   ScalarPtrTy, nullptr, nullptr, Ctx.CostKind);
+    }
+    // TODO: See getMemInstScalarizationCost for how to handle replicating and
+    // predicated cases.
+    break;
+  }
   }
 
   return Ctx.getLegacyCost(UI, VF);
