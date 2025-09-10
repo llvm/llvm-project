@@ -1231,48 +1231,40 @@ static void findForkedSCEVs(
   }
 }
 
-static SmallVector<PointerIntPair<const SCEV *, 1, bool>>
-findForkedPointer(PredicatedScalarEvolution &PSE,
-                  const DenseMap<Value *, const SCEV *> &StridesMap, Value *Ptr,
-                  const Loop *L) {
-  ScalarEvolution *SE = PSE.getSE();
-  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
-  SmallVector<PointerIntPair<const SCEV *, 1, bool>> Scevs;
-  findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
-
-  // For now, we will only accept a forked pointer with two possible SCEVs
-  // that are either SCEVAddRecExprs or loop invariant.
-  if (Scevs.size() == 2 &&
-      (isa<SCEVAddRecExpr>(get<0>(Scevs[0])) ||
-       SE->isLoopInvariant(get<0>(Scevs[0]), L)) &&
-      (isa<SCEVAddRecExpr>(get<0>(Scevs[1])) ||
-       SE->isLoopInvariant(get<0>(Scevs[1]), L))) {
-    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
-    LLVM_DEBUG(dbgs() << "\t(1) " << *get<0>(Scevs[0]) << "\n");
-    LLVM_DEBUG(dbgs() << "\t(2) " << *get<0>(Scevs[1]) << "\n");
-    return Scevs;
-  }
-
-  return {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
-}
-
 bool AccessAnalysis::createCheckForAccess(
     RuntimePointerChecking &RtCheck, MemAccessInfo Access, Type *AccessTy,
     const DenseMap<Value *, const SCEV *> &StridesMap,
     DenseMap<Value *, unsigned> &DepSetId, Loop *TheLoop,
     unsigned &RunningDepId, unsigned ASId, bool Assume) {
   Value *Ptr = Access.getPointer();
+  ScalarEvolution *SE = PSE.getSE();
+  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
-  SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
-      findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
-  assert(!TranslatedPtrs.empty() && "must have some translated pointers");
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> RTCheckPtrs;
+  findForkedSCEVs(SE, TheLoop, Ptr, RTCheckPtrs, MaxForkedSCEVDepth);
+  assert(!RTCheckPtrs.empty() &&
+         "Must have some runtime-check pointer candidates");
+
+  // RTCheckPtrs must have size 2 if there are forked pointers. Otherwise, there
+  // are no forked pointers; replaceSymbolicStridesSCEV in this case.
+  auto IsLoopInvariantOrAR =
+      [&SE, &TheLoop](const PointerIntPair<const SCEV *, 1, bool> &P) {
+        return SE->isLoopInvariant(P.getPointer(), TheLoop) ||
+               isa<SCEVAddRecExpr>(P.getPointer());
+      };
+  if (RTCheckPtrs.size() == 2 && all_of(RTCheckPtrs, IsLoopInvariantOrAR)) {
+    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n";
+               for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
+               << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
+  } else {
+    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+  }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
-  /// must either be invariant or AddRecs. If ShouldCheckWrap is true, they also
-  /// must not wrap.
-  for (auto &P : TranslatedPtrs) {
+  /// must either be invariant or non-wrapping affine AddRecs.
+  for (auto &P : RTCheckPtrs) {
     // The bounds for loop-invariant pointer is trivial.
-    if (PSE.getSE()->isLoopInvariant(P.getPointer(), TheLoop))
+    if (SE->isLoopInvariant(P.getPointer(), TheLoop))
       continue;
 
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
@@ -1283,21 +1275,18 @@ bool AccessAnalysis::createCheckForAccess(
 
     // If there's only one option for Ptr, look it up after bounds and wrap
     // checking, because assumptions might have been added to PSE.
-    if (TranslatedPtrs.size() == 1) {
+    if (RTCheckPtrs.size() == 1) {
       AR =
           cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
       P.setPointer(AR);
     }
 
-    // When we run after a failing dependency check we have to make sure
-    // we don't have wrapping pointers.
-    if (!isNoWrap(PSE, AR, TranslatedPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume)) {
+    if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
+                  TheLoop, Assume))
       return false;
-    }
   }
 
-  for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
+  for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
     unsigned DepId;
 
