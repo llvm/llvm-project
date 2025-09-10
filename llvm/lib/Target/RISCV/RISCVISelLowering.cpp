@@ -19123,6 +19123,7 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget,
                                          const RISCVTargetLowering &TLI) {
+  using namespace SDPatternMatch;
   // Note: We intentionally do not check the legality of the reduction type.
   // We want to handle the m4/m8 *src*  types, and thus need to let illegal
   // intermediate types flow through here.
@@ -19130,11 +19131,10 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
       !InVec.getValueType().getVectorElementCount().isKnownMultipleOf(4))
     return SDValue();
 
-  // Recurse through adds (since generic dag canonicalizes to that
-  // form). TODO: Handle disjoint or here.
-  if (InVec->getOpcode() == ISD::ADD) {
-    SDValue A = InVec.getOperand(0);
-    SDValue B = InVec.getOperand(1);
+  // Recurse through adds/disjoint ors (since generic dag canonicalizes to that
+  // form).
+  SDValue A, B;
+  if (sd_match(InVec, m_AddLike(m_Value(A), m_Value(B)))) {
     SDValue AOpt = foldReduceOperandViaVQDOT(A, DL, DAG, Subtarget, TLI);
     SDValue BOpt = foldReduceOperandViaVQDOT(B, DL, DAG, Subtarget, TLI);
     if (AOpt || BOpt) {
@@ -19171,11 +19171,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
   // mul (zext a, zext b) -> partial_reduce_umla 0, a, b
   // mul (sext a, zext b) -> partial_reduce_ssmla 0, a, b
   // mul (zext a, sext b) -> partial_reduce_smla 0, b, a (swapped)
-  if (InVec.getOpcode() != ISD::MUL)
+  if (!sd_match(InVec, m_Mul(m_Value(A), m_Value(B))))
     return SDValue();
-
-  SDValue A = InVec.getOperand(0);
-  SDValue B = InVec.getOperand(1);
 
   if (!ISD::isExtOpcode(A.getOpcode()))
     return SDValue();
