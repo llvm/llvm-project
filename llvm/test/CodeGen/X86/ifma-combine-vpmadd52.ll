@@ -253,23 +253,44 @@ define <1 x i64> @test_scalar_no_ifma(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) 
   ret <1 x i64> %res
 }
 
+; 40-bit and 13-bit, too wide
 define <8 x i64> @test_mixed_width_too_wide(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
-  ; 40-bit and 13-bit, too wide
 ; AVX-LABEL: test_mixed_width_too_wide:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps %ymm5, %ymm1
-; AVX-NEXT:    vmovaps %ymm4, %ymm0
+; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [8191,8191,8191,8191]
+; AVX-NEXT:    vpand %ymm6, %ymm2, %ymm2
+; AVX-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX-NEXT:    vpmovzxdq {{.*#+}} ymm6 = [2155905028,2155905036,2155905044,2155905052]
+; AVX-NEXT:    vpshufb %ymm6, %ymm1, %ymm7
+; AVX-NEXT:    vpmuludq %ymm3, %ymm7, %ymm7
+; AVX-NEXT:    vpsllq $32, %ymm7, %ymm7
+; AVX-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
+; AVX-NEXT:    vpshufb %ymm6, %ymm0, %ymm3
+; AVX-NEXT:    vpmuludq %ymm2, %ymm3, %ymm3
+; AVX-NEXT:    vpsllq $32, %ymm3, %ymm3
+; AVX-NEXT:    vpmuludq %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    vpaddq %ymm0, %ymm4, %ymm0
+; AVX-NEXT:    vpaddq %ymm3, %ymm0, %ymm0
+; AVX-NEXT:    vpaddq %ymm1, %ymm5, %ymm1
+; AVX-NEXT:    vpaddq %ymm7, %ymm1, %ymm1
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_mixed_width_too_wide:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps %zmm2, %zmm0
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
+; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm3
+; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm0
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsllq $32, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddq %zmm3, %zmm2, %zmm1
+; AVX512-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %x40 = and <8 x i64> %x, splat (i64 1099511627775)
   %y13 = and <8 x i64> %y, splat (i64 8191)
   %mul = mul <8 x i64> %x40, %y13
   %res = add <8 x i64> %z, %mul
-  ret <8 x i64> %z
+  ret <8 x i64> %res
 }
 
 define <8 x i64> @test_zext32_inputs_not_safe(<8 x i32> %xi32, <8 x i32> %yi32, <8 x i64> %z) {
@@ -352,8 +373,8 @@ define <16 x i64> @test_1024_combine_split(<16 x i64> %x, <16 x i64> %y, <16 x i
   ret <16 x i64> %res
 }
 
-define <1 x i64> @test_not_i1(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) {
-; X64-LABEL: test_not_i1:
+define <1 x i64> @test_not_v1i64(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) {
+; X64-LABEL: test_not_v1i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $67108863, %edi # imm = 0x3FFFFFF
 ; X64-NEXT:    imulq %rdi, %rdi
@@ -366,8 +387,8 @@ define <1 x i64> @test_not_i1(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) {
   ret <1 x i64> %res
 }
 
-define <3 x i64> @test_i3(<3 x i64> %x, <3 x i64> %y, <3 x i64> %z) {
-; AVX-LABEL: test_i3:
+define <3 x i64> @test_v3i64(<3 x i64> %x, <3 x i64> %y, <3 x i64> %z) {
+; AVX-LABEL: test_v3i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [67108863,67108863,67108863,67108863]
 ; AVX-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -375,7 +396,7 @@ define <3 x i64> @test_i3(<3 x i64> %x, <3 x i64> %y, <3 x i64> %z) {
 ; AVX-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-NOVL-LABEL: test_i3:
+; AVX512-NOVL-LABEL: test_v3i64:
 ; AVX512-NOVL:       # %bb.0:
 ; AVX512-NOVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [67108863,67108863,67108863,67108863]
 ; AVX512-NOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -383,7 +404,7 @@ define <3 x i64> @test_i3(<3 x i64> %x, <3 x i64> %y, <3 x i64> %z) {
 ; AVX512-NOVL-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX512-NOVL-NEXT:    retq
 ;
-; AVX512VL-LABEL: test_i3:
+; AVX512VL-LABEL: test_v3i64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmuludq %ymm0, %ymm0, %ymm0
@@ -396,8 +417,8 @@ define <3 x i64> @test_i3(<3 x i64> %x, <3 x i64> %y, <3 x i64> %z) {
   ret <3 x i64> %res
 }
 
-define <5 x i64> @test_i5(<5 x i64> %x, <5 x i64> %y, <5 x i64> %z) {
-; AVX-LABEL: test_i5:
+define <5 x i64> @test_v5i64(<5 x i64> %x, <5 x i64> %y, <5 x i64> %z) {
+; AVX-LABEL: test_v5i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    vmovq %r8, %xmm0
@@ -427,7 +448,7 @@ define <5 x i64> @test_i5(<5 x i64> %x, <5 x i64> %y, <5 x i64> %z) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_i5:
+; AVX512-LABEL: test_v5i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmuludq %zmm0, %zmm0, %zmm0
@@ -440,8 +461,8 @@ define <5 x i64> @test_i5(<5 x i64> %x, <5 x i64> %y, <5 x i64> %z) {
   ret <5 x i64> %res
 }
 
-define <6 x i64> @test_i6(<6 x i64> %x, <6 x i64> %y, <6 x i64> %z) {
-; AVX-LABEL: test_i6:
+define <6 x i64> @test_v6i64(<6 x i64> %x, <6 x i64> %y, <6 x i64> %z) {
+; AVX-LABEL: test_v6i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    vmovq %r8, %xmm0
@@ -466,7 +487,7 @@ define <6 x i64> @test_i6(<6 x i64> %x, <6 x i64> %y, <6 x i64> %z) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_i6:
+; AVX512-LABEL: test_v6i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmuludq %zmm0, %zmm0, %zmm0
@@ -479,8 +500,8 @@ define <6 x i64> @test_i6(<6 x i64> %x, <6 x i64> %y, <6 x i64> %z) {
   ret <6 x i64> %res
 }
 
-define <9 x i64> @test_i9(<9 x i64> %x, <9 x i64> %y, <9 x i64> %z) {
-; AVX-LABEL: test_i9:
+define <9 x i64> @test_v9i64(<9 x i64> %x, <9 x i64> %y, <9 x i64> %z) {
+; AVX-LABEL: test_v9i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    vmovq %r8, %xmm0
@@ -518,7 +539,7 @@ define <9 x i64> @test_i9(<9 x i64> %x, <9 x i64> %y, <9 x i64> %z) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_i9:
+; AVX512-LABEL: test_v9i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    vmovq %r8, %xmm0

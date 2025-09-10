@@ -57989,11 +57989,13 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return SDValue();
 
   KnownBits KnownX = DAG.computeKnownBits(X);
+  if (KnownX.countMinLeadingZeros() < 12)
+    return SDValue();
   KnownBits KnownY = DAG.computeKnownBits(Y);
+  if (KnownY.countMinLeadingZeros() < 12)
+    return SDValue();
   KnownBits KnownMul = KnownBits::mul(KnownX, KnownY);
-  if (KnownX.countMinLeadingZeros() < 12 ||
-      KnownY.countMinLeadingZeros() < 12 ||
-      KnownMul.countMinLeadingZeros() < 12)
+  if (KnownMul.countMinLeadingZeros() < 12)
     return SDValue();
 
   auto VPMADD52Builder = [](SelectionDAG &G, SDLoc DL,
