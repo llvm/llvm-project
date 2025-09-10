@@ -1747,9 +1747,9 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(
-                RPI.Reg1, NextReg, IsWindows, NeedsWinCFI,
-                /*NeedsFrameRecord=*/false, IsFirst, TRI))
+            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows,
+                                       NeedsWinCFI, NeedsFrameRecord, IsFirst,
+                                       TRI))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
