@@ -44,7 +44,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FP16InputMods:$src1_modifiers, Src1RC:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
     dag dpp_srcs =
-          (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
+          (ins FPVRegInputMods:$src0_modifiers, VGPROp_32:$src0,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
                FP16InputMods:$src2_modifiers, Src2RC:$src2);
 
@@ -84,7 +84,6 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
   def NAME : VOP3P_Pseudo<OpName, P> {
     let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
-    let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
   }
   let SubtargetPredicate = isGFX11Plus in {
     if P.HasExtVOP3DPP then
@@ -92,7 +91,6 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
         let VOP3P = 1;
         let PseudoInstr = OpName#"_dpp";
         let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
-        let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
       }
   } // end SubtargetPredicate = isGFX11Plus
 }
@@ -1166,7 +1164,7 @@ let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
 } // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2",
+  let Constraints = "$vdst = $src2",
       isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1, is_gfx940_xdl = 1 in {
     def _e64 : MAIInst<OpName, !cast<VOPProfileSMFMAC>("VOPProfileSMFMAC_" # P), node>;
   }
@@ -1520,8 +1518,8 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag MatrixFMT = !if(HasMatrixFMT, (ins MatrixAFMT:$matrix_a_fmt, MatrixBFMT:$matrix_b_fmt),
                                    (ins));
   dag MatrixScaleSrc = !if(HasMatrixScale,
-                           !if(Scale16, (ins VCSrc_b64:$scale_src0, VCSrc_b64:$scale_src1),
-                                        (ins VCSrc_b32:$scale_src0, VCSrc_b32:$scale_src1)),
+                           !if(Scale16, (ins VCSrc_b64_Lo256:$scale_src0, VCSrc_b64_Lo256:$scale_src1),
+                                        (ins VCSrc_b32_Lo256:$scale_src0, VCSrc_b32_Lo256:$scale_src1)),
                            (ins));
   dag MatrixScale = !if(HasMatrixScale, (ins MatrixAScale:$matrix_a_scale, MatrixBScale:$matrix_b_scale,
                                              MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),

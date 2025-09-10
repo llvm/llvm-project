@@ -1529,8 +1529,12 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
     // are ill-formed.
     if (getLangOpts().CPlusPlus26)
       DiagID = diag::warn_conv_mixed_enum_types_cxx26;
-    else if (!L->castAs<EnumType>()->getOriginalDecl()->hasNameForLinkage() ||
-             !R->castAs<EnumType>()->getOriginalDecl()->hasNameForLinkage()) {
+    else if (!L->castAsCanonical<EnumType>()
+                  ->getOriginalDecl()
+                  ->hasNameForLinkage() ||
+             !R->castAsCanonical<EnumType>()
+                  ->getOriginalDecl()
+                  ->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
@@ -6309,30 +6313,38 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   unsigned i = 0;
   SmallVector<QualType, 8> OverloadParams;
 
-  for (QualType ParamType : FT->param_types()) {
+  {
+    // The lvalue conversions in this loop are only for type resolution and
+    // don't actually occur.
+    EnterExpressionEvaluationContext Unevaluated(
+        *Sema, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap Trap(*Sema, /*ForValidityCheck=*/true);
 
-    // Convert array arguments to pointer to simplify type lookup.
-    ExprResult ArgRes =
-        Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
-    if (ArgRes.isInvalid())
-      return nullptr;
-    Expr *Arg = ArgRes.get();
-    QualType ArgType = Arg->getType();
-    if (!ParamType->isPointerType() ||
-        ParamType->getPointeeType().hasAddressSpace() ||
-        !ArgType->isPointerType() ||
-        !ArgType->getPointeeType().hasAddressSpace() ||
-        isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
-      OverloadParams.push_back(ParamType);
-      continue;
+    for (QualType ParamType : FT->param_types()) {
+
+      // Convert array arguments to pointer to simplify type lookup.
+      ExprResult ArgRes =
+          Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
+      if (ArgRes.isInvalid())
+        return nullptr;
+      Expr *Arg = ArgRes.get();
+      QualType ArgType = Arg->getType();
+      if (!ParamType->isPointerType() ||
+          ParamType->getPointeeType().hasAddressSpace() ||
+          !ArgType->isPointerType() ||
+          !ArgType->getPointeeType().hasAddressSpace() ||
+          isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
+        OverloadParams.push_back(ParamType);
+        continue;
+      }
+
+      QualType PointeeType = ParamType->getPointeeType();
+      NeedsNewDecl = true;
+      LangAS AS = ArgType->getPointeeType().getAddressSpace();
+
+      PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
+      OverloadParams.push_back(Context.getPointerType(PointeeType));
     }
-
-    QualType PointeeType = ParamType->getPointeeType();
-    NeedsNewDecl = true;
-    LangAS AS = ArgType->getPointeeType().getAddressSpace();
-
-    PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
-    OverloadParams.push_back(Context.getPointerType(PointeeType));
   }
 
   if (!NeedsNewDecl)
@@ -7836,8 +7848,10 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
   if (!CE->getCalleeAllocSizeAttr())
     return;
   std::optional<llvm::APInt> AllocSize =
-      CE->getBytesReturnedByAllocSizeCall(S.Context);
-  if (!AllocSize)
+      CE->evaluateBytesReturnedByAllocSizeCall(S.Context);
+  // Allocations of size zero are permitted as a special case. They are usually
+  // done intentionally.
+  if (!AllocSize || AllocSize->isZero())
     return;
   auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
 
@@ -8641,16 +8655,11 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
 
   // If both operands are the same structure or union type, the result is that
   // type.
-  if (const RecordType *LHSRT = LHSTy->getAs<RecordType>()) {    // C99 6.5.15p3
-    if (const RecordType *RHSRT = RHSTy->getAs<RecordType>())
-      if (declaresSameEntity(LHSRT->getOriginalDecl(),
-                             RHSRT->getOriginalDecl()))
-        // "If both the operands have structure or union type, the result has
-        // that type."  This implies that CV qualifiers are dropped.
-        return Context.getCommonSugaredType(LHSTy.getUnqualifiedType(),
-                                            RHSTy.getUnqualifiedType());
-    // FIXME: Type of conditional expression must be complete in C mode.
-  }
+  // FIXME: Type of conditional expression must be complete in C mode.
+  if (LHSTy->isRecordType() &&
+      Context.hasSameUnqualifiedType(LHSTy, RHSTy)) // C99 6.5.15p3
+    return Context.getCommonSugaredType(LHSTy.getUnqualifiedType(),
+                                        RHSTy.getUnqualifiedType());
 
   // C99 6.5.15p5: "If both operands have void type, the result has void type."
   // The following || allows only one side to be void (a GCC-ism).
@@ -11500,7 +11509,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 }
 
 static bool isScopedEnumerationType(QualType T) {
-  if (const EnumType *ET = T->getAs<EnumType>())
+  if (const EnumType *ET = T->getAsCanonical<EnumType>())
     return ET->getOriginalDecl()->isScoped();
   return false;
 }
@@ -12387,10 +12396,7 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
       S.InvalidOperands(Loc, LHS, RHS);
       return QualType();
     }
-    QualType IntType = LHSStrippedType->castAs<EnumType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf()
-                           ->getIntegerType();
+    QualType IntType = LHSStrippedType->castAsEnumDecl()->getIntegerType();
     assert(IntType->isArithmeticType());
 
     // We can't use `CK_IntegralCast` when the underlying type is 'bool', so we
@@ -13624,6 +13630,8 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   VarDecl *Var = dyn_cast<VarDecl>(Value);
   if (!Var)
     return NCCK_None;
+  if (Var->getType()->isReferenceType())
+    return NCCK_None;
 
   assert(Var->hasLocalStorage() && "capture added 'const' to non-local?");
 
@@ -13827,7 +13835,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
 
       // Then we append it to the list to check next in order.
       FieldTy = FieldTy.getCanonicalType();
-      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+      if (const auto *FieldRecTy = FieldTy->getAsCanonical<RecordType>()) {
         if (!llvm::is_contained(RecordTypeList, FieldRecTy))
           RecordTypeList.push_back(FieldRecTy);
       }
@@ -13843,7 +13851,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const Expr *E,
   QualType Ty = E->getType();
   assert(Ty->isRecordType() && "lvalue was not record?");
   SourceRange Range = E->getSourceRange();
-  const RecordType *RTy = Ty.getCanonicalType()->getAs<RecordType>();
+  const auto *RTy = Ty->getAsCanonical<RecordType>();
   bool DiagEmitted = false;
 
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(E))
@@ -16259,11 +16267,10 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
       return ExprError();
 
     // Look for the designated field.
-    const RecordType *RC = CurrentType->getAs<RecordType>();
-    if (!RC)
+    auto *RD = CurrentType->getAsRecordDecl();
+    if (!RD)
       return ExprError(Diag(OC.LocEnd, diag::err_offsetof_record_type)
                        << CurrentType);
-    RecordDecl *RD = RC->getOriginalDecl()->getDefinitionOrSelf();
 
     // C++ [lib.support.types]p5:
     //   The macro offsetof accepts a restricted set of type arguments in this
@@ -16660,8 +16667,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     auto *Var = cast<VarDecl>(Cap.getVariable());
     Expr *CopyExpr = nullptr;
     if (getLangOpts().CPlusPlus && Cap.isCopyCapture()) {
-      if (const RecordType *Record =
-              Cap.getCaptureType()->getAs<RecordType>()) {
+      if (auto *Record = Cap.getCaptureType()->getAsCXXRecordDecl()) {
         // The capture logic needs the destructor, so make sure we mark it.
         // Usually this is unnecessary because most local variables have
         // their destructors marked at declaration time, but parameters are
@@ -16889,9 +16895,8 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
       // va_arg. Instead, get the underlying type of the enumeration and pass
       // that.
       QualType UnderlyingType = TInfo->getType();
-      if (const auto *ET = UnderlyingType->getAs<EnumType>())
-        UnderlyingType =
-            ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      if (const auto *ED = UnderlyingType->getAsEnumDecl())
+        UnderlyingType = ED->getIntegerType();
       if (Context.typesAreCompatible(PromoteType, UnderlyingType,
                                      /*CompareUnqualified*/ true))
         PromoteType = QualType();
@@ -18888,19 +18893,16 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   }
   // Prohibit structs with flexible array members too.
   // We cannot capture what is in the tail end of the struct.
-  if (const RecordType *VTTy = Var->getType()->getAs<RecordType>()) {
-    if (VTTy->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->hasFlexibleArrayMember()) {
-      if (Diagnose) {
-        if (IsBlock)
-          S.Diag(Loc, diag::err_ref_flexarray_type);
-        else
-          S.Diag(Loc, diag::err_lambda_capture_flexarray_type) << Var;
-        S.Diag(Var->getLocation(), diag::note_previous_decl) << Var;
-      }
-      return false;
+  if (const auto *VTD = Var->getType()->getAsRecordDecl();
+      VTD && VTD->hasFlexibleArrayMember()) {
+    if (Diagnose) {
+      if (IsBlock)
+        S.Diag(Loc, diag::err_ref_flexarray_type);
+      else
+        S.Diag(Loc, diag::err_lambda_capture_flexarray_type) << Var;
+      S.Diag(Var->getLocation(), diag::note_previous_decl) << Var;
     }
+    return false;
   }
   const bool HasBlocksAttr = Var->hasAttr<BlocksAttr>();
   // Lambdas and captured statements are not allowed to capture __block
@@ -19980,7 +19982,7 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
   // C++2a [basic.def.odr]p4:
   //   [...] an expression of non-volatile-qualified non-class type to which
   //   the lvalue-to-rvalue conversion is applied [...]
-  if (E->getType().isVolatileQualified() || E->getType()->getAs<RecordType>())
+  if (E->getType().isVolatileQualified() || E->getType()->isRecordType())
     return E;
 
   ExprResult Result =
@@ -21482,8 +21484,11 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 
   // Expressions of unknown type.
   case BuiltinType::ArraySection:
-    Diag(E->getBeginLoc(), diag::err_array_section_use)
-        << cast<ArraySectionExpr>(E)->isOMPArraySection();
+    // If we've already diagnosed something on the array section type, we
+    // shouldn't need to do any further diagnostic here.
+    if (!E->containsErrors())
+      Diag(E->getBeginLoc(), diag::err_array_section_use)
+          << cast<ArraySectionExpr>(E)->isOMPArraySection();
     return ExprError();
 
   // Expressions of unknown type.

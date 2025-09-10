@@ -45,6 +45,7 @@ Notes
 import argparse
 import os
 import pathlib
+import platform
 import re
 import subprocess
 import sys
@@ -145,7 +146,12 @@ class CheckRunner:
             self.clang_extra_args.append("-resource-dir=%s" % self.resource_dir)
 
     def read_input(self) -> None:
-        with open(self.input_file_name, "r", encoding="utf-8") as input_file:
+        # Use a "\\?\" prefix on Windows to handle long file paths transparently:
+        # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+        file_name = self.input_file_name
+        if platform.system() == "Windows":
+            file_name = "\\\\?\\" + os.path.abspath(file_name)
+        with open(file_name, "r", encoding="utf-8") as input_file:
             self.input_text = input_file.read()
 
     def get_prefixes(self) -> None:
@@ -385,9 +391,7 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
     args, extra_args = parser.parse_known_args()
     if args.std is None:
         _, extension = os.path.splitext(args.assume_filename or args.input_file_name)
-        args.std = [
-            "c++11-or-later" if extension in [".cpp", ".hpp", ".mm"] else "c99-or-later"
-        ]
+        args.std = ["c99-or-later" if extension in [".c", ".m"] else "c++11-or-later"]
 
     return (args, extra_args)
 

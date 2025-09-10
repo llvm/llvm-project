@@ -1263,20 +1263,59 @@ MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
 static unsigned getIntrMemWidth(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
     return 8;
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
     return 128;
   default:
     llvm_unreachable("Unknown width");
   }
+}
+
+static void getCoopAtomicOperandsInfo(const CallInst &CI, bool IsLoad,
+                                      TargetLoweringBase::IntrinsicInfo &Info) {
+  Value *OrderingArg = CI.getArgOperand(IsLoad ? 1 : 2);
+  unsigned Ord = cast<ConstantInt>(OrderingArg)->getZExtValue();
+  switch (AtomicOrderingCABI(Ord)) {
+  case AtomicOrderingCABI::acquire:
+    Info.order = AtomicOrdering::Acquire;
+    break;
+  case AtomicOrderingCABI::release:
+    Info.order = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Info.order = AtomicOrdering::SequentiallyConsistent;
+    break;
+  default:
+    Info.order = AtomicOrdering::Monotonic;
+    break;
+  }
+
+  Info.flags =
+      (IsLoad ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore);
+  Info.flags |= MOCooperative;
+
+  MDNode *ScopeMD = cast<MDNode>(
+      cast<MetadataAsValue>(CI.getArgOperand(IsLoad ? 2 : 3))->getMetadata());
+  StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
+  Info.ssid = CI.getContext().getOrInsertSyncScopeID(Scope);
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -1506,6 +1545,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_monitor_b128:
+  case Intrinsic::amdgcn_cluster_load_b32:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_ds_load_tr6_b96:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
@@ -1523,6 +1565,26 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad;
+    return true;
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    getCoopAtomicOperandsInfo(CI, /*IsLoad=*/true, Info);
+    return true;
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.align.reset();
+    getCoopAtomicOperandsInfo(CI, /*IsLoad=*/false, Info);
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
@@ -1553,7 +1615,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
-  case Intrinsic::amdgcn_global_load_async_to_lds_b128: {
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(1);
@@ -1636,6 +1702,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_cluster_load_b128:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
@@ -1678,6 +1747,10 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
     Ptr = II->getArgOperand(1);
     break;
   default:
@@ -4260,6 +4333,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     }
 
+    // If the caller is a whole wave function, we need to use a special opcode
+    // so we can patch up EXEC.
+    if (Info->isWholeWaveFunction())
+      OPC = AMDGPUISD::TC_RETURN_GFX_WholeWave;
+
     return DAG.getNode(OPC, DL, MVT::Other, Ops);
   }
 
@@ -5192,7 +5270,58 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
-static uint32_t getIdentityValueForWaveReduction(unsigned Opc) {
+static MachineBasicBlock *Expand64BitScalarArithmetic(MachineInstr &MI,
+                                                      MachineBasicBlock *BB) {
+  // For targets older than GFX12, we emit a sequence of 32-bit operations.
+  // For GFX12, we emit s_add_u64 and s_sub_u64.
+  MachineFunction *MF = BB->getParent();
+  const SIInstrInfo *TII = MF->getSubtarget<GCNSubtarget>().getInstrInfo();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineOperand &Dest = MI.getOperand(0);
+  MachineOperand &Src0 = MI.getOperand(1);
+  MachineOperand &Src1 = MI.getOperand(2);
+  bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
+  if (ST.hasScalarAddSub64()) {
+    unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
+    // clang-format off
+    BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
+        .add(Src0)
+        .add(Src1);
+    // clang-format on
+  } else {
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const TargetRegisterClass *BoolRC = TRI->getBoolRC();
+
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+    unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+    unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
+    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+        .addReg(DestSub0)
+        .addImm(AMDGPU::sub0)
+        .addReg(DestSub1)
+        .addImm(AMDGPU::sub1);
+  }
+  MI.eraseFromParent();
+  return BB;
+}
+
+static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::S_MIN_U32:
     return std::numeric_limits<uint32_t>::max();
@@ -5210,8 +5339,40 @@ static uint32_t getIdentityValueForWaveReduction(unsigned Opc) {
   case AMDGPU::S_AND_B32:
     return std::numeric_limits<uint32_t>::max();
   default:
-    llvm_unreachable("Unexpected opcode in getIdentityValueForWaveReduction");
+    llvm_unreachable(
+        "Unexpected opcode in getIdentityValueFor32BitWaveReduction");
   }
+}
+
+static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_CMP_LT_U64_e64: // umin.u64
+    return std::numeric_limits<uint64_t>::max();
+  case AMDGPU::V_CMP_LT_I64_e64: // min.i64
+    return std::numeric_limits<int64_t>::max();
+  case AMDGPU::V_CMP_GT_U64_e64: // umax.u64
+    return std::numeric_limits<uint64_t>::min();
+  case AMDGPU::V_CMP_GT_I64_e64: // max.i64
+    return std::numeric_limits<int64_t>::min();
+  case AMDGPU::S_ADD_U64_PSEUDO:
+  case AMDGPU::S_SUB_U64_PSEUDO:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_XOR_B64:
+    return std::numeric_limits<uint64_t>::min();
+  case AMDGPU::S_AND_B64:
+    return std::numeric_limits<uint64_t>::max();
+  default:
+    llvm_unreachable(
+        "Unexpected opcode in getIdentityValueFor64BitWaveReduction");
+  }
+}
+
+static bool is32bitWaveReduceOperation(unsigned Opc) {
+  return Opc == AMDGPU::S_MIN_U32 || Opc == AMDGPU::S_MIN_I32 ||
+         Opc == AMDGPU::S_MAX_U32 || Opc == AMDGPU::S_MAX_I32 ||
+         Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_SUB_I32 ||
+         Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_OR_B32 ||
+         Opc == AMDGPU::S_XOR_B32;
 }
 
 static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
@@ -5241,53 +5402,99 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       RetBB = &BB;
       break;
     }
+    case AMDGPU::V_CMP_LT_U64_e64: // umin
+    case AMDGPU::V_CMP_LT_I64_e64: // min
+    case AMDGPU::V_CMP_GT_U64_e64: // umax
+    case AMDGPU::V_CMP_GT_I64_e64: // max
+    case AMDGPU::S_AND_B64:
+    case AMDGPU::S_OR_B64: {
+      // Idempotent operations.
+      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64), DstReg).addReg(SrcReg);
+      RetBB = &BB;
+      break;
+    }
     case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_XOR_B64:
     case AMDGPU::S_ADD_I32:
-    case AMDGPU::S_SUB_I32: {
+    case AMDGPU::S_ADD_U64_PSEUDO:
+    case AMDGPU::S_SUB_I32:
+    case AMDGPU::S_SUB_U64_PSEUDO: {
       const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
       const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
       Register ExecMask = MRI.createVirtualRegister(WaveMaskRegClass);
-      Register ActiveLanes = MRI.createVirtualRegister(DstRegClass);
+      Register NumActiveLanes =
+          MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
       bool IsWave32 = ST.isWave32();
       unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
       MCRegister ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      unsigned CountReg =
+      unsigned BitCountOpc =
           IsWave32 ? AMDGPU::S_BCNT1_I32_B32 : AMDGPU::S_BCNT1_I32_B64;
 
-      auto Exec =
-          BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
+      BuildMI(BB, MI, DL, TII->get(MovOpc), ExecMask).addReg(ExecReg);
 
-      auto NewAccumulator = BuildMI(BB, MI, DL, TII->get(CountReg), ActiveLanes)
-                                .addReg(Exec->getOperand(0).getReg());
+      auto NewAccumulator =
+          BuildMI(BB, MI, DL, TII->get(BitCountOpc), NumActiveLanes)
+              .addReg(ExecMask);
 
       switch (Opc) {
-      case AMDGPU::S_XOR_B32: {
+      case AMDGPU::S_XOR_B32:
+      case AMDGPU::S_XOR_B64: {
         // Performing an XOR operation on a uniform value
         // depends on the parity of the number of active lanes.
         // For even parity, the result will be 0, for odd
         // parity the result will be the same as the input value.
-        Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
+        Register ParityRegister =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-        auto ParityReg =
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
-                .addReg(NewAccumulator->getOperand(0).getReg())
-                .addImm(1);
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-            .addReg(SrcReg)
-            .addReg(ParityReg->getOperand(0).getReg());
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
+            .addReg(NewAccumulator->getOperand(0).getReg())
+            .addImm(1)
+            .setOperandDead(3); // Dead scc
+        if (Opc == AMDGPU::S_XOR_B32) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+              .addReg(SrcReg)
+              .addReg(ParityRegister);
+        } else {
+          Register DestSub0 =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+          Register DestSub1 =
+              MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+          const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+          const TargetRegisterClass *SrcSubRC =
+              TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
+
+          MachineOperand Op1L = TII->buildExtractSubRegOrImm(
+              MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub0, SrcSubRC);
+          MachineOperand Op1H = TII->buildExtractSubRegOrImm(
+              MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
+
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
+              .add(Op1L)
+              .addReg(ParityRegister);
+
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub1)
+              .add(Op1H)
+              .addReg(ParityRegister);
+
+          BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
+              .addReg(DestSub0)
+              .addImm(AMDGPU::sub0)
+              .addReg(DestSub1)
+              .addImm(AMDGPU::sub1);
+        }
         break;
       }
       case AMDGPU::S_SUB_I32: {
         Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
 
         // Take the negation of the source operand.
-        auto InvertedValReg =
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal)
-                .addImm(-1)
-                .addReg(SrcReg);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedVal)
+            .addImm(0)
+            .addReg(SrcReg);
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
-            .addReg(InvertedValReg->getOperand(0).getReg())
+            .addReg(NegatedVal)
             .addReg(NewAccumulator->getOperand(0).getReg());
         break;
       }
@@ -5295,6 +5502,75 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
             .addReg(SrcReg)
             .addReg(NewAccumulator->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_ADD_U64_PSEUDO:
+      case AMDGPU::S_SUB_U64_PSEUDO: {
+        Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register Op1H_Op0L_Reg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register Op1L_Op0H_Reg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register CarryReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register AddReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register NegatedValLo =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register NegatedValHi =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+        const TargetRegisterClass *Src1RC = MRI.getRegClass(SrcReg);
+        const TargetRegisterClass *Src1SubRC =
+            TRI->getSubRegisterClass(Src1RC, AMDGPU::sub0);
+
+        MachineOperand Op1L = TII->buildExtractSubRegOrImm(
+            MI, MRI, MI.getOperand(1), Src1RC, AMDGPU::sub0, Src1SubRC);
+        MachineOperand Op1H = TII->buildExtractSubRegOrImm(
+            MI, MRI, MI.getOperand(1), Src1RC, AMDGPU::sub1, Src1SubRC);
+
+        if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedValLo)
+              .addImm(0)
+              .addReg(NewAccumulator->getOperand(0).getReg())
+              .setOperandDead(3); // Dead scc
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ASHR_I32), NegatedValHi)
+              .addReg(NegatedValLo)
+              .addImm(31)
+              .setOperandDead(3); // Dead scc
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1L_Op0H_Reg)
+              .add(Op1L)
+              .addReg(NegatedValHi);
+        }
+        Register LowOpcode = Opc == AMDGPU::S_SUB_U64_PSEUDO
+                                 ? NegatedValLo
+                                 : NewAccumulator->getOperand(0).getReg();
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
+            .add(Op1L)
+            .addReg(LowOpcode);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
+            .add(Op1L)
+            .addReg(LowOpcode);
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1H_Op0L_Reg)
+            .add(Op1H)
+            .addReg(LowOpcode);
+
+        Register HiVal = Opc == AMDGPU::S_SUB_U64_PSEUDO ? AddReg : DestSub1;
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ADD_U32), HiVal)
+            .addReg(CarryReg)
+            .addReg(Op1H_Op0L_Reg)
+            .setOperandDead(3); // Dead scc
+
+        if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ADD_U32), DestSub1)
+              .addReg(HiVal)
+              .addReg(Op1L_Op0H_Reg)
+              .setOperandDead(3); // Dead scc
+        }
+        BuildMI(BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
+            .addReg(DestSub0)
+            .addImm(AMDGPU::sub0)
+            .addReg(DestSub1)
+            .addImm(AMDGPU::sub1);
         break;
       }
       }
@@ -5313,6 +5589,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     // so that we will get the next active lane for next iteration.
     MachineBasicBlock::iterator I = BB.end();
     Register SrcReg = MI.getOperand(1).getReg();
+    bool is32BitOpc = is32bitWaveReduceOperation(Opc);
 
     // Create Control flow for loop
     // Split MI's Machine Basic block into For loop
@@ -5322,73 +5599,160 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
     const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
     Register LoopIterator = MRI.createVirtualRegister(WaveMaskRegClass);
-    Register InitalValReg = MRI.createVirtualRegister(DstRegClass);
-
+    Register IdentityValReg = MRI.createVirtualRegister(DstRegClass);
     Register AccumulatorReg = MRI.createVirtualRegister(DstRegClass);
     Register ActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
     Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
-
-    Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
-    Register LaneValueReg =
-        MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    Register FF1Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register LaneValueReg = MRI.createVirtualRegister(DstRegClass);
 
     bool IsWave32 = ST.isWave32();
-    unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    unsigned MovOpcForExec = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
     // Create initial values of induction variable from Exec, Accumulator and
     // insert branch instr to newly created ComputeBlock
-    uint32_t InitalValue = getIdentityValueForWaveReduction(Opc);
-    auto TmpSReg =
-        BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
-    BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
-        .addImm(InitalValue);
+    BuildMI(BB, I, DL, TII->get(MovOpcForExec), LoopIterator).addReg(ExecReg);
+    if (is32BitOpc) {
+      uint32_t IdentityValue = getIdentityValueFor32BitWaveReduction(Opc);
+      BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), IdentityValReg)
+          .addImm(IdentityValue);
+    } else {
+      uint64_t IdentityValue = getIdentityValueFor64BitWaveReduction(Opc);
+      BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B64_IMM_PSEUDO), IdentityValReg)
+          .addImm(IdentityValue);
+    }
     // clang-format off
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
         .addMBB(ComputeLoop);
     // clang-format on
 
     // Start constructing ComputeLoop
-    I = ComputeLoop->end();
+    I = ComputeLoop->begin();
     auto Accumulator =
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), AccumulatorReg)
-            .addReg(InitalValReg)
+            .addReg(IdentityValReg)
             .addMBB(&BB);
     auto ActiveBits =
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), ActiveBitsReg)
-            .addReg(TmpSReg->getOperand(0).getReg())
+            .addReg(LoopIterator)
             .addMBB(&BB);
 
+    I = ComputeLoop->end();
+    MachineInstr *NewAccumulator;
     // Perform the computations
     unsigned SFFOpc = IsWave32 ? AMDGPU::S_FF1_I32_B32 : AMDGPU::S_FF1_I32_B64;
-    auto FF1 = BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
-                   .addReg(ActiveBits->getOperand(0).getReg());
-    auto LaneValue = BuildMI(*ComputeLoop, I, DL,
-                             TII->get(AMDGPU::V_READLANE_B32), LaneValueReg)
-                         .addReg(SrcReg)
-                         .addReg(FF1->getOperand(0).getReg());
-    auto NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
-                              .addReg(Accumulator->getOperand(0).getReg())
-                              .addReg(LaneValue->getOperand(0).getReg());
+    BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
+        .addReg(ActiveBitsReg);
+    if (is32BitOpc) {
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueReg)
+          .addReg(SrcReg)
+          .addReg(FF1Reg);
+      NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                           .addReg(Accumulator->getOperand(0).getReg())
+                           .addReg(LaneValueReg);
+    } else {
+      Register LaneValueLoReg =
+          MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      Register LaneValueHiReg =
+          MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      Register LaneValReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *SrcSubRC =
+          TRI->getSubRegisterClass(SrcRC, AMDGPU::sub0);
+      MachineOperand Op1L = TII->buildExtractSubRegOrImm(
+          MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub0, SrcSubRC);
+      MachineOperand Op1H = TII->buildExtractSubRegOrImm(
+          MI, MRI, MI.getOperand(1), SrcRC, AMDGPU::sub1, SrcSubRC);
+      // lane value input should be in an sgpr
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueLoReg)
+          .add(Op1L)
+          .addReg(FF1Reg);
+      BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
+              LaneValueHiReg)
+          .add(Op1H)
+          .addReg(FF1Reg);
+      auto LaneValue = BuildMI(*ComputeLoop, I, DL,
+                               TII->get(TargetOpcode::REG_SEQUENCE), LaneValReg)
+                           .addReg(LaneValueLoReg)
+                           .addImm(AMDGPU::sub0)
+                           .addReg(LaneValueHiReg)
+                           .addImm(AMDGPU::sub1);
+      switch (Opc) {
+      case AMDGPU::S_OR_B64:
+      case AMDGPU::S_AND_B64:
+      case AMDGPU::S_XOR_B64: {
+        NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                             .addReg(Accumulator->getOperand(0).getReg())
+                             .addReg(LaneValue->getOperand(0).getReg())
+                             .setOperandDead(3); // Dead scc
+        break;
+      }
+      case AMDGPU::V_CMP_GT_I64_e64:
+      case AMDGPU::V_CMP_GT_U64_e64:
+      case AMDGPU::V_CMP_LT_I64_e64:
+      case AMDGPU::V_CMP_LT_U64_e64: {
+        Register LaneMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+        Register ComparisonResultReg =
+            MRI.createVirtualRegister(WaveMaskRegClass);
+        const TargetRegisterClass *VregClass = TRI->getVGPR64Class();
+        const TargetRegisterClass *VSubRegClass =
+            TRI->getSubRegisterClass(VregClass, AMDGPU::sub0);
+        Register AccumulatorVReg = MRI.createVirtualRegister(VregClass);
+        MachineOperand SrcReg0Sub0 =
+            TII->buildExtractSubRegOrImm(MI, MRI, Accumulator->getOperand(0),
+                                         VregClass, AMDGPU::sub0, VSubRegClass);
+        MachineOperand SrcReg0Sub1 =
+            TII->buildExtractSubRegOrImm(MI, MRI, Accumulator->getOperand(0),
+                                         VregClass, AMDGPU::sub1, VSubRegClass);
+        BuildMI(*ComputeLoop, I, DL, TII->get(TargetOpcode::REG_SEQUENCE),
+                AccumulatorVReg)
+            .add(SrcReg0Sub0)
+            .addImm(AMDGPU::sub0)
+            .add(SrcReg0Sub1)
+            .addImm(AMDGPU::sub1);
+        BuildMI(*ComputeLoop, I, DL, TII->get(Opc), LaneMaskReg)
+            .addReg(LaneValue->getOperand(0).getReg())
+            .addReg(AccumulatorVReg);
 
+        unsigned AndOpc = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+        BuildMI(*ComputeLoop, I, DL, TII->get(AndOpc), ComparisonResultReg)
+            .addReg(LaneMaskReg)
+            .addReg(ActiveBitsReg);
+
+        NewAccumulator = BuildMI(*ComputeLoop, I, DL,
+                                 TII->get(AMDGPU::S_CSELECT_B64), DstReg)
+                             .addReg(LaneValue->getOperand(0).getReg())
+                             .addReg(Accumulator->getOperand(0).getReg());
+        break;
+      }
+      case AMDGPU::S_ADD_U64_PSEUDO:
+      case AMDGPU::S_SUB_U64_PSEUDO: {
+        NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                             .addReg(Accumulator->getOperand(0).getReg())
+                             .addReg(LaneValue->getOperand(0).getReg());
+        ComputeLoop = Expand64BitScalarArithmetic(*NewAccumulator, ComputeLoop);
+        break;
+      }
+      }
+    }
     // Manipulate the iterator to get the next active lane
     unsigned BITSETOpc =
         IsWave32 ? AMDGPU::S_BITSET0_B32 : AMDGPU::S_BITSET0_B64;
-    auto NewActiveBits =
-        BuildMI(*ComputeLoop, I, DL, TII->get(BITSETOpc), NewActiveBitsReg)
-            .addReg(FF1->getOperand(0).getReg())
-            .addReg(ActiveBits->getOperand(0).getReg());
+    BuildMI(*ComputeLoop, I, DL, TII->get(BITSETOpc), NewActiveBitsReg)
+        .addReg(FF1Reg)
+        .addReg(ActiveBitsReg);
 
     // Add phi nodes
-    Accumulator.addReg(NewAccumulator->getOperand(0).getReg())
-        .addMBB(ComputeLoop);
-    ActiveBits.addReg(NewActiveBits->getOperand(0).getReg())
-        .addMBB(ComputeLoop);
+    Accumulator.addReg(DstReg).addMBB(ComputeLoop);
+    ActiveBits.addReg(NewActiveBitsReg).addMBB(ComputeLoop);
 
     // Creating branching
     unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
     BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc))
-        .addReg(NewActiveBits->getOperand(0).getReg())
+        .addReg(NewActiveBitsReg)
         .addImm(0);
     BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
         .addMBB(ComputeLoop);
@@ -5410,22 +5774,40 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
+  case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_LT_U64_e64);
   case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_I32);
+  case AMDGPU::WAVE_REDUCE_MIN_PSEUDO_I64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_LT_I64_e64);
   case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
+  case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_GT_U64_e64);
   case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_I32);
+  case AMDGPU::WAVE_REDUCE_MAX_PSEUDO_I64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::V_CMP_GT_I64_e64);
   case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_I32);
+  case AMDGPU::WAVE_REDUCE_ADD_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_ADD_U64_PSEUDO);
   case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_I32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_I32);
+  case AMDGPU::WAVE_REDUCE_SUB_PSEUDO_U64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_SUB_U64_PSEUDO);
   case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B32);
+  case AMDGPU::WAVE_REDUCE_AND_PSEUDO_B64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_AND_B64);
   case AMDGPU::WAVE_REDUCE_OR_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_OR_B32);
+  case AMDGPU::WAVE_REDUCE_OR_PSEUDO_B64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_OR_B64);
   case AMDGPU::WAVE_REDUCE_XOR_PSEUDO_B32:
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B32);
+  case AMDGPU::WAVE_REDUCE_XOR_PSEUDO_B64:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B64);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
     const DebugLoc &DL = MI.getDebugLoc();
@@ -5452,55 +5834,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
-    // For targets older than GFX12, we emit a sequence of 32-bit operations.
-    // For GFX12, we emit s_add_u64 and s_sub_u64.
-    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    const DebugLoc &DL = MI.getDebugLoc();
-    MachineOperand &Dest = MI.getOperand(0);
-    MachineOperand &Src0 = MI.getOperand(1);
-    MachineOperand &Src1 = MI.getOperand(2);
-    bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
-    if (Subtarget->hasScalarAddSub64()) {
-      unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
-      // clang-format off
-      BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
-          .add(Src0)
-          .add(Src1);
-      // clang-format on
-    } else {
-      const SIRegisterInfo *TRI = ST.getRegisterInfo();
-      const TargetRegisterClass *BoolRC = TRI->getBoolRC();
-
-      Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-      Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-      MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-      MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-      MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-      MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
-          MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-      unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
-      unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-      BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
-          .add(Src0Sub0)
-          .add(Src1Sub0);
-      BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
-          .add(Src0Sub1)
-          .add(Src1Sub1);
-      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-          .addReg(DestSub0)
-          .addImm(AMDGPU::sub0)
-          .addReg(DestSub1)
-          .addImm(AMDGPU::sub1);
-    }
-    MI.eraseFromParent();
-    return BB;
+    return Expand64BitScalarArithmetic(MI, BB);
   }
   case AMDGPU::V_ADD_U64_PSEUDO:
   case AMDGPU::V_SUB_U64_PSEUDO: {
@@ -6023,14 +6357,15 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return SplitBB;
   }
+  case AMDGPU::SI_TCRETURN_GFX_WholeWave:
   case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN: {
     assert(MFI->isWholeWaveFunction());
 
     // During ISel, it's difficult to propagate the original EXEC mask to use as
     // an input to SI_WHOLE_WAVE_FUNC_RETURN. Set it up here instead.
     MachineInstr *Setup = TII->getWholeWaveFunctionSetup(*BB->getParent());
-    Register OriginalExec = Setup->getOperand(0).getReg();
     assert(Setup && "Couldn't find SI_SETUP_WHOLE_WAVE_FUNC");
+    Register OriginalExec = Setup->getOperand(0).getReg();
     MF->getRegInfo().clearKillFlags(OriginalExec);
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
@@ -10246,6 +10581,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    EVT VT = Op->getValueType(0);
+    return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
+                             Chain, Ptr, MII->getMemOperand());
+  }
   default:
 
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -10421,41 +10766,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opc = Done->isZero() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
-  case Intrinsic::amdgcn_s_barrier:
-  case Intrinsic::amdgcn_s_barrier_signal:
-  case Intrinsic::amdgcn_s_barrier_wait: {
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
-      unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
-      if (WGSize <= ST.getWavefrontSize()) {
-        // If the workgroup fits in a wave, remove s_barrier_signal and lower
-        // s_barrier/s_barrier_wait to wave_barrier.
-        if (IntrinsicID == Intrinsic::amdgcn_s_barrier_signal)
-          return Op.getOperand(0);
-        else
-          return SDValue(DAG.getMachineNode(AMDGPU::WAVE_BARRIER, DL,
-                                            MVT::Other, Op.getOperand(0)),
-                         0);
-      }
-    }
-
-    if (ST.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
-      // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-      SDValue K =
-          DAG.getSignedTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
-      SDValue BarSignal =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
-                                     MVT::Other, K, Op.getOperand(0)),
-                  0);
-      SDValue BarWait =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_WAIT, DL, MVT::Other, K,
-                                     BarSignal.getValue(0)),
-                  0);
-      return BarWait;
-    }
-
-    return SDValue();
-  };
 
   case Intrinsic::amdgcn_struct_tbuffer_store:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
@@ -10912,6 +11222,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_PREFETCH_DATA, DL,
                                    Op->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    SDValue Val = Op->getOperand(3);
+    return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
+                         Ptr, MII->getMemOperand());
   }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -16933,10 +17253,12 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       switch (BitWidth) {
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
-                                             : &AMDGPU::VGPR_32RegClass;
+                                             : &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
-        RC = TRI->getVGPRClassForBitWidth(BitWidth);
+        RC = Subtarget->has1024AddressableVGPRs()
+                 ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
+                 : TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
           return std::pair(0U, nullptr);
         break;
@@ -16980,7 +17302,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
     if (Kind == 'v') {
-      RC = &AMDGPU::VGPR_32RegClass;
+      RC = &AMDGPU::VGPR_32_Lo256RegClass;
     } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
     } else if (Kind == 'a') {
@@ -17022,6 +17344,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         return std::pair(0U, nullptr);
       if (Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
+      return std::pair(0U, nullptr);
     }
   }
 
@@ -17808,11 +18131,19 @@ static bool flatInstrMayAccessPrivate(const Instruction *I) {
          !AMDGPU::hasValueInRangeLikeMetadata(*MD, AMDGPUAS::PRIVATE_ADDRESS);
 }
 
+static TargetLowering::AtomicExpansionKind
+getPrivateAtomicExpansionKind(const GCNSubtarget &STI) {
+  // For GAS, lower to flat atomic.
+  return STI.hasGloballyAddressableScratch()
+             ? TargetLowering::AtomicExpansionKind::CustomExpand
+             : TargetLowering::AtomicExpansionKind::NotAtomic;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return AtomicExpansionKind::NotAtomic;
+    return getPrivateAtomicExpansionKind(*getSubtarget());
 
   // 64-bit flat atomics that dynamically reside in private memory will silently
   // be dropped.
@@ -17823,7 +18154,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   if (AS == AMDGPUAS::FLAT_ADDRESS &&
       DL.getTypeSizeInBits(RMW->getType()) == 64 &&
       flatInstrMayAccessPrivate(RMW))
-    return AtomicExpansionKind::Expand;
+    return AtomicExpansionKind::CustomExpand;
 
   auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
@@ -17898,7 +18229,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // does. InstCombine transforms these with 0 to or, so undo that.
         if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
             ConstVal && ConstVal->isNullValue())
-          return AtomicExpansionKind::Expand;
+          return AtomicExpansionKind::CustomExpand;
       }
 
       // If the allocation could be in remote, fine-grained memory, the rmw
@@ -18027,9 +18358,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         // fadd.
         if (Subtarget->hasLDSFPAtomicAddF32()) {
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-            return AtomicExpansionKind::Expand;
+            return AtomicExpansionKind::CustomExpand;
         }
       }
     }
@@ -18083,14 +18414,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
+             ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
-             ? AtomicExpansionKind::NotAtomic
+             ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
@@ -18098,7 +18429,7 @@ TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
-    return AtomicExpansionKind::NotAtomic;
+    return getPrivateAtomicExpansionKind(*getSubtarget());
 
   if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
     return AtomicExpansionKind::None;
@@ -18109,7 +18440,7 @@ SITargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CmpX) const {
 
   // If a 64-bit flat atomic may alias private, we need to avoid using the
   // atomic in the private case.
-  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::Expand
+  return DL.getTypeSizeInBits(ValTy) == 64 ? AtomicExpansionKind::CustomExpand
                                            : AtomicExpansionKind::None;
 }
 
@@ -18468,8 +18799,23 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   Builder.CreateBr(ExitBB);
 }
 
+static void convertScratchAtomicToFlatAtomic(Instruction *I,
+                                             unsigned PtrOpIdx) {
+  Value *PtrOp = I->getOperand(PtrOpIdx);
+  assert(PtrOp->getType()->getPointerAddressSpace() ==
+         AMDGPUAS::PRIVATE_ADDRESS);
+
+  Type *FlatPtr = PointerType::get(I->getContext(), AMDGPUAS::FLAT_ADDRESS);
+  Value *ASCast = CastInst::CreatePointerCast(PtrOp, FlatPtr, "scratch.ascast",
+                                              I->getIterator());
+  I->setOperand(PtrOpIdx, ASCast);
+}
+
 void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (AI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(AI, AI->getPointerOperandIndex());
 
   if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
       Op == AtomicRMWInst::Xor) {
@@ -18493,7 +18839,26 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 }
 
 void SITargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
+  if (CI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(CI, CI->getPointerOperandIndex());
+
   emitExpandAtomicAddrSpacePredicate(CI);
+}
+
+void SITargetLowering::emitExpandAtomicLoad(LoadInst *LI) const {
+  if (LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(LI, LI->getPointerOperandIndex());
+
+  llvm_unreachable(
+      "Expand Atomic Load only handles SCRATCH -> FLAT conversion");
+}
+
+void SITargetLowering::emitExpandAtomicStore(StoreInst *SI) const {
+  if (SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+    return convertScratchAtomicToFlatAtomic(SI, SI->getPointerOperandIndex());
+
+  llvm_unreachable(
+      "Expand Atomic Store only handles SCRATCH -> FLAT conversion");
 }
 
 LoadInst *

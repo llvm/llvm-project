@@ -466,8 +466,14 @@ llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
 std::optional<DefinitionAndSourceRegister>
 llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
-  auto *DefMI = MRI.getVRegDef(Reg);
-  auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
+  // This assumes that the code is in SSA form, so there should only be one
+  // definition.
+  auto DefIt = MRI.def_begin(Reg);
+  if (DefIt == MRI.def_end())
+    return {};
+  MachineOperand &DefOpnd = *DefIt;
+  MachineInstr *DefMI = DefOpnd.getParent();
+  auto DstTy = MRI.getType(DefOpnd.getReg());
   if (!DstTy.isValid())
     return std::nullopt;
   unsigned Opc = DefMI->getOpcode();

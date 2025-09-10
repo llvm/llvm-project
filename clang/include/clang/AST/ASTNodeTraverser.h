@@ -649,21 +649,8 @@ public:
 
   template <typename SpecializationDecl>
   void dumpTemplateDeclSpecialization(const SpecializationDecl *D) {
-    for (const auto *RedeclWithBadType : D->redecls()) {
-      // FIXME: The redecls() range sometimes has elements of a less-specific
-      // type. (In particular, ClassTemplateSpecializationDecl::redecls() gives
-      // us TagDecls, and should give CXXRecordDecls).
-      auto *Redecl = dyn_cast<SpecializationDecl>(RedeclWithBadType);
-      if (!Redecl) {
-        // Found the injected-class-name for a class template. This will be
-        // dumped as part of its surrounding class so we don't need to dump it
-        // here.
-        assert(isa<CXXRecordDecl>(RedeclWithBadType) &&
-               "expected an injected-class-name");
-        continue;
-      }
-      Visit(Redecl);
-    }
+    for (const auto *Redecl : D->redecls())
+      Visit(cast<SpecializationDecl>(Redecl));
   }
 
   template <typename TemplateDecl>
