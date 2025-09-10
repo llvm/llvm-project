@@ -1135,7 +1135,7 @@ void ExpandFpPass::printPipeline(
   static_cast<PassInfoMixin<ExpandFpPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
-  OS << "opt-level=" << (int)OptLevel;
+  OS << "O" << (int)OptLevel;
   OS << '>';
 }
 

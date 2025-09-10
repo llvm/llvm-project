@@ -49,7 +49,6 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; CHECK-NEXT: .amdhsa_uses_cu_stores 1
 ; CHECK-NEXT: .amdhsa_wavefront_size32 1
 ; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
@@ -57,7 +56,6 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_inst_pref_size 0
-  .amdhsa_uses_cu_stores 1
 .end_amdhsa_kernel
 
 ;--- 2.s
@@ -107,7 +105,6 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-; CHECK-NEXT: .amdhsa_uses_cu_stores 0
 ; CHECK-NEXT: .amdhsa_wavefront_size32 1
 ; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
@@ -116,6 +113,5 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_named_barrier_count 7
-  .amdhsa_uses_cu_stores 0
   .amdhsa_inst_pref_size 63
 .end_amdhsa_kernel

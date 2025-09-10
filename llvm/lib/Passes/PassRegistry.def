@@ -724,7 +724,7 @@ FUNCTION_PASS_WITH_PARAMS(
     [TM = TM](CodeGenOptLevel OL) {
       return ExpandFpPass(TM, OL);
     },
-    parseExpandFpOptions, "opt-level=N")
+    parseExpandFpOptions, "O0;O1;O2;O3")
     
 #undef FUNCTION_PASS_WITH_PARAMS
 
