@@ -62,7 +62,7 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
    * - Carlos Andrés Ramírez
      - Woven by Toyota
      - CarlosAndresRamirez
-     - -
+     - carlos_andres_ramirez
      - CarlosAndresRamirez
    * - Davide Cunial
      - BMW A.G.
