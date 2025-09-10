@@ -411,6 +411,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   case Builtin::BI__builtin_elementwise_acos:
     return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_asin:
+    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
