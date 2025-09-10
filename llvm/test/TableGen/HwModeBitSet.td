@@ -17,7 +17,7 @@ def Feat2 : SubtargetFeature<"feat2", "HasFeat2", "true", "enable feature 2">;
 def HasFeat1 : Predicate<"Subtarget->hasFeat1()">,
                AssemblerPredicate<(all_of Feat1)>;
 def HasFeat2 : Predicate<"Subtarget->hasFeat2()">,
-               AssemblerPredicate<(all_of Feat1)>;
+               AssemblerPredicate<(all_of Feat2)>;
 
 def TestMode : HwMode<[HasFeat1]>;
 def TestMode1 : HwMode<[HasFeat2]>;
@@ -133,8 +133,8 @@ def foo : Instruction {
 // CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
 // CHECK-SUBTARGET-NEXT:    unsigned Modes = 0;
 // CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1]) Modes |= (1 << 0);
-// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1]) Modes |= (1 << 1);
-// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1] && FB[TestTarget::Feat1]) Modes |= (1 << 2);
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat2]) Modes |= (1 << 1);
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1] && FB[TestTarget::Feat2]) Modes |= (1 << 2);
 // CHECK-SUBTARGET-NEXT:    return Modes;
 // CHECK-SUBTARGET-NEXT:  }
 
@@ -180,4 +180,3 @@ def foo : Instruction {
 // CHECK-SUBTARGET:         llvm_unreachable("unexpected HwModeType");
 // CHECK-SUBTARGET:         return 0; // should not get here
 // CHECK-SUBTARGET:       }
-
