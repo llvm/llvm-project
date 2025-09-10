@@ -540,7 +540,7 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
   auto mapInfoFrom = getMapInfo(mapFrom, "__flang_workdistribute_from");
   auto mapInfoTo = getMapInfo(mapTo, "__flang_workdistribute_to");
   return TempOmpVar{mapInfoFrom, mapInfoTo};
-};
+}
 
 static bool usedOutsideSplit(Value v, Operation *split) {
   if (!split)
@@ -1071,8 +1071,6 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
       mlir::Location loc = runtimeCall.getLoc();
       fir::FirOpBuilder builder{rewriter, op};
       assert(operands.size() == 4);
-      Value sourceFile{operands[2]}, sourceLine{operands[3]};
-
       auto fromBaseAddr =
           genDescriptorGetBaseAddress(builder, loc, operands[1]);
       auto toBaseAddr = genDescriptorGetBaseAddress(builder, loc, operands[0]);
