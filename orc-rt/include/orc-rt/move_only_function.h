@@ -41,7 +41,9 @@ public:
 template <typename CallableT, typename RetT, typename... ArgTs>
 class GenericCallableImpl : public GenericCallable<RetT, ArgTs...> {
 public:
-  GenericCallableImpl(CallableT &&Callable) : Callable(std::move(Callable)) {}
+  template <typename CallableInitT>
+  GenericCallableImpl(CallableInitT &&Callable)
+      : Callable(std::forward<CallableInitT>(Callable)) {}
   RetT call(ArgTs &&...Args) override {
     return Callable(std::forward<ArgTs>(Args)...);
   }
@@ -59,8 +61,9 @@ public:
 template <typename CallableT, typename RetT, typename... ArgTs>
 class GenericConstCallableImpl : public GenericConstCallable<RetT, ArgTs...> {
 public:
-  GenericConstCallableImpl(CallableT &&Callable)
-      : Callable(std::move(Callable)) {}
+  template <typename CallableInitT>
+  GenericConstCallableImpl(CallableInitT &&Callable)
+      : Callable(std::forward<CallableInitT>(Callable)) {}
   RetT call(ArgTs &&...Args) const override {
     return Callable(std::forward<ArgTs>(Args)...);
   }
@@ -93,7 +96,7 @@ public:
   template <typename CallableT>
   move_only_function(CallableT &&Callable)
       : C(std::make_unique<GenericCallableImpl<std::decay_t<CallableT>>>(
-            std::move(Callable))) {}
+            std::forward<CallableT>(Callable))) {}
 
   RetT operator()(ArgTs... Params) const {
     return C->call(std::forward<ArgTs>(Params)...);
@@ -126,7 +129,7 @@ public:
   template <typename CallableT>
   move_only_function(CallableT &&Callable)
       : C(std::make_unique<const GenericCallableImpl<std::decay_t<CallableT>>>(
-            std::move(Callable))) {}
+            std::forward<CallableT>(Callable))) {}
 
   RetT operator()(ArgTs... Params) const {
     return C->call(std::forward<ArgTs>(Params)...);
