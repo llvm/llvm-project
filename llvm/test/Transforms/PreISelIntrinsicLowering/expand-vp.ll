@@ -204,8 +204,49 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  %{{.+}} = ashr <8 x i32> %i0, %i1
 ; ALL-CONVERT-NEXT:  %{{.+}} = lshr <8 x i32> %i0, %i1
 ; ALL-CONVERT-NEXT:  %{{.+}} = shl <8 x i32> %i0, %i1
-; ALL-CONVERT:       ret void
+; ALL-CONVERT-NEXT:  [[NINS2:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
+; ALL-CONVERT-NEXT:  [[NSPLAT2:%.+]] = shufflevector <8 x i32> [[NINS2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; ALL-CONVERT-NEXT:  [[EVLM2:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT2]]
+; ALL-CONVERT-NEXT:  [[NEWM2:%.+]] = and <8 x i1> [[EVLM2]], %m
+; ALL-CONVERT-NEXT:  %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> [[NEWM2]], <8 x i32> %i0, <8 x i32> %i1, i32 8)
+; ALL-CONVERT-NEXT:  %r12 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 8)
+; ALL-CONVERT-NEXT:  ret void
 
+; ALL-CONVERT: define void @test_vp_int_vscale(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i32> %i2, <vscale x 4 x i32> %f3, <vscale x 4 x i1> %m, i32 %n) {
+; ALL-CONVERT:       %{{.*}} = add <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = sub <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = mul <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       [[EVLM:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM:%.+]] = and <vscale x 4 x i1> [[EVLM]], %m
+; ALL-CONVERT:       [[SELONE:%.+]] = select <vscale x 4 x i1> [[NEWM]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = sdiv <vscale x 4 x i32> %i0, [[SELONE]]
+; ALL-CONVERT:       [[EVLM2:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM2:%.+]] = and <vscale x 4 x i1> [[EVLM2]], %m
+; ALL-CONVERT:       [[SELONE2:%.+]] = select <vscale x 4 x i1> [[NEWM2]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = srem <vscale x 4 x i32> %i0, [[SELONE2]]
+; ALL-CONVERT:       [[EVLM3:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM3:%.+]] = and <vscale x 4 x i1> [[EVLM3]], %m
+; ALL-CONVERT:       [[SELONE3:%.+]] = select <vscale x 4 x i1> [[NEWM3]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = udiv <vscale x 4 x i32> %i0, [[SELONE3]]
+; ALL-CONVERT:       [[EVLM4:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM4:%.+]] = and <vscale x 4 x i1> [[EVLM4]], %m
+; ALL-CONVERT:       [[SELONE4:%.+]] = select <vscale x 4 x i1> [[NEWM4]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
+; ALL-CONVERT:       %{{.*}} = urem <vscale x 4 x i32> %i0, [[SELONE4]]
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.smax.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.+}} = call <vscale x 4 x i32> @llvm.umin.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1)
+; ALL-CONVERT:       %{{.*}} = and <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = or <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = xor <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = ashr <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = lshr <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       %{{.*}} = shl <vscale x 4 x i32> %i0, %i1
+; ALL-CONVERT:       [[EVLM5:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
+; ALL-CONVERT:       [[NEWM5:%.+]] = and <vscale x 4 x i1> [[EVLM5]], %m
+; ALL-CONVERT:       %r11 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[NEWM5]], <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
+; ALL-CONVERT:       %r12 = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
+; ALL-CONVERT-NEXT:  ret void
 
 ; Check that reductions use the correct neutral element for masked-off elements
 ; ALL-CONVERT: define void @test_vp_reduce_int_v4(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 %n) {
