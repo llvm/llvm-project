@@ -56,6 +56,8 @@ class LLVM_ABI_FOR_TEST VPValue {
 
   SmallVector<VPUser *, 1> Users;
 
+  unsigned getNumUsers() const { return Users.size(); }
+
 protected:
   // Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
@@ -110,7 +112,6 @@ public:
   void dump() const;
 #endif
 
-  unsigned getNumUsers() const { return Users.size(); }
   void addUser(VPUser &User) { Users.push_back(&User); }
 
   /// Remove a single \p User from the list of users.
@@ -136,17 +137,12 @@ public:
     return const_user_range(user_begin(), user_end());
   }
 
-  /// Returns true if the value has more than one unique user.
-  bool hasMoreThanOneUniqueUser() const {
-    if (getNumUsers() == 0)
-      return false;
+  bool hasUsers() const { return !Users.empty(); }
+  bool hasNoUsers() const { return !hasUsers(); }
+  bool hasOneUser() const { return !hasNoUsers() && all_equal(Users); }
 
-    // Check if all users match the first user.
-    auto Current = std::next(user_begin());
-    while (Current != user_end() && *user_begin() == *Current)
-      Current++;
-    return Current != user_end();
-  }
+  /// Returns true if the value has more than one unique user.
+  bool hasNoOrOneUser() const { return hasNoUsers() || hasOneUser(); }
 
   void replaceAllUsesWith(VPValue *New);
 

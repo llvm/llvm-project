@@ -198,8 +198,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           }
           // EVLIVIncrement is only used by EVLIV & BranchOnCount.
           // Having more than two users is unexpected.
-          if ((I->getNumUsers() != 1) &&
-              (I->getNumUsers() != 2 || none_of(I->users(), [&I](VPUser *U) {
+          if ((size(I->users()) != 1) &&
+              (size(I->users()) != 2 || none_of(I->users(), [&I](VPUser *U) {
                  using namespace llvm::VPlanPatternMatch;
                  return match(U, m_BranchOnCount(m_Specific(I), m_VPValue()));
                }))) {

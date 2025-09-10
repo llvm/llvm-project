@@ -1066,25 +1066,25 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  if (VF.getNumUsers() > 0) {
+  if (VF.hasUsers()) {
     O << "\nLive-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
   }
 
-  if (VFxUF.getNumUsers() > 0) {
+  if (VFxUF.hasUsers()) {
     O << "\nLive-in ";
     VFxUF.printAsOperand(O, SlotTracker);
     O << " = VF * UF";
   }
 
-  if (VectorTripCount.getNumUsers() > 0) {
+  if (VectorTripCount.hasUsers()) {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
     O << " = vector-trip-count";
   }
 
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+  if (BackedgeTakenCount && BackedgeTakenCount->hasUsers()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
     O << " = backedge-taken count";
@@ -1502,9 +1502,9 @@ void VPSlotTracker::assignName(const VPValue *V) {
 }
 
 void VPSlotTracker::assignNames(const VPlan &Plan) {
-  if (Plan.VF.getNumUsers() > 0)
+  if (Plan.VF.hasUsers())
     assignName(&Plan.VF);
-  if (Plan.VFxUF.getNumUsers() > 0)
+  if (Plan.VFxUF.hasUsers())
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
