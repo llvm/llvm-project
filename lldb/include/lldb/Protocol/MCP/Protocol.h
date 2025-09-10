@@ -14,6 +14,7 @@
 #ifndef LLDB_PROTOCOL_MCP_PROTOCOL_H
 #define LLDB_PROTOCOL_MCP_PROTOCOL_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <string>
@@ -323,5 +324,12 @@ llvm::json::Value toJSON(const CallToolResult &);
 bool fromJSON(const llvm::json::Value &, CallToolResult &, llvm::json::Path);
 
 } // namespace lldb_protocol::mcp
+
+namespace llvm::json {
+inline Value toJSON(const lldb_protocol::mcp::Void &) { return Object(); }
+inline bool fromJSON(const Value &, lldb_protocol::mcp::Void &, Path) {
+  return true;
+}
+} // namespace llvm::json
 
 #endif

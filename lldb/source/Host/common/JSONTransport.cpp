@@ -30,3 +30,13 @@ void TransportUnhandledContentsError::log(llvm::raw_ostream &OS) const {
 std::error_code TransportUnhandledContentsError::convertToErrorCode() const {
   return std::make_error_code(std::errc::bad_message);
 }
+
+char InvalidParams::ID;
+
+void InvalidParams::log(llvm::raw_ostream &OS) const {
+  OS << "invalid parameters for method '" << m_method << "': '" << m_context
+     << "'";
+}
+std::error_code InvalidParams::convertToErrorCode() const {
+  return std::make_error_code(std::errc::invalid_argument);
+}

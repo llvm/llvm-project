@@ -10,22 +10,95 @@
 #define LLDB_PROTOCOL_MCP_TRANSPORT_H
 
 #include "lldb/Host/JSONTransport.h"
+#include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+
+namespace lldb_private {
+/// Specializations of the JSONTransport protocol functions for MCP.
+/// @{
+template <>
+inline lldb_protocol::mcp::Request
+make_request(int64_t id, llvm::StringRef method,
+             std::optional<llvm::json::Value> params) {
+  return lldb_protocol::mcp::Request{id, method.str(), params};
+}
+template <>
+inline lldb_protocol::mcp::Response
+make_response(const lldb_protocol::mcp::Request &req, llvm::Error error) {
+  lldb_protocol::mcp::Error protocol_error;
+  llvm::handleAllErrors(
+      std::move(error),
+      [&](const lldb_protocol::mcp::MCPError &err) {
+        protocol_error = err.toProtocolError();
+      },
+      [&](const llvm::ErrorInfoBase &err) {
+        protocol_error.code = lldb_protocol::mcp::MCPError::kInternalError;
+        protocol_error.message = err.message();
+      });
+
+  return lldb_protocol::mcp::Response{req.id, std::move(protocol_error)};
+}
+template <>
+inline lldb_protocol::mcp::Response
+make_response(const lldb_protocol::mcp::Request &req,
+              llvm::json::Value result) {
+  return lldb_protocol::mcp::Response{req.id, std::move(result)};
+}
+template <>
+inline lldb_protocol::mcp::Notification
+make_event(llvm::StringRef method, std::optional<llvm::json::Value> params) {
+  return lldb_protocol::mcp::Notification{method.str(), params};
+}
+template <>
+inline llvm::Expected<llvm::json::Value>
+get_result(const lldb_protocol::mcp::Response &resp) {
+  if (const lldb_protocol::mcp::Error *error =
+          std::get_if<lldb_protocol::mcp::Error>(&resp.result))
+    return llvm::make_error<lldb_protocol::mcp::MCPError>(error->message,
+                                                          error->code);
+  return std::get<llvm::json::Value>(resp.result);
+}
+template <> inline int64_t get_id(const lldb_protocol::mcp::Response &resp) {
+  return std::get<int64_t>(resp.id);
+}
+template <>
+inline llvm::StringRef get_method(const lldb_protocol::mcp::Request &req) {
+  return req.method;
+}
+template <>
+inline llvm::StringRef get_method(const lldb_protocol::mcp::Notification &evt) {
+  return evt.method;
+}
+template <>
+inline llvm::json::Value get_params(const lldb_protocol::mcp::Request &req) {
+  return req.params;
+}
+template <>
+inline llvm::json::Value
+get_params(const lldb_protocol::mcp::Notification &evt) {
+  return evt.params;
+}
+/// @}
+
+} // end namespace lldb_private
 
 namespace lldb_protocol::mcp {
 
 /// Generic transport that uses the MCP protocol.
-using MCPTransport = lldb_private::Transport<Request, Response, Notification>;
+using MCPTransport =
+    lldb_private::JSONTransport<int64_t, Request, Response, Notification>;
 
 /// Generic logging callback, to allow the MCP server / client / transport layer
 /// to be independent of the lldb log implementation.
 using LogCallback = llvm::unique_function<void(llvm::StringRef message)>;
 
 class Transport final
-    : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
+    : public lldb_private::JSONRPCTransport<int64_t, Request, Response,
+                                            Notification> {
 public:
   Transport(lldb::IOObjectSP in, lldb::IOObjectSP out,
             LogCallback log_callback = {});

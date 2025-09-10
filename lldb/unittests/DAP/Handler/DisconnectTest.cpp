@@ -31,7 +31,7 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
   DisconnectRequestHandler handler(*dap);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));
-  RunOnce();
+  Run();
 }
 
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
@@ -53,5 +53,5 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   EXPECT_CALL(client, Received(Output("(lldb) script print(2)\n")));
   EXPECT_CALL(client, Received(Output("Running terminateCommands:\n")));
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));
-  RunOnce();
+  Run();
 }
