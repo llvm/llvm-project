@@ -5944,6 +5944,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_XOR_B64);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
     const DebugLoc &DL = MI.getDebugLoc();
     MachineOperand &Dest0 = MI.getOperand(0);
     MachineOperand &Dest1 = MI.getOperand(1);
@@ -5959,9 +5962,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .add(Src1);
     // clang-format on
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CSELECT_B64), Dest1.getReg())
-        .addImm(1)
-        .addImm(0);
+    const TargetRegisterClass *Dest1RC = MRI.getRegClass(Dest1.getReg());
+    unsigned Dest1Size = TRI->getRegSizeInBits(*Dest1RC);
+    assert(Dest1Size == 64 || Dest1Size == 32);
+    unsigned SelOpc =
+        (Dest1Size == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+
+    BuildMI(*BB, MI, DL, TII->get(SelOpc), Dest1.getReg()).addImm(1).addImm(0);
 
     MI.eraseFromParent();
     return BB;
