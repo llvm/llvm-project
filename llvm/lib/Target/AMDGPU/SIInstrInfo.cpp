@@ -62,8 +62,8 @@ static cl::opt<bool> Fix16BitCopies(
   cl::ReallyHidden);
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
-  : AMDGPUGenInstrInfo(AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
-    RI(ST), ST(ST) {
+    : AMDGPUGenInstrInfo(ST, AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
+      RI(ST), ST(ST) {
   SchedModel.init(&ST);
 }
 
@@ -3554,12 +3554,11 @@ static unsigned getNewFMAMKInst(const GCNSubtarget &ST, unsigned Opc) {
 
 bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
-  if (!MRI->hasOneNonDBGUse(Reg))
-    return false;
-
   int64_t Imm;
   if (!getConstValDefinedInReg(DefMI, Reg, Imm))
     return false;
+
+  const bool HasMultipleUses = !MRI->hasOneNonDBGUse(Reg);
 
   assert(!DefMI.getOperand(0).getSubReg() && "Expected SSA form");
 
@@ -3571,6 +3570,25 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     Register UseSubReg = UseMI.getOperand(1).getSubReg();
 
     const TargetRegisterClass *DstRC = RI.getRegClassForReg(*MRI, DstReg);
+
+    if (HasMultipleUses) {
+      // TODO: This should fold in more cases with multiple use, but we need to
+      // more carefully consider what those uses are.
+      unsigned ImmDefSize = RI.getRegSizeInBits(*MRI->getRegClass(Reg));
+
+      // Avoid breaking up a 64-bit inline immediate into a subregister extract.
+      if (UseSubReg != AMDGPU::NoSubRegister && ImmDefSize == 64)
+        return false;
+
+      // Most of the time folding a 32-bit inline constant is free (though this
+      // might not be true if we can't later fold it into a real user).
+      //
+      // FIXME: This isInlineConstant check is imprecise if
+      // getConstValDefinedInReg handled the tricky non-mov cases.
+      if (ImmDefSize == 32 &&
+          !isInlineConstant(Imm, AMDGPU::OPERAND_REG_IMM_INT32))
+        return false;
+    }
 
     bool Is16Bit = UseSubReg != AMDGPU::NoSubRegister &&
                    RI.getSubRegIdxSize(UseSubReg) == 16;
@@ -3658,6 +3676,9 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     UseMI.addImplicitDefUseOperands(*MF);
     return true;
   }
+
+  if (HasMultipleUses)
+    return false;
 
   if (Opc == AMDGPU::V_MAD_F32_e64 || Opc == AMDGPU::V_MAC_F32_e64 ||
       Opc == AMDGPU::V_MAD_F16_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
@@ -5994,25 +6015,12 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  bool IsAllocatable = false;
-  if (TID.TSFlags & SIInstrFlags::FLAT) {
-    // vdst and vdata should be both VGPR or AGPR, same for the DS instructions
-    // with two data operands. Request register class constrained to VGPR only
-    // of both operands present as Machine Copy Propagation can not check this
-    // constraint and possibly other passes too.
-    //
-    // The check is limited to FLAT because atomics in non-flat encoding have
-    // their vdst and vdata tied to be the same register, and DS instructions
-    // have separate instruction definitions with AGPR and VGPR operand lists.
-    IsAllocatable =
-        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdata) &&
-        AMDGPU::hasNamedOperand(TID.Opcode, AMDGPU::OpName::vdst);
-  } else if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
     // Special pseudos have no alignment requirement
     return RI.getRegClass(RegClass);
   }
 
-  return adjustAllocatableRegClass(ST, RI, TID, RegClass, IsAllocatable);
+  return adjustAllocatableRegClass(ST, RI, TID, RegClass, false);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
@@ -6565,6 +6573,21 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
+
+  if (isWMMA(MI)) {
+    // scale_src has a register class restricted to low 256 VGPRs, we may need
+    // to insert a copy to the restricted VGPR class.
+    int ScaleSrc0Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
+    if (ScaleSrc0Idx != -1) {
+      int ScaleSrc1Idx =
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
+      if (!isOperandLegal(MI, ScaleSrc0Idx))
+        legalizeOpWithMove(MI, ScaleSrc0Idx);
+      if (!isOperandLegal(MI, ScaleSrc1Idx))
+        legalizeOpWithMove(MI, ScaleSrc1Idx);
+    }
+  }
 
   // Fix the register class of packed FP32 instructions on gfx12+. See
   // SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more information.
@@ -9270,6 +9293,9 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
 
 MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
                                              AMDGPU::OpName OperandName) const {
+  if (OperandName == AMDGPU::OpName::NUM_OPERAND_NAMES)
+    return nullptr;
+
   int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OperandName);
   if (Idx == -1)
     return nullptr;
@@ -10255,7 +10281,7 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 InstructionUniformity
 SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  unsigned opcode = MI.getOpcode();
+  unsigned Opcode = MI.getOpcode();
 
   auto HandleAddrSpaceCast = [this, &MRI](const MachineInstr &MI) {
     Register Dst = MI.getOperand(0).getReg();
@@ -10275,7 +10301,7 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   // If the target supports globally addressable scratch, the mapping from
   // scratch memory to the flat aperture changes therefore an address space cast
   // is no longer uniform.
-  if (opcode == TargetOpcode::G_ADDRSPACE_CAST)
+  if (Opcode == TargetOpcode::G_ADDRSPACE_CAST)
     return HandleAddrSpaceCast(MI);
 
   if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
@@ -10303,7 +10329,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
-  if (opcode == AMDGPU::G_LOAD) {
+  if (Opcode == AMDGPU::G_LOAD || Opcode == AMDGPU::G_ZEXTLOAD ||
+      Opcode == AMDGPU::G_SEXTLOAD) {
     if (MI.memoperands_empty())
       return InstructionUniformity::NeverUniform; // conservative assumption
 
@@ -10317,10 +10344,10 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
-  if (SIInstrInfo::isGenericAtomicRMWOpcode(opcode) ||
-      opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
-      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||
-      AMDGPU::isGenericAtomic(opcode)) {
+  if (SIInstrInfo::isGenericAtomicRMWOpcode(Opcode) ||
+      Opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
+      Opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||
+      AMDGPU::isGenericAtomic(Opcode)) {
     return InstructionUniformity::NeverUniform;
   }
   return InstructionUniformity::Default;

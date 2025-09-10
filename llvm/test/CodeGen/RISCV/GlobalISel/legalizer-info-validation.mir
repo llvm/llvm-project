@@ -73,12 +73,13 @@
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ABDS (opcode 65): 1 type index, 0 imm indices
-# DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT:.. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT:.. imm index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT:G_ABDU (opcode 66): 1 type index, 0 imm indices
-# DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT:.. opcode 66 is aliased to 65
+# DEBUG-NEXT:.. type index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT:.. imm index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_IMPLICIT_DEF (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
