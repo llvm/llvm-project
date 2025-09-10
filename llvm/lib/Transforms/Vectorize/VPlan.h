@@ -716,7 +716,6 @@ public:
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
-public:
   void transferFlags(VPIRFlags &Other) {
     OpType = Other.OpType;
     AllFlags = Other.AllFlags;
@@ -902,6 +901,11 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 
   static inline bool classof(const VPValue *V) {
     auto *R = dyn_cast_or_null<VPRecipeBase>(V->getDefiningRecipe());
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
   }
 
@@ -2419,6 +2423,12 @@ public:
   VPValue *getMask(unsigned Idx) const {
     assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
     return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
+  }
+
+  /// Set mask number \p Idx to \p V.
+  void setMask(unsigned Idx, VPValue *V) {
+    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
+    Idx == 0 ? setOperand(1, V) : setOperand(Idx * 2 + !isNormalized(), V);
   }
 
   void execute(VPTransformState &State) override {
