@@ -204,7 +204,7 @@ class CreateNdDescToXeVMPattern
       val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
       return val;
     };
-    // Offsets are not supported not (0 is used).
+    // Offsets are not supported (0 is used).
     offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
     offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
     // Get shape values from op fold results.
@@ -379,10 +379,10 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
   LogicalResult
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Value offsets = adaptor.getOffsets();
-    if (!offsets)
+    Value offset = adaptor.getOffsets();
+    if (!offset)
       return rewriter.notifyMatchFailure(op,
-                                         "Expected offsets to be provided.");
+                                         "Expected offset to be provided.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
     auto tdescTy = op.getTensorDescType();
@@ -433,16 +433,16 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                                           basePtrI64);
     }
     Value mask = adaptor.getMask();
-    if (dyn_cast<VectorType>(offsets.getType())) {
+    if (dyn_cast<VectorType>(offset.getType())) {
       // Offset needs be scalar. Single element vector is converted to scalar
       // by type converter.
       return rewriter.notifyMatchFailure(op,
-                                         "Expected offsets to be a scalar.");
+                                         "Expected offset to be a scalar.");
     } else {
-      // If offsets are provided, we add them to the base pointer.
-      // Offsets are in number of elements, we need to multiply by
+      // If offset is provided, we add them to the base pointer.
+      // Offset is in number of elements, we need to multiply by
       // element byte size.
-      basePtrI64 = addOffset(rewriter, loc, basePtrI64, offsets, elemByteSize);
+      basePtrI64 = addOffset(rewriter, loc, basePtrI64, offset, elemByteSize);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value basePtrLLVM =
