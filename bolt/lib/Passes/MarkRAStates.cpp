@@ -134,19 +134,24 @@ Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
     return !BF.containedNegateRAState() || BF.isIgnored();
   };
 
-  ParallelUtilities::runOnEachFunction(
-      BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun,
-      SkipPredicate, "MarkRAStates");
-
   int Total = llvm::count_if(
       BC.getBinaryFunctions(),
       [&](std::pair<const unsigned long, BinaryFunction> &P) {
         return P.second.containedNegateRAState() && !P.second.isIgnored();
       });
-  BC.outs() << "BOLT-INFO: MarkRAStates ran on " << Total
-            << " functions. Ignored " << FunctionsIgnored << " functions "
-            << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
-            << " because of CFI inconsistencies.\n";
+
+  // If we attempt to run the pass, but SkipPredicate skips all functions,
+  // we get a warning that the SchedulingPolicy is changed to trivial.
+  // This would break bolt/test/AArch64/unmarked-data.test.
+  if (Total != 0) {
+    ParallelUtilities::runOnEachFunction(
+        BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
+        SkipPredicate, "MarkRAStates");
+    BC.outs() << "BOLT-INFO: MarkRAStates ran on " << Total
+              << " functions. Ignored " << FunctionsIgnored << " functions "
+              << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
+              << " because of CFI inconsistencies.\n";
+  }
 
   return Error::success();
 }
