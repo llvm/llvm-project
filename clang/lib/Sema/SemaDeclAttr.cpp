@@ -5684,11 +5684,11 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
 
   // Accept template arguments for now as they depend on something else.
   // We'll get to check them when they eventually get instantiated.
-  if (E->isValueDependent())
+  if (E->isInstantiationDependent())
     return {E, 1};
 
-  std::optional<llvm::APSInt> I = llvm::APSInt(64);
-  if (!(I = E->getIntegerConstantExpr(S.Context))) {
+  std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(S.Context);
+  if (!I) {
     S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
     return {nullptr, 0};
@@ -5756,7 +5756,7 @@ CUDAClusterDimsAttr *Sema::createClusterDimsAttr(const AttributeCommonInfo &CI,
     return nullptr;
   }
 
-  return ::new (Context) CUDAClusterDimsAttr(Context, CI, X, Y, Z);
+  return CUDAClusterDimsAttr::Create(Context, X, Y, Z, CI);
 }
 
 void Sema::addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
@@ -5766,8 +5766,7 @@ void Sema::addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
 }
 
 void Sema::addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI) {
-  if (CUDANoClusterAttr *Attr = ::new (Context) CUDANoClusterAttr(Context, CI))
-    D->addAttr(Attr);
+  D->addAttr(CUDANoClusterAttr::Create(Context, CI));
 }
 
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -5775,7 +5774,8 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
-    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported) << 0;
+    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported)
+        << "__cluster_dims__";
     return;
   }
 
@@ -5793,7 +5793,8 @@ static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
-    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported) << 1;
+    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported)
+        << "__no_cluster__";
     return;
   }
 

@@ -13071,7 +13071,7 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
 def err_cuda_cluster_attr_not_supported : Error<
-  "%select{__cluster_dims__|__no_cluster__}0 is not supported for this GPU architecture"
+  "%0 is not supported for this GPU architecture"
 >;
 
 def err_cuda_cluster_dims_too_large : Error<
