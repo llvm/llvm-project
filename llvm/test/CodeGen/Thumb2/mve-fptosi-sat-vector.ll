@@ -185,10 +185,11 @@ define arm_aapcs_vfpcc <6 x i32> @test_signed_v6f32_v6i32(<6 x float> %f) {
 ; CHECK-MVEFP:       @ %bb.0:
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q1, q1
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q0, q0
-; CHECK-MVEFP-NEXT:    vmov r1, r2, d2
-; CHECK-MVEFP-NEXT:    str r2, [r0, #20]
+; CHECK-MVEFP-NEXT:    vmov.f32 s6, s5
+; CHECK-MVEFP-NEXT:    vmov r2, s4
+; CHECK-MVEFP-NEXT:    vmov r1, s6
+; CHECK-MVEFP-NEXT:    strd r2, r1, [r0, #16]
 ; CHECK-MVEFP-NEXT:    vstrw.32 q0, [r0]
-; CHECK-MVEFP-NEXT:    str r1, [r0, #16]
 ; CHECK-MVEFP-NEXT:    bx lr
     %x = call <6 x i32> @llvm.fptosi.sat.v6f32.v6i32(<6 x float> %f)
     ret <6 x i32> %x
@@ -220,11 +221,13 @@ define arm_aapcs_vfpcc <7 x i32> @test_signed_v7f32_v7i32(<7 x float> %f) {
 ; CHECK-MVEFP:       @ %bb.0:
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q1, q1
 ; CHECK-MVEFP-NEXT:    vcvt.s32.f32 q0, q0
+; CHECK-MVEFP-NEXT:    vmov.f32 s10, s5
+; CHECK-MVEFP-NEXT:    vmov r2, s4
 ; CHECK-MVEFP-NEXT:    vmov r3, s6
-; CHECK-MVEFP-NEXT:    vmov r1, r2, d2
-; CHECK-MVEFP-NEXT:    strd r2, r3, [r0, #20]
+; CHECK-MVEFP-NEXT:    vmov r1, s10
+; CHECK-MVEFP-NEXT:    strd r2, r1, [r0, #16]
+; CHECK-MVEFP-NEXT:    str r3, [r0, #24]
 ; CHECK-MVEFP-NEXT:    vstrw.32 q0, [r0]
-; CHECK-MVEFP-NEXT:    str r1, [r0, #16]
 ; CHECK-MVEFP-NEXT:    bx lr
     %x = call <7 x i32> @llvm.fptosi.sat.v7f32.v7i32(<7 x float> %f)
     ret <7 x i32> %x

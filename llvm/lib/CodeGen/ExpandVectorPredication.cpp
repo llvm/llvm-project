@@ -111,6 +111,10 @@ static void transferDecorations(Value &NewVal, VPIntrinsic &VPI) {
 /// OldVP gets erased.
 static void replaceOperation(Value &NewOp, VPIntrinsic &OldOp) {
   transferDecorations(NewOp, OldOp);
+
+  if (isa<Instruction>(NewOp) && !NewOp.hasName() && OldOp.hasName())
+    NewOp.takeName(&OldOp);
+
   OldOp.replaceAllUsesWith(&NewOp);
   OldOp.eraseFromParent();
 }
@@ -253,7 +257,7 @@ bool CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
     }
   }
 
-  Value *NewBinOp = Builder.CreateBinOp(OC, Op0, Op1, VPI.getName());
+  Value *NewBinOp = Builder.CreateBinOp(OC, Op0, Op1);
 
   replaceOperation(*NewBinOp, VPI);
   return true;
@@ -268,8 +272,8 @@ bool CachingVPExpander::expandPredicationToIntCall(IRBuilder<> &Builder,
   for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
     Argument.push_back(VPI.getOperand(i));
   }
-  Value *NewOp = Builder.CreateIntrinsic(FID.value(), {VPI.getType()}, Argument,
-                                         /*FMFSource=*/nullptr, VPI.getName());
+  Value *NewOp =
+      Builder.CreateIntrinsic(FID.value(), {VPI.getType()}, Argument);
   replaceOperation(*NewOp, VPI);
   return true;
 }
@@ -288,9 +292,8 @@ bool CachingVPExpander::expandPredicationToFPCall(
     for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
       Argument.push_back(VPI.getOperand(i));
     }
-    Value *NewOp = Builder.CreateIntrinsic(
-        UnpredicatedIntrinsicID, {VPI.getType()}, Argument,
-        /*FMFSource=*/nullptr, VPI.getName());
+    Value *NewOp = Builder.CreateIntrinsic(UnpredicatedIntrinsicID,
+                                           {VPI.getType()}, Argument);
     replaceOperation(*NewOp, VPI);
     return true;
   }
@@ -305,10 +308,9 @@ bool CachingVPExpander::expandPredicationToFPCall(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp;
     if (Intrinsic::isConstrainedFPIntrinsic(UnpredicatedIntrinsicID))
-      NewOp =
-          Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+      NewOp = Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2});
     else
-      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+      NewOp = Builder.CreateCall(Fn, {Op0, Op1, Op2});
     replaceOperation(*NewOp, VPI);
     return true;
   }
@@ -393,9 +395,8 @@ bool CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
   Intrinsic::ID VPID = VPI.getIntrinsicID();
   unsigned CastOpcode = VPIntrinsic::getFunctionalOpcodeForVP(VPID).value();
   assert(Instruction::isCast(CastOpcode));
-  Value *CastOp =
-      Builder.CreateCast(Instruction::CastOps(CastOpcode), VPI.getOperand(0),
-                         VPI.getType(), VPI.getName());
+  Value *CastOp = Builder.CreateCast(Instruction::CastOps(CastOpcode),
+                                     VPI.getOperand(0), VPI.getType());
 
   replaceOperation(*CastOp, VPI);
   return true;
@@ -454,8 +455,8 @@ bool CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
     auto *ElementType = cast<VectorType>(VPI.getType())->getElementType();
     NewMemoryInst = Builder.CreateMaskedGather(
         VPI.getType(), PtrParam,
-        AlignOpt.value_or(DL.getPrefTypeAlign(ElementType)), MaskParam, nullptr,
-        VPI.getName());
+        AlignOpt.value_or(DL.getPrefTypeAlign(ElementType)), MaskParam,
+        nullptr);
     break;
   }
   }
@@ -577,7 +578,7 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   default:
     break;
   case Intrinsic::vp_fneg: {
-    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0), VPI.getName());
+    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0));
     replaceOperation(*NewNegOp, VPI);
     return NewNegOp;
   }
@@ -585,7 +586,7 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_merge: {
     assert(maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam());
     Value *NewSelectOp = Builder.CreateSelect(
-        VPI.getOperand(0), VPI.getOperand(1), VPI.getOperand(2), VPI.getName());
+        VPI.getOperand(0), VPI.getOperand(1), VPI.getOperand(2));
     replaceOperation(*NewSelectOp, VPI);
     return NewSelectOp;
   }
