@@ -2343,8 +2343,12 @@ void Ripple::genVectorInstructions() {
         ExternCallReturnSlices.push_back(ResultVal);
     }
     uint64_t NumSlices = ExternCallReturnSlices.size();
-    if (NumSlices == 0)
+    if (NumSlices == 0) {
+      assert(ExternF.returnsVoid());
+      // We generated the replacement(s), mark this instruction for removal
+      setReplacementFor(Call, nullptr, ToShape);
       return;
+    }
 
     if (NumSlices >= 2) {
       // We merge consecutive slices until we are left with the fully

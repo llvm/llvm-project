@@ -210,3 +210,8 @@ extern inline int ripple_this_is_not_really_a_ripple_function3(int Val) {
 extern inline int ripple_mask_this_is_not_really_a_ripple_function3(int Val) {
   return Val;
 }
+
+extern f32t32 someVal;
+extern inline void ripple_ew_side_effect_no_return(f32t32 f1, f32t32 f2) {
+  someVal += f1 + f2;
+}
