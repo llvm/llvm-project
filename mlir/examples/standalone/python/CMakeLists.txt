@@ -41,7 +41,6 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   PYTHON_BINDINGS_LIBRARY nanobind
   GENERATE_TYPE_STUBS
     "_mlir_libs/_standaloneDialectsNanobind.pyi"
-  PACKAGE_PREFIX "${MLIR_PYTHON_PACKAGE_PREFIX}"
 )
 
 

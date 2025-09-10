@@ -182,7 +182,7 @@ endfunction()
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY;PACKAGE_PREFIX"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS;GENERATE_TYPE_STUBS"
     ${ARGN})
 
@@ -196,6 +196,16 @@ function(declare_mlir_python_extension name)
   endif()
 
   add_library(${name} INTERFACE)
+
+  if(ARG_GENERATE_TYPE_STUBS)
+    declare_mlir_python_sources(
+      "${name}.type_stub_gen"
+      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
+      ADD_TO_PARENT "${ARG_ADD_TO_PARENT}"
+      SOURCES "${ARG_GENERATE_TYPE_STUBS}"
+    )
+  endif()
+
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
@@ -207,19 +217,6 @@ function(declare_mlir_python_extension name)
     mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
     mlir_python_GENERATE_TYPE_STUBS "${ARG_GENERATE_TYPE_STUBS}"
   )
-
-  if(ARG_GENERATE_TYPE_STUBS)
-    if ((NOT ARG_PACKAGE_PREFIX) OR ("${ARG_PACKAGE_PREFIX}" STREQUAL ""))
-      message(FATAL_ERROR "GENERATE_TYPE_STUBS requires PACKAGE_PREFIX for ${name}")
-    endif()
-    set(_stubgen_target "${ARG_PACKAGE_PREFIX}._mlir_libs.${name}.type_stub_gen")
-    declare_mlir_python_sources(
-      ${_stubgen_target}
-      ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
-      ADD_TO_PARENT "${ARG_ADD_TO_PARENT}"
-      SOURCES "${ARG_GENERATE_TYPE_STUBS}"
-    )
-  endif()
 
   # Set the interface source and link_libs properties of the target
   # These properties support generator expressions and are automatically exported
