@@ -546,10 +546,12 @@ benchmark-comparison)
     clean
     LIT_ARGS="-sv -j1 --param optimization=speed libcxx/test/benchmarks/hash.bench.cpp libcxx/test/benchmarks/join_view.bench.cpp"
 
-    baseline_commit=$(git merge-base main HEAD)
-    step "Building and running the baseline at ${baseline_commit}"
+    if [[ "${BASELINE_COMMIT}" == "" ]]; then
+        BASELINE_COMMIT=$(git merge-base main HEAD)
+    fi
+    step "Building and running the baseline at ${BASELINE_COMMIT}"
     rm -rf "${BUILD_DIR}-baseline"
-    ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B "${BUILD_DIR}-baseline" -- ${LIT_ARGS}
+    ./libcxx/utils/test-at-commit --commit ${BASELINE_COMMIT} -B "${BUILD_DIR}-baseline" -- ${LIT_ARGS}
 
     # Build and run the candidate
     step "Building and running the candidate"
