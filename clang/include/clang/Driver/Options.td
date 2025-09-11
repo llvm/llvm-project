@@ -3281,7 +3281,8 @@ defm declspec : BoolOption<"f", "declspec",
 def fmodules_cache_path : Joined<["-"], "fmodules-cache-path=">, Group<i_Group>,
   Flags<[]>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<directory>">,
-  HelpText<"Specify the module cache path">;
+  HelpText<"Specify the module cache path">,
+  MarshallingInfoString<HeaderSearchOpts<"ModuleCachePath">>;
 def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Group<i_Group>,
   Flags<[]>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<directory>">,
@@ -9418,6 +9419,8 @@ def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
+def dxc_Frs : DXCJoinedOrSeparate<"Frs">,
+  HelpText<"Output additional root signature object file">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,

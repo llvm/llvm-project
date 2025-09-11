@@ -3827,6 +3827,26 @@ def CIR_ACosOp : CIR_UnaryFPToFPBuiltinOp<"acos", "ACosOp"> {
   }];
 }
 
+def CIR_ASinOp : CIR_UnaryFPToFPBuiltinOp<"asin", "ASinOp"> {
+  let summary = "Computes the arcus sine of the specified value";
+  let description = [{
+    `cir.asin`computes the arcus sine of a given value and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_ATanOp : CIR_UnaryFPToFPBuiltinOp<"atan", "ATanOp"> {
+  let summary = "Computes the floating-point arcus tangent value";
+  let description = [{
+    `cir.atan` computes the arcus tangent of a floating-point operand
+    and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{

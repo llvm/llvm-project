@@ -1710,9 +1710,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
+  SmallString<256> HSOpts_ModuleCachePath;
+  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
+                           HSOpts_ModuleCachePath);
+
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
-  AddString(HSOpts.ModuleCachePath, Record);
+  AddString(HSOpts_ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
   Record.push_back(HSOpts.DisableModuleHash);
   Record.push_back(HSOpts.ImplicitModuleMaps);

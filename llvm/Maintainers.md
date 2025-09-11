@@ -504,7 +504,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.md)
 
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 

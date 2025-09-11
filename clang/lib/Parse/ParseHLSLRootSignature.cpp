@@ -38,8 +38,18 @@ bool RootSignatureParser::parse() {
   // Iterate as many RootSignatureElements as possible, until we hit the
   // end of the stream
   bool HadError = false;
+  bool HasRootFlags = false;
   while (!peekExpectedToken(TokenKind::end_of_stream)) {
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
+      if (HasRootFlags) {
+        reportDiag(diag::err_hlsl_rootsig_repeat_param)
+            << TokenKind::kw_RootFlags;
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      HasRootFlags = true;
+
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Flags = parseRootFlags();
       if (!Flags.has_value()) {
