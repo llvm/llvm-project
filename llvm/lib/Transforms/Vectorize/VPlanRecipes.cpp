@@ -1123,6 +1123,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // where it checks TC <= VF * UF, but we don't know UF yet. This means in
     // some cases we get a cost that's too high due to counting a cmp that
     // later gets removed.
+    // FIXME: The compare could also be removed if TC = M * vscale,
+    // VF = N * vscale, and M <= N. Detecting that would require having the
+    // trip count as a SCEV though.
     Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
     ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
     if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
