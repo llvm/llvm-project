@@ -8323,6 +8323,29 @@ def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
 }
 
+// SABA patterns for add(x, abs(y)) -> saba(x, y, 0)
+def : Pat<(v8i8 (add V64:$Vn, (abs V64:$Vm))),
+          (SABAv8i8 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v4i16 (add V64:$Vn, (abs V64:$Vm))),
+          (SABAv4i16 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v2i32 (add V64:$Vn, (abs V64:$Vm))),
+          (SABAv2i32 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v16i8 (add V128:$Vn, (abs V128:$Vm))),
+          (SABAv16i8 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
+def : Pat<(v8i16 (add V128:$Vn, (abs V128:$Vm))),
+          (SABAv8i16 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
+def : Pat<(v4i32 (add V128:$Vn, (abs V128:$Vm))),
+          (SABAv4i32 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
+
+// SABAL patterns for add(x, zext(abs(y))) -> sabal(x, y, 0)
+def : Pat<(v8i16 (add V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
+          (SABALv8i8_v8i16 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v4i32 (add V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
+          (SABALv4i16_v4i32 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+def : Pat<(v2i64 (add V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
+          (SABALv2i32_v2i64 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
+
+
 //----------------------------------------------------------------------------
 // AdvSIMD indexed element
 //----------------------------------------------------------------------------

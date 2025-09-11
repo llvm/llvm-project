@@ -17,6 +17,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -514,10 +515,19 @@ Fortran::lower::genCallOpAndResult(
     // arguments of any type and vice versa.
     mlir::Value cast;
     auto *context = builder.getContext();
-    if (mlir::isa<fir::BoxProcType>(snd) &&
-        mlir::isa<mlir::FunctionType>(fst.getType())) {
-      auto funcTy = mlir::FunctionType::get(context, {}, {});
-      auto boxProcTy = builder.getBoxProcType(funcTy);
+
+    // Special handling for %VAL arguments: internal procedures expect
+    // reference parameters. When %VAL is used, the argument should be
+    // passed by value. Pass the originally loaded value.
+    if (fir::isa_ref_type(snd) && !fir::isa_ref_type(fst.getType()) &&
+        fir::dyn_cast_ptrEleTy(snd) == fst.getType()) {
+      auto loadOp = mlir::cast<fir::LoadOp>(fst.getDefiningOp());
+      mlir::Value originalStorage = loadOp.getMemref();
+      cast = originalStorage;
+    } else if (mlir::isa<fir::BoxProcType>(snd) &&
+               mlir::isa<mlir::FunctionType>(fst.getType())) {
+      mlir::FunctionType funcTy = mlir::FunctionType::get(context, {}, {});
+      fir::BoxProcType boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = fir::EmboxProcOp::create(builder, loc, boxProcTy,
                                         llvm::ArrayRef<mlir::Value>{fst, host});
@@ -629,9 +639,18 @@ Fortran::lower::genCallOpAndResult(
               caller.getCallDescription().chevrons()[2], stmtCtx)));
 
     mlir::Value stream; // stream is optional.
-    if (caller.getCallDescription().chevrons().size() > 3)
+    if (caller.getCallDescription().chevrons().size() > 3) {
       stream = fir::getBase(converter.genExprAddr(
           caller.getCallDescription().chevrons()[3], stmtCtx));
+      if (!fir::unwrapRefType(stream.getType()).isInteger(64)) {
+        auto i64Ty = mlir::IntegerType::get(builder.getContext(), 64);
+        mlir::Value newStream = builder.createTemporary(loc, i64Ty);
+        mlir::Value load = fir::LoadOp::create(builder, loc, stream);
+        mlir::Value conv = fir::ConvertOp::create(builder, loc, i64Ty, load);
+        fir::StoreOp::create(builder, loc, conv, newStream);
+        stream = newStream;
+      }
+    }
 
     cuf::KernelLaunchOp::create(builder, loc, funcType.getResults(),
                                 funcSymbolAttr, grid_x, grid_y, grid_z, block_x,
@@ -1657,7 +1676,19 @@ void prepareUserCallArguments(
           (*cleanup)();
         break;
       }
-      caller.placeInput(arg, builder.createConvert(loc, argTy, value));
+      // For %VAL arguments, we should pass the value directly without
+      // conversion to reference types. If argTy is different from value type,
+      // it might be due to signature mismatch with internal procedures.
+      if (argTy == value.getType())
+        caller.placeInput(arg, value);
+      else if (fir::isa_ref_type(argTy) &&
+               fir::dyn_cast_ptrEleTy(argTy) == value.getType()) {
+        auto loadOp = mlir::cast<fir::LoadOp>(value.getDefiningOp());
+        mlir::Value originalStorage = loadOp.getMemref();
+        caller.placeInput(arg, originalStorage);
+      } else
+        caller.placeInput(arg, builder.createConvert(loc, argTy, value));
+
     } break;
     case PassBy::BaseAddressValueAttribute:
     case PassBy::CharBoxValueAttribute:
@@ -2192,10 +2223,15 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     const std::string intrinsicName = callContext.getProcedureName();
     const fir::IntrinsicArgumentLoweringRules *argLowering =
         intrinsicEntry.getArgumentLoweringRules();
+    mlir::Type resultType =
+        callContext.isElementalProcWithArrayArgs()
+            ? hlfir::getFortranElementType(*callContext.resultType)
+            : *callContext.resultType;
+
     std::optional<hlfir::EntityWithAttributes> res =
         Fortran::lower::lowerHlfirIntrinsic(builder, loc, intrinsicName,
                                             loweredActuals, argLowering,
-                                            *callContext.resultType);
+                                            resultType);
     if (res)
       return res;
   }
