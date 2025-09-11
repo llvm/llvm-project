@@ -1,8 +1,6 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
 ; CHECK: error: Samplers cannot be mixed with other resource types in a descriptor table, UAV(location=0)
 
-@TB.str = private unnamed_addr constant [3 x i8] c"TB\00", align 1
-
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
   ret void

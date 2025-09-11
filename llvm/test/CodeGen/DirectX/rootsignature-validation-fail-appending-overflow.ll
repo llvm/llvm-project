@@ -3,8 +3,6 @@
 
 ; CHECK: error: Cannot append range with implicit lower bound after an unbounded range UAV(register=0, space=0).
 
-@TB.str = private unnamed_addr constant [3 x i8] c"TB\00", align 1
-
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
   ret void
