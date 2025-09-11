@@ -310,7 +310,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
             mcdxbc::DescriptorRange Range;
-            Range.RangeType = dxil::ResourceClass(R.RangeType);
+            Range.RangeType = R.RangeType;
             Range.NumDescriptors = R.NumDescriptors;
             Range.BaseShaderRegister = R.BaseShaderRegister;
             Range.RegisterSpace = R.RegisterSpace;

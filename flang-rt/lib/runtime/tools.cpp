@@ -28,7 +28,7 @@ RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *s, std::size_t length, const Terminator &terminator) {
   if (s) {
     auto *p{static_cast<char *>(AllocateMemoryOrCrash(terminator, length + 1))};
-    std::memcpy(p, s, length);
+    runtime::memcpy(p, s, length);
     p[length] = '\0';
     return OwningPtr<char>{p};
   } else {
@@ -75,10 +75,10 @@ RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from) {
   std::size_t len{Fortran::runtime::strlen(from)};
   if (len < toLength) {
-    std::memcpy(to, from, len);
-    std::memset(to + len, ' ', toLength - len);
+    runtime::memcpy(to, from, len);
+    runtime::memset(to + len, ' ', toLength - len);
   } else {
-    std::memcpy(to, from, toLength);
+    runtime::memcpy(to, from, toLength);
   }
 }
 
@@ -127,10 +127,10 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
       toIt.Advance(), fromIt.Advance()) {
     // typeElementBytes == 1 when P is a char - the non-specialised case
     if constexpr (typeElementBytes != 1) {
-      std::memcpy(
+      runtime::memcpy(
           toIt.template Get<P>(), fromIt.template Get<P>(), typeElementBytes);
     } else {
-      std::memcpy(
+      runtime::memcpy(
           toIt.template Get<P>(), fromIt.template Get<P>(), elementBytes);
     }
   }
@@ -150,9 +150,9 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toAt += elementBytes, fromIt.Advance()) {
     if constexpr (typeElementBytes != 1) {
-      std::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
+      runtime::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
     } else {
-      std::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
+      runtime::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
     }
   }
 }
@@ -170,9 +170,9 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toIt.Advance(), fromAt += elementBytes) {
     if constexpr (typeElementBytes != 1) {
-      std::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
+      runtime::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
     } else {
-      std::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
+      runtime::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
     }
   }
 }
@@ -187,7 +187,7 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
   if (toIsContiguous) {
     if (fromIsContiguous) {
-      std::memcpy(to.OffsetElement(), from.OffsetElement(),
+      runtime::memcpy(to.OffsetElement(), from.OffsetElement(),
           to.Elements() * to.ElementBytes());
     } else {
       ShallowCopyDiscontiguousToContiguous<P, RANK>(to, from);
@@ -277,7 +277,7 @@ RT_API_ATTRS char *EnsureNullTerminated(
     char *str, std::size_t length, Terminator &terminator) {
   if (runtime::memchr(str, '\0', length) == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
-    std::memcpy(newCmd, str, length);
+    runtime::memcpy(newCmd, str, length);
     newCmd[length] = '\0';
     return newCmd;
   } else {
@@ -309,7 +309,7 @@ RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
     return ToErrmsg(errmsg, StatValueTooShort);
   }
 
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+  runtime::memcpy(value.OffsetElement(offset), rawValue, toCopy);
 
   if (static_cast<std::int64_t>(rawValueLength) > toCopy) {
     return ToErrmsg(errmsg, StatValueTooShort);

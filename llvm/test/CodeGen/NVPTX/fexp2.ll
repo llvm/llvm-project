@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mcpu=sm_50 -mattr=+ptx32 | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc < %s -mcpu=sm_75 -mattr=+ptx70 | FileCheck --check-prefixes=CHECK-FP16 %s
 ; RUN: llc < %s -mcpu=sm_90 -mattr=+ptx78 | FileCheck --check-prefixes=CHECK-BF16 %s
-; RUN: %if ptxas-12.0 %{ llc < %s -mcpu=sm_50 -mattr=+ptx32 | %ptxas-verify -arch=sm_50 %}
-; RUN: %if ptxas-12.0 %{ llc < %s -mcpu=sm_75 -mattr=+ptx70 | %ptxas-verify -arch=sm_75 %}
-; RUN: %if ptxas-12.0 %{ llc < %s -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
+; RUN: %if ptxas-sm_50 && ptxas-isa-3.2 %{ llc < %s -mcpu=sm_50 -mattr=+ptx32 | %ptxas-verify -arch=sm_50 %}
+; RUN: %if ptxas-sm_75 && ptxas-isa-7.0 %{ llc < %s -mcpu=sm_75 -mattr=+ptx70 | %ptxas-verify -arch=sm_75 %}
+; RUN: %if ptxas-sm_90 && ptxas-isa-7.8 %{ llc < %s -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
 target triple = "nvptx64-nvidia-cuda"
 
 ; --- f32 ---

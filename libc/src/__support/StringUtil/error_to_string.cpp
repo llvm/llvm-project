@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "error_to_string.h"
-#include "platform_errors.h"
 
+#include <stddef.h>
+
+#include "platform_errors.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
@@ -17,10 +19,8 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-#include <stddef.h>
-
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace {
 
 constexpr size_t max_buff_size() {
   constexpr size_t unknown_str_len = sizeof("Unknown error");
@@ -63,23 +63,22 @@ cpp::string_view build_error_string(int err_num, cpp::span<char> buffer) {
   return buffer_stream.str();
 }
 
-} // namespace internal
+} // namespace
 
 cpp::string_view get_error_string(int err_num) {
-  return get_error_string(err_num,
-                          {internal::error_buffer, internal::ERR_BUFFER_SIZE});
+  return get_error_string(err_num, {error_buffer, ERR_BUFFER_SIZE});
 }
 
 cpp::string_view get_error_string(int err_num, cpp::span<char> buffer) {
-  auto opt_str = internal::ERROR_MAPPER.get_str(err_num);
+  auto opt_str = ERROR_MAPPER.get_str(err_num);
   if (opt_str)
     return *opt_str;
   else
-    return internal::build_error_string(err_num, buffer);
+    return build_error_string(err_num, buffer);
 }
 
 cpp::optional<cpp::string_view> try_get_errno_name(int err_num) {
-  return internal::ERRNO_NAME_MAPPER.get_str(err_num);
+  return ERRNO_NAME_MAPPER.get_str(err_num);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

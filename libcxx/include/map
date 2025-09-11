@@ -603,6 +603,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
+#  include <__utility/lazy_synth_three_way_comparator.h>
 #  include <__utility/pair.h>
 #  include <__utility/piecewise_construct.h>
 #  include <__utility/swap.h>
@@ -701,6 +702,50 @@ public:
   }
 #  endif
 };
+
+#  if _LIBCPP_STD_VER >= 14
+template <class _MapValueT, class _Key, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _MapValueT, _MapValueT> {
+  __lazy_synth_three_way_comparator<_Compare, _Key, _Key> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _MapValueT& __lhs, _LIBCPP_LIFETIMEBOUND const _MapValueT& __rhs) const {
+    return __comp_(__lhs.first, __rhs.first);
+  }
+};
+
+template <class _MapValueT, class _Key, class _TransparentKey, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _TransparentKey, _MapValueT> {
+  __lazy_synth_three_way_comparator<_Compare, _TransparentKey, _Key> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _TransparentKey& __lhs, _LIBCPP_LIFETIMEBOUND const _MapValueT& __rhs) const {
+    return __comp_(__lhs, __rhs.first);
+  }
+};
+
+template <class _MapValueT, class _Key, class _TransparentKey, class _Compare>
+struct __lazy_synth_three_way_comparator<__map_value_compare<_Key, _MapValueT, _Compare>, _MapValueT, _TransparentKey> {
+  __lazy_synth_three_way_comparator<_Compare, _Key, _TransparentKey> __comp_;
+
+  __lazy_synth_three_way_comparator(
+      _LIBCPP_CTOR_LIFETIMEBOUND const __map_value_compare<_Key, _MapValueT, _Compare>& __comp)
+      : __comp_(__comp.key_comp()) {}
+
+  _LIBCPP_HIDE_FROM_ABI auto
+  operator()(_LIBCPP_LIFETIMEBOUND const _MapValueT& __lhs, _LIBCPP_LIFETIMEBOUND const _TransparentKey& __rhs) const {
+    return __comp_(__lhs.first, __rhs);
+  }
+};
+#  endif // _LIBCPP_STD_VER >= 14
 
 template <class _Key, class _CP, class _Compare, bool __b>
 inline _LIBCPP_HIDE_FROM_ABI void
@@ -1089,18 +1134,14 @@ public:
 #  endif
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      insert(__e.__i_, *__f);
+  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
+    __tree_.__insert_range_unique(__first, __last);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      insert(__end.__i_, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_unique(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
@@ -1416,9 +1457,8 @@ map<_Key, _Tp, _Compare, _Allocator>::__construct_node_with_key(const key_type& 
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
-  __parent_pointer __parent;
-  __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
-  __node_pointer __r           = static_cast<__node_pointer>(__child);
+  auto [__parent, __child] = __tree_.__find_equal(__k);
+  __node_pointer __r       = static_cast<__node_pointer>(__child);
   if (__child == nullptr) {
     __node_holder __h = __construct_node_with_key(__k);
     __tree_.__insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
@@ -1431,8 +1471,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
-  __parent_pointer __parent;
-  __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
+  auto [_, __child] = __tree_.__find_equal(__k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
   return static_cast<__node_pointer>(__child)->__get_value().second;
@@ -1440,8 +1479,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
-  __parent_pointer __parent;
-  __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
+  auto [_, __child] = __tree_.__find_equal(__k);
   if (__child == nullptr)
     std::__throw_out_of_range("map::at:  key not found");
   return static_cast<__node_pointer>(__child)->__get_value().second;
