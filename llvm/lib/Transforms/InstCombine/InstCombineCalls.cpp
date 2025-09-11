@@ -3052,6 +3052,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ptrauth_auth:
   case Intrinsic::ptrauth_resign: {
+    // We don't support this optimization on intrinsic calls with deactivation
+    // symbols, which are represented using operand bundles.
+    if (II->hasOperandBundles())
+      break;
+
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
@@ -3063,6 +3068,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
     if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
+      // We don't support this optimization on intrinsic calls with deactivation
+      // symbols, which are represented using operand bundles.
+      if (CI->hasOperandBundles())
+        break;
+
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
