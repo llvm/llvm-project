@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -159,6 +160,7 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
   LDBG() << "[init] Entering initializeSymbolCallables for top-level op: "
          << OpWithFlags(top, OpPrintingFlags().skipRegions());
   analysisScope = top;
+  hasSymbolTable = top->hasTrait<OpTrait::SymbolTable>();
   auto walkFn = [&](Operation *symTable, bool allUsesVisible) {
     LDBG() << "[init] Processing symbol table op: "
            << OpWithFlags(symTable, OpPrintingFlags().skipRegions());
@@ -260,14 +262,25 @@ LogicalResult DeadCodeAnalysis::initializeRecursively(Operation *op) {
       return failure();
   }
   // Recurse on nested operations.
-  for (Region &region : op->getRegions()) {
-    LDBG() << "[init] Recursing into region of op: "
-           << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    for (Operation &nestedOp : region.getOps()) {
-      LDBG() << "[init] Recursing into nested op: "
-             << OpWithFlags(&nestedOp, OpPrintingFlags().skipRegions());
-      if (failed(initializeRecursively(&nestedOp)))
-        return failure();
+  if (op->getNumRegions()) {
+    // If we haven't seen a symbol table yet, check if the current operation
+    // has one. If so, update the flag to allow for resolving callables in
+    // nested regions.
+    bool savedHasSymbolTable = hasSymbolTable;
+    auto restoreHasSymbolTable =
+        llvm::make_scope_exit([&]() { hasSymbolTable = savedHasSymbolTable; });
+    if (!hasSymbolTable && op->hasTrait<OpTrait::SymbolTable>())
+      hasSymbolTable = true;
+
+    for (Region &region : op->getRegions()) {
+      LDBG() << "[init] Recursing into region of op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
+      for (Operation &nestedOp : region.getOps()) {
+        LDBG() << "[init] Recursing into nested op: "
+               << OpWithFlags(&nestedOp, OpPrintingFlags().skipRegions());
+        if (failed(initializeRecursively(&nestedOp)))
+          return failure();
+      }
     }
   }
   LDBG() << "[init] Finished initializeRecursively for op: "
@@ -388,7 +401,13 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint *point) {
 void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
   LDBG() << "visitCallOperation: "
          << OpWithFlags(call.getOperation(), OpPrintingFlags().skipRegions());
-  Operation *callableOp = call.resolveCallableInTable(&symbolTable);
+
+  Operation *callableOp = nullptr;
+  if (hasSymbolTable)
+    callableOp = call.resolveCallableInTable(&symbolTable);
+  else
+    LDBG()
+        << "No symbol table present in analysis scope, can't resolve callable";
 
   // A call to a externally-defined callable has unknown predecessors.
   const auto isExternalCallable = [this](Operation *op) {
