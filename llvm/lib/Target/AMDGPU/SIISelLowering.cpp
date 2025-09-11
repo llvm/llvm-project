@@ -440,6 +440,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2i32, MVT::v2f32}, Legal);
   }
 
+  setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, MVT::v2i32, Legal);
+  // Prevent SELECT v2i32 from being implemented with the above bitwise ops and
+  // instead lower to cndmask in SITargetLowering::LowerSELECT().
+  setOperationAction(ISD::SELECT, MVT::v2i32, Custom);
+  // Enable MatchRotate to produce ISD::ROTR, which is later transformed to
+  // alignbit.
+  setOperationAction(ISD::ROTR, MVT::v2i32, Custom);
+
   setOperationAction(ISD::BUILD_VECTOR, {MVT::v4f16, MVT::v4i16, MVT::v4bf16},
                      Custom);
 
@@ -6528,6 +6536,20 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
 
+// Enable lowering of ROTR for vxi32 types. This is a workaround for a
+// regression whereby extra unnecessary instructions were added to codegen
+// for rotr operations, casued by legalising v2i32 or. This resulted in extra
+// instructions to extract the result from the vector.
+SDValue SITargetLowering::lowerROTR(SDValue Op, SelectionDAG &DAG) const {
+  [[maybe_unused]] EVT VT = Op.getValueType();
+
+  assert((VT == MVT::v2i32 || VT == MVT::v4i32 || VT == MVT::v8i32 ||
+          VT == MVT::v16i32) &&
+         "Unexpected ValueType.");
+
+  return DAG.UnrollVectorOp(Op.getNode());
+}
+
 // Work around LegalizeDAG doing the wrong thing and fully scalarizing if the
 // wider vector type is legal.
 SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
@@ -6719,6 +6741,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerGET_FPENV(Op, DAG);
   case ISD::SET_FPENV:
     return lowerSET_FPENV(Op, DAG);
+  case ISD::ROTR:
+    return lowerROTR(Op, DAG);
   }
   return SDValue();
 }
@@ -13801,6 +13825,47 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
   }
 
+  // Detect identity v2i32 OR and replace with identity source node.
+  // Specifically an Or that has operands constructed from the same source node
+  // via extract_vector_elt and build_vector. I.E.
+  // v2i32 or(
+  //   v2i32 build_vector(
+  //     i32 extract_elt(%IdentitySrc, 0),
+  //     i32 0
+  //   ),
+  //   v2i32 build_vector(
+  //     i32 0,
+  //     i32 extract_elt(%IdentitySrc, 1)
+  //   ) )
+  // =>
+  // v2i32 %IdentitySrc
+
+  if (VT == MVT::v2i32 && LHS->getOpcode() == ISD::BUILD_VECTOR &&
+      RHS->getOpcode() == ISD::BUILD_VECTOR) {
+
+    ConstantSDNode *LC = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
+    ConstantSDNode *RC = dyn_cast<ConstantSDNode>(RHS->getOperand(0));
+
+    // Test for and normalise build vectors.
+    if (LC && RC && LC->getZExtValue() == 0 && RC->getZExtValue() == 0) {
+
+      // Get the extract_vector_element operands.
+      SDValue LEVE = LHS->getOperand(0);
+      SDValue REVE = RHS->getOperand(1);
+
+      if (LEVE->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          REVE->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        // Check that different elements from the same vector are
+        // extracted.
+        if (LEVE->getOperand(0) == REVE->getOperand(0) &&
+            LEVE->getOperand(1) != REVE->getOperand(1)) {
+          SDValue IdentitySrc = LEVE.getOperand(0);
+          return IdentitySrc;
+        }
+      }
+    }
+  }
+
   if (VT != MVT::i64 || DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -13848,7 +13913,7 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  const ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
   SelectionDAG &DAG = DCI.DAG;
 
   EVT VT = N->getValueType(0);
@@ -13856,6 +13921,23 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
     if (SDValue Split =
             splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::XOR, LHS, CRHS))
       return Split;
+  }
+
+  // v2i32 (xor (vselect cc, x, y), K) ->
+  // (v2i32 svelect cc, (xor x, K), (xor y, K)) This enables the xor to be
+  // replaced with source modifiers when the select is lowered to CNDMASK.
+  unsigned Opc = LHS.getOpcode();
+  if (((Opc == ISD::VSELECT && VT == MVT::v2i32) ||
+       (Opc == ISD::SELECT && VT == MVT::i64)) &&
+      CRHS && CRHS->getAPIntValue().isSignMask()) {
+    SDValue CC = LHS->getOperand(0);
+    SDValue TRUE = LHS->getOperand(1);
+    SDValue FALSE = LHS->getOperand(2);
+    SDValue XTrue = DAG.getNode(ISD::XOR, SDLoc(N), VT, TRUE, RHS);
+    SDValue XFalse = DAG.getNode(ISD::XOR, SDLoc(N), VT, FALSE, RHS);
+    SDValue XSelect =
+        DAG.getNode(ISD::VSELECT, SDLoc(N), VT, CC, XTrue, XFalse);
+    return XSelect;
   }
 
   // Make sure to apply the 64-bit constant splitting fold before trying to fold
@@ -14846,6 +14928,27 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     SDValue Elt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec.getOperand(0), Idx);
     return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
+  }
+
+  // (extract_vector_element (and {y0, y1}, (build_vector 0x1f, 0x1f)), index)
+  // -> (and (extract_vector_element {y0, y1}, index), 0x1f)
+  // There are optimisations to transform 64-bit shifts into 32-bit shifts
+  // depending on the shift operand. See e.g. performSraCombine().
+  // This combine ensures that the optimisation is compatible with v2i32
+  // legalised AND.
+  if (VecVT == MVT::v2i32 && Vec->getOpcode() == ISD::AND &&
+      Vec->getOperand(1)->getOpcode() == ISD::BUILD_VECTOR) {
+
+    const ConstantSDNode *C = isConstOrConstSplat(Vec.getOperand(1));
+    if (!C || C->getZExtValue() != 0x1f)
+      return SDValue();
+
+    SDLoc SL(N);
+    SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+    SDValue EVE = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                              Vec->getOperand(0), N->getOperand(1));
+    SDValue A = DAG.getNode(ISD::AND, SL, MVT::i32, EVE, AndMask);
+    DAG.ReplaceAllUsesWith(N, A.getNode());
   }
 
   // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)

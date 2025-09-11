@@ -1024,9 +1024,9 @@ def : DivergentClampingBinOp<sub, V_SUB_CO_U32_e64>;
 def : DivergentBinOp<adde, V_ADDC_U32_e32>;
 def : DivergentBinOp<sube, V_SUBB_U32_e32>;
 
-class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
+class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst, ValueType vt = i64> :
   GCNPat<
-      (DivergentBinFrag<Op> i64:$src0, i64:$src1),
+      (DivergentBinFrag<Op> vt:$src0, vt:$src1),
       (REG_SEQUENCE VReg_64,
         (Inst
           (i32 (EXTRACT_SUBREG $src0, sub0)),
@@ -1042,6 +1042,10 @@ class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
 def :  divergent_i64_BinOp <and, V_AND_B32_e64>;
 def :  divergent_i64_BinOp <or,  V_OR_B32_e64>;
 def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
+
+def :  divergent_i64_BinOp <and, V_AND_B32_e64, v2i32>;
+def :  divergent_i64_BinOp <or,  V_OR_B32_e64, v2i32>;
+def :  divergent_i64_BinOp <xor, V_XOR_B32_e64, v2i32>;
 
 // mul24 w/ 64 bit output.
 class mul24_64_Pat<SDPatternOperator Op, Instruction InstLo, Instruction InstHi> : GCNPat<
