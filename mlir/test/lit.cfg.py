@@ -318,7 +318,7 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
         ]
     )
 else:
-    tools.extend(["mlir-opt"])
+    tools.extend([ToolSubst("mlir-opt", pre=";", post=";", unresolved="fatal")])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 

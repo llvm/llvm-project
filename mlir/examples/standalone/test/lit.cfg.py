@@ -53,7 +53,7 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
 tool_dirs = [config.standalone_tools_dir, config.llvm_tools_dir]
 tools = [
-    "mlir-opt",
+    ToolSubst("mlir-opt", pre=";", post=";", unresolved="fatal"),
     "standalone-capi-test",
     "standalone-opt",
     "standalone-translate",
