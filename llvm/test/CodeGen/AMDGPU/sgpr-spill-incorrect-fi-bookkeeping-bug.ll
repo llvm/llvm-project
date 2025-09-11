@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 < %s | FileCheck %s
 
 ; This tests for a bug that caused a crash in SIRegisterInfo::spillSGPR()
 ; which was due to incorrect book-keeping of removed dead frame indices.

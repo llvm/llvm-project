@@ -43,7 +43,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
@@ -615,8 +614,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x uge c => x ugt c - 1
     //
     // When c is not zero.
-    if (C == 0)
-      return std::nullopt;
+    assert(C != 0 && "C should not be zero here!");
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
     C -= 1;
     break;
@@ -657,14 +655,13 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   if (isLegalArithImmed(C))
     return {{C, P}};
 
-  auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
+  auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
     AArch64_IMM::expandMOVImm(Imm, 32, Insn);
-    return Insn.size() == 1;
+    return Insn.size();
   };
 
-  if (!IsMaterializableInSingleInstruction(OriginalC) &&
-      IsMaterializableInSingleInstruction(C))
+  if (NumberOfInstrToLoadImm(OriginalC) > NumberOfInstrToLoadImm(C))
     return {{C, P}};
 
   return std::nullopt;
@@ -1257,12 +1254,9 @@ AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
 }
 
 bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Legalized) &&
-         "Expected a legalized function?");
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
 

@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenConstantEmitter.h"
-#include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenRecordLayout.h"
 #include "mlir/IR/Attributes.h"
@@ -21,19 +21,546 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <functional>
+#include <iterator>
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+//===----------------------------------------------------------------------===//
+//                            ConstantAggregateBuilder
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ConstExprEmitter;
+
+static mlir::TypedAttr computePadding(CIRGenModule &cgm, CharUnits size) {
+  mlir::Type eltTy = cgm.UCharTy;
+  clang::CharUnits::QuantityType arSize = size.getQuantity();
+  CIRGenBuilderTy &bld = cgm.getBuilder();
+  if (size > CharUnits::One()) {
+    SmallVector<mlir::Attribute> elts(arSize, cir::ZeroAttr::get(eltTy));
+    return bld.getConstArray(mlir::ArrayAttr::get(bld.getContext(), elts),
+                             cir::ArrayType::get(eltTy, arSize));
+  }
+
+  return cir::ZeroAttr::get(eltTy);
+}
+
+static mlir::Attribute
+emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
+                  mlir::Type commonElementType, unsigned arrayBound,
+                  SmallVectorImpl<mlir::TypedAttr> &elements,
+                  mlir::TypedAttr filler);
+
+struct ConstantAggregateBuilderUtils {
+  CIRGenModule &cgm;
+  cir::CIRDataLayout dataLayout;
+
+  ConstantAggregateBuilderUtils(CIRGenModule &cgm)
+      : cgm(cgm), dataLayout{cgm.getModule()} {}
+
+  CharUnits getAlignment(const mlir::TypedAttr c) const {
+    return CharUnits::fromQuantity(
+        dataLayout.getAlignment(c.getType(), /*useABIAlign=*/true));
+  }
+
+  CharUnits getSize(mlir::Type ty) const {
+    return CharUnits::fromQuantity(dataLayout.getTypeAllocSize(ty));
+  }
+
+  CharUnits getSize(const mlir::TypedAttr c) const {
+    return getSize(c.getType());
+  }
+
+  mlir::TypedAttr getPadding(CharUnits size) const {
+    return computePadding(cgm, size);
+  }
+};
+
+/// Incremental builder for an mlir::TypedAttr holding a record or array
+/// constant.
+class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
+  struct Element {
+    Element(mlir::TypedAttr element, CharUnits offset)
+        : element(element), offset(offset) {}
+
+    mlir::TypedAttr element;
+    /// Describes the offset of `element` within the constant.
+    CharUnits offset;
+  };
+  /// The elements of the constant. The elements are kept in increasing offset
+  /// order, and we ensure that there is no overlap:
+  /// elements.offset[i+1] >= elements.offset[i] + getSize(elements.element[i])
+  ///
+  /// This may contain explicit padding elements (in order to create a
+  /// natural layout), but need not. Gaps between elements are implicitly
+  /// considered to be filled with undef.
+  llvm::SmallVector<Element, 32> elements;
+
+  /// The size of the constant (the maximum end offset of any added element).
+  /// May be larger than the end of elems.back() if we split the last element
+  /// and removed some trailing undefs.
+  CharUnits size = CharUnits::Zero();
+
+  /// This is true only if laying out elems in order as the elements of a
+  /// non-packed LLVM struct will give the correct layout.
+  bool naturalLayout = true;
+
+  static mlir::Attribute buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
+                                   CharUnits startOffset, CharUnits size,
+                                   bool naturalLayout, mlir::Type desiredTy,
+                                   bool allowOversized);
+
+public:
+  ConstantAggregateBuilder(CIRGenModule &cgm)
+      : ConstantAggregateBuilderUtils(cgm) {}
+
+  /// Update or overwrite the value starting at \p offset with \c c.
+  ///
+  /// \param allowOverwrite If \c true, this constant might overwrite (part of)
+  ///        a constant that has already been added. This flag is only used to
+  ///        detect bugs.
+  bool add(mlir::TypedAttr typedAttr, CharUnits offset, bool allowOverwrite);
+
+  /// Update or overwrite the bits starting at \p offsetInBits with \p bits.
+  bool addBits(llvm::APInt bits, uint64_t offsetInBits, bool allowOverwrite);
+
+  /// Produce a constant representing the entire accumulated value, ideally of
+  /// the specified type. If \p allowOversized, the constant might be larger
+  /// than implied by \p desiredTy (eg, if there is a flexible array member).
+  /// Otherwise, the constant will be of exactly the same size as \p desiredTy
+  /// even if we can't represent it as that type.
+  mlir::Attribute build(mlir::Type desiredTy, bool allowOversized) const {
+    return buildFrom(cgm, elements, CharUnits::Zero(), size, naturalLayout,
+                     desiredTy, allowOversized);
+  }
+};
+
+template <typename Container, typename Range = std::initializer_list<
+                                  typename Container::value_type>>
+static void replace(Container &c, size_t beginOff, size_t endOff, Range vals) {
+  assert(beginOff <= endOff && "invalid replacement range");
+  llvm::replace(c, c.begin() + beginOff, c.begin() + endOff, vals);
+}
+
+bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
+                                   bool allowOverwrite) {
+  // Common case: appending to a layout.
+  if (offset >= size) {
+    CharUnits align = getAlignment(typedAttr);
+    CharUnits alignedSize = size.alignTo(align);
+    if (alignedSize > offset || offset.alignTo(align) != offset) {
+      naturalLayout = false;
+    } else if (alignedSize < offset) {
+      elements.emplace_back(getPadding(offset - size), size);
+    }
+    elements.emplace_back(typedAttr, offset);
+    size = offset + getSize(typedAttr);
+    return true;
+  }
+
+  // Uncommon case: constant overlaps what we've already created.
+  cgm.errorNYI("overlapping constants");
+  return false;
+}
+
+mlir::Attribute
+ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
+                                    CharUnits startOffset, CharUnits size,
+                                    bool naturalLayout, mlir::Type desiredTy,
+                                    bool allowOversized) {
+  ConstantAggregateBuilderUtils utils(cgm);
+
+  if (elems.empty())
+    return cir::UndefAttr::get(desiredTy);
+
+  // If we want an array type, see if all the elements are the same type and
+  // appropriately spaced.
+  if (mlir::isa<cir::ArrayType>(desiredTy)) {
+    cgm.errorNYI("array aggregate constants");
+    return {};
+  }
+
+  // The size of the constant we plan to generate. This is usually just the size
+  // of the initialized type, but in AllowOversized mode (i.e. flexible array
+  // init), it can be larger.
+  CharUnits desiredSize = utils.getSize(desiredTy);
+  if (size > desiredSize) {
+    assert(allowOversized && "elems are oversized");
+    desiredSize = size;
+  }
+
+  // The natural alignment of an unpacked CIR record with the given elements.
+  CharUnits align = CharUnits::One();
+  for (auto [e, offset] : elems)
+    align = std::max(align, utils.getAlignment(e));
+
+  // The natural size of an unpacked LLVM struct with the given elements.
+  CharUnits alignedSize = size.alignTo(align);
+
+  bool packed = false;
+  bool padded = false;
+
+  llvm::SmallVector<mlir::Attribute, 32> unpackedElems;
+  if (desiredSize < alignedSize || desiredSize.alignTo(align) != desiredSize) {
+    naturalLayout = false;
+    packed = true;
+  } else {
+    // The natural layout would be too small. Add padding to fix it. (This
+    // is ignored if we choose a packed layout.)
+    unpackedElems.reserve(elems.size() + 1);
+    llvm::transform(elems, std::back_inserter(unpackedElems),
+                    std::mem_fn(&Element::element));
+    if (desiredSize > alignedSize)
+      unpackedElems.push_back(utils.getPadding(desiredSize - size));
+  }
+
+  // If we don't have a natural layout, insert padding as necessary.
+  // As we go, double-check to see if we can actually just emit Elems
+  // as a non-packed record and do so opportunistically if possible.
+  llvm::SmallVector<mlir::Attribute, 32> packedElems;
+  packedElems.reserve(elems.size());
+  if (!naturalLayout) {
+    CharUnits sizeSoFar = CharUnits::Zero();
+    for (auto [element, offset] : elems) {
+      CharUnits align = utils.getAlignment(element);
+      CharUnits naturalOffset = sizeSoFar.alignTo(align);
+      CharUnits desiredOffset = offset - startOffset;
+      assert(desiredOffset >= sizeSoFar && "elements out of order");
+
+      if (desiredOffset != naturalOffset)
+        packed = true;
+      if (desiredOffset != sizeSoFar)
+        packedElems.push_back(utils.getPadding(desiredOffset - sizeSoFar));
+      packedElems.push_back(element);
+      sizeSoFar = desiredOffset + utils.getSize(element);
+    }
+    // If we're using the packed layout, pad it out to the desired size if
+    // necessary.
+    if (packed) {
+      assert(sizeSoFar <= desiredSize &&
+             "requested size is too small for contents");
+
+      if (sizeSoFar < desiredSize)
+        packedElems.push_back(utils.getPadding(desiredSize - sizeSoFar));
+    }
+  }
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(),
+                                      packed ? packedElems : unpackedElems);
+
+  cir::RecordType recordType = builder.getCompleteRecordType(arrAttr, packed);
+  if (auto desired = mlir::dyn_cast<cir::RecordType>(desiredTy))
+    if (desired.isLayoutIdentical(recordType))
+      recordType = desired;
+
+  return builder.getConstRecordOrZeroAttr(arrAttr, packed, padded, recordType);
+}
+
+//===----------------------------------------------------------------------===//
+//                            ConstRecordBuilder
+//===----------------------------------------------------------------------===//
+
+class ConstRecordBuilder {
+  CIRGenModule &cgm;
+  ConstantEmitter &emitter;
+  ConstantAggregateBuilder &builder;
+  CharUnits startOffset;
+
+public:
+  static mlir::Attribute buildRecord(ConstantEmitter &emitter,
+                                     InitListExpr *ile, QualType valTy);
+  static mlir::Attribute buildRecord(ConstantEmitter &emitter,
+                                     const APValue &value, QualType valTy);
+  static bool updateRecord(ConstantEmitter &emitter,
+                           ConstantAggregateBuilder &constant, CharUnits offset,
+                           InitListExpr *updater);
+
+private:
+  ConstRecordBuilder(ConstantEmitter &emitter,
+                     ConstantAggregateBuilder &builder, CharUnits startOffset)
+      : cgm(emitter.cgm), emitter(emitter), builder(builder),
+        startOffset(startOffset) {}
+
+  bool appendField(const FieldDecl *field, uint64_t fieldOffset,
+                   mlir::TypedAttr initCst, bool allowOverwrite = false);
+
+  bool appendBytes(CharUnits fieldOffsetInChars, mlir::TypedAttr initCst,
+                   bool allowOverwrite = false);
+
+  bool build(InitListExpr *ile, bool allowOverwrite);
+  bool build(const APValue &val, const RecordDecl *rd, bool isPrimaryBase,
+             const CXXRecordDecl *vTableClass, CharUnits baseOffset);
+
+  mlir::Attribute finalize(QualType ty);
+};
+
+bool ConstRecordBuilder::appendField(const FieldDecl *field,
+                                     uint64_t fieldOffset,
+                                     mlir::TypedAttr initCst,
+                                     bool allowOverwrite) {
+  const ASTContext &astContext = cgm.getASTContext();
+
+  CharUnits fieldOffsetInChars = astContext.toCharUnitsFromBits(fieldOffset);
+
+  return appendBytes(fieldOffsetInChars, initCst, allowOverwrite);
+}
+
+bool ConstRecordBuilder::appendBytes(CharUnits fieldOffsetInChars,
+                                     mlir::TypedAttr initCst,
+                                     bool allowOverwrite) {
+  return builder.add(initCst, startOffset + fieldOffsetInChars, allowOverwrite);
+}
+
+bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
+  RecordDecl *rd = ile->getType()
+                       ->castAs<clang::RecordType>()
+                       ->getOriginalDecl()
+                       ->getDefinitionOrSelf();
+  const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
+
+  // Bail out if we have base classes. We could support these, but they only
+  // arise in C++1z where we will have already constant folded most interesting
+  // cases. FIXME: There are still a few more cases we can handle this way.
+  if (auto *cxxrd = dyn_cast<CXXRecordDecl>(rd))
+    if (cxxrd->getNumBases())
+      return false;
+
+  if (cgm.shouldZeroInitPadding()) {
+    assert(!cir::MissingFeatures::recordZeroInitPadding());
+    cgm.errorNYI(rd->getSourceRange(), "zero init padding");
+    return false;
+  }
+
+  unsigned elementNo = 0;
+  for (auto [index, field] : llvm::enumerate(rd->fields())) {
+
+    // If this is a union, skip all the fields that aren't being initialized.
+    if (rd->isUnion() &&
+        !declaresSameEntity(ile->getInitializedFieldInUnion(), field))
+      continue;
+
+    // Don't emit anonymous bitfields.
+    if (field->isUnnamedBitField())
+      continue;
+
+    // Get the initializer.  A record can include fields without initializers,
+    // we just use explicit null values for them.
+    Expr *init = nullptr;
+    if (elementNo < ile->getNumInits())
+      init = ile->getInit(elementNo++);
+    if (isa_and_nonnull<NoInitExpr>(init))
+      continue;
+
+    // Zero-sized fields are not emitted, but their initializers may still
+    // prevent emission of this record as a constant.
+    if (field->isZeroSize(cgm.getASTContext())) {
+      if (init->HasSideEffects(cgm.getASTContext()))
+        return false;
+      continue;
+    }
+
+    assert(!cir::MissingFeatures::recordZeroInitPadding());
+
+    // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
+    // represents additional overwriting of our current constant value, and not
+    // a new constant to emit independently.
+    if (allowOverwrite &&
+        (field->getType()->isArrayType() || field->getType()->isRecordType())) {
+      cgm.errorNYI(field->getSourceRange(), "designated init lists");
+      return false;
+    }
+
+    mlir::TypedAttr eltInit;
+    if (init)
+      eltInit = mlir::cast<mlir::TypedAttr>(
+          emitter.tryEmitPrivateForMemory(init, field->getType()));
+    else
+      eltInit = mlir::cast<mlir::TypedAttr>(emitter.emitNullForMemory(
+          cgm.getLoc(ile->getSourceRange()), field->getType()));
+
+    if (!eltInit)
+      return false;
+
+    if (!field->isBitField()) {
+      // Handle non-bitfield members.
+      if (!appendField(field, layout.getFieldOffset(index), eltInit,
+                       allowOverwrite))
+        return false;
+      // After emitting a non-empty field with [[no_unique_address]], we may
+      // need to overwrite its tail padding.
+      if (field->hasAttr<NoUniqueAddressAttr>())
+        allowOverwrite = true;
+    } else {
+      // Otherwise we have a bitfield.
+      if (auto constInt = dyn_cast<cir::IntAttr>(eltInit)) {
+        assert(!cir::MissingFeatures::bitfields());
+        cgm.errorNYI(field->getSourceRange(), "bitfields");
+      }
+      // We are trying to initialize a bitfield with a non-trivial constant,
+      // this must require run-time code.
+      return false;
+    }
+  }
+
+  assert(!cir::MissingFeatures::recordZeroInitPadding());
+  return true;
+}
+
+namespace {
+struct BaseInfo {
+  BaseInfo(const CXXRecordDecl *decl, CharUnits offset, unsigned index)
+      : decl(decl), offset(offset), index(index) {}
+
+  const CXXRecordDecl *decl;
+  CharUnits offset;
+  unsigned index;
+
+  bool operator<(const BaseInfo &o) const { return offset < o.offset; }
+};
+} // namespace
+
+bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
+                               bool isPrimaryBase,
+                               const CXXRecordDecl *vTableClass,
+                               CharUnits offset) {
+  const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
+  if (const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd)) {
+    // Add a vtable pointer, if we need one and it hasn't already been added.
+    if (layout.hasOwnVFPtr()) {
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      cir::GlobalOp vtable =
+          cgm.getCXXABI().getAddrOfVTable(vTableClass, CharUnits());
+      clang::VTableLayout::AddressPointLocation addressPoint =
+          cgm.getItaniumVTableContext()
+              .getVTableLayout(vTableClass)
+              .getAddressPoint(BaseSubobject(cd, offset));
+      assert(!cir::MissingFeatures::addressPointerAuthInfo());
+      mlir::ArrayAttr indices = builder.getArrayAttr({
+          builder.getI32IntegerAttr(addressPoint.VTableIndex),
+          builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
+      });
+      cir::GlobalViewAttr vtableInit =
+          cgm.getBuilder().getGlobalViewAttr(vtable, indices);
+      if (!appendBytes(offset, vtableInit))
+        return false;
+    }
+
+    // Accumulate and sort bases, in order to visit them in address order, which
+    // may not be the same as declaration order.
+    SmallVector<BaseInfo> bases;
+    bases.reserve(cd->getNumBases());
+    for (auto [index, base] : llvm::enumerate(cd->bases())) {
+      assert(!base.isVirtual() && "should not have virtual bases here");
+      const CXXRecordDecl *bd = base.getType()->getAsCXXRecordDecl();
+      CharUnits baseOffset = layout.getBaseClassOffset(bd);
+      bases.push_back(BaseInfo(bd, baseOffset, index));
+    }
+#ifdef EXPENSIVE_CHECKS
+    assert(llvm::is_sorted(bases) && "bases not sorted by offset");
+#endif
+
+    for (BaseInfo &base : bases) {
+      bool isPrimaryBase = layout.getPrimaryBase() == base.decl;
+      build(val.getStructBase(base.index), base.decl, isPrimaryBase,
+            vTableClass, offset + base.offset);
+    }
+  }
+
+  uint64_t offsetBits = cgm.getASTContext().toBits(offset);
+
+  bool allowOverwrite = false;
+  for (auto [index, field] : llvm::enumerate(rd->fields())) {
+    // If this is a union, skip all the fields that aren't being initialized.
+    if (rd->isUnion() && !declaresSameEntity(val.getUnionField(), field))
+      continue;
+
+    // Don't emit anonymous bitfields or zero-sized fields.
+    if (field->isUnnamedBitField() || field->isZeroSize(cgm.getASTContext()))
+      continue;
+
+    // Emit the value of the initializer.
+    const APValue &fieldValue =
+        rd->isUnion() ? val.getUnionValue() : val.getStructField(index);
+    mlir::TypedAttr eltInit = mlir::cast<mlir::TypedAttr>(
+        emitter.tryEmitPrivateForMemory(fieldValue, field->getType()));
+    if (!eltInit)
+      return false;
+
+    if (!field->isBitField()) {
+      // Handle non-bitfield members.
+      if (!appendField(field, layout.getFieldOffset(index) + offsetBits,
+                       eltInit, allowOverwrite))
+        return false;
+      // After emitting a non-empty field with [[no_unique_address]], we may
+      // need to overwrite its tail padding.
+      if (field->hasAttr<NoUniqueAddressAttr>())
+        allowOverwrite = true;
+    } else {
+      assert(!cir::MissingFeatures::bitfields());
+      cgm.errorNYI(field->getSourceRange(), "bitfields");
+    }
+  }
+
+  return true;
+}
+
+mlir::Attribute ConstRecordBuilder::finalize(QualType type) {
+  type = type.getNonReferenceType();
+  RecordDecl *rd = type->castAs<clang::RecordType>()
+                       ->getOriginalDecl()
+                       ->getDefinitionOrSelf();
+  mlir::Type valTy = cgm.convertType(type);
+  return builder.build(valTy, rd->hasFlexibleArrayMember());
+}
+
+mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
+                                                InitListExpr *ile,
+                                                QualType valTy) {
+  ConstantAggregateBuilder constant(emitter.cgm);
+  ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
+
+  if (!builder.build(ile, /*allowOverwrite*/ false))
+    return nullptr;
+
+  return builder.finalize(valTy);
+}
+
+mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
+                                                const APValue &val,
+                                                QualType valTy) {
+  ConstantAggregateBuilder constant(emitter.cgm);
+  ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
+
+  const RecordDecl *rd = valTy->castAs<clang::RecordType>()
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf();
+  const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd);
+  if (!builder.build(val, rd, false, cd, CharUnits::Zero()))
+    return nullptr;
+
+  return builder.finalize(valTy);
+}
+
+bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
+                                      ConstantAggregateBuilder &constant,
+                                      CharUnits offset, InitListExpr *updater) {
+  return ConstRecordBuilder(emitter, constant, offset)
+      .build(updater, /*allowOverwrite*/ true);
+}
 
 //===----------------------------------------------------------------------===//
 //                             ConstExprEmitter
@@ -59,7 +586,7 @@ public:
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
 
-  mlir::Attribute VisitStmt(Stmt *S, QualType T) { return {}; }
+  mlir::Attribute VisitStmt(Stmt *s, QualType t) { return {}; }
 
   mlir::Attribute VisitConstantExpr(ConstantExpr *ce, QualType t) {
     if (mlir::Attribute result = emitter.tryEmitConstantExpr(ce))
@@ -204,9 +731,9 @@ public:
     return Visit(e->getSubExpr(), t);
   }
 
-  mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *E,
-                                             QualType T) {
-    cgm.errorNYI(E->getBeginLoc(),
+  mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
+                                             QualType t) {
+    cgm.errorNYI(e->getBeginLoc(),
                  "ConstExprEmitter::VisitImplicitValueInitExpr");
     return {};
   }
@@ -223,8 +750,7 @@ public:
     }
 
     if (ile->getType()->isRecordType()) {
-      cgm.errorNYI(ile->getBeginLoc(), "ConstExprEmitter: record ILE");
-      return {};
+      return ConstRecordBuilder::buildRecord(emitter, ile, t);
     }
 
     if (ile->getType()->isVectorType()) {
@@ -254,8 +780,8 @@ public:
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {
-    cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitStringLiteral");
-    return {};
+    // This is a string literal initializing an array in an initializer.
+    return cgm.getConstantArrayFromStringLiteral(e);
   }
 
   mlir::Attribute VisitObjCEncodeExpr(ObjCEncodeExpr *e, QualType t) {
@@ -285,7 +811,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
                   mlir::Type commonElementType, unsigned arrayBound,
                   SmallVectorImpl<mlir::TypedAttr> &elements,
                   mlir::TypedAttr filler) {
-  const CIRGenBuilderTy &builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   unsigned nonzeroLength = arrayBound;
   if (elements.size() < nonzeroLength && builder.isNullValue(filler))
@@ -306,6 +832,33 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   if (trailingZeroes >= 8) {
     assert(elements.size() >= nonzeroLength &&
            "missing initializer for non-zero element");
+
+    if (commonElementType && nonzeroLength >= 8) {
+      // If all the elements had the same type up to the trailing zeroes and
+      // there are eight or more nonzero elements, emit a struct of two arrays
+      // (the nonzero data and the zeroinitializer).
+      SmallVector<mlir::Attribute> eles;
+      eles.reserve(nonzeroLength);
+      for (const auto &element : elements)
+        eles.push_back(element);
+      auto initial = cir::ConstArrayAttr::get(
+          cir::ArrayType::get(commonElementType, nonzeroLength),
+          mlir::ArrayAttr::get(builder.getContext(), eles));
+      elements.resize(2);
+      elements[0] = initial;
+    } else {
+      // Otherwise, emit a struct with individual elements for each nonzero
+      // initializer, followed by a zeroinitializer array filler.
+      elements.resize(nonzeroLength + 1);
+    }
+
+    mlir::Type fillerType =
+        commonElementType
+            ? commonElementType
+            : mlir::cast<cir::ArrayType>(desiredType).getElementType();
+    fillerType = cir::ArrayType::get(fillerType, trailingZeroes);
+    elements.back() = cir::ZeroAttr::get(fillerType);
+    commonElementType = nullptr;
   } else if (elements.size() != arrayBound) {
     elements.resize(arrayBound, filler);
 
@@ -314,7 +867,7 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   }
 
   if (commonElementType) {
-    SmallVector<mlir::Attribute, 4> eles;
+    SmallVector<mlir::Attribute> eles;
     eles.reserve(elements.size());
 
     for (const auto &element : elements)
@@ -325,7 +878,288 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
         mlir::ArrayAttr::get(builder.getContext(), eles));
   }
 
-  cgm.errorNYI("array with different type elements");
+  SmallVector<mlir::Attribute> eles;
+  eles.reserve(elements.size());
+  for (auto const &element : elements)
+    eles.push_back(element);
+
+  auto arrAttr = mlir::ArrayAttr::get(builder.getContext(), eles);
+  return builder.getAnonConstRecord(arrAttr, /*packed=*/true);
+}
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
+//                          ConstantLValueEmitter
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A struct which can be used to peephole certain kinds of finalization
+/// that normally happen during l-value emission.
+struct ConstantLValue {
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> value;
+  bool hasOffsetApplied;
+
+  /*implicit*/ ConstantLValue(std::nullptr_t)
+      : value(nullptr), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
+      : value(address), hasOffsetApplied(false) {}
+
+  ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
+};
+
+/// A helper class for emitting constant l-values.
+class ConstantLValueEmitter
+    : public ConstStmtVisitor<ConstantLValueEmitter, ConstantLValue> {
+  CIRGenModule &cgm;
+  ConstantEmitter &emitter;
+  const APValue &value;
+  QualType destType;
+
+  // Befriend StmtVisitorBase so that we don't have to expose Visit*.
+  friend StmtVisitorBase;
+
+public:
+  ConstantLValueEmitter(ConstantEmitter &emitter, const APValue &value,
+                        QualType destType)
+      : cgm(emitter.cgm), emitter(emitter), value(value), destType(destType) {}
+
+  mlir::Attribute tryEmit();
+
+private:
+  mlir::Attribute tryEmitAbsolute(mlir::Type destTy);
+  ConstantLValue tryEmitBase(const APValue::LValueBase &base);
+
+  ConstantLValue VisitStmt(const Stmt *s) { return nullptr; }
+  ConstantLValue VisitConstantExpr(const ConstantExpr *e);
+  ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *e);
+  ConstantLValue VisitStringLiteral(const StringLiteral *e);
+  ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *e);
+  ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *e);
+  ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *e);
+  ConstantLValue VisitPredefinedExpr(const PredefinedExpr *e);
+  ConstantLValue VisitAddrLabelExpr(const AddrLabelExpr *e);
+  ConstantLValue VisitCallExpr(const CallExpr *e);
+  ConstantLValue VisitBlockExpr(const BlockExpr *e);
+  ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *e);
+  ConstantLValue
+  VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
+
+  /// Return GEP-like value offset
+  mlir::ArrayAttr getOffset(mlir::Type ty) {
+    int64_t offset = value.getLValueOffset().getQuantity();
+    cir::CIRDataLayout layout(cgm.getModule());
+    SmallVector<int64_t, 3> idxVec;
+    cgm.getBuilder().computeGlobalViewIndicesFromFlatOffset(offset, ty, layout,
+                                                            idxVec);
+
+    llvm::SmallVector<mlir::Attribute, 3> indices;
+    for (int64_t i : idxVec) {
+      mlir::IntegerAttr intAttr = cgm.getBuilder().getI32IntegerAttr(i);
+      indices.push_back(intAttr);
+    }
+
+    if (indices.empty())
+      return {};
+    return cgm.getBuilder().getArrayAttr(indices);
+  }
+
+  /// Apply the value offset to the given constant.
+  ConstantLValue applyOffset(ConstantLValue &c) {
+    // Handle attribute constant LValues.
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
+      if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
+        auto baseTy = mlir::cast<cir::PointerType>(gv.getType()).getPointee();
+        mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+        assert(!gv.getIndices() && "Global view is already indexed");
+        return cir::GlobalViewAttr::get(destTy, gv.getSymbol(),
+                                        getOffset(baseTy));
+      }
+      llvm_unreachable("Unsupported attribute type to offset");
+    }
+
+    cgm.errorNYI("ConstantLValue: non-attribute offset");
+    return {};
+  }
+};
+
+} // namespace
+
+mlir::Attribute ConstantLValueEmitter::tryEmit() {
+  const APValue::LValueBase &base = value.getLValueBase();
+
+  // The destination type should be a pointer or reference
+  // type, but it might also be a cast thereof.
+  //
+  // FIXME: the chain of casts required should be reflected in the APValue.
+  // We need this in order to correctly handle things like a ptrtoint of a
+  // non-zero null pointer and addrspace casts that aren't trivially
+  // represented in LLVM IR.
+  mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+  assert(mlir::isa<cir::PointerType>(destTy));
+
+  // If there's no base at all, this is a null or absolute pointer,
+  // possibly cast back to an integer type.
+  if (!base)
+    return tryEmitAbsolute(destTy);
+
+  // Otherwise, try to emit the base.
+  ConstantLValue result = tryEmitBase(base);
+
+  // If that failed, we're done.
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> &value = result.value;
+  if (!value)
+    return {};
+
+  // Apply the offset if necessary and not already done.
+  if (!result.hasOffsetApplied)
+    value = applyOffset(result).value;
+
+  // Convert to the appropriate type; this could be an lvalue for
+  // an integer. FIXME: performAddrSpaceCast
+  if (mlir::isa<cir::PointerType>(destTy)) {
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(value))
+      return attr;
+    cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer");
+    return {};
+  }
+
+  cgm.errorNYI("ConstantLValueEmitter: other?");
+  return {};
+}
+
+/// Try to emit an absolute l-value, such as a null pointer or an integer
+/// bitcast to pointer type.
+mlir::Attribute ConstantLValueEmitter::tryEmitAbsolute(mlir::Type destTy) {
+  // If we're producing a pointer, this is easy.
+  auto destPtrTy = mlir::cast<cir::PointerType>(destTy);
+  return cgm.getBuilder().getConstPtrAttr(
+      destPtrTy, value.getLValueOffset().getQuantity());
+}
+
+ConstantLValue
+ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
+  // Handle values.
+  if (const ValueDecl *d = base.dyn_cast<const ValueDecl *>()) {
+    // The constant always points to the canonical declaration. We want to look
+    // at properties of the most recent declaration at the point of emission.
+    d = cast<ValueDecl>(d->getMostRecentDecl());
+
+    if (d->hasAttr<WeakRefAttr>()) {
+      cgm.errorNYI(d->getSourceRange(),
+                   "ConstantLValueEmitter: emit pointer base for weakref");
+      return {};
+    }
+
+    if (auto *fd = dyn_cast<FunctionDecl>(d)) {
+      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      mlir::MLIRContext *mlirContext = builder.getContext();
+      return cir::GlobalViewAttr::get(
+          builder.getPointerTo(fop.getFunctionType()),
+          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
+    }
+
+    if (auto *vd = dyn_cast<VarDecl>(d)) {
+      // We can never refer to a variable with local storage.
+      if (!vd->hasLocalStorage()) {
+        if (vd->isFileVarDecl() || vd->hasExternalStorage())
+          return cgm.getAddrOfGlobalVarAttr(vd);
+
+        if (vd->isLocalVarDecl()) {
+          cgm.errorNYI(vd->getSourceRange(),
+                       "ConstantLValueEmitter: local var decl");
+          return {};
+        }
+      }
+    }
+
+    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
+    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
+    // in which case it silently returns nullptr. For now, let's emit an
+    // error to see what cases we need to handle.
+    cgm.errorNYI(d->getSourceRange(),
+                 "ConstantLValueEmitter: unhandled value decl");
+    return {};
+  }
+
+  // Handle typeid(T).
+  if (base.dyn_cast<TypeInfoLValue>()) {
+    cgm.errorNYI("ConstantLValueEmitter: typeid");
+    return {};
+  }
+
+  // Otherwise, it must be an expression.
+  return Visit(base.get<const Expr *>());
+}
+
+ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: constant expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: compound literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *e) {
+  return cgm.getAddrOfConstantStringFromLiteral(e);
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: objc encode expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *e) {
+  cgm.errorNYI(e->getSourceRange(),
+               "ConstantLValueEmitter: objc string literal");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: objc boxed expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: call expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitBlockExpr(const BlockExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: block expr");
+  return {};
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
+  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: cxx typeid expr");
+  return {};
+}
+
+ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *e) {
+  cgm.errorNYI(e->getSourceRange(),
+               "ConstantLValueEmitter: materialize temporary expr");
   return {};
 }
 
@@ -374,8 +1208,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
         // assignments and whatnots). Since this is for globals shouldn't
         // be a problem for the near future.
         if (cd->isTrivial() && cd->isDefaultConstructor()) {
-          const auto *cxxrd =
-              cast<CXXRecordDecl>(ty->getAs<RecordType>()->getDecl());
+          const auto *cxxrd = ty->castAsCXXRecordDecl();
           if (cxxrd->getNumBases() != 0) {
             // There may not be anything additional to do here, but this will
             // force us to pause and test this path when it is supported.
@@ -427,11 +1260,32 @@ mlir::Attribute ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *ce) {
   return emitAbstract(ce->getBeginLoc(), ce->getAPValueResult(), retType);
 }
 
+mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const Expr *e,
+                                                         QualType destType) {
+  QualType nonMemoryDestType = getNonMemoryType(cgm, destType);
+  mlir::TypedAttr c = tryEmitPrivate(e, nonMemoryDestType);
+  if (c) {
+    mlir::Attribute attr = emitForMemory(c, destType);
+    return mlir::cast<mlir::TypedAttr>(attr);
+  }
+  return nullptr;
+}
+
 mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
                                                          QualType destType) {
   QualType nonMemoryDestType = getNonMemoryType(cgm, destType);
   mlir::Attribute c = tryEmitPrivate(value, nonMemoryDestType);
   return (c ? emitForMemory(c, destType) : nullptr);
+}
+
+mlir::Attribute ConstantEmitter::emitAbstract(const Expr *e,
+                                              QualType destType) {
+  AbstractStateRAII state{*this, true};
+  mlir::Attribute c = mlir::cast<mlir::Attribute>(tryEmitPrivate(e, destType));
+  if (!c)
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitAbstract failed, emit null constaant");
+  return c;
 }
 
 mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
@@ -444,6 +1298,15 @@ mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
   return c;
 }
 
+mlir::Attribute ConstantEmitter::emitNullForMemory(mlir::Location loc,
+                                                   CIRGenModule &cgm,
+                                                   QualType t) {
+  cir::ConstantOp cstOp =
+      cgm.emitNullConstant(t, loc).getDefiningOp<cir::ConstantOp>();
+  assert(cstOp && "expected cir.const op");
+  return emitForMemory(cgm, cstOp.getValue(), t);
+}
+
 mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
                                                QualType destType) {
   // For an _Atomic-qualified constant, we may need to add tail padding.
@@ -453,6 +1316,43 @@ mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
   }
 
   return c;
+}
+
+mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
+                                               mlir::Attribute c,
+                                               QualType destType) {
+  // For an _Atomic-qualified constant, we may need to add tail padding.
+  if (destType->getAs<AtomicType>()) {
+    cgm.errorNYI("atomic constants");
+  }
+
+  return c;
+}
+
+mlir::TypedAttr ConstantEmitter::tryEmitPrivate(const Expr *e,
+                                                QualType destType) {
+  assert(!destType->isVoidType() && "can't emit a void constant");
+
+  if (mlir::Attribute c =
+          ConstExprEmitter(*this).Visit(const_cast<Expr *>(e), destType))
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+
+  Expr::EvalResult result;
+
+  bool success = false;
+
+  if (destType->isReferenceType())
+    success = e->EvaluateAsLValue(result, cgm.getASTContext());
+  else
+    success =
+        e->EvaluateAsRValue(result, cgm.getASTContext(), inConstantContext);
+
+  if (success && !result.hasSideEffects()) {
+    mlir::Attribute c = tryEmitPrivate(result.Val, destType);
+    return llvm::dyn_cast<mlir::TypedAttr>(c);
+  }
+
+  return nullptr;
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
@@ -468,7 +1368,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (mlir::isa<cir::BoolType>(ty))
       return builder.getCIRBoolAttr(value.getInt().getZExtValue());
     assert(mlir::isa<cir::IntType>(ty) && "expected integral type");
-    return cgm.getBuilder().getAttr<cir::IntAttr>(ty, value.getInt());
+    return cir::IntAttr::get(ty, value.getInt());
   }
   case APValue::Float: {
     const llvm::APFloat &init = value.getFloat();
@@ -480,9 +1380,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     mlir::Type ty = cgm.convertType(destType);
-    assert(mlir::isa<cir::CIRFPTypeInterface>(ty) &&
+    assert(mlir::isa<cir::FPTypeInterface>(ty) &&
            "expected floating-point type");
-    return cgm.getBuilder().getAttr<cir::FPAttr>(ty, init);
+    return cir::FPAttr::get(ty, init);
   }
   case APValue::Array: {
     const ArrayType *arrayTy = cgm.getASTContext().getAsArrayType(destType);
@@ -556,33 +1456,38 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
     return {};
   }
-  case APValue::LValue: {
-
-    if (value.getLValueBase()) {
-      cgm.errorNYI("non-null pointer initialization");
-    } else {
-
-      mlir::Type desiredType = cgm.convertType(destType);
-      if (const cir::PointerType ptrType =
-              mlir::dyn_cast<cir::PointerType>(desiredType)) {
-        return builder.getConstPtrAttr(ptrType,
-                                       value.getLValueOffset().getQuantity());
-      } else {
-        llvm_unreachable("non-pointer variable initialized with a pointer");
-      }
-    }
-    return {};
-  }
+  case APValue::LValue:
+    return ConstantLValueEmitter(*this, value, destType).tryEmit();
   case APValue::Struct:
   case APValue::Union:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate struct or union");
-    return {};
-  case APValue::FixedPoint:
+    return ConstRecordBuilder::buildRecord(*this, value, destType);
   case APValue::ComplexInt:
-  case APValue::ComplexFloat:
+  case APValue::ComplexFloat: {
+    mlir::Type desiredType = cgm.convertType(destType);
+    cir::ComplexType complexType =
+        mlir::dyn_cast<cir::ComplexType>(desiredType);
+
+    mlir::Type complexElemTy = complexType.getElementType();
+    if (isa<cir::IntType>(complexElemTy)) {
+      llvm::APSInt real = value.getComplexIntReal();
+      llvm::APSInt imag = value.getComplexIntImag();
+      return builder.getAttr<cir::ConstComplexAttr>(
+          complexType, cir::IntAttr::get(complexElemTy, real),
+          cir::IntAttr::get(complexElemTy, imag));
+    }
+
+    assert(isa<cir::FPTypeInterface>(complexElemTy) &&
+           "expected floating-point type");
+    llvm::APFloat real = value.getComplexFloatReal();
+    llvm::APFloat imag = value.getComplexFloatImag();
+    return builder.getAttr<cir::ConstComplexAttr>(
+        complexType, cir::FPAttr::get(complexElemTy, real),
+        cir::FPAttr::get(complexElemTy, imag));
+  }
+  case APValue::FixedPoint:
   case APValue::AddrLabelDiff:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate fixed point, complex int, "
-                 "complex float, addr label diff");
+    cgm.errorNYI(
+        "ConstExprEmitter::tryEmitPrivate fixed point, addr label diff");
     return {};
   }
   llvm_unreachable("Unknown APValue kind");
@@ -600,7 +1505,7 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
     errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
   }
 
-  if (t->getAs<RecordType>())
+  if (t->isRecordType())
     errorNYI("CIRGenModule::emitNullConstant RecordType");
 
   assert(t->isMemberDataPointerType() &&

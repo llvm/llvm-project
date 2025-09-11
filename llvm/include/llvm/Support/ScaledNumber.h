@@ -424,10 +424,7 @@ class ScaledNumberBase {
 public:
   static constexpr int DefaultPrecision = 10;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD static void dump(uint64_t D, int16_t E, int Width);
-#endif
-
+  LLVM_ABI static void dump(uint64_t D, int16_t E, int Width);
   LLVM_ABI static raw_ostream &print(raw_ostream &OS, uint64_t D, int16_t E,
                                      int Width, unsigned Precision);
   LLVM_ABI static std::string toString(uint64_t D, int16_t E, int Width,
@@ -610,12 +607,7 @@ public:
                      unsigned Precision = DefaultPrecision) const {
     return ScaledNumberBase::print(OS, Digits, Scale, Width, Precision);
   }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const {
-    return ScaledNumberBase::dump(Digits, Scale, Width);
-  }
-#endif
+  void dump() const { return ScaledNumberBase::dump(Digits, Scale, Width); }
 
   ScaledNumber &operator+=(const ScaledNumber &X) {
     std::tie(Digits, Scale) =

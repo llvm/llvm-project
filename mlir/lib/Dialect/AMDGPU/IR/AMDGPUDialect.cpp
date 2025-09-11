@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -24,6 +25,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <limits>
@@ -61,7 +63,16 @@ LogicalResult PackedStochRoundFp8Op::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// FatRawBuferCastOp
+// mxfp float ops
+//===----------------------------------------------------------------------===//
+LogicalResult PackedScaledTruncOp::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// FatRawBufferCastOp
 //===----------------------------------------------------------------------===//
 
 /// Convert the type `source` to one with the same sizes and strides - and
@@ -79,7 +90,22 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
     auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout);
     if (!stridedLayout)
       return failure();
-    mb.setLayout(StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides()));
+    MemRefLayoutAttrInterface newLayout =
+        StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides());
+    // Special case: if resetting the offset causes the strided layout to become
+    // the identity layout, then reset to the identity layout.
+    // TODO: this'll get a lot simpler when we have the contiguous layout.
+    SmallVector<int64_t> stridesIfIdentity;
+    if (source.hasStaticShape()) {
+      stridesIfIdentity = computeSuffixProduct(source.getShape());
+    } else if (source.getRank() <= 1) {
+      stridesIfIdentity = SmallVector<int64_t>(source.getRank(), 1);
+    }
+    if (stridesIfIdentity == stridedLayout.getStrides()) {
+      newLayout = AffineMapAttr::get(
+          AffineMap::getMultiDimIdentityMap(source.getRank(), ctx));
+    }
+    mb.setLayout(newLayout);
   }
   return (MemRefType)(mb);
 }
@@ -124,10 +150,22 @@ static bool hasGlobalMemorySpace(Attribute memorySpace) {
 }
 
 static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
   if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
     return intMemorySpace.getInt() == 3;
   if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
+static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 7;
+  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
   return false;
 }
 
@@ -472,36 +510,123 @@ LogicalResult DPPOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// PermlaneSwapOp
+//===----------------------------------------------------------------------===//
+LogicalResult PermlaneSwapOp::verify() {
+  unsigned rowLength = getRowLength();
+
+  if (rowLength != 16 && rowLength != 32)
+    return emitOpError("row_length attribute must either be 16 or 32.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GatherToLDSOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!memref::isStaticShapeAndContiguousRowMajor(dstType))
-    return emitOpError(
-        "destination types must have static shape  and contiguous");
+  if (!dstType.areTrailingDimsContiguous(1))
+    return emitOpError("destination type inner most dim must be contiguous");
 
   auto elemType = srcType.getElementType();
   // Check $src and $dst element types are the same.
   if (elemType != dstType.getElementType())
     return emitOpError("source and destination element types must match");
 
-  // copy type sizes should be 1, 2, or 4 bytes.
+  // copy type sizes should be 1, 2, 4, 12 or 16 bytes.
   auto transferType = getTransferType();
-  size_t transferSize;
+  int transferSize;
   if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
     transferSize = vectorTransfer.getNumElements() *
                    vectorTransfer.getElementTypeBitWidth();
   } else {
     transferSize = transferType.getIntOrFloatBitWidth();
   }
-  if (transferSize != 8 && transferSize != 16 && transferSize != 32)
-    return emitOpError("Transfering type size must be 8, 16, or 32 bits");
+  if (!llvm::is_contained({8, 16, 32, 96, 128}, transferSize))
+    return emitOpError(
+        "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
-    return emitOpError("source memory address space must be Global");
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()) &&
+      !hasFatRawBufferMemorySpace(srcType.getMemorySpace()))
+    return emitOpError(
+        "source memory address space must be global or fat raw buffer");
 
   if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
     return emitOpError("destination memory address space must be Workgroup");
+
+  return success();
+}
+
+namespace {
+/// If the source/target of a GatherToLDSOp is a CastOp that only removes static
+/// information or changes layout, the cast can be skipped.
+struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    bool modified = false;
+    auto foldCast = [&](OpOperand &operand) {
+      if (auto castOp = operand.get().getDefiningOp<memref::CastOp>()) {
+        if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+          rewriter.modifyOpInPlace(gatherOp,
+                                   [&] { operand.assign(castOp.getSource()); });
+          modified = true;
+        }
+      }
+    };
+
+    foldCast(gatherOp.getSrcMutable());
+    foldCast(gatherOp.getDstMutable());
+
+    return success(modified);
+  }
+};
+} // namespace
+
+void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TransposeLoadOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Workgroup");
+
+  auto transferType = cast<VectorType>(getType());
+  size_t numElements = transferType.getNumElements();
+  size_t elementTypeSize =
+      transferType.getElementType().getIntOrFloatBitWidth();
+
+  // ElementSize -> NumElements
+  const llvm::SmallDenseMap<size_t, size_t> KValidLoadSizeMap = {
+      {4, 16},
+      {6, 16},
+      {8, 8},
+      {16, 4},
+  };
+
+  auto validNumElems = KValidLoadSizeMap.find(elementTypeSize);
+  if (validNumElems == KValidLoadSizeMap.end()) {
+    return emitOpError("Unsupported element type size for transpose load: ")
+           << elementTypeSize << " bits";
+  }
+  if (numElements != validNumElems->second) {
+    return emitOpError(
+               "Transferring type size mismatch: expected num of elements: ")
+           << validNumElems->second;
+  }
 
   return success();
 }

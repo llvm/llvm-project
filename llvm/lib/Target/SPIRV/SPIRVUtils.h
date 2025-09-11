@@ -125,6 +125,10 @@ void addStringImm(const StringRef &Str, IRBuilder<> &B,
 // the reverse of the logic in addStringImm.
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
 
+// Returns the string constant that the register refers to. It is assumed that
+// Reg is a global value that contains a string.
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
+
 // Add the given numerical immediate to MIB.
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
@@ -210,6 +214,8 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 10;
   case SPIRV::StorageClass::StorageBuffer:
     return 11;
+  case SPIRV::StorageClass::Uniform:
+    return 12;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -500,6 +506,8 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

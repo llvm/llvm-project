@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -85,11 +86,6 @@ public:
   /// between a two registers of the specified class.
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
-
-  /// getGPRsForTailCall - Returns a register class with registers that can be
-  /// used in forming tail calls.
-  const TargetRegisterClass *
-  getGPRsForTailCall(const MachineFunction &MF) const;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
@@ -180,6 +176,10 @@ public:
   constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
 
   bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
+
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace

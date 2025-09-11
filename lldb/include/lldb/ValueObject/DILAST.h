@@ -18,8 +18,13 @@ namespace lldb_private::dil {
 
 /// The various types DIL AST nodes (used by the DIL parser).
 enum class NodeKind {
+  eArraySubscriptNode,
+  eBitExtractionNode,
   eErrorNode,
+  eFloatLiteralNode,
   eIdentifierNode,
+  eIntegerLiteralNode,
+  eMemberOfNode,
   eUnaryOpNode,
 };
 
@@ -88,6 +93,29 @@ private:
   std::string m_name;
 };
 
+class MemberOfNode : public ASTNode {
+public:
+  MemberOfNode(uint32_t location, ASTNodeUP base, bool is_arrow,
+               std::string name)
+      : ASTNode(location, NodeKind::eMemberOfNode), m_base(std::move(base)),
+        m_is_arrow(is_arrow), m_field_name(std::move(name)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *GetBase() const { return m_base.get(); }
+  bool GetIsArrow() const { return m_is_arrow; }
+  llvm::StringRef GetFieldName() const { return llvm::StringRef(m_field_name); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eMemberOfNode;
+  }
+
+private:
+  ASTNodeUP m_base;
+  bool m_is_arrow;
+  std::string m_field_name;
+};
+
 class UnaryOpNode : public ASTNode {
 public:
   UnaryOpNode(uint32_t location, UnaryOpKind kind, ASTNodeUP operand)
@@ -96,8 +124,8 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  UnaryOpKind kind() const { return m_kind; }
-  ASTNode *operand() const { return m_operand.get(); }
+  UnaryOpKind GetKind() const { return m_kind; }
+  ASTNode *GetOperand() const { return m_operand.get(); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eUnaryOpNode;
@@ -106,6 +134,96 @@ public:
 private:
   UnaryOpKind m_kind;
   ASTNodeUP m_operand;
+};
+
+class ArraySubscriptNode : public ASTNode {
+public:
+  ArraySubscriptNode(uint32_t location, ASTNodeUP base, int64_t index)
+      : ASTNode(location, NodeKind::eArraySubscriptNode),
+        m_base(std::move(base)), m_index(index) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *GetBase() const { return m_base.get(); }
+  int64_t GetIndex() const { return m_index; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eArraySubscriptNode;
+  }
+
+private:
+  ASTNodeUP m_base;
+  int64_t m_index;
+};
+
+class BitFieldExtractionNode : public ASTNode {
+public:
+  BitFieldExtractionNode(uint32_t location, ASTNodeUP base, int64_t first_index,
+                         int64_t last_index)
+      : ASTNode(location, NodeKind::eBitExtractionNode),
+        m_base(std::move(base)), m_first_index(first_index),
+        m_last_index(last_index) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *GetBase() const { return m_base.get(); }
+  int64_t GetFirstIndex() const { return m_first_index; }
+  int64_t GetLastIndex() const { return m_last_index; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eBitExtractionNode;
+  }
+
+private:
+  ASTNodeUP m_base;
+  int64_t m_first_index;
+  int64_t m_last_index;
+};
+
+enum class IntegerTypeSuffix { None, Long, LongLong };
+
+class IntegerLiteralNode : public ASTNode {
+public:
+  IntegerLiteralNode(uint32_t location, llvm::APInt value, uint32_t radix,
+                     bool is_unsigned, IntegerTypeSuffix type)
+      : ASTNode(location, NodeKind::eIntegerLiteralNode),
+        m_value(std::move(value)), m_radix(radix), m_is_unsigned(is_unsigned),
+        m_type(type) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  const llvm::APInt &GetValue() const { return m_value; }
+  uint32_t GetRadix() const { return m_radix; }
+  bool IsUnsigned() const { return m_is_unsigned; }
+  IntegerTypeSuffix GetTypeSuffix() const { return m_type; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eIntegerLiteralNode;
+  }
+
+private:
+  llvm::APInt m_value;
+  uint32_t m_radix;
+  bool m_is_unsigned;
+  IntegerTypeSuffix m_type;
+};
+
+class FloatLiteralNode : public ASTNode {
+public:
+  FloatLiteralNode(uint32_t location, llvm::APFloat value)
+      : ASTNode(location, NodeKind::eFloatLiteralNode),
+        m_value(std::move(value)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  const llvm::APFloat &GetValue() const { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eFloatLiteralNode;
+  }
+
+private:
+  llvm::APFloat m_value;
 };
 
 /// This class contains one Visit method for each specialized type of
@@ -118,7 +236,17 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const MemberOfNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const UnaryOpNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ArraySubscriptNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BitFieldExtractionNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IntegerLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

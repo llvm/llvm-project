@@ -15,12 +15,27 @@
 
 #include "llvm/Support/CommandLine.h"
 
+namespace llvm {
+namespace bolt {
+class BinaryFunction;
+}
+} // namespace llvm
+
 namespace opts {
 
 enum HeatmapModeKind {
   HM_None = 0,
   HM_Exclusive, // llvm-bolt-heatmap
   HM_Optional   // perf2bolt --heatmap
+};
+
+using HeatmapBlockSizes = std::vector<unsigned>;
+struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
+  explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
+      : llvm::cl::parser<HeatmapBlockSizes>(O) {}
+  // Return true on error.
+  bool parse(llvm::cl::Option &O, llvm::StringRef ArgName, llvm::StringRef Arg,
+             HeatmapBlockSizes &Val);
 };
 
 extern HeatmapModeKind HeatmapMode;
@@ -39,6 +54,7 @@ extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
 extern llvm::cl::opt<bool> AggregateOnly;
+extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
 extern llvm::cl::opt<bool> CompactCodeModel;
 extern llvm::cl::opt<bool> DiffOnly;
@@ -47,7 +63,8 @@ extern llvm::cl::opt<bool> EqualizeBBCounts;
 extern llvm::cl::opt<bool> ForcePatch;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
-extern llvm::cl::opt<unsigned> HeatmapBlock;
+extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
+    HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
@@ -88,6 +105,9 @@ extern llvm::cl::opt<unsigned> Verbosity;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
+
+/// Return true if we should dump dot graphs for the given function.
+bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
 enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
 

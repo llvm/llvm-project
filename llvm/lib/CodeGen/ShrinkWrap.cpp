@@ -275,8 +275,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override { return "Shrink Wrapping analysis"; }
@@ -968,8 +967,14 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
                     << "\nRestore: " << printMBBReference(*Restore) << '\n');
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MFI.setSavePoint(Save);
-  MFI.setRestorePoint(Restore);
+  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  if (Save) {
+    SavePoints.push_back(Save);
+    RestorePoints.push_back(Restore);
+  }
+  MFI.setSavePoints(SavePoints);
+  MFI.setRestorePoints(RestorePoints);
   ++NumCandidates;
   return Changed;
 }

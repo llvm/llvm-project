@@ -17,7 +17,6 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
@@ -39,6 +38,7 @@
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -448,7 +448,7 @@ static Error applyLibraryLinkModifiers(Session &S, LinkGraph &G) {
   if (!S.HiddenArchives.empty()) {
     StringRef ObjName(G.getName());
     if (ObjName.ends_with(')')) {
-      auto LibName = ObjName.split('(').first;
+      auto LibName = ObjName.split('[').first;
       if (S.HiddenArchives.count(LibName)) {
         for (auto *Sym : G.defined_symbols())
           Sym->setScope(std::max(Sym->getScope(), Scope::Hidden));
@@ -1459,9 +1459,10 @@ Error Session::FileInfo::registerMultiStubEntry(
                      Sym.getTargetFlags());
 
   // Let's keep stubs ordered by ascending address.
-  llvm::sort(Entry, [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
-    return L.getTargetAddress() < R.getTargetAddress();
-  });
+  std::sort(Entry.begin(), Entry.end(),
+            [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
+              return L.getTargetAddress() < R.getTargetAddress();
+            });
 
   return Error::success();
 }
@@ -2278,8 +2279,26 @@ static Error addLibraries(Session &S,
 
     auto &LinkLayer = S.getLinkLayer(LazyLinkIdxs.count(LL.Position));
 
+    std::set<std::string> ImportedDynamicLibraries;
     StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
-    if (AllLoad)
+
+    // COFF gets special handling due to import libraries.
+    if (S.ES.getTargetTriple().isOSBinFormatCOFF()) {
+      if (AllLoad) {
+        VisitMembers =
+            [ImportScanner = COFFImportFileScanner(ImportedDynamicLibraries),
+             LoadAll =
+                 StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+                     LinkLayer, JD)](object::Archive &A,
+                                     MemoryBufferRef MemberBuf,
+                                     size_t Index) mutable -> Expected<bool> {
+          if (!ImportScanner(A, MemberBuf, Index))
+            return false;
+          return LoadAll(A, MemberBuf, Index);
+        };
+      } else
+        VisitMembers = COFFImportFileScanner(ImportedDynamicLibraries);
+    } else if (AllLoad)
       VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
           LinkLayer, JD);
     else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
@@ -2293,7 +2312,7 @@ static Error addLibraries(Session &S,
 
     // Push additional dynamic libraries to search.
     // Note that this mechanism only happens in COFF.
-    for (auto FileName : (*G)->getImportedDynamicLibraries()) {
+    for (auto FileName : ImportedDynamicLibraries) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
       if (!FileNameRef.ends_with_insensitive(".dll"))
@@ -2563,64 +2582,63 @@ struct TargetInfo {
 static TargetInfo
 getTargetInfo(const Triple &TT,
               const SubtargetFeatures &TF = SubtargetFeatures()) {
-  auto TripleName = TT.str();
   std::string ErrorStr;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, ErrorStr);
   if (!TheTarget)
-    ExitOnErr(make_error<StringError>("Error accessing target '" + TripleName +
+    ExitOnErr(make_error<StringError>("Error accessing target '" + TT.str() +
                                           "': " + ErrorStr,
                                       inconvertibleErrorCode()));
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", TF.getString()));
+      TheTarget->createMCSubtargetInfo(TT, "", TF.getString()));
   if (!STI)
     ExitOnErr(
-        make_error<StringError>("Unable to create subtarget for " + TripleName,
+        make_error<StringError>("Unable to create subtarget for " + TT.str(),
                                 inconvertibleErrorCode()));
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   if (!MRI)
     ExitOnErr(make_error<StringError>("Unable to create target register info "
                                       "for " +
-                                          TripleName,
+                                          TT.str(),
                                       inconvertibleErrorCode()));
 
   MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
-    ExitOnErr(make_error<StringError>("Unable to create target asm info " +
-                                          TripleName,
-                                      inconvertibleErrorCode()));
+    ExitOnErr(
+        make_error<StringError>("Unable to create target asm info " + TT.str(),
+                                inconvertibleErrorCode()));
 
-  auto Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(),
-                                         MRI.get(), STI.get());
+  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(), MRI.get(),
+                                         STI.get());
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, *Ctx));
   if (!Disassembler)
-    ExitOnErr(make_error<StringError>("Unable to create disassembler for " +
-                                          TripleName,
-                                      inconvertibleErrorCode()));
+    ExitOnErr(
+        make_error<StringError>("Unable to create disassembler for " + TT.str(),
+                                inconvertibleErrorCode()));
 
   std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   if (!MII)
     ExitOnErr(make_error<StringError>("Unable to create instruction info for" +
-                                          TripleName,
+                                          TT.str(),
                                       inconvertibleErrorCode()));
 
   std::unique_ptr<MCInstrAnalysis> MIA(
       TheTarget->createMCInstrAnalysis(MII.get()));
   if (!MIA)
     ExitOnErr(make_error<StringError>(
-        "Unable to create instruction analysis for" + TripleName,
+        "Unable to create instruction analysis for" + TT.str(),
         inconvertibleErrorCode()));
 
   std::unique_ptr<MCInstPrinter> InstPrinter(
-      TheTarget->createMCInstPrinter(Triple(TripleName), 0, *MAI, *MII, *MRI));
+      TheTarget->createMCInstPrinter(Triple(TT.str()), 0, *MAI, *MII, *MRI));
   if (!InstPrinter)
     ExitOnErr(make_error<StringError>(
-        "Unable to create instruction printer for" + TripleName,
+        "Unable to create instruction printer for" + TT.str(),
         inconvertibleErrorCode()));
   return {TheTarget,      std::move(STI), std::move(MRI),
           std::move(MAI), std::move(Ctx), std::move(Disassembler),

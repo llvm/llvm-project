@@ -1,6 +1,7 @@
 add_clang_unittest(StaticAnalysisTests
   AnalyzerOptionsTest.cpp
   APSIntTypeTest.cpp
+  BlockEntranceCallbackTest.cpp
   BugReportInterestingnessTest.cpp
   CallDescriptionTest.cpp
   CallEventTest.cpp

@@ -872,7 +872,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   // Reset the NoPHIs property if a PHI was inserted to prevent a conflict with
   // the MachineVerifier during testing.
   if (MIItBegin != MIItEnd)
-    F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+    F->getProperties().resetNoPHIs();
 
   // Now remove the CMOV(s).
   MBB->erase(MIItBegin, MIItEnd);

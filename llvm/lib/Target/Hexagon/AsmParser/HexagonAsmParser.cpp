@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
@@ -26,7 +27,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
@@ -40,6 +41,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -106,7 +108,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
     return Assembler;
   }
 
-  MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+  AsmLexer &getLexer() const { return Parser.getLexer(); }
 
   bool equalIsAsmAssignment() override { return false; }
   bool isLabel(AsmToken &Token) override;
@@ -421,7 +423,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<HexagonOperand> CreateToken(MCContext &Context,
                                                      StringRef Str, SMLoc S) {
@@ -454,10 +456,10 @@ public:
 
 } // end anonymous namespace
 
-void HexagonOperand::print(raw_ostream &OS) const {
+void HexagonOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case Immediate:
-    getImm()->print(OS, nullptr);
+    HexagonMCAsmInfo(Triple()).printExpr(OS, *getImm());
     break;
   case Register:
     OS << "<register R";
@@ -607,7 +609,7 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
 
 void HexagonAsmParser::eatToEndOfPacket() {
   assert(InBrackets);
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   while (!Lexer.is(AsmToken::RCurly))
     Lexer.Lex();
   Lexer.Lex();
@@ -877,7 +879,8 @@ bool HexagonAsmParser::RegisterMatchesArch(MCRegister MatchNum) const {
 // extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmLexer();
 
 /// Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonAsmParser() {
   RegisterMCAsmParser<HexagonAsmParser> X(getTheHexagonTarget());
 }
 
@@ -926,7 +929,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
   MCRegister Register;
   SMLoc Begin;
   SMLoc End;
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   if (!parseRegister(Register, Begin, End)) {
     if (!ErrorMissingParenthesis)
       switch (Register.id()) {
@@ -981,7 +984,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
 }
 
 bool HexagonAsmParser::isLabel(AsmToken &Token) {
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   AsmToken const &Second = Lexer.getTok();
   AsmToken Third = Lexer.peekTok();
   StringRef String = Token.getString();
@@ -1030,7 +1033,7 @@ bool HexagonAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
 
 ParseStatus HexagonAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                                SMLoc &EndLoc) {
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   StartLoc = getLexer().getLoc();
   SmallVector<AsmToken, 5> Lookahead;
   StringRef RawString(Lexer.getTok().getString().data(), 0);
@@ -1111,7 +1114,7 @@ bool HexagonAsmParser::implicitExpressionLocation(OperandVector &Operands) {
 
 bool HexagonAsmParser::parseExpression(MCExpr const *&Expr) {
   SmallVector<AsmToken, 4> Tokens;
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   bool Done = false;
   static char const *Comma = ",";
   do {
@@ -1161,7 +1164,7 @@ bool HexagonAsmParser::parseExpressionOrOperand(OperandVector &Operands) {
 /// Parse an instruction.
 bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   while (true) {
     AsmToken const &Token = Parser.getTok();
     switch (Token.getKind()) {

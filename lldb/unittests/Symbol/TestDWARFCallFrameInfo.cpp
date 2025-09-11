@@ -39,6 +39,7 @@ class DWARFCallFrameInfoTest : public testing::Test {
 
 protected:
   void TestBasic(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);
+  void TestValOffset(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);
 };
 
 namespace lldb_private {
@@ -255,4 +256,127 @@ TEST_F(DWARFCallFrameInfoTest, Basic_dwarf4) {
 
 TEST_F(DWARFCallFrameInfoTest, Basic_eh) {
   TestBasic(DWARFCallFrameInfo::EH, "eh_frame");
+}
+
+static UnwindPlan::Row GetValOffsetExpectedRow0() {
+  UnwindPlan::Row row;
+  row.SetOffset(0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rsp_x86_64, 16);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_rip_x86_64, -8, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(dwarf_rbp_x86_64, -16, false);
+  return row;
+}
+
+void DWARFCallFrameInfoTest::TestValOffset(DWARFCallFrameInfo::Type type,
+                                           llvm::StringRef symbol) {
+  // This test is artificial as X86 does not use DW_CFA_val_offset but this
+  // test verifies that we can successfully interpret them if they do occur.
+  // Note the distinction between RBP and RIP in this part of the DWARF dump:
+  // 0x0: CFA=RSP+16: RBP=CFA-16, RIP=[CFA-8]
+  // Whereas RIP is stored in the memory CFA-8 points at, RBP is reconstructed
+  // from the CFA without any memory access.
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         0F1F00
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x8
+#00000000 00000014 ffffffff CIE
+#  Format:                DWARF32
+#  Version:               4
+#  Augmentation:          ""
+#  Address size:          8
+#  Segment desc size:     0
+#  Code alignment factor: 1
+#  Data alignment factor: -8
+#  Return address column: 16
+#
+#  DW_CFA_def_cfa: RSP +8
+#  DW_CFA_offset: RIP -8
+#  DW_CFA_nop:
+#  DW_CFA_nop:
+#  DW_CFA_nop:
+#  DW_CFA_nop:
+#
+#  CFA=RSP+8: RIP=[CFA-8]
+#
+#00000018 0000001c 00000000 FDE cie=00000000 pc=00000000...00000003
+#  Format:       DWARF32
+#  DW_CFA_def_cfa_offset: +16
+#  DW_CFA_val_offset: RBP -16
+#  DW_CFA_nop:
+#  DW_CFA_nop:
+#  DW_CFA_nop:
+#
+#  0x0: CFA=RSP+16: RBP=CFA-16, RIP=[CFA-8]
+    Content:         14000000FFFFFFFF040008000178100C07089001000000001C00000000000000000000000000000003000000000000000E10140602000000
+  - Name:            .rela.debug_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_frame
+    Relocations:
+      - Offset:          0x1C
+        Symbol:          .debug_frame
+        Type:            R_X86_64_32
+      - Offset:          0x20
+        Symbol:          .text
+        Type:            R_X86_64_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .debug_frame
+      - Name:            .rela.debug_frame
+      - Name:            .symtab
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            debug_frame3
+    Section:         .text
+  - Name:            .debug_frame
+    Type:            STT_SECTION
+    Section:         .debug_frame
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  SectionList *list = module_sp->GetSectionList();
+  ASSERT_NE(nullptr, list);
+
+  auto section_sp = list->FindSectionByType(type == DWARFCallFrameInfo::EH
+                                                ? eSectionTypeEHFrame
+                                                : eSectionTypeDWARFDebugFrame,
+                                            false);
+  ASSERT_NE(nullptr, section_sp);
+
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp, type);
+
+  const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
+      ConstString(symbol), eSymbolTypeAny);
+  ASSERT_NE(nullptr, sym);
+
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  ASSERT_TRUE(plan_up);
+  ASSERT_EQ(1, plan_up->GetRowCount());
+  EXPECT_THAT(plan_up->GetRowAtIndex(0),
+              testing::Pointee(GetValOffsetExpectedRow0()));
+}
+
+TEST_F(DWARFCallFrameInfoTest, ValOffset_dwarf3) {
+  TestValOffset(DWARFCallFrameInfo::DWARF, "debug_frame3");
 }

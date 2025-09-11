@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
+#include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
@@ -27,8 +28,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -216,6 +215,7 @@ void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
   llvm::TimeTraceScope tcs{timeTraceScopeName(Loc), [Loc, Pred]() {
                              return timeTraceMetadata(Pred, Loc);
                            }};
+  PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
   // Dispatch on the location type.
   switch (Loc.getKind()) {
     case ProgramPoint::BlockEdgeKind:
@@ -304,26 +304,37 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
       }
     }
 
+    ExplodedNodeSet CheckerNodes;
+    BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getLocationContext());
+    ExprEng.runCheckersForBlockEntrance(BuilderCtx, BE, Pred, CheckerNodes);
+
     // Process the final state transition.
-    ExprEng.processEndOfFunction(BuilderCtx, Pred, RS);
+    for (ExplodedNode *P : CheckerNodes) {
+      ExprEng.processEndOfFunction(BuilderCtx, P, RS);
+    }
 
     // This path is done. Don't enqueue any more nodes.
     return;
   }
 
   // Call into the ExprEngine to process entering the CFGBlock.
-  ExplodedNodeSet dstNodes;
-  BlockEntrance BE(Blk, Pred->getLocationContext());
-  NodeBuilderWithSinks nodeBuilder(Pred, dstNodes, BuilderCtx, BE);
-  ExprEng.processCFGBlockEntrance(L, nodeBuilder, Pred);
+  BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getLocationContext());
+  ExplodedNodeSet DstNodes;
+  NodeBuilderWithSinks NodeBuilder(Pred, DstNodes, BuilderCtx, BE);
+  ExprEng.processCFGBlockEntrance(L, NodeBuilder, Pred);
 
   // Auto-generate a node.
-  if (!nodeBuilder.hasGeneratedNodes()) {
-    nodeBuilder.generateNode(Pred->State, Pred);
+  if (!NodeBuilder.hasGeneratedNodes()) {
+    NodeBuilder.generateNode(Pred->State, Pred);
+  }
+
+  ExplodedNodeSet CheckerNodes;
+  for (auto *N : DstNodes) {
+    ExprEng.runCheckersForBlockEntrance(BuilderCtx, BE, N, CheckerNodes);
   }
 
   // Enqueue nodes onto the worklist.
-  enqueue(dstNodes);
+  enqueue(CheckerNodes);
 }
 
 void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,

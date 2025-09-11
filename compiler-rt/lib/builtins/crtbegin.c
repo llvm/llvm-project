@@ -19,7 +19,7 @@
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
 #ifdef EH_USE_FRAME_REGISTRY
-__extension__ static void *__EH_FRAME_LIST__[]
+__extension__ static void *const __EH_FRAME_LIST__[]
     __attribute__((section(".eh_frame"), aligned(sizeof(void *)))) = {};
 
 extern void __register_frame_info(const void *, void *) __attribute__((weak));
@@ -54,22 +54,33 @@ static void __attribute__((used)) __do_init(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
-#if __has_feature(ptrauth_init_fini)
+# if __has_feature(ptrauth_init_fini)
 // TODO: use __ptrauth-qualified pointers when they are supported on clang side
-#if __has_feature(ptrauth_init_fini_address_discrimination)
+#  if __has_feature(ptrauth_init_fini_address_discrimination)
 __attribute__((section(".init_array"), used)) static void *__init =
     ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
                           ptrauth_blend_discriminator(
                               &__init, __ptrauth_init_fini_discriminator));
-#else
+#  else
 __attribute__((section(".init_array"), used)) static void *__init =
     ptrauth_sign_constant(&__do_init, ptrauth_key_init_fini_pointer,
                           __ptrauth_init_fini_discriminator);
-#endif
-#else
+#  endif
+# elif __has_feature(ptrauth_calls)
+#  ifdef __aarch64__
+// If ptrauth_init_fini feature is not present, compiler emits raw unsigned
+// pointers in .init_array. Use inline assembly to avoid implicit signing of
+// __do_init function pointer with ptrauth_calls enabled.
+__asm__(".pushsection .init_array,\"aw\",@init_array\n\t"
+        ".xword __do_init\n\t"
+        ".popsection");
+#  else
+#   error "ptrauth_calls is only supported for AArch64"
+#  endif
+# else
 __attribute__((section(".init_array"),
                used)) static void (*__init)(void) = __do_init;
-#endif
+# endif
 #elif defined(__i386__) || defined(__x86_64__)
 __asm__(".pushsection .init,\"ax\",@progbits\n\t"
         "call __do_init\n\t"
@@ -125,22 +136,33 @@ static void __attribute__((used)) __do_fini(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
-#if __has_feature(ptrauth_init_fini)
+# if __has_feature(ptrauth_init_fini)
 // TODO: use __ptrauth-qualified pointers when they are supported on clang side
-#if __has_feature(ptrauth_init_fini_address_discrimination)
+#  if __has_feature(ptrauth_init_fini_address_discrimination)
 __attribute__((section(".fini_array"), used)) static void *__fini =
     ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
                           ptrauth_blend_discriminator(
                               &__fini, __ptrauth_init_fini_discriminator));
-#else
+#  else
 __attribute__((section(".fini_array"), used)) static void *__fini =
     ptrauth_sign_constant(&__do_fini, ptrauth_key_init_fini_pointer,
                           __ptrauth_init_fini_discriminator);
-#endif
-#else
+#  endif
+# elif __has_feature(ptrauth_calls)
+#  ifdef __aarch64__
+// If ptrauth_init_fini feature is not present, compiler emits raw unsigned
+// pointers in .fini_array. Use inline assembly to avoid implicit signing of
+// __do_fini function pointer with ptrauth_calls enabled.
+__asm__(".pushsection .fini_array,\"aw\",@fini_array\n\t"
+        ".xword __do_fini\n\t"
+        ".popsection");
+#  else
+#   error "ptrauth_calls is only supported for AArch64"
+#  endif
+# else
 __attribute__((section(".fini_array"),
                used)) static void (*__fini)(void) = __do_fini;
-#endif
+# endif
 #elif defined(__i386__) || defined(__x86_64__)
 __asm__(".pushsection .fini,\"ax\",@progbits\n\t"
         "call __do_fini\n\t"

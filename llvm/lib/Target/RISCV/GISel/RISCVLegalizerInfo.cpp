@@ -26,6 +26,8 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -149,10 +151,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO})
+      .minScalar(0, sXLen)
+      .lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
-  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+  getActionDefinitionsBuilder(
+      {G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT, G_SSHLSAT, G_USHLSAT})
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -485,6 +490,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+      .minScalar(ST.hasStdExtZbb(), 0, sXLen)
+      .lower();
+
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
       .legalFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
@@ -502,8 +511,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
-  getActionDefinitionsBuilder(
-      {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT,
+                               G_FMAXNUM, G_FMINNUM, G_FMAXIMUMNUM,
+                               G_FMINIMUMNUM})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
@@ -692,6 +702,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
+  getActionDefinitionsBuilder(G_ATOMICRMW_ADD)
+      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, sXLen, sXLen);
+
+  getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
+      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, sXLen, sXLen)
+      .lower();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -729,6 +749,9 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::riscv_masked_atomicrmw_add:
+  case Intrinsic::riscv_masked_atomicrmw_sub:
+    return true;
   }
 }
 

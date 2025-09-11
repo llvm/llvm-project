@@ -99,17 +99,11 @@
 
 #elif TEST_STD_VER > 23
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should be defined in c++26"
-#    endif
-#    if __cpp_lib_constrained_equality != 202403L
-#      error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_constrained_equality
-#      error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_constrained_equality
+#    error "__cpp_lib_constrained_equality should be defined in c++26"
+#  endif
+#  if __cpp_lib_constrained_equality != 202411L
+#    error "__cpp_lib_constrained_equality should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -135,4 +129,3 @@
 #endif // TEST_STD_VER > 23
 
 // clang-format on
-

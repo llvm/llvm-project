@@ -43,6 +43,7 @@ struct ProcedureDesignator;
 
 namespace parser {
 struct AccClauseList;
+struct DoConstruct;
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
@@ -58,6 +59,7 @@ namespace lower {
 
 class AbstractConverter;
 class StatementContext;
+class SymMap;
 
 namespace pft {
 struct Evaluation;
@@ -85,7 +87,7 @@ void genOpenACCRoutineConstruct(
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
-mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(mlir::OpBuilder &,
+mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(fir::FirOpBuilder &,
                                                     llvm::StringRef,
                                                     mlir::Location, mlir::Type);
 
@@ -99,7 +101,7 @@ createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
 /// Get a acc.firstprivate.recipe op for the given type or create it if it does
 /// not exist yet.
 mlir::acc::FirstprivateRecipeOp
-createOrGetFirstprivateRecipe(mlir::OpBuilder &, llvm::StringRef,
+createOrGetFirstprivateRecipe(fir::FirOpBuilder &, llvm::StringRef,
                               mlir::Location, mlir::Type,
                               llvm::SmallVector<mlir::Value> &);
 
@@ -114,13 +116,31 @@ void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
 void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
                           mlir::Location);
 
-int64_t getCollapseValue(const Fortran::parser::AccClauseList &);
+/// Used to obtain the number of contained loops to look for
+/// since this is dependent on number of tile operands and collapse
+/// clause.
+uint64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
 
+/// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
+
+/// Checks whether the current insertion point is inside OpenACC compute
+/// construct.
+bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
 
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 
 void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
+
+/// Generates an OpenACC loop from a do construct in order to
+/// properly capture the loop bounds, parallelism determination mode,
+/// and to privatize the loop variables.
+/// When the conversion is rejected, nullptr is returned.
+mlir::Operation *genOpenACCLoopFromDoConstruct(
+    AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::SymMap &localSymbols,
+    const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval);
 
 } // namespace lower
 } // namespace Fortran

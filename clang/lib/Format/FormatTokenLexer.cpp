@@ -14,6 +14,7 @@
 
 #include "FormatTokenLexer.h"
 #include "FormatToken.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -73,6 +74,8 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
 
+  for (const auto &Macro : Style.MacrosSkippedByRemoveParentheses)
+    MacrosSkippedByRemoveParentheses.insert(&IdentTable.get(Macro));
   for (const auto &TemplateName : Style.TemplateNames)
     TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
@@ -123,16 +126,15 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
-    }
-    if (Style.isTextProto())
+    } else if (Style.isTextProto()) {
       tryParsePythonComment();
+    }
     tryMergePreviousTokens();
     if (Style.isCSharp()) {
       // This needs to come after tokens have been merged so that C#
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
-    }
-    if (Style.isTableGen()) {
+    } else if (Style.isTableGen()) {
       handleTableGenMultilineString();
       handleTableGenNumericLikeIdentifier();
     }
@@ -190,23 +192,23 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     }
     if (tryMergeNullishCoalescingEqual())
       return;
-  }
 
-  if (Style.isCSharp()) {
-    static const tok::TokenKind CSharpNullConditionalLSquare[] = {
-        tok::question, tok::l_square};
+    if (Style.isCSharp()) {
+      static const tok::TokenKind CSharpNullConditionalLSquare[] = {
+          tok::question, tok::l_square};
 
-    if (tryMergeCSharpKeywordVariables())
-      return;
-    if (tryMergeCSharpStringLiteral())
-      return;
-    if (tryTransformCSharpForEach())
-      return;
-    if (tryMergeTokens(CSharpNullConditionalLSquare,
-                       TT_CSharpNullConditionalLSquare)) {
-      // Treat like a regular "[" operator.
-      Tokens.back()->Tok.setKind(tok::l_square);
-      return;
+      if (tryMergeCSharpKeywordVariables())
+        return;
+      if (tryMergeCSharpStringLiteral())
+        return;
+      if (tryTransformCSharpForEach())
+        return;
+      if (tryMergeTokens(CSharpNullConditionalLSquare,
+                         TT_CSharpNullConditionalLSquare)) {
+        // Treat like a regular "[" operator.
+        Tokens.back()->Tok.setKind(tok::l_square);
+        return;
+      }
     }
   }
 
@@ -246,16 +248,12 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     }
     if (tryMergeJSPrivateIdentifier())
       return;
-  }
-
-  if (Style.isJava()) {
+  } else if (Style.isJava()) {
     static const tok::TokenKind JavaRightLogicalShiftAssign[] = {
         tok::greater, tok::greater, tok::greaterequal};
     if (tryMergeTokens(JavaRightLogicalShiftAssign, TT_BinaryOperator))
       return;
-  }
-
-  if (Style.isVerilog()) {
+  } else if (Style.isVerilog()) {
     // Merge the number following a base like `'h?a0`.
     if (Tokens.size() >= 3 && Tokens.end()[-3]->is(TT_VerilogNumberBase) &&
         Tokens.end()[-2]->is(tok::numeric_constant) &&
@@ -327,8 +325,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
-  }
-  if (Style.isTableGen()) {
+  } else if (Style.isTableGen()) {
     // TableGen's Multi line string starts with [{
     if (tryMergeTokens({tok::l_square, tok::l_brace},
                        TT_TableGenMultiLineString)) {
@@ -493,7 +490,7 @@ bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
 
 // In C# transform identifier foreach into kw_foreach
 bool FormatTokenLexer::tryTransformCSharpForEach() {
-  if (Tokens.size() < 1)
+  if (Tokens.empty())
     return false;
   auto &Identifier = *(Tokens.end() - 1);
   if (Identifier->isNot(tok::identifier))
@@ -700,6 +697,36 @@ bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
   return true;
 }
 
+void FormatTokenLexer::tryParseJavaTextBlock() {
+  if (FormatTok->TokenText != "\"\"")
+    return;
+
+  const auto *S = Lex->getBufferLocation();
+  const auto *End = Lex->getBuffer().end();
+
+  if (S == End || *S != '\"')
+    return;
+
+  ++S; // Skip the `"""` that begins a text block.
+
+  // Find the `"""` that ends the text block.
+  for (int Count = 0; Count < 3 && S < End; ++S) {
+    switch (*S) {
+    case '\\':
+      Count = -1;
+      break;
+    case '\"':
+      ++Count;
+      break;
+    default:
+      Count = 0;
+    }
+  }
+
+  // Ignore the possibly invalid text block.
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(S)));
+}
+
 // Tries to parse a JavaScript Regex literal starting at the current token,
 // if that begins with a slash and is in a location where JavaScript allows
 // regex literals. Changes the current token to a regex literal and updates
@@ -843,10 +870,7 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   const char *StrBegin = Lex->getBufferLocation() - TokenText.size();
   const char *Offset = StrBegin;
-  if (Verbatim && Interpolated)
-    Offset += 3;
-  else
-    Offset += 2;
+  Offset += Verbatim && Interpolated ? 3 : 2;
 
   const auto End = Lex->getBuffer().end();
   Offset = lexCSharpString(Offset, End, Verbatim, Interpolated);
@@ -926,7 +950,7 @@ void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
   // 4. The first non-digit character is 'x', and the next is a hex digit.
   // Note that in the case 3 and 4, if the next character does not exists in
   // this token, the token is an identifier.
-  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+  if (Text.empty() || Text[0] == '+' || Text[0] == '-')
     return;
   const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
   // All the characters are digits
@@ -1174,7 +1198,7 @@ void FormatTokenLexer::truncateToken(size_t NewLen) {
 /// Count the length of leading whitespace in a token.
 static size_t countLeadingWhitespace(StringRef Text) {
   // Basically counting the length matched by this regex.
-  // "^([\n\r\f\v \t]|(\\\\|\\?\\?/)[\n\r])+"
+  // "^([\n\r\f\v \t]|\\\\[\n\r])+"
   // Directly using the regex turned out to be slow. With the regex
   // version formatting all files in this directory took about 1.25
   // seconds. This version took about 0.5 seconds.
@@ -1182,23 +1206,22 @@ static size_t countLeadingWhitespace(StringRef Text) {
   const unsigned char *const End = Text.bytes_end();
   const unsigned char *Cur = Begin;
   while (Cur < End) {
-    if (isspace(Cur[0])) {
+    if (isWhitespace(Cur[0])) {
       ++Cur;
-    } else if (Cur[0] == '\\' && (Cur[1] == '\n' || Cur[1] == '\r')) {
-      // A '\' followed by a newline always escapes the newline, regardless
-      // of whether there is another '\' before it.
+    } else if (Cur[0] == '\\') {
+      // A backslash followed by optional horizontal whitespaces (P22232R2) and
+      // then a newline always escapes the newline.
       // The source has a null byte at the end. So the end of the entire input
       // isn't reached yet. Also the lexer doesn't break apart an escaped
       // newline.
-      assert(End - Cur >= 2);
-      Cur += 2;
-    } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
-               (Cur[3] == '\n' || Cur[3] == '\r')) {
-      // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
-      // characters are quoted individually in this comment because if we write
-      // them together some compilers warn that we have a trigraph in the code.
-      assert(End - Cur >= 4);
-      Cur += 4;
+      const auto *Lookahead = Cur + 1;
+      while (isHorizontalWhitespace(*Lookahead))
+        ++Lookahead;
+      // No line splice found; the backslash is a token.
+      if (!isVerticalWhitespace(*Lookahead))
+        break;
+      // Splice found, consume it.
+      Cur = Lookahead + 1;
     } else {
       break;
     }
@@ -1270,17 +1293,16 @@ FormatToken *FormatTokenLexer::getNextToken() {
             Style.TabWidth - (Style.TabWidth ? Column % Style.TabWidth : 0);
         break;
       case '\\':
-      case '?':
-      case '/':
-        // The text was entirely whitespace when this loop was entered. Thus
-        // this has to be an escape sequence.
-        assert(Text.substr(i, 2) == "\\\r" || Text.substr(i, 2) == "\\\n" ||
-               Text.substr(i, 4) == "\?\?/\r" ||
-               Text.substr(i, 4) == "\?\?/\n" ||
-               (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
-                           Text.substr(i - 1, 4) == "\?\?/\n")) ||
-               (i >= 2 && (Text.substr(i - 2, 4) == "\?\?/\r" ||
-                           Text.substr(i - 2, 4) == "\?\?/\n")));
+        // The code preceding the loop and in the countLeadingWhitespace
+        // function guarantees that Text is entirely whitespace, not including
+        // comments but including escaped newlines. So the character shows up,
+        // then it has to be in an escape sequence.
+        assert([&]() -> bool {
+          size_t j = i + 1;
+          while (j < Text.size() && isHorizontalWhitespace(Text[j]))
+            ++j;
+          return j < Text.size() && (Text[j] == '\n' || Text[j] == '\r');
+        }());
         InEscape = true;
         break;
       default:
@@ -1296,6 +1318,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   if (FormatTok->is(tok::unknown))
     FormatTok->setType(TT_ImplicitStringLiteral);
 
+  const bool IsCpp = Style.isCpp();
+
   // JavaScript and Java do not allow to escape the end of the line with a
   // backslash. Backslashes are syntax errors in plain source, but can occur in
   // comments. When a single line comment ends with a \, it'll cause the next
@@ -1303,16 +1327,17 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // finds comments that contain a backslash followed by a line break, truncates
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
-  if ((Style.isJavaScript() || Style.isJava()) && FormatTok->is(tok::comment) &&
-      FormatTok->TokenText.starts_with("//")) {
-    size_t BackslashPos = FormatTok->TokenText.find('\\');
-    while (BackslashPos != StringRef::npos) {
-      if (BackslashPos + 1 < FormatTok->TokenText.size() &&
-          FormatTok->TokenText[BackslashPos + 1] == '\n') {
-        truncateToken(BackslashPos + 1);
+  if (const auto Text = FormatTok->TokenText;
+      Text.starts_with("//") &&
+      (IsCpp || Style.isJavaScript() || Style.isJava())) {
+    assert(FormatTok->is(tok::comment));
+    for (auto Pos = Text.find('\\'); Pos++ != StringRef::npos;
+         Pos = Text.find('\\', Pos)) {
+      if (Pos < Text.size() && Text[Pos] == '\n' &&
+          (!IsCpp || Text.substr(Pos + 1).ltrim().starts_with("//"))) {
+        truncateToken(Pos);
         break;
       }
-      BackslashPos = FormatTok->TokenText.find('\\', BackslashPos + 1);
     }
   }
 
@@ -1338,8 +1363,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
       } else if (FormatTok->TokenText == "``") {
         FormatTok->Tok.setIdentifierInfo(nullptr);
         FormatTok->Tok.setKind(tok::hashhash);
-      } else if (Tokens.size() > 0 &&
-                 Tokens.back()->is(Keywords.kw_apostrophe) &&
+      } else if (!Tokens.empty() && Tokens.back()->is(Keywords.kw_apostrophe) &&
                  NumberBase.match(FormatTok->TokenText, &Matches)) {
         // In Verilog in a based number literal like `'b10`, there may be
         // whitespace between `'b` and `10`. Therefore we handle the base and
@@ -1377,19 +1401,17 @@ FormatToken *FormatTokenLexer::getNextToken() {
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
     }
-  } else if (FormatTok->is(tok::greatergreater)) {
-    FormatTok->Tok.setKind(tok::greater);
+  } else if (const bool Greater = FormatTok->is(tok::greatergreater);
+             Greater || FormatTok->is(tok::lessless)) {
+    FormatTok->Tok.setKind(Greater ? tok::greater : tok::less);
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
     ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
-  } else if (FormatTok->is(tok::lessless)) {
-    FormatTok->Tok.setKind(tok::less);
-    FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
-    ++Column;
-    StateStack.push(LexerState::TOKEN_STASHED);
+  } else if (Style.isJava() && FormatTok->is(tok::string_literal)) {
+    tryParseJavaTextBlock();
   }
 
-  if (Style.isVerilog() && Tokens.size() > 0 &&
+  if (Style.isVerilog() && !Tokens.empty() &&
       Tokens.back()->is(TT_VerilogNumberBase) &&
       FormatTok->Tok.isOneOf(tok::identifier, tok::question)) {
     // Mark the number following a base like `'h?a0` as a number.
@@ -1420,12 +1442,12 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
-    if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
-          Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
-              tok::pp_define) &&
+    if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
+         Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() !=
+             tok::pp_define) &&
         it != Macros.end()) {
       FormatTok->setType(it->second);
       if (it->second == TT_IfMacro) {
@@ -1440,6 +1462,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (MacrosSkippedByRemoveParentheses.contains(Identifier))
+        FormatTok->setFinalizedType(TT_FunctionLikeMacro);
       else if (TemplateNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))

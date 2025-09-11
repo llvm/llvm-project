@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "toy/AST.h"
@@ -95,7 +96,8 @@ static cl::opt<enum Action> emitAction(
 static cl::opt<bool> enableOpt("opt", cl::desc("Enable optimizations"));
 
 /// Returns a Toy AST resulting from parsing the file or a nullptr on error.
-std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
+static std::unique_ptr<toy::ModuleAST>
+parseInputFile(llvm::StringRef filename) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
       llvm::MemoryBuffer::getFileOrSTDIN(filename);
   if (std::error_code ec = fileOrErr.getError()) {
@@ -108,8 +110,8 @@ std::unique_ptr<toy::ModuleAST> parseInputFile(llvm::StringRef filename) {
   return parser.parseModule();
 }
 
-int loadMLIR(mlir::MLIRContext &context,
-             mlir::OwningOpRef<mlir::ModuleOp> &module) {
+static int loadMLIR(mlir::MLIRContext &context,
+                    mlir::OwningOpRef<mlir::ModuleOp> &module) {
   // Handle '.toy' input to the compiler.
   if (inputType != InputType::MLIR &&
       !llvm::StringRef(inputFilename).ends_with(".mlir")) {
@@ -139,8 +141,8 @@ int loadMLIR(mlir::MLIRContext &context,
   return 0;
 }
 
-int loadAndProcessMLIR(mlir::MLIRContext &context,
-                       mlir::OwningOpRef<mlir::ModuleOp> &module) {
+static int loadAndProcessMLIR(mlir::MLIRContext &context,
+                              mlir::OwningOpRef<mlir::ModuleOp> &module) {
   if (int error = loadMLIR(context, module))
     return error;
 
@@ -195,7 +197,7 @@ int loadAndProcessMLIR(mlir::MLIRContext &context,
   return 0;
 }
 
-int dumpAST() {
+static int dumpAST() {
   if (inputType == InputType::MLIR) {
     llvm::errs() << "Can't dump a Toy AST when the input is MLIR\n";
     return 5;
@@ -209,7 +211,7 @@ int dumpAST() {
   return 0;
 }
 
-int dumpLLVMIR(mlir::ModuleOp module) {
+static int dumpLLVMIR(mlir::ModuleOp module) {
   // Register the translation to LLVM IR with the MLIR context.
   mlir::registerBuiltinDialectTranslation(*module->getContext());
   mlir::registerLLVMDialectTranslation(*module->getContext());
@@ -253,7 +255,7 @@ int dumpLLVMIR(mlir::ModuleOp module) {
   return 0;
 }
 
-int runJit(mlir::ModuleOp module) {
+static int runJit(mlir::ModuleOp module) {
   // Initialize LLVM targets.
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();

@@ -17,7 +17,7 @@
 #include "llvm/IR/Function.h"
 
 namespace llvm {
-class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
+class DirectXTTIImpl final : public BasicTTIImplBase<DirectXTTIImpl> {
   using BaseT = BasicTTIImplBase<DirectXTTIImpl>;
   using TTI = TargetTransformInfo;
 

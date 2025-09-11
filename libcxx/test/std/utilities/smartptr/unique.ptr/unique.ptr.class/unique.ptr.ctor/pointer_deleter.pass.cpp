@@ -32,6 +32,8 @@ bool my_free_called = false;
 
 void my_free(void*) { my_free_called = true; }
 
+TEST_CONSTEXPR_CXX23 void deleter_function(A*) {}
+
 #if TEST_STD_VER >= 11
 struct DeleterBase {
   TEST_CONSTEXPR_CXX23 void operator()(void*) const {}
@@ -325,6 +327,21 @@ TEST_CONSTEXPR_CXX23 void test_nullptr() {
 #endif
 }
 
+template <bool IsArray>
+TEST_CONSTEXPR_CXX23 void test_function_reference() {
+  typedef typename std::conditional<!IsArray, A, A[]>::type VT;
+  {
+    std::unique_ptr<VT, void (&)(A*)> u(nullptr, deleter_function);
+    assert(u.get() == nullptr);
+    assert(u.get_deleter() == deleter_function);
+  }
+  {
+    std::unique_ptr<VT, void (&)(A*)> u(nullptr, deleter_function);
+    assert(u.get() == nullptr);
+    assert(u.get_deleter() == deleter_function);
+  }
+}
+
 TEST_CONSTEXPR_CXX23 bool test() {
   {
     test_basic</*IsArray*/ false>();
@@ -332,6 +349,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
     test_basic_single();
     test_sfinae<false>();
     test_noexcept<false>();
+    test_function_reference<false>();
   }
   {
     test_basic</*IsArray*/ true>();
@@ -339,6 +357,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
     test_sfinae<true>();
     test_sfinae_runtime();
     test_noexcept<true>();
+    test_function_reference<true>();
   }
 
   return true;

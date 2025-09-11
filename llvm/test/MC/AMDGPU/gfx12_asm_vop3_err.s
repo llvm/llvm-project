@@ -67,3 +67,9 @@ v_permlane16_var_b32 v5, v1, v2 op_sel:[0, 0, 1]
 
 v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:4
 // GFX12: :[[@LINE-1]]:29: error: invalid byte_sel value.
+
+v_cvt_pk_fp8_f32 v1, v2, v3 clamp
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f32 v1, v2, v3 clamp
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction

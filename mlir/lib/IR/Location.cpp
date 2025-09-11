@@ -18,13 +18,9 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
-#include <iterator>
-#include <memory>
-#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -56,8 +52,8 @@ struct FileLineColRangeAttrStorage final
         FileLineColRangeAttrStorage::totalSizeToAlloc<unsigned>(locEnc - 1);
     auto *rawMem =
         allocator.allocate(byteSize, alignof(FileLineColRangeAttrStorage));
-    auto *result = ::new (rawMem) FileLineColRangeAttrStorage(
-        std::move(std::get<0>(tblgenKey)), locEnc - 1);
+    auto *result = ::new (rawMem)
+        FileLineColRangeAttrStorage(std::get<0>(tblgenKey), locEnc - 1);
     if (numInArray > 0) {
       ArrayRef<unsigned> elements = std::get<1>(tblgenKey);
       result->startLine = elements[0];

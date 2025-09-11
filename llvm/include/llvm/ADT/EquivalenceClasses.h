@@ -218,12 +218,12 @@ public:
   /// insert - Insert a new value into the union/find set, ignoring the request
   /// if the value already exists.
   const ECValue &insert(const ElemTy &Data) {
-    auto I = TheMapping.insert({Data, nullptr});
-    if (!I.second)
-      return *I.first->second;
+    auto [I, Inserted] = TheMapping.try_emplace(Data);
+    if (!Inserted)
+      return *I->second;
 
     auto *ECV = new (ECValueAllocator) ECValue(Data);
-    I.first->second = ECV;
+    I->second = ECV;
     Members.push_back(ECV);
     return *ECV;
   }

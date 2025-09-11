@@ -16,7 +16,6 @@
 
 using namespace llvm;
 
-#if __has_feature(is_trivially_copyable) || (defined(__GNUC__) && __GNUC__ >= 5)
 static_assert(std::is_trivially_copyable_v<PressureChange>,
               "trivially copyable");
 static_assert(std::is_trivially_copyable_v<SDep>, "trivially copyable");
@@ -24,5 +23,3 @@ static_assert(std::is_trivially_copyable_v<SDValue>, "trivially copyable");
 static_assert(std::is_trivially_copyable_v<SlotIndex>, "trivially copyable");
 static_assert(std::is_trivially_copyable_v<IdentifyingPassPtr>,
               "trivially copyable");
-#endif
-

@@ -867,41 +867,6 @@ func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {
 
 // -----
 
-// CHECK-LABEL: @cond_prop
-func.func @cond_prop(%arg0 : i1) -> index {
-  %res = scf.if %arg0 -> index {
-    %res1 = scf.if %arg0 -> index {
-      %v1 = "test.get_some_value1"() : () -> index
-      scf.yield %v1 : index
-    } else {
-      %v2 = "test.get_some_value2"() : () -> index
-      scf.yield %v2 : index
-    }
-    scf.yield %res1 : index
-  } else {
-    %res2 = scf.if %arg0 -> index {
-      %v3 = "test.get_some_value3"() : () -> index
-      scf.yield %v3 : index
-    } else {
-      %v4 = "test.get_some_value4"() : () -> index
-      scf.yield %v4 : index
-    }
-    scf.yield %res2 : index
-  }
-  return %res : index
-}
-// CHECK-NEXT:  %[[if:.+]] = scf.if %arg0 -> (index) {
-// CHECK-NEXT:    %[[c1:.+]] = "test.get_some_value1"() : () -> index
-// CHECK-NEXT:    scf.yield %[[c1]] : index
-// CHECK-NEXT:  } else {
-// CHECK-NEXT:    %[[c4:.+]] = "test.get_some_value4"() : () -> index
-// CHECK-NEXT:    scf.yield %[[c4]] : index
-// CHECK-NEXT:  }
-// CHECK-NEXT:  return %[[if]] : index
-// CHECK-NEXT:}
-
-// -----
-
 // CHECK-LABEL: @replace_if_with_cond1
 func.func @replace_if_with_cond1(%arg0 : i1) -> (i32, i1) {
   %true = arith.constant true
@@ -1475,8 +1440,8 @@ func.func @propagate_into_execute_region() {
 
 // -----
 
-// CHECK-LABEL: func @execute_region_elim
-func.func @execute_region_elim() {
+// CHECK-LABEL: func @execute_region_inline
+func.func @execute_region_inline() {
   affine.for %i = 0 to 100 {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
@@ -1496,8 +1461,30 @@ func.func @execute_region_elim() {
 
 // -----
 
-// CHECK-LABEL: func @func_execute_region_elim
-func.func @func_execute_region_elim() {
+// CHECK-LABEL: func @execute_region_no_inline
+func.func @execute_region_no_inline() {
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 no_inline {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  }
+  return
+}
+
+// CHECK-NEXT:     affine.for %arg0 = 0 to 100 {
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+// CHECK-NOT:      no_inline
+
+// -----
+
+// CHECK-LABEL: func @func_execute_region_inline
+func.func @func_execute_region_inline() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1
@@ -1531,8 +1518,8 @@ func.func @func_execute_region_elim() {
 
 // -----
 
-// CHECK-LABEL: func @func_execute_region_elim_multi_yield
-func.func @func_execute_region_elim_multi_yield() {
+// CHECK-LABEL: func @func_execute_region_inline_multi_yield
+func.func @func_execute_region_inline_multi_yield() {
     "test.foo"() : () -> ()
     %v = scf.execute_region -> i64 {
       %c = "test.cmp"() : () -> i1
@@ -1811,7 +1798,7 @@ module {
       %4 = affine.min #map2(%arg3)[%dim, %arg0]
       %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.elemwise_unary ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.exp ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -1825,7 +1812,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
-//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
 //  CHECK-NEXT:      }
@@ -1851,7 +1838,7 @@ module {
       %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.elemwise_unary ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.exp ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -1868,7 +1855,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
-//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
 //  CHECK-NEXT:      }
@@ -1925,3 +1912,16 @@ func.func @index_switch_fold_no_res() {
 
 // CHECK-LABEL: func.func @index_switch_fold_no_res()
 //  CHECK-NEXT: "test.op"() : () -> ()
+
+// -----
+
+// CHECK-LABEL: func @scf_for_all_step_size_0()
+//       CHECK:   scf.forall (%{{.*}}) = (0) to (1) step (0)
+func.func @scf_for_all_step_size_0()  {
+  %x = arith.constant 0 : index
+  scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
+    vector.print %x : index
+    scf.forall.in_parallel {}
+  }
+  return
+}

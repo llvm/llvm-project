@@ -59,9 +59,9 @@ public:
 
     CreateInvocationOptions CIOpts;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*CIOpts.VFS,
-                                            new DiagnosticOptions());
+        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
     CIOpts.Diags = Diags;
 
     std::string CacheBMIPath =
@@ -82,7 +82,7 @@ public:
     EXPECT_TRUE(Invocation);
 
     CompilerInstance Instance(std::move(Invocation));
-    Instance.setDiagnostics(Diags.get());
+    Instance.setDiagnostics(Diags);
     Instance.getFrontendOpts().OutputFile = CacheBMIPath;
     GenerateReducedModuleInterfaceAction Action;
     EXPECT_TRUE(Instance.ExecuteAction(Action));

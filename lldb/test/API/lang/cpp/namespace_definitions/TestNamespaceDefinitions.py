@@ -14,7 +14,7 @@ class NamespaceDefinitionsTestCase(TestBase):
         bugnumber="llvm.org/pr28948",
         oslist=["linux"],
         compiler="gcc",
-        archs=["arm", "aarch64"],
+        archs=["arm$", "aarch64"],
     )
     @expectedFailureAll(oslist=["windows"])
     def test_expr(self):

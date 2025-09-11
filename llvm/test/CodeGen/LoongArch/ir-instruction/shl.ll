@@ -61,20 +61,22 @@ define i32 @shl_i32(i32 %x, i32 %y) {
 define i64 @shl_i64(i64 %x, i64 %y) {
 ; LA32-LABEL: shl_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sll.w $a1, $a1, $a2
-; LA32-NEXT:    xori $a3, $a2, 31
-; LA32-NEXT:    srli.w $a4, $a0, 1
-; LA32-NEXT:    srl.w $a3, $a4, $a3
-; LA32-NEXT:    or $a1, $a1, $a3
 ; LA32-NEXT:    addi.w $a3, $a2, -32
-; LA32-NEXT:    slti $a4, $a3, 0
-; LA32-NEXT:    maskeqz $a1, $a1, $a4
-; LA32-NEXT:    sll.w $a5, $a0, $a3
-; LA32-NEXT:    masknez $a4, $a5, $a4
+; LA32-NEXT:    bltz $a3, .LBB4_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    sll.w $a1, $a0, $a3
+; LA32-NEXT:    b .LBB4_3
+; LA32-NEXT:  .LBB4_2:
+; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    xori $a4, $a2, 31
+; LA32-NEXT:    srli.w $a5, $a0, 1
+; LA32-NEXT:    srl.w $a4, $a5, $a4
 ; LA32-NEXT:    or $a1, $a1, $a4
+; LA32-NEXT:  .LBB4_3:
+; LA32-NEXT:    slti $a3, $a3, 0
+; LA32-NEXT:    sub.w $a3, $zero, $a3
 ; LA32-NEXT:    sll.w $a0, $a0, $a2
-; LA32-NEXT:    srai.w $a2, $a3, 31
-; LA32-NEXT:    and $a0, $a2, $a0
+; LA32-NEXT:    and $a0, $a3, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: shl_i64:

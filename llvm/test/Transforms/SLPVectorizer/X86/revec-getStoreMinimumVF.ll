@@ -4,9 +4,7 @@
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> poison, <4 x i8> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> [[TMP0]], <4 x i8> zeroinitializer, i64 4)
-; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr null, align 1
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr null, align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

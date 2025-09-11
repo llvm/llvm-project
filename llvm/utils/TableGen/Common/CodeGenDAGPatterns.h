@@ -590,6 +590,11 @@ public:
   bool hasGISelPredicateCode() const;
   std::string getGISelPredicateCode() const;
 
+  // If true, indicates that GlobalISel-based C++ code was supplied for checking
+  // register operands.
+  bool hasGISelLeafPredicateCode() const;
+  std::string getGISelLeafPredicateCode() const;
+
 private:
   bool hasPredCode() const;
   bool hasImmCode() const;
@@ -633,7 +638,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
   /// Name - The name given to this node with the :$foo notation.
   ///
-  std::string Name;
+  StringRef Name;
 
   std::vector<ScopedName> NamesAsPredicateArg;
 
@@ -667,8 +672,8 @@ public:
   }
 
   bool hasName() const { return !Name.empty(); }
-  const std::string &getName() const { return Name; }
-  void setName(StringRef N) { Name.assign(N.begin(), N.end()); }
+  StringRef getName() const { return Name; }
+  void setName(StringRef N) { Name = N; }
 
   const std::vector<ScopedName> &getNamesAsPredicateArg() const {
     return NamesAsPredicateArg;
@@ -742,8 +747,8 @@ public:
 
   /// hasChild - Return true if N is any of our children.
   bool hasChild(const TreePatternNode *N) const {
-    for (unsigned i = 0, e = Children.size(); i != e; ++i)
-      if (Children[i].get() == N)
+    for (const TreePatternNodePtr &Child : Children)
+      if (Child.get() == N)
         return true;
     return false;
   }
@@ -826,7 +831,7 @@ public: // Higher level manipulation routines.
   /// SubstituteFormalArguments - Replace the formal arguments in this tree
   /// with actual values specified by ArgMap.
   void
-  SubstituteFormalArguments(std::map<std::string, TreePatternNodePtr> &ArgMap);
+  SubstituteFormalArguments(std::map<StringRef, TreePatternNodePtr> &ArgMap);
 
   /// InlinePatternFragments - If \p T pattern refers to any pattern
   /// fragments, return the set of inlined versions (this can be more than
@@ -1166,9 +1171,9 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return Intrinsics[i];
+    for (const CodeGenIntrinsic &Intrinsic : Intrinsics)
+      if (Intrinsic.TheDef == R)
+        return Intrinsic;
     llvm_unreachable("Unknown intrinsic!");
   }
 
@@ -1261,20 +1266,22 @@ private:
                        ArrayRef<const Record *> InstImpResults,
                        bool ShouldIgnore = false);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
-  void FindPatternInputsAndOutputs(
-      TreePattern &I, TreePatternNodePtr Pat,
-      std::map<std::string, TreePatternNodePtr> &InstInputs,
-      MapVector<std::string, TreePatternNodePtr,
-                std::map<std::string, unsigned>> &InstResults,
-      std::vector<const Record *> &InstImpResults);
+
+  using InstInputsTy = std::map<StringRef, TreePatternNodePtr>;
+  using InstResultsTy =
+      MapVector<StringRef, TreePatternNodePtr, std::map<StringRef, unsigned>>;
+  void FindPatternInputsAndOutputs(TreePattern &I, TreePatternNodePtr Pat,
+                                   InstInputsTy &InstInputs,
+                                   InstResultsTy &InstResults,
+                                   std::vector<const Record *> &InstImpResults);
   unsigned getNewUID();
 };
 
 inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode &N,
                                              TreePattern &TP) const {
   bool MadeChange = false;
-  for (unsigned i = 0, e = TypeConstraints.size(); i != e; ++i)
-    MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
+  for (const SDTypeConstraint &TypeConstraint : TypeConstraints)
+    MadeChange |= TypeConstraint.ApplyTypeConstraint(N, *this, TP);
   return MadeChange;
 }
 

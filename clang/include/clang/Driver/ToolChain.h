@@ -179,7 +179,6 @@ private:
   Tool *getLinkerWrapper() const;
 
   mutable bool SanitizerArgsChecked = false;
-  mutable std::unique_ptr<XRayArgs> XRayArguments;
 
   /// The effective clang triple for the current Job.
   mutable llvm::Triple EffectiveTriple;
@@ -203,10 +202,6 @@ protected:
   ToolChain(const Driver &D, const llvm::Triple &T,
             const llvm::opt::ArgList &Args);
 
-  /// Executes the given \p Executable and returns the stdout.
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  executeToolChainProgram(StringRef Executable) const;
-
   void setTripleEnvironment(llvm::Triple::EnvironmentType Env);
 
   virtual Tool *buildAssembler() const;
@@ -229,9 +224,6 @@ protected:
   static void addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
                                         llvm::opt::ArgStringList &CC1Args,
                                         const Twine &Path);
-  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
-                               llvm::opt::ArgStringList &CC1Args,
-                               const Twine &Path);
   static void addExternCSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
@@ -251,6 +243,9 @@ protected:
   ///@}
 
 public:
+  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
+                               llvm::opt::ArgStringList &CC1Args,
+                               const Twine &Path);
   virtual ~ToolChain();
 
   // Accessors
@@ -323,7 +318,7 @@ public:
 
   SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
 
-  const XRayArgs& getXRayArgs() const;
+  const XRayArgs getXRayArgs(const llvm::opt::ArgList &) const;
 
   // Returns the Arg * that explicitly turned on/off rtti, or nullptr.
   const llvm::opt::Arg *getRTTIArg() const { return CachedRTTIArg; }
@@ -807,7 +802,8 @@ public:
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args) const;
+  getDeviceLibs(const llvm::opt::ArgList &Args,
+                const Action::OffloadKind DeviceOffloadingKind) const;
 
   /// Add the system specific linker arguments to use
   /// for the given HIP runtime library type.

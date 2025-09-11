@@ -162,10 +162,10 @@ private:
 };
 
 std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
-  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  DiagnosticOptions DiagOpts;
   auto DC = std::make_unique<TestDiagnosticConsumer>();
   auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), DiagOpts.get(), DC.get(),
+      *llvm::vfs::getRealFileSystem(), DiagOpts, DC.get(),
       /*ShouldOwnClient=*/false);
 
   auto Inv = std::make_unique<CompilerInvocation>();
@@ -213,7 +213,8 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
       Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());
   Ins->setTarget(TI);
-  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts());
+  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts(),
+                          /*AuxTarget=*/nullptr);
   Ins->createFileManager();
   Ins->createSourceManager(Ins->getFileManager());
   Ins->createPreprocessor(TU_Complete);
@@ -235,7 +236,7 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
   return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
+      CI.getDiagnostics(), ModuleName, CI.getVirtualFileSystemPtr(),
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
       LLVMCtx));
 }

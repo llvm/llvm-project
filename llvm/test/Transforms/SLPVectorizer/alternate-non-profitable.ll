@@ -150,9 +150,9 @@ define <2 x i32> @replace_through_int_casts_ele0_only(i16 %inp, <2 x i16> %dead)
 define <2 x i8> @replace_through_binop_fail_cant_speculate(i8 %inp, <2 x i8> %d, <2 x i8> %any) {
 ; CHECK-LABEL: define <2 x i8> @replace_through_binop_fail_cant_speculate(
 ; CHECK-SAME: i8 [[INP:%.*]], <2 x i8> [[D:%.*]], <2 x i8> [[ANY:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INP]], 5
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i64 0
-; CHECK-NEXT:    [[V:%.*]] = insertelement <2 x i8> [[V0]], i8 [[ADD]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[TMP3]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = add <2 x i8> [[TMP2]], <i8 0, i8 5>
 ; CHECK-NEXT:    [[DIV0:%.*]] = sdiv <2 x i8> splat (i8 -128), [[V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[INP]], 123
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i8> [[DIV0]], i8 [[TMP1]], i64 0

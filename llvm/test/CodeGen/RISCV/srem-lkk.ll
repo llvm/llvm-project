@@ -43,7 +43,7 @@ define i32 @fold_srem_positive_odd(i32 %x) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    sext.w a1, a0
 ; RV64IM-NEXT:    lui a2, 706409
-; RV64IM-NEXT:    addiw a2, a2, 389
+; RV64IM-NEXT:    addi a2, a2, 389
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    srli a1, a1, 32
 ; RV64IM-NEXT:    add a1, a1, a0
@@ -93,7 +93,7 @@ define i32 @fold_srem_positive_even(i32 %x) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    sext.w a1, a0
 ; RV64IM-NEXT:    lui a2, 253241
-; RV64IM-NEXT:    addiw a2, a2, -15
+; RV64IM-NEXT:    addi a2, a2, -15
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    srli a2, a1, 63
 ; RV64IM-NEXT:    srai a1, a1, 40
@@ -141,7 +141,7 @@ define i32 @fold_srem_negative_odd(i32 %x) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    sext.w a1, a0
 ; RV64IM-NEXT:    lui a2, 677296
-; RV64IM-NEXT:    addiw a2, a2, -91
+; RV64IM-NEXT:    addi a2, a2, -91
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    srli a2, a1, 63
 ; RV64IM-NEXT:    srai a1, a1, 40
@@ -182,7 +182,7 @@ define i32 @fold_srem_negative_even(i32 %x) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    lui a1, 1048570
-; RV64I-NEXT:    addiw a1, a1, 1595
+; RV64I-NEXT:    addi a1, a1, 1595
 ; RV64I-NEXT:    call __moddi3
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
@@ -192,7 +192,7 @@ define i32 @fold_srem_negative_even(i32 %x) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    sext.w a1, a0
 ; RV64IM-NEXT:    lui a2, 1036895
-; RV64IM-NEXT:    addiw a2, a2, 999
+; RV64IM-NEXT:    addi a2, a2, 999
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    srli a2, a1, 63
 ; RV64IM-NEXT:    srai a1, a1, 40
@@ -269,7 +269,7 @@ define i32 @combine_srem_sdiv(i32 %x) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    sext.w a1, a0
 ; RV64IM-NEXT:    lui a2, 706409
-; RV64IM-NEXT:    addiw a2, a2, 389
+; RV64IM-NEXT:    addi a2, a2, 389
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    srli a1, a1, 32
 ; RV64IM-NEXT:    add a1, a1, a0

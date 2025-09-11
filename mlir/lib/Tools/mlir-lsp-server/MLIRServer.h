@@ -10,6 +10,7 @@
 #define LIB_MLIR_TOOLS_MLIRLSPSERVER_SERVER_H_
 
 #include "mlir/Support/LLVM.h"
+#include "mlir/Tools/mlir-lsp-server/MlirLspRegistryFunction.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -28,15 +29,14 @@ struct Location;
 struct MLIRConvertBytecodeResult;
 struct Position;
 struct Range;
-class URIForFile;
 
 /// This class implements all of the MLIR related functionality necessary for a
 /// language server. This class allows for keeping the MLIR specific logic
 /// separate from the logic that involves LSP server/client communication.
 class MLIRServer {
 public:
-  /// Construct a new server with the given dialect regitstry.
-  MLIRServer(DialectRegistry &registry);
+  /// Construct a new server with the given dialect registry function.
+  MLIRServer(DialectRegistryFn registry_fn);
   ~MLIRServer();
 
   /// Add or update the document, with the provided `version`, at the given URI.

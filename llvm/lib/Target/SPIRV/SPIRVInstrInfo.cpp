@@ -12,18 +12,19 @@
 
 #include "SPIRVInstrInfo.h"
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "SPIRVGenInstrInfo.inc"
 
 using namespace llvm;
 
-SPIRVInstrInfo::SPIRVInstrInfo() : SPIRVGenInstrInfo() {}
+SPIRVInstrInfo::SPIRVInstrInfo(const SPIRVSubtarget &STI)
+    : SPIRVGenInstrInfo(STI) {}
 
 bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {

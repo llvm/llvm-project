@@ -333,8 +333,8 @@ ThreadSafeTrieRawHashMapBase::ThreadSafeTrieRawHashMapBase(
     std::optional<size_t> NumRootBits, std::optional<size_t> NumSubtrieBits)
     : ContentAllocSize(ContentAllocSize), ContentAllocAlign(ContentAllocAlign),
       ContentOffset(ContentOffset),
-      NumRootBits(NumRootBits ? *NumRootBits : DefaultNumRootBits),
-      NumSubtrieBits(NumSubtrieBits ? *NumSubtrieBits : DefaultNumSubtrieBits),
+      NumRootBits(NumRootBits.value_or(DefaultNumRootBits)),
+      NumSubtrieBits(NumSubtrieBits.value_or(DefaultNumSubtrieBits)),
       ImplPtr(nullptr) {
   // Assertion checks for reasonable configuration. The settings below are not
   // hard limits on most platforms, but a reasonable configuration should fall

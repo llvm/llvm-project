@@ -90,3 +90,34 @@ loop:
 exit:
     ret double %f2
 }
+
+define double @foo2(double %0, double %1, i64 %n, i64 %fcsr) strictfp {
+; CHECK-LABEL: foo2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.d.x fa5, zero
+; CHECK-NEXT:  .LBB2_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    csrwi fcsr, 0
+; CHECK-NEXT:    fadd.d fa5, fa5, fa0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    fscsr a1
+; CHECK-NEXT:    fadd.d fa5, fa5, fa1
+; CHECK-NEXT:    beqz a0, .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    fmv.d fa0, fa5
+; CHECK-NEXT:    ret
+entry:
+    br label %loop
+loop:
+    %cnt = phi i64 [0, %entry], [%cnt_inc, %loop]
+    %acc = phi double [0.0, %entry], [%f2, %loop]
+    call void @llvm.set.fpenv(i64 0) strictfp
+    %f1 = call double @llvm.experimental.constrained.fadd.f64(double %acc, double %0, metadata !"round.dynamic", metadata !"fpexcept.ignore") strictfp
+    call void @llvm.set.fpenv(i64 %fcsr) strictfp
+    %f2 = call double @llvm.experimental.constrained.fadd.f64(double %f1, double %1, metadata !"round.dynamic", metadata !"fpexcept.ignore") strictfp
+    %cnt_inc = add i64 %cnt, 1
+    %cond = icmp eq i64 %cnt_inc, %n
+    br i1 %cond, label %loop, label %exit
+exit:
+    ret double %f2
+}

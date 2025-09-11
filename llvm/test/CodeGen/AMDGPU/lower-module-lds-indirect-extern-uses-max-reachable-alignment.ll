@@ -13,12 +13,22 @@
 @dynamic_shared8 = external addrspace(3) global [0 x i64], align 8
 
 ; CHECK: %llvm.amdgcn.module.lds.t = type { i32 }
+; CHECK: @dynamic_kernel_only = external addrspace(3) global [0 x double]
+; CHECK: @dynamic_shared8 = external addrspace(3) global [0 x i64], align 8
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 4, !absolute_symbol !0
+; CHECK: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
 
 ; Alignment of these must be the maximum of the alignment of the reachable symbols
+; CHECK: @llvm.amdgcn.expect_align1.dynlds = external addrspace(3) global [0 x i8], align 1, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.expect_align2.dynlds = external addrspace(3) global [0 x i8], align 2, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.expect_align4.dynlds = external addrspace(3) global [0 x i8], align 4, !absolute_symbol !1
+; CHECK: @llvm.amdgcn.expect_align8.dynlds = external addrspace(3) global [0 x i8], align 8, !absolute_symbol !0
 
 ; Align 4 and symbol at address [4 5) as module.lds is reachable
+; CHECK: @llvm.amdgcn.expect_max_of_2_and_4.dynlds = external addrspace(3) global [0 x i8], align 4, !absolute_symbol !1
 
 ; Builds a lookup table out of the newly created (suffixed .dynlds) variables in kernel.id order
+; CHECK: @llvm.amdgcn.dynlds.offset.table = internal addrspace(4) constant [5 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.expect_align1.dynlds to i32), i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.expect_align2.dynlds to i32), i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.expect_align4.dynlds to i32), i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.expect_align8.dynlds to i32), i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.expect_max_of_2_and_4.dynlds to i32)]
 
 
 
@@ -103,8 +113,7 @@ define void @use_shared8() #0 {
 
 ; The kernels are annotated with kernel.id and llvm.donothing use of the corresponding variable
 define amdgpu_kernel void @expect_align1() {
-; CHECK-LABEL: define amdgpu_kernel void @expect_align1(
-; CHECK-SAME: ) {{.*}}.amdgcn.lds.kernel.id [[META3:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @expect_align1() !llvm.amdgcn.lds.kernel.id !2 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_align1.dynlds) ]
 ; CHECK-NEXT:    call void @use_shared1()
 ; CHECK-NEXT:    ret void
@@ -114,8 +123,7 @@ define amdgpu_kernel void @expect_align1() {
 }
 
 define amdgpu_kernel void @expect_align2() {
-; CHECK-LABEL: define amdgpu_kernel void @expect_align2(
-; CHECK-SAME: ) {{.*}}.amdgcn.lds.kernel.id [[META4:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @expect_align2() !llvm.amdgcn.lds.kernel.id !3 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_align2.dynlds) ]
 ; CHECK-NEXT:    call void @use_shared2()
 ; CHECK-NEXT:    ret void
@@ -126,7 +134,7 @@ define amdgpu_kernel void @expect_align2() {
 
 define amdgpu_kernel void @expect_align4() {
 ; CHECK-LABEL: define amdgpu_kernel void @expect_align4(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {{.*}}.amdgcn.lds.kernel.id [[META5:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id !4 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_align4.dynlds) ]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @use_shared4()
@@ -138,8 +146,7 @@ define amdgpu_kernel void @expect_align4() {
 
 ; Use dynamic_shared directly too.
 define amdgpu_kernel void @expect_align8() {
-; CHECK-LABEL: define amdgpu_kernel void @expect_align8(
-; CHECK-SAME: ) {{.*}}.amdgcn.lds.kernel.id [[META6:![0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @expect_align8() !llvm.amdgcn.lds.kernel.id !5 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_align8.dynlds) ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i64], ptr addrspace(3) @dynamic_shared8, i32 0, i32 9
 ; CHECK-NEXT:    store i64 3, ptr addrspace(3) [[ARRAYIDX]], align 8
@@ -155,7 +162,7 @@ define amdgpu_kernel void @expect_align8() {
 ; Note: use_shared4 uses module.lds so this will allocate at offset 4
 define amdgpu_kernel void @expect_max_of_2_and_4() {
 ; CHECK-LABEL: define amdgpu_kernel void @expect_max_of_2_and_4(
-; CHECK-SAME: ) #[[ATTR1]] {{.*}}.amdgcn.lds.kernel.id [[META7:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1]] !llvm.amdgcn.lds.kernel.id !6 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_max_of_2_and_4.dynlds) ]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @use_shared2()
@@ -171,8 +178,10 @@ define amdgpu_kernel void @expect_max_of_2_and_4() {
 attributes #0 = { noinline }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+; CHECK: declare void @llvm.donothing() #2
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+; CHECK: declare noundef i32 @llvm.amdgcn.lds.kernel.id() #3
 
 ; CHECK: attributes #0 = { noinline }
 ; CHECK: attributes #1 = { "amdgpu-lds-size"="4,4" }
@@ -181,8 +190,8 @@ attributes #0 = { noinline }
 
 ; CHECK: !0 = !{i32 0, i32 1}
 ; CHECK: !1 = !{i32 4, i32 5}
-; CHECK: !3 = !{i32 0}
-; CHECK: !4 = !{i32 1}
-; CHECK: !5 = !{i32 2}
-; CHECK: !6 = !{i32 3}
-; CHECK: !7 = !{i32 4}
+; CHECK: !2 = !{i32 0}
+; CHECK: !3 = !{i32 1}
+; CHECK: !4 = !{i32 2}
+; CHECK: !5 = !{i32 3}
+; CHECK: !6 = !{i32 4}

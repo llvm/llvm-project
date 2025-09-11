@@ -283,3 +283,23 @@ func.func @test_10_negative() -> (i32) {
   %0:2 = func.call @private_1() : () -> (i32, i32)
   return %0#0 : i32
 }
+
+// -----
+
+// Test that we correctly set a liveness value for operations in dead block.
+// These won't be visited by the dataflow framework so the analysis need to
+// explicitly manage them.
+// CHECK-LABEL: test_tag: dead_block_cmpi:
+// CHECK-NEXT: operand #0: not live
+// CHECK-NEXT: operand #1: not live
+// CHECK-NEXT: result #0: not live
+func.func @dead_block() {
+  %false = arith.constant false
+  %zero = arith.constant 0 : i64
+  cf.cond_br %false, ^bb1, ^bb4
+  ^bb1:
+    %3 = arith.cmpi eq, %zero, %zero  {tag = "dead_block_cmpi"} : i64
+    cf.br ^bb1
+  ^bb4:
+    return
+}

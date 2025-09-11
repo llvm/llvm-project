@@ -29,3 +29,11 @@ subroutine foo() bind(c, name="x6")
 end subroutine
 subroutine foo() bind(c, name="x7")
 end subroutine
+
+subroutine entries()
+
+entry e1() bind(C, name="e")
+
+!ERROR: Two entities have the same global name 'e'
+entry e2() bind(C, name="e")
+end subroutine

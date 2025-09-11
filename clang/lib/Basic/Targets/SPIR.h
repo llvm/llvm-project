@@ -46,10 +46,11 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0,  // ptr32_sptr
     0,  // ptr32_uptr
     0,  // ptr64
-    0,  // hlsl_groupshared
-    2,  // hlsl_constant
+    3,  // hlsl_groupshared
+    12, // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -81,10 +82,11 @@ static const unsigned SPIRDefIsGenMap[] = {
     0,  // ptr32_sptr
     0,  // ptr32_uptr
     0,  // ptr64
-    0,  // hlsl_groupshared
+    3,  // hlsl_groupshared
     0,  // hlsl_constant
     10, // hlsl_private
     11, // hlsl_device
+    7,  // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -104,7 +106,7 @@ protected:
     LongWidth = LongAlign = 64;
     AddrSpaceMap = &SPIRDefIsPrivMap;
     UseAddrSpaceMapMangling = true;
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     // Define available target features
     // These must be defined in sorted order!
@@ -191,7 +193,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_OpenCLKernel) ? CCCR_OK
+    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
                                                             : CCCR_Warning;
   }
 
@@ -203,8 +205,9 @@ public:
     AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;
   }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
     // FIXME: SYCL specification considers unannotated pointers and references
     // to be pointing to the generic address space. See section 5.9.3 of
     // SYCL 2020 specification.
@@ -216,8 +219,11 @@ public:
     setAddressSpaceMap(
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
         // The address mapping from HIP/CUDA language for device code is only
-        // defined for SPIR-V.
-        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
+        // defined for SPIR-V, and all Intel SPIR-V code should have the default
+        // AS as generic.
+        (getTriple().isSPIRV() &&
+         (Opts.CUDAIsDevice ||
+          getTriple().getVendor() == llvm::Triple::Intel)));
   }
 
   void setSupportedOpenCLOpts() override {
@@ -261,6 +267,9 @@ public:
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    // SPIR32 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -278,6 +287,9 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    // SPIR64 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -292,6 +304,8 @@ public:
       : BaseSPIRTargetInfo(Triple, Opts) {
     assert(Triple.isSPIRV() && "Invalid architecture for SPIR-V.");
   }
+
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spirv";
@@ -320,8 +334,6 @@ public:
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
                     "v256:256-v512:512-v1024:1024-n8:16:32:64-G10");
   }
-
-  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -381,8 +393,9 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    BaseSPIRVTargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
     // opencl_constant will map to UniformConstant in SPIR-V
     if (Opts.OpenCL)
       ConstantAS = LangAS::opencl_constant;
@@ -417,7 +430,7 @@ public:
     BFloat16Width = BFloat16Align = 16;
     BFloat16Format = &llvm::APFloat::BFloat();
 
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     HalfArgsAndReturns = true;
 
@@ -427,6 +440,10 @@ public:
   bool hasBFloat16Type() const override { return true; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
 
   bool initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                       StringRef,
@@ -444,8 +461,9 @@ public:
 
   void setAuxTarget(const TargetInfo *Aux) override;
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }

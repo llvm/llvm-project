@@ -25,7 +25,7 @@ define i64 @test_foldable_live_in_via_scev() {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul <2 x i64> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 97, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
@@ -36,9 +36,9 @@ define i64 @test_foldable_live_in_via_scev() {
 ; CHECK-NEXT:    [[MUL]] = mul nsw i64 [[RED]], [[ADD]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[MUL]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[MUL]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
 entry:
@@ -62,7 +62,7 @@ exit:
 ; Test case for https://github.com/llvm/llvm-project/issues/109528.
 define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-LABEL: define i64 @second_lshr_operand_zero_via_scev() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[EXT_0:%.*]] = sext i8 0 to i32
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -77,14 +77,12 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <2 x i32> [[VEC_IND2]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[STEP_ADD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[STEP_ADD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[VEC_IND2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i32> [[STEP_ADD4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i32> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[TMP5]] to <2 x i64>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP0]], <2 x i64> [[TMP2]], <2 x i64> [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[TMP3]], <2 x i64> [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP0]], <2 x i64> zeroinitializer, <2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> zeroinitializer, <2 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP10]] = or <2 x i64> [[TMP8]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11]] = or <2 x i64> [[TMP9]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -95,14 +93,12 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i64> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOPS:.*]]
 ; CHECK:       [[LOOPS]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOPS]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOPS]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOPS]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOPS]] ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[IV]] to i32

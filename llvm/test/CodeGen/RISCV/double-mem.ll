@@ -104,48 +104,48 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fadd.d fa0, fa0, fa1
 ; CHECKIFD-NEXT:    lui a0, %hi(G)
-; CHECKIFD-NEXT:    fld fa5, %lo(G)(a0)
-; CHECKIFD-NEXT:    addi a1, a0, %lo(G)
-; CHECKIFD-NEXT:    fsd fa0, %lo(G)(a0)
-; CHECKIFD-NEXT:    fld fa5, 72(a1)
-; CHECKIFD-NEXT:    fsd fa0, 72(a1)
+; CHECKIFD-NEXT:    addi a0, a0, %lo(G)
+; CHECKIFD-NEXT:    fld fa5, 0(a0)
+; CHECKIFD-NEXT:    fsd fa0, 0(a0)
+; CHECKIFD-NEXT:    fld fa5, 72(a0)
+; CHECKIFD-NEXT:    fsd fa0, 72(a0)
 ; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: fld_fsd_global:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    lui a4, %hi(G)
+; RV32IZFINXZDINX-NEXT:    addi a4, a4, %lo(G)
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    lw zero, %lo(G)(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, %lo(G+4)(a4)
-; RV32IZFINXZDINX-NEXT:    addi a2, a4, %lo(G)
-; RV32IZFINXZDINX-NEXT:    sw a0, %lo(G)(a4)
-; RV32IZFINXZDINX-NEXT:    sw a1, %lo(G+4)(a4)
-; RV32IZFINXZDINX-NEXT:    lw zero, 72(a2)
-; RV32IZFINXZDINX-NEXT:    lw zero, 76(a2)
-; RV32IZFINXZDINX-NEXT:    sw a0, 72(a2)
-; RV32IZFINXZDINX-NEXT:    sw a1, 76(a2)
+; RV32IZFINXZDINX-NEXT:    lw zero, 0(a4)
+; RV32IZFINXZDINX-NEXT:    lw zero, 4(a4)
+; RV32IZFINXZDINX-NEXT:    sw a0, 0(a4)
+; RV32IZFINXZDINX-NEXT:    sw a1, 4(a4)
+; RV32IZFINXZDINX-NEXT:    lw zero, 72(a4)
+; RV32IZFINXZDINX-NEXT:    lw zero, 76(a4)
+; RV32IZFINXZDINX-NEXT:    sw a0, 72(a4)
+; RV32IZFINXZDINX-NEXT:    sw a1, 76(a4)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fld_fsd_global:
 ; RV64IZFINXZDINX:       # %bb.0:
 ; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, a1
 ; RV64IZFINXZDINX-NEXT:    lui a1, %hi(G)
-; RV64IZFINXZDINX-NEXT:    ld zero, %lo(G)(a1)
-; RV64IZFINXZDINX-NEXT:    addi a2, a1, %lo(G)
-; RV64IZFINXZDINX-NEXT:    sd a0, %lo(G)(a1)
-; RV64IZFINXZDINX-NEXT:    ld zero, 72(a2)
-; RV64IZFINXZDINX-NEXT:    sd a0, 72(a2)
+; RV64IZFINXZDINX-NEXT:    addi a1, a1, %lo(G)
+; RV64IZFINXZDINX-NEXT:    ld zero, 0(a1)
+; RV64IZFINXZDINX-NEXT:    sd a0, 0(a1)
+; RV64IZFINXZDINX-NEXT:    ld zero, 72(a1)
+; RV64IZFINXZDINX-NEXT:    sd a0, 72(a1)
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32IZFINXZDINXZILSD-LABEL: fld_fsd_global:
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    lui a4, %hi(G)
+; RV32IZFINXZDINXZILSD-NEXT:    addi a4, a4, %lo(G)
 ; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINXZILSD-NEXT:    ld a2, %lo(G)(a4)
-; RV32IZFINXZDINXZILSD-NEXT:    addi a2, a4, %lo(G)
-; RV32IZFINXZDINXZILSD-NEXT:    sd a0, %lo(G)(a4)
-; RV32IZFINXZDINXZILSD-NEXT:    ld a4, 72(a2)
-; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 72(a2)
+; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 0(a4)
+; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 0(a4)
+; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 72(a4)
+; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 72(a4)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
 ; Use %a and %b in an FP op to ensure floating point registers are used, even
 ; for the soft float ABI
@@ -400,5 +400,36 @@ define dso_local void @fsd_trunc(ptr %a, double %b) nounwind noinline optnone {
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
   %1 = fptrunc double %b to float
   store float %1, ptr %a, align 4
+  ret void
+}
+
+define dso_local void @store_zero(ptr %a) {
+; RV32IFD-LABEL: store_zero:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fsd fa5, 0(a0)
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: store_zero:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    sd zero, 0(a0)
+; RV64IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: store_zero:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    sw zero, 0(a0)
+; RV32IZFINXZDINX-NEXT:    sw zero, 4(a0)
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: store_zero:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    sd zero, 0(a0)
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32IZFINXZDINXZILSD-LABEL: store_zero:
+; RV32IZFINXZDINXZILSD:       # %bb.0:
+; RV32IZFINXZDINXZILSD-NEXT:    sd zero, 0(a0)
+; RV32IZFINXZDINXZILSD-NEXT:    ret
+  store double 0.0, ptr %a
   ret void
 }

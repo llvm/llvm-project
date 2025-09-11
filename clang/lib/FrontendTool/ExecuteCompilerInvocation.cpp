@@ -26,7 +26,6 @@
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
-#include "llvm/Option/Option.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -181,6 +180,9 @@ CreateFrontendAction(CompilerInstance &CI) {
     return nullptr;
 
   const FrontendOptions &FEOpts = CI.getFrontendOpts();
+
+  if (CI.getLangOpts().HLSL)
+    Act = std::make_unique<HLSLFrontendAction>(std::move(Act));
 
   if (FEOpts.FixAndRecompile) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));

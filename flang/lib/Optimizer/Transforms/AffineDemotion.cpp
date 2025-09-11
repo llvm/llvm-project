@@ -60,9 +60,10 @@ public:
     if (!maybeExpandedMap)
       return failure();
 
-    auto coorOp = rewriter.create<fir::CoordinateOp>(
-        op.getLoc(), fir::ReferenceType::get(op.getResult().getType()),
-        adaptor.getMemref(), *maybeExpandedMap);
+    auto coorOp = fir::CoordinateOp::create(
+        rewriter, op.getLoc(),
+        fir::ReferenceType::get(op.getResult().getType()), adaptor.getMemref(),
+        *maybeExpandedMap);
 
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, coorOp.getResult());
     return success();
@@ -83,8 +84,9 @@ public:
     if (!maybeExpandedMap)
       return failure();
 
-    auto coorOp = rewriter.create<fir::CoordinateOp>(
-        op.getLoc(), fir::ReferenceType::get(op.getValueToStore().getType()),
+    auto coorOp = fir::CoordinateOp::create(
+        rewriter, op.getLoc(),
+        fir::ReferenceType::get(op.getValueToStore().getType()),
         adaptor.getMemref(), *maybeExpandedMap);
     rewriter.replaceOpWithNewOp<fir::StoreOp>(op, adaptor.getValue(),
                                               coorOp.getResult());
@@ -115,10 +117,7 @@ public:
                                                       op.getValue());
           return success();
         }
-      rewriter.startOpModification(op->getParentOp());
-      op.getResult().replaceAllUsesWith(op.getValue());
-      rewriter.finalizeOpModification(op->getParentOp());
-      rewriter.eraseOp(op);
+      rewriter.replaceOp(op, op.getValue());
     }
     return success();
   }

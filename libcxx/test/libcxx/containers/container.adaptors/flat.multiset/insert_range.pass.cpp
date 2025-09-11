@@ -14,26 +14,29 @@
 // As an extension, libc++ flat containers support inserting a non forward range into
 // a pre-C++23 container that doesn't provide insert_range(...), since many containers
 // out there are in that situation.
-// https://github.com/llvm/llvm-project/issues/136656
+// https://https://llvm.org/PR136656
 
+#include <algorithm>
+#include <cassert>
 #include <flat_set>
 #include <ranges>
 #include <sstream>
 #include <vector>
 
-#include "MinSequenceContainer.h"
+#include "../flat_helpers.h"
 #include "test_macros.h"
 
 void test() {
-  MinSequenceContainer<int> v;
+  NotQuiteSequenceContainer<int> v;
   std::flat_multiset s(v);
   std::istringstream ints("0 1 1 0");
   auto r = std::ranges::subrange(std::istream_iterator<int>(ints), std::istream_iterator<int>()) |
            std::views::transform([](int i) { return i * i; });
   static_assert(
-      ![](auto& t) { return requires { t.insert_range(r); }; }(v),
+      ![](auto& t) { return requires { t.insert_range(t.end(), r); }; }(v),
       "This test is to test the case where the underlying container does not provide insert_range");
   s.insert_range(r);
+  assert(std::ranges::equal(s, std::vector<int>{0, 0, 1, 1}));
 }
 
 int main(int, char**) {

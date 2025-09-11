@@ -35,7 +35,7 @@ public:
                          const SrcMgr::ContentCache &ContentCache,
                          llvm::vfs::InMemoryFileSystem &InMemoryFs) {
     // Return if we are not interested in the contents of this file.
-    if (!FilesToRecord.count(File))
+    if (!FilesToRecord.contains(File))
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
@@ -49,8 +49,8 @@ public:
     FilesToRecord.erase(File);
   }
 
-  /// Makes sure we have contents for all the files we were interested in. Ideally
-  /// `FilesToRecord` should be empty.
+  /// Makes sure we have contents for all the files we were interested in.
+  /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
       for (auto FileEntry : FilesToRecord)
@@ -71,7 +71,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
       // Forward the new diagnostics to the original DiagnosticConsumer.
-      Diags(new DiagnosticIDs, new DiagnosticOptions,
+      Diags(DiagnosticIDs::create(), DiagOpts,
             new ForwardingDiagnosticConsumer(Compiler.getDiagnosticClient())),
       LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular

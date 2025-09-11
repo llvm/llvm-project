@@ -85,7 +85,7 @@ const char *getEdgeKindName(Edge::Kind R) {
   case RequestTLSDescEntryAndTransformToPageOffset12:
     return "RequestTLSDescEntryAndTransformToPageOffset12";
   default:
-    return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
+    return getGenericEdgeKindName(R);
   }
 }
 

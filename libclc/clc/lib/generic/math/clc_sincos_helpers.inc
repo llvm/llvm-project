@@ -175,13 +175,13 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
 
   __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7, c0, c1;
 
-  FULL_MUL(xm, b0, c0, p0);
-  FULL_MAD(xm, b1, c0, c1, p1);
-  FULL_MAD(xm, b2, c1, c0, p2);
-  FULL_MAD(xm, b3, c0, c1, p3);
-  FULL_MAD(xm, b4, c1, c0, p4);
-  FULL_MAD(xm, b5, c0, c1, p5);
-  FULL_MAD(xm, b6, c1, p7, p6);
+  __CLC_FULL_MUL(xm, b0, c0, p0);
+  __CLC_FULL_MAD(xm, b1, c0, c1, p1);
+  __CLC_FULL_MAD(xm, b2, c1, c0, p2);
+  __CLC_FULL_MAD(xm, b3, c0, c1, p3);
+  __CLC_FULL_MAD(xm, b4, c1, c0, p4);
+  __CLC_FULL_MAD(xm, b5, c0, c1, p5);
+  __CLC_FULL_MAD(xm, b6, c1, p7, p6);
 
   __CLC_UINTN fbits = (__CLC_UINTN)224 + (__CLC_UINTN)23 - __CLC_AS_UINTN(xe);
 

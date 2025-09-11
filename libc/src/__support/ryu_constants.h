@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_RYU_CONSTANTS_H
 #define LLVM_LIBC_SRC___SUPPORT_RYU_CONSTANTS_H
 
+#include "hdr/stdint_proxy.h"
 #include <stddef.h>
-#include <stdint.h>
 
 constexpr size_t TABLE_SHIFT_CONST = 120;
 constexpr size_t IDX_SIZE = 16;

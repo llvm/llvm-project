@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/stdlib/memalignment.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 TEST(LlvmLibcMemAlignmentTest, NullPointer) {
   void *ptr = nullptr;
