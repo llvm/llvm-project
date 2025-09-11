@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolEvents.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
+
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -19,9 +23,8 @@ namespace lldb_dap {
 //
 // Clients should only call this request if the corresponding capability
 //  supportsWriteMemoryRequest is true.
-llvm::Expected<protocol::WriteMemoryResponseBody>
-WriteMemoryRequestHandler::Run(
-    const protocol::WriteMemoryArguments &args) const {
+llvm::Expected<WriteMemoryResponseBody>
+WriteMemoryRequestHandler::Run(const WriteMemoryArguments &args) const {
   const lldb::addr_t address = args.memoryReference + args.offset;
 
   lldb::SBProcess process = dap.target.GetProcess();
@@ -91,8 +94,13 @@ WriteMemoryRequestHandler::Run(
   if (bytes_written == 0) {
     return llvm::make_error<DAPError>(write_error.GetCString());
   }
-  protocol::WriteMemoryResponseBody response;
+  WriteMemoryResponseBody response;
   response.bytesWritten = bytes_written;
+
+  // Also send invalidated event to signal client that some things
+  // (e.g. variables) can be changed.
+  SendInvalidatedEvent(dap, {InvalidatedEventBody::eAreaAll});
+
   return response;
 }
 
