@@ -994,8 +994,8 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // trunc ( OP i8 C1, V1) to i1 -> icmp ugt V1, cttz(C1) - 1 iff (C1) is
   // negative power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_NegatedPower2(C1), m_Value(V1)))) {
-    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero() - 1);
-    Value *Icmp = Builder.CreateICmpUGT(V1, Right);
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
+    Value *Icmp = Builder.CreateICmpUGE(V1, Right);
     return replaceInstUsesWith(Trunc, Icmp);
   }
 
