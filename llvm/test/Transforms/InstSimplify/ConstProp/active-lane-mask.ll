@@ -307,6 +307,39 @@ entry:
   ret <4 x float> %var33
 }
 
+define <vscale x 4 x i1> @nxv4i1_12_12() {
+; CHECK-LABEL: @nxv4i1_12_12(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
+;
+entry:
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 12, i32 12)
+  ret <vscale x 4 x i1> %mask
+}
+
+define <vscale x 4 x i1> @nxv4i1_8_4() {
+; CHECK-LABEL: @nxv4i1_8_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
+;
+entry:
+  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 8, i32 4)
+  ret <vscale x 4 x i1> %mask
+}
+
+define <vscale x 16 x i1> @nxv16i1_0_0() {
+; CHECK-LABEL: @nxv16i1_0_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 0)
+  ret <vscale x 16 x i1> %mask
+}
+
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
+
+declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32)
+declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64, i64)

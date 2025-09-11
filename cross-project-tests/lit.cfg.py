@@ -116,7 +116,7 @@ def configure_dexter_substitutions():
     dexter_path = os.path.join(
         config.cross_project_tests_src_root, "debuginfo-tests", "dexter", "dexter.py"
     )
-    tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test'))
+    tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test -v'))
     if lldb_dap_path is not None:
         tools.append(
             ToolSubst(
@@ -167,7 +167,7 @@ def configure_dexter_substitutions():
             '"{}"'.format(sys.executable),
             '"{}"'.format(dexter_path),
             "test",
-            "--fail-lt 1.0 -w",
+            "--fail-lt 1.0 -w -v",
             "--debugger",
             dexter_regression_test_debugger,
             dexter_regression_test_additional_flags,
