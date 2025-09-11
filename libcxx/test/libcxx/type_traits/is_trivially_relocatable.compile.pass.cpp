@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// With PFP we return different values for __libcpp_is_trivially_relocatable.
+// UNSUPPORTED: pfp
+
 #include <__type_traits/is_trivially_relocatable.h>
 #include <array>
 #include <deque>
@@ -24,12 +27,6 @@
 
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <locale>
-#endif
-
-#if defined(__POINTER_FIELD_PROTECTION__)
-constexpr bool pfp_disabled = false;
-#else
-constexpr bool pfp_disabled = true;
 #endif
 
 static_assert(std::__libcpp_is_trivially_relocatable<char>::value, "");
@@ -74,8 +71,8 @@ static_assert(!std::__libcpp_is_trivially_relocatable<NonTrivialDestructor>::val
 // ----------------------
 
 // __split_buffer
-static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<int> >::value == pfp_disabled, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<NotTriviallyCopyable> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<int> >::value, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<NotTriviallyCopyable> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::__split_buffer<int, test_allocator<int> > >::value, "");
 
 // standard library types
@@ -88,7 +85,7 @@ static_assert(std::__libcpp_is_trivially_relocatable<std::array<std::unique_ptr<
 
 static_assert(std::__libcpp_is_trivially_relocatable<std::array<int, 1> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::array<NotTriviallyCopyable, 1> >::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::array<std::unique_ptr<int>, 1> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::array<std::unique_ptr<int>, 1> >::value, "");
 
 // basic_string
 #if !__has_feature(address_sanitizer) || !_LIBCPP_INSTRUMENTED_WITH_ASAN
@@ -103,17 +100,17 @@ struct NotTriviallyRelocatableCharTraits : constexpr_char_traits<T> {
 };
 
 static_assert(std::__libcpp_is_trivially_relocatable<
-                  std::basic_string<char, std::char_traits<char>, std::allocator<char> > >::value == pfp_disabled,
+                  std::basic_string<char, std::char_traits<char>, std::allocator<char> > >::value,
               "");
 static_assert(std::__libcpp_is_trivially_relocatable<
-                  std::basic_string<char, NotTriviallyRelocatableCharTraits<char>, std::allocator<char> > >::value == pfp_disabled,
+                  std::basic_string<char, NotTriviallyRelocatableCharTraits<char>, std::allocator<char> > >::value,
               "");
 static_assert(std::__libcpp_is_trivially_relocatable<
-                  std::basic_string<MyChar, constexpr_char_traits<MyChar>, std::allocator<MyChar> > >::value == pfp_disabled,
+                  std::basic_string<MyChar, constexpr_char_traits<MyChar>, std::allocator<MyChar> > >::value,
               "");
 static_assert(
     std::__libcpp_is_trivially_relocatable<
-        std::basic_string<MyChar, NotTriviallyRelocatableCharTraits<MyChar>, std::allocator<MyChar> > >::value == pfp_disabled,
+        std::basic_string<MyChar, NotTriviallyRelocatableCharTraits<MyChar>, std::allocator<MyChar> > >::value,
     "");
 static_assert(!std::__libcpp_is_trivially_relocatable<
                   std::basic_string<char, std::char_traits<char>, test_allocator<char> > >::value,
@@ -125,21 +122,21 @@ static_assert(
 #endif
 
 // deque
-static_assert(std::__libcpp_is_trivially_relocatable<std::deque<int> >::value == pfp_disabled, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::deque<NotTriviallyCopyable> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::deque<int> >::value, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::deque<NotTriviallyCopyable> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::deque<int, test_allocator<int> > >::value, "");
 
 // exception_ptr
 #ifndef _LIBCPP_ABI_MICROSOFT // FIXME: Is this also the case on windows?
-static_assert(std::__libcpp_is_trivially_relocatable<std::exception_ptr>::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::exception_ptr>::value, "");
 #endif
 
 // expected
 #if TEST_STD_VER >= 23
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<int, int> >::value == pfp_disabled);
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<std::unique_ptr<int>, int>>::value == pfp_disabled);
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<int, std::unique_ptr<int>>>::value == pfp_disabled);
-static_assert(std::__libcpp_is_trivially_relocatable<std::expected<std::unique_ptr<int>, std::unique_ptr<int>>>::value == pfp_disabled);
+static_assert(std::__libcpp_is_trivially_relocatable<std::expected<int, int> >::value);
+static_assert(std::__libcpp_is_trivially_relocatable<std::expected<std::unique_ptr<int>, int>>::value);
+static_assert(std::__libcpp_is_trivially_relocatable<std::expected<int, std::unique_ptr<int>>>::value);
+static_assert(std::__libcpp_is_trivially_relocatable<std::expected<std::unique_ptr<int>, std::unique_ptr<int>>>::value);
 
 static_assert(!std::__libcpp_is_trivially_relocatable<std::expected<int, NotTriviallyCopyable>>::value);
 static_assert(!std::__libcpp_is_trivially_relocatable<std::expected<NotTriviallyCopyable, int>>::value);
@@ -149,42 +146,42 @@ static_assert(
 
 // locale
 #ifndef TEST_HAS_NO_LOCALIZATION
-static_assert(std::__libcpp_is_trivially_relocatable<std::locale>::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::locale>::value, "");
 #endif
 
 // optional
 #if TEST_STD_VER >= 17
 static_assert(std::__libcpp_is_trivially_relocatable<std::optional<int>>::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::optional<NotTriviallyCopyable>>::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::optional<std::unique_ptr<int>>>::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::optional<std::unique_ptr<int>>>::value, "");
 #endif // TEST_STD_VER >= 17
 
 // pair
-static_assert(std::__libcpp_is_trivially_relocatable<std::pair<int, int> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::pair<int, int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::pair<NotTriviallyCopyable, int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::pair<int, NotTriviallyCopyable> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::pair<NotTriviallyCopyable, NotTriviallyCopyable> >::value,
               "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::pair<std::unique_ptr<int>, std::unique_ptr<int> > >::value == pfp_disabled,
+static_assert(std::__libcpp_is_trivially_relocatable<std::pair<std::unique_ptr<int>, std::unique_ptr<int> > >::value,
               "");
 
 // shared_ptr
-static_assert(std::__libcpp_is_trivially_relocatable<std::shared_ptr<NotTriviallyCopyable> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::shared_ptr<NotTriviallyCopyable> >::value, "");
 
 // tuple
 #if TEST_STD_VER >= 11
 static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<> >::value, "");
 
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<int> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<NotTriviallyCopyable> >::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<std::unique_ptr<int> > >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<std::unique_ptr<int> > >::value, "");
 
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<int, int> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<int, int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<NotTriviallyCopyable, int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<int, NotTriviallyCopyable> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::tuple<NotTriviallyCopyable, NotTriviallyCopyable> >::value,
               "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<std::unique_ptr<int>, std::unique_ptr<int> > >::value == pfp_disabled,
+static_assert(std::__libcpp_is_trivially_relocatable<std::tuple<std::unique_ptr<int>, std::unique_ptr<int> > >::value,
               "");
 #endif // TEST_STD_VER >= 11
 
@@ -209,9 +206,9 @@ struct NotTriviallyRelocatablePointer {
   void operator()(T*);
 };
 
-static_assert(std::__libcpp_is_trivially_relocatable<std::unique_ptr<int> >::value == pfp_disabled, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::unique_ptr<NotTriviallyCopyable> >::value == pfp_disabled, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::unique_ptr<int[]> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::unique_ptr<int> >::value, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::unique_ptr<NotTriviallyCopyable> >::value, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::unique_ptr<int[]> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::unique_ptr<int, NotTriviallyRelocatableDeleter> >::value,
               "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::unique_ptr<int[], NotTriviallyRelocatableDeleter> >::value,
@@ -225,23 +222,23 @@ static_assert(!std::__libcpp_is_trivially_relocatable<std::unique_ptr<int[], Not
 #if TEST_STD_VER >= 17
 static_assert(std::__libcpp_is_trivially_relocatable<std::variant<int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<NotTriviallyCopyable> >::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::variant<std::unique_ptr<int> > >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::variant<std::unique_ptr<int> > >::value, "");
 
 static_assert(std::__libcpp_is_trivially_relocatable<std::variant<int, int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<NotTriviallyCopyable, int> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<int, NotTriviallyCopyable> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::variant<NotTriviallyCopyable, NotTriviallyCopyable> >::value,
               "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::variant<std::unique_ptr<int>, std::unique_ptr<int> > >::value == pfp_disabled,
+static_assert(std::__libcpp_is_trivially_relocatable<std::variant<std::unique_ptr<int>, std::unique_ptr<int> > >::value,
               "");
 #endif // TEST_STD_VER >= 17
 
 // vector
-static_assert(std::__libcpp_is_trivially_relocatable<std::vector<int> >::value == pfp_disabled, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::vector<NotTriviallyCopyable> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::vector<int> >::value, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::vector<NotTriviallyCopyable> >::value, "");
 static_assert(!std::__libcpp_is_trivially_relocatable<std::vector<int, test_allocator<int> > >::value, "");
 
 // weak_ptr
-static_assert(std::__libcpp_is_trivially_relocatable<std::weak_ptr<NotTriviallyCopyable> >::value == pfp_disabled, "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::weak_ptr<NotTriviallyCopyable> >::value, "");
 
 // TODO: Mark all the trivially relocatable STL types as such
