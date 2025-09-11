@@ -16,9 +16,9 @@
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/OptionalWithSentinel.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ValueWithSentinel.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -39,7 +39,7 @@ class AArch64Subtarget;
 class MachineInstr;
 
 struct TPIDR2Object {
-  ValueWithSentinelNumericMax<int> FrameIndex;
+  OptionalWithSentinelIntMax<int> FrameIndex;
   unsigned Uses = 0;
 };
 
@@ -115,8 +115,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The stack slots used to add space between FPR and GPR accesses when using
   /// hazard padding. StackHazardCSRSlotIndex is added between GPR and FPR CSRs.
   /// StackHazardSlotIndex is added between (sorted) stack objects.
-  ValueWithSentinelNumericMax<int> StackHazardSlotIndex;
-  ValueWithSentinelNumericMax<int> StackHazardCSRSlotIndex;
+  OptionalWithSentinelIntMax<int> StackHazardSlotIndex;
+  OptionalWithSentinelIntMax<int> StackHazardCSRSlotIndex;
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
@@ -206,7 +206,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool HasSwiftAsyncContext = false;
 
   /// The stack slot where the Swift asynchronous context is stored.
-  ValueWithSentinelNumericMax<int> SwiftAsyncContextFrameIdx;
+  OptionalWithSentinelIntMax<int> SwiftAsyncContextFrameIdx;
 
   bool IsMTETagged = false;
 

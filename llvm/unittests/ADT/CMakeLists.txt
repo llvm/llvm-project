@@ -54,6 +54,7 @@ add_llvm_unittest(ADTTests
   LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
+  OptionalWithSentinelTest.cpp
   PackedVectorTest.cpp
   PagedVectorTest.cpp
   PointerEmbeddedIntTest.cpp
@@ -93,7 +94,6 @@ add_llvm_unittest(ADTTests
   TwineTest.cpp
   TypeSwitchTest.cpp
   TypeTraitsTest.cpp
-  ValueWithSentinelTest.cpp
   )
 
 target_link_libraries(ADTTests PRIVATE LLVMTestingSupport)
