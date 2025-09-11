@@ -70,7 +70,10 @@ extractShaderVisibility(MDNode *Node, unsigned int OpId) {
 
 static uint64_t updateOngoingOffset(uint64_t CurOfset, uint64_t NumDescriptors,
                                     uint64_t Offset) {
-  return Offset == ~0U ? CurOfset + NumDescriptors : Offset + NumDescriptors;
+  // Append to the current offset if DescriptorTableOffsetAppend is set,
+  // otherwise calculate the new Offset.
+  return Offset == DescriptorTableOffsetAppend ? CurOfset + NumDescriptors
+                                               : Offset + NumDescriptors;
 }
 
 namespace {
@@ -558,7 +561,7 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
     // Errors for this check should be emitted before this point.
     if (Range.NumDescriptors <= 0)
       continue;
-    dxil::ResourceClass RangeType =
+    const dxil::ResourceClass &RangeType =
         static_cast<dxil::ResourceClass>(Range.RangeType);
 
     if (Range.OffsetInDescriptorsFromTableStart != DescriptorTableOffsetAppend)
@@ -584,8 +587,6 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
       return make_error<DescriptorRangeOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
-    // Append to the current offset if DescriptorTableOffsetAppend, otherwise
-    // calculate the new Offset.
     Offset = updateOngoingOffset(Offset, Range.NumDescriptors,
                                  Range.OffsetInDescriptorsFromTableStart);
   }
@@ -668,14 +669,12 @@ Error MetadataParser::validateRootSignature(
                              "DescriptorFlag", Range.Flags));
 
         if (Error Err =
-                validateDescriptorTableSamplerMixin(Table, Info.Location)) {
+                validateDescriptorTableSamplerMixin(Table, Info.Location))
           DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
-        }
 
         if (Error Err =
-                validateDescriptorTableRegisterOverflow(Table, Info.Location)) {
+                validateDescriptorTableRegisterOverflow(Table, Info.Location))
           DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
-        }
       }
       break;
     }
