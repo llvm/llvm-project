@@ -1,6 +1,7 @@
 import shutil
 import os
 import shlex
+import pathlib
 
 """
 This file provides the `diff_test_updater` function, which is invoked on failed RUN lines when lit is executed with --update-tests.
@@ -76,14 +77,12 @@ class SplitFileTarget:
 
     @staticmethod
     def create(path, commands, test_path, target_dir):
-        filename = path.replace(target_dir, "")
-        if filename.startswith(os.sep):
-            filename = filename[len(os.sep) :]
+        path = pathlib.Path(path)
         with open(test_path, "r") as f:
             lines = f.readlines()
         for i, l in enumerate(lines):
             p = SplitFileTarget._get_split_line_path(l)
-            if p == filename:
+            if p and path.samefile(os.path.join(target_dir, p)):
                 idx = i
                 break
         else:
