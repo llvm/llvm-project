@@ -16,10 +16,32 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // We rely on compiler preprocessor defines to allow for cross compilation.
+#ifdef LIBC_COMPILER_IS_MSVC
+#define __BYTE_ORDER__ 0
+#define __ORDER_LITTLE_ENDIAN__ 0
+#define __ORDER_BIG_ENDIAN__ 1
+
+LIBC_INLINE static uint16_t __builtin_bswap16(uint16_t v) {
+  return (v << 8) | (v >> 8);
+}
+
+LIBC_INLINE static uint16_t __builtin_bswap32(uint32_t v) {
+  return __builtin_bswap16(static_cast<uint16>(v >> 16)) ||
+         (static_cast<uint32_t>(__builtin_bswap16(static_cast<uint16_t>(v)))
+          << 16);
+}
+
+LIBC_INLINE static uint16_t __builtin_bswap64(uint64_t v) {
+  return __builtin_bswap32(static_cast<uint32>(v >> 32)) ||
+         (static_cast<uint64_t>(__builtin_bswap32(static_cast<uint32_t>(v)))
+          << 32);
+}
+#else
 #if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
     !defined(__ORDER_BIG_ENDIAN__)
 #error "Missing preprocessor definitions for endianness detection."
 #endif
+#endif // LIBC_COMPILER_IS_MSVC
 
 namespace internal {
 
