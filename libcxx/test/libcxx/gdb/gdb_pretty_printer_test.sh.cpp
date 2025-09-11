@@ -24,6 +24,9 @@
 // This test doesn't work as such on Windows.
 // UNSUPPORTED: windows
 
+// GDB doesn't know how to read PFP fields correctly yet.
+// UNSUPPORTED: pfp
+
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
 // RUN: env LANG=en_US.UTF-8 %{gdb} -nx -batch -iex "set autoload off" -ex "source %S/../../../utils/gdb/libcxx/printers.py" -ex "python register_libcxx_printer_loader()" -ex "source %S/gdb_pretty_printer_test.py" %t.exe
@@ -256,12 +259,9 @@ void unique_ptr_test() {
   ComparePrettyPrintToRegex(std::move(forty_two),
       R"(std::unique_ptr<int> containing = {__ptr_ = 0x[a-f0-9]+})");
 
-#if !defined(__POINTER_FIELD_PROTECTION__)
-  // GDB doesn't know how to read PFP fields correctly yet.
   std::unique_ptr<int> this_is_null;
   ComparePrettyPrintToChars(std::move(this_is_null),
       R"(std::unique_ptr is nullptr)");
-#endif
 }
 
 void bitset_test() {
@@ -357,8 +357,6 @@ void map_test() {
 }
 
 void multimap_test() {
-#if !defined(__POINTER_FIELD_PROTECTION__)
-  // GDB doesn't know how to read PFP fields correctly yet.
   std::multimap<int, int> i_am_empty{};
   ComparePrettyPrintToChars(i_am_empty, "std::multimap is empty");
 
@@ -374,7 +372,6 @@ void multimap_test() {
       "std::multimap with 6 elements = "
       R"({[1] = "one", [1] = "ein", [1] = "bir", )"
       R"([2] = "two", [2] = "zwei", [3] = "three"})");
-#endif
 }
 
 void queue_test() {
@@ -447,8 +444,6 @@ void stack_test() {
 }
 
 void multiset_test() {
-#if !defined(__POINTER_FIELD_PROTECTION__)
-  // GDB doesn't know how to read PFP fields correctly yet.
   std::multiset<int> i_am_empty;
   ComparePrettyPrintToChars(i_am_empty, "std::multiset is empty");
 
@@ -456,7 +451,6 @@ void multiset_test() {
   ComparePrettyPrintToChars(one_two_three,
       "std::multiset with 4 elements = {"
       R"("1:one", "1:one", "2:two", "3:three"})");
-#endif
 }
 
 void vector_test() {
@@ -490,13 +484,10 @@ void vector_test() {
                             "std::vector of length "
                             "3, capacity 3 = {5, 6, 7}");
 
-#if !defined(__POINTER_FIELD_PROTECTION__)
-  // GDB doesn't know how to read PFP fields correctly yet.
   std::vector<int, UncompressibleAllocator<int>> test3({7, 8});
   ComparePrettyPrintToChars(std::move(test3),
                             "std::vector of length "
                             "2, capacity 2 = {7, 8}");
-#endif
 }
 
 void set_iterator_test() {
@@ -667,11 +658,8 @@ void shared_ptr_test() {
       test0,
       R"(std::shared_ptr<int> count [3\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
-#if !defined(__POINTER_FIELD_PROTECTION__)
-  // GDB doesn't know how to read PFP fields correctly yet.
   std::shared_ptr<const int> test3;
   ComparePrettyPrintToChars(test3, "std::shared_ptr is nullptr");
-#endif
 }
 
 void streampos_test() {
