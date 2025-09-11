@@ -450,6 +450,18 @@ void foo() {
   consumeCF(provideCF());
 }
 
+struct Base {
+  NSString *provideStr() NS_RETURNS_RETAINED;
+};
+
+struct Derived : Base {
+  void consumeStr(NSString *);
+
+  void foo() {
+    consumeStr(provideStr());
+  }
+};
+
 } // namespace ns_retained_return_value
 
 @interface TestObject : NSObject
