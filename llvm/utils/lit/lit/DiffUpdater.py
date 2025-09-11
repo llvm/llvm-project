@@ -1,5 +1,6 @@
 import shutil
 import os
+import shlex
 
 """
 This file provides the `diff_test_updater` function, which is invoked on failed RUN lines when lit is executed with --update-tests.
@@ -61,7 +62,7 @@ class SplitFileTarget:
     @staticmethod
     def get_target_dir(commands, test_path):
         for cmd in commands:
-            split = cmd.split(" ")
+            split = shlex.split(cmd)
             if "split-file" not in split:
                 continue
             start_idx = split.index("split-file")

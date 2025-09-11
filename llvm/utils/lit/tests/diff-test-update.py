@@ -4,6 +4,7 @@
 # RUN: cp %S/Inputs/diff-test-update/multiple-split-file-populated.in %S/Inputs/diff-test-update/multiple-split-file-populated.test
 # RUN: cp %S/Inputs/diff-test-update/single-split-file-no-expected.in %S/Inputs/diff-test-update/single-split-file-no-expected.test
 # RUN: cp %S/Inputs/diff-test-update/split-c-comments.in %S/Inputs/diff-test-update/split-c-comments.test
+# RUN: cp %S/Inputs/diff-test-update/split-whitespace.in "%S/Inputs/diff-test-update/split whitespace.test"
 
 # RUN: not %{lit} --update-tests -v %S/Inputs/diff-test-update | FileCheck %s
 
@@ -13,6 +14,7 @@
 # RUN: diff %S/Inputs/diff-test-update/multiple-split-file.out %S/Inputs/diff-test-update/multiple-split-file-populated.test
 # RUN: diff %S/Inputs/diff-test-update/single-split-file-no-expected.out %S/Inputs/diff-test-update/single-split-file-no-expected.test
 # RUN: diff %S/Inputs/diff-test-update/split-c-comments.out %S/Inputs/diff-test-update/split-c-comments.test
+# RUN: diff %S/Inputs/diff-test-update/split-whitespace.out "%S/Inputs/diff-test-update/split whitespace.test"
 
 
 # CHECK: # update-diff-test: could not deduce source and target from {{.*}}1.in and {{.*}}2.in
@@ -24,4 +26,4 @@
 # CHECK: # update-diff-test: copied {{.*}}unrelated-split.txt to {{.*}}unrelated-split.expected
 
 
-# CHECK: Failed: 13 (100.00%)
+# CHECK: Failed: 14 (100.00%)
