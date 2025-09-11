@@ -4610,6 +4610,28 @@ libc_math_function(name = "ufromfpxf16")
 ############################## inttypes targets ##############################
 
 libc_function(
+    name = "strtoimax",
+    srcs = ["src/inttypes/strtoimax.cpp"],
+    hdrs = ["src/inttypes/strtoimax.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "strtoumax",
+    srcs = ["src/inttypes/strtoumax.cpp"],
+    hdrs = ["src/inttypes/strtoumax.h"],
+    deps = [
+        ":__support_common",
+        ":__support_str_to_integer",
+        ":errno",
+    ],
+)
+
+libc_function(
     name = "imaxabs",
     srcs = ["src/inttypes/imaxabs.cpp"],
     hdrs = ["src/inttypes/imaxabs.h"],
