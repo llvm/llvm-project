@@ -755,7 +755,6 @@ Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/switch.ll
-Transforms/FunctionSpecialization/function-specialization3.ll
 Transforms/GCOVProfiling/atomic-counter.ll
 Transforms/GCOVProfiling/exit-block.ll
 Transforms/GCOVProfiling/function-numbering.ll
