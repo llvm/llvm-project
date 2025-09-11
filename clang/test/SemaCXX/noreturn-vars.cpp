@@ -225,3 +225,16 @@ extern void abc_02(func_type *);
   abc_02(&func_ptr);
   func_ptr();
 } // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_lambda() {
+  func_type func_ptr = noret;
+  [&func_ptr]() { func_ptr = ordinary; } ();
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_lambda_var(int x) {
+  func_type func_ptr = noret;
+  auto LF = [&](){func_ptr = ordinary;};
+  LF();
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
