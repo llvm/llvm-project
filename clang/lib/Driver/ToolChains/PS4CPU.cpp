@@ -350,7 +350,7 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
                                          Twine(D.getClangProgramPath())));
 
-    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+    for (auto &A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
       CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
   }
 
