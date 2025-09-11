@@ -1,7 +1,7 @@
-// RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -std=c++17 -target x86_64-pc-linux-gnu \
+// RUN: clang-tidy %s -checks="-*,bugprone-throwing-static-initialization" -- -std=c++17 -target x86_64-pc-linux-gnu \
 // RUN:   | FileCheck %s -check-prefix=CHECK-EXCEPTIONS \
 // RUN:   -implicit-check-not="{{warning|error}}:"
-// RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -DNONEXCEPTIONS -fno-exceptions -std=c++17 -target x86_64-pc-linux-gnu \
+// RUN: clang-tidy %s -checks="-*,bugprone-throwing-static-initialization" -- -DNONEXCEPTIONS -fno-exceptions -std=c++17 -target x86_64-pc-linux-gnu \
 // RUN:   | FileCheck %s -allow-empty -check-prefix=CHECK-NONEXCEPTIONS \
 // RUN:   -implicit-check-not="{{warning|error}}:"
 
@@ -57,7 +57,7 @@ UserConv_Bad some_bad_func() noexcept;
 UserConv_Good some_good_func() noexcept;
 
 S s;
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
 // CHECK-NONEXCEPTIONS-NOT: warning:
 T t; // ok
@@ -146,7 +146,7 @@ void f(S s1, T t1, U u1, V v1, W w1) { // ok, ok, ok, ok, ok
 
 namespace {
 S s;
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
 // CHECK-NONEXCEPTIONS-NOT: warning:
 T t; // ok
@@ -207,7 +207,7 @@ class Statics {
 };
 
 S Statics::s;
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
 // CHECK-NONEXCEPTIONS-NOT: warning:
 T Statics::t;
@@ -231,7 +231,7 @@ constexpr int foo(int x) { if (x <= 0) throw 12; return x; }
 constexpr int bar = foo(1); // OK
 // CHECK-EXCEPTIONS-NOT: warning: initialization of 'bar' with static storage
 int baz = foo(0); // Not OK; throws at runtime when exceptions are enabled.
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:5: warning: initialization of 'baz' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:5: warning: initialization of 'baz' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: :[[@LINE-6]]:15: note: possibly throwing function declared here
 } // namespace pr35457
 #endif // NONEXCEPTIONS
@@ -243,10 +243,10 @@ struct T { T() noexcept; };
 auto Okay1 = []{ S s; };
 auto Okay2 = []{ (void)new int; };
 auto NotOkay1 = []{ S s; return 12; }(); // Because the lambda call is not noexcept
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay1' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay1' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: :[[@LINE-7]]:12: note: possibly throwing constructor declared here
 auto NotOkay2 = []() noexcept { S s; return 12; }(); // Because S::S() is not noexcept
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay2' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay2' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: :[[@LINE-10]]:12: note: possibly throwing constructor declared here
 auto Okay3 = []() noexcept { T t; return t; }();
 
@@ -258,7 +258,7 @@ struct U {
 };
 auto Okay4 = []{ U u; return u.getBadLambda(); }();
 auto NotOkay3 = []() noexcept { U u; return u.getBadLambda(); }()(); // Because the lambda returned and called is not noexcept
-// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay3' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay3' with static storage duration may throw an exception that cannot be caught [bugprone-throwing-static-initialization]
 // CHECK-EXCEPTIONS: :[[@LINE-6]]:12: note: possibly throwing function declared here
 
 #ifndef NONEXCEPTIONS
