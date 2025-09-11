@@ -10,6 +10,12 @@ add_subdirectory(lldb-fuzzer EXCLUDE_FROM_ALL)
 
 add_lldb_tool_subdirectory(lldb-instr)
 add_lldb_tool_subdirectory(lldb-dap)
+if (LLDB_BUILD_LLDBRPC)
+  add_lldb_tool_subdirectory(lldb-rpc-gen)
+endif()
+if (LLDB_CAN_USE_LLDB_RPC_SERVER)
+  add_subdirectory(lldb-rpc)
+endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_lldb_tool_subdirectory(darwin-debug)
