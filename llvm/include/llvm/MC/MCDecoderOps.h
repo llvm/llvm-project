@@ -17,6 +17,7 @@ namespace llvm::MCD {
 // enabled.
 enum DecoderOps {
   OPC_Scope = 1,         // OPC_Scope(nts_t NumToSkip)
+  OPC_ScopeNoFail,       // OPC_ScopeNoFail(nts_t NumToSkip)
   OPC_ExtractField,      // OPC_ExtractField(uleb128 Start, uint8_t Len)
   OPC_FilterValueOrSkip, // OPC_FilterValueOrSkip(uleb128 Val, nts_t NumToSkip)
   OPC_FilterValue,       // OPC_FilterValue(uleb128 Val)

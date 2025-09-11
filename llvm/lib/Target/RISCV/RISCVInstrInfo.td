@@ -2318,8 +2318,8 @@ def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
 
 // For 16 bit instructions.
 defvar DecodeOrderZicfiss16 = -1;
-defvar DecodeOrderRV32Only16 = 1;
-defvar DecodeOrderZcOverlap = 2;
+defvar DecodeOrderRV32Only16 = 0;//1;
+defvar DecodeOrderZcOverlap = 0;//2;
 
 // For 32-bit instructions.
 defvar DecodeOrderRV32Only32 = 1;

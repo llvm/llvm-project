@@ -801,6 +801,26 @@ unsigned Filter::usefulness() const {
 //                              //
 //////////////////////////////////
 
+static StringRef getDecoderOpName(uint8_t Op) {
+  // clang-format off
+  static constexpr StringLiteral Names[] = {
+    "OPC_Scope",
+    "OPC_ScopeNoFail",
+    "OPC_ExtractField",
+    "OPC_FilterValueOrSkip",
+    "OPC_FilterValue",
+    "OPC_CheckField",
+    "OPC_CheckPredicate",
+    "OPC_Decode",
+    "OPC_TryDecode",
+    "OPC_SoftFail",
+  };
+  // clang-format on
+  if (Op >= MCD::OPC_Scope && Op <= MCD::OPC_SoftFail)
+    return Names[Op - MCD::OPC_Scope];
+  llvm_unreachable("Unknown decoder op");
+}
+
 // Emit the decoder state machine table. Returns a mask of MCD decoder ops
 // that were emitted.
 unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
@@ -880,20 +900,19 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
 
     const uint8_t DecoderOp = *I++;
     OpcodeMask |= (1 << DecoderOp);
+    OS << "  MCD::" << getDecoderOpName(DecoderOp) << ", ";
     switch (DecoderOp) {
     default:
       PrintFatalError("Invalid decode table opcode: " + Twine((int)DecoderOp) +
                       " at index " + Twine(Pos));
-    case MCD::OPC_Scope: {
-      OS << "  MCD::OPC_Scope, ";
+    case MCD::OPC_Scope:
+    case MCD::OPC_ScopeNoFail: {
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       emitNumToSkipComment(NumToSkip);
       OS << '\n';
       break;
     }
     case MCD::OPC_ExtractField: {
-      OS << "  MCD::OPC_ExtractField, ";
-
       // ULEB128 encoded start value.
       const char *ErrMsg = nullptr;
       unsigned Start = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
@@ -908,7 +927,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_FilterValueOrSkip: {
-      OS << "  MCD::OPC_FilterValueOrSkip, ";
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
       uint32_t NumToSkip = emitNumToSkip(I, OS);
@@ -917,14 +935,12 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_FilterValue: {
-      OS << "  MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
       OS << '\n';
       break;
     }
     case MCD::OPC_CheckField: {
-      OS << "  MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
       emitULEB128(I, OS);
       // 8-bit length.
@@ -936,7 +952,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_CheckPredicate: {
-      OS << "  MCD::OPC_CheckPredicate, ";
       emitULEB128(I, OS);
       OS << '\n';
       break;
@@ -949,7 +964,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
-      OS << "  MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
       emitULEB128(I, OS);
 
       // Decoder index.
@@ -970,7 +984,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_SoftFail: {
-      OS << "  MCD::OPC_SoftFail, ";
       // Decode the positive mask.
       const char *ErrMsg = nullptr;
       uint64_t PositiveMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
@@ -1814,7 +1827,7 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
     // the last one. Note that `PerDecodeOrderChoosers` when preset is expected
     // to have atleast 2 entries, hence the size() > 1 check above.
     for (const auto &Delegate : drop_end(FC.PerDecodeOrderChoosers)) {
-      Table.insertOpcode(MCD::OPC_Scope);
+      Table.insertOpcode(MCD::OPC_ScopeNoFail);
       unsigned FixupLoc = Table.insertNumToSkip();
       emitTableEntries(*Delegate);
       Table.patchNumToSkip(FixupLoc, Table.size());
@@ -1825,7 +1838,7 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
     // We expect here to have > 1 EncodingIDs, else we could have created a
     // singleton chooser.
     for (const auto ID : drop_end(FC.EncodingIDs)) {
-      Table.insertOpcode(MCD::OPC_Scope);
+      Table.insertOpcode(MCD::OPC_ScopeNoFail);
       unsigned FixupLoc = Table.insertNumToSkip();
       FilterChooser SingletonFC(FC.Encodings, ID, FC.FilterBits, *FC.Parent);
       emitSingletonTableEntry(SingletonFC);
@@ -2305,7 +2318,26 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   }
 
   OS << R"(
-  SmallVector<const uint8_t *, 8> ScopeStack;
+  struct Scope {
+    const uint8_t *SkipTo;
+    // Indicates a non failing scope, which means we will never return with
+    // failure from the decode function when in this scope. It also implies that
+    // any nested scopes within it will be forced to be non-failing as well.
+    bool NoFail;
+    Scope(const uint8_t *SkipTo, bool NoFail)
+      : SkipTo(SkipTo), NoFail(NoFail) {}
+  };
+
+  SmallVector<Scope, 8> ScopeStack;
+
+  // Returns if we are allowed to fail and return from the function in the
+  // current scope.
+  auto CanReturnOnFailure = [&ScopeStack]() -> bool {
+    if (ScopeStack.empty())
+      return true;
+    return !ScopeStack.back().NoFail;
+  };
+
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
   while (true) {
@@ -2316,12 +2348,18 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       errs() << Loc << ": Unexpected decode table opcode: "
              << (int)DecoderOp << '\n';
       return MCDisassembler::Fail;
-    case MCD::OPC_Scope: {
+    case MCD::OPC_Scope:
+    case MCD::OPC_ScopeNoFail: {
       unsigned NumToSkip = decodeNumToSkip(Ptr);
       const uint8_t *SkipTo = Ptr + NumToSkip;
-      ScopeStack.push_back(SkipTo);
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_Scope(" << SkipTo - DecodeTable
-                        << ")\n");
+      bool NoFail = DecoderOp == MCD::OPC_ScopeNoFail;
+      NoFail |= !CanReturnOnFailure();
+      ScopeStack.emplace_back(SkipTo, NoFail);
+      LLVM_DEBUG({
+        const char *OpName = DecoderOp == MCD::OPC_Scope ? "OPC_Scope" : "OPC_ScopeNoFail";
+        dbgs() << Loc << ": " << OpName << "(" << SkipTo - DecodeTable
+               << "NoFail = " << NoFail << ")\n";
+      });
       break;
     }
     case MCD::OPC_ExtractField: {
@@ -2366,7 +2404,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val();
+        Ptr = ScopeStack.pop_back_val().SkipTo;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2394,7 +2432,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val();
+        Ptr = ScopeStack.pop_back_val().SkipTo;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2415,7 +2453,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val();
+        Ptr = ScopeStack.pop_back_val().SkipTo;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2440,8 +2478,17 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": "
-                   << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
-      return S;
+                   << (S != MCDisassembler::Fail ? "PASS" : "FAIL"));
+      if (S == MCDisassembler::Success || CanReturnOnFailure()) {
+        LLVM_DEBUG(dbgs() << ", Returning\n");
+        return S;
+      }
+      MI.clear();
+      Ptr = ScopeStack.pop_back_val().SkipTo;
+      LLVM_DEBUG(dbgs() << ", continuing at " << Ptr - DecodeTable << '\n');
+      // Reset the decode status.
+      S = MCDisassembler::Success;
+      break;
     })";
   if (HasTryDecode) {
     OS << R"(
@@ -2460,16 +2507,19 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 
       if (DecodeComplete) {
         // Decoding complete.
-        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
-        MI = TmpMI;
-        return S;
+        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS" : "FAIL"));
+        if (S == MCDisassembler::Success || CanReturnOnFailure()) {
+          MI = TmpMI;
+          LLVM_DEBUG(dbgs() << ", Returning\n");
+          return S;
+        }
       }
       assert(S == MCDisassembler::Fail);
       if (ScopeStack.empty()) {
         LLVM_DEBUG(dbgs() << "FAIL, returning FAIL\n");
         return MCDisassembler::Fail;
       }
-      Ptr = ScopeStack.pop_back_val();
+      Ptr = ScopeStack.pop_back_val().SkipTo;
       LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
       // Reset decode status. This also drops a SoftFail status that could be
       // set before the decode attempt.
