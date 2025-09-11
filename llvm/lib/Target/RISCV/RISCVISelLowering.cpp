@@ -422,12 +422,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::CTLZ, MVT::i32, Custom);
-      // Use default promotion for XTHeadBb.
-      if (Subtarget.hasStdExtZbb())
-        setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
-    }
+    // Use default promotion for i32 without Zbb.
+    if (Subtarget.is64Bit() && Subtarget.hasStdExtZbb())
+      setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
