@@ -405,7 +405,7 @@ public:
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
     if (!Constraint.hasParameterMapping()) {
-      for (auto List : TemplateArgs)
+      for (const auto &List : TemplateArgs)
         for (const TemplateArgument &Arg : List.Args)
           SemaRef.Context.getCanonicalTemplateArgument(Arg).Profile(
               ID, SemaRef.Context);
@@ -458,6 +458,9 @@ private:
 
   ExprResult Evaluate(const AtomicConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
+
+  ExprResult EvaluateSlow(const FoldExpandedConstraint &Constraint,
+                          const MultiLevelTemplateArgumentList &MLTAL);
 
   ExprResult Evaluate(const FoldExpandedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
@@ -732,7 +735,6 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ID.AddPointer(Constraint.getConstraintExpr());
   ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  ID.AddBoolean(Constraint.hasParameterMapping());
   HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
 
@@ -794,16 +796,16 @@ ConstraintSatisfactionChecker::EvaluateFoldExpandedConstraintSize(
   return NumExpansions;
 }
 
-ExprResult ConstraintSatisfactionChecker::Evaluate(
+ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const FoldExpandedConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
+
   bool Conjunction = Constraint.getFoldOperator() ==
                      FoldExpandedConstraint::FoldOperatorKind::And;
   unsigned EffectiveDetailEndIndex = Satisfaction.Details.size();
 
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   // FIXME: Is PackSubstitutionIndex correct?
-  // TODO: We might want to cache the substitution of fold expanded constraints.
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
@@ -859,10 +861,41 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   return Out;
 }
 
+ExprResult ConstraintSatisfactionChecker::Evaluate(
+    const FoldExpandedConstraint &Constraint,
+    const MultiLevelTemplateArgumentList &MLTAL) {
+
+  llvm::FoldingSetNodeID ID;
+  ID.AddPointer(Constraint.getPattern());
+  HashParameterMapping(S, MLTAL, ID, std::nullopt).VisitConstraint(Constraint);
+
+  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
+      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
+
+    auto &Cached = Iter->second.Satisfaction;
+    Satisfaction.ContainsErrors = Cached.ContainsErrors;
+    Satisfaction.IsSatisfied = Cached.IsSatisfied;
+    Satisfaction.Details.insert(Satisfaction.Details.end(),
+                                Cached.Details.begin(), Cached.Details.end());
+    return Iter->second.SubstExpr;
+  }
+
+  unsigned Size = Satisfaction.Details.size();
+
+  ExprResult E = EvaluateSlow(Constraint, MLTAL);
+  UnsubstitutedConstraintSatisfactionCacheResult Cache;
+  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
+  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
+  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
+            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.SubstExpr = E;
+  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
+  return E;
+}
+
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const ConceptIdConstraint &Constraint,
-    const MultiLevelTemplateArgumentList &MLTAL,
-    unsigned Size) {
+    const MultiLevelTemplateArgumentList &MLTAL, unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
@@ -907,8 +940,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
         new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
-                                                                       SubstDiag.first,
-                                                                       allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
+            SubstDiag.first,
+            allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
     return ExprError();
   }
 
@@ -944,10 +977,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
           ? Constraint.getPackSubstitutionIndex()
           : PackSubstitutionIndex;
 
-  Sema::InstantiatingTemplate _ (S, ConceptId->getBeginLoc(),
-                       Sema::InstantiatingTemplate::ConstraintsCheck{},
-                       ConceptId->getNamedConcept(), MLTAL.getInnermost(),
-                       Constraint.getSourceRange());
+  Sema::InstantiatingTemplate _(S, ConceptId->getBeginLoc(),
+                                Sema::InstantiatingTemplate::ConstraintsCheck{},
+                                ConceptId->getNamedConcept(),
+                                MLTAL.getInnermost(),
+                                Constraint.getSourceRange());
 
   unsigned Size = Satisfaction.Details.size();
 
@@ -967,10 +1001,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Constraint.getConceptId());
   ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
-  ID.AddBoolean(Constraint.hasParameterMapping());
   HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
       .VisitConstraint(Constraint);
-
 
   if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
       Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
@@ -984,7 +1016,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   }
 
   ExprResult CE = EvaluateSlow(Constraint, MLTAL, Size);
-  if(CE.isInvalid())
+  if (CE.isInvalid())
     return E;
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
