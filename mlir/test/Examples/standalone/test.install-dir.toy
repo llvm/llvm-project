@@ -1,4 +1,4 @@
-# REQUIRES: github-actions
+# REQUIRES: run-standalone-install-tests
 
 # RUN: echo "test full install" | tee %t
 # CHECK: test full install
