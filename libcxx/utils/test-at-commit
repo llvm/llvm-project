@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+import argparse
+import logging
+import os
+import subprocess
+import sys
+import tempfile
+
+PARENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+LIT_CONFIG_FILE = """
+#
+# This testing configuration handles running the test suite against a version
+# of libc++ installed at the given path.
+#
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{{flags}}',
+    '-pthread' + (' -isysroot {{}}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
+))
+config.substitutions.append(('%{{compile_flags}}', '-nostdinc++ -I {INSTALL_ROOT}/include/c++/v1 -I %{{libcxx-dir}}/test/support'))
+config.substitutions.append(('%{{link_flags}}', '-nostdlib++ -L {INSTALL_ROOT}/lib -Wl,-rpath,{INSTALL_ROOT}/lib -lc++'))
+config.substitutions.append(('%{{exec}}', '%{{executor}} --execdir %T -- '))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
+"""
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return string
+    else:
+        raise NotADirectoryError(string)
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='test-at-commit',
+        description='Build libc++ at the specified commit and test it against the version of the test suite '
+                    'currently checked out in the specified Git repository. '
+                    'This makes it easier to perform historical analyses of libc++ behavior, gather historical '
+                    'performance data, bisect issues, and so on. '
+                    'A current limitation of this script is that it assumes the arguments passed to CMake when '
+                    'building the library.')
+    parser.add_argument('--build', '-B', type=str, required=True,
+        help='Path to create the build directory for running the test suite at.')
+    parser.add_argument('--commit', type=str, required=True,
+        help='Commit to build libc++ at.')
+    parser.add_argument('lit_options', nargs=argparse.REMAINDER,
+        help='Optional arguments passed to lit when running the tests. Should be provided last and '
+             'separated from other arguments with a `--`.')
+    parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
+        help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    args = parser.parse_args(argv)
+
+    # Gather lit options
+    lit_options = []
+    if args.lit_options is not None:
+        if args.lit_options[0] != '--':
+            raise ArgumentError('For clarity, Lit options must be separated from other options by --')
+        lit_options = args.lit_options[1:]
+
+    with tempfile.TemporaryDirectory() as install_dir:
+        # Build the library at the baseline
+        build_cmd = [os.path.join(PARENT_DIR, 'build-at-commit'), '--install-dir', install_dir, '--commit', args.commit]
+        build_cmd += ['--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo']
+        subprocess.check_call(build_cmd)
+
+        # Configure the test suite in the specified build directory
+        os.makedirs(args.build)
+        lit_cfg = os.path.abspath(os.path.join(args.build, 'temp_lit_cfg.cfg.in'))
+        with open(lit_cfg, 'w') as f:
+            f.write(LIT_CONFIG_FILE.format(INSTALL_ROOT=install_dir))
+
+        test_suite_cmd = ['cmake', '-B', args.build, '-S', os.path.join(args.git_repo, 'runtimes'), '-G', 'Ninja']
+        test_suite_cmd += ['-D', 'LLVM_ENABLE_RUNTIMES=libcxx;libcxxabi']
+        test_suite_cmd += ['-D', 'LIBCXXABI_USE_LLVM_UNWINDER=OFF']
+        test_suite_cmd += ['-D', f'LIBCXX_TEST_CONFIG={lit_cfg}']
+        subprocess.check_call(test_suite_cmd)
+
+        # Run the specified tests against the produced baseline installation
+        lit_cmd = [os.path.join(PARENT_DIR, 'libcxx-lit'), args.build] + lit_options
+        subprocess.check_call(lit_cmd)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
