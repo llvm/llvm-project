@@ -9,7 +9,13 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CORE_PLISTDIAGNOSTICS_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CORE_PLISTDIAGNOSTICS_H
 
+#include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include <string>
+
 namespace clang {
+
 namespace ento {
 
 void createPlistDiagnosticConsumerImpl(

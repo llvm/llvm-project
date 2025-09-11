@@ -9,6 +9,10 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CORE_SARIFDIAGNOSTICS_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CORE_SARIFDIAGNOSTICS_H
 
+#include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include <string>
+
 namespace clang {
 namespace ento {
 
