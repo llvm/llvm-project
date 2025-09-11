@@ -1740,12 +1740,17 @@ void FilterChooser::dump() const {
   // Dump filter stack.
   dumpStack(errs(), Indent, PadToWidth);
 
+  bool PrintDecoderOrder = hasMultipleDecodeOrders();
+
   // Dump encodings.
   for (unsigned EncodingID : EncodingIDs) {
     const InstructionEncoding &Encoding = Encodings[EncodingID];
     errs() << Indent << indent(PadToWidth - Encoding.getBitWidth());
     printKnownBits(errs(), Encoding.getMandatoryBits(), '_');
-    errs() << "  " << Encoding.getName() << '\n';
+    errs() << "  " << Encoding.getName();
+    if (PrintDecoderOrder)
+      errs() << " (" << Encoding.getDecodeOrder() << ")";
+    errs() << '\n';
   }
 }
 
