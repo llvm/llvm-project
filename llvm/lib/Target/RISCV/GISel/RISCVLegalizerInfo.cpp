@@ -151,7 +151,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO})
+      .minScalar(0, sXLen)
+      .lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
   getActionDefinitionsBuilder(
@@ -509,8 +511,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
-  getActionDefinitionsBuilder(
-      {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT,
+                               G_FMAXNUM, G_FMINNUM, G_FMAXIMUMNUM,
+                               G_FMINIMUMNUM})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
@@ -699,7 +702,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
-  getActionDefinitionsBuilder(G_ATOMICRMW_ADD)
+  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+      .lowerIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(2, p0)));
+
+  getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD})
       .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
@@ -748,6 +754,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::riscv_masked_atomicrmw_add:
   case Intrinsic::riscv_masked_atomicrmw_sub:
+  case Intrinsic::riscv_masked_cmpxchg:
     return true;
   }
 }
