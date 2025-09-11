@@ -2432,22 +2432,6 @@ void VPlanTransforms::addActiveLaneMask(
   HeaderMask->eraseFromParent();
 }
 
-/// If \p R is a VPInstruction::Reverse, return a VPWidenIntrinsicRecipe
-/// for the vp.reverse intrinsic using \p EVL. Returns nullptr otherwise.
-static VPWidenIntrinsicRecipe *
-getEVLReverse(VPRecipeBase &R, VPTypeAnalysis &TypeInfo, VPValue &EVL) {
-  VPValue *ReversedVal;
-  if (!match(&R,
-             m_VPInstruction<VPInstruction::Reverse>(m_VPValue(ReversedVal))))
-    return nullptr;
-
-  auto *Reverse = cast<VPInstruction>(&R);
-  VPlan *Plan = Reverse->getParent()->getPlan();
-  return new VPWidenIntrinsicRecipe(
-      Intrinsic::experimental_vp_reverse, {ReversedVal, Plan->getTrue(), &EVL},
-      TypeInfo.inferScalarType(Reverse), Reverse->getDebugLoc());
-}
-
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
@@ -2500,6 +2484,29 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         VPValue *NewAddr = GetNewAddr(S->getAddr());
+        // Convert general reverse operations on stored value into vp.reverse,
+        // when the VPVectorEndPointerRecipe adjusting the access address uses
+        // EVL instead of VF.
+        if (match(NewAddr, m_VectorEndPointer(m_VPValue(), m_Specific(&EVL)))) {
+          VPValue *StoredVal = S->getStoredValue();
+          // Skip if the stored value is not defined in the loop region.
+          if (!StoredVal->isDefinedOutsideLoopRegions()) {
+            VPValue *ReversedVal;
+            bool IsReverse =
+                match(StoredVal, m_VPInstruction<VPInstruction::Reverse>(
+                                     m_VPValue(ReversedVal)));
+            assert(IsReverse && "The stored value of reverse store must be "
+                                "defined by a reverse operation");
+            auto *Reverse = cast<VPInstruction>(StoredVal);
+            auto *NewReverse = new VPWidenIntrinsicRecipe(
+                Intrinsic::experimental_vp_reverse,
+                {ReversedVal, &AllOneMask, &EVL},
+                TypeInfo.inferScalarType(Reverse), Reverse->getDebugLoc());
+            NewReverse->insertBefore(Reverse);
+            return new VPWidenStoreEVLRecipe(*S, NewAddr, NewReverse, EVL,
+                                             NewMask);
+          }
+        }
         return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
       })
       .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) {
@@ -2642,42 +2649,32 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
     ToErase.push_back(CurRecipe);
 
-    // Convert general reverse operations on loaded values and stored values
-    // into vp.reverse, when the VPVectorEndPointerRecipe adjusting the access
-    // address uses EVL instead of VF.
-    // TODO: Extend conversion along the def-use/use-def chain, as reverse
-    // operations may be eliminated or moved in the future.
-    if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(EVLRecipe)) {
-      if (!match(MemR->getAddr(),
+    // Convert general reverse operations on loaded result into vp.reverse, when
+    // the VPVectorEndPointerRecipe adjusting the access address uses EVL
+    // instead of VF.
+    if (auto *LoadR = dyn_cast<VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      if (!match(LoadR->getAddr(),
                  m_VectorEndPointer(m_VPValue(), m_Specific(&EVL))))
         continue;
-      assert(MemR->isReverse() &&
+      assert(LoadR->isReverse() &&
              "Only reverse access uses VPVectorEndPointerRecipe as address");
-
-      VPRecipeBase *Candidate = nullptr;
-      if (auto *LoadR = dyn_cast<VPWidenLoadEVLRecipe>(MemR)) {
-        assert(LoadR->getNumUsers() == 1 &&
-               "Unexpected user number of reverse load");
-        Candidate = cast<VPRecipeBase>(*LoadR->user_begin());
-      } else if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(MemR)) {
-        VPValue *StoredVal = StoreR->getStoredValue();
-        // Skip if the stored value is not defined in the loop region.
-        if (StoredVal->isDefinedOutsideLoopRegions())
-          continue;
-        Candidate = StoredVal->getDefiningRecipe();
-      }
-      assert(Candidate && "Must have one reverse operation for reverse access");
-
-      if (match(Candidate, m_Intrinsic<Intrinsic::experimental_vp_reverse>()))
-        continue;
-
-      VPWidenIntrinsicRecipe *NewReverse =
-          getEVLReverse(*Candidate, TypeInfo, EVL);
-      assert(NewReverse &&
-             "Unable to get an EVL reverse when tail folding by EVL");
-      NewReverse->insertBefore(Candidate);
-      cast<VPInstruction>(Candidate)->replaceAllUsesWith(NewReverse);
-      ToErase.push_back(Candidate);
+      // TODO: Extend conversion along the use-def chain, as reverse operations
+      // may be eliminated or sunk in the future.
+      assert(LoadR->getNumUsers() == 1 &&
+             "Unexpected user number of reverse load");
+      auto *UserR = cast<VPRecipeBase>(*LoadR->user_begin());
+      VPValue *ReversedVal;
+      bool IsReverse = match(UserR, m_VPInstruction<VPInstruction::Reverse>(
+                                        m_VPValue(ReversedVal)));
+      assert(IsReverse && "The defined value of reverse load must be used by a "
+                          "reverse operation");
+      auto *Reverse = cast<VPInstruction>(UserR);
+      auto *NewReverse = new VPWidenIntrinsicRecipe(
+          Intrinsic::experimental_vp_reverse, {ReversedVal, AllOneMask, &EVL},
+          TypeInfo.inferScalarType(Reverse), Reverse->getDebugLoc());
+      NewReverse->insertBefore(Reverse);
+      Reverse->replaceAllUsesWith(NewReverse);
+      ToErase.push_back(Reverse);
     }
   }
   // Remove dead EVL mask.
