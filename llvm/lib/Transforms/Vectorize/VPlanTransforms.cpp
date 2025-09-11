@@ -1986,6 +1986,22 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Default([](auto *) { return std::nullopt; });
   }
 
+  /// If recipe \p R will lower to a GEP with a non-trivial source element type,
+  /// return that source element type.
+  static Type *getGEPSourceElementType(const VPSingleDefRecipe *R) {
+    // All VPInstructions that lower to GEPs must have the trivial source
+    // element type (as they are PtrAdds), so we omit it.
+    return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
+        .Case<VPReplicateRecipe, VPWidenGEPRecipe>([](auto *I) -> Type * {
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
+            return GEP->getSourceElementType();
+          return nullptr;
+        })
+        .Case<VPVectorPointerRecipe>(
+            [](auto *I) { return I->getIndexedType(); })
+        .Default([](auto *) { return nullptr; });
+  }
+
   /// Returns true if recipe \p Def can be safely handed for CSE.
   static bool canHandle(const VPSingleDefRecipe *Def) {
     // We can extend the list of handled recipes in the future,
@@ -2015,15 +2031,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     VPTypeAnalysis TypeInfo(*Plan);
     hash_code Result = hash_combine(
         Def->getVPDefID(), getOpcodeOrIntrinsicID(Def),
-        TypeInfo.inferScalarType(Def), vputils::isSingleScalar(Def),
-        hash_combine_range(Def->operands()));
+        getGEPSourceElementType(Def), TypeInfo.inferScalarType(Def),
+        vputils::isSingleScalar(Def), hash_combine_range(Def->operands()));
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
         return hash_combine(Result, RFlags->getPredicate());
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
-      return hash_combine(Result, VPR->getIndexedType());
-    if (auto *WideGEP = dyn_cast<VPWidenGEPRecipe>(Def))
-      return hash_combine(Result, WideGEP->getIndexedType());
     return Result;
   }
 
@@ -2033,6 +2045,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       return L == R;
     if (L->getVPDefID() != R->getVPDefID() ||
         getOpcodeOrIntrinsicID(L) != getOpcodeOrIntrinsicID(R) ||
+        getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
         vputils::isSingleScalar(L) != vputils::isSingleScalar(R) ||
         !equal(L->operands(), R->operands()))
       return false;
@@ -2040,14 +2053,6 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LFlags->hasPredicate() &&
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
-        return false;
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(L))
-      if (VPR->getIndexedType() !=
-          cast<VPVectorPointerRecipe>(R)->getIndexedType())
-        return false;
-    if (auto *WideGEP = dyn_cast<VPWidenGEPRecipe>(L))
-      if (WideGEP->getIndexedType() !=
-          cast<VPWidenGEPRecipe>(R)->getIndexedType())
         return false;
     const VPlan *Plan = L->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);

@@ -19,8 +19,9 @@ define void @cse_gep_source_element_type(ptr noalias %A, ptr noalias %B, ptr noa
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i32 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP0]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP8]], i32 4
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP3]], i32 4
