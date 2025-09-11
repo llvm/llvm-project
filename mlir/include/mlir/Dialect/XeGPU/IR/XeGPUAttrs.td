@@ -191,6 +191,9 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
+    InterfaceMethod<"Get the order field of the attribute as integer array",
+                    "DenseI32ArrayAttr",
+                    "getOrder">,
     InterfaceMethod<"Get the num of effective subgroups",
                     "int64_t",
                     "getNumSubgroups", (ins), [{
@@ -253,33 +256,40 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                         seen[ta.value()] = true;
                       }
                       auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
+                        // If both `dst` and `src` are empty, conservatively return true
+                        // here because some layout fields can be empty.
+                        if (dst.empty() && src.empty())
+                          return true;
                         for (const auto &ta : llvm::enumerate(perm)) {
                           if (src[ta.index()] != dst[ta.value()])
                             return false;
                         }
                         return true;
                       };
-                      // check sgLayout
+                      // Check sgLayout
                       if (!checkTranspose($_self.getSgLayoutAsInt(), other.getSgLayoutAsInt(), perm))
                         return false;
-                      // check sgData
+                      // Check sgData
                       if (!checkTranspose($_self.getSgDataAsInt(), other.getSgDataAsInt(), perm))
                         return false;
-                      // check instData
+                      // Check instData
                       if (!checkTranspose($_self.getInstDataAsInt(), other.getInstDataAsInt(), perm))
                         return false;
-                      // check laneLayout
+                      // Check laneLayout
                       if (!checkTranspose($_self.getLaneLayoutAsInt(), other.getLaneLayoutAsInt(), perm))
                         return false;
-                      // check laneData
+                      // Check laneData
                       if (!checkTranspose($_self.getLaneDataAsInt(), other.getLaneDataAsInt(), perm))
                         return false;
+                      // Check order if both sides have order field.
+                      if ($_self.getOrder() && other.getOrder()) {
+                        auto thisOrderAsInt = llvm::to_vector_of<int64_t>($_self.getOrder().asArrayRef());
+                        auto otherOrderAsInt = llvm::to_vector_of<int64_t>(other.getOrder().asArrayRef());
+                        if (!checkTranspose(thisOrderAsInt, otherOrderAsInt, perm))
+                          return false;
+                      }
                       return true;
-                    }]>,
-    InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
-                    /*retTy=*/"bool",
-                    /*methodName=*/"isSliceOf",
-                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
+                    }]>
   ];
 }
 
@@ -481,9 +491,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     FailureOr<SmallVector<SmallVector<Value>>>
     getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
-    /// Check if this is slice of some other layout.
-    bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
-
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -644,9 +651,6 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
     getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
-
-    /// Check if this is slice of some other layout.
-    bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
 
   }];
 

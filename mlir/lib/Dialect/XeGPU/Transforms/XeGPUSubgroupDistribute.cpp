@@ -1108,24 +1108,15 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
           transposeOp,
           "the source or result vector of the transpose op lacks layout "
           "attribute");
-    SmallVector<int64_t> sourceLaneLayout = sourceLayout.getLaneLayoutAsInt();
-    SmallVector<int64_t> resultLaneLayout = resultLayout.getLaneLayoutAsInt();
-    SmallVector<int64_t> sourceLaneData = sourceLayout.getLaneDataAsInt();
-    SmallVector<int64_t> resultLaneData = resultLayout.getLaneDataAsInt();
-    if (sourceLaneLayout.size() != 2 || resultLaneLayout.size() != 2)
+    if (sourceLayout.getRank() != 2 || resultLayout.getRank() != 2)
       return rewriter.notifyMatchFailure(
           transposeOp, "the source or result vector of the transpose op "
                        "does not have 2D layout");
-    auto is2DTranspose = [](ArrayRef<int64_t> input, ArrayRef<int64_t> output) {
-      return input.size() == 2 && output.size() == 2 && input[0] == output[1] &&
-             input[1] == output[0];
-    };
-
-    if (!is2DTranspose(sourceLaneLayout, resultLaneLayout) ||
-        !is2DTranspose(sourceLaneData, resultLaneData))
+    ArrayRef<int64_t> perm = transposeOp.getPermutation();
+    if (!resultLayout.isTransposeOf(sourceLayout, perm))
       return rewriter.notifyMatchFailure(
           transposeOp,
-          "the source or result vector layouts must be transposes of each "
+          "the source or result vector layouts must be 2D transposes of each "
           "other");
     FailureOr<VectorType> distributedSourceTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
@@ -1141,7 +1132,7 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     auto newTransposeOp = vector::TransposeOp::create(
         rewriter, newWarpOp.getLoc(), newWarpOp.getResult(newRetIndices[0]),
-        transposeOp.getPermutation());
+        perm);
     Value distributedVal = newWarpOp.getResult(operandIdx);
     rewriter.replaceAllUsesWith(distributedVal, newTransposeOp.getResult());
     return success();
