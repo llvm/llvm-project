@@ -3880,11 +3880,9 @@ bool AsmParser::parseDirectiveCVLinetable() {
   SMLoc Loc = getTok().getLoc();
   if (parseCVFunctionId(FunctionId, ".cv_linetable") || parseComma() ||
       parseTokenLoc(Loc) ||
-      check(parseSymbol(FnStartSym), Loc,
-            "expected identifier in directive") ||
+      check(parseSymbol(FnStartSym), Loc, "expected identifier in directive") ||
       parseComma() || parseTokenLoc(Loc) ||
-      check(parseSymbol(FnEndSym), Loc,
-            "expected identifier in directive"))
+      check(parseSymbol(FnEndSym), Loc, "expected identifier in directive"))
     return true;
 
   getStreamer().emitCVLinetableDirective(FunctionId, FnStartSym, FnEndSym);
@@ -4306,8 +4304,7 @@ bool AsmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
   MCSymbol *Sym;
   if (check(!isValidEncoding(Encoding), "unsupported encoding.") ||
       parseComma() ||
-      check(parseSymbol(Sym), "expected identifier in directive") ||
-      parseEOL())
+      check(parseSymbol(Sym), "expected identifier in directive") || parseEOL())
     return true;
 
   if (IsPersonality)

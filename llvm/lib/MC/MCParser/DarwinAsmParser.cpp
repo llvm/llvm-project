@@ -563,7 +563,8 @@ bool DarwinAsmParser::parseDirectiveIndirectSymbol(StringRef, SMLoc Loc) {
     return TokError("non-local symbol required in directive");
 
   if (!getStreamer().emitSymbolAttribute(Sym, MCSA_IndirectSymbol))
-    return TokError("unable to emit indirect symbol attribute for: " + Sym->getName());
+    return TokError("unable to emit indirect symbol attribute for: " +
+                    Sym->getName());
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in '.indirect_symbol' directive");
