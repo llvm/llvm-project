@@ -1119,32 +1119,19 @@ define void @noalias_arg_simplifiable_1(ptr noalias sret(%struct.S) align 4 %agg
 ; TUNIT-SAME: (ptr noalias nofree writeonly sret([[STRUCT_S:%.*]]) align 4 captures(none) dereferenceable_or_null(24) [[AGG_RESULT:%.*]], ptr noalias nofree nonnull byval([[STRUCT_S]]) align 8 captures(none) dereferenceable(24) [[S:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
-; TUNIT-NEXT:    store float 0x3FF19999A0000000, ptr [[F1]], align 4, !tbaa [[TBAA7]]
 ; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
-; TUNIT-NEXT:    store float 0x40019999A0000000, ptr [[F2]], align 8, !tbaa [[TBAA10]]
 ; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
-; TUNIT-NEXT:    store float 0x400A666660000000, ptr [[F3]], align 4, !tbaa [[TBAA11]]
 ; TUNIT-NEXT:    call void @write_arg(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(24) [[S]], i32 noundef 1) #[[ATTR18]]
 ; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
 ; TUNIT-NEXT:    call void @write_arg(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR18]]
 ; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
 ; TUNIT-NEXT:    call void @write_arg(ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR18]]
-; TUNIT-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
-; TUNIT-NEXT:    [[I:%.*]] = load float, ptr [[F11]], align 4, !tbaa [[TBAA7]]
 ; TUNIT-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
-; TUNIT-NEXT:    store float [[I]], ptr [[F12]], align 4, !tbaa [[TBAA7]]
-; TUNIT-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
-; TUNIT-NEXT:    [[I4:%.*]] = load float, ptr [[F23]], align 8, !tbaa [[TBAA10]]
-; TUNIT-NEXT:    [[MUL:%.*]] = fmul float [[I4]], 2.000000e+00
+; TUNIT-NEXT:    store float 0x3FF19999A0000000, ptr [[F12]], align 4, !tbaa [[TBAA7]]
 ; TUNIT-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
-; TUNIT-NEXT:    store float [[MUL]], ptr [[F24]], align 4, !tbaa [[TBAA10]]
-; TUNIT-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
-; TUNIT-NEXT:    [[I5:%.*]] = load float, ptr [[F35]], align 4, !tbaa [[TBAA11]]
-; TUNIT-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
-; TUNIT-NEXT:    [[I6:%.*]] = load float, ptr [[F16]], align 4, !tbaa [[TBAA7]]
-; TUNIT-NEXT:    [[ADD:%.*]] = fadd float [[I5]], [[I6]]
+; TUNIT-NEXT:    store float 0x40119999A0000000, ptr [[F24]], align 4, !tbaa [[TBAA10]]
 ; TUNIT-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
-; TUNIT-NEXT:    store float [[ADD]], ptr [[F37]], align 4, !tbaa [[TBAA11]]
+; TUNIT-NEXT:    store float 0x40119999A0000000, ptr [[F37]], align 4, !tbaa [[TBAA11]]
 ; TUNIT-NEXT:    [[I7:%.*]] = load i32, ptr [[S]], align 8, !tbaa [[TBAA12]]
 ; TUNIT-NEXT:    store i32 [[I7]], ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12]]
 ; TUNIT-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
