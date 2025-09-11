@@ -3513,11 +3513,10 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
           CGM.getCXXABI().getMangleContext().getBlockId(BD, true);
       if (Discriminator)
         Name += "_" + Twine(Discriminator + 1).str();
-      auto C = CGM.GetAddrOfConstantCString(Name, GVName.c_str());
+      auto C = CGM.GetAddrOfConstantCString(Name, GVName);
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     } else {
-      auto C =
-          CGM.GetAddrOfConstantCString(std::string(FnName), GVName.c_str());
+      auto C = CGM.GetAddrOfConstantCString(std::string(FnName), GVName);
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     }
   }

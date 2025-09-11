@@ -20,9 +20,9 @@ def isUbuntu18_04():
             with open(path) as f:
                 contents = f.read()
             if "Ubuntu 18.04" in contents:
-                return True
+                return "Ubuntu 18.04 is not supported."
 
-    return False
+    return None
 
 
 class TestRerunExprDylib(TestBase):

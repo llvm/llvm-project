@@ -107,6 +107,7 @@ define <7 x i32> @v7i32(i32 %index, i32 %TC, <7 x i32> %V1, <7 x i32> %V2) {
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    ldr r2, [sp, #48]
+; CHECK-NEXT:    adds r0, #16
 ; CHECK-NEXT:    vqadd.u32 q0, q0, r1
 ; CHECK-NEXT:    ldr r1, [sp, #52]
 ; CHECK-NEXT:    vcmp.u32 hi, q3, q0
@@ -119,12 +120,9 @@ define <7 x i32> @v7i32(i32 %index, i32 %TC, <7 x i32> %V1, <7 x i32> %V2) {
 ; CHECK-NEXT:    ldr r1, [sp, #24]
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
 ; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    vmov.f32 s2, s1
-; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    strd r3, r2, [r0, #16]
-; CHECK-NEXT:    str r1, [r0, #24]
+; CHECK-NEXT:    vmov r1, r2, d0
+; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    stm r0!, {r1, r2, r3}
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:

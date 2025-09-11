@@ -45,7 +45,7 @@ export void foo() {
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %[[Tmp1]], i32 0, i32 0
 // CHECK-DXIL: store target("dx.TypedBuffer", float, 1, 0, 0) %[[Handle1]], ptr %__handle, align 4
-// CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[RetValue1]], ptr align 4 %[[Tmp1]], i32 4, i1 false)
+// CHECK: call void @hlsl::RWBuffer<float>::RWBuffer(hlsl::RWBuffer<float> const&)(ptr {{.*}} %[[RetValue1]], ptr {{.*}} %[[Tmp1]])
 
 // Buf2 initialization part 1 - global init function that RWBuffer<float>::__createFromImplicitBinding
 // CHECK: define internal void @__cxx_global_var_init.1()
@@ -62,7 +62,7 @@ export void foo() {
 // CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.TypedBuffer_f64_1_0_0t(
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer.0", ptr %[[Tmp2]], i32 0, i32 0
 // CHECK-DXIL: store target("dx.TypedBuffer", double, 1, 0, 0) %[[Handle2]], ptr %__handle, align 4
-// CHECK-DXIL: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[RetValue2]], ptr align 4 %[[Tmp2]], i32 4, i1 false)
+// CHECK: call void @hlsl::RWBuffer<double>::RWBuffer(hlsl::RWBuffer<double> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by RWBuffer<int> C1 default constructor
 // CHECK: define void @foo()

@@ -18,9 +18,10 @@ let Command = "target modules dump separate debug info" in {
       : Option<"errors-only", "e">,
         Group<1>,
         Desc<"Filter to show only debug info files with ${e}rrors.">;
-  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
-                                     Group<1>,
-                                     Desc<"Load all debug in${f}o files.">;
+  def tm_force_load_all_debug_info
+      : Option<"force-load-all-debug-info", "f">,
+        Group<1>,
+        Desc<"${F}orce load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -41,8 +42,8 @@ let Command = "settings set" in {
         Desc<"${F}orce an empty value to be accepted as the default.">;
   def setset_exists
       : Option<"exists", "e">,
-        Desc<"Set the setting if it ${e}xists, but do not cause "
-             "the command to raise an error if it does not exist.">;
+        Desc<"Set the setting if it ${e}xists, but do not cause the command to "
+             "raise an error if it does not exist.">;
 }
 
 let Command = "settings write" in {
@@ -85,16 +86,14 @@ let Command = "breakpoint list" in {
       : Option<"full", "f">,
         Group<2>,
         Desc<"Give a ${f}ull description of the breakpoint and its locations.">;
-  def blist_verbose
-      : Option<"verbose", "v">,
-        Group<3>,
-        Desc<"Explain everything we know about the breakpoint (for debugging "
-             "debugger bugs).">;
+  def blist_verbose : Option<"verbose", "v">,
+                      Group<3>,
+                      Desc<"Explain everything we know about the breakpoint "
+                           "(for debugging debugger bugs).">;
   def blist_dummy_bp
       : Option<"dummy-breakpoints", "D">,
-        Desc<
-            "List ${D}ummy breakpoints - i.e. breakpoints set before a file is "
-            "provided, which prime new targets.">;
+        Desc<"List ${D}ummy breakpoints - i.e. breakpoints set before a file "
+             "is provided, which prime new targets.">;
 }
 
 let Command = "breakpoint modify" in {
@@ -113,33 +112,33 @@ let Command = "breakpoint modify" in {
       : Option<"thread-index", "x">,
         Group<1>,
         Arg<"ThreadIndex">,
-        Desc<"The breakpoint stops only for the thread whose "
-             "inde${x} matches this argument.">;
+        Desc<"The breakpoint stops only for the thread whose inde${x} matches "
+             "this argument.">;
   def breakpoint_modify_thread_id
       : Option<"thread-id", "t">,
         Group<1>,
         Arg<"ThreadID">,
-        Desc<"The breakpoint stops only for the ${t}hread whose TID "
-             "matches this argument.  The token 'current' resolves to the "
-             "current thread's ID.">;
+        Desc<"The breakpoint stops only for the ${t}hread whose TID matches "
+             "this argument.  The token 'current' resolves to the current "
+             "thread's ID.">;
   def breakpoint_modify_thread_name
       : Option<"thread-name", "T">,
         Group<1>,
         Arg<"ThreadName">,
-        Desc<"The breakpoint stops only for the thread whose "
-             "thread name matches this argument.">;
+        Desc<"The breakpoint stops only for the ${t}hread whose thread name "
+             "matches this argument.">;
   def breakpoint_modify_queue_name
       : Option<"queue-name", "q">,
         Group<1>,
         Arg<"QueueName">,
-        Desc<"The breakpoint stops only for threads in the queue "
-             "whose name is given by this argument.">;
+        Desc<"The breakpoint stops only for threads in the ${q}ueue whose name "
+             "is given by this argument.">;
   def breakpoint_modify_condition
       : Option<"condition", "c">,
         Group<1>,
         Arg<"Expression">,
-        Desc<"The breakpoint stops only if this condition "
-             "expression evaluates to true.">;
+        Desc<"The breakpoint stops only if this ${c}ondition expression "
+             "evaluates to true.">;
   def breakpoint_modify_condition_language
       : Option<"condition-language", "Y">,
         Group<1>,
@@ -180,25 +179,22 @@ let Command = "breakpoint set" in {
         Arg<"ShlibName">,
         Completion<"Module">,
         Groups<[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12]>, // *not* in group 10
-        Desc<"${S}et the breakpoint only in this shared library.  Can repeat "
-             "this "
-             "option multiple times to specify multiple shared libraries.">;
+        Desc<
+            "${S}et the breakpoint only in this shared library.  Can repeat "
+            "this option multiple times to specify multiple shared libraries.">;
   def breakpoint_set_hardware
       : Option<"hardware", "H">,
         Desc<"Require the breakpoint to use ${h}ardware breakpoints.">;
-  def breakpoint_set_file : Option<"file", "f">,
-                            Arg<"Filename">,
-                            Completion<"SourceFile">,
-                            Groups<[1, 3, 4, 5, 6, 7, 8, 9, 11]>,
-                            Desc<"Specifies the source ${f}ile in which to set "
-                                 "this breakpoint.  Note, by "
-                                 "default lldb only looks for files that are "
-                                 "#included if they use the "
-                                 "standard include file extensions.  To set "
-                                 "breakpoints on .c/.cpp/.m/.mm "
-                                 "files that are #included, set "
-                                 "target.inline-breakpoint-strategy to "
-                                 "\"always\".">;
+  def breakpoint_set_file
+      : Option<"file", "f">,
+        Arg<"Filename">,
+        Completion<"SourceFile">,
+        Groups<[1, 3, 4, 5, 6, 7, 8, 9, 11]>,
+        Desc<"Specifies the source ${f}ile in which to set this breakpoint.  "
+             "Note, by default lldb only looks for files that are #included if "
+             "they use the standard include file extensions.  To set "
+             "breakpoints on .c/.cpp/.m/.mm files that are #included, set "
+             "target.inline-breakpoint-strategy to \"always\".">;
   def breakpoint_set_line
       : Option<"line", "l">,
         Group<1>,
@@ -215,59 +211,50 @@ let Command = "breakpoint set" in {
         Group<2>,
         Arg<"AddressOrExpression">,
         Required,
-        Desc<
-            "Set the breakpoint at the specified ${a}ddress.  If the address "
-            "maps "
-            "uniquely to a particular binary, then the address will be "
-            "converted to "
-            "a \"file\"address, so that the breakpoint will track that "
-            "binary+offset "
-            "no matter where the binary eventually loads.  Alternately, if you "
-            "also "
-            "specify the module - with the -s option - then the address will "
-            "be "
-            "treated as a file address in that module, and resolved "
-            "accordingly.  "
-            "Again, this will allow lldb to track that offset on subsequent "
-            "reloads.  "
-            "The module need not have been loaded at the time you specify this "
-            "breakpoint, and will get resolved when the module is loaded.">;
-  def breakpoint_set_name : Option<"name", "n">,
-                            Group<3>,
-                            Arg<"FunctionName">,
-                            Completion<"Symbol">,
-                            Required,
-                            Desc<"Set the breakpoint by function ${n}ame.  Can "
-                                 "be repeated multiple times to make one "
-                                 "breakpoint for multiple names.">;
+        Desc<"Set the breakpoint at the specified ${a}ddress.  If the address "
+             "maps uniquely to a particular binary, then the address will be "
+             "converted to a \"file\"address, so that the breakpoint will "
+             "track that binary+offset no matter where the binary eventually "
+             "loads.  Alternately, if you also specify the module - with the "
+             "-s option - then the address will be treated as a file address "
+             "in that module, and resolved accordingly.  Again, this will "
+             "allow lldb to track that offset on subsequent reloads.  The "
+             "module need not have been loaded at the time you specify this "
+             "breakpoint, and will get resolved when the module is loaded.">;
+  def breakpoint_set_name
+      : Option<"name", "n">,
+        Group<3>,
+        Arg<"FunctionName">,
+        Completion<"Symbol">,
+        Required,
+        Desc<"Set the breakpoint by function ${n}ame.  Can be repeated "
+             "multiple times to make one breakpoint for multiple names.">;
   def breakpoint_set_source_regexp_function
       : Option<"source-regexp-function", "X">,
         Group<9>,
         Arg<"FunctionName">,
         Completion<"Symbol">,
         Desc<"When used with '-p' limits the source regex to source contained "
-             "in "
-             "the named functions.  Can be repeated multiple times.">;
+             "in the named functions.  Can be repeated multiple times.">;
   def breakpoint_set_fullname
       : Option<"fullname", "F">,
         Group<4>,
         Arg<"FullName">,
         Required,
         Completion<"Symbol">,
-        Desc<
-            "Set the breakpoint by ${F}ully qualified function names. For C++ "
-            "this means namespaces and all arguments, and for Objective-C this "
-            "means a full function prototype with class and selector.  Can be "
-            "repeated "
-            "multiple times to make one breakpoint for multiple names.">;
+        Desc<"Set the breakpoint by ${f}ully qualified function names. For C++ "
+             "this means namespaces and all arguments, and for Objective-C "
+             "this means a full function prototype with class and selector.  "
+             "Can be repeated multiple times to make one breakpoint for "
+             "multiple names.">;
   def breakpoint_set_selector
       : Option<"selector", "S">,
         Group<5>,
         Arg<"Selector">,
         Required,
         Desc<"Set the breakpoint by Objective-C ${s}elector name.  Can be "
-             "repeated "
-             "multiple times to make one breakpoint for multiple Selectors.">;
+             "repeated multiple times to make one breakpoint for multiple "
+             "Selectors.">;
   def breakpoint_set_method
       : Option<"method", "M">,
         Group<6>,
@@ -280,26 +267,24 @@ let Command = "breakpoint set" in {
         Group<7>,
         Arg<"RegularExpression">,
         Required,
-        Desc<"Set the breakpoint by function "
-             "name, evaluating a ${r}egular-expression to find the function "
-             "name(s).">;
-  def breakpoint_set_basename : Option<"basename", "b">,
-                                Group<8>,
-                                Arg<"FunctionName">,
-                                Required,
-                                Completion<"Symbol">,
-                                Desc<"Set the breakpoint by function "
-                                     "${b}asename (C++ namespaces and arguments"
-                                     " will be ignored).  Can be repeated "
-                                     "multiple times to make one breakpoint "
-                                     "for multiple symbols.">;
+        Desc<"Set the breakpoint by function name, evaluating a "
+             "${r}egular-expression to find the function name(s).">;
+  def breakpoint_set_basename
+      : Option<"basename", "b">,
+        Group<8>,
+        Arg<"FunctionName">,
+        Required,
+        Completion<"Symbol">,
+        Desc<"Set the breakpoint by function ${b}asename (C++ namespaces and "
+             "arguments will be ignored).  Can be repeated multiple times to "
+             "make one breakpoint for multiple symbols.">;
   def breakpoint_set_source_pattern_regexp
       : Option<"source-pattern-regexp", "p">,
         Group<9>,
         Arg<"RegularExpression">,
         Required,
-        Desc<"Set the breakpoint by specifying a regular expression which"
-             " is matched against the source text in a source file or files "
+        Desc<"Set the breakpoint by specifying a regular expression which is "
+             "matched against the source text in a source file or files "
              "specified with the -f can be specified more than once.  If no "
              "source files are specified, uses the current \"default source "
              "file\".  If you want to match against all source files, ${p}ass "
@@ -314,8 +299,7 @@ let Command = "breakpoint set" in {
         Arg<"Language">,
         Required,
         Desc<"Set the breakpoint on ${e}xceptions thrown by the specified "
-             "language "
-             "(without options, on throw but not catch.)">;
+             "language (without options, on throw but not catch.)">;
   def breakpoint_set_on_throw
       : Option<"on-throw", "w">,
         Group<10>,
@@ -350,8 +334,7 @@ let Command = "breakpoint set" in {
         Groups<[1, 3, 4, 5, 6, 7, 8, 12]>,
         Desc<"Add the specified offset to whatever address(es) the breakpoint "
              "${r}esolves to. At present this applies the offset directly as "
-             "given, and "
-             "doesn't try to align it to instruction boundaries.">;
+             "given, and doesn't try to align it to instruction boundaries.">;
   def breakpoint_set_move_to_nearest_code
       : Option<"move-to-nearest-code", "m">,
         Groups<[1, 9, 12]>,
@@ -380,13 +363,13 @@ let Command = "breakpoint clear" in {
                               Arg<"Filename">,
                               Completion<"SourceFile">,
                               Desc<"Specify the breakpoint by source location "
-                                   "in this particular file.">;
+                                   "in this particular ${f}ile.">;
   def breakpoint_clear_line : Option<"line", "l">,
                               Group<1>,
                               Arg<"LineNum">,
                               Required,
                               Desc<"Specify the breakpoint by source location "
-                                   "at this particular line.">;
+                                   "at this particular ${l}ine.">;
 }
 
 let Command = "breakpoint delete" in {
@@ -455,7 +438,7 @@ let Command = "breakpoint read" in {
         Arg<"Filename">,
         Required,
         Completion<"DiskFile">,
-        Desc<"The file from which to read the breakpoints.">;
+        Desc<"The ${f}ile from which to read the breakpoints.">;
   def breakpoint_read_breakpoint_name
       : Option<"breakpoint-name", "N">,
         Arg<"BreakpointName">,
@@ -468,10 +451,10 @@ let Command = "breakpoint write" in {
         Arg<"Filename">,
         Required,
         Completion<"DiskFile">,
-        Desc<"The file into which to write the breakpoints.">;
+        Desc<"The ${f}ile into which to write the breakpoints.">;
   def breakpoint_write_append
       : Option<"append", "a">,
-        Desc<"Append to saved breakpoints file if it exists.">;
+        Desc<"${A}ppend to saved breakpoints file if it exists.">;
 }
 
 let Command = "breakpoint command add" in {
@@ -479,7 +462,7 @@ let Command = "breakpoint command add" in {
       : Option<"one-liner", "o">,
         Group<1>,
         Arg<"OneLiner">,
-        Desc<"Specify a one-line breakpoint command inline. Be sure to "
+        Desc<"Specify a ${o}ne-line breakpoint command inline. Be sure to "
              "surround it with quotes.">;
   def breakpoint_add_stop_on_error
       : Option<"stop-on-error", "e">,
@@ -506,32 +489,33 @@ let Command = "breakpoint command delete" in {
 }
 
 let Command = "disassemble" in {
-  def disassemble_options_bytes : Option<"bytes", "b">,
-                                  Desc<"Show opcode bytes when disassembling.">;
+  def disassemble_options_bytes
+      : Option<"bytes", "b">,
+        Desc<"Show opcode ${b}ytes when disassembling.">;
   def disassemble_options_kind
       : Option<"kind", "k">,
-        Desc<"Show instruction control flow kind. Refer to the enum "
+        Desc<"Show instruction control flow ${k}ind. Refer to the enum "
              "`InstructionControlFlowKind` for a list of control flow kind. As "
              "an important note, far jumps, far calls and far returns often "
              "indicate calls to and from kernel.">;
   def disassemble_options_context
       : Option<"context", "C">,
         Arg<"NumLines">,
-        Desc<"Number of context lines of source to show.">;
+        Desc<"Number of ${c}ontext lines of source to show.">;
   def disassemble_options_mixed
       : Option<"mixed", "m">,
-        Desc<"Enable mixed source and assembly display.">;
+        Desc<"Enable ${m}ixed source and assembly display.">;
   def disassemble_options_raw
       : Option<"raw", "r">,
-        Desc<"Print raw disassembly with no symbol information.">;
+        Desc<"Print ${r}aw disassembly with no symbol information.">;
   def disassemble_options_plugin
       : Option<"plugin", "P">,
         Arg<"Plugin">,
-        Desc<"Name of the disassembler plugin you want to use.">;
+        Desc<"Name of the disassembler ${p}lugin you want to use.">;
   def disassemble_options_flavor
       : Option<"flavor", "F">,
         Arg<"DisassemblyFlavor">,
-        Desc<"Name of the disassembly flavor you want to use. Currently the "
+        Desc<"Name of the disassembly ${f}lavor you want to use. Currently the "
              "only valid options are default, and for Intel architectures, att "
              "and intel.">;
   def disassemble_options_cpu : Option<"cpu", "X">,
@@ -544,7 +528,7 @@ let Command = "disassemble" in {
   def disassemble_options_arch
       : Option<"arch", "A">,
         Arg<"Architecture">,
-        Desc<"Specify the architecture to use for cross disassembly.">;
+        Desc<"Specify the ${a}rchitecture to use for cross disassembly.">;
   def disassemble_options_start_address
       : Option<"start-address", "s">,
         Groups<[1, 2]>,
@@ -565,31 +549,31 @@ let Command = "disassemble" in {
         Group<3>,
         Arg<"FunctionName">,
         Completion<"Symbol">,
-        Desc<"Disassemble entire contents of the given function name.">;
+        Desc<"Disassemble entire contents of the given function ${n}ame.">;
   def disassemble_options_frame
       : Option<"frame", "f">,
         Group<4>,
         Desc<"Disassemble from the start of the current frame's function.">;
   def disassemble_options_pc : Option<"pc", "p">,
                                Group<5>,
-                               Desc<"Disassemble around the current pc.">;
-  def disassemble_options_line : Option<"line", "l">,
-                                 Group<6>,
-                                 Desc<"Disassemble the current frame's current "
-                                      "source line instructions if "
-                                      "there is debug line table information, "
-                                      "else disassemble around the pc.">;
+                               Desc<"Disassemble around the current ${p}c.">;
+  def disassemble_options_line
+      : Option<"line", "l">,
+        Group<6>,
+        Desc<"Disassemble the current frame's current source ${l}ine "
+             "instructions if there is debug line table information, else "
+             "disassemble around the pc.">;
   def disassemble_options_address
       : Option<"address", "a">,
         Group<7>,
         Arg<"AddressOrExpression">,
-        Desc<"Disassemble function containing this address.">;
+        Desc<"Disassemble function containing this ${a}ddress.">;
   def disassemble_options_force : Option<"force", "\\x01">,
                                   Groups<[2, 3, 4, 5, 7]>,
                                   Desc<"Force disassembly of large functions.">;
   def disassemble_options_variable
       : Option<"variable", "v">,
-        Desc<"Enable variable disassembly annotations for this invocation.">;
+        Desc<"Enable ${v}ariable disassembly annotations for this invocation.">;
 }
 
 let Command = "diagnostics dump" in {
@@ -605,18 +589,19 @@ let Command = "expression" in {
       : Option<"all-threads", "a">,
         Groups<[1, 2]>,
         Arg<"Boolean">,
-        Desc<"Should we run all threads if the execution doesn't complete on "
-             "one thread.">;
+        Desc<
+            "Should we run ${a}ll threads if the execution doesn't complete on "
+            "one thread.">;
   def expression_options_ignore_breakpoints
       : Option<"ignore-breakpoints", "i">,
         Groups<[1, 2]>,
         Arg<"Boolean">,
-        Desc<"Ignore breakpoint hits while running expressions">;
+        Desc<"${I}gnore breakpoint hits while running expressions">;
   def expression_options_timeout
       : Option<"timeout", "t">,
         Groups<[1, 2]>,
         Arg<"UnsignedInteger">,
-        Desc<"Timeout value (in microseconds) for running the expression.">;
+        Desc<"${T}imeout value (in microseconds) for running the expression.">;
   def expression_options_unwind_on_error
       : Option<"unwind-on-error", "u">,
         Groups<[1, 2]>,
@@ -1726,36 +1711,37 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_queue_name
       : Option<"queue-name", "q">,
         Arg<"QueueName">,
-        Desc<"The stop hook is run only for threads in the queue whose name is "
-             "given by this argument.">;
-  def target_stop_hook_add_file
-      : Option<"file", "f">,
-        Groups<[1, 4]>,
-        Arg<"Filename">,
-        Desc<"Specify the source file within which the stop-hook "
-             "is to be run.">,
-        Completion<"SourceFile">;
+        Desc<"The stop hook is run only for threads in the ${q}ueue whose name "
+             "is given by this argument.">;
+  def target_stop_hook_add_file : Option<"file", "f">,
+                                  Groups<[1, 4]>,
+                                  Arg<"Filename">,
+                                  Desc<"Specify the source ${f}ile within "
+                                       "which the stop-hook is to be run.">,
+                                  Completion<"SourceFile">;
   def target_stop_hook_add_start_line
       : Option<"start-line", "l">,
         Groups<[1, 4]>,
         Arg<"LineNum">,
-        Desc<"Set the start of the line range for which the "
+        Desc<"Set the start of the ${l}ine range for which the "
              "stop-hook is to be run.">;
-  def target_stop_hook_add_end_line : Option<"end-line", "e">,
-                                      Groups<[1, 4]>,
-                                      Arg<"LineNum">,
-                                      Desc<"Set the end of the line range for "
-                                           "which the stop-hook is to be run.">;
+  def target_stop_hook_add_end_line
+      : Option<"end-line", "e">,
+        Groups<[1, 4]>,
+        Arg<"LineNum">,
+        Desc<"Set the ${e}nd of the line range for which the stop-hook is to "
+             "be run.">;
   def target_stop_hook_add_classname
       : Option<"classname", "c">,
         Groups<[2, 5]>,
         Arg<"ClassName">,
-        Desc<"Specify the class within which the stop-hook is to be run.">;
+        Desc<"Specify the ${c}lass within which the stop-hook is to be run.">;
   def target_stop_hook_add_name
       : Option<"name", "n">,
         Groups<[3, 6]>,
         Arg<"FunctionName">,
-        Desc<"Set the function name within which the stop hook will be run.">,
+        Desc<
+            "Set the ${f}unction name within which the stop hook will be run.">,
         Completion<"Symbol">;
   def target_stop_hook_add_auto_continue
       : Option<"auto-continue", "G">,
@@ -1764,7 +1750,7 @@ let Command = "target stop hook add" in {
   def target_stop_hook_add_at_initial_stop
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
-        Desc<"Whether the stop-hook will trigger when lldb initially gains "
+        Desc<"Whether the stop-hook will trigger when lldb ${i}nitially gains "
              "control of the process. For a process launch, this initial stop "
              "may happen very early on - before the loader has run. You can "
              "use this option if you do not want some stop-hooks to run then. "
@@ -1779,12 +1765,12 @@ let Command = "thread backtrace" in {
   def thread_backtrace_start : Option<"start", "s">,
                                Group<1>,
                                Arg<"FrameIndex">,
-                               Desc<"Frame in which to start the backtrace">;
+                               Desc<"Frame in which to ${s}tart the backtrace">;
   def thread_backtrace_extended
       : Option<"extended", "e">,
         Group<1>,
         Arg<"Boolean">,
-        Desc<"Show the extended backtrace, if available">;
+        Desc<"Show the ${e}xtended backtrace, if available">;
   def thread_backtrace_unfiltered : Option<"unfiltered", "u">,
                                     Group<1>,
                                     Desc<"Do not filter out frames according "
@@ -1828,8 +1814,8 @@ let Command = "thread step scope" in {
       : Option<"step-over-regexp", "r">,
         Group<1>,
         Arg<"RegularExpression">,
-        Desc<"A regular expression that defines function names to not to stop "
-             "at when stepping in.">;
+        Desc<"A ${r}egular expression that defines function names to not to "
+             "stop at when stepping in.">;
   def thread_step_scope_step_in_target
       : Option<"step-in-target", "t">,
         Group<1>,
