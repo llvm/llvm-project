@@ -166,8 +166,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   interval.print(os);
   return os;
 }
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const IntervalSetTy &set) {
+
+[[maybe_unused]] inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const IntervalSetTy &set) {
   if (set.empty()) {
     os << " <empty>";
     return os;

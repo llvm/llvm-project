@@ -106,18 +106,6 @@ void X86InstrMappingEmitter::printTable(ArrayRef<Entry> Table, StringRef Name,
   printMacroEnd(Macro, OS);
 }
 
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    const BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
-}
-
 class IsMatch {
   const CodeGenInstruction *OldInst;
 
