@@ -186,7 +186,7 @@ namespace {
   /// Find the path length and type of the most-derived subobject in the given
   /// path, and find the size of the containing array, if any.
   static unsigned
-  findMostDerivedSubobject(ASTContext &Ctx, APValue::LValueBase Base,
+  findMostDerivedSubobject(const ASTContext &Ctx, APValue::LValueBase Base,
                            ArrayRef<APValue::LValuePathEntry> Path,
                            uint64_t &ArraySize, QualType &Type, bool &IsArray,
                            bool &FirstEntryIsUnsizedArray) {
@@ -286,7 +286,7 @@ namespace {
           MostDerivedPathLength(0), MostDerivedArraySize(0),
           MostDerivedType(T.isNull() ? QualType() : T.getNonReferenceType()) {}
 
-    SubobjectDesignator(ASTContext &Ctx, const APValue &V)
+    SubobjectDesignator(const ASTContext &Ctx, const APValue &V)
         : Invalid(!V.isLValue() || !V.hasLValuePath()), IsOnePastTheEnd(false),
           FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
           MostDerivedPathLength(0), MostDerivedArraySize(0) {
@@ -1589,7 +1589,7 @@ namespace {
       if (AllowConstexprUnknown)
         V.setConstexprUnknown();
     }
-    void setFrom(ASTContext &Ctx, const APValue &V) {
+    void setFrom(const ASTContext &Ctx, const APValue &V) {
       assert(V.isLValue() && "Setting LValue from a non-LValue?");
       Base = V.getLValueBase();
       Offset = V.getLValueOffset();
