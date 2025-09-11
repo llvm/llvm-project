@@ -21,7 +21,9 @@ on:
 env:
   CC: clang-22
   CXX: clang++-22
-  COMMENT_BODY: ${{ github.event.comment.body  }}
+  COMMENT_BODY: ${{ github.event.comment.body }}
+  PULL_REQUEST_HEAD: ${{ github.event.issue.pull_request.head.sha }}
+  PULL_REQUEST_BASE: ${{ github.event.issue.pull_request.base.sha }}
 
 jobs:
   run-benchmarks:
@@ -33,6 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
+          ref: ${PULL_REQUEST_HEAD}
           fetch-depth: 0
           fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
 
@@ -49,13 +52,13 @@ jobs:
       - name: Run baseline
         run: |
           BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
-          baseline_commit=$(git merge-base refs/remotes/origin/${GITHUB_BASE_REF} ${GITHUB_SHA})
+          baseline_commit=$(git merge-base ${PULL_REQUEST_BASE} ${PULL_REQUEST_SHA})
           ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${BENCHMARKS}
 
       - name: Run candidate
         run: |
           BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
-          ./libcxx/utils/test-at-commit --commit ${GITHUB_SHA} -B build/candidate -- -sv -j1 --param optimization=speed ${BENCHMARKS}
+          ./libcxx/utils/test-at-commit --commit ${PULL_REQUEST_SHA} -B build/candidate -- -sv -j1 --param optimization=speed ${BENCHMARKS}
 
       - name: Compare baseline and candidate runs
         run: ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks build/baseline) \
