@@ -46,7 +46,7 @@ TEST_P(olMemcpyTest, SuccessHtoD) {
   std::vector<uint8_t> Input(Size, 42);
   ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size));
   olSyncQueue(Queue);
-  olMemFree(Alloc);
+  olMemFree(Device, Alloc);
 }
 
 TEST_P(olMemcpyTest, SuccessDtoH) {
@@ -62,7 +62,7 @@ TEST_P(olMemcpyTest, SuccessDtoH) {
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
-  ASSERT_SUCCESS(olMemFree(Alloc));
+  ASSERT_SUCCESS(olMemFree(Device, Alloc));
 }
 
 TEST_P(olMemcpyTest, SuccessDtoD) {
@@ -81,8 +81,8 @@ TEST_P(olMemcpyTest, SuccessDtoD) {
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
-  ASSERT_SUCCESS(olMemFree(AllocA));
-  ASSERT_SUCCESS(olMemFree(AllocB));
+  ASSERT_SUCCESS(olMemFree(Device, AllocA));
+  ASSERT_SUCCESS(olMemFree(Device, AllocB));
 }
 
 TEST_P(olMemcpyTest, SuccessHtoHSync) {
@@ -110,7 +110,7 @@ TEST_P(olMemcpyTest, SuccessDtoHSync) {
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
-  ASSERT_SUCCESS(olMemFree(Alloc));
+  ASSERT_SUCCESS(olMemFree(Device, Alloc));
 }
 
 TEST_P(olMemcpyTest, SuccessSizeZero) {
@@ -146,8 +146,8 @@ TEST_P(olMemcpyGlobalTest, SuccessRoundTrip) {
   for (uint32_t I = 0; I < 64; I++)
     ASSERT_EQ(DestData[I], I);
 
-  ASSERT_SUCCESS(olMemFree(DestMem));
-  ASSERT_SUCCESS(olMemFree(SourceMem));
+  ASSERT_SUCCESS(olMemFree(Device, DestMem));
+  ASSERT_SUCCESS(olMemFree(Device, SourceMem));
 }
 
 TEST_P(olMemcpyGlobalTest, SuccessWrite) {
@@ -178,8 +178,8 @@ TEST_P(olMemcpyGlobalTest, SuccessWrite) {
   for (uint32_t I = 0; I < 64; I++)
     ASSERT_EQ(DestData[I], I);
 
-  ASSERT_SUCCESS(olMemFree(DestMem));
-  ASSERT_SUCCESS(olMemFree(SourceMem));
+  ASSERT_SUCCESS(olMemFree(Device, DestMem));
+  ASSERT_SUCCESS(olMemFree(Device, SourceMem));
 }
 
 TEST_P(olMemcpyGlobalTest, SuccessRead) {
@@ -199,5 +199,5 @@ TEST_P(olMemcpyGlobalTest, SuccessRead) {
   for (uint32_t I = 0; I < 64; I++)
     ASSERT_EQ(DestData[I], I * 2);
 
-  ASSERT_SUCCESS(olMemFree(DestMem));
+  ASSERT_SUCCESS(olMemFree(Device, DestMem));
 }

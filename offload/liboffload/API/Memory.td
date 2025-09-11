@@ -13,14 +13,17 @@
 def ol_alloc_type_t : Enum {
   let desc = "Represents the type of allocation made with olMemAlloc.";
   let etors = [
-    Etor<"HOST", "Host allocation">,
-    Etor<"DEVICE", "Device allocation">,
-    Etor<"MANAGED", "Managed allocation">
+    Etor<"HOST", "Host allocation. Allocated on the host and visible to the host and all devices sharing the same platform.">,
+    Etor<"DEVICE", "Device allocation. Allocated on a specific device and visible only to that device.">,
+    Etor<"MANAGED", "Managed allocation. Allocated on a specific device and visible to the host and all devices sharing the same platform.">
   ];
 }
 
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
+  let details = [
+      "`DEVICE` allocations do not share the same address space as the host or other devices. The `AllocationOut` pointer cannot be used to uniquely identify the allocation in these cases.",
+  ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
@@ -36,10 +39,18 @@ def olMemAlloc : Function {
 
 def olMemFree : Function {
   let desc = "Frees a memory allocation previously made by olMemAlloc.";
+  let details = [
+      "`Address` must be the beginning of the allocation.",
+      "`Device` must be provided for memory allocated as `OL_ALLOC_TYPE_DEVICE`, and may be provided for other types.",
+      "If `Device` is provided, it must match the device used to allocate the memory with `olMemAlloc`.",
+  ];
   let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device this allocation was allocated on", PARAM_IN_OPTIONAL>,
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_NOT_FOUND", ["The address was not found in the list of allocations"]>
+  ];
 }
 
 def olMemcpy : Function {

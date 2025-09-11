@@ -39,7 +39,7 @@ struct olMemFillTest : OffloadQueueTest {
       ASSERT_EQ(AllocPtr[i], Pattern);
     }
 
-    olMemFree(Alloc);
+    olMemFree(Device, Alloc);
   }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemFillTest);
@@ -92,7 +92,7 @@ TEST_P(olMemFillTest, SuccessLarge) {
     ASSERT_EQ(AllocPtr[i].B, UINT64_MAX);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Device, Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeEnqueue) {
@@ -120,7 +120,7 @@ TEST_P(olMemFillTest, SuccessLargeEnqueue) {
     ASSERT_EQ(AllocPtr[i].B, UINT64_MAX);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Device, Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAligned) {
@@ -146,7 +146,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAligned) {
     ASSERT_EQ(AllocPtr[i].C, 255);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Device, Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
@@ -176,7 +176,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
     ASSERT_EQ(AllocPtr[i].C, 255);
   }
 
-  olMemFree(Alloc);
+  olMemFree(Device, Alloc);
 }
 
 TEST_P(olMemFillTest, InvalidPatternSize) {
@@ -189,5 +189,5 @@ TEST_P(olMemFillTest, InvalidPatternSize) {
                olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
 
   olSyncQueue(Queue);
-  olMemFree(Alloc);
+  olMemFree(Device, Alloc);
 }

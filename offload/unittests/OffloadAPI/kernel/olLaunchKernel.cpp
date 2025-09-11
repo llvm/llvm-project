@@ -101,7 +101,7 @@ TEST_P(olLaunchKernelFooTest, Success) {
     ASSERT_EQ(Data[i], i);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
@@ -123,7 +123,7 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
       ASSERT_EQ(Data[i], i);
     }
 
-    ASSERT_SUCCESS(olMemFree(Mem));
+    ASSERT_SUCCESS(olMemFree(Device, Mem));
   });
 }
 
@@ -151,7 +151,7 @@ TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
     ASSERT_EQ(Data[i], i);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelLocalMemTest, Success) {
@@ -176,7 +176,7 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], (i % 64) * 2);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
@@ -199,7 +199,7 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
@@ -222,7 +222,7 @@ TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelGlobalTest, Success) {
@@ -245,7 +245,7 @@ TEST_P(olLaunchKernelGlobalTest, Success) {
     ASSERT_EQ(Data[i], i * 2);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
@@ -273,7 +273,7 @@ TEST_P(olLaunchKernelGlobalCtorTest, Success) {
     ASSERT_EQ(Data[i], i + 100);
   }
 
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Device, Mem));
 }
 
 TEST_P(olLaunchKernelGlobalDtorTest, Success) {
