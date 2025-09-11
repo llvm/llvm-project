@@ -635,8 +635,6 @@ private:
 
   bool emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
 
-  bool doesOpcodeNeedPredicate(unsigned EncodingID) const;
-
   void emitPredicateTableEntry(unsigned EncodingID) const;
 
   void emitSoftFailTableEntry(unsigned EncodingID) const;
@@ -1221,7 +1219,8 @@ bool DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
                                              unsigned EncodingID) const {
   const ListInit *Predicates =
       Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
-  bool IsFirstEmission = true;
+  ListSeparator LS(" && ");
+  bool AnyPredicate = false;
   for (unsigned i = 0; i < Predicates->size(); ++i) {
     const Record *Pred = Predicates->getElementAsRecord(i);
     if (!Pred->getValue("AssemblerMatcherPredicate"))
@@ -1230,28 +1229,13 @@ bool DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
     if (!isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
       continue;
 
-    if (!IsFirstEmission)
-      OS << " && ";
+    AnyPredicate = true;
+    OS << LS;
     if (emitPredicateMatchAux(*Pred->getValueAsDag("AssemblerCondDag"),
                               Predicates->size() > 1, OS))
       PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-    IsFirstEmission = false;
   }
-  return !Predicates->empty();
-}
-
-bool DecoderTableBuilder::doesOpcodeNeedPredicate(unsigned EncodingID) const {
-  const ListInit *Predicates =
-      Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
-  for (unsigned i = 0; i < Predicates->size(); ++i) {
-    const Record *Pred = Predicates->getElementAsRecord(i);
-    if (!Pred->getValue("AssemblerMatcherPredicate"))
-      continue;
-
-    if (isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
-      return true;
-  }
-  return false;
+  return AnyPredicate;
 }
 
 unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
@@ -1269,15 +1253,13 @@ unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
 }
 
 void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
-  if (!doesOpcodeNeedPredicate(EncodingID))
-    return;
-
   // Build up the predicate string.
   SmallString<256> Predicate;
   // FIXME: emitPredicateMatch() functions can take a buffer directly rather
   // than a stream.
   raw_svector_ostream PS(Predicate);
-  emitPredicateMatch(PS, EncodingID);
+  if (!emitPredicateMatch(PS, EncodingID))
+    return;
 
   // Figure out the index into the predicate table for the predicate just
   // computed.
