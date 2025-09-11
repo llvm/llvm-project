@@ -863,6 +863,8 @@ public:
             m_ts->GetTypeFromMangledTypename(ConstString("$sSVD"));
 
         addr_t value = m_task_ptr;
+        if (auto process_sp = m_backend.GetProcessSP())
+          value = process_sp->FixDataAddress(value);
         DataExtractor data{reinterpret_cast<const void *>(&value),
                            sizeof(value), endian::InlHostByteOrder(),
                            sizeof(void *)};
@@ -903,7 +905,7 @@ public:
             parent_addr = 0;
         }
 
-        addr_t value = parent_addr;
+        addr_t value = process_sp->FixDataAddress(parent_addr);
         DataExtractor data{reinterpret_cast<const void *>(&value),
                            sizeof(value), endian::InlHostByteOrder(),
                            sizeof(void *)};
