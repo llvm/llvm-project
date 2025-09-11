@@ -46,15 +46,10 @@ void _01_empty_structs() {
   empty Empty = conjure<empty>();
   empty Empty2 = Empty;
   empty Empty3 = Empty2;
-  // All of these should refer to the exact same symbol, because all of
-  // these trivial copies refer to the original conjured value.
-  // There were Unknown before:
-  clang_analyzer_denote(Empty, "$Empty");
-  clang_analyzer_express(Empty);  // expected-warning {{$Empty}}
-  clang_analyzer_express(Empty2); // expected-warning {{$Empty}}
-  clang_analyzer_express(Empty3); // expected-warning {{$Empty}}
 
-  // We should have the same Conjured symbol for "Empty", "Empty2" and "Empty3".
+  // We only have binding for the original Empty object, because copying empty
+  // objects is a no-op in the performTrivialCopy. This is fine, because empty
+  // objects don't have any data members that could be accessed anyway.
   clang_analyzer_printState();
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
@@ -65,12 +60,6 @@ void _01_empty_structs() {
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Empty", "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ:conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+}]]" }
-  // CHECK-NEXT:    ]},
-  // CHECK-NEXT:    { "cluster": "Empty2", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ]]" }
-  // CHECK-NEXT:    ]},
-  // CHECK-NEXT:    { "cluster": "Empty3", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ]]" }
   // CHECK-NEXT:    ]}
   // CHECK-NEXT:  ]},
 
