@@ -366,6 +366,7 @@ func.func @allocmem_array_with_holes_dynchar(%arg0: index, %arg1: index) -> !fir
 // CHECK:    %[[VAL_0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
 // CHECK:    %[[VAL_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, i64 1
 // CHECK:    %[[VAL_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
+
 func.func @alloca_unlimited_polymorphic_box() {
   %0 = fir.alloca !fir.class<none>
   %1 = fir.alloca !fir.class<!fir.array<?xnone>>
