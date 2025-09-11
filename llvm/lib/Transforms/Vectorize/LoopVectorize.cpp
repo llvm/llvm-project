@@ -6907,6 +6907,16 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
 
+      // The VPlan-based cost model can analyze if recipes are scalar
+      // recursively, but the legacy cost model cannot.
+      if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+        auto *AddrI = dyn_cast<Instruction>(
+            getLoadStorePointerOperand(&WidenMemR->getIngredient()));
+        if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
+                         CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
+          return true;
+      }
+
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
@@ -9810,7 +9820,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
   LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, F, *LAIs, LI, ORE,
-                                &Requirements, &Hints, DB, AC, BFI, PSI);
+                                &Requirements, &Hints, DB, AC, BFI, PSI, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
     Hints.emitRemarkWithHints();
@@ -10247,6 +10257,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
   DB = &AM.getResult<DemandedBitsAnalysis>(F);
   ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   LAIs = &AM.getResult<LoopAccessAnalysis>(F);
+  AA = &AM.getResult<AAManager>(F);
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());

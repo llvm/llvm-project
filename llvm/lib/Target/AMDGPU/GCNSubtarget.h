@@ -1833,6 +1833,9 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
+  /// \returns true if the subtarget supports clusters of workgroups.
+  bool hasClusters() const { return GFX1250Insts; }
+
   /// \returns true if the subtarget requires a wait for xcnt before atomic
   /// flat/global stores & rmw.
   bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
