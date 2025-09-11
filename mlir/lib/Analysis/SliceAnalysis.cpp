@@ -109,7 +109,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
                                           DenseSet<Operation *> &visited,
                                           SetVector<Operation *> *backwardSlice,
                                           const BackwardSliceOptions &options) {
-  if (!op || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
+  if (!op)
     return success();
 
   // Evaluate whether we should keep this def.
