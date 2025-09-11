@@ -162,7 +162,6 @@ SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
 SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
-
 } // namespace xegpu
 
 } // namespace mlir
