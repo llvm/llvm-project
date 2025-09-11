@@ -2852,13 +2852,12 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
       Dst.elem<Floating>(I) =
           MaskBit ? TrueVec.elem<Floating>(I) : FalseVec.elem<Floating>(I);
     } else {
-      APSInt Elem;
-      INT_TYPE_SWITCH(ElemT, {
-        Elem = MaskBit ? TrueVec.elem<T>(I).toAPSInt()
-                       : FalseVec.elem<T>(I).toAPSInt();
+      assert(DstElemT == ElemT);
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) =
+            static_cast<T>(MaskBit ? TrueVec.elem<T>(I).toAPSInt()
+                                   : FalseVec.elem<T>(I).toAPSInt());
       });
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
-                              { Dst.elem<T>(I) = static_cast<T>(Elem); });
     }
   }
   Dst.initializeAllElements();
