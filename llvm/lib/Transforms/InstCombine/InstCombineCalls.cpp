@@ -3927,17 +3927,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::get_active_lane_mask: {
     const APInt *Op0, *Op1;
-    if (match(II->getOperand(0), m_Zero()) ||
-        !match(II->getOperand(0), m_APInt(Op0)) ||
-        !match(II->getOperand(1), m_APInt(Op1)))
-      break;
-
-    Type *OpTy = II->getOperand(0)->getType();
-    return replaceInstUsesWith(
-        *II,
-        Builder.CreateIntrinsic(II->getType(), Intrinsic::get_active_lane_mask,
-                                {Constant::getNullValue(OpTy),
-                                 ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
+    if (match(II->getOperand(0), m_StrictlyPositive(Op0)) &&
+        match(II->getOperand(1), m_APInt(Op1))) {
+      Type *OpTy = II->getOperand(0)->getType();
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(
+                   II->getType(), Intrinsic::get_active_lane_mask,
+                   {Constant::getNullValue(OpTy),
+                    ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
+    }
+    break;
   }
   default: {
     // Handle target specific intrinsics

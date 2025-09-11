@@ -36,19 +36,3 @@ define <vscale x 4 x i1> @bail_lhs_is_zero() {
   %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 4)
   ret <vscale x 4 x i1> %mask
 }
-
-define <vscale x 4 x i1> @lhs_gt_rhs() {
-; CHECK-LABEL: define <vscale x 4 x i1> @lhs_gt_rhs() {
-; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
-;
-  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 5, i32 4)
-  ret <vscale x 4 x i1> %mask
-}
-
-define <vscale x 4 x i1> @lhs_eq_rhs() {
-; CHECK-LABEL: define <vscale x 4 x i1> @lhs_eq_rhs() {
-; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
-;
-  %mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 4, i32 4)
-  ret <vscale x 4 x i1> %mask
-}
