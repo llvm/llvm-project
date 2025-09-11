@@ -1212,26 +1212,23 @@ define i32 @bzhi32_c0(i32 %val, i32 %numlowbits) nounwind {
 ; V7A-LABEL: bzhi32_c0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c0:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c0:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -1251,18 +1248,17 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; V7A-LABEL: bzhi32_c1_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c1_indexzext:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c1_indexzext:
@@ -1270,10 +1266,8 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %numhighbits = sub i8 32, %numlowbits
   %sh_prom = zext i8 %numhighbits to i32
@@ -1295,28 +1289,25 @@ define i32 @bzhi32_c2_load(ptr %w, i32 %numlowbits) nounwind {
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c2_load:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    ldr r0, [r0]
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c2_load:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
 ; V6M-NEXT:    ldr r0, [r0]
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %numhighbits = sub i32 32, %numlowbits
@@ -1339,19 +1330,18 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
 ; V7A-NEXT:    ldr r0, [r0]
-; V7A-NEXT:    mvn r2, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c3_load_indexzext:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
 ; V7A-T-NEXT:    ldr r0, [r0]
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c3_load_indexzext:
@@ -1359,11 +1349,9 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
 ; V6M-NEXT:    ldr r0, [r0]
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %numhighbits = sub i8 32, %numlowbits
@@ -1384,26 +1372,23 @@ define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; V7A-LABEL: bzhi32_c4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c4_commutative:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c4_commutative:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -2765,5 +2750,3 @@ define i64 @bzhi64_constant_mask8_load(ptr %val) nounwind {
   %masked = and i64 %val1, 127
   ret i64 %masked
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; V7M: {{.*}}

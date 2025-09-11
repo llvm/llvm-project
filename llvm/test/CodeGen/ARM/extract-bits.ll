@@ -2151,30 +2151,27 @@ define i32 @bextr32_c0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 ;
 ; V7A-LABEL: bextr32_c0:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    rsb r2, r2, #32
-; V7A-NEXT:    mvn r3, #0
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c0:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c0:
 ; V6M:       @ %bb.0:
+; V6M-NEXT:    movs r3, #32
+; V6M-NEXT:    subs r2, r3, r2
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    movs r1, #32
-; V6M-NEXT:    subs r1, r1, r2
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r2
+; V6M-NEXT:    lsrs r0, r2
 ; V6M-NEXT:    bx lr
   %shifted = lshr i32 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
@@ -2196,12 +2193,12 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ;
 ; V7A-LABEL: bextr32_c1_indexzext:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    rsb r2, r2, #32
-; V7A-NEXT:    mvn r3, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    uxtb r2, r2
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    uxtb r1, r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c1_indexzext:
@@ -2209,10 +2206,9 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; V7A-T-NEXT:    uxtb r1, r1
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c1_indexzext:
@@ -2222,10 +2218,8 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; V6M-NEXT:    movs r1, #32
 ; V6M-NEXT:    subs r1, r1, r2
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %skip = zext i8 %numskipbits to i32
   %shifted = lshr i32 %val, %skip
@@ -2249,32 +2243,29 @@ define i32 @bextr32_c2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-LABEL: bextr32_c2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
-; V7A-NEXT:    rsb r2, r2, #32
-; V7A-NEXT:    mvn r3, #0
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c2_load:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    ldr r0, [r0]
-; V7A-T-NEXT:    rsb.w r2, r2, #32
-; V7A-T-NEXT:    mov.w r3, #-1
-; V7A-T-NEXT:    lsr.w r2, r3, r2
 ; V7A-T-NEXT:    lsrs r0, r1
-; V7A-T-NEXT:    ands r0, r2
+; V7A-T-NEXT:    rsb.w r1, r2, #32
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c2_load:
 ; V6M:       @ %bb.0:
-; V6M-NEXT:    ldr r3, [r0]
-; V6M-NEXT:    lsrs r3, r1
-; V6M-NEXT:    movs r0, #32
-; V6M-NEXT:    subs r1, r0, r2
-; V6M-NEXT:    movs r0, #0
-; V6M-NEXT:    mvns r0, r0
+; V6M-NEXT:    movs r3, #32
+; V6M-NEXT:    subs r2, r3, r2
+; V6M-NEXT:    ldr r0, [r0]
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    ands r0, r3
+; V6M-NEXT:    lsls r0, r2
+; V6M-NEXT:    lsrs r0, r2
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %shifted = lshr i32 %val, %numskipbits
@@ -2298,13 +2289,13 @@ define i32 @bextr32_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ;
 ; V7A-LABEL: bextr32_c3_load_indexzext:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    rsb r2, r2, #32
 ; V7A-NEXT:    ldr r0, [r0]
-; V7A-NEXT:    mvn r3, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    uxtb r2, r2
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    uxtb r1, r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c3_load_indexzext:
@@ -2313,24 +2304,21 @@ define i32 @bextr32_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; V7A-T-NEXT:    uxtb r1, r1
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c3_load_indexzext:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    ldr r3, [r0]
-; V6M-NEXT:    lsrs r3, r1
-; V6M-NEXT:    movs r0, #32
-; V6M-NEXT:    subs r0, r0, r2
-; V6M-NEXT:    uxtb r1, r0
-; V6M-NEXT:    movs r0, #0
-; V6M-NEXT:    mvns r0, r0
+; V6M-NEXT:    ldr r0, [r0]
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    ands r0, r3
+; V6M-NEXT:    movs r1, #32
+; V6M-NEXT:    subs r1, r1, r2
+; V6M-NEXT:    uxtb r1, r1
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %skip = zext i8 %numskipbits to i32
@@ -2355,28 +2343,25 @@ define i32 @bextr32_c4_commutative(i32 %val, i32 %numskipbits, i32 %numlowbits) 
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    rsb r1, r2, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c4_commutative:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c4_commutative:
 ; V6M:       @ %bb.0:
+; V6M-NEXT:    movs r3, #32
+; V6M-NEXT:    subs r2, r3, r2
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    movs r1, #32
-; V6M-NEXT:    subs r1, r1, r2
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r2
+; V6M-NEXT:    lsrs r0, r2
 ; V6M-NEXT:    bx lr
   %shifted = lshr i32 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
@@ -3032,8 +3017,8 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-NEXT:    orr r0, r0, r1, lsl r3
 ; V7A-NEXT:    lsrpl r0, r1, r2
 ; V7A-NEXT:    rsb r1, r12, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr64_32_c1:
@@ -3047,9 +3032,8 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r2
 ; V7A-T-NEXT:    rsb.w r1, r12, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr64_32_c1:
@@ -3060,10 +3044,8 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V6M-NEXT:    ldr r1, [sp, #8]
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    pop {r7, pc}
   %shifted = lshr i64 %val, %numskipbits
   %truncshifted = trunc i64 %shifted to i32
@@ -3100,8 +3082,8 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-NEXT:    orr r0, r0, r1, lsl r3
 ; V7A-NEXT:    lsrpl r0, r1, r2
 ; V7A-NEXT:    rsb r1, r12, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr64_32_c2:
@@ -3115,9 +3097,8 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r2
 ; V7A-T-NEXT:    rsb.w r1, r12, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr64_32_c2:
@@ -3128,10 +3109,8 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V6M-NEXT:    ldr r1, [sp, #8]
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    pop {r7, pc}
   %shifted = lshr i64 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
@@ -4610,5 +4589,3 @@ define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
   store i64 %tmp2, ptr %ptr
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; V7M: {{.*}}
