@@ -147,6 +147,7 @@ def int_wasm_get_ehselector :
 def int_wasm_catch :
   DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty],
                         [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+def int_wasm_catch_js : DefaultAttrsIntrinsic<[llvm_externref_ty], []>;
 
 // WebAssembly EH must maintain the landingpads in the order assigned to them
 // by WasmEHPrepare pass to generate landingpad table in EHStreamer. This is
