@@ -85,8 +85,7 @@ getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
          "Expecting a valid layout.");
   SmallVector<int64_t> effectiveLaneLayout =
-      xegpu::computeEffectiveLaneLayout(layout);
-
+      layout.getEffectiveLaneLayoutAsInt();
   assert(static_cast<size_t>(originalType.getRank()) >=
              effectiveLaneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
@@ -1234,9 +1233,26 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
         cast<VectorType>(warpOp.getResult(operandNumber).getType());
     xegpu::DistributeLayoutAttr sourceLayout =
         xegpu::getDistributeLayoutAttr(shapeCastOp.getSource());
-    if (!sourceLayout)
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getDistributeLayoutAttr(shapeCastOp.getResult());
+    if (!sourceLayout || !resultLayout)
       return rewriter.notifyMatchFailure(
-          warpOp, "the source of shape_cast op lacks distribution layout");
+          warpOp,
+          "the source or result of shape_cast op lacks distribution layout");
+
+    // For rank reducing or increasing shape_cast ops, the lower rank layout
+    // must be a slice of higher rank layout.
+    int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
+    int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
+    if (sourceRank < resultRank && !sourceLayout.isSliceOf(resultLayout))
+      return rewriter.notifyMatchFailure(
+          warpOp, "shape_cast is rank reducing but source layout is not a "
+                  "slice of result layout");
+    if (sourceRank > resultRank && !resultLayout.isSliceOf(sourceLayout))
+      return rewriter.notifyMatchFailure(
+          warpOp, "shape_cast is rank increasing but result layout is not a "
+                  "slice of source layout");
+
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
                                         shapeCastOp.getSourceVectorType());
@@ -1349,10 +1365,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       return AffineMap::getMultiDimMapWithTargets(
           vecRank, {static_cast<unsigned int>(vecRank - 1)}, val.getContext());
     SmallVector<unsigned int> distributedDims;
-    // Get the distributed dimensions based on the layout.
-    SmallVector<int64_t> laneLayout = xegpu::computeEffectiveLaneLayout(layout);
-    for (unsigned i = 0; i < laneLayout.size(); ++i) {
-      if (laneLayout[i] > 1)
+    for (auto [i, v] : llvm::enumerate(layout.getEffectiveLaneLayoutAsInt())) {
+      if (v > 1)
         distributedDims.push_back(i);
     }
     return AffineMap::getMultiDimMapWithTargets(vecRank, distributedDims,
