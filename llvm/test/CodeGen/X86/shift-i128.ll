@@ -1081,25 +1081,25 @@ define i128 @shift_i128_limited_shamt_unknown_lhs(i128 noundef %a, i32 noundef %
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $48, %esp
+; i686-NEXT:    movl 44(%ebp), %ecx
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %edx
 ; i686-NEXT:    movl 32(%ebp), %esi
 ; i686-NEXT:    movl 36(%ebp), %edi
-; i686-NEXT:    movl 44(%ebp), %ecx
 ; i686-NEXT:    subl 40(%ebp), %ecx
 ; i686-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; i686-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; i686-NEXT:    movl $0, (%esp)
 ; i686-NEXT:    movl %ecx, %eax
 ; i686-NEXT:    shrb $3, %al
 ; i686-NEXT:    andb $12, %al
 ; i686-NEXT:    negb %al
 ; i686-NEXT:    movsbl %al, %eax
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; i686-NEXT:    movl $0, (%esp)
 ; i686-NEXT:    movl 20(%esp,%eax), %edx
 ; i686-NEXT:    movl 24(%esp,%eax), %ebx
 ; i686-NEXT:    movl %ebx, %edi

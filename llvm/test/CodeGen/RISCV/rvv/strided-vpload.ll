@@ -719,38 +719,38 @@ define <vscale x 16 x double> @strided_load_nxv16f64(ptr %ptr, i64 %stride, <vsc
 define <vscale x 16 x double> @strided_load_nxv16f64_allones_mask(ptr %ptr, i64 %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_load_nxv16f64_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    csrr a4, vlenb
-; CHECK-RV32-NEXT:    sub a2, a3, a4
-; CHECK-RV32-NEXT:    sltu a5, a3, a2
+; CHECK-RV32-NEXT:    csrr a2, vlenb
+; CHECK-RV32-NEXT:    sub a4, a3, a2
+; CHECK-RV32-NEXT:    sltu a5, a3, a4
 ; CHECK-RV32-NEXT:    addi a5, a5, -1
-; CHECK-RV32-NEXT:    and a2, a5, a2
-; CHECK-RV32-NEXT:    bltu a3, a4, .LBB56_2
+; CHECK-RV32-NEXT:    and a4, a5, a4
+; CHECK-RV32-NEXT:    bltu a3, a2, .LBB56_2
 ; CHECK-RV32-NEXT:  # %bb.1:
-; CHECK-RV32-NEXT:    mv a3, a4
+; CHECK-RV32-NEXT:    mv a3, a2
 ; CHECK-RV32-NEXT:  .LBB56_2:
-; CHECK-RV32-NEXT:    mul a4, a3, a1
-; CHECK-RV32-NEXT:    add a4, a0, a4
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v16, (a4), a1
+; CHECK-RV32-NEXT:    mul a2, a3, a1
+; CHECK-RV32-NEXT:    add a2, a0, a2
+; CHECK-RV32-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v16, (a2), a1
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_load_nxv16f64_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    csrr a4, vlenb
-; CHECK-RV64-NEXT:    sub a3, a2, a4
-; CHECK-RV64-NEXT:    sltu a5, a2, a3
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    sub a4, a2, a3
+; CHECK-RV64-NEXT:    sltu a5, a2, a4
 ; CHECK-RV64-NEXT:    addi a5, a5, -1
-; CHECK-RV64-NEXT:    and a3, a5, a3
-; CHECK-RV64-NEXT:    bltu a2, a4, .LBB56_2
+; CHECK-RV64-NEXT:    and a4, a5, a4
+; CHECK-RV64-NEXT:    bltu a2, a3, .LBB56_2
 ; CHECK-RV64-NEXT:  # %bb.1:
-; CHECK-RV64-NEXT:    mv a2, a4
+; CHECK-RV64-NEXT:    mv a2, a3
 ; CHECK-RV64-NEXT:  .LBB56_2:
-; CHECK-RV64-NEXT:    mul a4, a2, a1
-; CHECK-RV64-NEXT:    add a4, a0, a4
-; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    vlse64.v v16, (a4), a1
+; CHECK-RV64-NEXT:    mul a3, a2, a1
+; CHECK-RV64-NEXT:    add a3, a0, a3
+; CHECK-RV64-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    vlse64.v v16, (a3), a1
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret

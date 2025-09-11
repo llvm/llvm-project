@@ -203,13 +203,12 @@ define <4 x i32> @freeze_add_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_add_vec_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
+; X64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
   %y = freeze <4 x i32> %x
@@ -274,13 +273,12 @@ define <4 x i32> @freeze_sub_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_sub_vec_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sub_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
+; X64-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = sub <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
   %y = freeze <4 x i32> %x
@@ -345,14 +343,12 @@ define <8 x i16> @freeze_mul_vec(<8 x i16> %a0) nounwind {
 define <8 x i16> @freeze_mul_vec_undef(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_mul_vec_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,3,4,4,3,0,1]
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,3,2,1,1,2,u,4]
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,6,6,4,4,6,0,4]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4,4,3,0,1]
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,3,2,1,1,2,u,4]
+; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,6,6,4,4,6,0,4]
 ; X64-NEXT:    retq
   %x = mul <8 x i16> %a0, <i16 1, i16 2, i16 3, i16 4, i16 4, i16 3, i16 undef, i16 1>
   %y = freeze <8 x i16> %x
@@ -452,8 +448,7 @@ define i32 @freeze_ashr(i32 %a0) nounwind {
 ; X86-LABEL: freeze_ashr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sarl $3, %eax
-; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    sarl $6, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr:
@@ -471,15 +466,13 @@ define i32 @freeze_ashr_exact(i32 %a0) nounwind {
 ; X86-LABEL: freeze_ashr_exact:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sarl $3, %eax
-; X86-NEXT:    sarl $6, %eax
+; X86-NEXT:    sarl $9, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr_exact:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    sarl $3, %eax
-; X64-NEXT:    sarl $6, %eax
+; X64-NEXT:    sarl $9, %eax
 ; X64-NEXT:    retq
   %x = ashr exact i32 %a0, 3
   %y = freeze i32 %x
@@ -492,18 +485,19 @@ define i32 @freeze_ashr_exact_extra_use(i32 %a0, ptr %escape) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    sarl $3, %ecx
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sarl $6, %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    sarl $3, %edx
+; X86-NEXT:    sarl $9, %eax
+; X86-NEXT:    movl %edx, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ashr_exact_extra_use:
 ; X64:       # %bb.0:
-; X64-NEXT:    sarl $3, %edi
-; X64-NEXT:    movl %edi, (%rsi)
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    sarl $6, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    sarl $3, %ecx
+; X64-NEXT:    sarl $9, %eax
+; X64-NEXT:    movl %ecx, (%rsi)
 ; X64-NEXT:    retq
   %x = ashr exact i32 %a0, 3
   %y = freeze i32 %x
@@ -566,8 +560,7 @@ define i32 @freeze_lshr(i32 %a0) nounwind {
 ; X86-LABEL: freeze_lshr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $2, %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    shrl $3, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr:
@@ -585,15 +578,13 @@ define i32 @freeze_lshr_exact(i32 %a0) nounwind {
 ; X86-LABEL: freeze_lshr_exact:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $3, %eax
-; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr_exact:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $3, %eax
-; X64-NEXT:    shrl $5, %eax
+; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    retq
   %x = lshr exact i32 %a0, 3
   %y = freeze i32 %x
@@ -606,18 +597,19 @@ define i32 @freeze_lshr_exact_extra_use(i32 %a0, ptr %escape) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $3, %ecx
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $3, %edx
+; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movl %edx, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_lshr_exact_extra_use:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrl $3, %edi
-; X64-NEXT:    movl %edi, (%rsi)
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $5, %eax
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrl $3, %ecx
+; X64-NEXT:    shrl $8, %eax
+; X64-NEXT:    movl %ecx, (%rsi)
 ; X64-NEXT:    retq
   %x = lshr exact i32 %a0, 3
   %y = freeze i32 %x

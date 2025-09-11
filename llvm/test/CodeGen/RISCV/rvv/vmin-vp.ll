@@ -1048,22 +1048,24 @@ define <vscale x 32 x i32> @vmin_vx_nxv32i32_evl_nx8(<vscale x 32 x i32> %va, i3
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv1r.v v24, v0
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    srli a3, a1, 2
-; RV64-NEXT:    slli a2, a1, 1
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    srli a3, a2, 2
+; RV64-NEXT:    slli a1, a2, 1
+; RV64-NEXT:    slli a2, a2, 32
 ; RV64-NEXT:    vslidedown.vx v0, v0, a3
-; RV64-NEXT:    sub a3, a1, a2
-; RV64-NEXT:    sltu a4, a1, a3
+; RV64-NEXT:    srli a2, a2, 32
+; RV64-NEXT:    sub a3, a2, a1
+; RV64-NEXT:    sltu a4, a2, a3
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
 ; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vmin.vx v16, v16, a0, v0.t
-; RV64-NEXT:    bltu a1, a2, .LBB82_2
+; RV64-NEXT:    bltu a2, a1, .LBB82_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:    mv a2, a1
 ; RV64-NEXT:  .LBB82_2:
 ; RV64-NEXT:    vmv1r.v v0, v24
-; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV64-NEXT:    vmin.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i32> poison, i32 %b, i32 0
