@@ -7745,46 +7745,46 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
         AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_id_x:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
   case Intrinsic::amdgcn_cluster_id_y:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_cluster_id_z:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_id_y:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_id_z:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
     return AMDGPU::isGFX1250(ST) &&
            legalizeConstHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
-    return ST.hasGFX1250Insts() &&
+    return ST.hasClusters() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B,
                AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID);
