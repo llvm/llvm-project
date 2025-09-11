@@ -270,8 +270,7 @@ add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${LLVM_TEST_DEPENDS_COMMON}
   DEPENDS ${LLVM_TEST_DEPENDS}
   FOLDER "Tests/Subdirectories"
-  SKIP "^FileCheck"
-  SKIP "^TableGen"
+  SKIP "^FileCheck" "^TableGen"
   )
 add_subdirectory(FileCheck)
 add_subdirectory(TableGen)
