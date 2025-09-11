@@ -1323,7 +1323,7 @@ struct AAAMDGPUClusterDims
   /// This function should return true if the type of the \p AA is
   /// AAAMDGPUClusterDims.
   static bool classof(const AbstractAttribute *AA) {
-    return (AA->getIdAddr() == &ID);
+    return AA->getIdAddr() == &ID;
   }
 
   virtual const AMDGPU::ClusterDimsAttr &getClusterDims() const = 0;
@@ -1358,7 +1358,7 @@ struct AAAMDGPUClusterDimsFunction : public AAAMDGPUClusterDims {
       return "unknown";
     if (Attr.isNoCluster())
       return "no";
-    if (Attr.isVariableedDims())
+    if (Attr.isVariableDims())
       return "variable";
     return Attr.to_string();
   }
