@@ -39,6 +39,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -537,6 +538,13 @@ public:
 protected:
   friend class VarMapBuilder;
 
+  // Resolve any definition ID down to its non-reference base ID.
+  unsigned getCanonicalDefinitionID(unsigned ID) {
+    while (ID > 0 && VarDefinitions[ID].isReference())
+      ID = VarDefinitions[ID].Ref;
+    return ID;
+  }
+
   // Get the current context index
   unsigned getContextIndex() { return SavedContexts.size()-1; }
 
@@ -621,6 +629,7 @@ public:
 
   void VisitDeclStmt(const DeclStmt *S);
   void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitCallExpr(const CallExpr *CE);
 };
 
 } // namespace
@@ -666,6 +675,56 @@ void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 }
 
+// Invalidates local variable definitions if variable escaped.
+void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (!FD)
+    return;
+
+  // Heuristic for likely-benign functions that pass by mutable reference. This
+  // is needed to avoid a slew of false positives due to mutable reference
+  // passing where the captured reference is usually passed on by-value.
+  if (const IdentifierInfo *II = FD->getIdentifier()) {
+    // Any kind of std::bind-like functions.
+    if (II->isStr("bind") || II->isStr("bind_front"))
+      return;
+  }
+
+  // Invalidate local variable definitions that are passed by non-const
+  // reference or non-const pointer.
+  for (unsigned Idx = 0; Idx < CE->getNumArgs(); ++Idx) {
+    if (Idx >= FD->getNumParams())
+      break;
+
+    const Expr *Arg = CE->getArg(Idx)->IgnoreParenImpCasts();
+    const ParmVarDecl *PVD = FD->getParamDecl(Idx);
+    QualType ParamType = PVD->getType();
+
+    // Potential reassignment if passed by non-const reference / pointer.
+    const ValueDecl *VDec = nullptr;
+    if (ParamType->isReferenceType() &&
+        !ParamType->getPointeeType().isConstQualified()) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
+        VDec = DRE->getDecl();
+    } else if (ParamType->isPointerType() &&
+               !ParamType->getPointeeType().isConstQualified()) {
+      Arg = Arg->IgnoreParenCasts();
+      if (const auto *UO = dyn_cast<UnaryOperator>(Arg)) {
+        if (UO->getOpcode() == UO_AddrOf) {
+          const Expr *SubE = UO->getSubExpr()->IgnoreParenCasts();
+          if (const auto *DRE = dyn_cast<DeclRefExpr>(SubE))
+            VDec = DRE->getDecl();
+        }
+      }
+    }
+
+    if (VDec && Ctx.lookup(VDec)) {
+      Ctx = VMap->clearDefinition(VDec, Ctx);
+      VMap->saveContext(CE, Ctx);
+    }
+  }
+}
+
 // Computes the intersection of two contexts.  The intersection is the
 // set of variables which have the same definition in both contexts;
 // variables with different definitions are discarded.
@@ -674,11 +733,16 @@ LocalVariableMap::intersectContexts(Context C1, Context C2) {
   Context Result = C1;
   for (const auto &P : C1) {
     const NamedDecl *Dec = P.first;
-    const unsigned *i2 = C2.lookup(Dec);
-    if (!i2)             // variable doesn't exist on second path
+    const unsigned *I2 = C2.lookup(Dec);
+    if (!I2) {
+      // The variable doesn't exist on second path.
       Result = removeDefinition(Dec, Result);
-    else if (*i2 != P.second)  // variable exists, but has different definition
+    } else if (getCanonicalDefinitionID(P.second) !=
+               getCanonicalDefinitionID(*I2)) {
+      // If canonical definitions mismatch the underlying definitions are
+      // different, invalidate.
       Result = clearDefinition(Dec, Result);
+    }
   }
   return Result;
 }
@@ -698,13 +762,22 @@ LocalVariableMap::Context LocalVariableMap::createReferenceContext(Context C) {
 // createReferenceContext.
 void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
   for (const auto &P : C1) {
-    unsigned i1 = P.second;
-    VarDefinition *VDef = &VarDefinitions[i1];
+    const unsigned I1 = P.second;
+    VarDefinition *VDef = &VarDefinitions[I1];
     assert(VDef->isReference());
 
-    const unsigned *i2 = C2.lookup(P.first);
-    if (!i2 || (*i2 != i1))
-      VDef->Ref = 0;    // Mark this variable as undefined
+    const unsigned *I2 = C2.lookup(P.first);
+    if (!I2) {
+      // Variable does not exist at the end of the loop, invalidate.
+      VDef->Ref = 0;
+      continue;
+    }
+
+    // Compare the canonical IDs. This correctly handles chains of references
+    // and determines if the variable is truly loop-invariant.
+    if (getCanonicalDefinitionID(VDef->Ref) != getCanonicalDefinitionID(*I2)) {
+      VDef->Ref = 0; // Mark this variable as undefined
+    }
   }
 }
 
@@ -1196,11 +1269,10 @@ public:
 
   void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
                           const Expr *Exp, AccessKind AK, Expr *MutexExp,
-                          ProtectedOperationKind POK, til::LiteralPtr *Self,
+                          ProtectedOperationKind POK, til::SExpr *Self,
                           SourceLocation Loc);
   void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
-                       Expr *MutexExp, til::LiteralPtr *Self,
-                       SourceLocation Loc);
+                       Expr *MutexExp, til::SExpr *Self, SourceLocation Loc);
 
   void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
                    ProtectedOperationKind POK);
@@ -1596,6 +1668,16 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   const CFGBlockInfo *PredBlockInfo = &BlockInfo[PredBlock->getBlockID()];
   const LocalVarContext &LVarCtx = PredBlockInfo->ExitContext;
 
+  // Temporarily set the lookup context for SExprBuilder.
+  SxBuilder.setLookupLocalVarExpr([&](const NamedDecl *D) -> const Expr * {
+    if (!Handler.issueBetaWarnings())
+      return nullptr;
+    auto Ctx = LVarCtx;
+    return LocalVarMap.lookupExpr(D, Ctx);
+  });
+  auto Cleanup = llvm::make_scope_exit(
+      [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
+
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
   if (!Exp)
     return;
@@ -1652,7 +1734,7 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   }
 
   void handleCall(const Expr *Exp, const NamedDecl *D,
-                  til::LiteralPtr *Self = nullptr,
+                  til::SExpr *Self = nullptr,
                   SourceLocation Loc = SourceLocation());
   void examineArguments(const FunctionDecl *FD,
                         CallExpr::const_arg_iterator ArgBegin,
@@ -1664,7 +1746,17 @@ public:
                const FactSet &FunctionExitFSet)
       : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
         FunctionExitFSet(FunctionExitFSet), LVarCtx(Info.EntryContext),
-        CtxIndex(Info.EntryIndex) {}
+        CtxIndex(Info.EntryIndex) {
+    Analyzer->SxBuilder.setLookupLocalVarExpr(
+        [this](const NamedDecl *D) -> const Expr * {
+          if (!Analyzer->Handler.issueBetaWarnings())
+            return nullptr;
+          auto Ctx = LVarCtx;
+          return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+        });
+  }
+
+  ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -1682,7 +1774,7 @@ public:
 /// of at least the passed in AccessKind.
 void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
     const FactSet &FSet, const NamedDecl *D, const Expr *Exp, AccessKind AK,
-    Expr *MutexExp, ProtectedOperationKind POK, til::LiteralPtr *Self,
+    Expr *MutexExp, ProtectedOperationKind POK, til::SExpr *Self,
     SourceLocation Loc) {
   LockKind LK = getLockKindFromAccessKind(AK);
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
@@ -1741,8 +1833,7 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
 /// Warn if the LSet contains the given lock.
 void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
                                            const NamedDecl *D, const Expr *Exp,
-                                           Expr *MutexExp,
-                                           til::LiteralPtr *Self,
+                                           Expr *MutexExp, til::SExpr *Self,
                                            SourceLocation Loc) {
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
   if (Cp.isInvalid()) {
@@ -1910,7 +2001,7 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
 ///              of an implicitly called cleanup function.
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
-                              til::LiteralPtr *Self, SourceLocation Loc) {
+                              til::SExpr *Self, SourceLocation Loc) {
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
@@ -1922,7 +2013,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     const auto *TagT = Exp->getType()->getAs<TagType>();
     if (D->hasAttrs() && TagT && Exp->isPRValue()) {
       til::LiteralPtr *Placeholder =
-          Analyzer->SxBuilder.createVariable(nullptr);
+          Analyzer->SxBuilder.createThisPlaceholder();
       [[maybe_unused]] auto inserted =
           Analyzer->ConstructedObjects.insert({Exp, Placeholder});
       assert(inserted.second && "Are we visiting the same expression again?");
@@ -2216,6 +2307,9 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
 }
 
 void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
+  // adjust the context
+  LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, Exp, LVarCtx);
+
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(Exp)) {
     const auto *ME = dyn_cast<MemberExpr>(CE->getCallee());
     // ME can be null when calling a method pointer
@@ -2603,7 +2697,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       }
       if (UnderlyingLocks.empty())
         continue;
-      CapabilityExpr Cp(SxBuilder.createVariable(Param), StringRef(),
+      CapabilityExpr Cp(SxBuilder.translateVariable(Param, nullptr),
+                        StringRef(),
                         /*Neg=*/false, /*Reentrant=*/false);
       auto *ScopedEntry = FactMan.createFact<ScopedLockableFactEntry>(
           Cp, Param->getLocation(), FactEntry::Declared,
@@ -2721,17 +2816,19 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
           if (!DD->hasAttrs())
             break;
 
-          LocksetBuilder.handleCall(nullptr, DD,
-                                    SxBuilder.createVariable(AD.getVarDecl()),
-                                    AD.getTriggerStmt()->getEndLoc());
+          LocksetBuilder.handleCall(
+              nullptr, DD,
+              SxBuilder.translateVariable(AD.getVarDecl(), nullptr),
+              AD.getTriggerStmt()->getEndLoc());
           break;
         }
 
         case CFGElement::CleanupFunction: {
           const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
-          LocksetBuilder.handleCall(/*Exp=*/nullptr, CF.getFunctionDecl(),
-                                    SxBuilder.createVariable(CF.getVarDecl()),
-                                    CF.getVarDecl()->getLocation());
+          LocksetBuilder.handleCall(
+              /*Exp=*/nullptr, CF.getFunctionDecl(),
+              SxBuilder.translateVariable(CF.getVarDecl(), nullptr),
+              CF.getVarDecl()->getLocation());
           break;
         }
 
