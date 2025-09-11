@@ -652,3 +652,64 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+
+add_header_library(
+  annex_k_helper_macros
+  HDRS
+    annex_k_helper_macros.h
+  DEPENDS
+    .annex_k_libc_constraint_handler
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  annex_k_libc_constraint_handler
+  HDRS
+    annex_k_libc_constraint_handler.h
+  DEPENDS
+    .abort_handler_s
+    libc.hdr.types.constraint_handler_t
+    libc.src.__support.common
+)
+
+add_entrypoint_object(
+  set_constraint_handler_s
+  SRCS
+    set_constraint_handler_s.cpp
+  HDRS
+    set_constraint_handler_s.h
+  DEPENDS
+    .abort_handler_s
+    .annex_k_libc_constraint_handler
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  abort_handler_s
+  SRCS
+    abort_handler_s.cpp
+  HDRS
+    abort_handler_s.h
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.errno_t
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+    libc.src.__support.File.file
+    libc.src.stdio.fflush
+    libc.src.stdio.fprintf
+    libc.src.stdlib.abort
+)
+
+add_entrypoint_object(
+  ignore_handler_s
+  HDRS
+    ignore_handler_s.h
+  SRCS
+    ignore_handler_s.cpp
+  DEPENDS
+    libc.hdr.types.errno_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+)

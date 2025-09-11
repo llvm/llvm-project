@@ -1,5 +1,6 @@
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
+add_header(rsize_t HDR rsize_t.h)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
@@ -296,3 +297,7 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
+
+add_header(errno_t HDR errno_t.h)
+
+add_header(constraint_handler_t HDR constraint_handler_t.h DEPENDS .errno_t)
