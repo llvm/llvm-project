@@ -32,13 +32,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTarget() {
   initializeXtensaAsmPrinterPass(PR);
 }
 
-static std::string computeDataLayout(const Triple &TT, StringRef CPU,
-                                     const TargetOptions &Options,
-                                     bool IsLittle) {
-  std::string Ret = "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32";
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(bool JIT,
                                            std::optional<Reloc::Model> RM) {
   if (!RM || JIT)
@@ -53,8 +46,7 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OL, bool JIT,
                                          bool IsLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, IsLittle),
-                               TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(JIT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {

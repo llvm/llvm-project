@@ -121,62 +121,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<ARMElfTargetObjectFile>();
 }
 
-static std::string computeDataLayout(const Triple &TT,
-                                     const TargetOptions &Options,
-                                     bool isLittle) {
-  auto ABI = ARM::computeTargetABI(TT, Options.MCOptions.ABIName);
-  std::string Ret;
-
-  if (isLittle)
-    // Little endian.
-    Ret += "e";
-  else
-    // Big endian.
-    Ret += "E";
-
-  Ret += DataLayout::getManglingComponent(TT);
-
-  // Pointers are 32 bits and aligned to 32 bits.
-  Ret += "-p:32:32";
-
-  // Function pointers are aligned to 8 bits (because the LSB stores the
-  // ARM/Thumb state).
-  Ret += "-Fi8";
-
-  // ABIs other than APCS have 64 bit integers with natural alignment.
-  if (ABI != ARM::ARM_ABI_APCS)
-    Ret += "-i64:64";
-
-  // We have 64 bits floats. The APCS ABI requires them to be aligned to 32
-  // bits, others to 64 bits. We always try to align to 64 bits.
-  if (ABI == ARM::ARM_ABI_APCS)
-    Ret += "-f64:32:64";
-
-  // We have 128 and 64 bit vectors. The APCS ABI aligns them to 32 bits, others
-  // to 64. We always ty to give them natural alignment.
-  if (ABI == ARM::ARM_ABI_APCS)
-    Ret += "-v64:32:64-v128:32:128";
-  else if (ABI != ARM::ARM_ABI_AAPCS16)
-    Ret += "-v128:64:128";
-
-  // Try to align aggregates to 32 bits (the default is 64 bits, which has no
-  // particular hardware support on 32-bit ARM).
-  Ret += "-a:0:32";
-
-  // Integer registers are 32 bits.
-  Ret += "-n32";
-
-  // The stack is 64 bit aligned on AAPCS and 32 bit aligned everywhere else.
-  if (ABI == ARM::ARM_ABI_AAPCS16)
-    Ret += "-S128";
-  else if (ABI == ARM::ARM_ABI_AAPCS)
-    Ret += "-S64";
-  else
-    Ret += "-S32";
-
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
   if (!RM)
@@ -201,12 +145,13 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOptLevel OL, bool isLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options, isLittle), TT,
-                               CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+                                           CodeGenOptLevel OL)
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(Options.MCOptions.ABIName), TT, CPU, FS,
+          Options, getEffectiveRelocModel(TT, RM),
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
-      TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
   // Default to triple-appropriate float ABI
   if (Options.FloatABIType == FloatABI::Default) {
@@ -334,7 +279,7 @@ ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
+    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -342,7 +287,7 @@ ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
+    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 namespace {
 

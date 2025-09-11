@@ -141,39 +141,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVAsmPrinterPass(*PR);
 }
 
-static std::string computeDataLayout(const Triple &TT,
-                                     const TargetOptions &Opts) {
-  std::string Ret;
-
-  if (TT.isLittleEndian())
-    Ret += "e";
-  else
-    Ret += "E";
-
-  Ret += "-m:e";
-
-  // Pointer and integer sizes.
-  if (TT.isArch64Bit()) {
-    Ret += "-p:64:64-i64:64-i128:128";
-    Ret += "-n32:64";
-  } else {
-    assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
-    Ret += "-p:32:32-i64:64";
-    Ret += "-n32";
-  }
-
-  // Stack alignment based on ABI.
-  StringRef ABI = Opts.MCOptions.getABIName();
-  if (ABI == "ilp32e")
-    Ret += "-S32";
-  else if (ABI == "lp64e")
-    Ret += "-S64";
-  else
-    Ret += "-S128";
-
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
@@ -185,9 +152,10 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options), TT, CPU, FS,
-                               Options, getEffectiveRelocModel(TT, RM),
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
+          Options, getEffectiveRelocModel(TT, RM),
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
   initAsmInfo();
 

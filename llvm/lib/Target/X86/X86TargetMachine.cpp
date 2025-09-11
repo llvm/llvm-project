@@ -125,54 +125,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 
-static std::string computeDataLayout(const Triple &TT) {
-  // X86 is little endian
-  std::string Ret = "e";
-
-  Ret += DataLayout::getManglingComponent(TT);
-  // X86 and x32 have 32 bit pointers.
-  if (!TT.isArch64Bit() || TT.isX32())
-    Ret += "-p:32:32";
-
-  // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
-  Ret += "-p270:32:32-p271:32:32-p272:64:64";
-
-  // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
-  // 128 bit integers are not specified in the 32-bit ABIs but are used
-  // internally for lowering f128, so we match the alignment to that.
-  if (TT.isArch64Bit() || TT.isOSWindows())
-    Ret += "-i64:64-i128:128";
-  else if (TT.isOSIAMCU())
-    Ret += "-i64:32-f64:32";
-  else
-    Ret += "-i128:128-f64:32:64";
-
-  // Some ABIs align long double to 128 bits, others to 32.
-  if (TT.isOSIAMCU())
-    ; // No f80
-  else if (TT.isArch64Bit() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
-    Ret += "-f80:128";
-  else
-    Ret += "-f80:32";
-
-  if (TT.isOSIAMCU())
-    Ret += "-f128:32";
-
-  // The registers can hold 8, 16, 32 or, in x86-64, 64 bits.
-  if (TT.isArch64Bit())
-    Ret += "-n8:16:32:64";
-  else
-    Ret += "-n8:16:32";
-
-  // The stack is aligned to 32 bits on some ABIs and 128 bits on others.
-  if ((!TT.isArch64Bit() && TT.isOSWindows()) || TT.isOSIAMCU())
-    Ret += "-a:0:32-S32";
-  else
-    Ret += "-S128";
-
-  return Ret;
-}
-
 static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
                                            std::optional<Reloc::Model> RM) {
   bool is64Bit = TT.getArch() == Triple::x86_64;
@@ -236,7 +188,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, JIT, RM),
                                getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
