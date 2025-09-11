@@ -61,6 +61,11 @@ static llvm::cl::opt<bool> strideIncludeLowerExtent(
         "Whether to include the lower dimensions extents in the stride."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool> lowerDoLoopToAccLoop(
+    "openacc-do-loop-to-acc-loop",
+    llvm::cl::desc("Whether to lower do loops as `acc.loop` operations."),
+    llvm::cl::init(true));
+
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -5005,6 +5010,9 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,
     const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
+  if (!lowerDoLoopToAccLoop)
+    return nullptr;
+
   // Only convert loops which have induction variables that need privatized.
   if (!doConstruct.IsDoNormal() && !doConstruct.IsDoConcurrent())
     return nullptr;
@@ -5026,10 +5034,6 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
            "unstructured do loop in acc kernels");
     return nullptr;
   }
-
-  // Open up a new scope for the loop variables.
-  localSymbols.pushScope();
-  auto scopeGuard = llvm::make_scope_exit([&]() { localSymbols.popScope(); });
 
   // Prepare empty operand vectors since there are no associated `acc loop`
   // clauses with the Fortran do loops being handled here.

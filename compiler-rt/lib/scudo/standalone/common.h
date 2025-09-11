@@ -148,6 +148,10 @@ inline constexpr uptr getPageSizeLogCached() {
 extern uptr PageSizeCached;
 extern uptr PageSizeLogCached;
 
+// Must be defined in platform specific code.
+uptr getPageSize();
+
+// Always calls getPageSize(), but caches the results for get*Cached(), below.
 uptr getPageSizeSlow();
 
 inline uptr getPageSizeCached() {

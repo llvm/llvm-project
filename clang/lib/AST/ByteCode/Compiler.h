@@ -112,8 +112,22 @@ protected:
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
-  using OptLabelTy = std::optional<LabelTy>;
+  using OptLabelTy = UnsignedOrNone;
   using CaseMap = llvm::DenseMap<const SwitchCase *, LabelTy>;
+
+  struct LabelInfo {
+    const Stmt *Name;
+    const VariableScope<Emitter> *BreakOrContinueScope;
+    OptLabelTy BreakLabel;
+    OptLabelTy ContinueLabel;
+    OptLabelTy DefaultLabel;
+    LabelInfo(const Stmt *Name, OptLabelTy BreakLabel, OptLabelTy ContinueLabel,
+              OptLabelTy DefaultLabel,
+              const VariableScope<Emitter> *BreakOrContinueScope)
+        : Name(Name), BreakOrContinueScope(BreakOrContinueScope),
+          BreakLabel(BreakLabel), ContinueLabel(ContinueLabel),
+          DefaultLabel(DefaultLabel) {}
+  };
 
   /// Current compilation context.
   Context &Ctx;
@@ -443,17 +457,8 @@ protected:
 
   /// Switch case mapping.
   CaseMap CaseLabels;
-
-  /// Scope to cleanup until when we see a break statement.
-  VariableScope<Emitter> *BreakVarScope = nullptr;
-  /// Point to break to.
-  OptLabelTy BreakLabel;
-  /// Scope to cleanup until when we see a continue statement.
-  VariableScope<Emitter> *ContinueVarScope = nullptr;
-  /// Point to continue to.
-  OptLabelTy ContinueLabel;
-  /// Default case label.
-  OptLabelTy DefaultLabel;
+  /// Stack of label information for loops and switch statements.
+  llvm::SmallVector<LabelInfo> LabelInfoStack;
 
   const FunctionDecl *CompilingFunction = nullptr;
 };

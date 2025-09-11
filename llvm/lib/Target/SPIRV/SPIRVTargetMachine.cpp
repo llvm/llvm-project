@@ -77,6 +77,9 @@ static std::string computeDataLayout(const Triple &TT) {
       TT.getOS() == Triple::OSType::AMDHSA)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
            "v512:512-v1024:1024-n32:64-S32-G1-P4-A0";
+  if (TT.getVendor() == Triple::VendorType::Intel)
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-n8:16:32:64-G1-P9-A0";
   return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
          "v512:512-v1024:1024-n8:16:32:64-G1";
 }
@@ -189,6 +192,11 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
+  addPass(createSPIRVRegularizerPass());
+  addPass(createSPIRVPrepareFunctionsPass(TM));
+}
+
+void SPIRVPassConfig::addISelPrepare() {
   if (TM.getSubtargetImpl()->isShader()) {
     // Vulkan does not allow address space casts. This pass is run to remove
     // address space casts that can be removed.
@@ -220,12 +228,7 @@ void SPIRVPassConfig::addIRPasses() {
     addPass(createPromoteMemoryToRegisterPass());
   }
 
-  addPass(createSPIRVRegularizerPass());
-  addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
-}
-
-void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())

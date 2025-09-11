@@ -104,10 +104,16 @@ countr_zero(T value) {
 }
 #if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
-#endif
+#endif // __has_builtin(__builtin_ctzs)
+#if __has_builtin(__builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
+#endif // __has_builtin(__builtin_ctz)
+#if __has_builtin(__builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
+#endif // __has_builtin(__builtin_ctzl)
+#if __has_builtin(__builtin_ctzll)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzll)
 #endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
@@ -143,10 +149,16 @@ countl_zero(T value) {
 }
 #if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
-#endif
+#endif // __has_builtin(__builtin_clzs)
+#if __has_builtin(__builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
+#endif // __has_builtin(__builtin_clz)
+#if __has_builtin(__builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
+#endif // __has_builtin(__builtin_clzl)
+#if __has_builtin(__builtin_clzll)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
+#endif // __has_builtin(__builtin_clzll)
 #endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
@@ -283,11 +295,17 @@ popcount(T value) {
   [[nodiscard]] LIBC_INLINE constexpr int popcount<TYPE>(TYPE value) {         \
     return BUILTIN(value);                                                     \
   }
+#if __has_builtin(__builtin_popcount)
 ADD_SPECIALIZATION(unsigned char, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned short, __builtin_popcount)
 ADD_SPECIALIZATION(unsigned, __builtin_popcount)
+#endif // __builtin_popcount
+#if __has_builtin(__builtin_popcountl)
 ADD_SPECIALIZATION(unsigned long, __builtin_popcountl)
+#endif // __builtin_popcountl
+#if __has_builtin(__builtin_popcountll)
 ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
+#endif // __builtin_popcountll
 #endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
 

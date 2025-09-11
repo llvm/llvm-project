@@ -636,6 +636,9 @@ def FeatureZCZeroingGPR64 : SubtargetFeature<"zcz-gpr64", "HasZeroCycleZeroingGP
 def FeatureZCZeroingGPR32 : SubtargetFeature<"zcz-gpr32", "HasZeroCycleZeroingGPR32", "true",
                                         "Has zero-cycle zeroing instructions for GPR32 registers">;
 
+def FeatureZCZeroingFPR128 : SubtargetFeature<"zcz-fpr128", "HasZeroCycleZeroingFPR128", "true",
+                                        "Has zero-cycle zeroing instructions for FPR128 registers">;
+
 // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
 // as movi is more efficient across all cores. Newer cores can eliminate
 // fmovs early and there is no difference with movi, but this not true for

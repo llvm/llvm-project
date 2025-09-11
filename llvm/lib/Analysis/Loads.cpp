@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 
@@ -875,4 +876,67 @@ bool llvm::isReadOnlyLoop(
     }
   }
   return true;
+}
+
+LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
+                                                 Value *Ptr) {
+  assert(Ptr->getType()->isPointerTy() && "Must be called with pointer arg");
+
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(Ptr->getType());
+  LinearExpression Expr(Ptr, BitWidth);
+
+  while (true) {
+    auto *GEP = dyn_cast<GEPOperator>(Expr.BasePtr);
+    if (!GEP || GEP->getSourceElementType()->isScalableTy())
+      return Expr;
+
+    Value *VarIndex = nullptr;
+    for (Value *Index : GEP->indices()) {
+      if (isa<ConstantInt>(Index))
+        continue;
+      // Only allow a single variable index. We do not bother to handle the
+      // case of the same variable index appearing multiple times.
+      if (Expr.Index || VarIndex)
+        return Expr;
+      VarIndex = Index;
+    }
+
+    // Don't return non-canonical indexes.
+    if (VarIndex && !VarIndex->getType()->isIntegerTy(BitWidth))
+      return Expr;
+
+    // We have verified that we can fully handle this GEP, so we can update Expr
+    // members past this point.
+    Expr.BasePtr = GEP->getPointerOperand();
+    Expr.Flags = Expr.Flags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+    for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
+         GTI != GTE; ++GTI) {
+      Value *Index = GTI.getOperand();
+      if (auto *ConstOffset = dyn_cast<ConstantInt>(Index)) {
+        if (ConstOffset->isZero())
+          continue;
+        if (StructType *STy = GTI.getStructTypeOrNull()) {
+          unsigned ElementIdx = ConstOffset->getZExtValue();
+          const StructLayout *SL = DL.getStructLayout(STy);
+          Expr.Offset += SL->getElementOffset(ElementIdx);
+          continue;
+        }
+        // Truncate if type size exceeds index space.
+        APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
+                          /*isSigned=*/false,
+                          /*implcitTrunc=*/true);
+        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+        continue;
+      }
+
+      // FIXME: Also look through a mul/shl in the index.
+      assert(Expr.Index == nullptr && "Shouldn't have index yet");
+      Expr.Index = Index;
+      // Truncate if type size exceeds index space.
+      Expr.Scale = APInt(BitWidth, GTI.getSequentialElementStride(DL),
+                         /*isSigned=*/false, /*implicitTrunc=*/true);
+    }
+  }
+
+  return Expr;
 }

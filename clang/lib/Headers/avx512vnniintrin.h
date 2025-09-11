@@ -22,8 +22,8 @@
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_dpbusd_epi32(__m512i __S, __m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_vpdpbusd512((__v16si)__S, (__v16si)__A,
-                                             (__v16si)__B);
+  return (__m512i)__builtin_ia32_vpdpbusd512((__v16si)__S, (__v64qu)__A,
+                                             (__v64qi)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -45,8 +45,8 @@ _mm512_maskz_dpbusd_epi32(__mmask16 __U, __m512i __S, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_dpbusds_epi32(__m512i __S, __m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_vpdpbusds512((__v16si)__S, (__v16si)__A,
-                                              (__v16si)__B);
+  return (__m512i)__builtin_ia32_vpdpbusds512((__v16si)__S, (__v64qu)__A,
+                                              (__v64qi)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

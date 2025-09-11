@@ -397,6 +397,34 @@ static constexpr IntrinsicHandler handlers[]{
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
+    {"co_broadcast",
+     &I::genCoBroadcast,
+     {{{"a", asBox},
+       {"source_image", asAddr},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_max",
+     &I::genCoMax,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_min",
+     &I::genCoMin,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_sum",
+     &I::genCoSum,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
     {"cosd", &I::genCosd},
@@ -3684,6 +3712,85 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
                          : builder.createConvert(loc, partType, args[1]);
   return fir::factory::Complex{builder, loc}.createComplex(resultType, real,
                                                            imag);
+}
+
+// CO_BROADCAST
+void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value sourceImage = fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2])
+          ? fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult()
+          : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoBroadcast(builder, loc, fir::getBase(args[0]), sourceImage,
+                               status, errmsg);
+}
+
+// CO_MAX
+void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value refNone =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoMax(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
+// CO_MIN
+void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value refNone =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoMin(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
+// CO_SUM
+void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
+  checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value absentInt =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? absentInt : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? absentInt : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoSum(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
 }
 
 // COMMAND_ARGUMENT_COUNT

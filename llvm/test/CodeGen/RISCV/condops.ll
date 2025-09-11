@@ -126,8 +126,7 @@ define i64 @zero_singlebit1(i64 %rs1, i64 %rs2) {
 ;
 ; RV64XTHEADCONDMOV-LABEL: zero_singlebit1:
 ; RV64XTHEADCONDMOV:       # %bb.0:
-; RV64XTHEADCONDMOV-NEXT:    lui a2, 1
-; RV64XTHEADCONDMOV-NEXT:    and a1, a1, a2
+; RV64XTHEADCONDMOV-NEXT:    bexti a1, a1, 12
 ; RV64XTHEADCONDMOV-NEXT:    th.mvnez a0, zero, a1
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
@@ -4412,9 +4411,9 @@ define i64 @single_bit3(i80 %x, i64 %y) {
 ;
 ; RV64XTHEADCONDMOV-LABEL: single_bit3:
 ; RV64XTHEADCONDMOV:       # %bb.0: # %entry
-; RV64XTHEADCONDMOV-NEXT:    slli a1, a1, 63
-; RV64XTHEADCONDMOV-NEXT:    srai a0, a1, 63
-; RV64XTHEADCONDMOV-NEXT:    and a0, a0, a2
+; RV64XTHEADCONDMOV-NEXT:    mv a0, a2
+; RV64XTHEADCONDMOV-NEXT:    andi a1, a1, 1
+; RV64XTHEADCONDMOV-NEXT:    th.mveqz a0, zero, a1
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
 ; RV32ZICOND-LABEL: single_bit3:

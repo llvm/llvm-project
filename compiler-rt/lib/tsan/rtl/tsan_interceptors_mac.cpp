@@ -281,6 +281,25 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   Acquire(thr, pc, (uptr)lock);
 }
 
+// os_unfair_lock_lock_with_flags was introduced in macOS 15
+#  if defined(__MAC_15_0) || defined(__IPHONE_18_0) || defined(__TVOS_18_0) || \
+      defined(__VISIONOS_2_0) || defined(__WATCHOS_11_0)
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunguarded-availability-new"
+// We're just intercepting this - if it doesn't exist on the platform, then the
+// process shouldn't have called it in the first place.
+TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_flags, os_unfair_lock_t lock,
+                 os_unfair_lock_flags_t flags) {
+  if (!cur_thread()->is_inited || cur_thread()->is_dead) {
+    return REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+  }
+  SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_flags, lock, flags);
+  REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+  Acquire(thr, pc, (uptr)lock);
+}
+#    pragma clang diagnostic pop
+#  endif
+
 TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_options, os_unfair_lock_t lock,
                  u32 options) {
   if (!cur_thread()->is_inited || cur_thread()->is_dead) {

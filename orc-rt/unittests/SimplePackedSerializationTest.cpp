@@ -108,6 +108,12 @@ TEST(SimplePackedSerializationTest, SequenceSerialization) {
   blobSerializationRoundTrip<SPSSequence<int32_t>, std::vector<int32_t>>(V);
 }
 
+TEST(SimplePackedSerializationTest, ExecutorAddr) {
+  int X = 42;
+  auto A = ExecutorAddr::fromPtr(&X);
+  blobSerializationRoundTrip<SPSExecutorAddr>(A);
+}
+
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   const char *HW = "Hello, world!";
   blobSerializationRoundTrip<SPSString, std::string_view>(std::string_view(HW));
@@ -217,9 +223,29 @@ TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
   EXPECT_EQ(toString(SE.toError()), std::string("test error message"));
 }
 
-TEST(SimplePackedSerializationTest, SerializeExpectedSuccess) {
+TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaExpected) {
   auto B = spsSerialize<SPSArgList<SPSExpected<uint32_t>>>(
       toSPSSerializableExpected(Expected<uint32_t>(42U)));
+  if (!B) {
+    ADD_FAILURE() << "Unexpected failure to serialize expected-success value";
+    return;
+  }
+  SPSSerializableExpected<uint32_t> SE;
+  if (!spsDeserialize<SPSArgList<SPSExpected<uint32_t>>>(*B, SE)) {
+    ADD_FAILURE() << "Unexpected failure to deserialize expected-success value";
+    return;
+  }
+
+  auto E = SE.toExpected();
+  if (E)
+    EXPECT_EQ(*E, 42U);
+  else
+    ADD_FAILURE() << "Unexpected failure value";
+}
+
+TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaValue) {
+  auto B = spsSerialize<SPSArgList<SPSExpected<uint32_t>>>(
+      toSPSSerializableExpected(uint32_t(42U)));
   if (!B) {
     ADD_FAILURE() << "Unexpected failure to serialize expected-success value";
     return;

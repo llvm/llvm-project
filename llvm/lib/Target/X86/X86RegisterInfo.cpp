@@ -220,22 +220,8 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
     // NOSP does not contain RIP, so no special case here.
     return &X86::GR32_NOREX_NOSPRegClass;
   case 4: // Available for tailcall (not callee-saved GPRs).
-    return getGPRsForTailCall(MF);
+    return Is64Bit ? &X86::GR64_TCRegClass : &X86::GR32_TCRegClass;
   }
-}
-
-const TargetRegisterClass *
-X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  if (IsWin64 || IsUEFI64 || (F.getCallingConv() == CallingConv::Win64))
-    return &X86::GR64_TCW64RegClass;
-  else if (Is64Bit)
-    return &X86::GR64_TCRegClass;
-
-  bool hasHipeCC = (F.getCallingConv() == CallingConv::HiPE);
-  if (hasHipeCC)
-    return &X86::GR32RegClass;
-  return &X86::GR32_TCRegClass;
 }
 
 const TargetRegisterClass *
@@ -999,10 +985,9 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 unsigned X86RegisterInfo::findDeadCallerSavedReg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
   const MachineFunction *MF = MBB.getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   if (MF->callsEHReturn())
     return 0;
-
-  const TargetRegisterClass &AvailableRegs = *getGPRsForTailCall(*MF);
 
   if (MBBI == MBB.end())
     return 0;
@@ -1018,6 +1003,8 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::RETI64:
   case X86::TCRETURNdi:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
@@ -1025,20 +1012,16 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::TCRETURNmi64:
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
-    SmallSet<uint16_t, 8> Uses;
-    for (MachineOperand &MO : MBBI->operands()) {
-      if (!MO.isReg() || MO.isDef())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      for (MCRegAliasIterator AI(Reg, this, true); AI.isValid(); ++AI)
-        Uses.insert(*AI);
-    }
+    LiveRegUnits LRU(*this);
+    LRU.addLiveOuts(MBB);
+    LRU.stepBackward(*MBBI);
 
-    for (auto CS : AvailableRegs)
-      if (!Uses.count(CS) && CS != X86::RIP && CS != X86::RSP && CS != X86::ESP)
-        return CS;
+    const TargetRegisterClass &RC =
+        Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
+    for (MCRegister Reg : RC) {
+      if (LRU.available(Reg) && !MRI.isReserved(Reg))
+        return Reg;
+    }
   }
   }
 

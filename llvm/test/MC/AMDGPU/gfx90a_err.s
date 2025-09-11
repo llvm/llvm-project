@@ -154,10 +154,10 @@ v_ceil_f64_dpp v[0:1], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 flat_atomic_add v2, v[2:3], a2 glc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 flat_atomic_add a2, v[2:3], v2 glc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 tbuffer_store_format_xyzw v[0:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 tfe
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

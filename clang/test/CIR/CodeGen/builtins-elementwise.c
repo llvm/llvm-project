@@ -36,3 +36,29 @@ void test_builtin_elementwise_acos(float f, double d, vfloat4 vf4,
   vd4 = __builtin_elementwise_acos(vd4);
 }
 
+void test_builtin_elementwise_asin(float f, double d, vfloat4 vf4,
+  vdouble4  vd4) {
+  // CIR-LABEL: test_builtin_elementwise_asin
+  // LLVM-LABEL: test_builtin_elementwise_asin
+  // OGCG-LABEL: test_builtin_elementwise_asin
+
+  // CIR: %{{.*}} = cir.asin %{{.*}} : !cir.float
+  // LLVM: %{{.*}} = call float @llvm.asin.f32(float %{{.*}})
+  // OGCG: %{{.*}} = call float @llvm.asin.f32(float %{{.*}})
+  f = __builtin_elementwise_asin(f);
+
+  // CIR: %{{.*}} = cir.asin %{{.*}} : !cir.double
+  // LLVM: %{{.*}} = call double @llvm.asin.f64(double %{{.*}})
+  // OGCG: %{{.*}} = call double @llvm.asin.f64(double %{{.*}})
+  d = __builtin_elementwise_asin(d);
+
+  // CIR: %{{.*}} = cir.asin %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: %{{.*}} = call <4 x float> @llvm.asin.v4f32(<4 x float> %{{.*}})
+  // OGCG: %{{.*}} = call <4 x float> @llvm.asin.v4f32(<4 x float> %{{.*}})
+  vf4 = __builtin_elementwise_asin(vf4);
+
+  // CIR: %{{.*}} = cir.asin %{{.*}} : !cir.vector<4 x !cir.double>
+  // LLVM: %{{.*}} = call <4 x double> @llvm.asin.v4f64(<4 x double> %{{.*}})
+  // OGCG: %{{.*}} = call <4 x double> @llvm.asin.v4f64(<4 x double> %{{.*}})
+  vd4 = __builtin_elementwise_asin(vd4);
+}

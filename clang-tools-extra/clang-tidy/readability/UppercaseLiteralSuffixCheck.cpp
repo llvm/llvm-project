@@ -181,7 +181,7 @@ UppercaseLiteralSuffixCheck::UppercaseLiteralSuffixCheck(
     : ClangTidyCheck(Name, Context),
       NewSuffixes(
           utils::options::parseStringList(Options.get("NewSuffixes", ""))),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UppercaseLiteralSuffixCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

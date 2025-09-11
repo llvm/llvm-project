@@ -1653,6 +1653,11 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+
+let SubtargetPredicate = HasWaitXcnt in {
+  def S_WAIT_XCNT_soft : SOPP_Pseudo<"", (ins s16imm:$simm16), "$simm16">;
+}
+
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.
 // Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
 
@@ -1880,6 +1885,21 @@ def : GCNPat <
 def : GCNPat <
   (i16 imm:$imm),
   (S_MOV_B32 imm:$imm)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<and> v2i32:$x, v2i32:$y)),
+  (S_AND_B64 SReg_64:$x, SReg_64:$y)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<or> v2i32:$x, v2i32:$y)),
+  (S_OR_B64 SReg_64:$x, SReg_64:$y)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<xor> v2i32:$x, v2i32:$y)),
+  (S_XOR_B64 SReg_64:$x, SReg_64:$y)
 >;
 
 // Same as a 32-bit inreg

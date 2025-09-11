@@ -949,21 +949,20 @@ define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) nounwind 
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
 ; i686-NEXT:    subl $16, %esp
-; i686-NEXT:    movl 28(%ebp), %esi
-; i686-NEXT:    movl 32(%ebp), %eax
+; i686-NEXT:    movl 32(%ebp), %ebx
+; i686-NEXT:    movl 28(%ebp), %edi
+; i686-NEXT:    movzbl 40(%ebp), %ecx
 ; i686-NEXT:    movb $6, %dl
-; i686-NEXT:    subb 40(%ebp), %dl
+; i686-NEXT:    subb %cl, %dl
+; i686-NEXT:    addb $-7, %cl
+; i686-NEXT:    movl %edi, %eax
+; i686-NEXT:    shrl %eax
+; i686-NEXT:    shrl %cl, %eax
 ; i686-NEXT:    movl %edx, %ecx
-; i686-NEXT:    shll %cl, %eax
-; i686-NEXT:    movl %esi, %ebx
-; i686-NEXT:    movl %esi, %edi
-; i686-NEXT:    shrl %ebx
-; i686-NEXT:    notb %cl
-; i686-NEXT:    shrl %cl, %ebx
+; i686-NEXT:    shll %cl, %ebx
 ; i686-NEXT:    orl %eax, %ebx
 ; i686-NEXT:    movl 24(%ebp), %esi
 ; i686-NEXT:    movl %esi, %eax
-; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    shll %cl, %eax
 ; i686-NEXT:    shldl %cl, %esi, %edi
 ; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -972,10 +971,10 @@ define i128 @shift_i128_limited_shamt(i128 noundef %a, i32 noundef %b) nounwind 
 ; i686-NEXT:    movl 32(%ebp), %edx
 ; i686-NEXT:    shldl %cl, %edx, %esi
 ; i686-NEXT:    movl %esi, 12(%edi)
+; i686-NEXT:    movl %ebx, 8(%edi)
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; i686-NEXT:    movl %ecx, 4(%edi)
 ; i686-NEXT:    movl %eax, (%edi)
-; i686-NEXT:    movl %ebx, 8(%edi)
 ; i686-NEXT:    movl %edi, %eax
 ; i686-NEXT:    leal -12(%ebp), %esp
 ; i686-NEXT:    popl %esi

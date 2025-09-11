@@ -18,6 +18,6 @@ E: powerllvm@ca.ibm.com
 D: AIX, ppc64le
 
 N: Android libc++
-E: rprichard@google.com
-H: rprichard
+E: pirama@google.com, sharjeelkhan@google.com
+G: pirama-arumuga-nainar, Sharjeel-Khan
 D: Emulator-based x86[-64] libc++ CI testing

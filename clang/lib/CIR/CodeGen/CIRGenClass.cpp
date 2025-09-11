@@ -517,17 +517,23 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType fieldType = field->getType();
   switch (getEvaluationKind(fieldType)) {
   case cir::TEK_Scalar:
-    if (lhs.isSimple())
+    if (lhs.isSimple()) {
       emitExprAsInit(init, field, lhs, false);
-    else
-      cgm.errorNYI(field->getSourceRange(),
-                   "emitInitializerForField: non-simple scalar");
+    } else {
+      RValue rhs = RValue::get(emitScalarExpr(init));
+      emitStoreThroughLValue(rhs, lhs);
+    }
     break;
   case cir::TEK_Complex:
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: complex");
+    emitComplexExprIntoLValue(init, lhs, /*isInit=*/true);
     break;
   case cir::TEK_Aggregate: {
-    cgm.errorNYI(field->getSourceRange(), "emitInitializerForField: aggregate");
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    assert(!cir::MissingFeatures::sanitizers());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        lhs, AggValueSlot::IsDestructed, AggValueSlot::IsNotAliased,
+        getOverlapForFieldInit(field), AggValueSlot::IsNotZeroed);
+    emitAggExpr(init, slot);
     break;
   }
   }
@@ -820,9 +826,8 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   uint64_t subVTTIndex;
 
   if (delegating) {
-    cgm.errorNYI(rd->getSourceRange(),
-                 "getVTTParameter: delegating constructor");
-    return {};
+    // If this is a delegating constructor call, just load the VTT.
+    return loadCXXVTT();
   } else if (rd == base) {
     // If the record matches the base, this is the complete ctor/dtor
     // variant calling the base variant in a class with virtual bases.

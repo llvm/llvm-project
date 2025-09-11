@@ -31,8 +31,9 @@ static bool spsDeserialize(orc_rt::WrapperFunctionBuffer &B, ArgTs &...Args) {
   return SPSTraitsT::deserialize(IB, Args...);
 }
 
-template <typename SPSTagT, typename T>
-static inline void blobSerializationRoundTrip(const T &Value) {
+template <typename SPSTagT, typename T, typename Comparator = std::equal_to<T>>
+static inline void blobSerializationRoundTrip(const T &Value,
+                                              Comparator &&C = Comparator()) {
   using BST = orc_rt::SPSSerializationTraits<SPSTagT, T>;
 
   size_t Size = BST::size(Value);
@@ -46,7 +47,7 @@ static inline void blobSerializationRoundTrip(const T &Value) {
   T DSValue;
   EXPECT_TRUE(BST::deserialize(IB, DSValue));
 
-  EXPECT_EQ(Value, DSValue)
+  EXPECT_TRUE(C(Value, DSValue))
       << "Incorrect value after serialization/deserialization round-trip";
 }
 

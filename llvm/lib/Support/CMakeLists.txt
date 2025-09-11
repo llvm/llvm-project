@@ -265,13 +265,17 @@ add_llvm_component_library(LLVMSupport
   ToolOutputFile.cpp
   TrieRawHashMap.cpp
   Twine.cpp
-  TypeSize.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
   UnicodeNameToCodepoint.cpp
   UnicodeNameToCodepointGenerated.cpp
   VersionTuple.cpp
   VirtualFileSystem.cpp
+  VirtualOutputBackend.cpp
+  VirtualOutputBackends.cpp
+  VirtualOutputConfig.cpp
+  VirtualOutputError.cpp
+  VirtualOutputFile.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp

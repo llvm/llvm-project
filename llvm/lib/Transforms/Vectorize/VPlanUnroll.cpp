@@ -536,16 +536,9 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
 
       VPBuilder Builder(RepR);
       if (RepR->getNumUsers() == 0) {
-        if (isa<StoreInst>(RepR->getUnderlyingInstr()) &&
-            vputils::isSingleScalar(RepR->getOperand(1))) {
-          // Stores to invariant addresses need to store the last lane only.
-          cloneForLane(Plan, Builder, IdxTy, RepR, VPLane::getLastLaneForVF(VF),
-                       Def2LaneDefs);
-        } else {
-          // Create single-scalar version of RepR for all lanes.
-          for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Def2LaneDefs);
-        }
+        // Create single-scalar version of RepR for all lanes.
+        for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
+          cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Def2LaneDefs);
         RepR->eraseFromParent();
         continue;
       }
