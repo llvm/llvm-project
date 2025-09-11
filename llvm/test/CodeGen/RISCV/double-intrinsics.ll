@@ -241,15 +241,15 @@ define double @sincos_f64(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    mv s0, a1
-; RV32IZFINXZDINX-NEXT:    mv s1, a0
+; RV32IZFINXZDINX-NEXT:    mv s2, a1
+; RV32IZFINXZDINX-NEXT:    mv s3, a0
 ; RV32IZFINXZDINX-NEXT:    call sin
-; RV32IZFINXZDINX-NEXT:    mv s2, a0
-; RV32IZFINXZDINX-NEXT:    mv s3, a1
-; RV32IZFINXZDINX-NEXT:    mv a0, s1
-; RV32IZFINXZDINX-NEXT:    mv a1, s0
+; RV32IZFINXZDINX-NEXT:    mv s0, a0
+; RV32IZFINXZDINX-NEXT:    mv s1, a1
+; RV32IZFINXZDINX-NEXT:    mv a0, s3
+; RV32IZFINXZDINX-NEXT:    mv a1, s2
 ; RV32IZFINXZDINX-NEXT:    call cos
-; RV32IZFINXZDINX-NEXT:    fadd.d a0, s2, a0
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, s0, a0
 ; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
