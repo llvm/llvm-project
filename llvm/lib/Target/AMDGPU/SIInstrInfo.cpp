@@ -6125,12 +6125,10 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
     const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
     if (!SuperRC)
       return false;
-
-    DRC = RI.getMatchingSuperRegClass(SuperRC, DRC, MO.getSubReg());
-    if (!DRC)
-      return false;
+    return RI.getMatchingSuperRegClass(SuperRC, DRC, MO.getSubReg()) != nullptr;
   }
-  return RC->hasSuperClassEq(DRC);
+
+  return RI.getCommonSubClass(DRC, RC) != nullptr;
 }
 
 bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
