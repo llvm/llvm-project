@@ -258,7 +258,6 @@ define <4 x i32>  @u16tou32v4(<4 x i16> %a) {
 ; CHECK: %[[#]] = OpUConvert [[U32]] %[[#]]
 ; CHECK: %[[#]] = OpSConvert [[U32]] %[[#]]
 ; CHECK: %[[#]] = OpFConvert [[F16]] %[[#]]
-; CHECK: %[[#]] = OpQuantizeToF16 [[F32]] %[[#]]
 ; CHECK: %[[#]] = OpSatConvertSToU [[U64]] %[[#]]
 ; CHECK: %[[#]] = OpSatConvertUToS [[U64]] %[[#]]
 ; CHECK: %[[#]] = OpConvertPtrToU [[U64]] [[Arg1]]
@@ -281,7 +280,6 @@ define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg
   %r5 = call spir_func i32 @__spirv_UConvert(i64 1)
   %r6 = call spir_func i32 @__spirv_SConvert(i64 1)
   %r7 = call spir_func half @__spirv_FConvert(float 0.000000e+00)
-  %r8 = call spir_func float @__spirv_QuantizeToF16(float 0.000000e+00)
   %r9 = call spir_func i64 @__spirv_SatConvertSToU(i64 1)
   %r10 = call spir_func i64 @__spirv_SatConvertUToS(i64 1)
   %r11 = call spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4) %arg)
@@ -305,7 +303,6 @@ declare dso_local spir_func float @__spirv_ConvertUToF(i32)
 declare dso_local spir_func i32 @__spirv_UConvert(i64)
 declare dso_local spir_func i32 @__spirv_SConvert(i64)
 declare dso_local spir_func half @__spirv_FConvert(float)
-declare dso_local spir_func float @__spirv_QuantizeToF16(float)
 declare dso_local spir_func i64 @__spirv_SatConvertSToU(i64)
 declare dso_local spir_func i64 @__spirv_SatConvertUToS(i64)
 declare dso_local spir_func i64 @__spirv_ConvertPtrToU(ptr addrspace(4))
