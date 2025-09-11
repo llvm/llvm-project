@@ -338,34 +338,37 @@ public:
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(DeferredFiles &deferred) {
-  static const size_t largeArchive = 10 * 1024 * 1024;
-#ifndef NDEBUG
   using namespace std::chrono;
-  std::atomic_int numDeferedFilesAdvised = 0;
+  static const size_t pageSize = Process::getPageSizeEstimate();
+  static const size_t largeArchive = 10 * 1024 * 1024;
   static std::atomic_uint64_t totalBytes = 0;
+  std::atomic_int numDeferedFilesAdvised = 0;
   auto t0 = high_resolution_clock::now();
-#endif
 
   auto preloadDeferredFile = [&](const DeferredFile &deferredFile) {
     const StringRef &buff = deferredFile.buffer.getBuffer();
     if (buff.size() > largeArchive)
       return;
-#ifndef NDEBUG
+    if (((uintptr_t)buff.data() & (pageSize - 1)))
+      return; // Not mmap()'d (not page aligned).
+
     totalBytes += buff.size();
     numDeferedFilesAdvised += 1;
-#endif
 
 #if _WIN32
-    static const size_t pageSize = Process::getPageSizeEstimate();
     // Reference all file's mmap'd pages to load them into memory.
     for (const char *page = buff.data(), *end = page + buff.size(); page < end;
          page += pageSize)
       LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
 #else
-    // Advise that mmap'd files should be loaded into memory.
-    madvise((void *)buff.data(), buff.size(), MADV_WILLNEED);
+    if (madvise((void *)buff.data(), buff.size(), MADV_WILLNEED) < 0)
+#ifndef NDEBUG
+      llvm::errs() << "madvise() error " << strerror(errno)
+#endif
+          ;
 #endif
   };
+
 #if LLVM_ENABLE_THREADS
   { // Create scope for waiting for the taskGroup
     std::atomic_size_t index = 0;
@@ -380,14 +383,16 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         }
       });
   }
+#else
+  for (const auto &file : deferred)
+    preloadDeferredFile(file);
 #endif
-#ifndef NDEBUG
+
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
                  << numDeferedFilesAdvised << "/" << deferred.size() << "/"
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
-#endif
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred) {
