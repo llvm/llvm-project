@@ -972,10 +972,6 @@ def Vector_ScalableInsertOp :
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
     }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
-    }
   }];
 }
 
@@ -1026,10 +1022,6 @@ def Vector_ScalableExtractOp :
     }
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
-    }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
     }
   }];
 }
@@ -1084,10 +1076,6 @@ def Vector_InsertStridedSliceOp :
       return llvm::any_of(getStrides(), [](Attribute attr) {
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
-    }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
     }
   }];
 
