@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Tools/lsp-server-support/Transport.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "llvm/Support/LSP/Transport.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace mlir;
-using namespace mlir::lsp;
+using namespace llvm;
+using namespace llvm::lsp;
 using namespace testing;
 
 namespace {
@@ -88,7 +88,7 @@ protected:
 TEST_F(TransportInputTest, RequestWithInvalidParams) {
   struct Handler {
     void onMethod(const TextDocumentItem &params,
-                  mlir::lsp::Callback<TextDocumentIdentifier> callback) {}
+                  llvm::lsp::Callback<TextDocumentIdentifier> callback) {}
   } handler;
   getMessageHandler().method("invalid-params-request", &handler,
                              &Handler::onMethod);

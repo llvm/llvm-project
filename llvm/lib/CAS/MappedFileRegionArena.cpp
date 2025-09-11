@@ -42,9 +42,7 @@
 /// original will result in error on creation.
 ///
 /// To support resizing, we use two separate file locks:
-/// 1. We use a shared reader lock on a ".shared" file until destruction. The
-///    shared file also contains the configuration for the main file, including
-///    the offset to the header and the capacity.
+/// 1. We use a shared reader lock on a ".shared" file until destruction.
 /// 2. We use a lock on the main file during initialization - shared to check
 ///    the status, upgraded to exclusive to resize/initialize the file.
 ///
@@ -269,12 +267,8 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
     FileSize = FileSizeInfo::get(File);
     if (!FileSize)
       return createFileError(Result.Path, FileSize.getError());
+    Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
   }
-  Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
-
-  // unlock the main file.
-  if (auto E = MainFile->unlock())
-    return std::move(E);
 
   // Release the shared lock so it can be closed in destoryImpl().
   SharedFileLock->release();

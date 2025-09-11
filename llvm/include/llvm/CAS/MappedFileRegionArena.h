@@ -65,10 +65,6 @@ public:
   create(const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
          function_ref<Error(MappedFileRegionArena &)> NewFileConstructor);
 
-  /// Finish initializing the header. Must be called by \c NewFileConstructor.
-  /// \c HeaderOffset passed should match the value passed to \c create.
-  void initializeHeader(uint64_t HeaderOffset);
-
   /// Minimum alignment for allocations, currently hardcoded to 8B.
   static constexpr Align getAlign() {
     // Trick Align into giving us '8' as a constexpr.
@@ -107,6 +103,9 @@ public:
   MappedFileRegionArena &operator=(const MappedFileRegionArena &) = delete;
 
 private:
+  // initialize header from offset.
+  void initializeHeader(uint64_t HeaderOffset);
+
   void destroyImpl();
   void moveImpl(MappedFileRegionArena &RHS) {
     std::swap(Region, RHS.Region);

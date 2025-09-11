@@ -83,17 +83,16 @@ protected:
 
 #if LLVM_ENABLE_ONDISK_CAS
 
+static Error emptyConstructor(MappedFileRegionArena &) {
+  return Error::success();
+}
+
 TEST_F(CASProgramTest, MappedFileRegionArenaTest) {
   auto TestAllocator = [](StringRef Path) {
-    auto NewFileConstructor = [&](MappedFileRegionArena &Alloc) -> Error {
-      Alloc.initializeHeader(0);
-      return Error::success();
-    };
-
     std::optional<MappedFileRegionArena> Alloc;
     ASSERT_THAT_ERROR(
         MappedFileRegionArena::create(Path, /*Capacity=*/10 * 1024 * 1024,
-                                      /*HeaderOffset=*/0, NewFileConstructor)
+                                      /*HeaderOffset=*/0, emptyConstructor)
             .moveInto(Alloc),
         Succeeded());
 
@@ -155,11 +154,6 @@ TEST_F(CASProgramTest, MappedFileRegionArenaTest) {
 
 TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
   using namespace std::chrono_literals;
-  auto NewFileConstructor = [&](MappedFileRegionArena &Alloc) -> Error {
-    Alloc.initializeHeader(0);
-    return Error::success();
-  };
-
   if (const char *File = getenv("LLVM_CAS_TEST_MAPPED_FILE_REGION")) {
     ExponentialBackoff Backoff(5s);
     do {
@@ -171,7 +165,7 @@ TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
     std::optional<MappedFileRegionArena> Alloc;
     ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/1024,
                                                     /*HeaderOffset=*/0,
-                                                    NewFileConstructor)
+                                                    emptyConstructor)
                           .moveInto(Alloc),
                       Succeeded());
     ASSERT_TRUE(Alloc->capacity() == 2048);
@@ -179,7 +173,7 @@ TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
     Alloc.reset();
     ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/4096,
                                                     /*HeaderOffset=*/0,
-                                                    NewFileConstructor)
+                                                    emptyConstructor)
                           .moveInto(Alloc),
                       Succeeded());
     ASSERT_TRUE(Alloc->capacity() == 2048);
@@ -187,14 +181,14 @@ TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
 
     ASSERT_THAT_ERROR(
         MappedFileRegionArena::create(File, /*Capacity=*/2048,
-                                      /*HeaderOffset=*/32, NewFileConstructor)
+                                      /*HeaderOffset=*/32, emptyConstructor)
             .moveInto(Alloc),
         FailedWithMessage(
             "specified header offset (32) does not match existing config (0)"));
 
     ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/2048,
                                                     /*HeaderOffset=*/0,
-                                                    NewFileConstructor)
+                                                    emptyConstructor)
                           .moveInto(Alloc),
                       Succeeded());
 
@@ -219,7 +213,7 @@ TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
   std::optional<MappedFileRegionArena> Alloc;
   ASSERT_THAT_ERROR(MappedFileRegionArena::create(FilePath, /*Capacity=*/2048,
                                                   /*HeaderOffset=*/0,
-                                                  NewFileConstructor)
+                                                  emptyConstructor)
                         .moveInto(Alloc),
                     Succeeded());
 
