@@ -170,8 +170,6 @@ struct OperandInfo {
     Fields.emplace_back(Base, Width, Offset);
   }
 
-  unsigned numFields() const { return Fields.size(); }
-
   ArrayRef<EncodingField> fields() const { return Fields; }
 };
 
