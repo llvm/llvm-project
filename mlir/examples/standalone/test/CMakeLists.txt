@@ -10,7 +10,7 @@ configure_lit_site_cfg(
 )
 
 set(STANDALONE_TEST_DEPENDS
-        FileCheck
+        FileCheck count not
         standalone-capi-test
         standalone-opt
         standalone-translate
