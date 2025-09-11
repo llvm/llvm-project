@@ -212,6 +212,27 @@ gpu.module @test {
 
 //-----
 
+
+  // CHECK-LABEL: load_with_offsets
+  // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
+  // CHECK-COUNT-2: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : memref<64xf32>, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  gpu.func @load_with_offsets(%src: memref<64xf32>) -> vector<32xf32> {
+      %cst = arith.constant dense<[
+      0,   8,  16,  24,  32,  40,  48,  56,
+      64,  72,  80,  88,  96, 104, 112, 120,
+      128, 136, 144, 152, 160, 168, 176, 184,
+      192, 200, 208, 216, 224, 232, 240, 248
+      ]> : vector<32xindex>
+
+      %c17 = arith.constant 17: index
+      %mask = vector.create_mask %c17: vector<32xi1>
+      %ld = xegpu.load %src[%cst], %mask {chunk_size = 1, layout_result_0 = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : memref<64xf32>, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+
+      gpu.return %ld : vector<32xf32>
+  }
+
+//-----
+
   // CHECK-LABEL: prefetch
   // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK-COUNT-2: xegpu.create_tdesc [[arg0]], {{.*}} : ui64, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<>>
