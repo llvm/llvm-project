@@ -80,3 +80,5 @@ pythonenv*
 /lldb/docs/python_api/
 
 DeepSeekCodeAnalyzer.py
+llvm-test-suite/
+linux/
