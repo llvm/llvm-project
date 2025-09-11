@@ -1887,6 +1887,21 @@ def : GCNPat <
   (S_MOV_B32 imm:$imm)
 >;
 
+def : GCNPat <
+  (v2i32 (UniformBinFrag<and> v2i32:$x, v2i32:$y)),
+  (S_AND_B64 SReg_64:$x, SReg_64:$y)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<or> v2i32:$x, v2i32:$y)),
+  (S_OR_B64 SReg_64:$x, SReg_64:$y)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformBinFrag<xor> v2i32:$x, v2i32:$y)),
+  (S_XOR_B64 SReg_64:$x, SReg_64:$y)
+>;
+
 // Same as a 32-bit inreg
 def : GCNPat<
   (i32 (UniformUnaryFrag<sext> i16:$src)),
