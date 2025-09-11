@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s %fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 // RUN: %clangxx_asan -O0 %s -o %t %ld_flags_rpath_exe
 
