@@ -58,6 +58,19 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
+static void replaceFuncletPadsRetWithUnreachable(Instruction &I) {
+  assert(isa<FuncletPadInst>(I) && "Instruction must be a funclet pad!");
+  for (User *User : make_early_inc_range(I.users())) {
+    Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+    if (isa<CatchReturnInst>(ReturnInstr) ||
+        isa<CleanupReturnInst>(ReturnInstr)) {
+      BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+      ReturnInstr->eraseFromParent();
+      new UnreachableInst(ReturnInstrBB->getContext(), ReturnInstrBB);
+    }
+  }
+}
+
 void llvm::detachDeadBlocks(
     ArrayRef<BasicBlock *> BBs,
     SmallVectorImpl<DominatorTree::UpdateType> *Updates,
@@ -75,7 +88,36 @@ void llvm::detachDeadBlocks(
     // Zap all the instructions in the block.
     while (!BB->empty()) {
       Instruction &I = BB->back();
-      // If this instruction is used, replace uses with an arbitrary value.
+      // Exception handling funclets need to be explicitly addressed.
+      // These funclets must begin with cleanuppad or catchpad and end with
+      // cleanupred or catchret. The return instructions can be in different
+      // basic blocks than the pad instruction. If we would only delete the
+      // first block, the we would have possible cleanupret and catchret
+      // instructions with poison arguments, which wouldn't be valid.
+      if (isa<FuncletPadInst>(I))
+        replaceFuncletPadsRetWithUnreachable(I);
+
+      // Catchswitch instructions have handlers, that must be catchpads and
+      // an unwind label, that is either a catchpad or catchswitch.
+      if (CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(&I)) {
+        // Iterating over the handlers and the unwind basic block and processing
+        // catchpads. If the unwind label is a catchswitch, we just replace the
+        // label with poison later on.
+        for (unsigned I = 0; I < CSI->getNumSuccessors(); I++) {
+          BasicBlock *SucBlock = CSI->getSuccessor(I);
+          Instruction &SucFstInst = *(SucBlock->getFirstNonPHIIt());
+          if (isa<FuncletPadInst>(SucFstInst)) {
+            replaceFuncletPadsRetWithUnreachable(SucFstInst);
+            // There may be catchswitch instructions using the catchpad.
+            // Just replace those with poison.
+            if (!SucFstInst.use_empty())
+              SucFstInst.replaceAllUsesWith(
+                  PoisonValue::get(SucFstInst.getType()));
+            SucFstInst.eraseFromParent();
+          }
+        }
+      }
+
       // Because control flow can't get here, we don't care what we replace the
       // value with.  Note that since this block is unreachable, and all values
       // contained within it must dominate their uses, that all uses will
