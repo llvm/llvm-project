@@ -2956,9 +2956,11 @@ AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
   Register RegSVL = MRI.createVirtualRegister(RC);
   Register RegCheck = MRI.createVirtualRegister(RC);
 
+  // Read VL and Streaming VL
   BuildMI(*MBB, MI, DL, TII->get(AArch64::RDVLI_XI), RegVL).addImm(1);
   BuildMI(*MBB, MI, DL, TII->get(AArch64::RDSVLI_XI), RegSVL).addImm(1);
 
+  // Compare vector lengths
   BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBXrr), RegCheck)
       .addReg(RegVL)
       .addReg(RegSVL);
@@ -2968,6 +2970,7 @@ AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
   MF->insert(It, TrapBB);
   MF->insert(It, PassBB);
 
+  // Continue if vector lengths match
   BuildMI(*MBB, MI, DL, TII->get(AArch64::CBZX))
       .addReg(RegCheck)
       .addMBB(PassBB);
@@ -2977,6 +2980,7 @@ AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   PassBB->transferSuccessorsAndUpdatePHIs(MBB);
 
+  // Trap if vector lengths mismatch
   BuildMI(TrapBB, DL, TII->get(AArch64::BRK)).addImm(1);
 
   MBB->addSuccessor(TrapBB);
