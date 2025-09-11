@@ -224,6 +224,11 @@ public:
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
+  /// If the modifier 'strict' is given:
+  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
+  /// generate code for 'num_threads' clause with 'strict' modifier.
+  /// \param NumThreads An integer value of threads.
   void emitNumThreadsClause(
       CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
       OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
@@ -292,11 +297,11 @@ public:
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
   /// \param NumThreadsModifier The modifier of the num_threads clause, if
-  /// any, ignored otherwise. Currently unused on the device.
+  /// any, ignored otherwise.
   /// \param Severity The severity corresponding to the num_threads clause, if
-  /// any, ignored otherwise. Currently unused on the device.
+  /// any, ignored otherwise.
   /// \param Message The message string corresponding to the num_threads clause,
-  /// if any, or nullptr. Currently unused on the device.
+  /// if any, or nullptr.
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
