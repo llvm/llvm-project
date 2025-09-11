@@ -5211,7 +5211,7 @@ public:
   }
 
   bool hasSpelling() const {
-    return llvm::any_of(Spellings, [](const auto &L) { return L.size() != 0; });
+    return llvm::any_of(Spellings, [](const auto &L) { return !L.empty(); });
   }
 };
 
