@@ -6,6 +6,11 @@
 #include "llvm/ProfileData/InstrProf.h"
 
 using namespace llvm;
+
+cl::opt<bool> PreserveHotDataSectionPrefix(
+    "preserve-hot-data-section-prefix", cl::Hidden, cl::init(true),
+    cl::desc("If true, hot data section prefixes are preserved"));
+
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
   if (!Count) {
@@ -36,7 +41,7 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
   // The accummulated counter shows the constant is hot. Return 'hot' whether
   // this variable is seen by unprofiled functions or not.
   if (PSI->isHotCount(*Count))
-    return "hot";
+    return PreserveHotDataSectionPrefix ? "hot" : "";
   // The constant is not hot, and seen by unprofiled functions. We don't want to
   // assign it to unlikely sections, even if the counter says 'cold'. So return
   // an empty prefix before checking whether the counter is cold.
