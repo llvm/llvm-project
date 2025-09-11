@@ -1,23 +1,23 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: %[[#extinst_id:]] = OpExtInstImport "OpenCL.std"
-; CHECK: %[[#float_32_type:]] = OpTypeFloat 32
-; CHECK: %[[#int_32_type:]] = OpTypeInt 32 0
-; CHECK: %[[#fn_ptr_type_i32:]] = OpTypePointer Function %[[#int_32_type]]
-; CHECK: %[[#const_negzero:]] = OpConstant %[[#float_32_type]] -0
-; CHECK: %[[#vec2_float_type:]] = OpTypeVector %[[#float_32_type]] 2
-; CHECK: %[[#vec2_int_type:]] = OpTypeVector %[[#int_32_type]] 2
-; CHECK: %[[#fn_ptr_type_vec2_i32:]] = OpTypePointer Function %[[#vec2_int_type]]
-; CHECK: %[[#vec2_null:]] = OpConstantNull %[[#vec2_float_type]]
-; CHECK: %[[#scalar_null:]] = OpConstantNull %[[#float_32_type]]
-; CHECK: %[[#const_composite1:]] = OpConstantComposite %[[#vec2_float_type]] %[[#scalar_null]] %[[#const_negzero]]
-; CHECK: %[[#vec4_float_type:]] = OpTypeVector %[[#float_32_type]] 4
-; CHECK: %[[#vec4_int_type:]] = OpTypeVector %[[#int_32_type]] 4
-; CHECK: %[[#fn_ptr_type_vec4_i32:]] = OpTypePointer Function %[[#vec4_int_type]]
-; CHECK: %[[#const_composite2:]] = OpConstantComposite %[[#vec4_float_type]] %[[#const_16:]] %[[#const_neg32:]] %[[#const_0:]] %[[#const_9999:]]
-; CHECK: %[[#float_64_type:]] = OpTypeFloat 64
-; CHECK: %[[#vec2_double_type:]] = OpTypeVector %[[#float_64_type]] 2
+; CHECK-DAG: %[[#extinst_id:]] = OpExtInstImport "OpenCL.std"
+; CHECK-DAG: %[[#float_32_type:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#int_32_type:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#fn_ptr_type_i32:]] = OpTypePointer Function %[[#int_32_type]]
+; CHECK-DAG: %[[#const_negzero:]] = OpConstant %[[#float_32_type]] -0
+; CHECK-DAG: %[[#vec2_float_type:]] = OpTypeVector %[[#float_32_type]] 2
+; CHECK-DAG: %[[#vec2_int_type:]] = OpTypeVector %[[#int_32_type]] 2
+; CHECK-DAG: %[[#fn_ptr_type_vec2_i32:]] = OpTypePointer Function %[[#vec2_int_type]]
+; CHECK-DAG: %[[#vec2_null:]] = OpConstantNull %[[#vec2_float_type]]
+; CHECK-DAG: %[[#scalar_null:]] = OpConstantNull %[[#float_32_type]]
+; CHECK-DAG: %[[#const_composite1:]] = OpConstantComposite %[[#vec2_float_type]] %[[#scalar_null]] %[[#const_negzero]]
+; CHECK-DAG: %[[#vec4_float_type:]] = OpTypeVector %[[#float_32_type]] 4
+; CHECK-DAG: %[[#vec4_int_type:]] = OpTypeVector %[[#int_32_type]] 4
+; CHECK-DAG: %[[#fn_ptr_type_vec4_i32:]] = OpTypePointer Function %[[#vec4_int_type]]
+; CHECK-DAG: %[[#const_composite2:]] = OpConstantComposite %[[#vec4_float_type]] %[[#const_16:]] %[[#const_neg32:]] %[[#const_0:]] %[[#const_9999:]]
+; CHECK-DAG: %[[#float_64_type:]] = OpTypeFloat 64
+; CHECK-DAG: %[[#vec2_double_type:]] = OpTypeVector %[[#float_64_type]] 2
 
 ; CHECK: %[[#]] = OpFunctionParameter %[[#float_32_type]]
 ; CHECK: %[[#var1:]] = OpVariable %[[#fn_ptr_type_i32]] Function
