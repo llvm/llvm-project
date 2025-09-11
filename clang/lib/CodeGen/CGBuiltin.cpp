@@ -602,20 +602,25 @@ Value *emitUnaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 
 // Emit an intrinsic that has 2 operands of the same type as its result.
 // Depending on mode, this may be a constrained floating-point intrinsic.
-static Value *emitBinaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
-                                const CallExpr *E, unsigned IntrinsicID,
-                                unsigned ConstrainedIntrinsicID) {
+static Value *emitBinaryMaybeConstrainedFPBuiltin(
+    CodeGenFunction &CGF, const CallExpr *E, unsigned IntrinsicID,
+    unsigned ConstrainedIntrinsicID,
+    llvm::FastMathFlags FMF = llvm::FastMathFlags()) {
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
 
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+  CallInst *CI;
   if (CGF.Builder.getIsFPConstrained()) {
     Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
-    return CGF.Builder.CreateConstrainedFPCall(F, { Src0, Src1 });
+    CI = CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1});
   } else {
     Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-    return CGF.Builder.CreateCall(F, { Src0, Src1 });
+    CI = CGF.Builder.CreateCall(F, {Src0, Src1});
   }
+  if (isa<FPMathOperator>(CI))
+    CI->setFastMathFlags(FMF);
+  return CI;
 }
 
 // Has second type mangled argument.
@@ -2890,10 +2895,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxl:
-    case Builtin::BI__builtin_fmaxf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::maxnum,
-                                   Intrinsic::experimental_constrained_maxnum));
+    case Builtin::BI__builtin_fmaxf128: {
+      llvm::FastMathFlags FMF;
+      FMF.setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::maxnum,
+          Intrinsic::experimental_constrained_maxnum, FMF));
+    }
 
     case Builtin::BIfmin:
     case Builtin::BIfminf:
@@ -2902,10 +2910,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminl:
-    case Builtin::BI__builtin_fminf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::minnum,
-                                   Intrinsic::experimental_constrained_minnum));
+    case Builtin::BI__builtin_fminf128: {
+      llvm::FastMathFlags FMF;
+      FMF.setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::minnum,
+          Intrinsic::experimental_constrained_minnum, FMF));
+    }
 
     case Builtin::BIfmaximum_num:
     case Builtin::BIfmaximum_numf:
@@ -4093,8 +4104,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateBinaryIntrinsic(
           Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
           Op1, nullptr, "elt.max");
-    } else
-      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
+    } else {
+      FastMathFlags FMF;
+      FMF.setNoSignedZeros(true);
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/FMF, "elt.max");
+    }
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4108,8 +4122,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateBinaryIntrinsic(
           Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
           Op1, nullptr, "elt.min");
-    } else
-      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
+    } else {
+      FastMathFlags FMF;
+      FMF.setNoSignedZeros(true);
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/FMF, "elt.min");
+    }
     return RValue::get(Result);
   }
 
