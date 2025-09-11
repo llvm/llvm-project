@@ -1237,24 +1237,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   vector::populatePropagateWarpVectorDistributionPatterns(
       patterns, distributionFn, shuffleFn);
 
-  auto warpReduction = [](Location loc, OpBuilder &builder, Value input,
-                          vector::CombiningKind kind, uint32_t size) {
-    // First reduce on a single thread to get per lane reduction value.
-    Value laneVal = builder.create<vector::ReductionOp>(loc, kind, input);
-    // Parallel reduction using butterfly shuffles.
-    for (uint64_t i = 1; i < size; i <<= 1) {
-      Value shuffled =
-          builder
-              .create<gpu::ShuffleOp>(loc, laneVal, i,
-                                      /*width=*/size,
-                                      /*mode=*/gpu::ShuffleMode::XOR)
-              .getShuffleResult();
-      laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
-    }
-    return laneVal;
-  };
-
-  vector::populateDistributeReduction(patterns, warpReduction);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
     signalPassFailure();
     return;
