@@ -683,6 +683,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         return std::make_unique<SPIRV64AMDGCNTargetInfo>(Triple, Opts);
       return nullptr;
     }
+    if (Triple.getVendor() == llvm::Triple::Intel)
+      return std::make_unique<SPIRV64IntelTargetInfo>(Triple, Opts);
     return std::make_unique<SPIRV64TargetInfo>(Triple, Opts);
   }
   case llvm::Triple::wasm32:
