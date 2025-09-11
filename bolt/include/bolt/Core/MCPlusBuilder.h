@@ -858,6 +858,20 @@ public:
     return StringRef();
   }
 
+  /// Returns the base register used by the instruction.
+  virtual unsigned getBaseReg(const MCInst &Inst) const{
+    llvm_unreachable("not implemented");
+    return 0;
+  }
+
+  /// Matches a pair of instructions that implement a GOT load:
+  /// an AUIPC (loading the high part of the address)
+  /// followed by a GOT-loading instruction (loading the low part of the address).
+  virtual bool matchGotAuipcPair(const MCInst &Inst) const{
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Interface and basic functionality of a MCInstMatcher. The idea is to make
   /// it easy to match one or more MCInsts against a tree-like pattern and
   /// extract the fragment operands. Example:
