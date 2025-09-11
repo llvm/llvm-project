@@ -481,6 +481,17 @@ public:
                       const MultiLevelTemplateArgumentList &MLTAL);
 };
 
+StringRef allocateStringFromConceptDiagnostic(const Sema &S,
+                                              const PartialDiagnostic Diag) {
+  SmallString<128> DiagString;
+  DiagString = ": ";
+  Diag.EmitToString(S.getDiagnostics(), DiagString);
+  unsigned MessageSize = DiagString.size();
+  char *Mem = new (S.Context) char[MessageSize];
+  memcpy(Mem, DiagString.c_str(), MessageSize);
+  return StringRef(Mem, MessageSize);
+}
+
 } // namespace
 
 ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
@@ -533,15 +544,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
       //  just storing them as strings. We would still like, in the
       //  future, to serialize the proper PartialDiagnostic as serializing
       //  it as a string defeats the purpose of the diagnostic mechanism.
-      SmallString<128> DiagString;
-      DiagString = ": ";
-      SubstDiag.second.EmitToString(S.getDiagnostics(), DiagString);
-      unsigned MessageSize = DiagString.size();
-      char *Mem = new (S.Context) char[MessageSize];
-      memcpy(Mem, DiagString.c_str(), MessageSize);
       Satisfaction.Details.emplace_back(
           new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
-              SubstDiag.first, StringRef(Mem, MessageSize)});
+              SubstDiag.first,
+              allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
       Satisfaction.IsSatisfied = false;
       return ExprEmpty();
     }
@@ -669,16 +675,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.ContainsErrors = true;
 
     PartialDiagnostic Msg = S.PDiag(diag::note_constraint_references_error);
-    SmallString<128> DiagString;
-    DiagString = ": ";
-    Msg.EmitToString(S.getDiagnostics(), DiagString);
-    unsigned MessageSize = DiagString.size();
-    char *Mem = new (S.Context) char[MessageSize];
-    memcpy(Mem, DiagString.c_str(), MessageSize);
     Satisfaction.Details.emplace_back(
         new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
             SubstitutedAtomicExpr.get()->getBeginLoc(),
-            StringRef(Mem, MessageSize)});
+            allocateStringFromConceptDiagnostic(S, Msg)});
     return SubstitutedAtomicExpr;
   }
 
@@ -917,22 +917,17 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     PartialDiagnosticAt SubstDiag{SourceLocation(),
                                   PartialDiagnostic::NullDiagnostic()};
     Info.takeSFINAEDiagnostic(SubstDiag);
-    // FIXME: Concepts: This is an unfortunate consequence of there
+    // FIXME: This is an unfortunate consequence of there
     //  being no serialization code for PartialDiagnostics and the fact
     //  that serializing them would likely take a lot more storage than
     //  just storing them as strings. We would still like, in the
     //  future, to serialize the proper PartialDiagnostic as serializing
     //  it as a string defeats the purpose of the diagnostic mechanism.
-    SmallString<128> DiagString;
-    DiagString = ": ";
-    SubstDiag.second.EmitToString(S.getDiagnostics(), DiagString);
-    unsigned MessageSize = DiagString.size();
-    char *Mem = new (S.Context) char[MessageSize];
-    memcpy(Mem, DiagString.c_str(), MessageSize);
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
         new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
-            SubstDiag.first, StringRef(Mem, MessageSize)});
+            SubstDiag.first,
+            allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
     return ExprError();
   }
 
