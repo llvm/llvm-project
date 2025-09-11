@@ -12004,70 +12004,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
-  case X86::BI__builtin_ia32_pslldqi128_byteshift:
-  case X86::BI__builtin_ia32_psrldqi128_byteshift: {
-    unsigned BuiltinID = E->getBuiltinCallee();
-
-    APSInt Amt;
-    if (!EvaluateInteger(E->getArg(1), Amt, Info))
-      break;
-    unsigned Shift = (unsigned)Amt.getZExtValue();
-
-    APValue Vec;
-    if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
-      break;
-
-    SmallVector<APValue, 16> ResultElements;
-    ResultElements.reserve(16);
-
-    bool isLeft = (BuiltinID == X86::BI__builtin_ia32_pslldqi128_byteshift);
-
-    for (unsigned i = 0; i < 16; i++) {
-      int SrcIdx = -1;
-      if (isLeft)
-        SrcIdx = i + Shift;
-      else if (i >= Shift)
-        SrcIdx = i - Shift;
-
-      if (SrcIdx >= 0 && (unsigned)SrcIdx < 16)
-        ResultElements.push_back(Vec.getVectorElt(SrcIdx));
-      else
-        ResultElements.push_back(APValue(0));
-    }
-    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
-  }
-
-  case X86::BI__builtin_ia32_pslldqi256_byteshift:
-  case X86::BI__builtin_ia32_psrldqi256_byteshift: {
-    unsigned BuiltinID = E->getBuiltinCallee();
-
-    APSInt Amt;
-    if (!EvaluateInteger(E->getArg(1), Amt, Info))
-      break;
-    unsigned Shift = (unsigned)Amt.getZExtValue();
-
-    APValue Vec;
-    if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
-      break;
-
-    SmallVector<APValue, 32> ResultElements;
-    ResultElements.reserve(32);
-
-    bool isLeft = (BuiltinID == X86::BI__builtin_ia32_pslldqi256_byteshift);
-
-    for (unsigned i = 0; i < 32; i++) {
-      int SrcIdx = -1;
-      if (isLeft)
-        SrcIdx = i + Shift;
-      else if (i >= Shift)
-        SrcIdx = i - Shift;
-
-      if (SrcIdx >= 0 && (unsigned)SrcIdx < 32)
-        ResultElements.push_back(Vec.getVectorElt(SrcIdx));
-      else
-        ResultElements.push_back(APValue(0));
-    }
-
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -12113,38 +12049,28 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     unsigned NumElts = Vec.getVectorLength();
     const unsigned LaneBytes = 16;
-    SmallVector<APValue, 64> Result;
-    Result.resize(NumElts, APValue(0));
-
-    bool IsLeft =
-        (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
-         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
+    assert(NumElts % LaneBytes == 0);
 
     SmallVector<APValue, 64> Result;
     Result.resize(NumElts, APValue(0));
 
-    SmallVector<int, 64> Indices;
-    Indices.reserve(NumElts);
+    bool IsLeft = (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
+                  E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
 
-    unsigned LaneSize = LaneBytes;
-    for (unsigned laneBase = 0; laneBase < NumElts; laneBase += LaneSize) {
-      for (unsigned i = 0; i < LaneSize; ++i) {
+    if (ShiftVal >= LaneBytes)
+      return Success(APValue(Result.data(), Result.size()), E);
+
+    for (unsigned laneBase = 0; laneBase < NumElts; laneBase += LaneBytes) {
+      for (unsigned i = 0; i < LaneBytes; ++i) {
         int src = IsLeft ? (i + ShiftVal) : (int)i - (int)ShiftVal;
 
-        if (src >= 0 && (unsigned)src < LaneSize)
-          Indices.push_back(laneBase + src);
+        if (src >= 0 && (unsigned)src < LaneBytes)
+          Result[laneBase + i] = Vec.getVectorElt(laneBase + (unsigned)src);
         else
-          Indices.push_back(-1);
+          Result[laneBase + i] = APValue(0);
       }
     }
 
-    for (unsigned i = 0; i < NumElts; i++) {
-      int src = Indices[i];
-      if (src >= 0)
-        Result[i] = Vec.getVectorElt((unsigned)src);
-      else
-        Result[i] = APValue(0);
-    }
     return Success(APValue(Result.data(), Result.size()), E);
   }
   }
