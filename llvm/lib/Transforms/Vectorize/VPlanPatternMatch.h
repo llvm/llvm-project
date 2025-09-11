@@ -254,8 +254,7 @@ private:
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
                   std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
+                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
