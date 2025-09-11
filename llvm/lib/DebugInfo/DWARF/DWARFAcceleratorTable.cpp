@@ -1139,5 +1139,8 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   while (NumLeftAnglesToSkip--)
     StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
 
-  return Name.substr(0, StartOfTemplate - 1);
+  StringRef Result = Name.substr(0, StartOfTemplate - 1);
+  if (Result.empty())
+    return std::nullopt;
+  return Result;
 }
