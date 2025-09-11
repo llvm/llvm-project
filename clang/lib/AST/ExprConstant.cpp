@@ -11964,7 +11964,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     assert(SourceC.getKind() == clang::APValue::Int);
 
     const APInt &C = SourceC.getInt();
-    auto SourceLen = SourceF.getVectorLength();
+    unsigned SourceLen = SourceF.getVectorLength();
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(SourceLen);
     for (unsigned EltNum = 0; EltNum != SourceLen; ++EltNum) {
