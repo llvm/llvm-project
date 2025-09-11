@@ -248,7 +248,7 @@ exit:
   ret void
 }
 
-; CHECK-BFI-INV-LABEL: Running analysis: OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop, LoopStandardAnalysisResults &> on loop %l0.header in function simplifiable_loop
+; CHECK-BFI-INV-LABEL: Running analysis: OuterAnalysisManagerProxy<{{.*}}> on loop %l0.header in function simplifiable_loop
 ; CHECK-BFI-INV-NEXT: Running pass: LoopInstSimplifyPass on loop %l0.header in function simplifiable_loop
 ; CHECK-BFI-INV-NEXT: Running pass: LoopSimplifyCFGPass on loop %l0.header in function simplifiable_loop
 ; CHECK-BFI-INV-NEXT: Running pass: LICMPass on loop %l0.header in function simplifiable_loop
