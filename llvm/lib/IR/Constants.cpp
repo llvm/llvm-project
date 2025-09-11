@@ -2082,6 +2082,7 @@ ConstantPtrAuth::ConstantPtrAuth(Constant *Ptr, ConstantInt *Key,
   assert(Key->getBitWidth() == 32);
   assert(Disc->getBitWidth() == 64);
   assert(AddrDisc->getType()->isPointerTy());
+  assert(DeactivationSymbol->getType()->isPointerTy());
   setOperand(0, Ptr);
   setOperand(1, Key);
   setOperand(2, Disc);
