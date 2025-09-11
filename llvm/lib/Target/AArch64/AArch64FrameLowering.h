@@ -23,6 +23,11 @@ class TargetLowering;
 class AArch64FunctionInfo;
 class AArch64PrologueEmitter;
 
+struct SVEStackSizes {
+  uint64_t ZPRStackSize{0};
+  uint64_t PPRStackSize{0};
+};
+
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
@@ -147,7 +152,16 @@ public:
 
   bool requiresSaveVG(const MachineFunction &MF) const;
 
-  StackOffset getSVEStackSize(const MachineFunction &MF) const;
+  /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
+  StackOffset getZPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire PPR stackframe (calleesaves + spills).
+  StackOffset getPPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire SVE stackframe (PPRs + ZPRs).
+  StackOffset getSVEStackSize(const MachineFunction &MF) const {
+    return getZPRStackSize(MF) + getPPRStackSize(MF);
+  }
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
@@ -166,10 +180,6 @@ private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       uint64_t StackBumpBytes) const;
 
-  int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
-  int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
-                                      int &MinCSFrameIndex,
-                                      int &MaxCSFrameIndex) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
                                                 uint64_t StackBumpBytes) const;
   void emitCalleeSavedGPRRestores(MachineBasicBlock &MBB,
@@ -181,6 +191,7 @@ private:
                           int64_t RealignmentPadding, StackOffset AllocSize,
                           bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
                           StackOffset InitialOffset, bool FollowupAllocs) const;
+
   /// Make a determination whether a Hazard slot is used and create it if
   /// needed.
   void determineStackHazardSlot(MachineFunction &MF,
@@ -248,7 +259,19 @@ private:
                                          bool NeedsWinCFI,
                                          bool *HasWinCFI) const;
 
-  bool isSVECalleeSave(MachineBasicBlock::iterator I) const;
+  // Convenience function to determine whether I is part of the ZPR callee
+  // saves.
+  bool isPartOfZPRCalleeSaves(MachineBasicBlock::iterator I) const;
+
+  // Convenience function to determine whether I is part of the PPR callee
+  // saves.
+  bool isPartOfPPRCalleeSaves(MachineBasicBlock::iterator I) const;
+
+  // Convenience function to determine whether I is part of the SVE callee
+  // saves.
+  bool isPartOfSVECalleeSaves(MachineBasicBlock::iterator I) const {
+    return isPartOfZPRCalleeSaves(I) || isPartOfPPRCalleeSaves(I);
+  }
 
   /// Returns the size of the fixed object area (allocated next to sp on entry)
   /// On Win64 this may include a var args area and an UnwindHelp object for EH.
