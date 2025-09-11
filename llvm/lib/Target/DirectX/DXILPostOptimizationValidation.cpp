@@ -214,7 +214,7 @@ static void validateRootSignature(Module &M,
     }
   }
 
-  for (const dxbc::RTS0::v1::StaticSampler &S : RSD.StaticSamplers)
+  for (const mcdxbc::StaticSampler &S : RSD.StaticSamplers)
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
 

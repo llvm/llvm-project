@@ -20,7 +20,7 @@ Parts:
       StaticSamplersOffset: 24
       Parameters: []
       Samplers: 
-        - Filter: 10 
+        - Filter: 16 
           AddressU: 1
           AddressV: 2
           AddressW: 5
@@ -46,7 +46,7 @@ Parts:
 #CHECK-NEXT:      StaticSamplersOffset: 24
 #CHECK-NEXT:      Parameters:      []
 #CHECK-NEXT:      Samplers:
-#CHECK-NEXT:        - Filter:          10
+#CHECK-NEXT:        - Filter:          16
 #CHECK-NEXT:          AddressU:        1
 #CHECK-NEXT:          AddressV:        2
 #CHECK-NEXT:          AddressW:        5
