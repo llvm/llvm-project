@@ -141,6 +141,8 @@ public:
     return false;
   }
 
+  bool preferControlFlow() const override { return false; }
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
