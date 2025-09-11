@@ -558,7 +558,7 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
   uint64_t Offset = 0;
 
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
-    // Errors for this check should be emitted before this point.
+    // Validation of NumDescriptors should have happened by this point.
     if (Range.NumDescriptors <= 0)
       continue;
     const dxil::ResourceClass &RangeType =
