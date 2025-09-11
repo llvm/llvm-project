@@ -507,7 +507,7 @@ integer type.
 
 
 -Wimplicit-overflow-behavior-conversion-assignment
--------------------------------------------------
+--------------------------------------------------
 
 This warning is issued specifically when an overflow behavior type is implicitly
 converted to a standard integer type during assignment operations. This is a
