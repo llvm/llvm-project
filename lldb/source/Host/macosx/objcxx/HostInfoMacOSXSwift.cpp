@@ -29,17 +29,46 @@ bool HostInfoMacOSX::ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
   if (!lldb_shlib_spec)
     return false;
 
-  std::string raw_path = lldb_shlib_spec.GetPath();
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos == std::string::npos)
-    return HostInfoPosix::ComputeSwiftResourceDirectory(lldb_shlib_spec,
-                                                           file_spec, verify);
+  std::string shlib_path = lldb_shlib_spec.GetPath();
+  std::string resource_dir;
 
-  framework_pos += strlen("LLDB.framework");
-  raw_path.resize(framework_pos);
-  raw_path.append("/Resources/Swift");
-  if (!verify || VerifySwiftPath(raw_path)) {
-    file_spec.SetDirectory(raw_path);
+  llvm::StringRef path(shlib_path);
+  // "LLDB.framework/Versions/A/LLDB" -> "LLDB.framework"
+  while (!path.empty() && llvm::sys::path::filename(path) != "LLDB.framework")
+    path = llvm::sys::path::parent_path(path);
+  // POSIX-style install.
+  if (path.empty() || llvm::sys::path::filename(path) != "LLDB.framework")
+    return HostInfoPosix::ComputeSwiftResourceDirectory(lldb_shlib_spec,
+                                                        file_spec, verify);
+
+  assert(llvm::sys::path::filename(path) == "LLDB.framework");
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) == "PrivateFrameworks") {
+    // Toolchain:
+    // Xcode.app/Contents/Developer/Toolchains/OSX26.0.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework
+    // Xcode.app/Contents/Developer/Toolchains/OSX26.0.xctoolchain/usr/lib/swift
+    path = llvm::sys::path::parent_path(path);
+    if (llvm::sys::path::filename(path) != "Library")
+      return {};
+    path = llvm::sys::path::parent_path(path);
+    if (llvm::sys::path::filename(path) != "System")
+      return {};
+    path = llvm::sys::path::parent_path(path);
+    resource_dir = std::string(path) + "/usr/lib/swift";
+  } else if (llvm::sys::path::filename(path) == "SharedFrameworks") {
+    // Xcode:
+    // Xcode.app/Contents/SharedFrameworks/LLDB.framework
+    // Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift
+    path = llvm::sys::path::parent_path(path);
+    resource_dir =
+        std::string(path) +
+        "/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift";
+  } else {
+    // Local build: LLDB.framework
+    resource_dir = std::string(path) + "/LLDB.framework/Resources/Swift";
+  }
+  if (!verify || VerifySwiftPath(resource_dir)) {
+    file_spec.SetDirectory(resource_dir);
     FileSystem::Instance().Resolve(file_spec);
     return true;
   }
