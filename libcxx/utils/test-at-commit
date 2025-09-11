@@ -70,7 +70,9 @@ def main(argv):
 
     with tempfile.TemporaryDirectory() as install_dir:
         # Build the library at the baseline
-        build_cmd = [os.path.join(PARENT_DIR, 'build-at-commit'), '--install-dir', install_dir, '--commit', args.commit]
+        build_cmd = [os.path.join(PARENT_DIR, 'build-at-commit'), '--git-repo', args.git_repo,
+                                                                  '--install-dir', install_dir,
+                                                                  '--commit', args.commit]
         build_cmd += ['--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo']
         subprocess.check_call(build_cmd)
 
