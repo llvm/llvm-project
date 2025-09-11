@@ -802,8 +802,8 @@ bool FunctionSpecializer::run() {
         if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
                 S.F->getEntryCount()) {
           uint64_t OriginalCount = MaybeOriginalCount->getCount();
-          if (OriginalCount >= CallCount) {
-            S.F->setEntryCount(OriginalCount - CallCount);
+          if (OriginalCount >= *Count) {
+            S.F->setEntryCount(OriginalCount - *Count);
           } else {
             // This should generally not happen as that would mean there are
             // more computed calls to the function than what was recorded.
