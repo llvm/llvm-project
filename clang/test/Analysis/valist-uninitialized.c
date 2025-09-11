@@ -151,3 +151,16 @@ void va_copy_test(va_list arg) {
   va_copy(dst, arg);
   va_end(dst);
 }
+
+void all_state_changes(va_list unknown, int fst, ...) {
+  va_list va, va2;
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_copy(va, unknown); // expected-note{{Copied unknown contents into the va_list}}
+  va_end(va); // expected-note{{Ended va_list}}
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_copy(va, va2); // expected-note{{Copied uninitialized contents into the va_list}}
+  va_start(va, fst); // expected-note{{Initialized va_list}}
+  va_end(va); // expected-note{{Ended va_list}}
+  va_end(va); // expected-warning{{va_end() is called on an already released va_list}}
+  // expected-note@-1{{va_end() is called on an already released va_list}}
+}
