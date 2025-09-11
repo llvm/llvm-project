@@ -1,0 +1,66 @@
+# This file defines a workflow that runs the libc++ benchmarks when a comment is added to the PR.
+#
+# The comment is of the form:
+#
+#   /libcxx-bot benchmark <path-to-benchmarks-to-run>
+#
+# That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
+# their results to be compared.
+
+name: Benchmark libc++
+
+permissions:
+  contents: read # Default everything to read-only
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+env:
+  CC: clang-22
+  CXX: clang++-22
+  COMMENT_BODY: ${{ github.event.comment.body  }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  run-benchmarks:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/libcxx-bot benchmark')
+
+    runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r libcxx/utils/requirements.txt
+
+      - name: Run baseline
+        run: |
+          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
+          baseline_commit=$(git merge-base refs/remotes/origin/${GITHUB_BASE_REF} ${GITHUB_SHA})
+          ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${BENCHMARKS}
+
+      - name: Run candidate
+        run: |
+          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
+          ./libcxx/utils/test-at-commit --commit ${GITHUB_SHA} -B build/candidate -- -sv -j1 --param optimization=speed ${BENCHMARKS}
+
+      - name: Compare baseline and candidate runs
+        run: ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks build/baseline) \
+                                               <(./libcxx/utils/consolidate-benchmarks build/candidate)
