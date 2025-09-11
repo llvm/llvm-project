@@ -598,6 +598,14 @@ mlir::LogicalResult CIRToLLVMACosOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMASinOpLowering::matchAndRewrite(
+    cir::ASinOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ASinOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1092,6 +1100,14 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(baseClassOp, isNull,
                                                       derivedAddr, adjusted);
   }
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
+    cir::ATanOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ATanOp>(op, resTy, adaptor.getSrc());
   return mlir::success();
 }
 
@@ -2454,11 +2470,13 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<
       // clang-format off
                CIRToLLVMACosOpLowering,
+               CIRToLLVMASinOpLowering,
                CIRToLLVMAssumeOpLowering,
                CIRToLLVMAssumeAlignedOpLowering,
                CIRToLLVMAssumeSepStorageOpLowering,
                CIRToLLVMAtomicCmpXchgLowering,
                CIRToLLVMBaseClassAddrOpLowering,
+               CIRToLLVMATanOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBitClrsbOpLowering,
                CIRToLLVMBitClzOpLowering,
