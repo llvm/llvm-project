@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/termios/cfgetispeed.h"
 #include "src/termios/cfgetospeed.h"
@@ -22,8 +23,7 @@
 #include <termios.h>
 
 using LlvmLibcTermiosTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 // We just list a bunch of smoke tests here as it is not possible to
 // test functionality at the least because we want to run the tests
@@ -43,18 +43,25 @@ TEST_F(LlvmLibcTermiosTest, SpeedSmokeTest) {
 TEST_F(LlvmLibcTermiosTest, GetAttrSmokeTest) {
   struct termios t;
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
-  if (fd < 0)
-    return; // When /dev/tty is not available, no point continuing.
+  if (fd < 0) {
+    // When /dev/tty is not available, no point continuing
+    libc_errno = 0;
+    return;
+  }
   ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::tcgetattr(fd, &t), Succeeds(0));
-  ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
 TEST_F(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
-  if (fd < 0)
-    return; // When /dev/tty is not available, no point continuing.
+  if (fd < 0) {
+    // When /dev/tty is not available, no point continuing
+    libc_errno = 0;
+    return;
+  }
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(LIBC_NAMESPACE::tcgetsid(fd), pid_t(0));
-  ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::tcgetsid(fd),
+              returns(GT(pid_t(0))).with_errno(EQ(0)));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
