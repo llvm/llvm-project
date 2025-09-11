@@ -350,8 +350,6 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
     const StringRef &buff = deferredFile.buffer.getBuffer();
     if (buff.size() > largeArchive)
       return;
-    if (((uintptr_t)buff.data() & (pageSize - 1)))
-      return; // Not mmap()'d (not page aligned).
 
     totalBytes += buff.size();
     numDeferedFilesAdvised += 1;
@@ -363,8 +361,9 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
       LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
 #else
 #define DEBUG_TYPE "lld-madvise"
-    if (madvise((void *)buff.data(), buff.size(), MADV_WILLNEED) < 0)
-      LLVM_DEBUG(llvm::dbgs() << "madvise() error: " << strerror(errno));
+    auto aligned = llvm::alignAddr(buff.data(), Align(pageSize));
+    if (madvise((void *)aligned, buff.size(), MADV_WILLNEED) < 0)
+      LLVM_DEBUG(llvm::dbgs() << "madvise error: " << strerror(errno) << "\n");
 #undef DEBUG_TYPE
 #endif
   };
