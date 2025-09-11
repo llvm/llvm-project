@@ -153,24 +153,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
           loc, "incompatible memref type for EmitC conversion");
     }
 
-    Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
-    Type elementType = memrefType.getElementType();
-    IndexType indexType = rewriter.getIndexType();
-    emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
-        rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
-        ValueRange{},
-        ArrayAttr::get(rewriter.getContext(), {TypeAttr::get(elementType)}));
-
-    int64_t numElements = 1;
-    for (int64_t dimSize : memrefType.getShape()) {
-      numElements *= dimSize;
-    }
-    Value numElementsValue = emitc::ConstantOp::create(
-        rewriter, loc, indexType, rewriter.getIndexAttr(numElements));
-
     Value totalSizeBytes =
-        emitc::MulOp::create(rewriter, loc, sizeTType,
-                             sizeofElementOp.getResult(0), numElementsValue);
+        calculateMemrefTotalSizeBytes(loc, memrefType, rewriter);
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
@@ -179,8 +163,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     if (allocOp.getAlignment()) {
       allocFunctionName = rewriter.getStringAttr(alignedAllocFunctionName);
       alignmentValue = emitc::ConstantOp::create(
-          rewriter, loc, sizeTType,
-          rewriter.getIntegerAttr(indexType,
+          rewriter, loc, emitc::SizeTType::get(rewriter.getContext()),
+          rewriter.getIntegerAttr(rewriter.getIndexType(),
                                   allocOp.getAlignment().value_or(0)));
       argsVec.push_back(alignmentValue);
     } else {
@@ -196,7 +180,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
             emitc::OpaqueType::get(rewriter.getContext(), "void")),
         allocFunctionName, args);
 
-    emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
+    emitc::PointerType targetPointerType =
+        emitc::PointerType::get(memrefType.getElementType());
     emitc::CastOp castOp = emitc::CastOp::create(
         rewriter, loc, targetPointerType, allocCall.getResult(0));
 
