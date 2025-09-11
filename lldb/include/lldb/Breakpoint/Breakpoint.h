@@ -563,10 +563,12 @@ private:
       m_name_list.erase(name_to_remove);
   }
 
-  enum TypeDisplay {
-    eDisplayFacade = 1,
-    eDisplayReal = 1 << 1,
-    eDisplayHeader = 1 << 2
+  /// This controls whether to display information about
+  /// the facade locations or the real locations.
+  enum DisplayType {
+    eDisplayFacade = 1,  // Display facade locations
+    eDisplayReal = 1 << 1, // Display real locations
+    eDisplayHeader = 1 << 2  // Display compressed list of locations only
   };
 
   void GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
