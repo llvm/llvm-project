@@ -408,9 +408,40 @@ void ICF::run() {
         // When using safe_thunks, ensure that we first sort by icfEqClass and
         // then by keepUnique (descending). This guarantees that within an
         // equivalence class, the keepUnique inputs are always first.
-        if (config->icfLevel == ICFLevel::safe_thunks)
-          if (a->icfEqClass[0] == b->icfEqClass[0])
-            return a->keepUnique > b->keepUnique;
+        if (a->icfEqClass[0] == b->icfEqClass[0]) {
+          if (config->icfLevel == ICFLevel::safe_thunks) {
+            if (a->keepUnique != b->keepUnique)
+              return a->keepUnique > b->keepUnique;
+          }
+          // Within each equivalence class, sort by primary (user) symbol name
+          // for determinism. Prefer the first non-local (external) symbol at
+          // offset 0.
+          auto getPrimarySymbolName = [](const ConcatInputSection *isec) {
+            const Symbol *firstLocalSymAtZero = nullptr;
+
+            // Single pass through symbols to find the best candidate
+            for (const Symbol *sym : isec->symbols) {
+              if (auto *d = dyn_cast<Defined>(sym)) {
+                if (d->value == 0) {
+                  // If we find an external symbol at offset 0, return it
+                  // immediately
+                  if (d->isExternal())
+                    return d->getName();
+                  // Otherwise, remember the first local symbol at offset 0
+                  if (!firstLocalSymAtZero)
+                    firstLocalSymAtZero = sym;
+                }
+              }
+            }
+            // Return the local symbol at offset 0 if we found one
+            if (firstLocalSymAtZero)
+              return firstLocalSymAtZero->getName();
+
+            // Fallback: use section name
+            return isec->getName();
+          };
+          return getPrimarySymbolName(a) < getPrimarySymbolName(b);
+        }
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
   forEachClass([&](size_t begin, size_t end) {

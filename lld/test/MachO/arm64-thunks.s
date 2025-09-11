@@ -40,7 +40,7 @@
 # OBJC: _objc_msgSend$bar:
 # OBJC: _objc_msgSend$foo:
 
-# MAP:      0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr
+# MAP:      0x{{[[:xdigit:]]+}} {{.*}} _fold_func_first_addr
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
@@ -58,12 +58,12 @@
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _main
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_high_addr
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_second_addr
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
-# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_first_addr.thunk.0
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _z
 
 
@@ -243,14 +243,14 @@ _objc_msgSend:
 .subsections_via_symbols
 
 .addrsig
-.addrsig_sym _fold_func_low_addr
-.addrsig_sym _fold_func_high_addr
+.addrsig_sym _fold_func_first_addr
+.addrsig_sym _fold_func_second_addr
 
 .text
 
-.globl _fold_func_low_addr
+.globl _fold_func_first_addr
 .p2align 2
-_fold_func_low_addr:
+_fold_func_first_addr:
   add x0, x0, x0
   add x1, x0, x1
   add x2, x0, x2
@@ -383,16 +383,16 @@ _main:
   bl _f
   bl _g
   bl _h
-  bl _fold_func_low_addr
-  bl _fold_func_high_addr
+  bl _fold_func_first_addr
+  bl _fold_func_second_addr
   bl ___nan
   bl _objc_msgSend$foo
   bl _objc_msgSend$bar
   ret
 
-.globl _fold_func_high_addr
+.globl _fold_func_second_addr
 .p2align 2
-_fold_func_high_addr:
+_fold_func_second_addr:
   add x0, x0, x0
   add x1, x0, x1
   add x2, x0, x2
