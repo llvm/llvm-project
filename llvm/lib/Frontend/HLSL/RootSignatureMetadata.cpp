@@ -68,14 +68,6 @@ extractShaderVisibility(MDNode *Node, unsigned int OpId) {
   return make_error<InvalidRSMetadataValue>("ShaderVisibility");
 }
 
-static uint64_t updateOngoingOffset(uint64_t CurOfset, uint64_t NumDescriptors,
-                                    uint64_t Offset) {
-  // Append to the current offset if DescriptorTableOffsetAppend is set,
-  // otherwise calculate the new Offset.
-  return Offset == DescriptorTableOffsetAppend ? CurOfset + NumDescriptors
-                                               : Offset + NumDescriptors;
-}
-
 namespace {
 
 // We use the OverloadVisit with std::visit to ensure the compiler catches if a
@@ -586,7 +578,6 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
     if (!verifyNoOverflowedOffset(OffsetBound))
       return make_error<DescriptorRangeOverflowError>(
           RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
-
     Offset = updateOngoingOffset(Offset, Range.NumDescriptors,
                                  Range.OffsetInDescriptorsFromTableStart);
   }

@@ -182,6 +182,14 @@ uint64_t computeRangeBound(uint32_t Offset, uint32_t Size) {
   return uint64_t(Offset) + uint64_t(Size) - 1;
 }
 
+uint64_t updateOngoingOffset(uint64_t CurOffset, uint64_t NumDescriptors,
+                             uint64_t Offset) {
+  // Append to the current offset if DescriptorTableOffsetAppend is set,
+  // otherwise calculate the new Offset.
+  return Offset == DescriptorTableOffsetAppend ? CurOffset + NumDescriptors
+                                               : Offset + NumDescriptors;
+}
+
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

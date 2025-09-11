@@ -1378,9 +1378,8 @@ bool SemaHLSL::handleRootSignatureElements(
           Diag(Loc, diag::err_hlsl_offset_overflow) << Offset << RangeBound;
         }
 
-        Offset = RangeBound == llvm::hlsl::rootsig::NumDescriptorsUnbounded
-                     ? uint32_t(RangeBound)
-                     : uint32_t(RangeBound + 1);
+        Offset = llvm::hlsl::rootsig::updateOngoingOffset(
+            Offset, Clause->NumDescriptors, Clause->Offset);
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
