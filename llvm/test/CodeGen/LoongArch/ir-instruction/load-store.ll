@@ -13,10 +13,11 @@
 define i32 @load_store_global() nounwind {
 ; LA32RNOPIC-LABEL: load_store_global:
 ; LA32RNOPIC:       # %bb.0:
-; LA32RNOPIC-NEXT:    pcalau12i $a1, %pc_hi20(G)
-; LA32RNOPIC-NEXT:    ld.w $a0, $a1, %pc_lo12(G)
+; LA32RNOPIC-NEXT:  .Lpcadd_hi0:
+; LA32RNOPIC-NEXT:    pcaddu12i $a1, %pcadd_hi20(G)
+; LA32RNOPIC-NEXT:    ld.w $a0, $a1, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32RNOPIC-NEXT:    addi.w $a0, $a0, 1
-; LA32RNOPIC-NEXT:    st.w $a0, $a1, %pc_lo12(G)
+; LA32RNOPIC-NEXT:    st.w $a0, $a1, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32RNOPIC-NEXT:    ret
 ;
 ; LA32SNOPIC-LABEL: load_store_global:
@@ -29,10 +30,11 @@ define i32 @load_store_global() nounwind {
 ;
 ; LA32RPIC-LABEL: load_store_global:
 ; LA32RPIC:       # %bb.0:
-; LA32RPIC-NEXT:    pcalau12i $a1, %pc_hi20(.LG$local)
-; LA32RPIC-NEXT:    ld.w $a0, $a1, %pc_lo12(.LG$local)
+; LA32RPIC-NEXT:  .Lpcadd_hi0:
+; LA32RPIC-NEXT:    pcaddu12i $a1, %pcadd_hi20(.LG$local)
+; LA32RPIC-NEXT:    ld.w $a0, $a1, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32RPIC-NEXT:    addi.w $a0, $a0, 1
-; LA32RPIC-NEXT:    st.w $a0, $a1, %pc_lo12(.LG$local)
+; LA32RPIC-NEXT:    st.w $a0, $a1, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32RPIC-NEXT:    ret
 ;
 ; LA32SPIC-LABEL: load_store_global:
@@ -67,8 +69,9 @@ define i32 @load_store_global() nounwind {
 define i32 @load_store_global_array(i32 %a) nounwind {
 ; LA32RNOPIC-LABEL: load_store_global_array:
 ; LA32RNOPIC:       # %bb.0:
-; LA32RNOPIC-NEXT:    pcalau12i $a1, %pc_hi20(arr)
-; LA32RNOPIC-NEXT:    addi.w $a2, $a1, %pc_lo12(arr)
+; LA32RNOPIC-NEXT:  .Lpcadd_hi1:
+; LA32RNOPIC-NEXT:    pcaddu12i $a1, %pcadd_hi20(arr)
+; LA32RNOPIC-NEXT:    addi.w $a2, $a1, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32RNOPIC-NEXT:    ld.w $a1, $a2, 0
 ; LA32RNOPIC-NEXT:    st.w $a0, $a2, 0
 ; LA32RNOPIC-NEXT:    ld.w $zero, $a2, 36
@@ -89,8 +92,9 @@ define i32 @load_store_global_array(i32 %a) nounwind {
 ;
 ; LA32RPIC-LABEL: load_store_global_array:
 ; LA32RPIC:       # %bb.0:
-; LA32RPIC-NEXT:    pcalau12i $a1, %pc_hi20(.Larr$local)
-; LA32RPIC-NEXT:    addi.w $a2, $a1, %pc_lo12(.Larr$local)
+; LA32RPIC-NEXT:  .Lpcadd_hi1:
+; LA32RPIC-NEXT:    pcaddu12i $a1, %pcadd_hi20(.Larr$local)
+; LA32RPIC-NEXT:    addi.w $a2, $a1, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32RPIC-NEXT:    ld.w $a1, $a2, 0
 ; LA32RPIC-NEXT:    st.w $a0, $a2, 0
 ; LA32RPIC-NEXT:    ld.w $zero, $a2, 36
