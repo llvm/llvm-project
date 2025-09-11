@@ -2077,9 +2077,45 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
         diag << " (tried '" << opName << "' as well)";
       auto &note = diag.attachNote();
       note << "Registered dialects: ";
-      llvm::interleaveComma(getContext()->getAvailableDialects(), note,
-                            [&](StringRef dialect) { note << dialect; });
-      note << " ; for more info on dialect registration see "
+      std::vector<StringRef> registered = getContext()->getAvailableDialects();
+      auto loaded = getContext()->getLoadedDialects();
+
+      // Merge the sorted lists of registered and loaded dialects.
+      SmallVector<std::pair<StringRef, bool>> mergedDialects;
+      auto regIt = registered.begin(), regEnd = registered.end();
+      auto loadIt = loaded.rbegin(), loadEnd = loaded.rend();
+      bool isRegistered = false;
+      bool isOnlyLoaded = true;
+      while (regIt != regEnd && loadIt != loadEnd) {
+        StringRef reg = *regIt;
+        StringRef load = (*loadIt)->getNamespace();
+        if (reg < load) {
+          mergedDialects.emplace_back(*regIt++, isRegistered);
+        } else if (load < reg) {
+          mergedDialects.emplace_back(load, isOnlyLoaded);
+          loadIt++;
+        } else {
+          mergedDialects.emplace_back(*regIt++, isRegistered);
+          loadIt++;
+        }
+      }
+      for (; regIt != regEnd; ++regIt)
+        mergedDialects.emplace_back(*regIt, isRegistered);
+      for (; loadIt != loadEnd; ++loadIt)
+        mergedDialects.emplace_back((*loadIt)->getNamespace(), isOnlyLoaded);
+
+      bool loadedUnregistered = false;
+      llvm::interleaveComma(mergedDialects, note, [&](auto &pair) {
+        note << pair.first;
+        if (pair.second) {
+          loadedUnregistered = true;
+          note << " (*)";
+        }
+      });
+      note << " ";
+      if (loadedUnregistered)
+        note << "(* corresponding to loaded but unregistered dialects)";
+      note << "; for more info on dialect registration see "
               "https://mlir.llvm.org/getting_started/Faq/"
               "#registered-loaded-dependent-whats-up-with-dialects-management";
       return nullptr;
