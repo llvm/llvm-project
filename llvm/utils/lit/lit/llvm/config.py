@@ -197,7 +197,7 @@ class LLVMConfig(object):
             )
             if gmalloc_path_str is not None:
                 self.with_environment("DYLD_INSERT_LIBRARIES", gmalloc_path_str)
-        
+
         if not platform.system() == "Windows":
             features.add("symlinks")
 
