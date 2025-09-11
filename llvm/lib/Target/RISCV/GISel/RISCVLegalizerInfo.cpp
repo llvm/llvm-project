@@ -151,7 +151,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(
       {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO})
+      .minScalar(0, sXLen)
+      .lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
   getActionDefinitionsBuilder(
