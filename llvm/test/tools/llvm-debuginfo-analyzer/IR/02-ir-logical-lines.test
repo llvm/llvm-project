@@ -57,4 +57,4 @@
 ; ONE-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'retq'
-; ONE-NEXT: [003]     6           {Line}
+; ONE-NEXT: [002]     6         {Line}

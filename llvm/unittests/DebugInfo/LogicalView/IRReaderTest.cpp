@@ -186,11 +186,21 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
 
   // Get comparison table.
   LVPassTable PassTable = Compare.getPassTable();
-  ASSERT_EQ(PassTable.size(), 9u);
+  ASSERT_EQ(PassTable.size(), 6u);
 
   LVReader *Reader;
   LVElement *Element;
   LVComparePass Pass;
+
+  // Reference: Missing DebugLine
+  std::tie(Reader, Element, Pass) = PassTable[0];
+  ASSERT_NE(Reader, nullptr);
+  ASSERT_NE(Element, nullptr);
+  EXPECT_EQ(Reader, Reference);
+  EXPECT_EQ(Element->getLevel(), 3u);
+  EXPECT_EQ(Element->getLineNumber(), 0u);
+  EXPECT_EQ(Element->getName(), "");
+  EXPECT_EQ(Pass, LVComparePass::Missing);
 
   // Reference: Missing Variable 'CONSTANT'
   std::tie(Reader, Element, Pass) = PassTable[1];
@@ -212,18 +222,8 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Element->getName(), "INTEGER");
   EXPECT_EQ(Pass, LVComparePass::Missing);
 
-  // Reference: Missing DebugLine
-  std::tie(Reader, Element, Pass) = PassTable[4];
-  ASSERT_NE(Reader, nullptr);
-  ASSERT_NE(Element, nullptr);
-  EXPECT_EQ(Reader, Reference);
-  EXPECT_EQ(Element->getLevel(), 3u);
-  EXPECT_EQ(Element->getLineNumber(), 8u);
-  EXPECT_EQ(Element->getName(), "");
-  EXPECT_EQ(Pass, LVComparePass::Missing);
-
   // Target: Added Variable 'CONSTANT'
-  std::tie(Reader, Element, Pass) = PassTable[6];
+  std::tie(Reader, Element, Pass) = PassTable[3];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
@@ -233,7 +233,7 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Pass, LVComparePass::Added);
 
   // Target: Added TypeDefinition 'INTEGER'
-  std::tie(Reader, Element, Pass) = PassTable[7];
+  std::tie(Reader, Element, Pass) = PassTable[4];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
@@ -243,12 +243,12 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Pass, LVComparePass::Added);
 
   // Target: Added DebugLine
-  std::tie(Reader, Element, Pass) = PassTable[8];
+  std::tie(Reader, Element, Pass) = PassTable[5];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
-  EXPECT_EQ(Element->getLevel(), 4u);
-  EXPECT_EQ(Element->getLineNumber(), 8u);
+  EXPECT_EQ(Element->getLevel(), 2u);
+  EXPECT_EQ(Element->getLineNumber(), 9u);
   EXPECT_EQ(Element->getName(), "");
   EXPECT_EQ(Pass, LVComparePass::Added);
 }
