@@ -1693,22 +1693,39 @@ void BinaryContext::preprocessDebugInfo() {
 
     auto It = llvm::partition_point(
         AllRanges, [=](CURange R) { return R.HighPC <= FunctionAddress; });
-    if (It != AllRanges.end() && It->LowPC <= FunctionAddress)
-      Function.setDWARFUnit(It->Unit);
+    if (It == AllRanges.end() || It->LowPC > FunctionAddress) {
+      continue;
+    }
+    Function.addDWARFUnit(It->Unit);
+
+    // Go forward and add all units from ranges that cover the function.
+    while (++It != AllRanges.end()) {
+      if (It->LowPC > FunctionAddress || FunctionAddress >= It->HighPC)
+        break;
+      Function.addDWARFUnit(It->Unit);
+    }
   }
 
   // Discover units with debug info that needs to be updated.
   for (const auto &KV : BinaryFunctions) {
     const BinaryFunction &BF = KV.second;
-    if (shouldEmit(BF) && BF.getDWARFUnit())
-      ProcessedCUs.insert(BF.getDWARFUnit());
+    if (shouldEmit(BF) && !BF.getDWARFUnits().empty())
+      for (const auto &[_, Unit] : BF.getDWARFUnits())
+        ProcessedCUs.insert(Unit);
   }
-
   // Clear debug info for functions from units that we are not going to process.
   for (auto &KV : BinaryFunctions) {
     BinaryFunction &BF = KV.second;
-    if (BF.getDWARFUnit() && !ProcessedCUs.count(BF.getDWARFUnit()))
-      BF.setDWARFUnit(nullptr);
+    // Collect units to remove to avoid iterator invalidation
+    SmallVector<DWARFUnit *, 1> UnitsToRemove;
+    for (const auto &[_, Unit] : BF.getDWARFUnits()) {
+      if (!ProcessedCUs.count(Unit))
+        UnitsToRemove.push_back(Unit);
+    }
+    // Remove the collected units
+    for (auto *Unit : UnitsToRemove) {
+      BF.removeDWARFUnit(Unit);
+    }
   }
 
   if (opts::Verbosity >= 1) {
@@ -1903,23 +1920,23 @@ bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
 static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
                            const BinaryFunction *Function,
                            DWARFContext *DwCtx) {
-  DebugLineTableRowRef RowRef =
-      DebugLineTableRowRef::fromSMLoc(Instruction.getLoc());
-  if (RowRef == DebugLineTableRowRef::NULL_ROW)
+  const ClusteredRows *LineTableRows =
+      ClusteredRows::fromSMLoc(Instruction.getLoc());
+  if (LineTableRows == nullptr)
     return;
 
-  const DWARFDebugLine::LineTable *LineTable;
-  if (Function && Function->getDWARFUnit() &&
-      Function->getDWARFUnit()->getOffset() == RowRef.DwCompileUnitIndex) {
-    LineTable = Function->getDWARFLineTable();
-  } else {
-    LineTable = DwCtx->getLineTableForUnit(
-        DwCtx->getCompileUnitForOffset(RowRef.DwCompileUnitIndex));
-  }
-  assert(LineTable && "line table expected for instruction with debug info");
+  // File name and line number should be the same for all CUs.
+  // So it is sufficient to check the first one.
+  DebugLineTableRowRef RowRef = LineTableRows->getRows().front();
+  const DWARFDebugLine::LineTable *LineTable = DwCtx->getLineTableForUnit(
+      DwCtx->getCompileUnitForOffset(RowRef.DwCompileUnitIndex));
+
+  if (!LineTable)
+    return;
 
   const DWARFDebugLine::Row &Row = LineTable->Rows[RowRef.RowIndex - 1];
   StringRef FileName = "";
+
   if (std::optional<const char *> FName =
           dwarf::toString(LineTable->Prologue.getFileNameEntry(Row.File).Name))
     FileName = *FName;

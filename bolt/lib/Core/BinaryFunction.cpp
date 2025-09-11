@@ -179,37 +179,29 @@ template <typename R> static bool emptyRange(const R &Range) {
 }
 
 /// Gets debug line information for the instruction located at the given
-/// address in the original binary. The SMLoc's pointer is used
-/// to point to this information, which is represented by a
-/// DebugLineTableRowRef. The returned pointer is null if no debug line
-/// information for this instruction was found.
-static SMLoc findDebugLineInformationForInstructionAt(
+/// address in the original binary. Returns an optional DebugLineTableRowRef
+/// that references the corresponding row in the DWARF line table. Since binary
+/// functions can span multiple compilation units, this function helps
+/// associate instructions with their debug line information from the
+/// appropriate CU. Returns std::nullopt if no debug line information for
+/// this instruction was found.
+static std::optional<DebugLineTableRowRef>
+findDebugLineInformationForInstructionAt(
     uint64_t Address, DWARFUnit *Unit,
     const DWARFDebugLine::LineTable *LineTable) {
-  // We use the pointer in SMLoc to store an instance of DebugLineTableRowRef,
-  // which occupies 64 bits. Thus, we can only proceed if the struct fits into
-  // the pointer itself.
-  static_assert(
-      sizeof(decltype(SMLoc().getPointer())) >= sizeof(DebugLineTableRowRef),
-      "Cannot fit instruction debug line information into SMLoc's pointer");
-
-  SMLoc NullResult = DebugLineTableRowRef::NULL_ROW.toSMLoc();
   uint32_t RowIndex = LineTable->lookupAddress(
       {Address, object::SectionedAddress::UndefSection});
   if (RowIndex == LineTable->UnknownRowIndex)
-    return NullResult;
+    return std::nullopt;
 
   assert(RowIndex < LineTable->Rows.size() &&
          "Line Table lookup returned invalid index.");
 
-  decltype(SMLoc().getPointer()) Ptr;
-  DebugLineTableRowRef *InstructionLocation =
-      reinterpret_cast<DebugLineTableRowRef *>(&Ptr);
+  DebugLineTableRowRef InstructionLocation;
+  InstructionLocation.DwCompileUnitIndex = Unit->getOffset();
+  InstructionLocation.RowIndex = RowIndex + 1;
 
-  InstructionLocation->DwCompileUnitIndex = Unit->getOffset();
-  InstructionLocation->RowIndex = RowIndex + 1;
-
-  return SMLoc::getFromPointer(Ptr);
+  return InstructionLocation;
 }
 
 static std::string buildSectionName(StringRef Prefix, StringRef Name,
@@ -1496,9 +1488,24 @@ Error BinaryFunction::disassemble() {
     }
 
 add_instruction:
-    if (getDWARFLineTable()) {
-      Instruction.setLoc(findDebugLineInformationForInstructionAt(
-          AbsoluteInstrAddr, getDWARFUnit(), getDWARFLineTable()));
+    if (!getDWARFUnits().empty()) {
+      SmallVector<DebugLineTableRowRef, 1> Rows;
+      for (const auto &[_, Unit] : getDWARFUnits()) {
+        const DWARFDebugLine::LineTable *LineTable =
+            getDWARFLineTableForUnit(Unit);
+        if (!LineTable)
+          continue;
+        if (std::optional<DebugLineTableRowRef> RowRef =
+                findDebugLineInformationForInstructionAt(AbsoluteInstrAddr,
+                                                         Unit, LineTable))
+          Rows.emplace_back(*RowRef);
+      }
+      if (!Rows.empty()) {
+        ClusteredRows *Cluster =
+            BC.ClusteredRows.createClusteredRows(Rows.size());
+        Cluster->populate(Rows);
+        Instruction.setLoc(Cluster->toSMLoc());
+      }
     }
 
     // Record offset of the instruction for profile matching.
