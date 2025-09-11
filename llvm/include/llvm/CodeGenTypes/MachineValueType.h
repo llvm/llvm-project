@@ -178,6 +178,12 @@ namespace llvm {
       return (isFixedLengthVector() && getFixedSizeInBits() == 2048);
     }
 
+    /// Return true if this is a CHERI capability type.
+    bool isCheriCapability() const {
+      return (SimpleTy >= MVT::FIRST_CHERI_CAPABILITY_VALUETYPE) &&
+             (SimpleTy <= MVT::LAST_CHERI_CAPABILITY_VALUETYPE);
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       switch (SimpleTy) {
