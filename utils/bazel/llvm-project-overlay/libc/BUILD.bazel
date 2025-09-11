@@ -117,6 +117,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_config",
     hdrs = ["src/__support/macros/config.h"],
+    deps = [
+        "__support_macros_properties_architectures",
+        "__support_macros_properties_compiler",
+    ],
 )
 
 ################################# Include Files ################################
@@ -707,6 +711,7 @@ libc_support_library(
     deps = [
         ":__support_cpp_algorithm",
         ":__support_cpp_bit",
+        ":__support_cpp_tuple",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":hdr_stdint_proxy",
