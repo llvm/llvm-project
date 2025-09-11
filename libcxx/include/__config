@@ -1281,6 +1281,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_PFP
 #  endif
 
+#  if defined(__POINTER_FIELD_PROTECTION__)
+#    define _LIBCPP_PFP [[_Clang::__pointer_field_protection__]]
+#  else
+#    define _LIBCPP_PFP
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG
