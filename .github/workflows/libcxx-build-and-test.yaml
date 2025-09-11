@@ -293,11 +293,13 @@ jobs:
         # with:
         #   fetch-depth: 0 # This job requires access to all the Git branches so it can diff against (usually) main
         #   fetch-tags: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
       - name: benchmarks
         # TODO: python3-virtualenv should be taken from the Docker image instead
         # libcxx/utils/ci/run-buildbot benchmark-comparison
         run: |
-          python3 -m pip install virtualenv
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install -r libcxx/utils/requirements.txt
