@@ -375,7 +375,7 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  if (const Triple &TT = MergedModule->getTargetTriple(); TT.empty())
+  if (MergedModule->getTargetTriple().empty())
     MergedModule->setTargetTriple(Triple(sys::getDefaultTargetTriple()));
 
   // create target machine from info for merged modules
