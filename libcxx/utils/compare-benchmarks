@@ -118,6 +118,7 @@ def main(argv):
     else:
         diff = plain_text_comparison(benchmarks, baseline_series, candidate_series)
         args.output.write(diff)
+        args.output.write('\n')
 
 if __name__ == '__main__':
     main(sys.argv[1:])
