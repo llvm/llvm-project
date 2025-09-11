@@ -1043,12 +1043,12 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
   // The brief description is just the location name (1.2 or whatever).  That's
   // pointless to show in the breakpoint's description, so suppress it.
   if (show_locations && level != lldb::eDescriptionLevelBrief) {
-    if ((display_type & eDisplayHeader) != 0)
+    if ((display_type & eDisplayHeader) != 0) {
       if ((display_type & eDisplayFacade) != 0)
         s->Printf("Facade locations:\n");
       else
         s->Printf("Implementation Locations\n");
-
+    }
     s->IndentMore();
     for (size_t i = 0; i < num_locations; ++i) {
       BreakpointLocation *loc = GetLocationAtIndex(i, use_facade).get();
