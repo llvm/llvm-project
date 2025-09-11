@@ -798,6 +798,51 @@ struct LinearizeVectorFromElements final
   }
 };
 
+/// This pattern linearizes the operand in `vector.to_elements` operations
+/// by converting the source type to a 1-D vector while preserving all element
+/// values. The transformation creates a linearized `vector.shape_cast`
+/// followed by a `vector.to_elements`.
+///
+/// Example:
+///
+///     %0:4 = vector.to_elements %v : vector<2x2xf32>
+///
+/// is converted to:
+///
+///     %vector_cast = vector.shape_cast %v : vector<2x2xf32> to vector<4xf32>
+///     %0:4 = vector.to_elements %vector_cast : vector<4xf32>
+///
+struct LinearizeVectorToElements final
+    : public OpConversionPattern<vector::ToElementsOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LinearizeVectorToElements(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    VectorType vecType = toElementsOp.getSource().getType();
+    if (vecType.getRank() <= 1)
+      return rewriter.notifyMatchFailure(
+          toElementsOp, "the rank is already less than or equal to 1");
+
+    assert(vecType.getNumScalableDims() == 0 &&
+           "to_elements does not support scalable vectors");
+    auto vec1DType =
+        VectorType::get({vecType.getNumElements()}, vecType.getElementType());
+    Value shapeCast = vector::ShapeCastOp::create(
+        rewriter, toElementsOp.getLoc(), vec1DType, toElementsOp.getSource());
+    auto newToElementsOp =
+        vector::ToElementsOp::create(rewriter, toElementsOp.getLoc(),
+                                     toElementsOp.getResultTypes(), shapeCast);
+    rewriter.replaceOp(toElementsOp, newToElementsOp);
+    return success();
+  }
+};
+
 } // namespace
 
 /// This method defines the set of operations that are linearizable, and hence
@@ -890,8 +935,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
            LinearizeVectorSplat, LinearizeVectorCreateMask, LinearizeVectorLoad,
-           LinearizeVectorStore, LinearizeVectorFromElements>(
-          typeConverter, patterns.getContext());
+           LinearizeVectorStore, LinearizeVectorFromElements,
+           LinearizeVectorToElements>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
