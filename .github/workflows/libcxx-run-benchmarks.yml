@@ -77,7 +77,7 @@ jobs:
         run: |
           source .venv/bin/activate && cd repo
           ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks build/baseline) \
-                                            <(./libcxx/utils/consolidate-benchmarks build/candidate) > results.txt
+                                            <(./libcxx/utils/consolidate-benchmarks build/candidate) | tee results.txt
 
       - name: Update comment with results
         run: |
