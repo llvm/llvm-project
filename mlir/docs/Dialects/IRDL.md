@@ -1,26 +1,47 @@
-# IRDL Rationale
+# 'irdl' Dialect
 
-The IRDL (*Intermediate Representation Definition Language*) dialect allows defining MLIR dialects as MLIR programs. Nested operations are used to represent dialect structure: dialects contain operations, types and attributes, themselves containing type parameters, operands, results, etc. Each of those concepts are mapped to MLIR operations in the IRDL dialect, as shown in the example below:
+[TOC]
+
+## Basics
+
+The IRDL (*Intermediate Representation Definition Language*) dialect allows defining MLIR dialects as MLIR programs. Nested operations are used to represent dialect structure: dialects contain operations, types and attributes, themselves containing type parameters, operands, results, etc. Each of those concepts are mapped to MLIR operations in the IRDL dialect, as shown in the example dialect below:
 
 ```mlir
-irdl.dialect @my_dialect {
-	irdl.type @my_type {
-		// This type has a single parameter that must be i32.
-		%constraint = irdl.is : i32
-		irdl.parameters(param1: %constraint)
-	}
+irdl.dialect @cmath {
+    irdl.type @complex {
+        %0 = irdl.is f32
+        %1 = irdl.is f64
+        %2 = irdl.any_of(%0, %1)
+        irdl.parameters(%2)
+    }
 
-	irdl.operation @my_scale_op {
-	    // This operation represents the scaling of a vector.
-		%vec_constraint = irdl.is : vector<i64>
-		%scalar_constraint = irdl.is : i64
-		irdl.operands(vector: %vec_constraint, scalar: %scalar_constraint)
-		irdl.results(result: %vec_constraint)
-	}
+    irdl.operation @mul {
+        %0 = irdl.is f32
+        %1 = irdl.is f64
+        %2 = irdl.any_of(%0, %1)
+        %3 = irdl.parametric @cmath::@complex<%2>
+        irdl.operands(%3, %3)
+        irdl.results(%3)
+    }
 }
 ```
 
-IRDL provides a declarative way to define verifiers using constraint operations (`irdl.is` in the example above). See [constraints and combinators](#constraints-and-combinators) for more details.
+This program defines a `cmath` dialect that defines a `complex` type, and
+a `mul` operation. Both express constraints over their parameters using
+SSA constraint operations. Informally, one can see those SSA values as
+constraint variables that evaluate to a single type at constraint
+evaluation. For example, the result of the `irdl.any_of` stored in `%2`
+in the `mul` operation will collapse into either `f32` or `f64` for the
+entirety of this instance of `mul` constraint evaluation. As such,
+both operands and the result of `mul` must be of equal type (and not just
+satisfy the same constraint). For more information, see
+[constraints and combinators](#constraints-and-combinators).
+
+In order to simplify the dialect, IRDL variables are handles over
+`mlir::Attribute`. In order to support manipulating `mlir::Type`,
+IRDL wraps all types in an `mlir::TypeAttr` attribute.
+
+## Principles
 
 The core principles of IRDL are the following, in no particular order:
 
@@ -37,10 +58,10 @@ Attribute, type and operation verifiers are expressed in terms of constraint var
 
 Constraint variables act as variables: as such, matching against the same constraint variable multiple times can only succeed if the matching type or attribute is the same as the one that previously matched. In the following example:
 
-```
-irdl.type foo {
-	%ty = irdl.any_type
-	irdl.parameters(param1: %ty, param2: %ty)
+```mlir
+irdl.type @foo {
+    %ty = irdl.any_type
+    irdl.parameters(param1: %ty, param2: %ty)
 }
 ```
 
@@ -56,3 +77,7 @@ To illustrate the rationale behind IRDL, the following list describes examples o
 - **Portable dialects between compiler infrastructures.** Some compiler infrastructures are independent from MLIR but are otherwise IR-compatible. Portable IRDL dialects allow to share the dialect definitions between MLIR and other compiler infrastructures without needing to maintain multiple potentially out-of-sync definitions.
 - **Dialect simplification.** Because IRDL definitions can easily be mechanically modified, it is possible to simplify the definition of dialects based on which operations are actually used, leading to smaller compilers.
 - **SMT analysis.** Because IRDL dialect definitions are declarative, their definition can be lowered to alternative representations like SMT, allowing analysis of the behavior of transforms taking verifiers into account.
+
+## Operations
+
+[include "Dialects/IRDLOps.md"]
