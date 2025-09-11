@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Demangle
   Support
   TableGen
+  SupportLSP
 )
 
 llvm_add_library(TableGenLspServerLib
@@ -11,9 +12,6 @@ llvm_add_library(TableGenLspServerLib
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Tools/tblgen-lsp-server
-
-  LINK_COMPONENTS
-  SupportLSP
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
