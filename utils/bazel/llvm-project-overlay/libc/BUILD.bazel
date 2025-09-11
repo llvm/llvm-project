@@ -711,6 +711,7 @@ libc_support_library(
     deps = [
         ":__support_cpp_algorithm",
         ":__support_cpp_bit",
+        ":__support_cpp_tuple",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":hdr_stdint_proxy",
