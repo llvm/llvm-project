@@ -64,15 +64,12 @@ struct BitSetBuilder {
   uint64_t Min = std::numeric_limits<uint64_t>::max();
   uint64_t Max = 0;
 
-  BitSetBuilder() = default;
-
-  void addOffset(uint64_t Offset) {
-    if (Min > Offset)
-      Min = Offset;
-    if (Max < Offset)
-      Max = Offset;
-
-    Offsets.push_back(Offset);
+  explicit BitSetBuilder(ArrayRef<uint64_t> Offsets) : Offsets(Offsets) {
+    if (!Offsets.empty()) {
+      auto [MinIt, MaxIt] = std::minmax_element(Offsets.begin(), Offsets.end());
+      Min = *MinIt;
+      Max = *MaxIt;
+    }
   }
 
   LLVM_ABI BitSetInfo build();
