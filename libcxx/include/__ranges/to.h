@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___RANGES_TO_H
 #define _LIBCPP___RANGES_TO_H
 
+#include <__algorithm/ranges_for_each.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
@@ -72,6 +73,20 @@ concept __constructible_from_iter_pair =
     derived_from<typename iterator_traits<iterator_t<_Range>>::iterator_category, input_iterator_tag> &&
     constructible_from<_Container, iterator_t<_Range>, sentinel_t<_Range>, _Args...>;
 
+template <class _Ref, class _Container>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __container_append(_Container& __c) {
+  if constexpr (requires { __c.emplace_back(std::declval<_Ref>()); })
+    return [&__c](_Ref&& __ref) { __c.emplace_back(std::forward<_Ref>(__ref)); };
+  else if constexpr (requires { __c.push_back(std::declval<_Ref>()); })
+    return [&__c](_Ref&& __ref) { __c.push_back(std::forward<_Ref>(__ref)); };
+  else if constexpr (requires { __c.emplace(__c.end(), std::declval<_Ref>()); })
+    return [&__c](_Ref&& __ref) { __c.emplace(__c.end(), std::forward<_Ref>(__ref)); };
+  else {
+    static_assert(requires { __c.insert(__c.end(), std::declval<_Ref>()); });
+    return [&__c](_Ref&& __ref) { __c.insert(__c.end(), std::forward<_Ref>(__ref)); };
+  }
+}
+
 template <class>
 concept __always_false = false;
 
@@ -111,21 +126,8 @@ template <class _Container, input_range _Range, class... _Args>
         __result.reserve(static_cast<range_size_t<_Container>>(ranges::size(__range)));
       }
 
-      for (auto&& __ref : __range) {
-        using _Ref = decltype(__ref);
-        if constexpr (requires { __result.emplace_back(std::declval<_Ref>()); }) {
-          __result.emplace_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.push_back(std::declval<_Ref>()); }) {
-          __result.push_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.emplace(__result.end(), std::declval<_Ref>()); }) {
-          __result.emplace(__result.end(), std::forward<_Ref>(__ref));
-        } else {
-          static_assert(requires { __result.insert(__result.end(), std::declval<_Ref>()); });
-          __result.insert(__result.end(), std::forward<_Ref>(__ref));
-        }
-      }
+      ranges::for_each(__range, ranges::__container_append<ranges::range_reference_t<_Range>>(__result));
       return __result;
-
     } else {
       static_assert(__always_false<_Container>, "ranges::to: unable to convert to the given container type.");
     }
