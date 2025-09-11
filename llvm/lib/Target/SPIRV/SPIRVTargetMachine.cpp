@@ -189,6 +189,11 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
+  addPass(createSPIRVRegularizerPass());
+  addPass(createSPIRVPrepareFunctionsPass(TM));
+}
+
+void SPIRVPassConfig::addISelPrepare() {
   if (TM.getSubtargetImpl()->isShader()) {
     // Vulkan does not allow address space casts. This pass is run to remove
     // address space casts that can be removed.
@@ -220,12 +225,7 @@ void SPIRVPassConfig::addIRPasses() {
     addPass(createPromoteMemoryToRegisterPass());
   }
 
-  addPass(createSPIRVRegularizerPass());
-  addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
-}
-
-void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
