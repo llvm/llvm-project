@@ -506,6 +506,9 @@ def OMPC_ThreadLimit : Clause<[Spelling<"thread_limit">]> {
 def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
   let isImplicit = true;
 }
+def OMPC_GroupPrivate : Clause<[Spelling<"groupprivate">]> { 
+  let isImplicit = true;
+}
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
@@ -872,6 +875,10 @@ def OMP_For : Directive<[Spelling<"for">]> {
   let association = AS_Loop;
   let category = CA_Executable;
   let languages = [L_C];
+}
+def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
+  let association = AS_None;
+  let category = CA_Declarative;
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedOnceClauses = [

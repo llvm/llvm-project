@@ -122,6 +122,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:
@@ -221,6 +222,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_flush:
   case OMPC_depobj:
   case OMPC_read:

@@ -196,6 +196,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   }
   case OMPC_unknown:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_if:
   case OMPC_final:
   case OMPC_safelen:
@@ -540,6 +541,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     llvm_unreachable("Invalid OpenMP 'num_threads' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
+  case OMPC_groupprivate:
   case OMPC_if:
   case OMPC_final:
   case OMPC_safelen:
