@@ -1169,6 +1169,7 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
 
 clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
+  TypeSystemClang::RequireCompleteType(ToCompilerType(element_type));
 
   SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
       m_clang.GetSymbolFile()->GetBackingSymbolFile());

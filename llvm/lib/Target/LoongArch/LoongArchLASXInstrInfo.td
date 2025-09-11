@@ -10,8 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+def SDT_LoongArchXVPERM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                                               SDTCisVec<2>, SDTCisInt<2>]>;
+
 // Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
+def loongarch_xvperm: SDNode<"LoongArchISD::XVPERM", SDT_LoongArchXVPERM>;
 def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskgez: SDNode<"LoongArchISD::XVMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskeqz: SDNode<"LoongArchISD::XVMSKEQZ", SDT_LoongArchVMSKCOND>;
@@ -1186,6 +1190,17 @@ multiclass PatXrXrXr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xd, LASX256:$xj, LASX256:$xk)>;
 }
 
+multiclass PatXrXrW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode(v32i8 LASX256:$vj), (v32i8 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_H_B") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(OpNode(v16i16 LASX256:$vj), (v16i16 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_W_H") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(OpNode(v8i32 LASX256:$vj), (v8i32 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_D_W") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(OpNode(v4i64 LASX256:$vj), (v4i64 LASX256:$vk)),
+            (!cast<LAInst>(Inst#"_Q_D") LASX256:$vj, LASX256:$vk)>;
+}
+
 multiclass PatShiftXrXr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xj), (and vsplati8_imm_eq_7,
                                               (v32i8 LASX256:$xk))),
@@ -1512,6 +1527,9 @@ def : Pat<(bswap (v16i16 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b10110001)>;
 def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;
 def : Pat<(bswap (v4i64 LASX256:$xj)),
           (XVSHUF4I_W (XVSHUF4I_B LASX256:$xj, 0b00011011), 0b10110001)>;
+
+// XVHADDW_{H_B/W_H/D_W/Q_D}
+defm : PatXrXrW<loongarch_vhaddw, "XVHADDW">;
 
 // XVFADD_{S/D}
 defm : PatXrXrF<fadd, "XVFADD">;
@@ -1851,6 +1869,12 @@ def : Pat<(loongarch_xvpermi v4i64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4i64:$xj, immZExt8: $ui8)>;
 def : Pat<(loongarch_xvpermi v4f64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4f64:$xj, immZExt8: $ui8)>;
+
+// XVPERM_W
+def : Pat<(loongarch_xvperm v8i32:$xj, v8i32:$xk),
+          (XVPERM_W v8i32:$xj, v8i32:$xk)>;
+def : Pat<(loongarch_xvperm v8f32:$xj, v8i32:$xk),
+          (XVPERM_W v8f32:$xj, v8i32:$xk)>;
 
 // XVREPLVE0_{W/D}
 def : Pat<(lasxsplatf32 FPR32:$fj),

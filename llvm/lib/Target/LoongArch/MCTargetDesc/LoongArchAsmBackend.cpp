@@ -259,14 +259,10 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCFragment &F,
   return std::make_pair(true, true);
 }
 
-bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
-                                             bool &WasRelaxed) const {
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   MCContext &C = getContext();
-
   int64_t LineDelta = F.getDwarfLineDelta();
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
-  size_t OldSize = F.getVarSize();
-
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
@@ -312,15 +308,12 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
   F.setVarContents(Data);
   F.setVarFixups({MCFixup::create(Offset, &AddrDelta,
                                   MCFixup::getDataKindForSize(PCBytes))});
-  WasRelaxed = OldSize != Data.size();
   return true;
 }
 
-bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
+bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F) const {
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   SmallVector<MCFixup, 2> Fixups;
-  size_t OldSize = F.getVarContents().size();
-
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
@@ -333,7 +326,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   if (Value == 0) {
     F.clearVarContents();
     F.clearVarFixups();
-    WasRelaxed = OldSize != 0;
     return true;
   }
 
@@ -367,8 +359,6 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const {
   }
   F.setVarContents(Data);
   F.setVarFixups(Fixups);
-
-  WasRelaxed = OldSize != Data.size();
   return true;
 }
 

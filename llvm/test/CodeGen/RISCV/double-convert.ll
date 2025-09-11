@@ -1691,9 +1691,8 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    lui a0, 265728
-; RV32I-NEXT:    addi a3, a0, -64
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    lui a3, 265728
+; RV32I-NEXT:    addi a3, a3, -64
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    call __gtdf2
 ; RV32I-NEXT:    mv s2, a0

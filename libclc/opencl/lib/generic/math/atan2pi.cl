@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/math/clc_atan2pi.h>
 #include <clc/opencl/math/atan2pi.h>
 

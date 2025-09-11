@@ -1432,7 +1432,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
-  bool HasCalls = !CurrentFnCallsiteSymbols.empty();
+  bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1497,13 +1497,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
       const MCSymbol *CurrentLabel = MBBSymbol;
       if (HasCalls) {
-        auto CallsiteSymbols = CurrentFnCallsiteSymbols.lookup(&MBB);
+        auto CallsiteEndSymbols = CurrentFnCallsiteEndSymbols.lookup(&MBB);
         OutStreamer->AddComment("number of callsites");
-        OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
-        for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
+        OutStreamer->emitULEB128IntValue(CallsiteEndSymbols.size());
+        for (const MCSymbol *CallsiteEndSymbol : CallsiteEndSymbols) {
           // Emit the callsite offset.
-          emitLabelDifferenceAsULEB128(CallsiteSymbol, CurrentLabel);
-          CurrentLabel = CallsiteSymbol;
+          emitLabelDifferenceAsULEB128(CallsiteEndSymbol, CurrentLabel);
+          CurrentLabel = CallsiteEndSymbol;
         }
       }
       // Emit the offset to the end of the block, which can be used to compute
@@ -1941,8 +1941,6 @@ void AsmPrinter::emitFunctionBody() {
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
       }
-      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
-        OutStreamer->emitLabel(createCallsiteSymbol(MBB));
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
@@ -2063,6 +2061,9 @@ void AsmPrinter::emitFunctionBody() {
         }
         break;
       }
+
+      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+        OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
         emitIndirectCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
@@ -2897,11 +2898,11 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
-MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
+MCSymbol *AsmPrinter::createCallsiteEndSymbol(const MachineBasicBlock &MBB) {
   MCContext &Ctx = MF->getContext();
   MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
                                        "_" + Twine(MBB.getNumber()) + "_CS");
-  CurrentFnCallsiteSymbols[&MBB].push_back(Sym);
+  CurrentFnCallsiteEndSymbols[&MBB].push_back(Sym);
   return Sym;
 }
 
@@ -2939,7 +2940,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
-  CurrentFnCallsiteSymbols.clear();
+  CurrentFnCallsiteEndSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();

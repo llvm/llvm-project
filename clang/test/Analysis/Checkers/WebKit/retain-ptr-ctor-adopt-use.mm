@@ -13,6 +13,8 @@ void basic_correct() {
   auto ns4 = adoptNS([ns3 mutableCopy]);
   auto ns5 = adoptNS([ns3 copyWithValue:3]);
   auto ns6 = retainPtr([ns3 next]);
+  auto ns7 = retainPtr((SomeObj *)0);
+  auto ns8 = adoptNS(nil);
   CFMutableArrayRef cf1 = adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, 10));
   auto cf2 = adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault));
   auto cf3 = adoptCF(checked_cf_cast<CFArrayRef>(CFCopyArray(cf1)));
@@ -109,6 +111,10 @@ RetainPtr<CVPixelBufferRef> cf_out_argument() {
   CVPixelBufferRef rawBuffer = nullptr;
   auto status = CVPixelBufferCreateWithIOSurface(kCFAllocatorDefault, surface.get(), nullptr, &rawBuffer);
   return adoptCF(rawBuffer);
+}
+
+RetainPtr<SomeObj> return_nil() {
+  return nil;
 }
 
 RetainPtr<SomeObj> return_nullptr() {

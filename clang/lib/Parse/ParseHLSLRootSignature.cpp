@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Parse/ParseHLSLRootSignature.h"
-
+#include "clang/AST/ASTConsumer.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Parse/Parser.h"
+#include "clang/Sema/Sema.h"
 
 using namespace llvm::hlsl::rootsig;
 
@@ -36,8 +38,18 @@ bool RootSignatureParser::parse() {
   // Iterate as many RootSignatureElements as possible, until we hit the
   // end of the stream
   bool HadError = false;
+  bool HasRootFlags = false;
   while (!peekExpectedToken(TokenKind::end_of_stream)) {
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
+      if (HasRootFlags) {
+        reportDiag(diag::err_hlsl_rootsig_repeat_param)
+            << TokenKind::kw_RootFlags;
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      HasRootFlags = true;
+
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Flags = parseRootFlags();
       if (!Flags.has_value()) {
@@ -1446,6 +1458,62 @@ bool RootSignatureParser::skipUntilClosedParens(uint32_t NumParens) {
 SourceLocation RootSignatureParser::getTokenLocation(RootSignatureToken Tok) {
   return Signature->getLocationOfByte(Tok.LocOffset, PP.getSourceManager(),
                                       PP.getLangOpts(), PP.getTargetInfo());
+}
+
+IdentifierInfo *ParseHLSLRootSignature(Sema &Actions,
+                                       llvm::dxbc::RootSignatureVersion Version,
+                                       StringLiteral *Signature) {
+  // Construct our identifier
+  auto [DeclIdent, Found] =
+      Actions.HLSL().ActOnStartRootSignatureDecl(Signature->getString());
+  // If we haven't found an already defined DeclIdent then parse the root
+  // signature string and construct the in-memory elements
+  if (!Found) {
+    // Invoke the root signature parser to construct the in-memory constructs
+    hlsl::RootSignatureParser Parser(Version, Signature,
+                                     Actions.getPreprocessor());
+    if (Parser.parse())
+      return nullptr;
+
+    // Construct the declaration.
+    Actions.HLSL().ActOnFinishRootSignatureDecl(
+        Signature->getBeginLoc(), DeclIdent, Parser.getElements());
+  }
+
+  return DeclIdent;
+}
+
+void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
+  ASTConsumer *Consumer = &S.getASTConsumer();
+
+  // Minimally initalize the parser. This does a couple things:
+  // - initializes Sema scope handling
+  // - invokes HLSLExternalSemaSource
+  // - invokes the preprocessor to lex the macros in the file
+  std::unique_ptr<Parser> P(new Parser(S.getPreprocessor(), S, true));
+  S.getPreprocessor().EnterMainSourceFile();
+
+  bool HaveLexer = S.getPreprocessor().getCurrentLexer();
+  if (HaveLexer) {
+    P->Initialize();
+    S.ActOnStartOfTranslationUnit();
+
+    // Skim through the file to parse to find the define
+    while (P->getCurToken().getKind() != tok::eof)
+      P->ConsumeAnyToken();
+
+    HLSLRootSignatureDecl *SignatureDecl =
+        S.HLSL().lookupRootSignatureOverrideDecl(
+            S.getASTContext().getTranslationUnitDecl());
+
+    if (SignatureDecl)
+      Consumer->HandleTopLevelDecl(DeclGroupRef(SignatureDecl));
+    else
+      S.getDiagnostics().Report(diag::err_hlsl_rootsignature_entry)
+          << EntryRootSig;
+  }
+
+  Consumer->HandleTranslationUnit(S.getASTContext());
 }
 
 } // namespace hlsl

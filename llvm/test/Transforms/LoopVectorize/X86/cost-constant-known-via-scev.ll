@@ -77,14 +77,12 @@ define i64 @second_lshr_operand_zero_via_scev() {
 ; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <2 x i32> [[VEC_IND2]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[STEP_ADD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[STEP_ADD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[VEC_IND2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i32> [[STEP_ADD4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i32> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[TMP5]] to <2 x i64>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP0]], <2 x i64> [[TMP2]], <2 x i64> [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[TMP3]], <2 x i64> [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP0]], <2 x i64> zeroinitializer, <2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> zeroinitializer, <2 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP10]] = or <2 x i64> [[TMP8]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11]] = or <2 x i64> [[TMP9]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

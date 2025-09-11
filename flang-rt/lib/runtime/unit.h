@@ -71,10 +71,10 @@ public:
   // at the end of IO statement.
   RT_API_ATTRS bool isTerminal() const { return true; }
   RT_API_ATTRS bool isWindowsTextFile() const { return false; }
-  RT_API_ATTRS Fortran::common::optional<FileOffset> knownSize() const;
+  RT_API_ATTRS common::optional<FileOffset> knownSize() const;
   RT_API_ATTRS bool IsConnected() const { return false; }
-  RT_API_ATTRS void Open(OpenStatus, Fortran::common::optional<Action>,
-      Position, IoErrorHandler &);
+  RT_API_ATTRS void Open(
+      OpenStatus, common::optional<Action>, Position, IoErrorHandler &);
   RT_API_ATTRS void Predefine(int fd) {}
   RT_API_ATTRS void Close(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS std::size_t Read(FileOffset, char *, std::size_t minBytes,
@@ -127,8 +127,7 @@ public:
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
-      Direction, Fortran::common::optional<bool> isUnformatted,
-      IoErrorHandler &);
+      Direction, common::optional<bool> isUnformatted, IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
       const char *path, std::size_t pathLen);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);
@@ -139,11 +138,11 @@ public:
   static RT_API_ATTRS void FlushAll(IoErrorHandler &);
 
   // Returns true if an existing unit was closed
-  RT_API_ATTRS bool OpenUnit(Fortran::common::optional<OpenStatus>,
-      Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
+  RT_API_ATTRS bool OpenUnit(common::optional<OpenStatus>,
+      common::optional<Action>, Position, OwningPtr<char> &&path,
       std::size_t pathLength, Convert, IoErrorHandler &);
-  RT_API_ATTRS bool OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
-      Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
+  RT_API_ATTRS bool OpenAnonymousUnit(common::optional<OpenStatus>,
+      common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS void DestroyClosed();
 
@@ -254,7 +253,7 @@ private:
       u_;
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
-  Fortran::common::optional<IoStatementState> io_;
+  common::optional<IoStatementState> io_;
 
   // A stack of child I/O pseudo-units for defined I/O that have this
   // unit number.
@@ -298,7 +297,7 @@ private:
       ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState,
       ErroneousIoStatementState, ExternalMiscIoStatementState>
       u_;
-  Fortran::common::optional<IoStatementState> io_;
+  common::optional<IoStatementState> io_;
 };
 
 RT_OFFLOAD_API_GROUP_END

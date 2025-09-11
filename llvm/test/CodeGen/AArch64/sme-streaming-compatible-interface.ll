@@ -41,8 +41,7 @@ define void @streaming_compatible_caller_normal_callee() "aarch64_pstate_sm_comp
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -77,8 +76,7 @@ define void @streaming_compatible_caller_streaming_callee() "aarch64_pstate_sm_c
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -134,10 +132,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    add x8, sp, #16
-; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB4_2
@@ -209,8 +204,7 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB5_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -301,8 +295,7 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -365,8 +358,7 @@ define i32 @conditional_smstart_unreachable_block() "aarch64_pstate_sm_compatibl
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbnz w19, #0, .LBB7_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -381,18 +373,16 @@ define void @conditional_smstart_no_successor_block(i1 %p) "aarch64_pstate_sm_co
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    tbz w8, #0, .LBB8_5
+; CHECK-NEXT:    mrs x19, SVCR
+; CHECK-NEXT:    tbz w0, #0, .LBB8_5
 ; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    tbnz w0, #0, .LBB8_3
+; CHECK-NEXT:    tbnz w19, #0, .LBB8_3
 ; CHECK-NEXT:  // %bb.2: // %if.then
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB8_3: // %if.then
-; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    bl streaming_callee
 ; CHECK-NEXT:    tbnz w19, #0, .LBB8_5
 ; CHECK-NEXT:  // %bb.4: // %if.then
@@ -422,8 +412,7 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB9_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -469,19 +458,14 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    .cfi_offset b14, -88
 ; CHECK-NEXT:    .cfi_offset b15, -96
 ; CHECK-NEXT:    stp d2, d3, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    mov x8, x1
-; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB10_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB10_2: // %entry
 ; CHECK-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    mov x0, x9
 ; CHECK-NEXT:    ldp d2, d3, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov x1, x8
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    tbz w19, #0, .LBB10_4
 ; CHECK-NEXT:  // %bb.3: // %entry

@@ -57,14 +57,11 @@ public:
   bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
-  Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
   Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override {
-    return Parent.getBottomFrame();
-  }
+  const Frame *getBottomFrame() const override { return &BottomFrame; }
 
   // Access objects from the walker context.
   Expr::EvalStatus &getEvalStatus() const override {
@@ -73,17 +70,11 @@ public:
   ASTContext &getASTContext() const override { return Parent.getASTContext(); }
 
   // Forward status checks and updates to the walker.
-  bool checkingForUndefinedBehavior() const override {
-    return Parent.checkingForUndefinedBehavior();
-  }
   bool keepEvaluatingAfterFailure() const override {
     return Parent.keepEvaluatingAfterFailure();
   }
   bool keepEvaluatingAfterSideEffect() const override {
     return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool checkingPotentialConstantExpression() const override {
-    return Parent.checkingPotentialConstantExpression();
   }
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();
@@ -98,9 +89,6 @@ public:
   }
   bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
   bool noteSideEffect() override { return Parent.noteSideEffect(); }
-
-  /// Reports overflow and return true if evaluation should continue.
-  bool reportOverflow(const Expr *E, const llvm::APSInt &Value);
 
   /// Deallocates a pointer.
   void deallocate(Block *B);
@@ -118,7 +106,13 @@ public:
 
   void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
-  DynamicAllocator &getAllocator() { return Alloc; }
+  DynamicAllocator &getAllocator() {
+    if (!Alloc) {
+      Alloc = std::make_unique<DynamicAllocator>();
+    }
+
+    return *Alloc.get();
+  }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
   /// Will return \c false if there were any allocations to diagnose,
@@ -164,7 +158,7 @@ private:
   /// Reference to the offset-source mapping.
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
-  DynamicAllocator Alloc;
+  std::unique_ptr<DynamicAllocator> Alloc;
 
 public:
   /// Reference to the module containing all bytecode.

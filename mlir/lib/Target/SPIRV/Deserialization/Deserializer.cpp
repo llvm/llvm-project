@@ -229,7 +229,7 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
 }
 
 template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
-LogicalResult deserializeCacheControlDecoration(
+static LogicalResult deserializeCacheControlDecoration(
     Location loc, OpBuilder &opBuilder,
     DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
     StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {

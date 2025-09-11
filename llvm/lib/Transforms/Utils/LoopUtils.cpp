@@ -956,6 +956,21 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   }
 }
 
+Intrinsic::ID llvm::getMinMaxReductionIntrinsicID(Intrinsic::ID IID) {
+  switch (IID) {
+  default:
+    llvm_unreachable("Unexpected intrinsic id");
+  case Intrinsic::umin:
+    return Intrinsic::vector_reduce_umin;
+  case Intrinsic::umax:
+    return Intrinsic::vector_reduce_umax;
+  case Intrinsic::smin:
+    return Intrinsic::vector_reduce_smin;
+  case Intrinsic::smax:
+    return Intrinsic::vector_reduce_smax;
+  }
+}
+
 // This is the inverse to getReductionForBinop
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
@@ -2017,6 +2032,7 @@ Value *llvm::addRuntimeChecks(
     MemoryRuntimeCheck = IsConflict;
   }
 
+  Exp.eraseDeadInstructions(MemoryRuntimeCheck);
   return MemoryRuntimeCheck;
 }
 
@@ -2062,6 +2078,7 @@ Value *llvm::addDiffRuntimeChecks(
     MemoryRuntimeCheck = IsConflict;
   }
 
+  Expander.eraseDeadInstructions(MemoryRuntimeCheck);
   return MemoryRuntimeCheck;
 }
 

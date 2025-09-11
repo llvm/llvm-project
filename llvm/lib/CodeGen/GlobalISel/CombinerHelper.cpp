@@ -2094,6 +2094,68 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
+                                            LshrOfTruncOfLshr &MatchInfo,
+                                            MachineInstr &ShiftMI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a G_LSHR");
+
+  Register N0 = MI.getOperand(1).getReg();
+  Register N1 = MI.getOperand(2).getReg();
+  unsigned OpSizeInBits = MRI.getType(N0).getScalarSizeInBits();
+
+  APInt N1C, N001C;
+  if (!mi_match(N1, MRI, m_ICstOrSplat(N1C)))
+    return false;
+  auto N001 = ShiftMI.getOperand(2).getReg();
+  if (!mi_match(N001, MRI, m_ICstOrSplat(N001C)))
+    return false;
+
+  if (N001C.getBitWidth() > N1C.getBitWidth())
+    N1C = N1C.zext(N001C.getBitWidth());
+  else
+    N001C = N001C.zext(N1C.getBitWidth());
+
+  Register InnerShift = ShiftMI.getOperand(0).getReg();
+  LLT InnerShiftTy = MRI.getType(InnerShift);
+  uint64_t InnerShiftSize = InnerShiftTy.getScalarSizeInBits();
+  if ((N1C + N001C).ult(InnerShiftSize)) {
+    MatchInfo.Src = ShiftMI.getOperand(1).getReg();
+    MatchInfo.ShiftAmt = N1C + N001C;
+    MatchInfo.ShiftAmtTy = MRI.getType(N001);
+    MatchInfo.InnerShiftTy = InnerShiftTy;
+
+    if ((N001C + OpSizeInBits) == InnerShiftSize)
+      return true;
+    if (MRI.hasOneUse(N0) && MRI.hasOneUse(InnerShift)) {
+      MatchInfo.Mask = true;
+      MatchInfo.MaskVal = APInt(N1C.getBitWidth(), OpSizeInBits) - N1C;
+      return true;
+    }
+  }
+  return false;
+}
+
+void CombinerHelper::applyLshrOfTruncOfLshr(
+    MachineInstr &MI, LshrOfTruncOfLshr &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_LSHR && "Expected a G_LSHR");
+
+  Register Dst = MI.getOperand(0).getReg();
+  auto ShiftAmt =
+      Builder.buildConstant(MatchInfo.ShiftAmtTy, MatchInfo.ShiftAmt);
+  auto Shift =
+      Builder.buildLShr(MatchInfo.InnerShiftTy, MatchInfo.Src, ShiftAmt);
+  if (MatchInfo.Mask == true) {
+    APInt MaskVal =
+        APInt::getLowBitsSet(MatchInfo.InnerShiftTy.getScalarSizeInBits(),
+                             MatchInfo.MaskVal.getZExtValue());
+    auto Mask = Builder.buildConstant(MatchInfo.InnerShiftTy, MaskVal);
+    auto And = Builder.buildAnd(MatchInfo.InnerShiftTy, Shift, Mask);
+    Builder.buildTrunc(Dst, And);
+  } else
+    Builder.buildTrunc(Dst, Shift);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
                                           unsigned &ShiftVal) const {
   assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
@@ -5922,6 +5984,96 @@ void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {
   auto Trunc = Builder.buildZExtOrTrunc(ShiftAmtTy, ShiftAmt);
   Builder.buildLShr(Dst, LHS, Trunc);
   MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}}))
+    return false;
+
+  APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+  APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+  return mi_match(Src, MRI,
+                  m_GSMin(m_GSMax(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(SignedMin)),
+                          m_SpecificICstOrSplat(SignedMax))) ||
+         mi_match(Src, MRI,
+                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(SignedMax)),
+                          m_SpecificICstOrSplat(SignedMin)));
+}
+
+void CombinerHelper::applyTruncSSatS(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncSSatS(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+    return false;
+  APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
+  return mi_match(Src, MRI,
+                  m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                          m_SpecificICstOrSplat(UnsignedMax))) ||
+         mi_match(Src, MRI,
+                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                  m_SpecificICstOrSplat(UnsignedMax)),
+                          m_SpecificICstOrSplat(0))) ||
+         mi_match(Src, MRI,
+                  m_GUMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                          m_SpecificICstOrSplat(UnsignedMax)));
+}
+
+void CombinerHelper::applyTruncSSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncSSatU(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncUSatU(MachineInstr &MI,
+                                     MachineInstr &MinMI) const {
+  Register Min = MinMI.getOperand(2).getReg();
+  Register Val = MinMI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(Val);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+    return false;
+  APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
+  return mi_match(Min, MRI, m_SpecificICstOrSplat(UnsignedMax)) &&
+         !mi_match(Val, MRI, m_GSMax(m_Reg(), m_Reg()));
+}
+
+bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
+                                                MachineInstr &SrcMI) const {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(SrcMI.getOperand(1).getReg());
+
+  return LI &&
+         isLegalOrBeforeLegalizer({TargetOpcode::G_FPTOUI_SAT, {DstTy, SrcTy}});
 }
 
 bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,

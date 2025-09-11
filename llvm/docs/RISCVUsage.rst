@@ -231,6 +231,7 @@ on support follow.
      ``Zve64x``        Supported
      ``Zve64f``        Supported
      ``Zve64d``        Supported
+     ``Zvfbfa``        Assembly Support
      ``Zvfbfmin``      Supported
      ``Zvfbfwma``      Supported
      ``Zvfh``          Supported

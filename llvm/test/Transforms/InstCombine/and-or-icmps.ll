@@ -3491,3 +3491,198 @@ define i1 @and_icmp_eq_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range
   %ret = and i1 %icmp1, %icmp2
   ret i1 %ret
 }
+
+define i1 @or_icmp_eq_and_pow2(i32 %x) {
+; CHECK-LABEL: @or_icmp_eq_and_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -127
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[TMP1]], 33
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp eq i32 %x, 127
+  %and = and i32 %x, -32
+  %icmp2 = icmp eq i32 %and, 128
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @or_icmp_eq_and_pow2_mask_equal_to_icmp(i32 %x) {
+; CHECK-LABEL: @or_icmp_eq_and_pow2_mask_equal_to_icmp(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -63
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[TMP1]], 65
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp eq i32 %x, 63
+  %and = and i32 %x, -64
+  %icmp2 = icmp eq i32 %and, 64
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @and_icmp_ne_and_pow2(i32 %x) {
+; CHECK-LABEL: @and_icmp_ne_and_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -160
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[TMP1]], -33
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp ne i32 %x, 127
+  %and = and i32 %x, -32
+  %icmp2 = icmp ne i32 %and, 128
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @and_icmp_ne_and_pow2_mask_equal_to_icmp(i32 %x) {
+; CHECK-LABEL: @and_icmp_ne_and_pow2_mask_equal_to_icmp(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -128
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[TMP1]], -65
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp ne i32 %x, 63
+  %and = and i32 %x, -64
+  %icmp2 = icmp ne i32 %and, 64
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @or_icmp_eq_and_pow2_commute(i32 %x) {
+; CHECK-LABEL: @or_icmp_eq_and_pow2_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -127
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP1]], 33
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %and = and i32 %x, -32
+  %icmp1 = icmp eq i32 %and, 128
+  %icmp2 = icmp eq i32 %x, 127
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @and_icmp_ne_and_pow2_commute(i32 %x) {
+; CHECK-LABEL: @and_icmp_ne_and_pow2_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -160
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[TMP1]], -33
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %and = and i32 %x, -32
+  %icmp1 = icmp ne i32 %and, 128
+  %icmp2 = icmp ne i32 %x, 127
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_or_icmp_eq_and_pow2_multi_use(i32 %x) {
+; CHECK-LABEL: @neg_or_icmp_eq_and_pow2_multi_use(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp eq i32 [[X:%.*]], 127
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -32
+; CHECK-NEXT:    call void @use32(i32 [[AND]])
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[AND]], 128
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp eq i32 %x, 127
+  %and = and i32 %x, -32
+  call void @use32(i32 %and)
+  %icmp2 = icmp eq i32 %and, 128
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_and_icmp_eq_and_pow2(i32 %x) {
+; CHECK-LABEL: @neg_and_icmp_eq_and_pow2(
+; CHECK-NEXT:    ret i1 false
+;
+  %icmp1 = icmp eq i32 %x, 127
+  %and = and i32 %x, -32
+  %icmp2 = icmp eq i32 %and, 128
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_or_icmp_eq_and_non_pow2_mask(i32 %x) {
+; CHECK-LABEL: @neg_or_icmp_eq_and_non_pow2_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 127
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], -33
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 128
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %icmp1 = icmp eq i32 %x, 127
+  %and = and i32 %x, -33
+  %icmp2 = icmp eq i32 %and, 128
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_and_icmp_ne_and_non_pow2_icmp(i32 %x) {
+; CHECK-LABEL: @neg_and_icmp_ne_and_non_pow2_icmp(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne i32 [[X:%.*]], 127
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -33
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[AND]], 128
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp ne i32 %x, 127
+  %and = and i32 %x, -33
+  %icmp2 = icmp ne i32 %and, 128
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_or_icmp_eq_and_const_less_than_mask(i32 %x) {
+; CHECK-LABEL: @neg_or_icmp_eq_and_const_less_than_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 15
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %icmp1 = icmp eq i32 %x, 15
+  %and = and i32 %x, -32
+  %icmp2 = icmp eq i32 %and, 16
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_and_icmp_ne_and_pow2_disjoint(i32 %x) {
+; CHECK-LABEL: @neg_and_icmp_ne_and_pow2_disjoint(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne i32 [[X:%.*]], 126
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -32
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[AND]], 128
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp ne i32 %x, 126
+  %and = and i32 %x, -32
+  %icmp2 = icmp ne i32 %and, 128
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_or_icmp_eq_double_and_pow2(i32 %x) {
+; CHECK-LABEL: @neg_or_icmp_eq_double_and_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -16
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 64
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], -32
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AND2]], 128
+; CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %and1 = and i32 %x, -16
+  %icmp1 = icmp eq i32 %and1, 64
+  %and2 = and i32 %x, -32
+  %icmp2 = icmp eq i32 %and2, 128
+  %ret = or i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+define i1 @neg_select_icmp_eq_and_pow2(i32 %x) {
+; CHECK-LABEL: @neg_select_icmp_eq_and_pow2(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i32 [[X:%.*]], 127
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -32
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[AND]], 128
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %icmp1 = icmp sgt i32 %x, 127
+  %and = and i32 %x, -32
+  %icmp2 = icmp eq i32 %and, 128
+  %1 = select i1 %icmp1, i1 %icmp2, i1 false
+  ret i1 %1
+}

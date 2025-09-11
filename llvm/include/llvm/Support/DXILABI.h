@@ -28,6 +28,7 @@ enum class ResourceClass : uint8_t {
   UAV,
   CBuffer,
   Sampler,
+  LastEntry = Sampler,
 };
 
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as

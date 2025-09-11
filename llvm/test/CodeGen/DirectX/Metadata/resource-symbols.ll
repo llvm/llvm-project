@@ -10,27 +10,27 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @test() {
   ; Buffer<float4>
   %float4 = call target("dx.TypedBuffer", <4 x float>, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr @A.str)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr @A.str)
   ; CHECK: %"Buffer<float4>" = type { <4 x float> }
 
   ; Buffer<int>
   %int = call target("dx.TypedBuffer", i32, 0, 0, 1)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr null)
   ; CHECK: %"Buffer<int32_t>" = type { i32 }
 
   ; Buffer<uint3>
   %uint3 = call target("dx.TypedBuffer", <3 x i32>, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr null)
   ; CHECK: %"Buffer<uint32_t3>" = type { <3 x i32> }
 
   ; StructuredBuffer<S>
   %struct0 = call target("dx.RawBuffer", %struct.S, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 10, i32 1, i32 0, i1 true, ptr @SB.str)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 10, i32 1, i32 0, ptr @SB.str)
   ; CHECK: %"StructuredBuffer<struct.S>" = type { %struct.S }
 
   ; ByteAddressBuffer
   %byteaddr = call target("dx.RawBuffer", i8, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 20, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 20, i32 1, i32 0, ptr null)
   ; CHECK: %ByteAddressBuffer = type { i32 }
 
   ret void

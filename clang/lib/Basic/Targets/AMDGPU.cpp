@@ -197,12 +197,11 @@ bool AMDGPUTargetInfo::initFeatureMap(
     const std::vector<std::string> &FeatureVec) const {
 
   using namespace llvm::AMDGPU;
-  fillAMDGPUFeatureMap(CPU, getTriple(), Features);
+
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec))
     return false;
 
-  // TODO: Should move this logic into TargetParser
-  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  auto HasError = fillAMDGPUFeatureMap(CPU, getTriple(), Features);
   switch (HasError.first) {
   default:
     break;

@@ -18,7 +18,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -1872,11 +1872,10 @@ public:
     if (!getLocalData()->QualifierData)
       return NestedNameSpecifierLoc();
 
-    auto *QTN =
-        getTypePtr()->getTemplateName().getAsAdjustedQualifiedTemplateName();
-    assert(QTN && "missing qualification");
-    return NestedNameSpecifierLoc(QTN->getQualifier(),
-                                  getLocalData()->QualifierData);
+    NestedNameSpecifier Qualifier =
+        getTypePtr()->getTemplateName().getQualifier();
+    assert(Qualifier && "missing qualification");
+    return NestedNameSpecifierLoc(Qualifier, getLocalData()->QualifierData);
   }
 
   SourceLocation getTemplateKeywordLoc() const {
@@ -2503,10 +2502,9 @@ public:
     void *Data = getLocalData()->QualifierData;
     if (!Data)
       return NestedNameSpecifierLoc();
-    NestedNameSpecifier Qualifier = getTypePtr()
-                                        ->getTemplateName()
-                                        .getAsAdjustedQualifiedTemplateName()
-                                        ->getQualifier();
+    NestedNameSpecifier Qualifier =
+        getTypePtr()->getTemplateName().getQualifier();
+    assert(Qualifier && "missing qualification");
     return NestedNameSpecifierLoc(Qualifier, Data);
   }
 
@@ -2521,10 +2519,7 @@ public:
     }
 
     assert(QualifierLoc.getNestedNameSpecifier() ==
-               getTypePtr()
-                   ->getTemplateName()
-                   .getAsAdjustedQualifiedTemplateName()
-                   ->getQualifier() &&
+               getTypePtr()->getTemplateName().getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }

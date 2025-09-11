@@ -243,14 +243,17 @@ public:
                                  uint32_t end_line) const;
 };
 
-class CompletionsRequestHandler : public LegacyRequestHandler {
+class CompletionsRequestHandler
+    : public RequestHandler<protocol::CompletionsArguments,
+                            llvm::Expected<protocol::CompletionsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "completions"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureCompletionsRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::CompletionsResponseBody>
+  Run(const protocol::CompletionsArguments &args) const override;
 };
 
 class ContinueRequestHandler

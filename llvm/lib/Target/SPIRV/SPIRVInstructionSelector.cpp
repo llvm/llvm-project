@@ -204,6 +204,9 @@ private:
   bool selectIntegerDotExpansion(Register ResVReg, const SPIRVType *ResType,
                                  MachineInstr &I) const;
 
+  bool selectOpIsInf(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
+
   template <bool Signed>
   bool selectDot4AddPacked(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
@@ -2042,6 +2045,17 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectOpIsInf(Register ResVReg,
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsInf))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 template <bool Signed>
 bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                                                    const SPIRVType *ResType,
@@ -3183,6 +3197,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, GL::FaceForward);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
+  case Intrinsic::spv_isinf:
+    return selectOpIsInf(ResVReg, ResType, I);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
   case Intrinsic::spv_refract:
@@ -4276,9 +4292,11 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   uint32_t Binding = foldImm(HandleDef.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
   Register IndexReg = HandleDef.getOperand(5).getReg();
-  bool IsNonUniform = ArraySize > 1 && foldImm(HandleDef.getOperand(6), MRI);
+  // FIXME: The IsNonUniform flag needs to be set based on resource analysis.
+  // https://github.com/llvm/llvm-project/issues/155701
+  bool IsNonUniform = false;
   std::string Name =
-      getStringValueFromReg(HandleDef.getOperand(7).getReg(), *MRI);
+      getStringValueFromReg(HandleDef.getOperand(6).getReg(), *MRI);
 
   bool IsStructuredBuffer = ResType->getOpcode() == SPIRV::OpTypePointer;
   MachineIRBuilder MIRBuilder(HandleDef);

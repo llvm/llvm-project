@@ -58,6 +58,7 @@ gentbl_cc_library(
         "Refactoring",
         "Sema",
         "Serialization",
+        "Trap",
     ] for out in [
         (
             "include/clang/Basic/Diagnostic%sKinds.inc" % c,

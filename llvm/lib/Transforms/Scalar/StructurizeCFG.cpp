@@ -13,7 +13,6 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/RegionInfo.h"
@@ -998,7 +997,8 @@ void StructurizeCFG::simplifyHoistedPhis() {
         continue;
 
       OtherPhi->setIncomingValue(PoisonValBBIdx, V);
-      Phi->setIncomingValue(i, OtherV);
+      if (DT->dominates(OtherV, Phi))
+        Phi->setIncomingValue(i, OtherV);
     }
   }
 }

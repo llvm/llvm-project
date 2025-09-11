@@ -113,11 +113,11 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
   // Ignore implicit casts, since enums implicitly cast to integer types.
   Cond = Cond->IgnoreParenImpCasts();
   // Get the canonical type to handle typedefs.
-  EnumT = Cond->getType().getCanonicalType()->getAsAdjusted<EnumType>();
+  EnumT = Cond->getType()->getAsCanonical<EnumType>();
   if (!EnumT)
     return false;
-  EnumD = EnumT->getOriginalDecl();
-  if (!EnumD || EnumD->isDependentType())
+  EnumD = EnumT->getOriginalDecl()->getDefinitionOrSelf();
+  if (EnumD->isDependentType())
     return false;
 
   // Finally, check which cases exist and which are covered.

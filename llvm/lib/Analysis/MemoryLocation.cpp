@@ -12,6 +12,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include <optional>
 using namespace llvm;
@@ -150,6 +151,33 @@ MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
   return MemoryLocation::getBeforeOrAfter(UsedV, CB->getAAMetadata());
 }
 
+// If the mask for a memory op is a get active lane mask intrinsic
+// we can possibly infer the size of memory written or read
+static std::optional<FixedVectorType *>
+getKnownTypeFromMaskedOp(Value *Mask, VectorType *Ty) {
+  using namespace llvm::PatternMatch;
+  ConstantInt *Op0, *Op1;
+  if (!match(Mask, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                       m_ConstantInt(Op0), m_ConstantInt(Op1))))
+    return std::nullopt;
+
+  APInt LaneMaskLo = Op0->getValue();
+  APInt LaneMaskHi = Op1->getValue();
+  if (LaneMaskHi.ule(LaneMaskLo))
+    return std::nullopt;
+
+  APInt NumElts = LaneMaskHi - LaneMaskLo;
+  if (NumElts.ugt(Ty->getElementCount().getKnownMinValue())) {
+    if (isa<ScalableVectorType>(Ty))
+      return std::nullopt;
+    // Unlike scalable vectors, fixed vector types are guaranteed to handle the
+    // KnownMinValue and can be clamped
+    NumElts = Ty->getElementCount().getKnownMinValue();
+  }
+
+  return FixedVectorType::get(Ty->getElementType(), NumElts.getZExtValue());
+}
+
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                                               unsigned ArgIdx,
                                               const TargetLibraryInfo *TLI) {
@@ -213,20 +241,26 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
               cast<ConstantInt>(II->getArgOperand(0))->getZExtValue()),
           AATags);
 
-    case Intrinsic::masked_load:
+    case Intrinsic::masked_load: {
       assert(ArgIdx == 0 && "Invalid argument index");
-      return MemoryLocation(
-          Arg,
-          LocationSize::upperBound(DL.getTypeStoreSize(II->getType())),
-          AATags);
 
-    case Intrinsic::masked_store:
-      assert(ArgIdx == 1 && "Invalid argument index");
+      auto *Ty = cast<VectorType>(II->getType());
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
+        return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
+
       return MemoryLocation(
-          Arg,
-          LocationSize::upperBound(
-              DL.getTypeStoreSize(II->getArgOperand(0)->getType())),
-          AATags);
+          Arg, LocationSize::upperBound(DL.getTypeStoreSize(Ty)), AATags);
+    }
+    case Intrinsic::masked_store: {
+      assert(ArgIdx == 1 && "Invalid argument index");
+
+      auto *Ty = cast<VectorType>(II->getArgOperand(0)->getType());
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(3), Ty))
+        return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
+
+      return MemoryLocation(
+          Arg, LocationSize::upperBound(DL.getTypeStoreSize(Ty)), AATags);
+    }
 
     case Intrinsic::invariant_end:
       // The first argument to an invariant.end is a "descriptor" type (e.g. a

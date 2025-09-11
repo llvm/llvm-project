@@ -557,7 +557,6 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
@@ -587,12 +586,9 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (ST.isWave32()) {
+  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
-  }
-  if (isGFX1250(ST) && ST.hasCUStores()) {
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
   }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
@@ -638,7 +634,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   (void)PGRM_Rsrc3;
   (void)EvaluatableRsrc3;
   assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-         STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
+         STM.hasGFX90AInsts() || AMDGPU::isGFX1250(STM) || !EvaluatableRsrc3 ||
          static_cast<uint64_t>(PGRM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
@@ -845,7 +841,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
     [[maybe_unused]] int64_t PGMRSrc3;
     assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-           STM.hasGFX90AInsts() ||
+           STM.hasGFX90AInsts() || AMDGPU::isGFX1250(STM) ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
@@ -1143,9 +1139,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
     return SubGPR;
   };
-
-  ProgInfo.SGPRBlocks = GetNumGPRBlocks(ProgInfo.NumSGPRsForWavesPerEU,
-                                        IsaInfo::getSGPREncodingGranule(&STM));
+  // GFX10+ will always allocate 128 SGPRs and this field must be 0
+  if (STM.getGeneration() >= AMDGPUSubtarget::GFX10) {
+    ProgInfo.SGPRBlocks = CreateExpr(0ul);
+  } else {
+    ProgInfo.SGPRBlocks = GetNumGPRBlocks(
+        ProgInfo.NumSGPRsForWavesPerEU, IsaInfo::getSGPREncodingGranule(&STM));
+  }
   ProgInfo.VGPRBlocks = GetNumGPRBlocks(ProgInfo.NumVGPRsForWavesPerEU,
                                         IsaInfo::getVGPREncodingGranule(&STM));
 
@@ -1440,9 +1440,10 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
-  MD->setHwStage(CC, ".lds_size",
-                 (unsigned)(CurrentProgramInfo.LdsSize *
-                            getLdsDwGranularity(ST) * sizeof(uint32_t)));
+  MD->updateHwStageMaximum(
+      CC, ".lds_size",
+      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
+                 sizeof(uint32_t)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

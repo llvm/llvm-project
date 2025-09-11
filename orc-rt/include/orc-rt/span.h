@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <type_traits>
 
 namespace orc_rt {
 

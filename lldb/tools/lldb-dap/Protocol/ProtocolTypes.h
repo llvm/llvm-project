@@ -109,6 +109,84 @@ enum ChecksumAlgorithm : unsigned {
 bool fromJSON(const llvm::json::Value &, ChecksumAlgorithm &, llvm::json::Path);
 llvm::json::Value toJSON(const ChecksumAlgorithm &);
 
+/// Some predefined types for the CompletionItem. Please note that not all
+/// clients have specific icons for all of them.
+enum CompletionItemType : unsigned {
+  eCompletionItemTypeMethod,
+  eCompletionItemTypeFunction,
+  eCompletionItemTypeConstructor,
+  eCompletionItemTypeField,
+  eCompletionItemTypeVariable,
+  eCompletionItemTypeClass,
+  eCompletionItemTypeInterface,
+  eCompletionItemTypeModule,
+  eCompletionItemTypeProperty,
+  eCompletionItemTypeUnit,
+  eCompletionItemTypeValue,
+  eCompletionItemTypeEnum,
+  eCompletionItemTypeKeyword,
+  eCompletionItemTypeSnippet,
+  eCompletionItemTypeText,
+  eCompletionItemTypeColor,
+  eCompletionItemTypeFile,
+  eCompletionItemTypeReference,
+  eCompletionItemTypeCustomColor,
+};
+bool fromJSON(const llvm::json::Value &, CompletionItemType &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const CompletionItemType &);
+
+/// `CompletionItems` are the suggestions returned from the `completions`
+/// request.
+struct CompletionItem {
+  /// The label of this completion item. By default this is also the text that
+  /// is inserted when selecting this completion.
+  std::string label;
+
+  /// If text is returned and not an empty string, then it is inserted instead
+  /// of the label.
+  std::string text;
+
+  /// A string that should be used when comparing this item with other items. If
+  /// not returned or an empty string, the `label` is used instead.
+  std::string sortText;
+
+  /// A human-readable string with additional information about this item, like
+  /// type or symbol information.
+  std::string detail;
+
+  /// The item's type. Typically the client uses this information to render the
+  /// item in the UI with an icon.
+  std::optional<CompletionItemType> type;
+
+  /// Start position (within the `text` attribute of the `completions`
+  /// request) where the completion text is added. The position is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based. If the start position is omitted the text
+  /// is added at the location specified by the `column` attribute of the
+  /// `completions` request.
+  int64_t start = 0;
+
+  /// Length determines how many characters are overwritten by the completion
+  /// text and it is measured in UTF-16 code units. If missing the value 0 is
+  /// assumed which results in the completion text being inserted.
+  int64_t length = 0;
+
+  /// Determines the start of the new selection after the text has been
+  /// inserted (or replaced). `selectionStart` is measured in UTF-16 code
+  /// units and must be in the range 0 and length of the completion text. If
+  /// omitted the selection starts at the end of the completion text.
+  int64_t selectionStart = 0;
+
+  /// Determines the length of the new selection after the text has been
+  /// inserted (or replaced) and it is measured in UTF-16 code units. The
+  /// selection can not extend beyond the bounds of the completion text. If
+  /// omitted the length is assumed to be 0.
+  int64_t selectionLength = 0;
+};
+bool fromJSON(const llvm::json::Value &, CompletionItem &, llvm::json::Path);
+llvm::json::Value toJSON(const CompletionItem &);
+
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
 /// is a non-exhaustive enumeration and may expand as future breakpoint types
 /// are added.

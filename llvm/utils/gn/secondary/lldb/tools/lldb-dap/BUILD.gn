@@ -44,6 +44,7 @@ static_library("lib") {
     "Handler/InitializeRequestHandler.cpp",
     "Handler/LaunchRequestHandler.cpp",
     "Handler/LocationsRequestHandler.cpp",
+    "Handler/ModuleSymbolsRequestHandler.cpp",
     "Handler/ModulesRequestHandler.cpp",
     "Handler/NextRequestHandler.cpp",
     "Handler/PauseRequestHandler.cpp",

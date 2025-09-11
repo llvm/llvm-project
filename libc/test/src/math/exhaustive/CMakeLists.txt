@@ -378,6 +378,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmodbf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    fmodbf16_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.fmodbf16
+    libc.src.__support.FPUtil.bfloat16
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   coshf_test
   NO_RUN_POSTBUILD
   NEED_MPFR

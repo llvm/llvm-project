@@ -61,16 +61,46 @@ template <common::TypeCategory C, int K>
 struct IsIntegral<evaluate::Type<C, K>> {
   static constexpr bool value{//
       C == common::TypeCategory::Integer ||
-      C == common::TypeCategory::Unsigned ||
-      C == common::TypeCategory::Logical};
+      C == common::TypeCategory::Unsigned};
 };
 
 template <typename T> constexpr bool is_integral_v{IsIntegral<T>::value};
 
+template <typename...> struct IsFloatingPoint {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsFloatingPoint<evaluate::Type<C, K>> {
+  static constexpr bool value{//
+      C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
+};
+
+template <typename T>
+constexpr bool is_floating_point_v{IsFloatingPoint<T>::value};
+
+template <typename T>
+constexpr bool is_numeric_v{is_integral_v<T> || is_floating_point_v<T>};
+
+template <typename...> struct IsLogical {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsLogical<evaluate::Type<C, K>> {
+  static constexpr bool value{C == common::TypeCategory::Logical};
+};
+
+template <typename T> constexpr bool is_logical_v{IsLogical<T>::value};
+
 template <typename T, typename Op0, typename Op1>
 using ReassocOpBase = evaluate::match::AnyOfPattern< //
     evaluate::match::Add<T, Op0, Op1>, //
-    evaluate::match::Mul<T, Op0, Op1>>;
+    evaluate::match::Mul<T, Op0, Op1>, //
+    evaluate::match::LogicalOp<common::LogicalOperator::And, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Or, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Eqv, T, Op0, Op1>,
+    evaluate::match::LogicalOp<common::LogicalOperator::Neqv, T, Op0, Op1>>;
 
 template <typename T, typename Op0, typename Op1>
 struct ReassocOp : public ReassocOpBase<T, Op0, Op1> {
@@ -88,13 +118,14 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   using Id = evaluate::rewrite::Identity;
   struct NonIntegralTag {};
 
-  ReassocRewriter(const SomeExpr &atom) : atom_(atom) {}
+  ReassocRewriter(const SomeExpr &atom, const SemanticsContext &context)
+      : atom_(atom), context_(context) {}
 
   // Try to find cases where the input expression is of the form
   // (1) (a . b) . c, or
   // (2) a . (b . c),
-  // where . denotes an associative operation (currently + or *), and a, b, c
-  // are some subexpresions.
+  // where . denotes an associative operation, and a, b, c are some
+  // subexpresions.
   // If one of the operands in the nested operation is the atomic variable
   // (with some possible type conversions applied to it), bring it to the
   // top-level operation, and move the top-level operand into the nested
@@ -102,8 +133,13 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   // For example, assuming x is the atomic variable:
   //   (a + x) + b  ->  (a + b) + x,  i.e. (conceptually) swap x and b.
   template <typename T, typename U,
-      typename = std::enable_if_t<is_integral_v<T>>>
+      typename = std::enable_if_t<is_numeric_v<T> || is_logical_v<T>>>
   evaluate::Expr<T> operator()(evaluate::Expr<T> &&x, const U &u) {
+    if constexpr (is_floating_point_v<T>) {
+      if (!context_.langOptions().AssociativeMath) {
+        return Id::operator()(std::move(x), u);
+      }
+    }
     // As per the above comment, there are 3 subexpressions involved in this
     // transformation. A match::Expr<T> will match evaluate::Expr<U> when T is
     // same as U, plus it will store a pointer (ref) to the matched expression.
@@ -111,8 +147,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // some order) from the example above.
     evaluate::match::Expr<T> sub[3];
     auto inner{reassocOp<T>(sub[0], sub[1])};
-    auto outer1{reassocOp<T>(inner, sub[2])}; // inner + something
-    auto outer2{reassocOp<T>(sub[2], inner)}; // something + inner
+    auto outer1{reassocOp<T>(inner, sub[2])}; // inner . something
+    auto outer2{reassocOp<T>(sub[2], inner)}; // something . inner
 #if !defined(__clang__) && !defined(_MSC_VER) && \
     (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 5))
     // If GCC version < 8.5, use this definition. For the other definition
@@ -121,7 +157,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     // inside of the visitor function in common::visit.
     // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
     // that this is some kind of a GCC issue.
-    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>>;
+    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>,
+        evaluate::LogicalOperation<T::kind>>;
 #else
     using MatchTypes = typename decltype(outer1)::MatchTypes;
 #endif
@@ -145,23 +182,9 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
       }
       return common::visit(
           [&](auto &&s) {
-            using Expr = evaluate::Expr<T>;
-            using TypeS = llvm::remove_cvref_t<decltype(s)>;
-            // This visitor has to be semantically correct for all possible
-            // types of s even though at runtime s will only be one of the
-            // matched types.
-            // Limit the construction to the operation types that we tried
-            // to match (otherwise TypeS(op1, op2) would fail for non-binary
-            // operations).
-            if constexpr (common::HasMember<TypeS, MatchTypes>) {
-              Expr atom{*sub[atomIdx].ref};
-              Expr op1{*sub[(atomIdx + 1) % 3].ref};
-              Expr op2{*sub[(atomIdx + 2) % 3].ref};
-              return Expr(
-                  TypeS(atom, Expr(TypeS(std::move(op1), std::move(op2)))));
-            } else {
-              return Expr(TypeS(s));
-            }
+            // Build the new expression from the matched components.
+            return Reconstruct<T, MatchTypes>(s, *sub[atomIdx].ref,
+                *sub[(atomIdx + 1) % 3].ref, *sub[(atomIdx + 2) % 3].ref);
           },
           evaluate::match::deparen(x).u);
     }
@@ -169,18 +192,49 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   }
 
   template <typename T, typename U,
-      typename = std::enable_if_t<!is_integral_v<T>>>
+      typename = std::enable_if_t<!is_numeric_v<T> && !is_logical_v<T>>>
   evaluate::Expr<T> operator()(
       evaluate::Expr<T> &&x, const U &u, NonIntegralTag = {}) {
     return Id::operator()(std::move(x), u);
   }
 
 private:
+  template <typename T, typename MatchTypes, typename S>
+  evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
+      evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
+    using TypeS = llvm::remove_cvref_t<decltype(op)>;
+    // This function has to be semantically correct for all possible types
+    // of S even though at runtime s will only be one of the matched types.
+    // Limit the construction to the operation types that we tried to match
+    // (otherwise TypeS(op1, op2) would fail for non-binary operations).
+    if constexpr (!common::HasMember<TypeS, MatchTypes>) {
+      return evaluate::Expr<T>(TypeS(op));
+    } else if constexpr (is_logical_v<T>) {
+      constexpr int K{T::kind};
+      if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation<K>>) {
+        // Logical operators take an extra argument in their constructor,
+        // so they need their own reconstruction code.
+        common::LogicalOperator opCode{op.logicalOperator};
+        return evaluate::Expr<T>(TypeS( //
+            opCode, std::move(atom),
+            evaluate::Expr<T>(TypeS( //
+                opCode, std::move(op1), std::move(op2)))));
+      }
+    } else {
+      // Generic reconstruction.
+      return evaluate::Expr<T>(TypeS( //
+          std::move(atom),
+          evaluate::Expr<T>(TypeS( //
+              std::move(op1), std::move(op2)))));
+    }
+  }
+
   template <typename T> bool IsAtom(const evaluate::Expr<T> &x) const {
     return IsSameOrConvertOf(evaluate::AsGenericExpr(AsRvalue(x)), atom_);
   }
 
   const SomeExpr &atom_;
+  const SemanticsContext &context_;
 };
 
 struct AnalyzedCondStmt {
@@ -809,7 +863,7 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
     CheckStorageOverlap(atom, GetNonAtomArguments(atom, update.rhs), source);
     return std::nullopt;
   } else if (tryReassoc) {
-    ReassocRewriter ra(atom);
+    ReassocRewriter ra(atom, context_);
     SomeExpr raRhs{evaluate::rewrite::Mutator(ra)(update.rhs)};
 
     std::tie(hasErrors, tryReassoc) = CheckAtomicUpdateAssignmentRhs(

@@ -18,7 +18,6 @@
 #ifndef NDEBUG
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_iterator.h"

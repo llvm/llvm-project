@@ -375,6 +375,17 @@ DEFAULT_PARAMETERS = [
         actions=lambda mode: [AddFeature(f"enable-benchmarks={mode}")],
     ),
     Parameter(
+        name="spec_dir",
+        type=str,
+        default="none",
+        help="Path to the SPEC benchmarks. This is required in order to run the SPEC benchmarks as part of "
+             "the libc++ test suite. If provided, the appropriate SPEC toolset must already be built and installed.",
+        actions=lambda spec_dir: [
+            AddSubstitution("%{spec_dir}", spec_dir),
+            AddFeature('enable-spec-benchmarks')
+        ] if spec_dir != "none" else [],
+    ),
+    Parameter(
         name="long_tests",
         choices=[True, False],
         type=bool,

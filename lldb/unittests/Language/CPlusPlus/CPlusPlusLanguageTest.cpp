@@ -9,6 +9,8 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -426,4 +428,177 @@ TEST(CPlusPlusLanguage, MatchesCxx) {
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(itaniumExtensionSymbol));
   Mangled msvcSymbol("??x@@3AH");
   EXPECT_TRUE(CPlusPlusLang->SymbolNameFitsToLanguage(msvcSymbol));
+}
+
+struct ManglingSubstitutorTestCase {
+  llvm::StringRef mangled;
+  llvm::StringRef from;
+  llvm::StringRef to;
+  llvm::StringRef expected;
+  bool expect_error;
+};
+
+struct ManglingSubstitutorTestFixture
+    : public ::testing::TestWithParam<ManglingSubstitutorTestCase> {};
+
+ManglingSubstitutorTestCase g_mangled_substitutor_type_test_cases[] = {
+    {/*.mangled*/ "_Z3fooa", /*from*/ "a", /*to*/ "c", /*expected*/ "_Z3fooc",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3fooy", /*from*/ "y", /*to*/ "m", /*expected*/ "_Z3foom",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foox", /*from*/ "x", /*to*/ "l", /*expected*/ "_Z3fool",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3baraa", /*from*/ "a", /*to*/ "c", /*expected*/ "_Z3barcc",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foov", /*from*/ "x", /*to*/ "l", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3fooB3Tagv", /*from*/ "Tag", /*to*/ "random",
+     /*expected*/ "", /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foocc", /*from*/ "a", /*to*/ "c", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3fooIaE3barIaEEvaT_", /*from*/ "a", /*to*/ "c",
+     /*expected*/ "_ZN3fooIcE3barIcEEvcT_", /*expect_error*/ false},
+    {/*.mangled*/ "foo", /*from*/ "x", /*to*/ "l", /*expected*/ "",
+     /*expect_error*/ true},
+    {/*.mangled*/ "", /*from*/ "x", /*to*/ "l", /*expected*/ "",
+     /*expect_error*/ true},
+    // FIXME: these two cases are odd behaviours, though not realistic in
+    // practice.
+    {/*.mangled*/ "_Z3foox", /*from*/ "", /*to*/ "l", /*expected*/ "_Z3foolx",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_Z3foox", /*from*/ "x", /*to*/ "", /*expected*/ "_Z3foo",
+     /*expect_error*/ false}};
+
+TEST_P(ManglingSubstitutorTestFixture, Type) {
+  // Tests the CPlusPlusLanguage::SubstituteType_ItaniumMangle API.
+
+  const auto &[mangled, from, to, expected, expect_error] = GetParam();
+
+  auto subst_or_err =
+      CPlusPlusLanguage::SubstituteType_ItaniumMangle(mangled, from, to);
+  if (expect_error) {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Failed());
+  } else {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, expected);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ManglingSubstitutorTypeTests, ManglingSubstitutorTestFixture,
+    ::testing::ValuesIn(g_mangled_substitutor_type_test_cases));
+
+struct ManglingSubstitutorStructorTestFixture
+    : public ::testing::TestWithParam<ManglingSubstitutorTestCase> {};
+
+ManglingSubstitutorTestCase g_mangled_substitutor_structor_test_cases[] = {
+    {/*.mangled*/ "_ZN3FooC1Ev", /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN3FooC2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooC4Ev", /*from*/ "C4", /*to*/ "C2",
+     /*expected*/ "_ZN3FooC2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooC2Ev", /*from*/ "C1", /*to*/ "C2", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooD1Ev", /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN3FooD2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooD2Ev", /*from*/ "D1", /*to*/ "D2", /*expected*/ "",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooD4Ev", /*from*/ "D4", /*to*/ "D2",
+     /*expected*/ "_ZN3FooD2Ev", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1C1I2C12D1EE2C12D1", /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN2D12C1C2I2C12D1EE2C12D1", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1D1I2C12D1EE2C12D1", /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN2D12C1D2I2C12D1EE2C12D1", /*expect_error*/ false},
+    {/*.mangled*/ "_ZN3FooC6Ev", /*from*/ "D1", /*to*/ "D2", /*expected*/ "",
+     /*expect_error*/ true},
+    {/*.mangled*/ "_ZN2D12C1B2D1C1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*from*/ "C1", /*to*/ "C2",
+     /*expected*/ "_ZN2D12C1B2D1C2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*expect_error*/ false},
+    {/*.mangled*/ "_ZN2D12C1B2D1D1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*from*/ "D1", /*to*/ "D2",
+     /*expected*/ "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1",
+     /*expect_error*/ false},
+};
+
+TEST_P(ManglingSubstitutorStructorTestFixture, Structors) {
+  // Tests the CPlusPlusLanguage::SubstituteStructor_ItaniumMangle API.
+
+  const auto &[mangled, from, to, expected, expect_error] = GetParam();
+
+  auto subst_or_err =
+      CPlusPlusLanguage::SubstituteStructor_ItaniumMangle(mangled, from, to);
+  if (expect_error) {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Failed());
+  } else {
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, expected);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ManglingSubstitutorStructorTests, ManglingSubstitutorStructorTestFixture,
+    ::testing::ValuesIn(g_mangled_substitutor_structor_test_cases));
+
+TEST(CPlusPlusLanguage, ManglingSubstitutor_StructorAlias) {
+  // Tests the CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle API.
+  {
+    // Invalid mangling.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle("Foo");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Failed());
+  }
+
+  {
+    // Ctor C1 alias.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooC1Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN3FooC2Ev");
+  }
+
+  {
+    // Dtor D1 alias.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooD1Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN3FooD2Ev");
+  }
+
+  {
+    // Ctor C2 not aliased.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooC2Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_FALSE(*subst_or_err);
+  }
+
+  {
+    // Dtor D2 not aliased.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN3FooD2Ev");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_FALSE(*subst_or_err);
+  }
+
+  {
+    // Check that ctor variants in other parts of the name don't get replaced.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN2D12C1B2D1C1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1C2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+  }
+
+  {
+    // Check that dtor variants in other parts of the name don't get replaced.
+    auto subst_or_err =
+        CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+            "_ZN2D12C1B2D1D1I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+    EXPECT_THAT_EXPECTED(subst_or_err, llvm::Succeeded());
+    EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
+  }
 }
