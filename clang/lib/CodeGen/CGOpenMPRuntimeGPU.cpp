@@ -1481,18 +1481,7 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     assert(IfCondVal && "Expected a value");
     RuntimeFunction FnID = OMPRTL___kmpc_parallel_51;
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-    if (CGM.getLangOpts().OpenMPNoNestedParallelism &&
-        CGM.IsSPMDExecutionMode()) {
-      llvm::Value *Args[] = {
-          RTLoc, NumThreadsVal, FnPtr,
-          Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
-                                     CGF.VoidPtrPtrTy),
-          llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
-      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                              CGM.getModule(), OMPRTL___kmpc_parallel_spmd),
-                          Args);
-    } else {
-      llvm::SmallVector<llvm::Value *, 10> Args(
+    llvm::SmallVector<llvm::Value *, 10> Args(
         {RTLoc, getThreadID(CGF, Loc), IfCondVal, NumThreadsVal,
          llvm::ConstantInt::get(CGF.Int32Ty, -1), FnPtr, ID,
          Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
@@ -1506,7 +1495,6 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     }
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
-   }
   };
 
   RegionCodeGenTy RCG(ParallelGen);
