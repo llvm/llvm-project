@@ -4657,3 +4657,107 @@ define i1 @or_fcmp_reassoc4(i1 %x, double %a, double %b) {
   %retval = or i1 %cmp1, %or
   ret i1 %retval
 }
+
+define i1 @or_fcmp_redundant_or1(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_or1(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = fcmp nsz olt double [[V0]], 1.990000e+00
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz olt double %v0, 1.000000e-02
+  %v2 = fcmp nsz olt double %v0, 1.990000e+00
+  %v3 = or i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_or2(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_or2(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = fcmp nsz olt double [[V0]], 2.300000e+00
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz olt double %v0, 2.300000e+00
+  %v2 = fcmp nsz olt double %v0, 1.990000e+00
+  %v3 = or i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_or3(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_or3(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = fcmp nsz ogt double [[V0]], 1.000000e-02
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz ogt double %v0, 1.000000e-02
+  %v2 = fcmp nsz ogt double %v0, 1.990000e+00
+  %v3 = or i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_or4(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_or4(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = fcmp nsz ogt double [[V0]], 1.990000e+00
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz ogt double %v0, 2.300000e+00
+  %v2 = fcmp nsz ogt double %v0, 1.990000e+00
+  %v3 = or i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_and1(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_and1(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = fcmp nsz olt double [[V0]], 1.000000e-02
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz olt double %v0, 1.000000e-02
+  %v2 = fcmp nsz olt double %v0, 1.990000e+00
+  %v3 = and i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_and2(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_and2(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = fcmp nsz olt double [[V0]], 1.990000e+00
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz olt double %v0, 2.300000e+00
+  %v2 = fcmp nsz olt double %v0, 1.990000e+00
+  %v3 = and i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_and3(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_and3(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = fcmp nsz ogt double [[V0]], 1.990000e+00
+; CHECK-NEXT:    ret i1 [[V2]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz ogt double %v0, 1.000000e-02
+  %v2 = fcmp nsz ogt double %v0, 1.990000e+00
+  %v3 = and i1 %v1, %v2
+  ret i1 %v3
+}
+
+define i1 @or_fcmp_redundant_and4(ptr %arg0) {
+; CHECK-LABEL: @or_fcmp_redundant_and4(
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = fcmp nsz ogt double [[V0]], 2.300000e+00
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = load double, ptr %arg0, align 8
+  %v1 = fcmp nsz ogt double %v0, 2.300000e+00
+  %v2 = fcmp nsz ogt double %v0, 1.990000e+00
+  %v3 = and i1 %v1, %v2
+  ret i1 %v3
+}
