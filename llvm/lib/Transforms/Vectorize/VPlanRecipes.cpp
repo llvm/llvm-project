@@ -1138,8 +1138,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *ScalarTy = Ctx.Types.inferScalarType(this);
     Type *VecTy = toVectorTy(ScalarTy, VF);
     Type *MaskTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-    IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_extract_last_active,
-                                ScalarTy, {VecTy, MaskTy, ScalarTy});
+    IntrinsicCostAttributes ICA(
+        Intrinsic::experimental_vector_extract_last_active, ScalarTy,
+        {VecTy, MaskTy, ScalarTy});
     return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind);
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {

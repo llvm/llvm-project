@@ -1161,8 +1161,8 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FindLast, TheLoop, FMF, RedDes, DB, AC, DT,
-                      SE)) {
+  if (AddReductionVar(Phi, RecurKind::FindLast, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a FindLast reduction PHI." << *Phi << "\n");
     return true;
   }

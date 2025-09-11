@@ -4141,9 +4141,9 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
 }
 
 /// Change CSA reductions to save the appropriate state.
-void VPlanTransforms::convertFindLastRecurrences(VPlan &Plan,
-                                            VPRecipeBuilder &RecipeBuilder,
-                                            LoopVectorizationLegality *Legal) {
+void VPlanTransforms::convertFindLastRecurrences(
+    VPlan &Plan, VPRecipeBuilder &RecipeBuilder,
+    LoopVectorizationLegality *Legal) {
   assert(Legal && "Need valid LoopVecLegality");
 
   // May need to do something better than this?

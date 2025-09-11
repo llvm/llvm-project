@@ -4549,7 +4549,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   // FIXME: implement interleaving for FindLast transform correctly.
   for (auto &[_, RdxDesc] : Legal->getReductionVars())
-    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RdxDesc.getRecurrenceKind()))
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind()))
       return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)
@@ -8694,8 +8695,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     return nullptr;
 
   // Create whole-vector selects for find-last recurrences.
-  VPlanTransforms::runPass(VPlanTransforms::convertFindLastRecurrences,
-                           *Plan, RecipeBuilder, Legal);
+  VPlanTransforms::runPass(VPlanTransforms::convertFindLastRecurrences, *Plan,
+                           RecipeBuilder, Legal);
 
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
@@ -8999,7 +9000,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else if (RecurrenceDescriptor::isFindLastRecurrenceKind(
-             RdxDesc.getRecurrenceKind())) {
+                   RdxDesc.getRecurrenceKind())) {
       FinalReductionResult = Builder.createNaryOp(
           VPInstruction::ExtractLastActive, {NewExitingVPV}, ExitDL);
     } else {
@@ -10087,9 +10088,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // FIXME: Enable interleaving for last_active reductions.
   if (any_of(LVL.getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return RecurrenceDescriptor::isFindLastRecurrenceKind(RdxDesc.getRecurrenceKind());
-  })) {
+        const RecurrenceDescriptor &RdxDesc = Reduction.second;
+        return RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind());
+      })) {
     LLVM_DEBUG(dbgs() << "LV: Not interleaving without vectorization due "
                       << "to conditional scalar assignments.\n");
     IntDiagMsg = {
