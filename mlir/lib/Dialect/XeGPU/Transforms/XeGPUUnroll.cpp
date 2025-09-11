@@ -589,6 +589,58 @@ struct UnrollLoadGatherOpWithOffset
   }
 };
 
+struct UnrollStoreScatterOpWithOffsets
+    : public UnrollPattern<xegpu::StoreScatterOp> {
+  using UnrollPattern<xegpu::StoreScatterOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::StoreScatterOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
+    Value offsets = op.getOffsets();
+    Value mask = op.getMask();
+
+    // Only handle the case where offsets are present (scattered store)
+    if (!offsets)
+      return failure();
+
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape)
+      return failure();
+
+    // Unroll offsets
+    VectorType offsetsTy = llvm::dyn_cast<VectorType>(offsets.getType());
+    SmallVector<Type> convertedOffsetTypes =
+        getUnrolledTypes(offsetsTy, *targetShape);
+    SmallVector<Value> convertedOffsets =
+        pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
+
+    // Unroll mask
+    VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
+    SmallVector<Type> convertedMaskTypes =
+        getUnrolledTypes(maskTy, *targetShape);
+    SmallVector<Value> convertedMasks =
+        pack(mask, convertedMaskTypes, *targetShape, loc, rewriter);
+
+    // Unroll value
+    SmallVector<Type> convertedValTypes =
+        getUnrolledTypes(valueTy, *targetShape);
+    SmallVector<Value> convertedValues =
+        pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
+
+    auto chunkSizeAttr =
+        rewriter.getI64IntegerAttr(op.getChunkSize().value_or(1));
+    for (auto [v, o, m] :
+         llvm::zip(convertedValues, convertedOffsets, convertedMasks)) {
+      xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
+                                    chunkSizeAttr, op.getL1HintAttr(),
+                                    op.getL2HintAttr(), op.getL3HintAttr());
+    }
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
   using UnrollPattern<xegpu::PrefetchOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::PrefetchOp op,
@@ -814,10 +866,11 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
-               UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp,
-               UnrollCreateDescOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
-               UnrollPrefetchOp, UnrollUpdateOffsetOp, UnrollLoadMatrixOp,
-               UnrollStoreMatrixOp, UnrollLoadGatherOpWithOffset>(
-      patterns.getContext(), options);
+  patterns
+      .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollCreateDescOp,
+           UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
+           UnrollUpdateOffsetOp, UnrollLoadMatrixOp, UnrollStoreMatrixOp,
+           UnrollLoadGatherOpWithOffset, UnrollStoreScatterOpWithOffsets>(
+          patterns.getContext(), options);
 }

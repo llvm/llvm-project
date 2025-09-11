@@ -275,6 +275,28 @@ gpu.module @test {
 
     gpu.return
   }
+  
+  //-----
+
+  // CHECK-LABEL: store_with_offsets
+  // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
+  // CHECK-COUNT-2: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<16xf32>, memref<64xf32>, vector<16xindex>, vector<16xi1>
+  gpu.func @store_with_offsets(%src: memref<64xf32>) {
+      %cst = arith.constant dense<[
+      0,   8,  16,  24,  32,  40,  48,  56,
+      64,  72,  80,  88,  96, 104, 112, 120,
+      128, 136, 144, 152, 160, 168, 176, 184,
+      192, 200, 208, 216, 224, 232, 240, 248
+      ]> : vector<32xindex>
+
+      %c17 = arith.constant 17: index
+      %mask = vector.create_mask %c17: vector<32xi1>
+
+      %st_vec = arith.constant dense<1023.0>: vector<32xf32>
+      xegpu.store %st_vec, %src[%cst], %mask {chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, memref<64xf32>, vector<32xindex>, vector<32xi1>
+
+      gpu.return
+  }
 
 //-----
   // CHECK-LABEL: create_tdesc_step_chunk

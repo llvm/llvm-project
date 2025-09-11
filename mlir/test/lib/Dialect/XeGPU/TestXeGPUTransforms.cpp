@@ -88,7 +88,19 @@ struct TestXeGPUUnrollingPatterns
             tdescTy = loadOp.getTensorDescType();
           }
         } else if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(op)) {
-          tdescTy = storeOp.getTensorDescType();
+          if (storeOp.getOffsets()) {
+            auto layout = llvm::dyn_cast_or_null<xegpu::LayoutAttr>(
+                op->getAttr("layout"));
+            if (layout && layout.isForSubgroup()) {
+              auto inst_data = layout.getInstDataAsInt();
+              if (!inst_data.empty())
+                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
+            } else {
+              return std::nullopt;
+            }
+          } else if (!storeOp.getOffsets()) {
+            tdescTy = storeOp.getTensorDescType();
+          }
         }
 
         if (auto layout = tdescTy.getLayoutAttr()) {
