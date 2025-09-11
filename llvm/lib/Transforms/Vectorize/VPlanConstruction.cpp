@@ -920,62 +920,19 @@ bool VPlanTransforms::legalizeUnclassifiedPhis(VPlan &Plan) {
   using namespace VPlanPatternMatch;
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    if (!isa<VPPhi>(&PhiR))
+    auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
+    if (!MinMaxPhiR || !RecurrenceDescriptor::isIntMinMaxRecurrenceKind(
+                           MinMaxPhiR->getRecurrenceKind()))
       continue;
 
-    // Check if PhiR is a min/max reduction that has a user inside the loop
-    // outside the min/max reduction chain. The other user must be the compare
-    // of a FindLastIV reduction chain.
-    auto *MinMaxPhiR = cast<VPPhi>(&PhiR);
-    auto *MinMaxOp = dyn_cast_or_null<VPSingleDefRecipe>(
-        MinMaxPhiR->getOperand(1)->getDefiningRecipe());
-    if (!MinMaxOp)
-      return false;
-
-    // The incoming value must be a min/max instrinsic.
-    // TODO: Also handle the select variant.
-    Intrinsic::ID ID = Intrinsic::not_intrinsic;
-    if (auto *WideInt = dyn_cast<VPWidenIntrinsicRecipe>(MinMaxOp)) {
-      ID = WideInt->getVectorIntrinsicID();
-    } else {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxOp);
-      if (!RepR || !isa<IntrinsicInst>(RepR->getUnderlyingInstr()))
-        return false;
-      ID = cast<IntrinsicInst>(RepR->getUnderlyingInstr())->getIntrinsicID();
-    }
-    RecurKind RdxKind = RecurKind::None;
-    switch (ID) {
-    case Intrinsic::umax:
-      RdxKind = RecurKind::UMax;
-      break;
-    case Intrinsic::umin:
-      RdxKind = RecurKind::UMin;
-      break;
-    case Intrinsic::smax:
-      RdxKind = RecurKind::SMax;
-      break;
-    case Intrinsic::smin:
-      RdxKind = RecurKind::SMin;
-      break;
-    default:
-      return false;
-    }
-
-    // The min/max intrinsic must use the phi and itself must only be used by
-    // the phi and a resume-phi in the scalar preheader.
-    if (MinMaxOp->getOperand(0) != MinMaxPhiR &&
-        MinMaxOp->getOperand(1) != MinMaxPhiR)
-      return false;
-    if (MinMaxPhiR->getNumUsers() != 2 ||
-        any_of(MinMaxOp->users(), [MinMaxPhiR, &Plan](VPUser *U) {
-          auto *Phi = dyn_cast<VPPhi>(U);
-          return MinMaxPhiR != U &&
-                 (!Phi || Phi->getParent() != Plan.getScalarPreheader());
-        }))
-      return false;
+    RecurKind RdxKind = RecurrenceDescriptor::convertFromMultiUseKind(
+        MinMaxPhiR->getRecurrenceKind());
+    if (RdxKind == MinMaxPhiR->getRecurrenceKind())
+      continue;
 
     // One user of MinMaxPhiR is MinMaxOp, the other users must be a compare
     // that's part of a FindLastIV chain.
+    auto *MinMaxOp = cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
     auto MinMaxUsers = to_vector(MinMaxPhiR->users());
     auto *Cmp = dyn_cast<VPRecipeWithIRFlags>(
         MinMaxUsers[0] == MinMaxOp ? MinMaxUsers[1] : MinMaxUsers[0]);

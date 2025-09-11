@@ -42,9 +42,13 @@ enum class RecurKind {
   And,      ///< Bitwise or logical AND of integers.
   Xor,      ///< Bitwise or logical XOR of integers.
   SMin,     ///< Signed integer min implemented in terms of select(cmp()).
+  SMinMultiUse,     ///< Signed integer min implemented in terms of select(cmp()).
   SMax,     ///< Signed integer max implemented in terms of select(cmp()).
+  SMaxMultiUse,     ///< Signed integer max implemented in terms of select(cmp()).
   UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
+  UMinMultiUse,     ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
+  UMaxMultiUse,     ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,     ///< Sum of floats.
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
@@ -247,8 +251,24 @@ public:
 
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::UMin || Kind == RecurKind::UMax ||
-           Kind == RecurKind::SMin || Kind == RecurKind::SMax;
+    return Kind == RecurKind::UMin || Kind == RecurKind::UMinMultiUse ||
+           Kind == RecurKind::UMax || Kind == RecurKind::UMaxMultiUse ||
+           Kind == RecurKind::SMin || Kind == RecurKind::SMinMultiUse ||
+           Kind == RecurKind::SMax || Kind == RecurKind::SMaxMultiUse;
+  }
+
+  static RecurKind convertFromMultiUseKind(RecurKind Kind) {
+    switch (Kind) {
+    case RecurKind::UMaxMultiUse:
+      return RecurKind::UMax;
+    case RecurKind::UMinMultiUse:
+      return RecurKind::UMin;
+    case RecurKind::SMinMultiUse:
+      return RecurKind::SMin;
+    case RecurKind::SMaxMultiUse:
+      return RecurKind::SMax;
+    }
+    return Kind;
   }
 
   /// Returns true if the recurrence kind is a floating-point min/max kind.

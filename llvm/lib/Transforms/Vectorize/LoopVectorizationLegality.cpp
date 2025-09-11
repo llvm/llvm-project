@@ -808,23 +808,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     }
   }
 
-  if (range_size(TheLoop->getHeader()->phis()) != FixedOrderRecurrences.size() +
-                                                      Inductions.size() +
-                                                      Reductions.size() &&
-      none_of(TheLoop->getHeader()->phis(), [this](PHINode &P) {
-        auto I = Reductions.find(&P);
-        return I != Reductions.end() &&
-               RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-                   I->second.getRecurrenceKind());
-      })) {
-    reportVectorizationFailure("Found an unidentified PHI",
-                               "value that could not be identified as "
-                               "reduction is used outside the loop",
-                               "NonReductionValueUsedOutsideLoop", ORE, TheLoop,
-                               &*TheLoop->getHeader()->phis().begin());
-    return false;
-  }
-
   if (!PrimaryInduction) {
     if (Inductions.empty()) {
       reportVectorizationFailure(
@@ -944,8 +927,15 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
         !IsDisallowedStridedPointerInduction(ID)) {
       addInductionPhi(Phi, ID, AllowedExit);
+      return true;
     }
-    return true;
+
+    reportVectorizationFailure("Found an unidentified PHI",
+                               "value that could not be identified as "
+                               "reduction is used outside the loop",
+                               "NonReductionValueUsedOutsideLoop", ORE, TheLoop,
+                               Phi);
+    return false;
   } // end of PHI handling
 
   // We handle calls that:

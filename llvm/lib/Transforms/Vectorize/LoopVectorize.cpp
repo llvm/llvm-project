@@ -7929,6 +7929,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
   for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(
+            RdxDesc.getRecurrenceKind()))
+      continue;
     getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
                         PartialReductionChains);
   }
