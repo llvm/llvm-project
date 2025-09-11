@@ -14,6 +14,7 @@ entry:
 ; CHECK: if.then:
 ; CHECK: call i32 @foo.specialized.1(i32 %x, ptr @A)
 ; CHECK: call i32 @foo.specialized.2(i32 %y, ptr @B)
+; CHECK: call i32 @foo.specialized.2(i32 %y, ptr @B)
 if.then:
   %call = call i32 @foo(i32 %x, ptr @A)
   %call1 = call i32 @foo(i32 %y, ptr @B)
