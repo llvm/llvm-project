@@ -2317,29 +2317,41 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 )";
   }
 
+  // We maintain 2 scope stacks. One is ScopeStack which is used in conjunction
+  // with OPC_Scope and it encodes the "regular" forward traversal through the
+  // decoder table in response to Field or Predicate check failures.
+  //
+  // Other is NoFailScopeStack and is used in conjunction with OPC_ScopeNoFail
+  // and it essentially encodes nested checks that in any failure mode continue
+  // further checks and never return from the decode function with a failure.
+  // This is used when we need to attempt multiple decoding possibilities and
+  // a failure anywhere is not a signal to return from the decode function but
+  // to reset some state and continue.
+  //
+  // ScopeStack can be thought of as nested within the NoFailScopeStack. A
+  // "failure" will result in clearing the ScopeStack and continuing execution
+  // at the top of the NoFailScopeStack, if its not empty, else returning from
+  // the decode function with a failure.
+
   OS << R"(
-  struct Scope {
-    const uint8_t *SkipTo;
-    // Indicates a non failing scope, which means we will never return with
-    // failure from the decode function when in this scope. It also implies that
-    // any nested scopes within it will be forced to be non-failing as well.
-    bool NoFail;
-    Scope(const uint8_t *SkipTo, bool NoFail)
-      : SkipTo(SkipTo), NoFail(NoFail) {}
-  };
-
-  SmallVector<Scope, 8> ScopeStack;
-
-  // Returns if we are allowed to fail and return from the function in the
-  // current scope.
-  auto CanReturnOnFailure = [&ScopeStack]() -> bool {
-    if (ScopeStack.empty())
-      return true;
-    return !ScopeStack.back().NoFail;
-  };
+  SmallVector<const uint8_t *> ScopeStack;
+  SmallVector<const uint8_t *> NoFailScopeStack;
 
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
+
+  // Handle a return with failure. Returns true if we can actually return from
+  // the decode function, else adjust the state and return the continuation
+  // point.
+  auto PopScope = [&](bool CheckScopeStack) -> std::pair<bool, const uint8_t*> {
+    if (CheckScopeStack && !ScopeStack.empty())
+      return {false, ScopeStack.pop_back_val()};
+    ScopeStack.resize(0);
+    if (!NoFailScopeStack.empty())
+      return {false, NoFailScopeStack.pop_back_val()};
+    return {true, nullptr};
+  };
+
   while (true) {
     ptrdiff_t Loc = Ptr - DecodeTable;
     const uint8_t DecoderOp = *Ptr++;
@@ -2352,13 +2364,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     case MCD::OPC_ScopeNoFail: {
       unsigned NumToSkip = decodeNumToSkip(Ptr);
       const uint8_t *SkipTo = Ptr + NumToSkip;
-      bool NoFail = DecoderOp == MCD::OPC_ScopeNoFail;
-      NoFail |= !CanReturnOnFailure();
-      ScopeStack.emplace_back(SkipTo, NoFail);
+      SmallVector<const uint8_t *> &Stack = DecoderOp == MCD::OPC_ScopeNoFail ? NoFailScopeStack : ScopeStack;
+      Stack.push_back(SkipTo);
       LLVM_DEBUG({
         const char *OpName = DecoderOp == MCD::OPC_Scope ? "OPC_Scope" : "OPC_ScopeNoFail";
-        dbgs() << Loc << ": " << OpName << "(" << SkipTo - DecodeTable
-               << "NoFail = " << NoFail << ")\n";
+        dbgs() << Loc << ": " << OpName << "(" << SkipTo - DecodeTable << ")\n";
       });
       break;
     }
@@ -2400,11 +2410,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << (Failed ? "FAIL, " : "PASS\n"));
 
       if (Failed) {
-        if (ScopeStack.empty()) {
+        auto Ret = PopScope(/*CheckScopeStack=*/true);
+        if (Ret.first) {
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val().SkipTo;
+        Ptr = Ret.second;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2428,11 +2439,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << FieldValue << ", ExpectedValue = " << ExpectedValue
                         << ": " << (Failed ? "FAIL, " : "PASS\n"););
       if (Failed) {
-        if (ScopeStack.empty()) {
+        auto Ret = PopScope(/*CheckScopeStack=*/true);
+        if (Ret.first) {
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val().SkipTo;
+        Ptr = Ret.second;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2449,11 +2461,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << (Failed ? "FAIL, " : "PASS\n"););
 
       if (Failed) {
-        if (ScopeStack.empty()) {
+        auto Ret = PopScope(/*CheckScopeStack=*/true);
+        if (Ret.first) {
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val().SkipTo;
+        Ptr = Ret.second;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2479,15 +2492,21 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": "
                    << (S != MCDisassembler::Fail ? "PASS" : "FAIL"));
-      if (S == MCDisassembler::Success || CanReturnOnFailure()) {
+      if (S != MCDisassembler::Fail) {
         LLVM_DEBUG(dbgs() << ", Returning\n");
         return S;
       }
-      MI.clear();
-      Ptr = ScopeStack.pop_back_val().SkipTo;
-      LLVM_DEBUG(dbgs() << ", continuing at " << Ptr - DecodeTable << '\n');
+      // We ignore the scope stack and just check NoFail stack here.
+      auto Ret = PopScope(/*CheckScopeStack=*/false);
+      if (Ret.first) {
+        LLVM_DEBUG(dbgs() << "returning Fail\n");
+        return MCDisassembler::Fail;
+      }
       // Reset the decode status.
+      MI.clear();
       S = MCDisassembler::Success;
+      Ptr = Ret.second;
+      LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       break;
     })";
   if (HasTryDecode) {
@@ -2508,22 +2527,25 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       if (DecodeComplete) {
         // Decoding complete.
         LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS" : "FAIL"));
-        if (S == MCDisassembler::Success || CanReturnOnFailure()) {
+        if (S != MCDisassembler::Fail) {
           MI = TmpMI;
           LLVM_DEBUG(dbgs() << ", Returning\n");
           return S;
         }
       }
-      assert(S == MCDisassembler::Fail);
-      if (ScopeStack.empty()) {
+      // If decoding was complete, we only check the NoFail stack, else we
+      // check both stacks when popping the scope.
+      auto Ret = PopScope(/*CheckScopeStack=*/!DecodeComplete);
+
+      if (Ret.first) {
         LLVM_DEBUG(dbgs() << "FAIL, returning FAIL\n");
         return MCDisassembler::Fail;
       }
-      Ptr = ScopeStack.pop_back_val().SkipTo;
-      LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
       // Reset decode status. This also drops a SoftFail status that could be
       // set before the decode attempt.
       S = MCDisassembler::Success;
+      Ptr = Ret.second;
+      LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
       break;
     })";
   }
