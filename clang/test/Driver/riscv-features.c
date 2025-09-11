@@ -1,3 +1,4 @@
+
 // RUN: %clang --target=riscv32-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
@@ -85,3 +86,14 @@
 // FUCHSIA-SAME: "-target-feature" "+zbb"
 // FUCHSIA-SAME: "-target-feature" "+zbs"
 
+
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv32i %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVI
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv64i %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVI
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv32e %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVE
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv64e %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVE
+
+// RVI: "-target-feature" "+i"
+// RVI-SAME: "-target-feature" "-e"
+
+// RVE: "-target-feature" "+e"
+// RVE-SAME: "-target-feature" "-i"

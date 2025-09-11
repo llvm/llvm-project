@@ -3452,7 +3452,7 @@ bool SITargetLowering::CanLowerReturn(
 
   // We must use the stack if return would require unavailable registers.
   unsigned MaxNumVGPRs = Subtarget->getMaxNumVGPRs(MF);
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  unsigned TotalNumVGPRs = Subtarget->getAddressableNumArchVGPRs();
   for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i)
     if (CCInfo.isAllocated(AMDGPU::VGPR_32RegClass.getRegister(i)))
       return false;
