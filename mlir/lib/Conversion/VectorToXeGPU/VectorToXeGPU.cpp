@@ -620,6 +620,12 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
     Value localOffsets = computeOffsets(rewriter, gatherOp, strides);
     Value flatMemref = collapseMemrefTo1D(gatherOp, rewriter);
 
+    if (auto alignment = gatherOp.getAlignment()) {
+      flatMemref = memref::AssumeAlignmentOp::create(rewriter, loc, flatMemref,
+                                                     alignment.value())
+                       .getResult();
+    }
+
     auto xeGatherOp = xegpu::LoadGatherOp::create(
         rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
         /*chunk_size=*/IntegerAttr{},
@@ -652,6 +658,12 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
 
     Value localOffsets = computeOffsets(rewriter, scatterOp, strides);
     Value flatMemref = collapseMemrefTo1D(scatterOp, rewriter);
+
+    if (auto alignment = scatterOp.getAlignment()) {
+      flatMemref = memref::AssumeAlignmentOp::create(rewriter, loc, flatMemref,
+                                                     alignment.value())
+                       .getResult();
+    }
 
     xegpu::StoreScatterOp::create(rewriter, loc, scatterOp.getValueToStore(),
                                   flatMemref, localOffsets, scatterOp.getMask(),
