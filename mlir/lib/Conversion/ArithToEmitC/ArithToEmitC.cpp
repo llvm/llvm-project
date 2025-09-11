@@ -340,6 +340,25 @@ public:
   }
 };
 
+class MaximumFOpLowering : public OpConversionPattern<arith::MaximumFOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::MaximumFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    auto newOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, op.getType(), rewriter.getStringAttr("fmax"),
+        ValueRange{adaptor.getLhs(), adaptor.getRhs()});
+
+    rewriter.replaceOp(op, newOp);
+
+    return success();
+  }
+};
+
 template <typename ArithOp, bool castToUnsigned>
 class CastConversion : public OpConversionPattern<ArithOp> {
 public:
