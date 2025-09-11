@@ -256,6 +256,16 @@ void DFAPacketizerEmitter::emitForItineraries(
   }
   OS << "\n};\n\n";
 
+  // Output the mapping from proc ID to ResourceIndexStart
+  Idx = 1;
+  OS << "std::map<unsigned, unsigned> " << TargetName << DFAName
+     << "ProcIdToResourceIndexStartMapping = {\n";
+  for (const CodeGenProcModel *Model : ProcModels) {
+    OS << "  { " << Model->Index << ",  " << Idx++ << " }, // "
+       << Model->ModelName << "\n";
+  }
+  OS << "};\n\n";
+
   // And the mapping from Itinerary index into the previous table.
   OS << "constexpr unsigned " << TargetName << DFAName
      << "ProcResourceIndexStart[] = {\n";
@@ -339,16 +349,17 @@ void DFAPacketizerEmitter::emitForItineraries(
 
   std::string SubTargetClassName = TargetName + "GenSubtargetInfo";
   OS << "namespace llvm {\n";
-  OS << "DFAPacketizer *" << SubTargetClassName << "::"
-     << "create" << DFAName
+  OS << "DFAPacketizer *" << SubTargetClassName << "::" << "create" << DFAName
      << "DFAPacketizer(const InstrItineraryData *IID) const {\n"
      << "  static Automaton<uint64_t> A(ArrayRef<" << TargetAndDFAName
      << "Transition>(" << TargetAndDFAName << "Transitions), "
      << TargetAndDFAName << "TransitionInfo);\n"
+     << "  unsigned Index = " << TargetName << DFAName
+     << "ProcIdToResourceIndexStartMapping[IID->SchedModel.ProcID];\n"
      << "  unsigned ProcResIdxStart = " << TargetAndDFAName
-     << "ProcResourceIndexStart[IID->SchedModel.ProcID];\n"
+     << "ProcResourceIndexStart[Index];\n"
      << "  unsigned ProcResIdxNum = " << TargetAndDFAName
-     << "ProcResourceIndexStart[IID->SchedModel.ProcID + 1] - "
+     << "ProcResourceIndexStart[Index + 1] - "
         "ProcResIdxStart;\n"
      << "  return new DFAPacketizer(IID, A, {&" << TargetAndDFAName
      << "ResourceIndices[ProcResIdxStart], ProcResIdxNum});\n"
