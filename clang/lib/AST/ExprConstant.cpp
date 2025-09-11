@@ -12054,8 +12054,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue, 64> Result;
     Result.resize(NumElts, APValue(0));
 
-    bool IsLeft = (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
-                  E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
+    bool IsLeft =
+        (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
+         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
 
     if (ShiftVal >= LaneBytes)
       return Success(APValue(Result.data(), Result.size()), E);
