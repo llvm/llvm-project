@@ -4808,6 +4808,19 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     CompareType = ARMISD::CMPZ;
     break;
   }
+
+  // If we have MI or PL and a sub, we can just do that instead of a CMP.
+  if (CondCode == ARMCC::MI || CondCode == ARMCC::PL || CondCode == ARMCC::EQ ||
+      CondCode == ARMCC::NE ||
+      (LHS->getFlags().hasNoSignedWrap() &&
+       (CondCode == ARMCC::LT || CondCode == ARMCC::GE ||
+        CondCode == ARMCC::LE || CondCode == ARMCC::GT))) {
+    if (LHS.getOpcode() == ISD::SUB) {
+      ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
+      return DAG.getNode(CompareType, dl, FlagsVT, LHS.getOperand(0),
+                         LHS.getOperand(1));
+    }
+  }
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
   return DAG.getNode(CompareType, dl, FlagsVT, LHS, RHS);
 }
