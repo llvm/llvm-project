@@ -3273,7 +3273,6 @@ specifications are given in this list:
 -  ``p[n]:64:64:64`` - Other address spaces are assumed to be the
    same as the default address space.
 -  ``S0`` - natural stack alignment is unspecified
--  ``i1:8:8`` - i1 is 8-bit (byte) aligned
 -  ``i8:8:8`` - i8 is 8-bit (byte) aligned as mandated
 -  ``i16:16:16`` - i16 is 16-bit aligned
 -  ``i32:32:32`` - i32 is 32-bit aligned
@@ -14632,6 +14631,8 @@ Semantics:
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
       must match the target's :ref:`alloca address space <alloca_addrspace>` type.
 
+.. _int_prefetch:
+
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -21123,6 +21124,53 @@ Example:
       %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
       %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
 
+Floating-Point Conversion Intrinsics
+------------------------------------
+
+This class of intrinsics is designed for floating-point conversions that do
+not fall into other categories. For example conversions with specified rounding
+mode or mini-float conversions.
+
+'``llvm.fptrunc.round``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <ty2>
+      @llvm.fptrunc.round(<type> <value>, metadata <rounding mode>)
+
+Overview:
+"""""""""
+
+The '``llvm.fptrunc.round``' intrinsic truncates
+:ref:`floating-point <t_floating>` ``value`` to type ``ty2``
+with a specified rounding mode.
+
+Arguments:
+""""""""""
+
+The '``llvm.fptrunc.round``' intrinsic takes a :ref:`floating-point
+<t_floating>` value to cast and a :ref:`floating-point <t_floating>` type
+to cast it to. This argument must be larger in size than the result.
+
+The second argument specifies the rounding mode as described in the constrained
+intrinsics section.
+For this intrinsic, the "round.dynamic" mode is not supported.
+
+Semantics:
+""""""""""
+
+The '``llvm.fptrunc.round``' intrinsic casts a ``value`` from a larger
+:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
+<t_floating>` type.
+This intrinsic is assumed to execute in the default :ref:`floating-point
+environment <floatenv>` *except* for the rounding mode.
+This intrinsic is not supported on all targets. Some targets may not support
+all rounding modes.
+
 Convergence Intrinsics
 ----------------------
 
@@ -23987,8 +24035,7 @@ indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
 ``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
 the unsigned less-than comparison operator.  Overflow cannot occur in
 ``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  If ``%n`` is ``0``, then the result is a
-poison value. The above is equivalent to:
+numbers and not in machine numbers.  The above is equivalent to:
 
 ::
 
@@ -24018,6 +24065,130 @@ Examples:
       %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
+
+.. _int_loop_dependence_war_mask:
+
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector load from %ptrA followed by a vector store to %ptrB, this
+instruction generates a mask where an active lane indicates that the
+write-after-read sequence can be performed safely for that lane, without the
+danger of a write-after-read hazard occurring.
+
+A write-after-read hazard occurs when a write-after-read sequence for a given
+lane in a vector ends up being executed as a read-after-write sequence due to
+the aliasing of pointers.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when loading from %ptrA then storing to
+%ptrB is safe and doesn't result in a write-after-read hazard, meaning that:
+
+* (ptrB - ptrA) <= 0 (guarantees that all lanes are loaded before any stores), or
+* (ptrB - ptrA) >= elementSize * lane (guarantees that this lane is loaded
+  before the store to the same address)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
+
+.. _int_loop_dependence_raw_mask:
+
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector store to %ptrA followed by a vector load from %ptrB, this
+instruction generates a mask where an active lane indicates that the
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
+
+A read-after-write hazard occurs when a read-after-write sequence for a given
+lane in a vector ends up being executed as a write-after-read sequence due to
+the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
+
+Arguments:
+""""""""""
+
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
+is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
+or ``%ptrB + VF * %elementSize`` wrap.
+The element of the result mask is active when storing to %ptrA then loading from
+%ptrB is safe and doesn't result in aliasing, meaning that:
+
+* abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
+  occurs before loading from this address), or
+* ptrA == ptrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask)
+      [...]
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
 
 .. _int_experimental_vp_splice:
 
@@ -29600,9 +29771,15 @@ Arguments:
 """"""""""
 
 The ``llvm.objectsize`` intrinsic takes four arguments. The first argument is a
-pointer to or into the ``object``. The second argument determines whether
-``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size is
-unknown. The third argument controls how ``llvm.objectsize`` acts when ``null``
+pointer to or into the ``object``.
+
+The second argument determines whether ``llvm.objectsize`` returns the minimum
+(if true) or maximum (if false) object size. The minimum size may be any size
+smaller than or equal to the actual object size (including 0 if unknown). The
+maximum size may be any size greater than or equal to the actual object size
+(including -1 if unknown).
+
+The third argument controls how ``llvm.objectsize`` acts when ``null``
 in address space 0 is used as its pointer argument. If it's ``false``,
 ``llvm.objectsize`` reports 0 bytes available when given ``null``. Otherwise, if
 the ``null`` is in a non-zero address space or if ``true`` is given for the
@@ -31166,42 +31343,3 @@ Semantics:
 The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
 as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.
 
-'``llvm.fptrunc.round``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <ty2>
-      @llvm.fptrunc.round(<type> <value>, metadata <rounding mode>)
-
-Overview:
-"""""""""
-
-The '``llvm.fptrunc.round``' intrinsic truncates
-:ref:`floating-point <t_floating>` ``value`` to type ``ty2``
-with a specified rounding mode.
-
-Arguments:
-""""""""""
-
-The '``llvm.fptrunc.round``' intrinsic takes a :ref:`floating-point
-<t_floating>` value to cast and a :ref:`floating-point <t_floating>` type
-to cast it to. This argument must be larger in size than the result.
-
-The second argument specifies the rounding mode as described in the constrained
-intrinsics section.
-For this intrinsic, the "round.dynamic" mode is not supported.
-
-Semantics:
-""""""""""
-
-The '``llvm.fptrunc.round``' intrinsic casts a ``value`` from a larger
-:ref:`floating-point <t_floating>` type to a smaller :ref:`floating-point
-<t_floating>` type.
-This intrinsic is assumed to execute in the default :ref:`floating-point
-environment <floatenv>` *except* for the rounding mode.
-This intrinsic is not supported on all targets. Some targets may not support
-all rounding modes.

@@ -6313,30 +6313,38 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   unsigned i = 0;
   SmallVector<QualType, 8> OverloadParams;
 
-  for (QualType ParamType : FT->param_types()) {
+  {
+    // The lvalue conversions in this loop are only for type resolution and
+    // don't actually occur.
+    EnterExpressionEvaluationContext Unevaluated(
+        *Sema, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap Trap(*Sema, /*ForValidityCheck=*/true);
 
-    // Convert array arguments to pointer to simplify type lookup.
-    ExprResult ArgRes =
-        Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
-    if (ArgRes.isInvalid())
-      return nullptr;
-    Expr *Arg = ArgRes.get();
-    QualType ArgType = Arg->getType();
-    if (!ParamType->isPointerType() ||
-        ParamType->getPointeeType().hasAddressSpace() ||
-        !ArgType->isPointerType() ||
-        !ArgType->getPointeeType().hasAddressSpace() ||
-        isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
-      OverloadParams.push_back(ParamType);
-      continue;
+    for (QualType ParamType : FT->param_types()) {
+
+      // Convert array arguments to pointer to simplify type lookup.
+      ExprResult ArgRes =
+          Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
+      if (ArgRes.isInvalid())
+        return nullptr;
+      Expr *Arg = ArgRes.get();
+      QualType ArgType = Arg->getType();
+      if (!ParamType->isPointerType() ||
+          ParamType->getPointeeType().hasAddressSpace() ||
+          !ArgType->isPointerType() ||
+          !ArgType->getPointeeType().hasAddressSpace() ||
+          isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
+        OverloadParams.push_back(ParamType);
+        continue;
+      }
+
+      QualType PointeeType = ParamType->getPointeeType();
+      NeedsNewDecl = true;
+      LangAS AS = ArgType->getPointeeType().getAddressSpace();
+
+      PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
+      OverloadParams.push_back(Context.getPointerType(PointeeType));
     }
-
-    QualType PointeeType = ParamType->getPointeeType();
-    NeedsNewDecl = true;
-    LangAS AS = ArgType->getPointeeType().getAddressSpace();
-
-    PointeeType = Context.getAddrSpaceQualType(PointeeType, AS);
-    OverloadParams.push_back(Context.getPointerType(PointeeType));
   }
 
   if (!NeedsNewDecl)
@@ -7841,7 +7849,9 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
     return;
   std::optional<llvm::APInt> AllocSize =
       CE->evaluateBytesReturnedByAllocSizeCall(S.Context);
-  if (!AllocSize)
+  // Allocations of size zero are permitted as a special case. They are usually
+  // done intentionally.
+  if (!AllocSize || AllocSize->isZero())
     return;
   auto Size = CharUnits::fromQuantity(AllocSize->getZExtValue());
 
@@ -21474,8 +21484,11 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 
   // Expressions of unknown type.
   case BuiltinType::ArraySection:
-    Diag(E->getBeginLoc(), diag::err_array_section_use)
-        << cast<ArraySectionExpr>(E)->isOMPArraySection();
+    // If we've already diagnosed something on the array section type, we
+    // shouldn't need to do any further diagnostic here.
+    if (!E->containsErrors())
+      Diag(E->getBeginLoc(), diag::err_array_section_use)
+          << cast<ArraySectionExpr>(E)->isOMPArraySection();
     return ExprError();
 
   // Expressions of unknown type.

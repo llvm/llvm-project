@@ -666,7 +666,7 @@ if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
 endif()
 
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND
    "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
    NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
   message(STATUS "Enabling compiler-rt as a dependency of Flang")
@@ -705,18 +705,6 @@ else()
 endif()
 
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
-
-# While adding scalable vector support to LLVM, we temporarily want to
-# allow an implicit conversion of TypeSize to uint64_t, and to allow
-# code to get the fixed number of elements from a possibly scalable vector.
-# This CMake flag enables a more strict mode where it asserts that the type
-# is not a scalable vector type.
-#
-# Enabling this flag makes it easier to find cases where the compiler makes
-# assumptions on the size being 'fixed size', when building tests for
-# SVE/SVE2 or other scalable vector architectures.
-option(LLVM_ENABLE_STRICT_FIXED_SIZE_VECTORS
-       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t and calls to getNumElements" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
@@ -956,7 +944,8 @@ if (LLVM_LINK_LLVM_DYLIB AND BUILD_SHARED_LIBS)
 endif()
 
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
-if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
+if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS
+  OR CMAKE_CONFIGURATION_TYPES OR LLVM_USE_SANITIZER)))
   set(LLVM_USE_HOST_TOOLS ON)
 endif()
 

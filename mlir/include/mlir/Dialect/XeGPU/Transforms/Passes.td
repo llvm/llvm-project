@@ -67,8 +67,8 @@ def XeGPUBlocking: Pass<"xegpu-blocking"> {
     to a hardware instruction.
   }];
   let dependentDialects = [
-      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
-  ];
+      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect",
+      "index::IndexDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
