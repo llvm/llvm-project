@@ -3098,7 +3098,8 @@ Deactivation Symbol Operand Bundles
 A ``"deactivation-symbol"`` operand bundle is valid on the following
 instructions (AArch64 only):
 
-- Call to a normal function with ``notail`` attribute.
+- Call to a normal function with ``notail`` attribute and a first argument and
+  return value of type ``ptr``.
 - Call to ``llvm.ptrauth.sign`` or ``llvm.ptrauth.auth`` intrinsics.
 
 This operand bundle specifies that if the deactivation symbol is defined
