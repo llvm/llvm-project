@@ -31,35 +31,35 @@ program openacc_loop_validity
   !$acc parallel
   !$acc loop tile(2)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel device_type(*) num_gangs(2)
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop seq
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop independent
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop auto
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -67,35 +67,35 @@ program openacc_loop_validity
   !ERROR: At most one VECTOR clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc loop vector vector(128)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop vector
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop vector(10)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop vector(vector_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop vector(length: vector_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -103,35 +103,35 @@ program openacc_loop_validity
   !ERROR: At most one WORKER clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc loop worker worker(10)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop worker
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop worker(10)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop worker(worker_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop worker(num: worker_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -139,58 +139,58 @@ program openacc_loop_validity
   !ERROR: At most one GANG clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc loop gang gang(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc loop gang device_type(default) gang(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At most one GANG clause can appear on the PARALLEL LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc parallel loop gang gang(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop gang device_type(default) gang(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel
   !$acc loop gang(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop gang(num: gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop gang(gang_size, static:*)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop gang(num: gang_size, static:*)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
   !$acc parallel
   !$acc loop gang(num: gang_size, static: gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -222,7 +222,7 @@ program openacc_loop_validity
   !$acc loop collapse(-1)
   do i = 1, N
     do j = 1, N
-      a(i) = 3.14 + j
+      a(i) = 3.14d0 + j
     end do
   end do
   !$acc end parallel
@@ -231,7 +231,7 @@ program openacc_loop_validity
   !ERROR: Clause PRIVATE is not allowed after clause DEVICE_TYPE on the LOOP directive
   !$acc loop device_type(*) private(i)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -239,7 +239,7 @@ program openacc_loop_validity
   !ERROR: Clause GANG is not allowed if clause SEQ appears on the LOOP directive
   !$acc loop gang seq
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -247,7 +247,7 @@ program openacc_loop_validity
   !ERROR: Clause WORKER is not allowed if clause SEQ appears on the LOOP directive
   !$acc loop worker seq
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -255,7 +255,7 @@ program openacc_loop_validity
   !ERROR: Clause VECTOR is not allowed if clause SEQ appears on the LOOP directive
   !$acc loop vector seq
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -355,7 +355,7 @@ program openacc_loop_validity
   !$acc parallel device_type(*) if(.TRUE.)
   !$acc loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -363,7 +363,7 @@ program openacc_loop_validity
   do i = 1, N
     !ERROR: Loop control is not present in the DO LOOP
     do
-      a(i) = 3.14
+      a(i) = 3.14d0
     end do
   end do
 

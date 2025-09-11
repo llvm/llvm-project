@@ -166,12 +166,8 @@ public:
   // Return false to use default handling. Otherwise, set `Size` to the number
   // of padding bytes.
   virtual bool relaxAlign(MCFragment &F, unsigned &Size) { return false; }
-  virtual bool relaxDwarfLineAddr(MCFragment &, bool &WasRelaxed) const {
-    return false;
-  }
-  virtual bool relaxDwarfCFA(MCFragment &, bool &WasRelaxed) const {
-    return false;
-  }
+  virtual bool relaxDwarfLineAddr(MCFragment &) const { return false; }
+  virtual bool relaxDwarfCFA(MCFragment &) const { return false; }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.

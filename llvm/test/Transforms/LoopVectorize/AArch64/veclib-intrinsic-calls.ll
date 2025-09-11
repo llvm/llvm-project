@@ -1310,7 +1310,8 @@ define void @fma_f64(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; LIBMVEC-SVE-LABEL: define void @fma_f64
 ; LIBMVEC-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-SVE:    [[TMP2:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]], <2 x double> [[WIDE_LOAD]])
+; LIBMVEC-SVE:    [[TMP8:%.*]] = call <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]], <vscale x 2 x double> [[WIDE_LOAD]], <vscale x 2 x double> [[WIDE_LOAD]])
+; LIBMVEC-SVE:    [[CALL:%.*]] = tail call double @llvm.fma.f64(double [[IN:%.*]], double [[IN]], double [[IN]])
 ;
 ; SLEEF-NEON-LABEL: define void @fma_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
@@ -1357,7 +1358,8 @@ define void @fma_f32(ptr noalias %in.ptr, ptr %out.ptr) {
 ;
 ; LIBMVEC-SVE-LABEL: define void @fma_f32
 ; LIBMVEC-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {
-; LIBMVEC-SVE:    [[TMP2:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD]])
+; LIBMVEC-SVE:    [[TMP8:%.*]] = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD]])
+; LIBMVEC-SVE:    [[CALL:%.*]] = tail call float @llvm.fma.f32(float [[IN:%.*]], float [[IN]], float [[IN]])
 ;
 ; SLEEF-NEON-LABEL: define void @fma_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) #[[ATTR1]] {

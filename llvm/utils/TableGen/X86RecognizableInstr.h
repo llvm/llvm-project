@@ -383,6 +383,18 @@ bool isMemoryOperand(const Record *Rec);
 bool isImmediateOperand(const Record *Rec);
 unsigned getRegOperandSize(const Record *RegRec);
 unsigned getMemOperandSize(const Record *MemRec);
+
+/// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
+///   Useful for switch statements and the like.
+///
+/// @param B - A pointer to the BitsInit to be decoded.
+/// @return  - The field, with the first bit in the BitsInit as the lowest
+///            order bit.
+inline uint8_t byteFromBitsInit(const BitsInit *B) {
+  assert(B->getNumBits() <= 8 && "Field is too large for uint8_t!");
+  return static_cast<uint8_t>(*B->convertInitializerToInt());
+}
+
 } // namespace X86Disassembler
 } // namespace llvm
 #endif

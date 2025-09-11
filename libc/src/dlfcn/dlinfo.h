@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int dlinfo(void *restrict, int, void *restrict);
+int dlinfo(void *__restrict, int, void *__restrict);
 
 } // namespace LIBC_NAMESPACE_DECL
 

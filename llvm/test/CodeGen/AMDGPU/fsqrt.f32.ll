@@ -1274,13 +1274,13 @@ define float @v_sqrt_f32_afn_nnan_ninf_nsz(float %x) {
   ret float %result
 }
 
-define float @v_sqrt_f32__approx_func_fp_math(float %x) #2 {
+define float @v_sqrt_f32__approx_func_fp_math(float %x) {
 ; GCN-LABEL: v_sqrt_f32__approx_func_fp_math:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call nsz float @llvm.sqrt.f32(float %x)
+  %result = call afn nsz float @llvm.sqrt.f32(float %x)
   ret float %result
 }
 
@@ -1290,7 +1290,7 @@ define float @v_sqrt_f32__enough_unsafe_attrs(float %x) #3 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_sqrt_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %result = call nsz float @llvm.sqrt.f32(float %x)
+  %result = call afn nsz float @llvm.sqrt.f32(float %x)
   ret float %result
 }
 
@@ -4761,8 +4761,7 @@ declare { float, i32 } @llvm.frexp.f32.i32(float) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { convergent nounwind willreturn memory(none) }
-attributes #2 = { "approx-func-fp-math"="true" }
-attributes #3 = { "approx-func-fp-math"="true" "no-nans-fp-math"="true" "no-infs-fp-math"="true" }
+attributes #3 = { "no-nans-fp-math"="true" "no-infs-fp-math"="true" }
 attributes #5 = { "no-infs-fp-math"="true" }
 
 !0 = !{float 0.5}

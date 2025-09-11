@@ -9,7 +9,7 @@
 #include <clc/opencl/relational/isunordered.h>
 #include <clc/relational/clc_isunordered.h>
 
-#define FUNCTION isunordered
+#define __CLC_FUNCTION isunordered
 #define __CLC_BODY "binary_def.inc"
 
 #include <clc/math/gentype.inc>

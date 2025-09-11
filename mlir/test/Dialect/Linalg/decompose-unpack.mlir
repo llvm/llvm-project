@@ -203,3 +203,20 @@ func.func @unpack_with_non_trailing_dimensions_in_inner_dims(%arg0: tensor<1x1x1
 // CHECK-SAME:                      outs(%[[EMPTY]] : tensor<1x4xf32>) permutation = [1, 0]
 // CHECK:        %[[INSERT:.+]] = tensor.insert_slice %transposed into %[[DEST]][0, 0, 0] [1, 1, 4] [1, 1, 1] : tensor<1x4xf32> into tensor<1x1x4xf32>
 // CHECK:        return %[[INSERT]]
+
+// -----
+
+/// Note "126", which is a non-unit tile-outer-dim. This is not supported.
+
+func.func @negative_non_unit_tiled_outer_dim(%src: tensor<1x126x1x1x8xf32>, %dest: tensor<1x1x1x1001xf32>) -> tensor<1x1x1x1001xf32> {
+  %unpack = linalg.unpack %src
+    outer_dims_perm = [0, 3, 2, 1]
+    inner_dims_pos = [3]
+    inner_tiles = [8]
+    into %dest : tensor<1x126x1x1x8xf32>
+    -> tensor<1x1x1x1001xf32>
+
+  return %unpack : tensor<1x1x1x1001xf32>
+}
+// CHECK-LABEL: @negative_non_unit_tiled_outer_dim(
+// CHECK: linalg.unpack

@@ -8,8 +8,8 @@
 //
 // This pass performs below peephole optimizations on MIR level.
 //
-// 1. MOVi32imm + ANDS?Wrr ==> ANDWri + ANDS?Wri
-//    MOVi64imm + ANDS?Xrr ==> ANDXri + ANDS?Xri
+// 1. MOVi32imm + (ANDS?|EOR|ORR)Wrr ==> (AND|EOR|ORR)Wri + (ANDS?|EOR|ORR)Wri
+//    MOVi64imm + (ANDS?|EOR|ORR)Xrr ==> (AND|EOR|ORR)Xri + (ANDS?|EOR|ORR)Xri
 //
 // 2. MOVi32imm + ADDWrr ==> ADDWRi + ADDWRi
 //    MOVi64imm + ADDXrr ==> ADDXri + ADDXri
@@ -128,6 +128,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   // Strategy used to split logical immediate bitmasks.
   enum class SplitStrategy {
     Intersect,
+    Disjoint,
   };
   template <typename T>
   bool trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
@@ -163,6 +164,7 @@ INITIALIZE_PASS(AArch64MIPeepholeOpt, "aarch64-mi-peephole-opt",
 template <typename T>
 static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
   T UImm = static_cast<T>(Imm);
+  assert(UImm && (UImm != ~static_cast<T>(0)) && "Invalid immediate!");
 
   // The bitmask immediate consists of consecutive ones.  Let's say there is
   // constant 0b00000000001000000000010000000000 which does not consist of
@@ -191,18 +193,47 @@ static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
 }
 
 template <typename T>
+static bool splitDisjointBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc,
+                                    T &Imm2Enc) {
+  assert(Imm && (Imm != ~static_cast<T>(0)) && "Invalid immediate!");
+
+  // Try to split a bitmask of the form 0b00000000011000000000011110000000 into
+  // two disjoint masks such as 0b00000000011000000000000000000000 and
+  // 0b00000000000000000000011110000000 where the inclusive/exclusive OR of the
+  // new masks match the original mask.
+  unsigned LowestBitSet = llvm::countr_zero(Imm);
+  unsigned LowestGapBitUnset =
+      LowestBitSet + llvm::countr_one(Imm >> LowestBitSet);
+
+  // Create a mask for the least significant group of consecutive ones.
+  assert(LowestGapBitUnset < sizeof(T) * CHAR_BIT && "Undefined behaviour!");
+  T NewImm1 = (static_cast<T>(1) << LowestGapBitUnset) -
+              (static_cast<T>(1) << LowestBitSet);
+  // Create a disjoint mask for the remaining ones.
+  T NewImm2 = Imm & ~NewImm1;
+
+  // Do not split if NewImm2 is not a valid bitmask immediate.
+  if (!AArch64_AM::isLogicalImmediate(NewImm2, RegSize))
+    return false;
+
+  Imm1Enc = AArch64_AM::encodeLogicalImmediate(NewImm1, RegSize);
+  Imm2Enc = AArch64_AM::encodeLogicalImmediate(NewImm2, RegSize);
+  return true;
+}
+
+template <typename T>
 bool AArch64MIPeepholeOpt::trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
                                               SplitStrategy Strategy,
                                               unsigned OtherOpc) {
-  // Try below transformation.
+  // Try below transformations.
   //
-  // MOVi32imm + ANDS?Wrr ==> ANDWri + ANDS?Wri
-  // MOVi64imm + ANDS?Xrr ==> ANDXri + ANDS?Xri
+  // MOVi32imm + (ANDS?|EOR|ORR)Wrr ==> (AND|EOR|ORR)Wri + (ANDS?|EOR|ORR)Wri
+  // MOVi64imm + (ANDS?|EOR|ORR)Xrr ==> (AND|EOR|ORR)Xri + (ANDS?|EOR|ORR)Xri
   //
   // The mov pseudo instruction could be expanded to multiple mov instructions
   // later. Let's try to split the constant operand of mov instruction into two
-  // bitmask immediates. It makes only two AND instructions instead of multiple
-  // mov + and instructions.
+  // bitmask immediates based on the given split strategy. It makes only two
+  // logical instructions instead of multiple mov + logic instructions.
 
   return splitTwoPartImm<T>(
       MI,
@@ -223,6 +254,9 @@ bool AArch64MIPeepholeOpt::trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
         switch (Strategy) {
         case SplitStrategy::Intersect:
           SplitSucc = splitBitmaskImm(Imm, RegSize, Imm0, Imm1);
+          break;
+        case SplitStrategy::Disjoint:
+          SplitSucc = splitDisjointBitmaskImm(Imm, RegSize, Imm0, Imm1);
           break;
         }
         if (SplitSucc)
@@ -888,6 +922,22 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
       case AArch64::ANDSXrr:
         Changed |= trySplitLogicalImm<uint64_t>(
             AArch64::ANDXri, MI, SplitStrategy::Intersect, AArch64::ANDSXri);
+        break;
+      case AArch64::EORWrr:
+        Changed |= trySplitLogicalImm<uint32_t>(AArch64::EORWri, MI,
+                                                SplitStrategy::Disjoint);
+        break;
+      case AArch64::EORXrr:
+        Changed |= trySplitLogicalImm<uint64_t>(AArch64::EORXri, MI,
+                                                SplitStrategy::Disjoint);
+        break;
+      case AArch64::ORRWrr:
+        Changed |= trySplitLogicalImm<uint32_t>(AArch64::ORRWri, MI,
+                                                SplitStrategy::Disjoint);
+        break;
+      case AArch64::ORRXrr:
+        Changed |= trySplitLogicalImm<uint64_t>(AArch64::ORRXri, MI,
+                                                SplitStrategy::Disjoint);
         break;
       case AArch64::ORRWrs:
         Changed |= visitORR(MI);

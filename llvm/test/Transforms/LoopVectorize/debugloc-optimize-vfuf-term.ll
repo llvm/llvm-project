@@ -6,7 +6,7 @@
 define i32 @foo(ptr %p) {
 ; CHECK-LABEL: define i32 @foo(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -16,10 +16,9 @@ define i32 @foo(ptr %p) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]], !dbg [[DBG3]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], !dbg [[DBG7]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 0 to i8, !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    store i8 [[CONV]], ptr [[P]], align 1, !dbg [[DBG3]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1, !dbg [[DBG9:![0-9]+]]

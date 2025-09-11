@@ -3322,6 +3322,14 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 6); // soffset
       return;
     }
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(B, MI, 5);
+      return;
+    }
     case Intrinsic::amdgcn_load_to_lds:
     case Intrinsic::amdgcn_global_load_lds: {
       applyDefaultMapping(OpdMapper);
@@ -3338,10 +3346,21 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 8); // M0
       return;
+    case Intrinsic::amdgcn_cluster_load_b32:
+    case Intrinsic::amdgcn_cluster_load_b64:
+    case Intrinsic::amdgcn_cluster_load_b128: {
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(B, MI, 4); // M0
+      return;
+    }
     case Intrinsic::amdgcn_s_sleep_var:
       assert(OpdMapper.getVRegs(1).empty());
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
+    case Intrinsic::amdgcn_s_barrier_join:
+      constrainOpWithReadfirstlane(B, MI, 1);
+      return;
+    case Intrinsic::amdgcn_s_barrier_init:
     case Intrinsic::amdgcn_s_barrier_signal_var:
       constrainOpWithReadfirstlane(B, MI, 1);
       constrainOpWithReadfirstlane(B, MI, 2);
@@ -5462,6 +5481,27 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
+    case Intrinsic::amdgcn_cluster_load_b32:
+    case Intrinsic::amdgcn_cluster_load_b64:
+    case Intrinsic::amdgcn_cluster_load_b128: {
+      OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned M0Bank =
+          getRegBankID(MI.getOperand(4).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[4] = AMDGPU::getValueMapping(M0Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+    case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
+      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned M0Bank =
+          getRegBankID(MI.getOperand(5).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[5] = AMDGPU::getValueMapping(M0Bank, 32);
+      break;
+    }
     case Intrinsic::amdgcn_global_store_async_from_lds_b8:
     case Intrinsic::amdgcn_global_store_async_from_lds_b32:
     case Intrinsic::amdgcn_global_store_async_from_lds_b64:
@@ -5515,6 +5555,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_s_sleep_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
+    case Intrinsic::amdgcn_s_barrier_join:
+      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      break;
+    case Intrinsic::amdgcn_s_barrier_init:
     case Intrinsic::amdgcn_s_barrier_signal_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);

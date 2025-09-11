@@ -137,7 +137,7 @@ func.func @transfer_read_1d_mask_in_bounds(
 // Non-contiguous, strided store.
 func.func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fn1 = arith.constant -1.0 : f32
-  %vf0 = vector.splat %fn1 : vector<7xf32>
+  %vf0 = vector.broadcast %fn1 : f32 to vector<7xf32>
   vector.transfer_write %vf0, %A[%base1, %base2]
     {permutation_map = affine_map<(d0, d1) -> (d0)>}
     : vector<7xf32>, memref<?x?xf32>
@@ -147,7 +147,7 @@ func.func @transfer_write_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : inde
 // Non-contiguous, strided store.
 func.func @transfer_write_1d_mask(%A : memref<?x?xf32>, %base1 : index, %base2 : index) {
   %fn1 = arith.constant -2.0 : f32
-  %vf0 = vector.splat %fn1 : vector<7xf32>
+  %vf0 = vector.broadcast %fn1 : f32 to vector<7xf32>
   %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1]> : vector<7xi1>
   vector.transfer_write %vf0, %A[%base1, %base2], %mask
     {permutation_map = affine_map<(d0, d1) -> (d0)>}

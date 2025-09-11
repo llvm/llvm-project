@@ -13,20 +13,20 @@
 ; RUN: %python %S/../../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ;
 ; When the bounds are very wide ("no bounds"), all inlinings happen.
-; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=%t1 -enable-ml-inliner=development -ml-advisor-size-increase-threshold=10.0 -S < %s | FileCheck %s --check-prefixes=NOBOUNDS-OUT,CHECK
+; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-model-under-training=%t -training-log=%t1 -enable-ml-inliner=development -ml-advisor-size-increase-threshold=10.0 -S < %s | FileCheck %s --check-prefixes=NOBOUNDS-OUT,CHECK
 ; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t1 | FileCheck %s --check-prefix=NOBOUNDS
 ;
 ; When the bounds are very restrictive, the first inlining happens but it's
 ; considered as "bad" (since it trips over the bounds) and its reward is a
 ; penalty. However, the mandatory inlining, which is considered next, happens.
 ; No other inlinings happend.
-; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=%t2 -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.0 -S < %s | FileCheck %s --check-prefixes=BOUNDS-OUT,CHECK
+; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-model-under-training=%t -training-log=%t2 -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.0 -S < %s | FileCheck %s --check-prefixes=BOUNDS-OUT,CHECK
 ; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t2 | FileCheck %s --check-prefix=BOUNDS
 ;
 ; With more restrictive bounds, the first inlining happens and is OK. The
 ; mandatory inlining happens next, and it trips over the bounds, which then
 ; forces no further inlinings.
-; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=%t3 -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.1 -S < %s | FileCheck %s --check-prefixes=RELAXED-BOUNDS-OUT,CHECK
+; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-model-under-training=%t -training-log=%t3 -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.2 -S < %s | FileCheck %s --check-prefixes=RELAXED-BOUNDS-OUT,CHECK
 ; RUN: %python %S/../../../../lib/Analysis/models/log_reader.py %t3 | FileCheck %s --check-prefix=RELAXED-BOUNDS
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -52,15 +52,16 @@ define i64 @top() {
 }
 attributes #0 = { alwaysinline }
 ; NOBOUNDS: observation: 0
-; NOBOUNDS: delta_size: 6
-; RELAXED-BOUNDS: delta_size: 6
-; BOUNDS: delta_size: 2147483647
+; NOBOUNDS: inlining_decision: 1
+; RELAXED-BOUNDS: inlining_decision: 1
+; BOUNDS: inlining_decision: 1
 ; NOBOUNDS: observation: 1
-; BOUNDS-NOT: observation
-; RELAXED-BOUNDS-NOT: observation
-; NOBOUNDS: delta_size: -11
+; BOUNDS-NOT: observation: 1
+; RELAXED-BOUNDS: observation: 1
+; NOBOUNDS: inlining_decision: 1
 ; NOBOUNDS: observation: 2
-; NOBOUNDS: delta_size: 4
+; NOBOUNDS: inlining_decision
+; RELAXED-BOUNDS-NOT: observation: 2
 
 ; CHECK-LABEL: @top
 ; must_be_inlined must always be inlined, so we won't find a call to it in @top()

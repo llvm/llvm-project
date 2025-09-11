@@ -8,14 +8,14 @@
 
 #include <clc/opencl/atomic/atomic_cmpxchg.h>
 
-#define IMPL(TYPE, AS)                                                         \
+#define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_cmpxchg(volatile AS TYPE *p, TYPE cmp,    \
                                              TYPE val) {                       \
     return __sync_val_compare_and_swap(p, cmp, val);                           \
   }
 
-IMPL(int, global)
-IMPL(unsigned int, global)
-IMPL(int, local)
-IMPL(unsigned int, local)
-#undef IMPL
+__CLC_IMPL(int, global)
+__CLC_IMPL(unsigned int, global)
+__CLC_IMPL(int, local)
+__CLC_IMPL(unsigned int, local)
+#undef __CLC_IMPL

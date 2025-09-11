@@ -46,7 +46,7 @@ enums:
     standards:
       - gnu
     value: 2
-  - name: RTLD_DI_CONFIGADDR,
+  - name: RTLD_DI_CONFIGADDR
     standards:
       - gnu
     value: 3
@@ -127,5 +127,5 @@ functions:
       - POSIX
     return_type: int
     arguments:
-      - type: const void *
-      - type: Dl_info *
+      - type: const void *__restrict
+      - type: Dl_info *__restrict

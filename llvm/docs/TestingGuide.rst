@@ -834,7 +834,7 @@ Besides replacing LLVM tool names, the following substitutions are performed in
    Invokes the Clang driver.
 
 ``%clang_cpp``
-   Invokes the Clang driver for C++.
+   Invokes the Clang driver as the preprocessor.
 
 ``%clang_cl``
    Invokes the CL-compatible Clang driver.

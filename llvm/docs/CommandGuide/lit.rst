@@ -399,6 +399,11 @@ ADDITIONAL OPTIONS
  Show all features used in the test suite (in ``XFAIL``, ``UNSUPPORTED`` and
  ``REQUIRES``) and exit.
 
+.. option:: --update-tests
+
+ Pass failing tests to functions in the ``lit_config.test_updaters`` list to
+ check whether any of them know how to update the test to make it pass.
+
 EXIT STATUS
 -----------
 

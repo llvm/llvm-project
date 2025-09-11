@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
@@ -44,7 +45,7 @@ namespace dxbc {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
-  assert(Kind <= Triple::Amplification - Triple::Pixel &&
+  assert(Kind <= Triple::RootSignature - Triple::Pixel &&
          "Shader kind out of expected range.");
   return static_cast<Triple::EnvironmentType>(Triple::Pixel + Kind);
 }
@@ -191,13 +192,6 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
     return true;
@@ -206,6 +200,10 @@ inline bool isValidParameterType(uint32_t V) {
 #include "DXContainerConstants.def"
   }
   return false;
+}
+
+inline bool isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,

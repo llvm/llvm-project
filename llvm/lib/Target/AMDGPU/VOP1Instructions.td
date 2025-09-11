@@ -71,7 +71,6 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let isCodeGenOnly = 0;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
@@ -80,7 +79,6 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -584,7 +582,6 @@ def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
 let SubtargetPredicate = isGFX9Plus in {
   def V_SWAP_B32 : VOP1_Pseudo<"v_swap_b32", VOP_SWAP_I32, [], 1> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
-    let DisableEncoding = "$vdst1,$src1";
     let SchedRW = [Write64Bit, Write64Bit];
   }
 
@@ -706,7 +703,6 @@ def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12PlusNot12_50 in
     defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
   let SubtargetPredicate = isGFX125xOnly in
@@ -731,7 +727,6 @@ class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst, bit HasOpSe
 >;
 
 let OtherPredicates = [HasFP8ConversionInsts] in {
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12PlusNot12_50 in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_OP_SEL_e64>;
   let SubtargetPredicate = isGFX125xOnly in {
@@ -740,7 +735,6 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
     def : GCNPat<(int_amdgcn_cvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
                  (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
   }
-  // FIXME: This differs from downstream due to changes that haven't been upstreamed yet.
   let SubtargetPredicate = isGFX12Plus in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
 }
@@ -805,7 +799,6 @@ let SubtargetPredicate = isGFX10Plus in {
 
     def V_SWAPREL_B32 : VOP1_Pseudo<"v_swaprel_b32", VOP_SWAP_I32, [], 1> {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
-      let DisableEncoding = "$vdst1,$src1";
       let SchedRW = [Write64Bit, Write64Bit];
     }
   } // End Uses = [M0]
@@ -834,7 +827,6 @@ def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
 let SubtargetPredicate = isGFX11Plus in {
   def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], /* VOP1Only= */true> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
-    let DisableEncoding = "$vdst1, $src1";
     let SchedRW = [Write64Bit, Write64Bit];
     let True16Predicate = UseRealTrue16Insts;
   }
@@ -852,7 +844,6 @@ let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
-     DisableEncoding="$vdst_in,$src0_out",
      SchedRW = [Write32Bit, Write32Bit],
      isConvergent = 1 in {
 let SubtargetPredicate = HasPermlane16Swap in {
@@ -1057,11 +1048,6 @@ multiclass VOP1Only_Real_gfx11_gfx12<bits<9> op> :
 
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
-
-multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
-                                             string opName, string asmName> :
-  VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
-  VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
 
 multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250<
     bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {

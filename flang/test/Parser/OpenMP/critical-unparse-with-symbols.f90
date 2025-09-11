@@ -13,9 +13,9 @@ end
 !UNPARSE:  implicit none
 !UNPARSE:  !DEF: /f/x ObjectEntity INTEGER(4)
 !UNPARSE:  integer x
-!UNPARSE: !$omp critical (c)
+!UNPARSE: !$omp critical(c)
 !UNPARSE:  !REF: /f/x
 !UNPARSE:  x = 0
-!UNPARSE: !$omp end critical (c)
+!UNPARSE: !$omp end critical(c)
 !UNPARSE: end subroutine
 

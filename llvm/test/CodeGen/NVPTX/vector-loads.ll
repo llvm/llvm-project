@@ -154,7 +154,7 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [foo_complex_param_0];
@@ -166,11 +166,12 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 ; CHECK-NEXT:    shl.b32 %r6, %r1, 1;
 ; CHECK-NEXT:    or.b32 %r7, %r5, %r6;
 ; CHECK-NEXT:    cvt.u64.u32 %rd2, %r7;
-; CHECK-NEXT:    mad.wide.u32 %rd3, %r3, 131072, %rd1;
-; CHECK-NEXT:    add.s64 %rd4, %rd3, %rd2;
-; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd4+128];
+; CHECK-NEXT:    mul.wide.u32 %rd3, %r3, 131072;
+; CHECK-NEXT:    add.s64 %rd4, %rd1, %rd3;
+; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd2;
+; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd5+128];
 ; CHECK-NEXT:    max.u16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    st.b8 [%rd4+129], %rs3;
+; CHECK-NEXT:    st.b8 [%rd5+129], %rs3;
 ; CHECK-NEXT:    ret;
   %t0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x(), !range !1
   %t1 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
@@ -206,18 +207,18 @@ define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst
 ; CHECK-NEXT:    ld.param.b64 %rd1, [extv8f16_global_a16_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [extv8f16_global_a16_param_1];
 ; CHECK-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd2];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    cvt.f32.f16 %r5, %rs2;
-; CHECK-NEXT:    cvt.f32.f16 %r6, %rs1;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    cvt.f32.f16 %r7, %rs4;
-; CHECK-NEXT:    cvt.f32.f16 %r8, %rs3;
-; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
-; CHECK-NEXT:    cvt.f32.f16 %r9, %rs6;
-; CHECK-NEXT:    cvt.f32.f16 %r10, %rs5;
-; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
-; CHECK-NEXT:    cvt.f32.f16 %r11, %rs8;
-; CHECK-NEXT:    cvt.f32.f16 %r12, %rs7;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
+; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; CHECK-NEXT:    cvt.f32.f16 %r5, %rs8;
+; CHECK-NEXT:    cvt.f32.f16 %r6, %rs7;
+; CHECK-NEXT:    cvt.f32.f16 %r7, %rs6;
+; CHECK-NEXT:    cvt.f32.f16 %r8, %rs5;
+; CHECK-NEXT:    cvt.f32.f16 %r9, %rs4;
+; CHECK-NEXT:    cvt.f32.f16 %r10, %rs3;
+; CHECK-NEXT:    cvt.f32.f16 %r11, %rs2;
+; CHECK-NEXT:    cvt.f32.f16 %r12, %rs1;
 ; CHECK-NEXT:    st.global.v4.b32 [%rd1+16], {%r12, %r11, %r10, %r9};
 ; CHECK-NEXT:    st.global.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;
@@ -270,18 +271,18 @@ define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalia
 ; CHECK-NEXT:    ld.param.b64 %rd1, [extv8f16_generic_a16_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [extv8f16_generic_a16_param_1];
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd2];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    cvt.f32.f16 %r5, %rs2;
-; CHECK-NEXT:    cvt.f32.f16 %r6, %rs1;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    cvt.f32.f16 %r7, %rs4;
-; CHECK-NEXT:    cvt.f32.f16 %r8, %rs3;
-; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
-; CHECK-NEXT:    cvt.f32.f16 %r9, %rs6;
-; CHECK-NEXT:    cvt.f32.f16 %r10, %rs5;
-; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
-; CHECK-NEXT:    cvt.f32.f16 %r11, %rs8;
-; CHECK-NEXT:    cvt.f32.f16 %r12, %rs7;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
+; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
+; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
+; CHECK-NEXT:    cvt.f32.f16 %r5, %rs8;
+; CHECK-NEXT:    cvt.f32.f16 %r6, %rs7;
+; CHECK-NEXT:    cvt.f32.f16 %r7, %rs6;
+; CHECK-NEXT:    cvt.f32.f16 %r8, %rs5;
+; CHECK-NEXT:    cvt.f32.f16 %r9, %rs4;
+; CHECK-NEXT:    cvt.f32.f16 %r10, %rs3;
+; CHECK-NEXT:    cvt.f32.f16 %r11, %rs2;
+; CHECK-NEXT:    cvt.f32.f16 %r12, %rs1;
 ; CHECK-NEXT:    st.v4.b32 [%rd1+16], {%r12, %r11, %r10, %r9};
 ; CHECK-NEXT:    st.v4.b32 [%rd1], {%r8, %r7, %r6, %r5};
 ; CHECK-NEXT:    ret;

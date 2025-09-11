@@ -150,6 +150,10 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+      Loc = MemoryLocation::getForArgument(II, 0, TLI);
+      // These intrinsics don't really modify the memory, but returning Mod
+      // will allow them to be handled conservatively.
+      return ModRefInfo::Mod;
     case Intrinsic::invariant_start:
       Loc = MemoryLocation::getForArgument(II, 1, TLI);
       // These intrinsics don't really modify the memory, but returning Mod
@@ -441,11 +445,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       Intrinsic::ID ID = II->getIntrinsicID();
       switch (ID) {
       case Intrinsic::lifetime_start: {
-        // FIXME: This only considers queries directly on the invariant-tagged
-        // pointer, not on query pointers that are indexed off of them.  It'd
-        // be nice to handle that at some point (the right approach is to use
-        // GetPointerBaseWithConstantOffset).
-        MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(1));
+        MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(0));
         if (BatchAA.isMustAlias(ArgLoc, MemLoc))
           return MemDepResult::getDef(II);
         continue;
