@@ -99,11 +99,10 @@ void llvm::detachDeadBlocks(
 
       // Catchswitch instructions have handlers, that must be catchpads and
       // an unwind label, that is either a catchpad or catchswitch.
-      CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(&I);
-      if (CSI)
-        // Iterating over the handlers and the unwind basic block and precssing
+      if (CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(&I)) {
+        // Iterating over the handlers and the unwind basic block and processing
         // catchpads. If the unwind label is a catchswitch, we just replace the
-        // label wit poison later on.
+        // label with poison later on.
         for (unsigned I = 0; I < CSI->getNumSuccessors(); I++) {
           BasicBlock *SucBlock = CSI->getSuccessor(I);
           Instruction &SucFstInst = *(SucBlock->getFirstNonPHIIt());
@@ -117,6 +116,8 @@ void llvm::detachDeadBlocks(
             SucFstInst.eraseFromParent();
           }
         }
+      }
+
       // Because control flow can't get here, we don't care what we replace the
       // value with.  Note that since this block is unreachable, and all values
       // contained within it must dominate their uses, that all uses will
