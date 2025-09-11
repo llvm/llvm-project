@@ -11967,13 +11967,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     auto SourceLen = SourceF.getVectorLength();
     SmallVector<APValue, 32> ResultElements;
     ResultElements.reserve(SourceLen);
-    auto BitIndex = E->getBuiltinCallee() == X86::BI__builtin_ia32_pblendw256
-                        ? [](unsigned I) { return I % 8; }
-                        : [](unsigned I) { return I; };
     for (unsigned EltNum = 0; EltNum != SourceLen; ++EltNum) {
       const APValue &F = SourceF.getVectorElt(EltNum);
       const APValue &T = SourceT.getVectorElt(EltNum);
-      ResultElements.push_back(C[BitIndex(EltNum)] ? T : F);
+      ResultElements.push_back(C[EltNum % 8] ? T : F);
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);

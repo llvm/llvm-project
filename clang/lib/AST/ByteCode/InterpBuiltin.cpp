@@ -2845,11 +2845,8 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
   PrimType ElemT = FalseElem.getFieldDesc()->getPrimType();
   PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
 
-  auto BitIndex = BuiltinID == X86::BI__builtin_ia32_pblendw256
-                      ? [](unsigned I) { return I % 8; }
-                      : [](unsigned I) { return I; };
   for (unsigned I = 0; I != NumElems; ++I) {
-    bool MaskBit = Mask[BitIndex(I)];
+    bool MaskBit = Mask[I % 8];
     if (ElemT == PT_Float) {
       assert(DstElemT == PT_Float);
       Dst.elem<Floating>(I) =
