@@ -1,4 +1,5 @@
 # REQUIRES: github-actions
+# RUN: rm -rf %host_cmake_install_prefix
 # RUN: "%cmake_exe" --build "%llvm_obj_root" --target install
 # RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
