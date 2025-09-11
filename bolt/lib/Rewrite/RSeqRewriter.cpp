@@ -45,7 +45,7 @@ public:
         if (BF) {
           BC.outs() << "BOLT-INFO: restartable sequence detected in " << *BF
                     << ". Function will not be optimized\n";
-          BF->setSimple(false);
+          BF->setIgnored();
         } else {
           BC.errs() << "BOLT-WARNING: no function found matching dynamic "
                        "relocation in __rseq_cs\n";
