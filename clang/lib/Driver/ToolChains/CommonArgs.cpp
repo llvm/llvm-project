@@ -3003,27 +3003,39 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
 
 void tools::addOpenCLBuiltinsLib(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,
-                                 llvm::opt::ArgStringList &CC1Args) {
+                                 llvm::opt::ArgStringList &CC1Args,
+                                 const StringRef InferredLibclcLibName) {
   // Check whether user specifies a libclc bytecode library
-  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib,
+                                       options::OPT_libclc_lib_EQ);
   if (!A)
     return;
+
+  bool IsEQOpt = A->getOption().matches(options::OPT_libclc_lib_EQ);
 
   // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
   SmallString<128> LibclcPath(D.ResourceDir);
   llvm::sys::path::append(LibclcPath, "lib", "libclc");
 
   // If the namespec is of the form :filename, search for that file.
-  StringRef LibclcNamespec(A->getValue());
-  bool FilenameSearch = LibclcNamespec.consume_front(":");
-  SmallString<128> LibclcTargetFile(LibclcNamespec);
+  bool FilenameSearch = false;
+  SmallString<128> LibclcTargetFile;
+
+  if (IsEQOpt) {
+    StringRef LibclcNamespec(A->getValue());
+    FilenameSearch = LibclcNamespec.consume_front(":");
+    LibclcTargetFile = LibclcNamespec;
+  } else {
+    assert(!InferredLibclcLibName.empty() && "No inferred libclc name");
+    LibclcTargetFile = InferredLibclcLibName;
+  }
 
   if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
   } else {
     // Search the library paths for the file
-    if (!FilenameSearch)
+    if (!FilenameSearch && IsEQOpt)
       LibclcTargetFile += ".bc";
 
     llvm::sys::path::append(LibclcPath, LibclcTargetFile);
