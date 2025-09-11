@@ -547,7 +547,7 @@ benchmark-comparison)
     LIT_ARGS="-sv -j1 --param optimization=speed libcxx/test/benchmarks/hash.bench.cpp libcxx/test/benchmarks/join_view.bench.cpp"
 
     if [[ "${GITHUB_BASE_REF}" != "" ]]; then # triggered from a PR
-        baseline_commit=$(git merge-base refs/heads/${GITHUB_BASE_REF} ${GITHUB_SHA})
+        baseline_commit=$(git merge-base refs/remotes/origin/${GITHUB_BASE_REF} ${GITHUB_SHA})
     else
         baseline_commit=$(git merge-base main HEAD)
     fi
