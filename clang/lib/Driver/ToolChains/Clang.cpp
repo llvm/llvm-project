@@ -4608,6 +4608,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                    KeyInstructionsOnByDefault))
     CmdArgs.push_back("-gkey-instructions");
 
+  if (!Args.hasFlag(options::OPT_gstructor_decl_linkage_names,
+                    options::OPT_gno_structor_decl_linkage_names, true))
+    CmdArgs.push_back("-gno-structor-decl-linkage-names");
+
   if (EmitCodeView) {
     CmdArgs.push_back("-gcodeview");
 
@@ -6756,7 +6760,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
         !Triple.isX86() &&
         !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
-                                Triple.getArch() == llvm::Triple::ppc64)))
+                                Triple.getArch() == llvm::Triple::ppc64 ||
+                                Triple.getArch() == llvm::Triple::ppc64le)))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||

@@ -1,6 +1,4 @@
-// Needs symlinks
-// UNSUPPORTED: system-windows
-// REQUIRES: x86-registered-target
+// REQUIRES: x86-registered-target, symlinks
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: ln -s %clang %t/i386-clang
