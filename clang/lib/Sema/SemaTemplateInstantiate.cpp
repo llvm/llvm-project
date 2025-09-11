@@ -1406,7 +1406,8 @@ namespace {
     bool BailOutOnIncomplete;
 
     // Whether to rebuild pack expansion types; We don't do that when
-    // rebuilding a fold expression appearing in a constraint expression.
+    // rebuilding the parameter mapping of a fold expression appearing
+    // in a constraint expression.
     bool BuildPackExpansionTypes = true;
 
     // CWG2770: Function parameters should be instantiated when they are
