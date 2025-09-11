@@ -7769,7 +7769,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
-    return AMDGPU::isGFX1250(ST) &&
+    return ST.hasClusters() &&
            legalizeConstHwRegRead(MI, B, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return ST.hasClusters() &&
