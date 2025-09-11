@@ -1,4 +1,5 @@
-// REQUIRES: shell
+// Needs symlinks
+// UNSUPPORTED: system-windows
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
 // RUN: mkdir -p %t.dir
