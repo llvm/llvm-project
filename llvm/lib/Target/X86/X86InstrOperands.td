@@ -141,6 +141,11 @@ def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
 }
 
+def i64mem_w64TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
+  let MIOperandInfo = (ops GR64_TCW64, i8imm,
+                       GR64_TCW64, i32imm, SEGMENT_REG);
+}
+
 // Special parser to detect 16-bit mode to select 16-bit displacement.
 def X86AbsMemMode16AsmOperand : AsmOperandClass {
   let Name = "AbsMemMode16";

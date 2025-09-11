@@ -30,6 +30,10 @@ struct MDProfLabels {
   LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
 
+/// Profile-based loop metadata that should be accessed only by using
+/// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
+LLVM_ABI extern const char *LLVMLoopEstimatedTripCount;
+
 /// Checks if an Instruction has MD_prof Metadata
 LLVM_ABI bool hasProfMD(const Instruction &I);
 
