@@ -63,7 +63,7 @@ public:
     if (Line.Level >= IndentForLevel.size())
       IndentForLevel.resize(Line.Level + 1, -1);
     if (Style.IndentPPDirectives == FormatStyle::PPDIS_Leave &&
-        Line.InPPDirective) {
+        (Line.InPPDirective || Line.Type == LT_CommentAbovePPDirective)) {
       Indent = Line.InMacroBody
                    ? (Line.Level - Line.PPLevel) * Style.IndentWidth +
                          AdditionalIndent

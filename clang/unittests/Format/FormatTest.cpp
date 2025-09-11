@@ -5585,6 +5585,13 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                  "}\n"
                  "  #endif",
                  style);
+  verifyNoChange("#ifdef foo\n"
+                 "#else\n"
+                 "/* This is a comment */\n"
+                 "#ifdef BAR\n"
+                 "#endif\n"
+                 "#endif",
+                 style);
 
   style.IndentWidth = 1;
   style.PPIndentWidth = 4;
