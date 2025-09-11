@@ -677,20 +677,20 @@ spirv::Deserializer::processGraphEntryPointARM(ArrayRef<uint32_t> operands) {
   }
 
   unsigned wordIndex = 0;
-  uint32_t grID = operands[wordIndex++];
-  if (!graphMap.count(grID)) {
+  uint32_t graphID = operands[wordIndex++];
+  if (!graphMap.contains(graphID)) {
     return emitError(unknownLoc,
                      "missing graph definition/declaration with id ")
-           << grID;
+           << graphID;
   }
 
-  spirv::GraphARMOp graphARM = graphMap[grID];
+  spirv::GraphARMOp graphARM = graphMap[graphID];
   StringRef name = decodeStringLiteral(operands, wordIndex);
   graphARM.setSymName(name);
   graphARM.setEntryPoint(true);
 
   SmallVector<Attribute, 4> interface;
-  for (int64_t size = operands.size(); wordIndex < size; wordIndex++) {
+  for (int64_t size = operands.size(); wordIndex < size; ++wordIndex) {
     if (spirv::GlobalVariableOp arg = getGlobalVariable(operands[wordIndex])) {
       interface.push_back(SymbolRefAttr::get(arg.getOperation()));
     } else {
@@ -729,22 +729,22 @@ spirv::Deserializer::processGraphARM(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "expected at least one result");
   }
 
-  uint32_t grID = operands[1];
-  if (graphMap.count(grID)) {
+  uint32_t graphID = operands[1];
+  if (graphMap.count(graphID)) {
     return emitError(unknownLoc, "duplicate graph definition/declaration");
   }
 
-  std::string grName = getGraphSymbol(grID);
+  std::string graphName = getGraphSymbol(graphID);
   auto graphOp =
-      opBuilder.create<spirv::GraphARMOp>(unknownLoc, grName, graphType);
-  curGraph = graphMap[grID] = graphOp;
+      opBuilder.create<spirv::GraphARMOp>(unknownLoc, graphName, graphType);
+  curGraph = graphMap[graphID] = graphOp;
   Block *entryBlock = graphOp.addEntryBlock();
   LLVM_DEBUG({
     logger.startLine()
         << "//===-------------------------------------------===//\n";
-    logger.startLine() << "[graph] name: " << grName << "\n";
+    logger.startLine() << "[graph] name: " << graphName << "\n";
     logger.startLine() << "[graph] type: " << graphType << "\n";
-    logger.startLine() << "[graph] ID: " << grID << "\n";
+    logger.startLine() << "[graph] ID: " << graphID << "\n";
     logger.startLine() << "[graph] entry block: " << entryBlock << "\n";
     logger.indent();
   });
@@ -795,8 +795,8 @@ spirv::Deserializer::processGraphARM(ArrayRef<uint32_t> operands) {
   // deserializing the body of this function.
   OpBuilder::InsertionGuard moduleInsertionGuard(opBuilder);
 
-  blockMap[grID] = entryBlock;
-  if (failed(createGraphBlock(grID))) {
+  blockMap[graphID] = entryBlock;
+  if (failed(createGraphBlock(graphID))) {
     return failure();
   }
 
@@ -1535,7 +1535,7 @@ spirv::Deserializer::processGraphTypeARM(ArrayRef<uint32_t> operands) {
   uint32_t numInputs = operands[1];
   SmallVector<Type, 1> argTypes;
   SmallVector<Type, 1> returnTypes;
-  for (unsigned i = 2; i < size; i++) {
+  for (unsigned i = 2; i < size; ++i) {
     Type inOutTy = getType(operands[i]);
     if (!inOutTy) {
       return emitError(unknownLoc,

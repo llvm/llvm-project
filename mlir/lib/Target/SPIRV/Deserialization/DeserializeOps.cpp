@@ -90,8 +90,8 @@ Value spirv::Deserializer::getValue(uint32_t id) {
           graphConstantARMInfo = getGraphConstantARM(id)) {
     IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
     Type resultType = graphConstantARMInfo->resultType;
-    return opBuilder.create<spirv::GraphConstantARMOp>(unknownLoc, resultType,
-                                                       graphConstantID);
+    return spirv::GraphConstantARMOp::create(opBuilder, unknownLoc, resultType,
+                                             graphConstantID);
   }
   return valueMap.lookup(id);
 }

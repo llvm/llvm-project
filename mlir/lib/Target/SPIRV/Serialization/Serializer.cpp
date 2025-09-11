@@ -889,20 +889,18 @@ Serializer::prepareGraphType(Location loc, GraphType type,
 
   operands.push_back(type.getNumInputs());
 
-  for (const Type &res : type.getInputs()) {
+  for (Type argType : type.getInputs()) {
     uint32_t argTypeID = 0;
-    if (failed(processType(loc, res, argTypeID))) {
+    if (failed(processType(loc, argType, argTypeID)))
       return failure();
-    }
     operands.push_back(argTypeID);
   }
 
-  for (const Type &res : type.getResults()) {
-    uint32_t resultID = 0;
-    if (failed(processType(loc, res, resultID))) {
+  for (Type resType : type.getResults()) {
+    uint32_t resTypeID = 0;
+    if (failed(processType(loc, resType, resTypeID)))
       return failure();
-    }
-    operands.push_back(resultID);
+    operands.push_back(resTypeID);
   }
 
   return success();
