@@ -150,7 +150,7 @@ void test_compress_store(v8b m, v8i v, v8i *p) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[IDX_ADDR]], align 32
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], <8 x i32> [[TMP3]]
-// CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP5]], i32 1, <8 x i1> [[TMP2]], <8 x i32> poison)
+// CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP5]], i32 4, <8 x i1> [[TMP2]], <8 x i32> poison)
 // CHECK-NEXT:    ret <8 x i32> [[MASKED_GATHER]]
 //
 v8i test_gather(v8b mask, v8i idx, int *ptr) {
@@ -180,8 +180,8 @@ v8i test_gather(v8b mask, v8i idx, int *ptr) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[VAL_ADDR]], align 32
 // CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i32>, ptr [[IDX_ADDR]], align 32
 // CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], <8 x i32> [[TMP5]]
-// CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP4]], <8 x ptr> [[TMP7]], i32 1, <8 x i1> [[TMP3]])
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP6]], <8 x i32> [[TMP4]]
+// CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP5]], <8 x ptr> [[TMP7]], i32 4, <8 x i1> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 void test_scatter(v8b mask, v8i val, v8i idx, int *ptr) {
