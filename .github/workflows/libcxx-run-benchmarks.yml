@@ -34,17 +34,12 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install -r libcxx/utils/requirements.txt
-          python -m pip install pygithub
-
       - name: Extract information from the PR
         id: vars
         run: |
+          python3 -m venv .venv
           source .venv/bin/activate
+          python -m pip install pygithub
           cat <<EOF | python >> ${GITHUB_OUTPUT}
           import github
           repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
@@ -65,6 +60,7 @@ jobs:
       - name: Run baseline
         run: |
           source .venv/bin/activate
+          python -m pip install -r repo/libcxx/utils/requirements.txt
           baseline_commit=$(git -C repo merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
           ./repo/libcxx/utils/test-at-commit --git-repo repo --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
 
