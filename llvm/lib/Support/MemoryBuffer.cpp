@@ -505,10 +505,8 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
       // On at least Linux, and possibly on other systems, mmap may return pages
       // from the page cache that are not properly filled with trailing zeroes,
       // if some prior user of the page wrote non-zero bytes. Detect this and
-      // don't use mmap in that case (unless it is object or archive file).
-      if (!RequiresNullTerminator || *Result->getBufferEnd() == '\0' ||
-          StringRef(Filename.str()).ends_with(".o") ||
-          StringRef(Filename.str()).ends_with(".a"))
+      // don't use mmap in that case.
+      if (!RequiresNullTerminator || *Result->getBufferEnd() == '\0')
         return std::move(Result);
     }
   }
