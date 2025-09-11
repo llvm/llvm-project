@@ -511,8 +511,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
-  getActionDefinitionsBuilder(
-      {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT,
+                               G_FMAXNUM, G_FMINNUM, G_FMAXIMUMNUM,
+                               G_FMINIMUMNUM})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})

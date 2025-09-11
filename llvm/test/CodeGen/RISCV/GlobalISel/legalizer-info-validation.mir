@@ -604,12 +604,14 @@
 # DEBUG-NEXT: G_FMAXIMUM (opcode {{[0-9]+}}): 1 type index
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_FMINIMUMNUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_FMAXIMUMNUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_FMINIMUMNUM (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. opcode 219 is aliased to 183
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: G_FMAXIMUMNUM (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. opcode 220 is aliased to 183
+# DEBUG-NEXT: .. the first uncovered type index: 1, OK
+# DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 # DEBUG-NEXT: G_GET_FPENV (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined

@@ -1758,9 +1758,11 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMUL:
