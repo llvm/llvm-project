@@ -3408,8 +3408,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // Try to remove redundant alignment assumptions.
       if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
-        RetainedKnowledge RK = getKnowledgeFromBundle(
-            *cast<AssumeInst>(II), II->bundle_op_info_begin()[Idx]);
+        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
+            *cast<AssumeInst>(II), II->arg_size() + Idx);
         if (!RK || RK.AttrKind != Attribute::Alignment ||
             !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
           continue;
