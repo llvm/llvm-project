@@ -639,9 +639,18 @@ Fortran::lower::genCallOpAndResult(
               caller.getCallDescription().chevrons()[2], stmtCtx)));
 
     mlir::Value stream; // stream is optional.
-    if (caller.getCallDescription().chevrons().size() > 3)
+    if (caller.getCallDescription().chevrons().size() > 3) {
       stream = fir::getBase(converter.genExprAddr(
           caller.getCallDescription().chevrons()[3], stmtCtx));
+      if (!fir::unwrapRefType(stream.getType()).isInteger(64)) {
+        auto i64Ty = mlir::IntegerType::get(builder.getContext(), 64);
+        mlir::Value newStream = builder.createTemporary(loc, i64Ty);
+        mlir::Value load = fir::LoadOp::create(builder, loc, stream);
+        mlir::Value conv = fir::ConvertOp::create(builder, loc, i64Ty, load);
+        fir::StoreOp::create(builder, loc, conv, newStream);
+        stream = newStream;
+      }
+    }
 
     cuf::KernelLaunchOp::create(builder, loc, funcType.getResults(),
                                 funcSymbolAttr, grid_x, grid_y, grid_z, block_x,
