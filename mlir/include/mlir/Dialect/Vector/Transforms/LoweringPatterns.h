@@ -313,6 +313,12 @@ void populateVectorFromElementsLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [UnrollToElements]
+void populateVectorToElementsLoweringPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [ContractionOpToMatmulOpLowering]
 /// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
 ///
