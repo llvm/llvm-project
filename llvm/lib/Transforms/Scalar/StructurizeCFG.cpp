@@ -445,10 +445,11 @@ bool StructurizeCFG::isHoistableInstruction(Instruction *I, BasicBlock *BB,
   if (CostVal != 0)
     return false;
 
-  // Check if any operands are instructions defined in the same block.
+  // Check if all operands are available at the hoisting destination.
   for (auto &Op : I->operands()) {
     if (auto *OpI = dyn_cast<Instruction>(Op)) {
-      if (OpI->getParent() == BB || !DT->dominates(OpI->getParent(), HoistTo))
+      // Operand must dominate the hoisting destination.
+      if (!DT->dominates(OpI->getParent(), HoistTo))
         return false;
     }
   }
