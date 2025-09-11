@@ -1399,13 +1399,16 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) {
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(Feature1024AddressableVGPRs))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  return 256;
+}
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
                                 unsigned DynamicVGPRBlockSize) {
   const auto &Features = STI->getFeatureBits();
-  if (Features.test(FeatureGFX1250Insts))
-    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
