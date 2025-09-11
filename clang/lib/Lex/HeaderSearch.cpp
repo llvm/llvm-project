@@ -1289,23 +1289,20 @@ void HeaderFileInfo::mergeModuleMembership(ModuleMap::ModuleHeaderRole Role) {
                                 (Role & ModuleMap::TextualHeader));
 }
 
-/// Merge the header file info provided by \p OtherHFI into the current
-/// header file info (\p HFI)
-static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
-                                const HeaderFileInfo &OtherHFI) {
-  assert(OtherHFI.External && "expected to merge external HFI");
+void HeaderFileInfo::merge(const HeaderFileInfo &Other) {
+  assert(Other.External && "expected to merge external HFI");
 
-  HFI.isImport |= OtherHFI.isImport;
-  HFI.isPragmaOnce |= OtherHFI.isPragmaOnce;
-  mergeHeaderFileInfoModuleBits(HFI, OtherHFI.isModuleHeader,
-                                OtherHFI.isTextualModuleHeader);
+  isImport |= Other.isImport;
+  isPragmaOnce |= Other.isPragmaOnce;
+  mergeHeaderFileInfoModuleBits(*this, Other.isModuleHeader,
+                                Other.isTextualModuleHeader);
 
-  if (!HFI.LazyControllingMacro.isValid())
-    HFI.LazyControllingMacro = OtherHFI.LazyControllingMacro;
+  if (!LazyControllingMacro.isValid())
+    LazyControllingMacro = Other.LazyControllingMacro;
 
-  HFI.DirInfo = OtherHFI.DirInfo;
-  HFI.External = (!HFI.IsValid || HFI.External);
-  HFI.IsValid = true;
+  DirInfo = Other.DirInfo;
+  External = (!IsValid || External);
+  IsValid = true;
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
@@ -1319,7 +1316,7 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
     if (ExternalHFI.IsValid) {
       HFI->Resolved = true;
       if (ExternalHFI.External)
-        mergeHeaderFileInfo(*HFI, ExternalHFI);
+        HFI->merge(ExternalHFI);
     }
   }
 
@@ -1343,7 +1340,7 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
       if (ExternalHFI.IsValid) {
         HFI->Resolved = true;
         if (ExternalHFI.External)
-          mergeHeaderFileInfo(*HFI, ExternalHFI);
+          HFI->merge(ExternalHFI);
       }
     }
   } else if (FE.getUID() < FileInfo.size()) {
