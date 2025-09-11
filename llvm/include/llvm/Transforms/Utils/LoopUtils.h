@@ -371,6 +371,9 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
 LLVM_ABI constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
+/// Returns the llvm.vector.reduce min/max intrinsic that corresponds to the
+/// intrinsic op.
+LLVM_ABI Intrinsic::ID getMinMaxReductionIntrinsicID(Intrinsic::ID IID);
 
 /// Returns the arithmetic instruction opcode used when expanding a reduction.
 LLVM_ABI unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);

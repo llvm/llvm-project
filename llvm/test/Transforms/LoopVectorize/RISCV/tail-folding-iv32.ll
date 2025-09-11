@@ -23,7 +23,7 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP_LOAD]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP12]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[TMP11]], [[TMP12]]
-; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], [[N]]
+; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]

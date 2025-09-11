@@ -55,7 +55,6 @@ class InstVE<dag outs, dag ins, string asmstr, list<dag> pattern>
   let TSFlags{4-2} = !add(VE_VLIndex, VE_VLWithMask);
 
   let DecoderNamespace = "VE";
-  field bits<64> SoftFail = 0;
 }
 
 //-----------------------------------------------------------------------------

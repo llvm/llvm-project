@@ -251,10 +251,13 @@ private:
                 : Limit - TheLine->Last->TotalLength;
 
     if (TheLine->Last->is(TT_FunctionLBrace) &&
-        TheLine->First == TheLine->Last &&
-        !Style.BraceWrapping.SplitEmptyFunction &&
-        NextLine.First->is(tok::r_brace)) {
-      return tryMergeSimpleBlock(I, E, Limit);
+        TheLine->First == TheLine->Last) {
+      const bool EmptyFunctionBody = NextLine.First->is(tok::r_brace);
+      if ((EmptyFunctionBody && !Style.BraceWrapping.SplitEmptyFunction) ||
+          (!EmptyFunctionBody &&
+           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always)) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;

@@ -352,10 +352,6 @@ public:
     return Fragment;
   }
 
-  // For ELF, use MCSymbolELF::setBinding instead.
-  bool isExternal() const { return IsExternal; }
-  void setExternal(bool Value) const { IsExternal = Value; }
-
   // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }
 

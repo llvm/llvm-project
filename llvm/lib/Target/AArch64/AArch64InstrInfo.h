@@ -646,8 +646,10 @@ bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
 MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
                               unsigned Reg, const StackOffset &Offset,
                               bool LastAdjustmentWasScalable = true);
-MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
-                                 const StackOffset &OffsetFromDefCFA);
+MCCFIInstruction
+createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
+                const StackOffset &OffsetFromDefCFA,
+                std::optional<int64_t> IncomingVGOffsetFromDefCFA);
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog

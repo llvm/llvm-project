@@ -119,7 +119,7 @@ class SILoadStoreOptimizer {
     unsigned DMask;
     InstClassEnum InstClass;
     unsigned CPol = 0;
-    bool IsAGPR;
+    const TargetRegisterClass *DataRC;
     bool UseST64;
     int AddrIdx[MaxAddressRegs];
     const MachineOperand *AddrReg[MaxAddressRegs];
@@ -203,6 +203,7 @@ class SILoadStoreOptimizer {
   using MemInfoMap = DenseMap<MachineInstr *, MemAddress>;
 
 private:
+  MachineFunction *MF = nullptr;
   const GCNSubtarget *STM = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
@@ -245,6 +246,8 @@ private:
 
   unsigned write2Opcode(unsigned EltSize) const;
   unsigned write2ST64Opcode(unsigned EltSize) const;
+  unsigned getWrite2Opcode(const CombineInfo &CI) const;
+
   MachineBasicBlock::iterator
   mergeWrite2Pair(CombineInfo &CI, CombineInfo &Paired,
                   MachineBasicBlock::iterator InsertBefore);
@@ -846,7 +849,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   if (InstClass == UNKNOWN)
     return;
 
-  IsAGPR = LSO.TRI->hasAGPRs(LSO.getDataRegClass(*MI));
+  DataRC = LSO.getDataRegClass(*MI);
 
   switch (InstClass) {
   case DS_READ:
@@ -878,8 +881,12 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     Offset = I->getOperand(OffsetIdx).getImm();
   }
 
-  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE)
+  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
     Format = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm();
+    const AMDGPU::GcnBufferFormatInfo *Info =
+        AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
+    EltSize = Info->BitsPerComp / 8;
+  }
 
   Width = getOpcodeWidth(*I, *LSO.TII);
 
@@ -1087,24 +1094,44 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
 
     const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
         llvm::AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
-    if (!Info0)
-      return false;
     const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
         llvm::AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
-    if (!Info1)
-      return false;
 
     if (Info0->BitsPerComp != Info1->BitsPerComp ||
         Info0->NumFormat != Info1->NumFormat)
       return false;
 
-    // TODO: Should be possible to support more formats, but if format loads
-    // are not dword-aligned, the merged load might not be valid.
-    if (Info0->BitsPerComp != 32)
+    // For 8-bit or 16-bit formats there is no 3-component variant.
+    // If NumCombinedComponents is 3, try the 4-component format and use XYZ.
+    // Example:
+    //   tbuffer_load_format_x + tbuffer_load_format_x + tbuffer_load_format_x
+    //   ==> tbuffer_load_format_xyz with format:[BUF_FMT_16_16_16_16_SNORM]
+    unsigned NumCombinedComponents = CI.Width + Paired.Width;
+    if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+      NumCombinedComponents = 4;
+
+    if (getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI) ==
+        0)
       return false;
 
-    if (getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, STI) == 0)
+    // Merge only when the two access ranges are strictly back-to-back,
+    // any gap or overlap can over-write data or leave holes.
+    unsigned ElemIndex0 = CI.Offset / CI.EltSize;
+    unsigned ElemIndex1 = Paired.Offset / Paired.EltSize;
+    if (ElemIndex0 + CI.Width != ElemIndex1 &&
+        ElemIndex1 + Paired.Width != ElemIndex0)
       return false;
+
+    // 1-byte formats require 1-byte alignment.
+    // 2-byte formats require 2-byte alignment.
+    // 4-byte and larger formats require 4-byte alignment.
+    unsigned MergedBytes = CI.EltSize * NumCombinedComponents;
+    unsigned RequiredAlign = std::min(MergedBytes, 4u);
+    unsigned MinOff = std::min(CI.Offset, Paired.Offset);
+    if (MinOff % RequiredAlign != 0)
+      return false;
+
+    return true;
   }
 
   uint32_t EltOffset0 = CI.Offset / CI.EltSize;
@@ -1289,6 +1316,50 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // have already been confirmed to be mergeable.
   if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
     offsetsCanBeCombined(CI, *STM, Paired, true);
+
+  if (CI.InstClass == DS_WRITE) {
+    // Both data operands must be AGPR or VGPR, so the data registers needs to
+    // be constrained to one or the other. We expect to only emit the VGPR form
+    // here for now.
+    //
+    // FIXME: There is currently a hack in getRegClass to report that the write2
+    // operands are VGPRs. In the future we should have separate agpr
+    // instruction definitions.
+    const MachineOperand *Data0 =
+        TII->getNamedOperand(*CI.I, AMDGPU::OpName::data0);
+    const MachineOperand *Data1 =
+        TII->getNamedOperand(*Paired.I, AMDGPU::OpName::data0);
+
+    const MCInstrDesc &Write2Opc = TII->get(getWrite2Opcode(CI));
+    int Data0Idx = AMDGPU::getNamedOperandIdx(Write2Opc.getOpcode(),
+                                              AMDGPU::OpName::data0);
+    int Data1Idx = AMDGPU::getNamedOperandIdx(Write2Opc.getOpcode(),
+                                              AMDGPU::OpName::data1);
+
+    const TargetRegisterClass *DataRC0 =
+        TII->getRegClass(Write2Opc, Data0Idx, TRI, *MF);
+
+    const TargetRegisterClass *DataRC1 =
+        TII->getRegClass(Write2Opc, Data1Idx, TRI, *MF);
+
+    if (unsigned SubReg = Data0->getSubReg()) {
+      DataRC0 = TRI->getMatchingSuperRegClass(MRI->getRegClass(Data0->getReg()),
+                                              DataRC0, SubReg);
+    }
+
+    if (unsigned SubReg = Data1->getSubReg()) {
+      DataRC1 = TRI->getMatchingSuperRegClass(MRI->getRegClass(Data1->getReg()),
+                                              DataRC1, SubReg);
+    }
+
+    if (!MRI->constrainRegClass(Data0->getReg(), DataRC0) ||
+        !MRI->constrainRegClass(Data1->getReg(), DataRC1))
+      return nullptr;
+
+    // TODO: If one register can be constrained, and not the other, insert a
+    // copy.
+  }
+
   return Where;
 }
 
@@ -1438,6 +1509,10 @@ unsigned SILoadStoreOptimizer::write2ST64Opcode(unsigned EltSize) const {
                         : AMDGPU::DS_WRITE2ST64_B64_gfx9;
 }
 
+unsigned SILoadStoreOptimizer::getWrite2Opcode(const CombineInfo &CI) const {
+  return CI.UseST64 ? write2ST64Opcode(CI.EltSize) : write2Opcode(CI.EltSize);
+}
+
 MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
@@ -1454,8 +1529,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
 
   unsigned NewOffset0 = CI.Offset;
   unsigned NewOffset1 = Paired.Offset;
-  unsigned Opc =
-      CI.UseST64 ? write2ST64Opcode(CI.EltSize) : write2Opcode(CI.EltSize);
+  unsigned Opc = getWrite2Opcode(CI);
 
   if (NewOffset0 > NewOffset1) {
     // Canonicalize the merged instruction so the smaller offset comes first.
@@ -1634,8 +1708,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
+  // For 8-bit or 16-bit tbuffer formats there is no 3-component encoding.
+  // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
+  // and use XYZ of XYZW to enable the merge.
+  unsigned NumCombinedComponents = CI.Width + Paired.Width;
+  if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+    NumCombinedComponents = 4;
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
+      getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -1677,8 +1757,14 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
   if (Regs.VAddr)
     MIB.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr));
 
+  // For 8-bit or 16-bit tbuffer formats there is no 3-component encoding.
+  // If the combined count is 3 (e.g. X+X+X or XY+X), promote to 4 components
+  // and use XYZ of XYZW to enable the merge.
+  unsigned NumCombinedComponents = CI.Width + Paired.Width;
+  if (NumCombinedComponents == 3 && CI.EltSize <= 2)
+    NumCombinedComponents = 4;
   unsigned JoinedFormat =
-      getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, *STM);
+      getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, *STM);
 
   // It shouldn't be possible to get this far if the two instructions
   // don't have a single memoperand, because MachineInstr::mayAlias()
@@ -1996,6 +2082,8 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
     }
   }
 
+  // FIXME: This should compute the instruction to use, and then use the result
+  // of TII->getRegClass.
   unsigned BitWidth = 32 * (CI.Width + Paired.Width);
   return TRI->isAGPRClass(getDataRegClass(*CI.I))
              ? TRI->getAGPRClassForBitWidth(BitWidth)
@@ -2364,7 +2452,6 @@ void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
                  std::list<std::list<CombineInfo> > &MergeableInsts) const {
   for (std::list<CombineInfo> &AddrList : MergeableInsts) {
     if (AddrList.front().InstClass == CI.InstClass &&
-        AddrList.front().IsAGPR == CI.IsAGPR &&
         AddrList.front().hasSameBaseAddress(CI)) {
       AddrList.emplace_back(CI);
       return;
@@ -2413,22 +2500,21 @@ SILoadStoreOptimizer::collectMergeableInsts(
     if (Swizzled != -1 && MI.getOperand(Swizzled).getImm())
       continue;
 
+    if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      const MachineOperand *Fmt =
+          TII->getNamedOperand(MI, AMDGPU::OpName::format);
+      if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {
+        LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
+        continue;
+      }
+    }
+
     CombineInfo CI;
     CI.setMI(MI, *this);
     CI.Order = Order++;
 
     if (!CI.hasMergeableAddress(*MRI))
       continue;
-
-    if (CI.InstClass == DS_WRITE && CI.IsAGPR) {
-      // FIXME: nothing is illegal in a ds_write2 opcode with two AGPR data
-      //        operands. However we are reporting that ds_write2 shall have
-      //        only VGPR data so that machine copy propagation does not
-      //        create an illegal instruction with a VGPR and AGPR sources.
-      //        Consequenctially if we create such instruction the verifier
-      //        will complain.
-      continue;
-    }
 
     LLVM_DEBUG(dbgs() << "Mergeable: " << MI);
 
@@ -2602,6 +2688,7 @@ bool SILoadStoreOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 bool SILoadStoreOptimizer::run(MachineFunction &MF) {
+  this->MF = &MF;
   STM = &MF.getSubtarget<GCNSubtarget>();
   if (!STM->loadStoreOptEnabled())
     return false;

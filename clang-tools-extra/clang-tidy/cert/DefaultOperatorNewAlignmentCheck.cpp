@@ -31,7 +31,7 @@ void DefaultOperatorNewAlignmentCheck::check(
     return;
   const TagDecl *D = T->getAsTagDecl();
   // Alignment can not be obtained for undefined type.
-  if (!D || !D->getDefinition() || !D->isCompleteDefinition())
+  if (!D || !D->isCompleteDefinition())
     return;
 
   ASTContext &Context = D->getASTContext();

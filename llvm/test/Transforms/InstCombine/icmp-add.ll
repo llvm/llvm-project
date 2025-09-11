@@ -3209,13 +3209,11 @@ entry:
   ret i1 %cmp
 }
 
-; TODO: should be canonicalized to (x - 4) u> 2
 define i1 @zext_range_check_ugt(i8 %x) {
 ; CHECK-LABEL: @zext_range_check_ugt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[CONV]], -7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP0]], -3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[X:%.*]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], -3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -3225,19 +3223,30 @@ entry:
   ret i1 %cmp
 }
 
-; TODO: should be canonicalized to (x - 4) u> 2
 define i1 @zext_range_check_ult_alter(i8 %x) {
 ; CHECK-LABEL: @zext_range_check_ult_alter(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], -3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[X:%.*]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], -3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
   %conv = zext i8 %x to i32
   %add = add i32 %conv, -7
   %cmp = icmp ult i32 %add, -3
+  ret i1 %cmp
+}
+
+define i1 @zext_range_check_ult_alter2(i8 %x) {
+; CHECK-LABEL: @zext_range_check_ult_alter2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %conv = zext i8 %x to i32
+  %add = add i32 %conv, -4
+  %cmp = icmp ult i32 %add, 253
   ret i1 %cmp
 }
 
@@ -3283,21 +3292,6 @@ entry:
   %conv = zext i7 %x to i32
   %add = add i32 %conv, -4
   %cmp = icmp ult i32 %add, 3
-  ret i1 %cmp
-}
-
-define i1 @zext_range_check_ult_range_check_failure(i8 %x) {
-; CHECK-LABEL: @zext_range_check_ult_range_check_failure(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 253
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-entry:
-  %conv = zext i8 %x to i32
-  %add = add i32 %conv, -4
-  %cmp = icmp ult i32 %add, 253
   ret i1 %cmp
 }
 

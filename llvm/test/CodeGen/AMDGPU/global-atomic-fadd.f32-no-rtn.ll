@@ -146,7 +146,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX942-NEXT:   successors: %bb.3(0x80000000)
   ; GFX90A_GFX942-NEXT: {{  $}}
   ; GFX90A_GFX942-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX90A_GFX942-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %1
+  ; GFX90A_GFX942-NEXT:   [[COPY8:%[0-9]+]]:av_32 = COPY %1
   ; GFX90A_GFX942-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR killed [[V_MOV_B32_e32_1]], [[COPY8]], [[COPY3]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX942-NEXT: {{  $}}
   ; GFX90A_GFX942-NEXT: bb.3.Flow:

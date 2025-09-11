@@ -645,12 +645,6 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
 
   ssize_t bytes_written = -1;
   if (ValueGuard descriptor_guard = DescriptorIsValid()) {
-#ifdef _WIN32
-    if (is_windows_console) {
-      llvm::raw_fd_ostream(m_descriptor, false).write((char *)buf, num_bytes);
-      return error;
-    }
-#endif
     bytes_written =
         llvm::sys::RetryAfterSignal(-1, ::write, m_descriptor, buf, num_bytes);
     if (bytes_written == -1) {

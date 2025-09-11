@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
@@ -12,8 +14,8 @@ labelA:
 // CIR:    cir.label "labelA"
 // CIR:    cir.return
 
-// Note: We are not lowering to LLVM IR via CIR at this stage because that
-// process depends on the GotoSolver.
+// LLVM:define dso_local void @label
+// LLVM:  ret void
 
 // OGCG: define dso_local void @label
 // OGCG:   br label %labelA
@@ -32,6 +34,11 @@ labelC:
 // CIR:  ^bb1:  // pred: ^bb0
 // CIR:    cir.label "labelC"
 // CIR:    cir.return
+
+// LLVM: define dso_local void @multiple_labels()
+// LLVM:   br label %1
+// LLVM: 1:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @multiple_labels
 // OGCG:   br label %labelB
@@ -55,6 +62,22 @@ labelD:
 // CIR:        cir.store align(4) [[INC]], [[COND]] : !s32i, !cir.ptr<!s32i>
 // CIR:      }
 // CIR:    cir.return
+
+// LLVM: define dso_local void @label_in_if
+// LLVM:   br label %3
+// LLVM: 3:
+// LLVM:   [[LOAD:%.*]] = load i32, ptr [[COND:%.*]], align 4
+// LLVM:   [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
+// LLVM:   br i1 [[CMP]], label %6, label %9
+// LLVM: 6:
+// LLVM:   [[LOAD2:%.*]] = load i32, ptr [[COND]], align 4
+// LLVM:   [[ADD1:%.*]] = add nsw i32 [[LOAD2]], 1
+// LLVM:   store i32 [[ADD1]], ptr [[COND]], align 4
+// LLVM:   br label %9
+// LLVM: 9:
+// LLVM:   br label %10
+// LLVM: 10:
+// LLVM:  ret void
 
 // OGCG: define dso_local void @label_in_if
 // OGCG: if.then:
@@ -80,6 +103,13 @@ void after_return() {
 // CIR:    cir.label "label"
 // CIR:    cir.br ^bb1
 
+// LLVM: define dso_local void @after_return
+// LLVM:   br label %1
+// LLVM: 1:
+// LLVM:   ret void
+// LLVM: 2:
+// LLVM:   br label %1
+
 // OGCG: define dso_local void @after_return
 // OGCG:   br label %label
 // OGCG: label:
@@ -97,6 +127,11 @@ void after_unreachable() {
 // CIR:    cir.label "label"
 // CIR:    cir.return
 
+// LLVM: define dso_local void @after_unreachable
+// LLVM:   unreachable
+// LLVM: 1:
+// LLVM:   ret void
+
 // OGCG: define dso_local void @after_unreachable
 // OGCG:   unreachable
 // OGCG: label:
@@ -110,6 +145,9 @@ end:
 // CIR:    cir.label "end"
 // CIR:    cir.return
 // CIR:  }
+
+// LLVM: define dso_local void @labelWithoutMatch
+// LLVM:   ret void
 
 // OGCG: define dso_local void @labelWithoutMatch
 // OGCG:   br label %end
@@ -131,6 +169,15 @@ void foo() {
 // CIR:   cir.scope {
 // CIR:     cir.label "label"
 // CIR:     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+
+// LLVM:define dso_local void @foo() {
+// LLVM:  [[ALLOC:%.*]] = alloca %struct.S, i64 1, align 1
+// LLVM:  br label %2
+// LLVM:2:
+// LLVM:  [[CALL:%.*]] = call %struct.S @get()
+// LLVM:  store %struct.S [[CALL]], ptr [[ALLOC]], align 1
+// LLVM:  [[LOAD:%.*]] = load %struct.S, ptr [[ALLOC]], align 1
+// LLVM:  call void @bar(%struct.S [[LOAD]])
 
 // OGCG: define dso_local void @foo()
 // OGCG:   %agg.tmp = alloca %struct.S, align 1

@@ -407,3 +407,88 @@ void doGccThings() {
 }
 
 } // namespace BuildStringOnClangScope
+
+namespace candiscard {
+
+struct [[nodiscard]] NoDiscard {
+  [[nodiscard]] NoDiscard(int);
+  NoDiscard(const char *);
+};
+
+struct [[gnu::warn_unused]] WarnUnused {
+  [[gnu::warn_unused]] WarnUnused(int); // expected-warning {{'gnu::warn_unused' attribute only applies to structs, unions, and classes}}
+  WarnUnused(const char*);
+};
+
+struct [[gnu::warn_unused_result]] WarnUnusedResult {
+  [[gnu::warn_unused_result]] WarnUnusedResult(int);
+  WarnUnusedResult(const char*);
+};
+
+NoDiscard return_nodiscard();
+WarnUnused return_warnunused();
+WarnUnusedResult return_warnunusedresult();
+
+NoDiscard (*p_return_nodiscard)();
+WarnUnused (*p_return_warnunused)();
+WarnUnusedResult (*p_return_warnunusedresult)();
+
+NoDiscard (*(*pp_return_nodiscard)())();
+WarnUnused (*(*pp_return_warnunused)())();
+WarnUnusedResult (*(*pp_return_warnunusedresult)())();
+
+template <class T> T from_a_template();
+
+void test() {
+  // Unused but named variables
+  NoDiscard unused_variable1(1);         // no warning
+  NoDiscard unused_variable2("");        // no warning
+  WarnUnused unused_variable3(1);        // no warning
+  WarnUnused unused_variable4("");       // no warning
+  WarnUnusedResult unused_variable5(1);  // no warning
+  WarnUnusedResult unused_variable6(""); // no warning
+
+  // Constructor return values
+  NoDiscard(1);         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  NoDiscard("");        // expected-warning {{ignoring temporary of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  WarnUnused(1);        // expected-warning {{expression result unused}}
+  WarnUnused("");       // expected-warning {{expression result unused}}
+  WarnUnusedResult(1);  // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
+  WarnUnusedResult(""); // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  NoDiscard{1};         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  NoDiscard{""};        // expected-warning {{ignoring temporary of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  WarnUnused{1};        // expected-warning {{expression result unused}}
+  WarnUnused{""};       // expected-warning {{expression result unused}}
+  WarnUnusedResult{1};  // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
+  WarnUnusedResult{""}; // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  static_cast<NoDiscard>(1);         // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  static_cast<NoDiscard>("");        // expected-warning {{ignoring temporary of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  static_cast<WarnUnused>(1);        // expected-warning {{expression result unused}}
+  static_cast<WarnUnused>("");       // expected-warning {{expression result unused}}
+  static_cast<WarnUnusedResult>(1);  // expected-warning {{ignoring temporary created by a constructor declared with 'gnu::warn_unused_result' attribute}}
+  static_cast<WarnUnusedResult>(""); // expected-warning {{ignoring temporary of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // Function return values
+  return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  return_warnunused(); // no warning
+  return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // Function pointer return values
+  p_return_nodiscard(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  p_return_warnunused(); // no warning
+  p_return_warnunusedresult(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // Function pointer expression return values
+  pp_return_nodiscard()(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  pp_return_warnunused()(); // no warning
+  pp_return_warnunusedresult()(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+
+  // From a template
+  from_a_template<NoDiscard>(); // expected-warning {{ignoring return value of type 'NoDiscard' declared with 'nodiscard' attribute}}
+  from_a_template<WarnUnused>(); // no warning
+  from_a_template<WarnUnusedResult>(); // expected-warning {{ignoring return value of type 'WarnUnusedResult' declared with 'gnu::warn_unused_result' attribute}}
+}
+
+} // namespace candiscard

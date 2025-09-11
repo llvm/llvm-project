@@ -35,7 +35,7 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                  const MCTargetOptions &Options);
+                  bool IsLittleEndian, const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
 
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
@@ -65,8 +65,8 @@ public:
                         const MCSubtargetInfo &STI) const override;
 
   bool relaxAlign(MCFragment &F, unsigned &Size) override;
-  bool relaxDwarfLineAddr(MCFragment &F, bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const override;
+  bool relaxDwarfLineAddr(MCFragment &) const override;
+  bool relaxDwarfCFA(MCFragment &) const override;
   std::pair<bool, bool> relaxLEB128(MCFragment &LF,
                                     int64_t &Value) const override;
 

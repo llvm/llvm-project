@@ -85,6 +85,14 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   return RValue::get(call->getResult(0));
 }
 
+template <class Operation>
+static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -140,6 +148,57 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_va_end:
     emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
     return {};
+
+  case Builtin::BIalloca:
+  case Builtin::BI_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
+  case Builtin::BI__builtin_alloca: {
+    // Get alloca size input
+    mlir::Value size = emitScalarExpr(e->getArg(0));
+
+    // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
+    const TargetInfo &ti = getContext().getTargetInfo();
+    const CharUnits suitableAlignmentInBytes =
+        getContext().toCharUnitsFromBits(ti.getSuitableAlign());
+
+    // Emit the alloca op with type `u8 *` to match the semantics of
+    // `llvm.alloca`. We later bitcast the type to `void *` to match the
+    // semantics of C/C++
+    // FIXME(cir): It may make sense to allow AllocaOp of type `u8` to return a
+    // pointer of type `void *`. This will require a change to the allocaOp
+    // verifier.
+    mlir::Value allocaAddr = builder.createAlloca(
+        getLoc(e->getSourceRange()), builder.getUInt8PtrTy(),
+        builder.getUInt8Ty(), "bi_alloca", suitableAlignmentInBytes, size);
+
+    // Initialize the allocated buffer if required.
+    if (builtinID != Builtin::BI__builtin_alloca_uninitialized) {
+      // Initialize the alloca with the given size and alignment according to
+      // the lang opts. Only the trivial non-initialization is supported for
+      // now.
+
+      switch (getLangOpts().getTrivialAutoVarInit()) {
+      case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+        // Nothing to initialize.
+        break;
+      case LangOptions::TrivialAutoVarInitKind::Zero:
+      case LangOptions::TrivialAutoVarInitKind::Pattern:
+        cgm.errorNYI("trivial auto var init");
+        break;
+      }
+    }
+
+    // An alloca will always return a pointer to the alloca (stack) address
+    // space. This address space need not be the same as the AST / Language
+    // default (e.g. in C / C++ auto vars are in the generic address space). At
+    // the AST level this is handled within CreateTempAlloca et al., but for the
+    // builtin / dynamic alloca we have to handle it here.
+    assert(!cir::MissingFeatures::addressSpace());
+
+    // Bitcast the alloca to the expected type.
+    return RValue::get(
+        builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
+  }
 
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
@@ -349,6 +408,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_unreachable:
     emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
     return RValue::get(nullptr);
+
+  case Builtin::BI__builtin_elementwise_acos:
+    return emitUnaryFPBuiltin<cir::ACosOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_asin:
+    return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_atan:
+    return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -400,4 +466,16 @@ void CIRGenFunction::emitVAStart(mlir::Value vaList, mlir::Value count) {
 
 void CIRGenFunction::emitVAEnd(mlir::Value vaList) {
   cir::VAEndOp::create(builder, vaList.getLoc(), vaList);
+}
+
+// FIXME(cir): This completely abstracts away the ABI with a generic CIR Op. By
+// default this lowers to llvm.va_arg which is incomplete and not ABI-compliant
+// on most targets so cir.va_arg will need some ABI handling in LoweringPrepare
+mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *ve) {
+  assert(!cir::MissingFeatures::msabi());
+  assert(!cir::MissingFeatures::vlas());
+  mlir::Location loc = cgm.getLoc(ve->getExprLoc());
+  mlir::Type type = convertType(ve->getType());
+  mlir::Value vaList = emitVAListRef(ve->getSubExpr()).getPointer();
+  return cir::VAArgOp::create(builder, loc, type, vaList);
 }
