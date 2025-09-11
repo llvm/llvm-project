@@ -331,9 +331,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     Action.legalForTypesWithMemDesc({{s8, p0, s8, 1},
                                      {s16, p0, s16, 1},
                                      {s32, p0, s32, 1},
-                                     {s80, p0, s80, 1},
                                      {p0, p0, p0, 1},
                                      {v4s8, p0, v4s8, 1}});
+
+    if (UseX87)
+      Action.legalForTypesWithMemDesc({{s80, p0, s32, 1},
+                                       {s80, p0, s64, 1},
+                                       {s32, p0, s80, 1},
+                                       {s64, p0, s80, 1},
+                                       {s80, p0, s80, 1}});
     if (Is64Bit)
       Action.legalForTypesWithMemDesc(
           {{s64, p0, s64, 1}, {v2s32, p0, v2s32, 1}});
@@ -439,12 +445,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(HasSSE2, {{s64, s32}})
       .legalFor(HasAVX, {{v4s64, v4s32}})
-      .legalFor(HasAVX512, {{v8s64, v8s32}});
+      .legalFor(HasAVX512, {{v8s64, v8s32}})
+      .customFor(UseX87, {{s64, s32}, {s80, s32}, {s80, s64}});
 
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(HasSSE2, {{s32, s64}})
       .legalFor(HasAVX, {{v4s32, v4s64}})
-      .legalFor(HasAVX512, {{v8s32, v8s64}});
+      .legalFor(HasAVX512, {{v8s32, v8s64}})
+      .customFor(UseX87, {{s32, s64}, {s32, s80}, {s64, s80}});
 
   getActionDefinitionsBuilder(G_SITOFP)
       .legalFor(HasSSE1, {{s32, s32}})
@@ -614,6 +622,9 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSITOFP(MI, MRI, Helper);
   case TargetOpcode::G_FPTOSI:
     return legalizeFPTOSI(MI, MRI, Helper);
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
+    return legalizeFPExtAndTrunc(MI, MRI, Helper);
   case TargetOpcode::G_GET_ROUNDING:
     return legalizeGETROUNDING(MI, MRI, Helper);
   }
@@ -853,6 +864,33 @@ bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
   auto RetValTrunc = MIRBuilder.buildZExtOrTrunc(DstTy, RetVal);
 
   MIRBuilder.buildCopy(Dst, RetValTrunc);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeFPExtAndTrunc(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             LegalizerHelper &Helper) const {
+  assert((MI.getOpcode() == TargetOpcode::G_FPEXT ||
+          MI.getOpcode() == TargetOpcode::G_FPTRUNC) &&
+         "Only G_FPEXT and G_FPTRUNC are expected");
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  MachinePointerInfo PtrInfo;
+  LLT StackTy = MI.getOpcode() == TargetOpcode::G_FPEXT ? SrcTy : DstTy;
+  Align StackTyAlign = Helper.getStackTemporaryAlignment(StackTy);
+  auto StackTemp = Helper.createStackTemporary(StackTy.getSizeInBytes(),
+                                               StackTyAlign, PtrInfo);
+
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  auto *StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                           StackTy, StackTyAlign);
+  MIRBuilder.buildStore(SrcReg, StackTemp, *StoreMMO);
+
+  auto *LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                          StackTy, StackTyAlign);
+  MIRBuilder.buildLoad(DstReg, StackTemp, *LoadMMO);
 
   MI.eraseFromParent();
   return true;
