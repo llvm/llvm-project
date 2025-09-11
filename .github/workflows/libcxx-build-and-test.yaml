@@ -296,7 +296,7 @@ jobs:
       - name: benchmarks
         # TODO: python3-virtualenv should be taken from the Docker image instead
         run: |
-          sudo apt-get install -y python3-virtualenv
+          sudo pip install virtualenv
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install -r libcxx/utils/requirements.txt
