@@ -187,7 +187,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
-    ToolSubst("mlir-tblgen", pre=";", post=";", unresolved="fatal"),
+    ToolSubst("mlir-tblgen", post=";", unresolved="fatal"),
     "mlir-translate",
     "mlir-lsp-server",
     "mlir-capi-execution-engine-test",
@@ -318,7 +318,7 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
         ]
     )
 else:
-    tools.extend([ToolSubst("mlir-opt", pre=";", post=";", unresolved="fatal")])
+    tools.extend([ToolSubst("mlir-opt", post=";", unresolved="fatal")])
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
