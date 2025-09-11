@@ -243,28 +243,6 @@ static double getTimeOfDay() {
   return TimeVal;
 }
 
-/// Get the first timepoints on host and device.
-void startH2DTimeRate(double *HTime, uint64_t *DTime) {
-  *HTime = getTimeOfDay();
-  *DTime = getSystemTimestampInNs();
-}
-
-/// Get the second timepoints on host and device and compute the rate
-/// required for translating device time to host time.
-void completeH2DTimeRate(double HostRef1, uint64_t DeviceRef1) {
-  double HostRef2 = getTimeOfDay();
-  uint64_t DeviceRef2 = getSystemTimestampInNs();
-  // Assume host (h) timing is related to device (d) timing as
-  // h = m.d + o, where m is the slope and o is the offset.
-  // Calculate slope and offset from the two host and device timepoints.
-  double HostDiff = HostRef2 - HostRef1;
-  uint64_t DeviceDiff = DeviceRef2 - DeviceRef1;
-  double Slope = DeviceDiff != 0 ? (HostDiff / DeviceDiff) : HostDiff;
-  double Offset = HostRef1 - Slope * DeviceRef1;
-  ompt::setOmptHostToDeviceRate(Slope, Offset);
-  DP("Translate time Slope: %f Offset: %f\n", Slope, Offset);
-}
-
 #else // OMPT_SUPPORT
 namespace llvm::omp::target::ompt {
 struct OmptEventInfoTy {};
@@ -3279,7 +3257,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     setHSATicksToTimeConstant();
 
-#ifdef OMPT_SUPPORT
     // At init we capture two time points for host and device. The two
     // timepoints are spaced out to help smooth out their accuracy
     // differences.
@@ -3287,11 +3264,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // the value for omp_get_wtime. So we use the same clock here to calculate
     // the slope/offset and convert device time to omp_get_wtime via
     // translate_time.
-    double HostRef1 = 0;
-    uint64_t DeviceRef1 = 0;
-#endif
-    // Take the first timepoints.
-    OMPT_IF_ENABLED(startH2DTimeRate(&HostRef1, &DeviceRef1););
+    auto StartTime = getDHTime();
 
     if (auto Err = preAllocateDeviceMemoryPool())
       return Err;
@@ -3400,7 +3373,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Take the second timepoints and compute the required metadata.
-    OMPT_IF_ENABLED(completeH2DTimeRate(HostRef1, DeviceRef1););
+    auto EndTime = getDHTime();
+    deriveHostToDeviceClockOffset(StartTime, EndTime);
 
     uint32_t NumSdmaEngines = 0;
     if (auto Err =
@@ -5015,6 +4989,35 @@ private:
 
   /// True if in multi-device mode.
   bool IsMultiDeviceEnabled = false;
+
+  /// Struct holding time in ns at a point in time for both host and device
+  /// This is used to compute a device-to-host offset and skew. Required for
+  /// OMPT function translate_time.
+  struct DHTime {
+    double Host;
+    uint64_t Device;
+  };
+
+  /// Get a DHTimepoint
+  DHTime getDHTime() const {
+    return DHTime{getTimeOfDay(), getSystemTimestampInNs()};
+  }
+
+  /// Compute time differences for host and device between Start and End
+  /// Assume host (h) timing is related to device (d) timing as
+  /// h = m.d + o, where m is the slope and o is the offset.
+  /// Calculate slope and offset from the two host and device timepoints.
+  void deriveHostToDeviceClockOffset(DHTime Start, DHTime End) {
+    double HostDiff = End.Host - Start.Host;
+    uint64_t DeviceDiff = End.Device - Start.Device;
+    double Slope = DeviceDiff != 0 ? (HostDiff / DeviceDiff) : HostDiff;
+    double Offset = Start.Host - Slope * Start.Device;
+    DP("Translate time Slope: %f Offset: %f\n", Slope, Offset);
+#ifdef OMPT_SUPPORT
+    // TODO: This will eventually move into the ProfilerInterface
+    ompt::setOmptHostToDeviceRate(Slope, Offset);
+#endif
+  }
 
   /// Representing all the runtime envar configs for a device.
   struct DeviceEnvarConfigTy {
