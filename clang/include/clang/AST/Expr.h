@@ -1038,7 +1038,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::CTLog2<alignof(Expr)>(),
+                  llvm::ConstantLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
