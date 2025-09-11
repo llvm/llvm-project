@@ -18,8 +18,7 @@ define i64 @test_duplicated_phis(i64 noundef %N) {
 ; CHECK:       [[FOR_BODY_PREHEADER_NEW]]:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[MUL]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UNROLL_ITER]], -4
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = sub i64 -3, [[TMP3]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
