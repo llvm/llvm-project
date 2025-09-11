@@ -235,6 +235,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
 
   void readCoverageRegions(const std::string &Coverage,
                            OutputFunctionCoverageData &Data) {
+    // +1 here since `Files` (filename to index map) uses 1-based index.
     Data.FilenamesStorage.resize(Files.size() + 1);
     for (const auto &E : Files)
       Data.FilenamesStorage[E.getValue()] = E.getKey().str();
