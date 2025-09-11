@@ -1892,6 +1892,44 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       FirstAnswer = std::min<uint64_t>(FirstAnswer + *C, TyBits);
     break;
   }
+  case TargetOpcode::G_SHL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    if (std::optional<ConstantRange> ShAmtRange =
+            getValidShiftAmountRange(Src2, DemandedElts, Depth + 1)) {
+      uint64_t MaxShAmt = ShAmtRange->getUnsignedMax().getZExtValue();
+      uint64_t MinShAmt = ShAmtRange->getUnsignedMin().getZExtValue();
+
+      MachineInstr &ExtMI = *MRI.getVRegDef(Src1);
+      unsigned ExtOpc = ExtMI.getOpcode();
+
+      // Try to look through ZERO/SIGN/ANY_EXTEND. If all extended bits are
+      // shifted out, then we can compute the number of sign bits for the
+      // operand being extended. A future improvement could be to pass along the
+      // "shifted left by" information in the recursive calls to
+      // ComputeKnownSignBits. Allowing us to handle this more generically.
+      if (ExtOpc == TargetOpcode::G_SEXT || ExtOpc == TargetOpcode::G_ZEXT ||
+          ExtOpc == TargetOpcode::G_ANYEXT) {
+        LLT ExtTy = MRI.getType(Src1);
+        Register Extendee = ExtMI.getOperand(1).getReg();
+        LLT ExtendeeTy = MRI.getType(Extendee);
+        uint64_t SizeDiff =
+            ExtTy.getScalarSizeInBits() - ExtendeeTy.getScalarSizeInBits();
+
+        if (SizeDiff <= MinShAmt) {
+          unsigned Tmp =
+              SizeDiff + computeNumSignBits(Extendee, DemandedElts, Depth + 1);
+          if (MaxShAmt < Tmp)
+            return Tmp - MaxShAmt;
+        }
+      }
+      // shl destroys sign bits, ensure it doesn't shift out all sign bits.
+      unsigned Tmp = computeNumSignBits(Src1, DemandedElts, Depth + 1);
+      if (MaxShAmt < Tmp)
+        return Tmp - MaxShAmt;
+    }
+    break;
+  }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
