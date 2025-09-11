@@ -3,6 +3,7 @@
 # RUN: "%cmake_exe" --build "%llvm_obj_root" --target install
 # RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
+# RUN: -DCMAKE_CXX_COMPILER_LAUNCHER=%cmake_cxx_compiler_launcher -DCMAKE_C_COMPILER_LAUNCHER=%cmake_c_compiler_launcher \
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR="%host_cmake_install_prefix" \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
 # RUN: -DPython3_EXECUTABLE=%python \
