@@ -10,7 +10,7 @@
 name: Benchmark libc++
 
 permissions:
-  contents: read # Default everything to read-only
+  contents: read
 
 on:
   issue_comment:
@@ -24,6 +24,9 @@ env:
 
 jobs:
   run-benchmarks:
+    permissions:
+      pull-requests: write
+
     if: >-
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/libcxx-bot benchmark')
@@ -40,6 +43,7 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install pygithub
+
           cat <<EOF | python >> ${GITHUB_OUTPUT}
           import github
           repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
@@ -59,18 +63,47 @@ jobs:
 
       - name: Run baseline
         run: |
-          source .venv/bin/activate
-          python -m pip install -r repo/libcxx/utils/requirements.txt
-          baseline_commit=$(git -C repo merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
-          ./repo/libcxx/utils/test-at-commit --git-repo repo --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
+          source .venv/bin/activate && cd repo
+          python -m pip install -r libcxx/utils/requirements.txt
+          baseline_commit=$(git merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
+          ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
 
       - name: Run candidate
         run: |
-          source .venv/bin/activate
-          ./repo/libcxx/utils/test-at-commit --git-repo repo --commit ${{ steps.vars.outputs.pr_head }} -B build/candidate -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
+          source .venv/bin/activate && cd repo
+          ./libcxx/utils/test-at-commit --commit ${{ steps.vars.outputs.pr_head }} -B build/candidate -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
 
       - name: Compare baseline and candidate runs
         run: |
-          source .venv/bin/activate
-          ./repo/libcxx/utils/compare-benchmarks <(./repo/libcxx/utils/consolidate-benchmarks build/baseline) \
-                                                 <(./repo/libcxx/utils/consolidate-benchmarks build/candidate)
+          source .venv/bin/activate && cd repo
+          ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks build/baseline) \
+                                            <(./libcxx/utils/consolidate-benchmarks build/candidate) > results.txt
+
+      - name: Update comment with results
+        run: |
+          source .venv/bin/activate && cd repo
+          cat <<EOF | python
+          import github
+          repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          comment = pr.get_issue_comment(${{ github.event.comment.id }})
+          with open('results.txt', 'r') as f:
+            benchmark_results = f.read()
+
+          new_comment_text = f"""
+          {comment.body}
+
+          <details>
+          <summary>
+          Benchmark results:
+          </summary>
+
+          \`\`\`
+          {benchmark_results}
+          \`\`\`
+
+          </details>
+          """
+
+          comment.edit(new_comment_text)
+          EOF
