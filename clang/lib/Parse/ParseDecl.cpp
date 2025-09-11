@@ -5696,8 +5696,11 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
-  if (!R.isUsable())
+  if (!R.isUsable()) {
+    if (DeclContext *DC = TLSD->getDeclContext())
+      DC->removeDecl(TLSD); // unlink from TU
     R = Actions.ActOnNullStmt(Tok.getLocation());
+  }
 
   if (Tok.is(tok::annot_repl_input_end) &&
       Tok.getAnnotationValue() != nullptr) {
