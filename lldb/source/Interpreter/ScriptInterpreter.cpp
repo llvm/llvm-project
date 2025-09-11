@@ -137,6 +137,12 @@ ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
   return exe_ctx.m_exe_ctx_sp;
 }
 
+lldb::ModuleSP
+ScriptInterpreter::GetOpaqueTypeFromSBModule(
+    const lldb::SBModule &module) const {
+  return module.m_opaque_sp;
+}
+
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))
