@@ -301,8 +301,8 @@ struct ConsumeThreadContext {
   ThreadContextBase *tctx;
 };
 
-Tid ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
-  return ctx->thread_registry.ConsumeThreadUserId(uid);
+bool ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid, Tid *tid_out) {
+  return ctx->thread_registry.ConsumeThreadUserId(uid, tid_out);
 }
 
 struct JoinArg {
