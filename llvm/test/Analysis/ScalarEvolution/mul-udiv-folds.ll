@@ -21,7 +21,7 @@ define void @udiv4_and_udiv2(i1 %c, ptr %A) {
 ; CHECK-NEXT:    %gep.8 = getelementptr i8, ptr %A, i64 %iv
 ; CHECK-NEXT:    --> {(((zext i32 %start to i64) /u 4) + %A),+,1}<%loop> U: full-set S: full-set Exits: (((zext i32 %start to i64) /u 2) + %A) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep.16 = getelementptr i16, ptr %A, i64 %iv
-; CHECK-NEXT:    --> {((2 * ((zext i32 %start to i64) /u 4))<nuw><nsw> + %A),+,2}<%loop> U: full-set S: full-set Exits: ((zext i32 %start to i64) + %A) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(((zext i32 %start to i64) /u 2) + %A),+,2}<%loop> U: full-set S: full-set Exits: ((zext i32 %start to i64) + %A) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep.32 = getelementptr i32, ptr %A, i64 %iv
 ; CHECK-NEXT:    --> {((zext i32 %start to i64) + %A),+,4}<%loop> U: full-set S: full-set Exits: ((2 * (zext i32 %start to i64))<nuw><nsw> + %A) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep.40 = getelementptr <{ i32, i8 }>, ptr %A, i64 %iv
