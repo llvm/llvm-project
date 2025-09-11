@@ -762,3 +762,103 @@ function(mlir_target_link_libraries target type)
     target_link_libraries(${target} ${type} ${ARGN})
   endif()
 endfunction()
+
+# Extracts LIT tests embedded in `Testable` records in `tblgen_file`
+# and generates a file per test in `output_dir`
+#
+# Example usage:
+#   # Extract tests from MyPasses.td and generate them in test/Passes/
+#   add_embedded_lit_tests(MyPassesEmbeddedTests 
+#                          ${CMAKE_CURRENT_SOURCE_DIR}/include/MyPasses.td
+#                          ${CMAKE_CURRENT_SOURCE_DIR}/test/Passes/)
+#
+#   # This will:
+#   # 1. Process MyPasses.td with mlir-tblgen --gen-lit-tests
+#   # 2. Extract individual test files to test/Passes/
+#   # 3. Generate files like: test/Passes/generated_MyPass_test1.mlir
+#
+function(add_embedded_lit_tests target tblgen_file output_dir)
+  set(LLVM_TARGET_DEFINITIONS ${tblgen_file})
+
+  # Extraction script content
+  set(EXTRACT_SCRIPT_CONTENT [[
+    # Generated extraction script
+    if(NOT CONSOLIDATED_FILE)
+    message(FATAL_ERROR "CONSOLIDATED_FILE variable is required")
+    endif()
+
+    if(NOT OUTPUT_DIR)
+    message(FATAL_ERROR "OUTPUT_DIR variable is required")
+    endif()
+
+    if(NOT EXISTS ${CONSOLIDATED_FILE})
+    message(FATAL_ERROR "Consolidated file does not exist: ${CONSOLIDATED_FILE}")
+    endif()
+
+    # Read the consolidated file
+    file(READ ${CONSOLIDATED_FILE} file_content)
+
+    # Split into lines for processing
+    string(REPLACE "\n" ";" lines "${file_content}")
+
+    set(current_filename "")
+    set(current_content "")
+    set(in_test_block FALSE)
+    set(extracted_test_files)
+
+    foreach(line IN LISTS lines)
+    # Check for filename line
+    if(line MATCHES "^// File: (.+)$")
+      set(current_filename "${CMAKE_MATCH_1}")
+    endif()
+
+    # Check for BEGIN marker
+    if(line MATCHES "^// --- BEGIN .+ ---$")
+      set(in_test_block TRUE)
+      set(current_content "")
+    # Check for END marker
+    elseif(line MATCHES "^// --- END .+ ---$")
+      set(in_test_block FALSE)
+
+      # Write the extracted content to file
+      if(current_filename AND current_content)
+        file(MAKE_DIRECTORY ${OUTPUT_DIR})
+        file(WRITE ${OUTPUT_DIR}/${current_filename} "${current_content}")
+        message(STATUS "Extracted test file: ${current_filename}")
+        list(APPEND extracted_test_files ${current_filename})
+      endif()
+
+      set(current_filename "")
+      set(current_content "")
+    # Collect content within BEGIN/END block
+    elseif(in_test_block)
+      string(APPEND current_content "${line}\n")
+    endif()
+    endforeach()
+
+    list(LENGTH extracted_test_files num_extracted_files)
+    message(STATUS "Extracted ${num_extracted_files} test files to ${OUTPUT_DIR}")
+  ]])
+
+  # Write extraction script to a file in the build directory
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/extract_lit_tests.cmake "${EXTRACT_SCRIPT_CONTENT}")
+
+  # Process tblgen_file and generate a file with all embedded LIT 
+  # tests in tblgen_file
+  get_filename_component(tblgen_name ${tblgen_file} NAME_WE)
+  set(consolidated_output_file ${tblgen_name}_extracted_lit_tests.txt)
+  mlir_tablegen(${consolidated_output_file} --gen-lit-tests)
+
+  # Add public tablegen target to trigger builds on changes in tblgen_file
+  add_public_tablegen_target(${target})
+
+  # Call the extraction script to extract all LIT tests into individual
+  # `.mlir` test files
+  add_custom_command(TARGET ${target} POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+      -DCONSOLIDATED_FILE=${CMAKE_CURRENT_BINARY_DIR}/${consolidated_output_file}
+      -DOUTPUT_DIR=${output_dir}
+      -P ${CMAKE_CURRENT_BINARY_DIR}/extract_lit_tests.cmake
+    COMMENT "Extracting LIT tests to individual files"
+  )
+endfunction()

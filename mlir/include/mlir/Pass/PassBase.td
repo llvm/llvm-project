@@ -14,6 +14,8 @@
 #ifndef MLIR_PASS_PASSBASE
 #define MLIR_PASS_PASSBASE
 
+include "mlir/IR/Testable.td"
+
 //===----------------------------------------------------------------------===//
 // Options
 //===----------------------------------------------------------------------===//
@@ -62,7 +64,7 @@ class Statistic<string varName, string statName, string desc> {
 // Pass
 //===----------------------------------------------------------------------===//
 
-class PassBase<string passArg, string base> {
+class PassBase<string passArg, string base> : Testable {
   // The command line argument of the pass.
   string argument = passArg;
 
