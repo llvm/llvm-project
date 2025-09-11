@@ -37,7 +37,7 @@ template <> LIBC_INLINE uint16_t byte_swap<uint16_t>(uint16_t value) {
 #else
   return (v << 8) | (v >> 8);
 #endif // __builtin_bswap16
-};
+}
 
 template <> LIBC_INLINE uint32_t byte_swap<uint32_t>(uint32_t value) {
 #if __has_builtin(__builtin_bswap32)
@@ -47,7 +47,7 @@ template <> LIBC_INLINE uint32_t byte_swap<uint32_t>(uint32_t value) {
          (static_cast<uint32_t>(byte_swap<uint16_t>(static_cast<uint16_t>(v)))
           << 16);
 #endif // __builtin_bswap64
-};
+}
 
 template <> LIBC_INLINE uint64_t byte_swap<uint64_t>(uint64_t value) {
 #if __has_builtin(__builtin_bswap64)
@@ -57,7 +57,7 @@ template <> LIBC_INLINE uint64_t byte_swap<uint64_t>(uint64_t value) {
          (static_cast<uint64_t>(byte_swap<uint32_t>(static_cast<uint32_t>(v)))
           << 32);
 #endif // __builtin_bswap64
-};
+}
 
 // Converts uint8_t, uint16_t, uint32_t, uint64_t to its big or little endian
 // counterpart.
