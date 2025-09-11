@@ -290,6 +290,8 @@ jobs:
     # needs: [ stage3 ] # TODO: Run this at the end of the pipeline once we're done testing the job
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # This job requires access to all the Git branches so it can diff against (usually) main
       - name: benchmarks
         run: libcxx/utils/ci/run-buildbot benchmark-comparison
         env:
