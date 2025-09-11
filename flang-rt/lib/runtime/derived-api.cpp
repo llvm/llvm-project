@@ -46,7 +46,7 @@ void RTDEF(Destroy)(const Descriptor &descriptor) {
       if (!derived->noDestructionNeeded()) {
         // TODO: Pass source file & line information to the API
         // so that a good Terminator can be passed
-        Destroy(descriptor, true, *derived, nullptr);
+        Destroy(descriptor, /*finalize=*/true, *derived, nullptr);
       }
     }
   }
@@ -144,6 +144,10 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   }
 }
 
+// The object will be destroyed without finalization at the top level,
+// but allocated allocatable subobjects must be deallocated, and
+// deallocation is a finalization-triggering event, so they will
+// be finalized regardless.
 void RTDEF(DestroyWithoutFinalization)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
