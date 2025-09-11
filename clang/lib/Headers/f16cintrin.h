@@ -19,10 +19,14 @@
   __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS256 \
   __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(256)))
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR \
-  __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(128), __constexpr__))
-#define __DEFAULT_FN_ATTRS256_CONSTEXPR \
-  __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(256), __constexpr__))
+
+#ifdef __cplusplus
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#else
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#endif
 
 /* NOTE: Intel documents the 128-bit versions of these as being in emmintrin.h,
  * but that's because icc can emulate these without f16c using a library call.
@@ -165,5 +169,7 @@ _mm256_cvtph_ps(__m128i __a)
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
 
 #endif /* __F16CINTRIN_H */
