@@ -4823,8 +4823,7 @@ _mm256_zextsi128_si256(__m128i __a) {
 /// \returns A 256-bit floating-point vector of [8 x float] containing the
 ///    concatenated result.
 static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm256_set_m128 (__m128 __hi, __m128 __lo)
-{
+_mm256_set_m128(__m128 __hi, __m128 __lo) {
   return (__m256) __builtin_shufflevector((__v4sf)__lo, (__v4sf)__hi, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
@@ -4844,8 +4843,7 @@ _mm256_set_m128 (__m128 __hi, __m128 __lo)
 /// \returns A 256-bit floating-point vector of [4 x double] containing the
 ///    concatenated result.
 static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm256_set_m128d (__m128d __hi, __m128d __lo)
-{
+_mm256_set_m128d(__m128d __hi, __m128d __lo) {
   return (__m256d) __builtin_shufflevector((__v2df)__lo, (__v2df)__hi, 0, 1, 2, 3);
 }
 
@@ -4864,8 +4862,7 @@ _mm256_set_m128d (__m128d __hi, __m128d __lo)
 ///    result.
 /// \returns A 256-bit integer vector containing the concatenated result.
 static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm256_set_m128i (__m128i __hi, __m128i __lo)
-{
+_mm256_set_m128i(__m128i __hi, __m128i __lo) {
   return (__m256i) __builtin_shufflevector((__v2di)__lo, (__v2di)__hi, 0, 1, 2, 3);
 }
 
@@ -4887,8 +4884,7 @@ _mm256_set_m128i (__m128i __hi, __m128i __lo)
 /// \returns A 256-bit floating-point vector of [8 x float] containing the
 ///    concatenated result.
 static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm256_setr_m128 (__m128 __lo, __m128 __hi)
-{
+_mm256_setr_m128(__m128 __lo, __m128 __hi) {
   return _mm256_set_m128(__hi, __lo);
 }
 
@@ -4910,8 +4906,7 @@ _mm256_setr_m128 (__m128 __lo, __m128 __hi)
 /// \returns A 256-bit floating-point vector of [4 x double] containing the
 ///    concatenated result.
 static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm256_setr_m128d (__m128d __lo, __m128d __hi)
-{
+_mm256_setr_m128d(__m128d __lo, __m128d __hi) {
   return (__m256d)_mm256_set_m128d(__hi, __lo);
 }
 
@@ -4931,8 +4926,7 @@ _mm256_setr_m128d (__m128d __lo, __m128d __hi)
 ///    result.
 /// \returns A 256-bit integer vector containing the concatenated result.
 static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
-_mm256_setr_m128i (__m128i __lo, __m128i __hi)
-{
+_mm256_setr_m128i(__m128i __lo, __m128i __hi) {
   return (__m256i)_mm256_set_m128i(__hi, __lo);
 }
 
