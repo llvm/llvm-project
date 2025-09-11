@@ -48,7 +48,7 @@
 ; ONE-NEXT: [0x0000000010][004]      5             {Variable} 'CONSTANT' -> [0x000000003c]'const INTEGER'
 ; ONE-NEXT: [0x0000000010][005]                      {Coverage} 100.00%
 ; ONE-NEXT: [0x0000000000][006]                        {Location}
-; ONE-NEXT: [0x0000000000][007]                          {Entry} bregx 5 ptr %CONSTANT+0
+; ONE-NEXT: [0x0000000000][007]                          {Entry} bregx 3ptr %CONSTANT+0
 ; ONE-NEXT: [0x0000000030][004]      5             {Line} '{{.*}}/general/test.cpp'
 ; ONE-NEXT: [0x0000000030][004]                    {Code} 'store i32 7, ptr %CONSTANT, align 4, !dbg !32'
 ; ONE-NEXT: [0x0000000034][004]      6             {Line} '{{.*}}/general/test.cpp'
@@ -58,15 +58,15 @@
 ; ONE-NEXT: [0x0000000014][003]      2           {Parameter} 'ParamPtr' -> [0x0000000028]'INTPTR'
 ; ONE-NEXT: [0x0000000014][004]                    {Coverage} 100.00%
 ; ONE-NEXT: [0x0000000000][004]                    {Location}
-; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 0 ptr %ParamPtr.addr ptr %ParamUnsigned.addr+0
+; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 0ptr %ParamPtr.addr+0
 ; ONE-NEXT: [0x0000000018][003]      2           {Parameter} 'ParamUnsigned' -> [0x0000000034]'unsigned int'
 ; ONE-NEXT: [0x0000000018][004]                    {Coverage} 100.00%
 ; ONE-NEXT: [0x0000000000][004]                    {Location}
-; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 0 ptr %ParamPtr.addr ptr %ParamUnsigned.addr+0
+; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 1ptr %ParamUnsigned.addr+0
 ; ONE-NEXT: [0x000000001c][003]      2           {Parameter} 'ParamBool' -> [0x0000000038]'bool'
 ; ONE-NEXT: [0x000000001c][004]                    {Coverage} 100.00%
 ; ONE-NEXT: [0x0000000000][004]                    {Location}
-; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 4 ptr %ParamBool.addr+0
+; ONE-NEXT: [0x0000000000][005]                      {Entry} bregx 2ptr %ParamBool.addr+0
 ; ONE-NEXT: [0x0000000020][003]      4           {TypeAlias} 'INTEGER' -> [0x0000000024]'int'
 ; ONE-NEXT: [0x0000000000][003]      2           {Line} '{{.*}}/general/test.cpp'
 ; ONE-NEXT: [0x0000000000][003]                  {Code} '%retval = alloca i32, align 4'
