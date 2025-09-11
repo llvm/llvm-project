@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=CHECK-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX512F,CHECK-NO-FASTFMA
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skx -fp-contract=fast | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX512F,CHECK-FMA
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skx | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX512F,CHECK-FMA
 
 declare i16 @llvm.umax.i16(i16, i16)
 declare i64 @llvm.umin.i64(i64, i64)
@@ -1007,14 +1007,6 @@ define <4 x float> @fmul_pow_shl_cnt_vec_preserve_fma(<4 x i32> %cnt, <4 x float
 ; CHECK-AVX2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_preserve_fma:
-; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    vpslld $23, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1092616192,1092616192,1092616192,1092616192]
-; CHECK-NO-FASTFMA-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    retq
-;
 ; CHECK-FMA-LABEL: fmul_pow_shl_cnt_vec_preserve_fma:
 ; CHECK-FMA:       # %bb.0:
 ; CHECK-FMA-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2,2,2,2]
@@ -1024,8 +1016,8 @@ define <4 x float> @fmul_pow_shl_cnt_vec_preserve_fma(<4 x i32> %cnt, <4 x float
 ; CHECK-FMA-NEXT:    retq
   %shl = shl nsw nuw <4 x i32> <i32 2, i32 2, i32 2, i32 2>, %cnt
   %conv = uitofp <4 x i32> %shl to <4 x float>
-  %mul = fmul <4 x float> <float 5.000000e+00, float 5.000000e+00, float 5.000000e+00, float 5.000000e+00>, %conv
-  %res = fadd <4 x float> %mul, %add
+  %mul = fmul contract <4 x float> <float 5.000000e+00, float 5.000000e+00, float 5.000000e+00, float 5.000000e+00>, %conv
+  %res = fadd contract <4 x float> %mul, %add
   ret <4 x float> %res
 }
 
