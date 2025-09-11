@@ -62,30 +62,30 @@ __attribute__((availability(domain:feature1, UNAVAIL), availability(domain:featu
 
 __attribute__((availability(macosx,introduced=10), availability(domain:feature1, AVAIL))) void func19(void);
 
-int *g12 = &g0; // expected-error {{use of 'g0' requires feature 'feature1' to be available}}
-int g7 = sizeof(g0); // expected-error {{use of 'g0' requires feature 'feature1' to be available}}
+int *g12 = &g0; // expected-error {{cannot use 'g0' because feature 'feature1' is unavailable in this context}}
+int g7 = sizeof(g0); // expected-error {{cannot use 'g0' because feature 'feature1' is unavailable in this context}}
 __attribute__((availability(domain:feature1, AVAIL))) int g6 = sizeof(g0);
-__attribute__((availability(domain:feature1, UNAVAIL))) int g8 = sizeof(g0); // expected-error {{use of 'g0' requires feature 'feature1' to be available}}
-__attribute__((availability(domain:feature2, AVAIL))) int g9 = sizeof(g0); // expected-error {{use of 'g0' requires feature 'feature1' to be available}}
-void (*fp0)(void) = func6; // expected-error {{use of 'func6' requires feature 'feature1' to be available}}
+__attribute__((availability(domain:feature1, UNAVAIL))) int g8 = sizeof(g0); // expected-error {{cannot use 'g0' because feature 'feature1' is unavailable in this context}}
+__attribute__((availability(domain:feature2, AVAIL))) int g9 = sizeof(g0); // expected-error {{cannot use 'g0' because feature 'feature1' is unavailable in this context}}
+void (*fp0)(void) = func6; // expected-error {{cannot use 'func6' because feature 'feature1' is unavailable in this context}}
 void (* __attribute__((availability(domain:feature1, AVAIL))) fp1)(void) = func6;
-void (* __attribute__((availability(domain:feature1, UNAVAIL))) fp2)(void) = func6; // expected-error {{use of 'func6' requires feature 'feature1' to be available}}
-void (* __attribute__((availability(domain:feature2, AVAIL))) fp3)(void) = func6; // expected-error {{use of 'func6' requires feature 'feature1' to be available}}
+void (* __attribute__((availability(domain:feature1, UNAVAIL))) fp2)(void) = func6; // expected-error {{cannot use 'func6' because feature 'feature1' is unavailable in this context}}
+void (* __attribute__((availability(domain:feature2, AVAIL))) fp3)(void) = func6; // expected-error {{cannot use 'func6' because feature 'feature1' is unavailable in this context}}
 
 void func6(void);
 __attribute__((availability(domain:feature1, AVAIL))) void func6(void); // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
 __attribute__((availability(domain:feature1, UNAVAIL))) void func6(void); // expected-error {{cannot merge incompatible feature attribute to this decl}} expected-note {{feature attribute __attribute__((availability(domain:feature1, 1)))}}
-__attribute__((availability(domain:feature1, AVAIL))) void func8(void); // expected-error {{new feature attributes cannot be added to redeclarations}}
+__attribute__((availability(domain:feature1, AVAIL))) void func8(void); // expected-error {{new domain availability attributes cannot be added to redeclarations}}
 
 int g0;
 __attribute__((availability(domain:feature1, AVAIL))) int g0; // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
 __attribute__((availability(domain:feature1, UNAVAIL))) int g0; // expected-error {{cannot merge incompatible feature attribute to this decl}} expected-note {{feature attribute __attribute__((availability(domain:feature1, 1)))}}
-__attribute__((availability(domain:feature1, AVAIL))) int g2;// expected-error {{new feature attributes cannot be added to redeclarations}}
+__attribute__((availability(domain:feature1, AVAIL))) int g2;// expected-error {{new domain availability attributes cannot be added to redeclarations}}
 
 typedef int INT0 __attribute__((availability(domain:feature2, AVAIL)));
 typedef INT0 INT1 __attribute__((availability(domain:feature2, AVAIL)));
-typedef INT0 INT2 __attribute__((availability(domain:feature2, UNAVAIL))); // expected-error {{use of 'INT0' requires feature 'feature2' to be available}}
-typedef INT0 INT3 __attribute__((availability(domain:feature1, AVAIL))); // expected-error {{use of 'INT0' requires feature 'feature2' to be available}}
+typedef INT0 INT2 __attribute__((availability(domain:feature2, UNAVAIL))); // expected-error {{cannot use 'INT0' because feature 'feature2' is unavailable in this context}}
+typedef INT0 INT3 __attribute__((availability(domain:feature1, AVAIL))); // expected-error {{cannot use 'INT0' because feature 'feature2' is unavailable in this context}}
 
 enum __attribute__((availability(domain:feature1, AVAIL))) E {
   EA,
@@ -101,36 +101,36 @@ struct __attribute__((availability(domain:feature1, AVAIL))) S1 {
 };
 
 struct S2 {
-  struct S0 s0; // expected-error {{use of 'S0' requires feature 'feature1' to be available}}
+  struct S0 s0; // expected-error {{cannot use 'S0' because feature 'feature1' is unavailable in this context}}
   int i0 __attribute__((availability(domain:feature1, AVAIL))); // expected-error {{feature attributes cannot be applied to struct members}}
 };
 
-struct S0 g10; // expected-error {{use of 'S0' requires feature 'feature1' to be available}}
+struct S0 g10; // expected-error {{cannot use 'S0' because feature 'feature1' is unavailable in this context}}
 __attribute__((availability(domain:feature1, AVAIL))) struct S0 g11;
 
 void test0(void) {
-  func12(); // expected-error {{use of 'func12' requires feature 'feature1' to be available}}
-  func7(); // expected-error {{use of 'func7' requires feature 'feature1' to be unavailable}}
-  func19(); // expected-error {{use of 'func19' requires feature 'feature1' to be available}}
+  func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+  func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+  func19(); // expected-error {{cannot use 'func19' because feature 'feature1' is unavailable in this context}}
 
   if (__builtin_available(domain:feature1, domain:feature2)) // expected-error {{cannot pass a domain argument along with other arguments}}
     ;
 
   if (__builtin_available(domain:feature1)) {
     func12();
-    func7(); // expected-error {{use of 'func7' requires feature 'feature1' to be unavailable}}
-    func13(); // expected-error {{use of 'func13' requires feature 'feature2' to be available}}
+    func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
+    func13(); // expected-error {{cannot use 'func13' because feature 'feature2' is unavailable in this context}}
     if (__builtin_available(domain:feature2)) {
       func13();
-      func9(); // expected-error {{use of 'func9' requires feature 'feature2' to be unavailable}}
+      func9(); // expected-error {{cannot use 'func9' because feature 'feature2' is available in this context}}}
       func12();
     } else {
-      func13(); // expected-error {{use of 'func13' requires feature 'feature2' to be available}}
+      func13(); // expected-error {{cannot use 'func13' because feature 'feature2' is unavailable in this context}}
       func9();
       func12();
     }
   } else {
-    func12(); // expected-error {{use of 'func12' requires feature 'feature1' to be available}}
+    func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
     func7();
   }
 }
@@ -138,47 +138,47 @@ void test0(void) {
  __attribute__((availability(domain:feature1, AVAIL)))
 void test1(void) {
   func12();
-  func7(); // expected-error {{use of 'func7' requires feature 'feature1' to be unavailable}}
+  func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
 }
 
  __attribute__((availability(domain:feature1, UNAVAIL)))
 void test2(void) {
-  func12(); // expected-error {{use of 'func12' requires feature 'feature1' to be available}}
+  func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
   func7();
 }
 
 __attribute__((availability(domain:feature3, AVAIL)))
 void test3(void) {
   ^ {
-    func12(); // expected-error {{use of 'func12' requires feature 'feature1' to be available}}
-    func7(); // expected-error {{use of 'func7' requires feature 'feature1' to be unavailable}}
+    func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
+    func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
     func20();
   }();
 
   if (__builtin_available(domain:feature1)) {
     ^{
       func12();
-      func7(); // expected-error {{use of 'func7' requires feature 'feature1' to be unavailable}}
+      func7(); // expected-error {{cannot use 'func7' because feature 'feature1' is available in this context}}}
       func20();
       if (__builtin_available(domain:feature2)) {
         func13();
-        func9(); // expected-error {{use of 'func9' requires feature 'feature2' to be unavailable}}
+        func9(); // expected-error {{cannot use 'func9' because feature 'feature2' is available in this context}}}
       } else {
-        func13(); // expected-error {{use of 'func13' requires feature 'feature2' to be available}}
+        func13(); // expected-error {{cannot use 'func13' because feature 'feature2' is unavailable in this context}}
         func9();
       }
     }();
   } else {
     ^{
-      func12(); // expected-error {{use of 'func12' requires feature 'feature1' to be available}}
+      func12(); // expected-error {{cannot use 'func12' because feature 'feature1' is unavailable in this context}}
       func7();
       func20();
     }();
   }
 }
 
-void test4(struct S0 *s0) { // expected-error {{use of 'S0' requires feature 'feature1' to be available}}
-  g11.i0 = 0; // expected-error {{use of 'g11' requires feature 'feature1' to be available}} expected-error {{use of 'i0' requires feature 'feature1' to be available}}
+void test4(struct S0 *s0) { // expected-error {{cannot use 'S0' because feature 'feature1' is unavailable in this context}}
+  g11.i0 = 0; // expected-error {{cannot use 'g11' because feature 'feature1' is unavailable in this context}} expected-error {{cannot use 'i0' because feature 'feature1' is unavailable in this context}}
 }
 
 void test5(int c) {
@@ -203,44 +203,44 @@ void test6(void) {
   if (__builtin_available(domain:feature1)) {
     if (__builtin_available(domain:feature2)) {
       func15();
-      func16(); // expected-error {{use of 'func16' requires feature 'feature2' to be unavailable}}
-      func17(); // expected-error {{use of 'func17' requires feature 'feature1' to be unavailable}}
-      func18(); // expected-error {{use of 'func18' requires feature 'feature1' to be unavailable}} expected-error {{use of 'func18' requires feature 'feature2' to be unavailable}}
+      func16(); // expected-error {{cannot use 'func16' because feature 'feature2' is available in this context}}}
+      func17(); // expected-error {{cannot use 'func17' because feature 'feature1' is available in this context}}}
+      func18(); // expected-error {{cannot use 'func18' because feature 'feature1' is available in this context}}} expected-error {{cannot use 'func18' because feature 'feature2' is available in this context}}}
     } else {
-      func15(); // expected-error {{use of 'func15' requires feature 'feature2' to be available}}
+      func15(); // expected-error {{cannot use 'func15' because feature 'feature2' is unavailable in this context}}
       func16();
-      func17(); // expected-error {{use of 'func17' requires feature 'feature1' to be unavailable}} expected-error {{use of 'func17' requires feature 'feature2' to be available}}
-      func18(); // expected-error {{use of 'func18' requires feature 'feature1' to be unavailable}}
+      func17(); // expected-error {{cannot use 'func17' because feature 'feature1' is available in this context}}} expected-error {{cannot use 'func17' because feature 'feature2' is unavailable in this context}}
+      func18(); // expected-error {{cannot use 'func18' because feature 'feature1' is available in this context}}}
     }
   } else {
     if (__builtin_available(domain:feature2)) {
-      func15(); // expected-error {{use of 'func15' requires feature 'feature1' to be available}}
-      func16(); // expected-error {{use of 'func16' requires feature 'feature1' to be available}} expected-error {{use of 'func16' requires feature 'feature2' to be unavailable}}
+      func15(); // expected-error {{cannot use 'func15' because feature 'feature1' is unavailable in this context}}
+      func16(); // expected-error {{cannot use 'func16' because feature 'feature1' is unavailable in this context}} expected-error {{cannot use 'func16' because feature 'feature2' is available in this context}}}
       func17();
-      func18(); // expected-error {{use of 'func18' requires feature 'feature2' to be unavailable}}
+      func18(); // expected-error {{cannot use 'func18' because feature 'feature2' is available in this context}}}
     } else {
-      func15(); // expected-error {{use of 'func15' requires feature 'feature1' to be available}} expected-error {{use of 'func15' requires feature 'feature2' to be available}}
-      func16(); // expected-error {{use of 'func16' requires feature 'feature1' to be available}}
-      func17(); // expected-error {{use of 'func17' requires feature 'feature2' to be available}}
+      func15(); // expected-error {{cannot use 'func15' because feature 'feature1' is unavailable in this context}} expected-error {{cannot use 'func15' because feature 'feature2' is unavailable in this context}}
+      func16(); // expected-error {{cannot use 'func16' because feature 'feature1' is unavailable in this context}}
+      func17(); // expected-error {{cannot use 'func17' because feature 'feature2' is unavailable in this context}}
       func18();
     }
   }
 }
 
 void test7(void) {
-  enum E e; // expected-error {{use of 'E' requires feature 'feature1' to be available}}
-  struct S0 s0; // expected-error {{use of 'S0' requires feature 'feature1' to be available}}
+  enum E e; // expected-error {{cannot use 'E' because feature 'feature1' is unavailable in this context}}
+  struct S0 s0; // expected-error {{cannot use 'S0' because feature 'feature1' is unavailable in this context}}
 
   if (__builtin_available(domain:feature1)) {
     enum E e;
     e = EA;
-    e = EB; // expected-error {{use of 'EB' requires feature 'feature2' to be available}}
+    e = EB; // expected-error {{cannot use 'EB' because feature 'feature2' is unavailable in this context}}
   }
 
   if (__builtin_available(domain:feature2)) {
-    enum E e; // expected-error {{use of 'E' requires feature 'feature1' to be available}}
-    e = EA; // expected-error {{use of 'EA' requires feature 'feature1' to be available}}
-    e = EB; // expected-error {{use of 'EB' requires feature 'feature1' to be available}}
+    enum E e; // expected-error {{cannot use 'E' because feature 'feature1' is unavailable in this context}}
+    e = EA; // expected-error {{cannot use 'EA' because feature 'feature1' is unavailable in this context}}
+    e = EB; // expected-error {{cannot use 'EB' because feature 'feature1' is unavailable in this context}}
   }
 }
 

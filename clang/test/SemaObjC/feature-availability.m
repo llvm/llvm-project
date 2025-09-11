@@ -18,31 +18,31 @@ struct __attribute__((availability(domain:feature1, UNAVAIL))) S0 {};
 struct __attribute__((availability(domain:feature1, AVAIL))) S1 {};
 
 @interface C0 {
-  struct S0 ivar0; // expected-error {{use of 'S0' requires feature 'feature1' to be unavailable}}
-  struct S1 ivar1; // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
+  struct S0 ivar0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
+  struct S1 ivar1; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
   struct S1 ivar2 __attribute__((availability(domain:feature1, AVAIL)));
-  struct S1 ivar3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
+  struct S1 ivar3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 }
-@property struct S0 prop0; // expected-error {{use of 'S0' requires feature 'feature1' to be unavailable}}
-@property struct S1 prop1; // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
+@property struct S0 prop0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
+@property struct S1 prop1; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @property struct S1 prop2 __attribute__((availability(domain:feature1, AVAIL)));
-@property struct S1 prop3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
--(struct S0)m0; // expected-error {{use of 'S0' requires feature 'feature1' to be unavailable}}
--(struct S1)m1; // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
+@property struct S1 prop3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
+-(struct S0)m0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
+-(struct S1)m1; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 -(struct S1)m2 __attribute__((availability(domain:feature1, AVAIL)));
--(struct S1)m3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
+-(struct S1)m3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @end
 
 @class Base0;
 
 __attribute__((availability(domain:feature1, AVAIL))) // expected-note 2 {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
 @interface Base0 {
-  struct S0 ivar0; // expected-error {{use of 'S0' requires feature 'feature1' to be unavailable}}
+  struct S0 ivar0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
   struct S1 ivar1;
   struct S1 ivar2 __attribute__((availability(domain:feature1, AVAIL)));
   struct S1 ivar3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot merge incompatible feature attribute to this decl}} expected-note {{feature attribute __attribute__((availability(domain:feature1, 1)))}}
 }
-@property struct S0 prop0; // expected-error {{use of 'S0' requires feature 'feature1' to be unavailable}}
+@property struct S0 prop0; // expected-error {{cannot use 'S0' because feature 'feature1' is available in this context}}
 @property struct S1 prop1;
 @property struct S1 prop2 __attribute__((availability(domain:feature1, AVAIL)));
 @property struct S1 prop3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{cannot merge incompatible feature attribute to this decl}} expected-note {{feature attribute __attribute__((availability(domain:feature1, 1)))}}
@@ -59,7 +59,7 @@ __attribute__((availability(domain:feature1, AVAIL), // expected-note {{is incom
 @interface Base7<T> : NSObject
 @end
 
-@interface Derived3 : Base7<Base0 *> // expected-error {{use of 'Base0' requires feature 'feature1' to be available}}
+@interface Derived3 : Base7<Base0 *> // expected-error {{cannot use 'Base0' because feature 'feature1' is unavailable in this context}}
 @end
 
 __attribute__((availability(domain:feature1, AVAIL))) // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}} expected-note 2 {{feature attribute __attribute__((availability(domain:feature1, 0)))}}
@@ -78,7 +78,7 @@ __attribute__((availability(domain:feature1, AVAIL))) // expected-note {{is inco
 @implementation Derived0
 -(void)m0 {
   func1();
-  func3(); // expected-error {{use of 'func3' requires feature 'feature1' to be unavailable}}
+  func3(); // expected-error {{cannot use 'func3' because feature 'feature1' is available in this context}}
 }
 -(void)m1 {
   self.p1 = 1;
@@ -116,7 +116,7 @@ __attribute__((availability(domain:feature1, UNAVAIL))) // expected-note {{featu
 @end
 
 @protocol P0
-@property struct S1 *p0; // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
+@property struct S1 *p0; // expected-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @end
 
 __attribute__((availability(domain:feature1, AVAIL)))
@@ -175,7 +175,7 @@ __attribute__((availability(domain:feature1, UNAVAIL)))
 @interface Base6 <P1, P2>
 @end
 
-void foo(id<P1>); // expected-error {{use of 'P1' requires feature 'feature1' to be unavailable}}
+void foo(id<P1>); // expected-error {{cannot use 'P1' because feature 'feature1' is available in this context}}
 
 @interface Base8
 @property (copy) id x;
@@ -198,8 +198,8 @@ __attribute__((availability(domain:feature1, AVAIL)))
 -(void)m4 {
   // Check that this method doesn't inherit the domain availablity attribute
   // from the base class method.
-  func1(); // expected-error {{use of 'func1' requires feature 'feature1' to be available}}
+  func1(); // expected-error {{cannot use 'func1' because feature 'feature1' is unavailable in this context}}
 
-  [super m4]; // expected-error {{use of 'm4' requires feature 'feature1' to be available}}
+  [super m4]; // expected-error {{cannot use 'm4' because feature 'feature1' is unavailable in this context}}
 }
 @end

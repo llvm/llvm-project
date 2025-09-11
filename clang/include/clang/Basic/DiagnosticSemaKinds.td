@@ -4101,7 +4101,7 @@ def warn_unguarded_availability :
   Warning<"%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
 def err_unguarded_feature : Error<
-  "use of %0 requires feature '%1' to be %select{available|unavailable}2">;
+  "cannot use %0 because feature '%1' is %select{unavailable|available}2 in this context">;
 def err_label_in_conditionally_guarded_feature : Error<
   "labels cannot appear in regions conditionally guarded by features">;
 def err_features_invalid_for_decl : Error<
@@ -4114,8 +4114,8 @@ def err_feature_invalid_for_decl : Error<
   "feature attribute '%0(%1)' cannot be applied to this decl">;
 def err_feature_merge_incompatible : Error<
   "cannot merge incompatible feature attribute to this decl">;
-def err_new_feature_redeclaration : Error<
-  "new feature attributes cannot be added to redeclarations">;
+def warn_new_feature_redeclaration : Warning<
+  "new domain availability attributes cannot be added to redeclarations">, DefaultError;
 def err_feature_invalid_added : Error<
   "cannot add feature availability to this decl">;
 def note_feature_incompatible0 : Note<

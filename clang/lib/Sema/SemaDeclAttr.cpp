@@ -4083,7 +4083,7 @@ void Sema::copyFeatureAvailabilityCheck(Decl *Dst, NamedDecl *Src,
     if (!DstToAttr.empty())
       Dst->setInvalidDecl();
     for (auto &P : DstToAttr)
-      Diag(P.second->getLocation(), diag::err_new_feature_redeclaration)
+      Diag(P.second->getLocation(), diag::warn_new_feature_redeclaration)
           << P.second->getFeatureAttributeStr();
   }
 }
