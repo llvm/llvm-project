@@ -1618,7 +1618,8 @@ bool AArch64InstrInfo::optimizePTestInstr(
     // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
     // before the branch to extract each subregister.
     auto Op = Pred->getOperand(1);
-    if (Op.isReg() && Op.getSubReg() == AArch64::psub0)
+    if (Op.isReg() && Op.getReg().isVirtual() &&
+        Op.getSubReg() == AArch64::psub0)
       Pred = MRI->getUniqueVRegDef(Op.getReg());
   }
 
