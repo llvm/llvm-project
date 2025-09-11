@@ -88,10 +88,5 @@ int main(int, char**) {
   static_assert(test());
 #endif
 
-  // can't run this as a constant expression
-  // because
-  // existing implementation relies on UB to avoid allocatr::construct_at()
-  // instantiating anything other than container::value_type
-  // assert(test_container_general_requirements());
   return 0;
 }
