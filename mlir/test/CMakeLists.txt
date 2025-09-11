@@ -65,7 +65,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
 
 endif()
 
-option(MLIR_RUN_STANDALONE_INSTALL_TESTS "Run Standalone example install tests." ON)
+option(MLIR_RUN_STANDALONE_INSTALL_TESTS "Run Standalone example install tests." OFF)
 if(MLIR_RUN_STANDALONE_INSTALL_TESTS AND "${CMAKE_INSTALL_PREFIX}" STREQUAL "")
   message(WARNING "Standalone example install tests will install into root!\
   If you want to disable this behavior pass -DMLIR_RUN_STANDALONE_INSTALL_TESTS=OFF")

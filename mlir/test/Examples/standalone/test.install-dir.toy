@@ -3,8 +3,6 @@
 # RUN: echo "test full install" | tee %t
 # CHECK: test full install
 
-# RUN: rm -rf "%host_cmake_install_prefix"
-
 # RUN: "%cmake_exe" --build "%llvm_obj_root" --target install -j | tee -a %t
 
 # RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
@@ -23,8 +21,6 @@
 # CHECK: Passed
 # CHECK-NOT: Failed
 # UNSUPPORTED: target={{.*(windows|android).*}}
-
-# RUN: rm -rf "%host_cmake_install_prefix"
 
 # RUN: echo "test install distribution" | tee -a %t
 # CHECK: test install distribution
