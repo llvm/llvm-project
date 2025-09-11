@@ -560,17 +560,15 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
       Offset = Range.OffsetInDescriptorsFromTableStart;
 
     if (!verifyNoOverflowedOffset(Offset))
-      return make_error<OffsetOverflowError>(RangeType,
-                                             Range.BaseShaderRegister,
-                                             Range.RegisterSpace);
+      return make_error<OffsetOverflowError>(
+          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     const uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
         Range.BaseShaderRegister, Range.NumDescriptors);
 
     if (!verifyNoOverflowedOffset(RangeBound))
       return make_error<ShaderRegisterOverflowError>(
-          RangeType, Range.BaseShaderRegister,
-          Range.RegisterSpace);
+          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     const uint64_t OffsetBound =
         llvm::hlsl::rootsig::computeRangeBound(Offset, Range.NumDescriptors);
