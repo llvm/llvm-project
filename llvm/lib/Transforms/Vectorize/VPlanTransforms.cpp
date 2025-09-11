@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanTransforms.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
@@ -20,6 +21,7 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VPlanValue.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -31,11 +33,17 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <cstdint>
+#include <limits>
+#include <optional>
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -4336,14 +4344,20 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       auto IsProfitable = [&](ElementCount VF) -> bool {
         Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
         const Align Alignment = getLoadStoreAlignment(&Ingredient);
-        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
-          return false;
-        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
-        const InstructionCost StridedLoadStoreCost =
-            Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
-                                           MemR->isMasked(), Alignment,
-                                           Ctx.CostKind, &Ingredient);
-        return StridedLoadStoreCost < CurrentCost;
+        if (Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment)) {
+          const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
+          const InstructionCost StridedLoadStoreCost =
+              Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
+                                             MemR->isMasked(), Alignment,
+                                             Ctx.CostKind, &Ingredient);
+          return StridedLoadStoreCost < CurrentCost;
+        }
+
+        if (Ctx.TTI.preferToUseStrideRecipesForVectorization(DataTy,
+                                                             Alignment)) {
+          return true;
+        }
+        return false;
       };
 
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
@@ -4392,4 +4406,47 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
     R->eraseFromParent();
   for (auto *V : PossiblyDead)
     recursivelyDeleteDeadRecipes(V);
+}
+
+void VPlanTransforms::legalizeStridedAccess(VPlan &Plan, VPCostContext &Ctx,
+                                            VFRange &Range) {
+  VPTypeAnalysis TypeInfo(Plan);
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *StrideR = dyn_cast<VPWidenStridedLoadRecipe>(&R);
+      if (!StrideR)
+        continue;
+
+      Instruction &Ingredient = StrideR->getIngredient();
+      auto NeedsLegalize = [&](ElementCount VF) -> bool {
+        Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
+        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+          return true;
+        return false;
+      };
+
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(NeedsLegalize,
+                                                              Range))
+        continue;
+
+      auto *Ptr = cast<VPVectorPointerRecipe>(StrideR->getAddr());
+      auto *Stride = StrideR->getStride();
+      Type *StrideTy = TypeInfo.inferScalarType(Stride);
+
+      VPBuilder Builder(StrideR);
+      auto *Step =
+          Builder.createNaryOp(VPInstruction::StepVector, {}, StrideTy);
+      VPValue *Offset = Builder.createNaryOp(Instruction::Mul, {Step, Stride});
+      VPValue *GEP = Builder.createWidePtrAdd(Ptr->getOperand(0), Offset);
+
+      auto *LoadR = new VPWidenLoadRecipe(*cast<LoadInst>(&Ingredient), GEP,
+                                          StrideR->getMask(), false, false,
+                                          *StrideR, StrideR->getDebugLoc());
+      Builder.insert(LoadR);
+      StrideR->replaceAllUsesWith(LoadR);
+      StrideR->eraseFromParent();
+    }
+  }
 }

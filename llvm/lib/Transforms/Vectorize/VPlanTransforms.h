@@ -252,6 +252,11 @@ struct VPlanTransforms {
   static void convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
 
+  /// Legalize strided access recipes for targets that do not support
+  /// them natively.
+  static void legalizeStridedAccess(VPlan &Plan, VPCostContext &Ctx,
+                                    VFRange &Range);
+
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 

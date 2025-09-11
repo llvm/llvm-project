@@ -374,6 +374,11 @@ public:
     return false;
   }
 
+  virtual bool preferToUseStrideRecipesForVectorization(Type *DataType,
+                                                        Align Alignment) const {
+    return false;
+  }
+
   virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
                                             Align Alignment,
                                             unsigned AddrSpace) const {

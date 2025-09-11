@@ -852,6 +852,11 @@ public:
   /// Return true if the target supports strided load.
   LLVM_ABI bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
+  /// Return true if the target benefits from the generation of a more
+  /// efficient instruction sequence for strided accesses.
+  LLVM_ABI bool preferToUseStrideRecipesForVectorization(Type *DataType,
+                                                         Align Alignment) const;
+
   /// Return true is the target supports interleaved access for the given vector
   /// type \p VTy, interleave factor \p Factor, alignment \p Alignment and
   /// address space \p AddrSpace.

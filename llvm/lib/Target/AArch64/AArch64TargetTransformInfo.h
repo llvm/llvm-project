@@ -346,6 +346,12 @@ public:
     return isLegalMaskedGatherScatter(DataType);
   }
 
+  bool
+  preferToUseStrideRecipesForVectorization(Type *DataType,
+                                           Align Alignment) const override {
+    return isLegalMaskedGatherScatter(DataType);
+  }
+
   bool isLegalBroadcastLoad(Type *ElementTy,
                             ElementCount NumElements) const override {
     // Return true if we can generate a `ld1r` splat load instruction.

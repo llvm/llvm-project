@@ -8627,6 +8627,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::runPass(VPlanTransforms::convertToStridedAccesses, *Plan,
                            CostCtx, Range);
 
+  VPlanTransforms::runPass(VPlanTransforms::legalizeStridedAccess, *Plan,
+                           CostCtx, Range);
+
   for (ElementCount VF : Range)
     Plan->addVF(VF);
   Plan->setName("Initial VPlan");

@@ -3,11 +3,18 @@
 
 define void @stride7_i32(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_i32(
+; CHECK:      vector.ph:
+; CHECK:        %[[STEP:.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+; CHECK-NEXT:   %[[OFFSET:.*]] = mul <vscale x 4 x i64> %[[STEP]], splat (i64 28)
 ; CHECK:      vector.body
-; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 4 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
+; CHECK:        %[[INDEX:.*]] = phi i64 [ 0, %vector.ph ], [ %{{.*}}, %vector.body ]
+; CHECK-NEXT:   %[[VEC_IND:.*]] = phi <vscale x 4 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 4 x i64> %[[VEC_IND]], splat (i64 7)
+; CHECK-NEXT:   %[[IDX:.*]] = mul nsw i64 %[[INDEX]], 28
+; CHECK-NEXT:   %[[BASE_PTR:.*]] = getelementptr inbounds i8, ptr %dst, i64 %[[IDX]]
 ; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds i32, ptr %dst, <vscale x 4 x i64> %[[PTR_INDICES]]
-; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %[[PTRS]]
+; CHECK-NEXT:   %[[STRIDE_PTRS:.*]] = getelementptr i8, ptr %[[BASE_PTR]], <vscale x 4 x i64> %[[OFFSET]]
+; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %[[STRIDE_PTRS]]
 ; CHECK-NEXT:   %[[VALS:.*]] = add nsw <vscale x 4 x i32> %[[GLOAD]],
 ; CHECK-NEXT:   call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %[[VALS]], <vscale x 4 x ptr> %[[PTRS]]
 entry:
@@ -30,11 +37,18 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 define void @stride7_f64(ptr noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_f64(
+; CHECK:      vector.ph:
+; CHECK:        %[[STEP:.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:   %[[OFFSET:.*]] = mul <vscale x 2 x i64> %[[STEP]], splat (i64 56)
 ; CHECK:      vector.body
+; CHECK:        %[[INDEX:.*]] = phi i64 [ 0, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 2 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
 ; CHECK-NEXT:   %[[PTR_INDICES:.*]] = mul nuw nsw <vscale x 2 x i64> %[[VEC_IND]], splat (i64 7)
+; CHECK-NEXT:   %[[IDX:.*]] = mul nsw i64 %[[INDEX]], 56
+; CHECK-NEXT:   %[[BASE_PTR:.*]] = getelementptr inbounds i8, ptr %dst, i64 %[[IDX]]
 ; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds double, ptr %dst, <vscale x 2 x i64> %[[PTR_INDICES]]
-; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> %[[PTRS]],
+; CHECK-NEXT:   %[[STRIDE_PTRS:.*]] = getelementptr i8, ptr %[[BASE_PTR]], <vscale x 2 x i64> %[[OFFSET]]
+; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> %[[STRIDE_PTRS]],
 ; CHECK-NEXT:   %[[VALS:.*]] = fadd <vscale x 2 x double> %[[GLOAD]],
 ; CHECK-NEXT:  call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> %[[VALS]], <vscale x 2 x ptr> %[[PTRS]],
 entry:
@@ -60,8 +74,10 @@ define void @cond_stride7_f64(ptr noalias nocapture %dst, ptr noalias nocapture 
 ; CHECK-LABEL: @cond_stride7_f64(
 ; CHECK:      vector.body
 ; CHECK:        %[[MASK:.*]] = icmp ne <vscale x 2 x i64>
-; CHECK:        %[[PTRS:.*]] = getelementptr inbounds double, ptr %dst, <vscale x 2 x i64> %{{.*}}
-; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> %[[PTRS]], i32 8, <vscale x 2 x i1> %[[MASK]]
+; CHECK:        %[[BASE_PTR:.*]] = getelementptr inbounds i8, ptr %dst, i64 %{{.*}}
+; CHECK-NEXT:   %[[PTRS:.*]] = getelementptr inbounds double, ptr %dst, <vscale x 2 x i64> %{{.*}}
+; CHECK-NEXT:   %[[STRIDE_PTRS:.*]] = getelementptr i8, ptr %[[BASE_PTR]], <vscale x 2 x i64> %{{.*}}
+; CHECK-NEXT:   %[[GLOAD:.*]] = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> %[[STRIDE_PTRS]], i32 8, <vscale x 2 x i1> %[[MASK]]
 ; CHECK-NEXT:   %[[VALS:.*]] = fadd <vscale x 2 x double> %[[GLOAD]],
 ; CHECK-NEXT:  call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> %[[VALS]], <vscale x 2 x ptr> %[[PTRS]], i32 8, <vscale x 2 x i1> %[[MASK]])
 entry:
