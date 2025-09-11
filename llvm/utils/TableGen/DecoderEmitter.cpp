@@ -722,6 +722,26 @@ unsigned Filter::usefulness() const {
 //                              //
 //////////////////////////////////
 
+static StringRef getDecoderOpName(uint8_t Op) {
+  // clang-format off
+  static constexpr StringLiteral Names[] = {
+    "OPC_Scope",
+    "OPC_ExtractField",
+    "OPC_FilterValueOrSkip",
+    "OPC_FilterValue",
+    "OPC_CheckField",
+    "OPC_CheckPredicate",
+    "OPC_Decode",
+    "OPC_TryDecode",
+    "OPC_SoftFail",
+  };
+  static_assert(std::size(Names) == MCD::OPC_SoftFail - MCD::OPC_Scope + 1);
+  // clang-format on
+  if (Op >= MCD::OPC_Scope && Op <= MCD::OPC_SoftFail)
+    return Names[Op - MCD::OPC_Scope];
+  llvm_unreachable("Unknown decoder op");
+}
+
 // Emit the decoder state machine table. Returns a mask of MCD decoder ops
 // that were emitted.
 unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
@@ -775,9 +795,20 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   DecoderTable::const_iterator E = Table.end();
   const uint8_t *const EndPtr = Table.data() + Table.size();
 
+  constexpr uint32_t StartColumn = 14;
+
+  auto StartComment = [&OS]() {
+    constexpr uint32_t CommentColumn = 60;
+    OS.PadToColumn(CommentColumn);
+    OS << " // ";
+  };
+
   auto emitNumToSkipComment = [&](uint32_t NumToSkip, bool InComment = false) {
     uint32_t Index = ((I - Table.begin()) + NumToSkip);
-    OS << (InComment ? ", " : "// ");
+    if (InComment)
+      OS << ", ";
+    else
+      StartComment();
     OS << "Skip to: " << Index;
   };
 
@@ -785,10 +816,21 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   // This will be used for additional checks in `decodeInstruction`.
   if (SpecializeDecodersPerBitwidth) {
     OS << "/* 0  */";
-    OS.PadToColumn(14);
+    OS.PadToColumn(StartColumn);
     emitULEB128(I, OS);
     OS << " // Bitwidth " << BitWidth << '\n';
   }
+
+  auto DecodeAndEmitULEB128 = [EndPtr,
+                               &emitULEB128](DecoderTable::const_iterator &I,
+                                             formatted_raw_ostream &OS) {
+    const char *ErrMsg = nullptr;
+    uint64_t Value = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
+    assert(ErrMsg == nullptr && "ULEB128 value too large!");
+
+    emitULEB128(I, OS);
+    return Value;
+  };
 
   unsigned OpcodeMask = 0;
 
@@ -797,119 +839,109 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
 
     uint64_t Pos = I - Table.begin();
     OS << "/* " << Pos << " */";
-    OS.PadToColumn(12);
+    OS.PadToColumn(StartColumn);
 
     const uint8_t DecoderOp = *I++;
     OpcodeMask |= (1 << DecoderOp);
+    OS << "MCD::" << getDecoderOpName(DecoderOp) << ", ";
     switch (DecoderOp) {
     default:
       PrintFatalError("Invalid decode table opcode: " + Twine((int)DecoderOp) +
                       " at index " + Twine(Pos));
     case MCD::OPC_Scope: {
-      OS << "  MCD::OPC_Scope, ";
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       emitNumToSkipComment(NumToSkip);
-      OS << '\n';
       break;
     }
     case MCD::OPC_ExtractField: {
-      OS << "  MCD::OPC_ExtractField, ";
-
       // ULEB128 encoded start value.
-      const char *ErrMsg = nullptr;
-      unsigned Start = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
-      assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      emitULEB128(I, OS);
-
+      unsigned Start = DecodeAndEmitULEB128(I, OS);
       unsigned Len = *I++;
-      OS << Len << ",  // Inst{";
+      OS << Len << ',';
+      StartComment();
+      OS << "Inst{";
       if (Len > 1)
-        OS << (Start + Len - 1) << "-";
-      OS << Start << "} ...\n";
+        OS << (Start + Len - 1) << '-';
+      OS << Start << '}';
       break;
     }
     case MCD::OPC_FilterValueOrSkip: {
-      OS << "  MCD::OPC_FilterValueOrSkip, ";
       // The filter value is ULEB128 encoded.
-      emitULEB128(I, OS);
+      uint64_t FilterVal = DecodeAndEmitULEB128(I, OS);
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      emitNumToSkipComment(NumToSkip);
-      OS << '\n';
+      StartComment();
+      OS << "FilterVal = 0x";
+      OS.write_hex(FilterVal);
+      emitNumToSkipComment(NumToSkip, /*InComment=*/true);
       break;
     }
     case MCD::OPC_FilterValue: {
-      OS << "  MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
-      emitULEB128(I, OS);
-      OS << '\n';
+      uint64_t FilterVal = DecodeAndEmitULEB128(I, OS);
+
+      StartComment();
+      OS << "FilterVal = 0x";
+      OS.write_hex(FilterVal);
       break;
     }
     case MCD::OPC_CheckField: {
-      OS << "  MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
-      emitULEB128(I, OS);
+      unsigned Start = DecodeAndEmitULEB128(I, OS);
+
       // 8-bit length.
       unsigned Len = *I++;
       OS << Len << ", ";
+
       // ULEB128 encoded field value.
-      emitULEB128(I, OS);
-      OS << '\n';
+      uint64_t FieldVal = DecodeAndEmitULEB128(I, OS);
+
+      StartComment();
+      OS << "Inst{";
+      if (Len > 1)
+        OS << (Start + Len - 1) << '-';
+      OS << Start << "} == 0x";
+      OS.write_hex(FieldVal);
       break;
     }
     case MCD::OPC_CheckPredicate: {
-      OS << "  MCD::OPC_CheckPredicate, ";
-      emitULEB128(I, OS);
-      OS << '\n';
+      unsigned PIdx = DecodeAndEmitULEB128(I, OS);
+      StartComment();
+      OS << "PredicateIdx " << PIdx;
       break;
     }
     case MCD::OPC_Decode:
     case MCD::OPC_TryDecode: {
-      bool IsTry = DecoderOp == MCD::OPC_TryDecode;
       // Decode the Opcode value.
-      const char *ErrMsg = nullptr;
-      unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
-      assert(ErrMsg == nullptr && "ULEB128 value too large!");
-
-      OS << "  MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
-      emitULEB128(I, OS);
+      unsigned Opc = DecodeAndEmitULEB128(I, OS);
 
       // Decoder index.
-      unsigned DecodeIdx = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
-      assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      emitULEB128(I, OS);
+      unsigned DecodeIdx = DecodeAndEmitULEB128(I, OS);
 
       auto EncI = OpcodeToEncodingID.find(Opc);
       assert(EncI != OpcodeToEncodingID.end() && "no encoding entry");
       auto EncodingID = EncI->second;
 
-      if (!IsTry) {
-        OS << "// Opcode: " << Encodings[EncodingID].getName()
-           << ", DecodeIdx: " << DecodeIdx << '\n';
-        break;
-      }
-      OS << '\n';
+      StartComment();
+      OS << "Opcode: " << Encodings[EncodingID].getName()
+         << ", DecodeIdx: " << DecodeIdx;
       break;
     }
     case MCD::OPC_SoftFail: {
-      OS << "  MCD::OPC_SoftFail, ";
       // Decode the positive mask.
-      const char *ErrMsg = nullptr;
-      uint64_t PositiveMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
-      assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      emitULEB128(I, OS);
+      uint64_t PositiveMask = DecodeAndEmitULEB128(I, OS);
 
       // Decode the negative mask.
-      uint64_t NegativeMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
-      assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      emitULEB128(I, OS);
-      OS << "// +ve mask: 0x";
+      uint64_t NegativeMask = DecodeAndEmitULEB128(I, OS);
+
+      StartComment();
+      OS << "+ve mask: 0x";
       OS.write_hex(PositiveMask);
       OS << ", -ve mask: 0x";
       OS.write_hex(NegativeMask);
-      OS << '\n';
       break;
     }
     }
+    OS << '\n';
   }
   OS << "};\n\n";
 
