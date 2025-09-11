@@ -110,7 +110,8 @@ struct PhysRegSave {
   Register X0Save = AArch64::NoRegister;
 };
 
-/// Contains the needed ZA state (and live registers) at an instruction.
+/// Contains the needed ZA state (and live registers) at an instruction. That is
+/// the state ZA must be in _before_ "InsertPt".
 struct InstInfo {
   ZAState NeededState{ZAState::ANY};
   MachineBasicBlock::iterator InsertPt;
@@ -135,7 +136,8 @@ struct FunctionInfo {
 
 /// State/helpers that is only needed when emitting code to handle
 /// saving/restoring ZA.
-struct EmitContext {
+class EmitContext {
+public:
   EmitContext() = default;
 
   /// Get or create a TPIDR2 block in \p MF.
@@ -160,7 +162,11 @@ struct EmitContext {
     return AgnosticZABufferPtr;
   }
 
+  /// Returns true if the function must allocate a ZA save buffer on entry. This
+  /// will be the case if, at any point in the function, a ZA save was emitted.
   bool needsSaveBuffer() const {
+    assert(!(TPIDR2BlockFI && AgnosticZABufferPtr) &&
+           "Cannot have both a TPIDR2 block and agnostic ZA buffer");
     return TPIDR2BlockFI || AgnosticZABufferPtr != AArch64::NoRegister;
   }
 
@@ -252,13 +258,13 @@ struct MachineSMEABI : public MachineFunctionPass {
 
   /// Assigns each edge bundle a ZA state based on the needed states of blocks
   /// that have incoming or outgoing edges in that bundle.
-  SmallVector<ZAState> assignBundleZAStates(EdgeBundles const &Bundles,
-                                            FunctionInfo const &FnInfo);
+  SmallVector<ZAState> assignBundleZAStates(const EdgeBundles &Bundles,
+                                            const FunctionInfo &FnInfo);
 
   /// Inserts code to handle changes between ZA states within the function.
   /// E.g., ACTIVE -> LOCAL_SAVED will insert code required to save ZA.
-  void insertStateChanges(EmitContext &, FunctionInfo const &FnInfo,
-                          EdgeBundles const &Bundles,
+  void insertStateChanges(EmitContext &, const FunctionInfo &FnInfo,
+                          const EdgeBundles &Bundles,
                           ArrayRef<ZAState> BundleStates);
 
   // Emission routines for private and shared ZA functions (using lazy saves).
@@ -319,7 +325,7 @@ struct MachineSMEABI : public MachineFunctionPass {
   PhysRegSave createPhysRegSave(LiveRegs PhysLiveRegs, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI, DebugLoc DL);
   /// Restore physical registers from a save of their previous values.
-  void restorePhyRegSave(PhysRegSave const &RegSave, MachineBasicBlock &MBB,
+  void restorePhyRegSave(const PhysRegSave &RegSave, MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, DebugLoc DL);
 
 private:
@@ -410,8 +416,8 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
 /// Assigns each edge bundle a ZA state based on the needed states of blocks
 /// that have incoming or outgoing edges in that bundle.
 SmallVector<ZAState>
-MachineSMEABI::assignBundleZAStates(EdgeBundles const &Bundles,
-                                    FunctionInfo const &FnInfo) {
+MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
+                                    const FunctionInfo &FnInfo) {
   SmallVector<ZAState> BundleStates(Bundles.getNumBundles());
   for (unsigned I = 0, E = Bundles.getNumBundles(); I != E; ++I) {
     LLVM_DEBUG(dbgs() << "Assigning ZA state for edge bundle: " << I << '\n');
@@ -471,8 +477,8 @@ MachineSMEABI::assignBundleZAStates(EdgeBundles const &Bundles,
 }
 
 void MachineSMEABI::insertStateChanges(EmitContext &Context,
-                                       FunctionInfo const &FnInfo,
-                                       EdgeBundles const &Bundles,
+                                       const FunctionInfo &FnInfo,
+                                       const EdgeBundles &Bundles,
                                        ArrayRef<ZAState> BundleStates) {
   for (MachineBasicBlock &MBB : *MF) {
     const BlockInfo &Block = FnInfo.Blocks[MBB.getNumber()];
@@ -551,7 +557,7 @@ PhysRegSave MachineSMEABI::createPhysRegSave(LiveRegs PhysLiveRegs,
   return RegSave;
 }
 
-void MachineSMEABI::restorePhyRegSave(PhysRegSave const &RegSave,
+void MachineSMEABI::restorePhyRegSave(const PhysRegSave &RegSave,
                                       MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI,
                                       DebugLoc DL) {
@@ -844,7 +850,7 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  EdgeBundles const &Bundles =
+  const EdgeBundles &Bundles =
       getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
