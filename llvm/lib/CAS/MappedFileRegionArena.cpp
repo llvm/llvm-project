@@ -11,23 +11,23 @@
 ///
 /// The effect we want is:
 ///
-/// 1. If it doesn't exist, create the file with an initial size.
-/// 2. Reserve virtual memory large enough for the max file size.
-/// 3. Map the file into memory in the reserved region.
-/// 4. Increase the file size and update the mapping when necessary.
+/// Step 1. If it doesn't exist, create the file with an initial size.
+/// Step 2. Reserve virtual memory large enough for the max file size.
+/// Step 3. Map the file into memory in the reserved region.
+/// Step 4. Increase the file size and update the mapping when necessary.
 ///
 /// However, updating the mapping is challenging when it needs to work portably,
 /// and across multiple processes without locking for every read. Our current
-/// implementation strategy is:
+/// implementation handles the steps above in following ways:
 ///
-/// 1. Use \ref sys::fs::resize_file_sparse to grow the file to its max size
-///    (typically several GB). If the file system doesn't support sparse file,
-///    this may return a fully allocated file.
-/// 2. Call \ref sys::fs::mapped_file_region to map the entire file.
-/// 3. [Automatic as part of 2.]
-/// 4. If supported, use \c fallocate or similiar APIs to ensure the file system
-///    storage for the sparse file so we won't end up with partial file if the
-///    disk is out of space.
+/// Step 1. Use \ref sys::fs::resize_file_sparse to grow the file to its max
+///         size (typically several GB). If the file system doesn't support
+///         sparse file, this may return a fully allocated file.
+/// Step 2. Call \ref sys::fs::mapped_file_region to map the entire file.
+/// Step 3. [Automatic as part of step 2.]
+/// Step 4. If supported, use \c fallocate or similiar APIs to ensure the file
+///         system storage for the sparse file so we won't end up with partial
+///         file if the disk is out of space.
 ///
 /// Additionally, we attempt to resize the file to its actual data size when
 /// closing the mapping, if this is the only concurrent instance. This is done
