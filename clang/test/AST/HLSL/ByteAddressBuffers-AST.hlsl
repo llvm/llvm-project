@@ -107,6 +107,8 @@ RESOURCE Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
 // CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::[[RESOURCE]]' 'void (const hlsl::[[RESOURCE]] &)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::[[RESOURCE]]' xvalue <NoOp>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
@@ -135,6 +137,8 @@ RESOURCE Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
 // CHECK-NEXT: ReturnStmt
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::[[RESOURCE]]' 'void (const hlsl::[[RESOURCE]] &)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::[[RESOURCE]]' xvalue <NoOp>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 

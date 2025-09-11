@@ -33,10 +33,16 @@ void SecondEntry() {}
 
 // Verify the constructors are alwaysinline
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
-// NOINLINE-NEXT: define linkonce_odr hidden void @hlsl::RWBuffer<float>::RWBuffer()(ptr noundef nonnull align 4 dereferenceable(4) %this){{.*}} [[CtorAttr:\#[0-9]+]]
+// NOINLINE-NEXT: define linkonce_odr hidden void @hlsl::RWBuffer<float>::RWBuffer()({{.*}}){{.*}} [[CtorAttr:\#[0-9]+]]
+
+// NOINLINE: ; Function Attrs: {{.*}}alwaysinline
+// NOINLINE-NEXT: define linkonce_odr hidden void @hlsl::RWBuffer<float>::RWBuffer(hlsl::RWBuffer<float> const&)({{.*}}){{.*}} [[CtorAttr]]
 
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
 // NOINLINE-NEXT: define linkonce_odr hidden void @hlsl::RWBuffer<float>::RWBuffer()(ptr noundef nonnull align 4 dereferenceable(4) %this){{.*}} [[CtorAttr:\#[0-9]+]]
+
+// NOINLINE: ; Function Attrs: {{.*}}alwaysinline
+// NOINLINE-NEXT: define linkonce_odr hidden void @hlsl::RWBuffer<float>::RWBuffer(hlsl::RWBuffer<float> const&)({{.*}}){{.*}} [[CtorAttr]]
 
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
 // NOINLINE-NEXT: define internal void @_GLOBAL__sub_I_GlobalConstructorLib.hlsl() [[InitAttr:\#[0-9]+]]
