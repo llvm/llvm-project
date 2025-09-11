@@ -6267,12 +6267,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AArch64ISD::CTLZ_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
   case Intrinsic::aarch64_sme_cntsd: {
-    auto Flags = SDNodeFlags();
-    Flags.setExact(true);
     SDValue Bytes = DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(),
                                 DAG.getConstant(1, DL, MVT::i32));
     return DAG.getNode(ISD::SRL, DL, Op.getValueType(), Bytes,
-                       DAG.getConstant(3, DL, MVT::i32), Flags);
+                       DAG.getConstant(3, DL, MVT::i32), SDNodeFlags::Exact);
   }
   case Intrinsic::aarch64_sve_cnt: {
     SDValue Data = Op.getOperand(3);
