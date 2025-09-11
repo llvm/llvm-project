@@ -2725,12 +2725,15 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
+    bool HLSLSemantic = false;
     for (const Record *R : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName().str();
       if (R->getName() == "InheritableAttr")
         Inheritable = true;
+      if (R->getName() == "HLSLSemanticAttr")
+        HLSLSemantic = true;
     }
 
     if (Header)
@@ -3054,6 +3057,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
+      if (HLSLSemantic)
+        OS << ", " << (R.getValueAsBit("SemanticIndexable") ? "true" : "false");
       OS << ")\n";
 
       for (auto const &ai : Args) {
@@ -3270,7 +3275,8 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
     {"INHERITABLE_PARAM_ATTR", "InheritableParamAttr"},
     {"INHERITABLE_PARAM_OR_STMT_ATTR", "InheritableParamOrStmtAttr"},
     {"PARAMETER_ABI_ATTR", "ParameterABIAttr"},
-    {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"}};
+    {"HLSL_ANNOTATION_ATTR", "HLSLAnnotationAttr"},
+    {"HLSL_SEMANTIC_ATTR", "HLSLSemanticAttr"}};
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,
                               const char *superName) {
