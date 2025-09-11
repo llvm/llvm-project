@@ -70,8 +70,7 @@ bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN) {
         if (Visited.size() >= 16)
           return false;
         Stack.push_back(PhiUse);
-      }
-      else
+      } else
         return false;
     }
   }
