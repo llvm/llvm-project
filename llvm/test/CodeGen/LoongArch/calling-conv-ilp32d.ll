@@ -65,24 +65,30 @@ define i32 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.w $sp, $sp, -16
 ; CHECK-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI3_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; CHECK-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI3_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI3_3)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_4)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI3_4)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_5)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI3_5)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_6)
-; CHECK-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI3_6)
-; CHECK-NEXT:    addi.w $a0, $zero, 1
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
-; CHECK-NEXT:    ffint.s.w $fa0, $fa0
-; CHECK-NEXT:    fcvt.d.s $fa0, $fa0
+; CHECK-NEXT:    movgr2fr.w $fa7, $zero
+; CHECK-NEXT:    lu12i.w $a0, 261888
+; CHECK-NEXT:    fmov.d $fa0, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa0, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262144
+; CHECK-NEXT:    fmov.d $fa1, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa1, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262272
+; CHECK-NEXT:    fmov.d $fa2, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa2, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262400
+; CHECK-NEXT:    fmov.d $fa3, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa3, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262464
+; CHECK-NEXT:    fmov.d $fa4, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa4, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262528
+; CHECK-NEXT:    fmov.d $fa5, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa5, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262592
+; CHECK-NEXT:    fmov.d $fa6, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa6, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262656
+; CHECK-NEXT:    movgr2frh.w $fa7, $a0
 ; CHECK-NEXT:    lu12i.w $a1, 262688
 ; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    bl callee_double_in_gpr_exhausted_fprs
@@ -125,24 +131,30 @@ define i32 @caller_double_on_stack_exhausted_fprs_gprs() nounwind {
 ; CHECK-NEXT:    st.w $zero, $sp, 0
 ; CHECK-NEXT:    lu12i.w $a0, 262848
 ; CHECK-NEXT:    st.w $a0, $sp, 12
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI5_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; CHECK-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI5_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI5_3)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_4)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI5_4)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_5)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI5_5)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_6)
-; CHECK-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI5_6)
-; CHECK-NEXT:    addi.w $a0, $zero, 1
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
-; CHECK-NEXT:    ffint.s.w $fa0, $fa0
-; CHECK-NEXT:    fcvt.d.s $fa0, $fa0
+; CHECK-NEXT:    movgr2fr.w $fa7, $zero
+; CHECK-NEXT:    lu12i.w $a0, 261888
+; CHECK-NEXT:    fmov.d $fa0, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa0, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262144
+; CHECK-NEXT:    fmov.d $fa1, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa1, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262272
+; CHECK-NEXT:    fmov.d $fa2, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa2, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262400
+; CHECK-NEXT:    fmov.d $fa3, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa3, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262464
+; CHECK-NEXT:    fmov.d $fa4, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa4, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262528
+; CHECK-NEXT:    fmov.d $fa5, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa5, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262592
+; CHECK-NEXT:    fmov.d $fa6, $fa7
+; CHECK-NEXT:    movgr2frh.w $fa6, $a0
+; CHECK-NEXT:    lu12i.w $a0, 262656
+; CHECK-NEXT:    movgr2frh.w $fa7, $a0
 ; CHECK-NEXT:    lu12i.w $a1, 262688
 ; CHECK-NEXT:    lu12i.w $a3, 262720
 ; CHECK-NEXT:    lu12i.w $a5, 262752
@@ -168,10 +180,9 @@ define i32 @caller_double_on_stack_exhausted_fprs_gprs() nounwind {
 define double @callee_double_ret() nounwind {
 ; CHECK-LABEL: callee_double_ret:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.w $a0, $zero, 1
-; CHECK-NEXT:    movgr2fr.w $fa0, $a0
-; CHECK-NEXT:    ffint.s.w $fa0, $fa0
-; CHECK-NEXT:    fcvt.d.s $fa0, $fa0
+; CHECK-NEXT:    movgr2fr.w $fa0, $zero
+; CHECK-NEXT:    lu12i.w $a0, 261888
+; CHECK-NEXT:    movgr2frh.w $fa0, $a0
 ; CHECK-NEXT:    ret
   ret double 1.0
 }

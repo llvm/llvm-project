@@ -190,6 +190,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
 
+    setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
     setOperationAction(ISD::FMA, MVT::f32, Legal);
@@ -237,6 +238,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
 
+    setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
@@ -549,7 +551,55 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:
     return lowerVECREDUCE(Op, DAG);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   }
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Op);
+  const APFloat &FPVal = CFP->getValueAPF();
+  SDLoc DL(CFP);
+
+  assert((VT == MVT::f32 && Subtarget.hasBasicF()) ||
+         (VT == MVT::f64 && Subtarget.hasBasicD()));
+
+  // If value is 0.0 or -0.0, just ignore it.
+  if (FPVal.isZero())
+    return SDValue();
+
+  // If lsx enabled, use cheaper 'vldi' instruction if possible.
+  if (Subtarget.hasExtLSX() && isFPImmVLDILegal(FPVal, VT))
+    return SDValue();
+
+  // Construct as integer, and move to float register.
+  APInt INTVal = FPVal.bitcastToAPInt();
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected floating point type!");
+    break;
+  case MVT::f32: {
+    SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i32);
+    if (Subtarget.is64Bit())
+      NewVal = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, NewVal);
+    return DAG.getNode(Subtarget.is64Bit() ? LoongArchISD::MOVGR2FR_W_LA64
+                                           : LoongArchISD::MOVGR2FR_W,
+                       DL, VT, NewVal);
+  }
+  case MVT::f64: {
+    if (Subtarget.is64Bit()) {
+      SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i64);
+      return DAG.getNode(LoongArchISD::MOVGR2FR_D, DL, VT, NewVal);
+    }
+    SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
+    SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
+    return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
+  }
+  }
+
   return SDValue();
 }
 
@@ -7041,7 +7091,10 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(SRL_W)
     NODE_NAME_CASE(BSTRINS)
     NODE_NAME_CASE(BSTRPICK)
+    NODE_NAME_CASE(MOVGR2FR_W)
     NODE_NAME_CASE(MOVGR2FR_W_LA64)
+    NODE_NAME_CASE(MOVGR2FR_D)
+    NODE_NAME_CASE(MOVGR2FR_D_LO_HI)
     NODE_NAME_CASE(MOVFR2GR_S_LA64)
     NODE_NAME_CASE(FTINT)
     NODE_NAME_CASE(BUILD_PAIR_F64)

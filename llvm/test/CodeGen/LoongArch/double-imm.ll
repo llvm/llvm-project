@@ -35,14 +35,21 @@ define double @f64_negative_zero() nounwind {
 define double @f64_constant_pi() nounwind {
 ; LA32-LABEL: f64_constant_pi:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA32-NEXT:    lu12i.w $a0, 262290
+; LA32-NEXT:    ori $a0, $a0, 507
+; LA32-NEXT:    lu12i.w $a1, 345154
+; LA32-NEXT:    ori $a1, $a1, 3352
+; LA32-NEXT:    movgr2fr.w $fa0, $a1
+; LA32-NEXT:    movgr2frh.w $fa0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f64_constant_pi:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64-NEXT:    fld.d $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA64-NEXT:    lu12i.w $a0, 345154
+; LA64-NEXT:    ori $a0, $a0, 3352
+; LA64-NEXT:    lu32i.d $a0, -450053
+; LA64-NEXT:    lu52i.d $a0, $a0, 1024
+; LA64-NEXT:    movgr2fr.d $fa0, $a0
 ; LA64-NEXT:    ret
   ret double 3.1415926535897931159979634685441851615905761718750
 }
@@ -50,10 +57,9 @@ define double @f64_constant_pi() nounwind {
 define double @f64_add_fimm1(double %a) nounwind {
 ; LA32-LABEL: f64_add_fimm1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a0, $zero, 1
-; LA32-NEXT:    movgr2fr.w $fa1, $a0
-; LA32-NEXT:    ffint.s.w $fa1, $fa1
-; LA32-NEXT:    fcvt.d.s $fa1, $fa1
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    lu12i.w $a0, 261888
+; LA32-NEXT:    movgr2frh.w $fa1, $a0
 ; LA32-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LA32-NEXT:    ret
 ;
@@ -69,10 +75,9 @@ define double @f64_add_fimm1(double %a) nounwind {
 define double @f64_positive_fimm1() nounwind {
 ; LA32-LABEL: f64_positive_fimm1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a0, $zero, 1
-; LA32-NEXT:    movgr2fr.w $fa0, $a0
-; LA32-NEXT:    ffint.s.w $fa0, $fa0
-; LA32-NEXT:    fcvt.d.s $fa0, $fa0
+; LA32-NEXT:    movgr2fr.w $fa0, $zero
+; LA32-NEXT:    lu12i.w $a0, 261888
+; LA32-NEXT:    movgr2frh.w $fa0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f64_positive_fimm1:

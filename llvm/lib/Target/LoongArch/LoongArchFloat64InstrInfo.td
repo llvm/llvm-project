@@ -11,6 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// LoongArch specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def SDT_LoongArchMOVGR2FR_D
+    : SDTypeProfile<1, 1, [SDTCisVT<0, f64>, SDTCisVT<1, i64>]>;
+def SDT_LoongArchMOVGR2FR_D_LO_HI
+    : SDTypeProfile<1, 2, [SDTCisVT<0, f64>, SDTCisVT<1, i32>,
+                           SDTCisSameAs<1, 2>]>;
+
+def loongarch_movgr2fr_d
+    : SDNode<"LoongArchISD::MOVGR2FR_D", SDT_LoongArchMOVGR2FR_D>;
+def loongarch_movgr2fr_d_lo_hi
+    : SDNode<"LoongArchISD::MOVGR2FR_D_LO_HI", SDT_LoongArchMOVGR2FR_D_LO_HI>;
+
+//===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
@@ -307,9 +322,13 @@ def : Pat<(f64 (sint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
 def : Pat<(f64 (sint_to_fp GPR:$src)), (FFINT_D_L (MOVGR2FR_D GPR:$src))>;
 
 def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
+def : Pat<(loongarch_movgr2fr_d GPR:$src), (MOVGR2FR_D GPR:$src)>;
 } // Predicates = [HasBasicD, IsLA64]
 let Predicates = [HasBasicD, IsLA32] in {
 def : Pat<(f64 (sint_to_fp (i32 GPR:$src))), (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
+
+def : Pat<(f64 (loongarch_movgr2fr_d_lo_hi (i32 GPR:$lo), (i32 GPR:$hi))),
+          (MOVGR2FRH_W (MOVGR2FR_W_64 GPR:$lo), GPR:$hi)>;
 } // Predicates = [HasBasicD, IsLA32]
 
 // Convert FP to int
