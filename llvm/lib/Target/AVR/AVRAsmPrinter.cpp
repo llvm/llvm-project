@@ -263,11 +263,17 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
     auto *Section = static_cast<MCSectionELF *>(TLOF.SectionForGlobal(&GO, TM));
     if (Section->getName().starts_with(".data"))
       NeedsCopyData = true;
-    else if (Section->getName().starts_with(".rodata") && SubTM->hasLPM())
+    else if (Section->getName().starts_with(".rodata") && SubTM->hasLPM()) {
       // AVRs that have a separate program memory (that's most AVRs) store
-      // .rodata sections in RAM.
-      NeedsCopyData = true;
-    else if (Section->getName().starts_with(".bss"))
+      // .rodata sections in RAM,
+      // but XMEGA3 family maps all flash in the data space.
+      // Forcing pulling in __do_copy_data with 0 bytes to copy is a (minor)
+      // waste, so we let the loader handle this for newer devices.
+      if (!(SubTM->hasFeatureSetFamilyXMEGA2() ||
+            SubTM->hasFeatureSetFamilyXMEGA3() ||
+            SubTM->hasFeatureSetFamilyXMEGA4()))
+        NeedsCopyData = true;
+    } else if (Section->getName().starts_with(".bss"))
       NeedsClearBSS = true;
   }
 
