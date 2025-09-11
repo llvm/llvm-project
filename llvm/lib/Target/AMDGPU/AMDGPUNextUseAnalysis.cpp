@@ -1,5 +1,3 @@
-
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -25,6 +23,36 @@
 using namespace llvm;
 
 // namespace {
+
+// StoredVal is signed, relative to the block entry of the map it lives in.
+static inline int64_t materialize(int64_t storedVal, unsigned snapshotOffset) {
+  int64_t v = storedVal + (int64_t)snapshotOffset;
+  return v <= 0 ? 0 : v; // (clamp to 0; Infinity handled at call sites)
+}
+
+// Three-tier ranking system for spiller decisions
+unsigned NextUseResult::materializeForRank(int64_t stored, unsigned snapshotOffset) const {
+  int64_t Mat64 = materialize(stored, snapshotOffset);
+
+  // Tier 1: Finite distances (0 to LoopTag-1) → return as-is
+  // Tier 2: Loop-exit distances (LoopTag to DeadTag-1) → map to 60000-64999 range
+  // Tier 3: Dead registers (DeadTag+) → return Infinity (65535)
+  if (Mat64 >= DeadTag) {
+    return Infinity;  // Tier 3: Dead registers get maximum distance
+  } else if (Mat64 >= LoopTag) {
+    // Tier 2: Loop-exit distances get mapped to high range [60000, 64999]
+    int64_t LoopRemainder = Mat64 - LoopTag;
+    // Clamp the remainder to fit in available range (5000 values)
+    unsigned ClampedRemainder = static_cast<unsigned>(
+        std::min(LoopRemainder, static_cast<int64_t>(4999)));
+    return 60000 + ClampedRemainder;
+  } else if (Mat64 <= 0) {
+    return 0;  // Tier 1: Zero-distance for immediate uses
+  } else {
+    return static_cast<unsigned>(Mat64);  // Tier 1: Finite distances as-is
+  }
+}
+
 
 void NextUseResult::init(const MachineFunction &MF) {
   TG = new TimerGroup("Next Use Analysis",
@@ -52,6 +80,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
   while (Changed) {
     Changed = false;
     for (auto MBB : post_order(&MF)) {
+      unsigned Offset = 0;
       unsigned MBBNum = MBB->getNumber();
       VRegDistances Curr, Prev;
       if (UpwardNextUses.contains(MBBNum)) {
@@ -74,33 +103,35 @@ void NextUseResult::analyze(const MachineFunction &MF) {
                           << Succ->getName() << "\n");
 
         // Check if the edge from MBB to Succ goes out of the Loop
-        unsigned Weight = 0;
+        int64_t EdgeWeight = 0;
         if (LoopExits.contains(MBB->getNumber())) {
-          int SuccNum = LoopExits[MBB->getNumber()];
-          if (Succ->getNumber() == SuccNum)
-            Weight = Infinity;
+          unsigned ExitTo = LoopExits[MBB->getNumber()];
+          if (SuccNum == ExitTo)
+            EdgeWeight = LoopTag;
         }
 
         if (LI->getLoopDepth(MBB) < LI->getLoopDepth(Succ)) {
           // MBB->Succ is entering the Succ's loop
-          // Clear out the Loop-Exiting wights.
+          // Clear out the Loop-Exiting weights.
           for (auto &P : SuccDist) {
             auto &Dists = P.second;
             for (auto R : Dists) {
-              if (R.second >= Infinity) {
-                std::pair<LaneBitmask, unsigned> New = R;
-                New.second -= Infinity;
+              if (R.second >= LoopTag) {
+                std::pair<LaneBitmask, int64_t> New = R;
+                New.second -= LoopTag;
                 Dists.erase(R);
                 Dists.insert(New);
               }
             }
           }
         }
-        LLVM_DEBUG(dbgs() << "\nCurr: "; printVregDistances(Curr);
-                   dbgs() << "\nSucc: "; printVregDistances(SuccDist));
+        LLVM_DEBUG(dbgs() << "\nCurr:";
+                   printVregDistances(Curr, EntryOff[MBBNum]);
+                   dbgs() << "\nSucc:";
+                   printVregDistances(SuccDist, EntryOff[SuccNum]));
 
-        Curr.merge(SuccDist, Weight);
-        LLVM_DEBUG(dbgs() << "\nCurr after merge: "; printVregDistances(Curr));
+        Curr.merge(SuccDist, EntryOff[SuccNum], EdgeWeight);
+        LLVM_DEBUG(dbgs() << "\nCurr after merge:"; printVregDistances(Curr));
         // Now take care of the PHIs operands in the Succ
         for (auto &PHI : Succ->phis()) {
           for (auto &U : PHI.uses()) {
@@ -133,20 +164,11 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           // predecessor.
           continue;
 
-        // TODO: Compute distances in some modifiable container and copy to
-        // the std::set once when ready in one loop!
-        for (auto &P : Curr) {
-          VRegDistances::SortedRecords Tmp;
-          for (auto D : P.second)
-            Tmp.insert({D.first, ++D.second});
-          P.second = Tmp;
-        }
-
         for (auto &MO : MI.operands()) {
           if (MO.isReg() && MO.getReg().isVirtual()) {
             VRegMaskPair P(MO, TRI, MRI);
             if (MO.isUse()) {
-              Curr.insert(P, 0);
+              Curr.insert(P, -(int64_t)Offset);
               UsedInBlock[MBB->getNumber()].insert(P);
             } else if (MO.isDef()) {
               Curr.clear(P);
@@ -155,14 +177,23 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           }
         }
         NextUseMap[MBBNum].InstrDist[&MI] = Curr;
+        NextUseMap[MBBNum].InstrOffset[&MI] = Offset;
+        printVregDistances(Curr, Offset);
+        ++Offset;
       }
+
+      if (Offset > 0)
+        --Offset;
 
       LLVM_DEBUG(dbgs() << "\nFinal distances for MBB_" << MBB->getNumber()
                         << "." << MBB->getName() << "\n";
-                 printVregDistances(Curr));
+                 printVregDistances(Curr, Offset));
       LLVM_DEBUG(dbgs() << "\nPrevious distances for MBB_" << MBB->getNumber()
                         << "." << MBB->getName() << "\n";
-                 printVregDistances(Prev));
+                 printVregDistances(Prev, Offset));
+
+      // EntryOff -offset of the first instruction in the block top-down walk
+      EntryOff[MBBNum] = Offset;
       UpwardNextUses[MBBNum] = std::move(Curr);
 
       bool Changed4MBB = (Prev != UpwardNextUses[MBBNum]);
@@ -178,16 +209,26 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 }
 
 void NextUseResult::getFromSortedRecords(
-    const VRegDistances::SortedRecords Dists, LaneBitmask Mask, unsigned &D) {
-  LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(Mask) << "]\n");
-  for (auto P : Dists) {
-    // Records are sorted in distance increasing order. So, the first record
-    // is for the closest use.
-    LaneBitmask UseMask = P.first;
-    LLVM_DEBUG(dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n");
+    const VRegDistances::SortedRecords &Dists, LaneBitmask Mask,
+    unsigned SnapshotOffset, unsigned &D) {
+  LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(Mask) << "]  "
+                    << "SnapshotOffset=" << SnapshotOffset << "\n");
+
+  // Records are sorted by stored value in increasing order. Since all entries
+  // in this snapshot share the same SnapshotOffset, ordering by stored value
+  // is equivalent to ordering by materialized distance.
+  for (const auto &P : Dists) {
+    const LaneBitmask UseMask = P.first;
+    LLVM_DEBUG(dbgs() << "  UseMask : [" << PrintLaneMask(UseMask) << "]\n");
+
+    // Require full coverage: a use contributes only if it covers the queried
+    // lanes.
     if ((UseMask & Mask) == UseMask) {
-      D = P.second;
-      break;
+      // Use materializeForRank for three-tier ranking system
+      int64_t Stored = static_cast<int64_t>(P.second);
+      D = materializeForRank(Stored, SnapshotOffset);
+
+      break; // first covering record is the nearest for this snapshot
     }
   }
 }
@@ -262,7 +303,9 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
     VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
     if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.getVReg())) {
       // printSortedRecords(Dists[VMP.VReg], VMP.VReg);
-      getFromSortedRecords(Dists[VMP.getVReg()], VMP.getLaneMask(), Dist);
+      unsigned SnapOff = NextUseMap[MBBNum].InstrOffset[&*I];
+      getFromSortedRecords(Dists[VMP.getVReg()], VMP.getLaneMask(),
+                           SnapOff, Dist);
     }
   }
 
@@ -276,7 +319,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
   if (NextUseMap.contains(MBBNum)) {
     if (NextUseMap[MBBNum].Bottom.contains(VMP.getVReg())) {
       getFromSortedRecords(NextUseMap[MBBNum].Bottom[VMP.getVReg()],
-                           VMP.getLaneMask(), Dist);
+                           VMP.getLaneMask(), 0, Dist);
     }
   }
   return Dist;
@@ -337,12 +380,13 @@ AMDGPUNextUseAnalysisWrapper::AMDGPUNextUseAnalysisWrapper()
     : MachineFunctionPass(ID) {
   initializeAMDGPUNextUseAnalysisWrapperPass(*PassRegistry::getPassRegistry());
 }
+
 void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "=== NextUseAnalysis Results for " << MF.getName()
                     << " ===\n");
 
   for (const auto &MBB : MF) {
-    unsigned MBBNum = MBB.getNumber();
+    const unsigned MBBNum = MBB.getNumber();
     LLVM_DEBUG(dbgs() << "\n--- MBB_" << MBBNum << " ---\n");
 
     if (!NextUseMap.contains(MBBNum)) {
@@ -352,87 +396,34 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
 
     const NextUseInfo &Info = NextUseMap.at(MBBNum);
 
-    // Process each instruction in the block
+    // Per-instruction dump (materialized with per-MI snapshot offset).
     for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
       const MachineInstr &MI = *II;
 
-      // Print instruction
       LLVM_DEBUG(dbgs() << "  Instr: ");
       LLVM_DEBUG(MI.print(dbgs(), /*IsStandalone=*/false, /*SkipOpers=*/false,
                           /*SkipDebugLoc=*/true, /*AddNewLine=*/false));
       LLVM_DEBUG(dbgs() << "\n");
 
-      // Print distances at this instruction
+      LLVM_DEBUG(dbgs() << "    Next-use distances:\n");
       if (Info.InstrDist.contains(&MI)) {
         const VRegDistances &Dists = Info.InstrDist.at(&MI);
-        LLVM_DEBUG(dbgs() << "    Next-use distances:\n");
-
-        for (const auto &VRegEntry : Dists) {
-          unsigned VReg = VRegEntry.getFirst();
-          const auto &Records = VRegEntry.getSecond();
-
-          for (const auto &Record : Records) {
-            LaneBitmask LaneMask = Record.first;
-            unsigned Distance = Record.second;
-
-            LLVM_DEBUG(dbgs() << "      ");
-
-            // Print register with sub-register if applicable
-            LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
-            if (LaneMask != FullMask) {
-              unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
-              LLVM_DEBUG(dbgs() << printReg(VReg, TRI, SubRegIdx, MRI));
-            } else {
-              LLVM_DEBUG(dbgs() << printReg(VReg, TRI));
-            }
-
-            if (Distance == Infinity) {
-              LLVM_DEBUG(dbgs() << " -> DEAD (infinite distance)\n");
-            } else {
-              LLVM_DEBUG(dbgs() << " -> " << Distance << " instructions\n");
-            }
-          }
-        }
-
-        if (Dists.size() == 0) {
-          LLVM_DEBUG(dbgs() << "    (no register uses)\n");
-        }
+        const unsigned SnapOff = Info.InstrOffset.lookup(&MI); // 0 if absent
+        const bool Any = printVregDistances(Dists, SnapOff, dbgs(), "      ");
+        if (!Any)
+          LLVM_DEBUG(dbgs() << "      (no register uses)\n");
       } else {
-        LLVM_DEBUG(dbgs() << "    (no distance data)\n");
+        LLVM_DEBUG(dbgs() << "      (no distance data)\n");
       }
+      LLVM_DEBUG(dbgs() << "\n");
     }
 
-    // Print distances at end of block
+    // Block-end dump (materialized with offset = 0).
     LLVM_DEBUG(dbgs() << "  Block End Distances:\n");
-    for (const auto &VRegEntry : Info.Bottom) {
-      unsigned VReg = VRegEntry.getFirst();
-      const auto &Records = VRegEntry.getSecond();
-
-      for (const auto &Record : Records) {
-        LaneBitmask LaneMask = Record.first;
-        unsigned Distance = Record.second;
-
-        LLVM_DEBUG(dbgs() << "    ");
-
-        LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
-        if (LaneMask != FullMask) {
-          unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
-          LLVM_DEBUG(dbgs() << printReg(VReg, TRI, SubRegIdx, MRI));
-        } else {
-          LLVM_DEBUG(dbgs() << printReg(VReg, TRI));
-        }
-
-        if (Distance == Infinity) {
-          LLVM_DEBUG(dbgs() << " -> DEAD\n");
-        } else {
-          LLVM_DEBUG(dbgs() << " -> " << Distance << "\n");
-        }
-      }
-    }
-
-    if (Info.Bottom.size() == 0) {
+    const bool AnyEnd =
+        printVregDistances(Info.Bottom, /*SnapshotOffset=*/0, dbgs(), "    ");
+    if (!AnyEnd)
       LLVM_DEBUG(dbgs() << "    (no registers live at block end)\n");
-    }
   }
 
   LLVM_DEBUG(dbgs() << "\n=== End NextUseAnalysis Results ===\n");

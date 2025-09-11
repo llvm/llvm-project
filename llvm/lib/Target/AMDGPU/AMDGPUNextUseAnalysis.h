@@ -27,6 +27,13 @@ using namespace llvm;
 
 // namespace {
 
+// Helper function for rebasing successor distances into current block frame
+static inline int64_t rebaseFromSucc(int64_t succStored, unsigned succEntryOff,
+                                     int64_t edgeWeight /*0 or LoopTag*/) {
+  // Move succ-relative value into "current block end" frame.
+  return (int64_t)succStored + (int64_t)succEntryOff + (int64_t)edgeWeight;
+}
+
 class NextUseResult {
   friend class AMDGPUNextUseAnalysisWrapper;
   SlotIndexes *Indexes;
@@ -40,7 +47,7 @@ class NextUseResult {
 
   class VRegDistances {
 
-    using Record = std::pair<LaneBitmask, unsigned>;
+    using Record = std::pair<LaneBitmask, int64_t>;
     struct CompareByDist {
       bool operator()(const Record &LHS, const Record &RHS) const {
         if (LHS.first ==
@@ -83,7 +90,7 @@ class NextUseResult {
 
     bool contains(unsigned Key) { return NextUseMap.contains(Key); }
 
-    bool insert(VRegMaskPair VMP, unsigned Dist) {
+    bool insert(VRegMaskPair VMP, int64_t Dist) {
       Record R(VMP.getLaneMask(), Dist);
       if (NextUseMap.contains(VMP.getVReg())) {
         SortedRecords &Dists = NextUseMap[VMP.getVReg()];
@@ -152,14 +159,18 @@ class NextUseResult {
       return !operator==(Other);
     }
 
-    void merge(const VRegDistances &Other, unsigned Weight = 0) {
+    // Adjust 'Other' (which is in successor's frame) into *this* frame,
+    // then take pointwise min by LaneBitmask.
+    void merge(const VRegDistances &Other, unsigned SuccEntryOff,
+               int64_t EdgeWeight = 0) {
       for (const auto &P : Other) {
         unsigned Key = P.getFirst();
         const auto &OtherDists = P.getSecond();
         auto &MineDists = NextUseMap[Key]; // creates empty if not present
 
         for (const auto &D : OtherDists) {
-          Record Adjusted = {D.first, D.second + Weight};
+          // D.second is the successor's STORED value (signed, relative to succ)
+          int64_t rebased = rebaseFromSucc(D.second, SuccEntryOff, EdgeWeight);
 
           // Try to find existing record with the same LaneBitmask
           auto It =
@@ -168,11 +179,11 @@ class NextUseResult {
 
           if (It == MineDists.end()) {
             // No record → insert
-            MineDists.insert(Adjusted);
-          } else if (It->second > Adjusted.second) {
+            MineDists.insert({D.first, rebased});
+          } else if (It->second > rebased) { // take MIN in the current frame
             // Furthest wins (adjusted is more distant) → replace
             MineDists.erase(It);
-            MineDists.insert(Adjusted);
+            MineDists.insert({D.first, rebased});
           }
         }
       }
@@ -183,38 +194,133 @@ class NextUseResult {
   public:
     VRegDistances Bottom;
     DenseMap<const MachineInstr *, VRegDistances> InstrDist;
+    DenseMap<const MachineInstr *, unsigned>
+        InstrOffset; // offset at that MI snapshot
   };
 
   DenseMap<unsigned, NextUseInfo> NextUseMap;
+  // Map MBB number to the maximal offset in given by the bottm-up walk
+  DenseMap<unsigned, unsigned> EntryOff;
 
 public:
 private:
   DenseMap<unsigned, SetVector<VRegMaskPair>> UsedInBlock;
   DenseMap<int, int> LoopExits;
+  // Signed tag used to mark "outside current loop" in stored values.
+  // Must be >> any finite distance you can accumulate in one function.
+  static constexpr int64_t LoopTag = (int64_t)1 << 40; // ~1e12 headroom
+  static constexpr int64_t DeadTag = (int64_t)1 << 60; // ~1e18, >> LoopTag
+
+  // Unsigned Infinity for external API/DAG users who want a sentinel.
+  static constexpr unsigned PrintedInfinity = std::numeric_limits<unsigned>::max();
+
   const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
   void init(const MachineFunction &MF);
   void analyze(const MachineFunction &MF);
-  LLVM_ATTRIBUTE_NOINLINE void
-  printSortedRecords(VRegDistances::SortedRecords Records, unsigned VReg,
-                     raw_ostream &O = dbgs()) const {
-    for (auto X : Records) {
-      O << "Vreg: ";
-      LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
-      if (X.first != FullMask) {
-        unsigned SubRegIdx = getSubRegIndexForLaneMask(X.first, TRI);
-        O << printReg(VReg, TRI, SubRegIdx, MRI) << "[ " << X.second << "]\n";
-      } else
-        O << printReg(VReg) << "[ " << X.second << "]\n";
-    }
+
+  // Core materialization: convert stored relative value + snapshot offset
+  // to full materialized distance with bounds checking.
+  int64_t materialize(int64_t stored, unsigned snapshotOffset) const {
+    int64_t mat64 = stored + static_cast<int64_t>(snapshotOffset);
+    return (mat64 <= 0) ? 0 : mat64;
   }
 
-  LLVM_ATTRIBUTE_NOINLINE
-  void printVregDistances(const VRegDistances &D,
-                          raw_ostream &O = dbgs()) const {
-    O << "\n";
-    for (auto P : D) {
-      printSortedRecords(P.second, P.first);
+  // Structure for enhanced distance ranking and printing
+  struct PrintDist {
+    bool IsInfinity;
+    bool IsDead;
+    int64_t LoopMultiplier;  // How many LoopTags are in the distance
+    int64_t Rema;            // remainder after extracting LoopTags
+    
+    PrintDist(int64_t mat64) {
+      if (mat64 >= DeadTag) {
+        IsInfinity = false;
+        IsDead = true;
+        LoopMultiplier = 0;
+        Rema = mat64 - DeadTag;
+      } else if (mat64 >= LoopTag) {
+        IsInfinity = true;
+        IsDead = false;
+        // Extract LoopTag multiples and remainder
+        LoopMultiplier = mat64 / LoopTag;
+        Rema = mat64 % LoopTag;
+      } else {
+        IsInfinity = false;
+        IsDead = false;
+        LoopMultiplier = 0;
+        Rema = mat64;
+      }
     }
+  };
+
+  // Materializer for spiller use: applies three-tier ranking system
+  unsigned materializeForRank(int64_t stored, unsigned snapshotOffset) const;
+
+  // Materializer for printing: returns PrintDist structure
+  PrintDist materializeForPrint(int64_t stored, unsigned snapshotOffset) const {
+    return PrintDist(materialize(stored, snapshotOffset));
+  }
+
+  // Print each (VReg, LaneMask) entry with materialized distances.
+  // Returns true if at least one record was printed.
+  LLVM_ATTRIBUTE_NOINLINE
+  bool printSortedRecords(const VRegDistances::SortedRecords &Records,
+                          unsigned VReg, unsigned SnapshotOffset,
+                          raw_ostream &O = dbgs(),
+                          StringRef Indent = "      ") const {
+    bool Any = false;
+    O << "\n";
+    for (const auto &X : Records) {
+      const LaneBitmask UseMask = X.first;
+      const int64_t Stored = X.second; // stored relative (may be negative)
+
+      // Use enhanced materialization for display that shows three-tier structure
+      PrintDist PDist = materializeForPrint(Stored, SnapshotOffset);
+
+      O << Indent << "Vreg: ";
+      const LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
+      if (UseMask != FullMask) {
+        const unsigned SubRegIdx = getSubRegIndexForLaneMask(UseMask, TRI);
+        O << printReg(VReg, TRI, SubRegIdx, MRI);
+      } else {
+        O << printReg(VReg, TRI);
+      }
+
+      if (PDist.IsDead)
+        O << "[ DEAD ]\n";
+      else if (PDist.IsInfinity)
+        if (PDist.LoopMultiplier == 1)
+          O << "[ LoopTag+" << PDist.Rema << " ]\n";
+        else if (PDist.LoopMultiplier > 1)
+          O << "[ LoopTag*" << PDist.LoopMultiplier << "+" << PDist.Rema << " ]\n";
+        else
+          O << "[ INF+" << PDist.Rema << " ]\n";
+      else
+        O << "[ " << PDist.Rema << " ]\n";
+
+      Any = true;
+    }
+    return Any;
+  }
+
+  // Iterate VRegs and delegate to printSortedRecords.
+  // Returns true if anything was printed.
+  LLVM_ATTRIBUTE_NOINLINE
+  bool printVregDistances(const VRegDistances &D, unsigned SnapshotOffset,
+                          raw_ostream &O = dbgs(),
+                          StringRef Indent = "      ") const {
+    bool Any = false;
+    for (const auto &P : D) {
+      Any |= printSortedRecords(P.second, P.first, SnapshotOffset, O, Indent);
+    }
+    return Any;
+  }
+
+  // Backward-compat shim for block-end printing (offset = 0, default indent).
+  LLVM_ATTRIBUTE_NOINLINE
+  bool printVregDistances(const VRegDistances &D,
+                          raw_ostream &O = dbgs()) const {
+    return printVregDistances(D, /*SnapshotOffset=*/0, O);
   }
 
   void clear() {
@@ -237,8 +343,9 @@ public:
                               const VRegMaskPair VMP);
   unsigned getNextUseDistance(const MachineBasicBlock::iterator I,
                               const VRegMaskPair VMP);
-  void getFromSortedRecords(const VRegDistances::SortedRecords Dists,
-                            LaneBitmask Mask, unsigned &D);
+  void getFromSortedRecords(const VRegDistances::SortedRecords &Dists,
+                            LaneBitmask Mask, unsigned SnapshotOffset,
+                            unsigned &D);
 
   SmallVector<VRegMaskPair>
   getSortedSubregUses(const MachineBasicBlock::iterator I,
