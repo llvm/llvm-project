@@ -1506,6 +1506,7 @@ DynamicSection<ELFT>::computeContents() {
         addInt(DT_RISCV_VARIANT_CC, 0);
       [[fallthrough]];
     default:
+      assert(ctx.target->usesGotPlt);
       addInSec(DT_PLTGOT, *ctx.in.gotPlt);
       break;
     }
@@ -1718,9 +1719,14 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (ctx.in.relaPlt.get() == this && ctx.in.gotPlt->getParent()) {
-    getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
+  if (ctx.in.relaPlt.get() == this) {
+    if (ctx.target->usesGotPlt && ctx.in.gotPlt->getParent()) {
+      getParent()->flags |= ELF::SHF_INFO_LINK;
+      getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
+    } else if (ctx.in.plt->getParent()) {
+      getParent()->flags |= ELF::SHF_INFO_LINK;
+      getParent()->info = ctx.in.plt->getParent()->sectionIndex;
+    }
   }
 }
 
@@ -2601,8 +2607,10 @@ PltSection::PltSection(Ctx &ctx)
 
   // The PLT needs to be writable on SPARC as the dynamic linker will
   // modify the instructions in the PLT entries.
-  if (ctx.arg.emachine == EM_SPARCV9)
+  if (ctx.arg.emachine == EM_SPARCV9) {
     this->flags |= SHF_WRITE;
+    addralign = 256;
+  }
 }
 
 void PltSection::writeTo(uint8_t *buf) {
@@ -4919,10 +4927,12 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
   // it as a relocation and ensure the referenced section is created.
   if (ctx.sym.globalOffsetTable && ctx.arg.emachine != EM_MIPS) {
-    if (ctx.target->gotBaseSymInGotPlt)
+    if (ctx.target->gotBaseSymInGotPlt) {
+      assert(ctx.target->usesGotPlt);
       ctx.in.gotPlt->hasGotPltOffRel = true;
-    else
+    } else {
       ctx.in.got->hasGotOffRel = true;
+    }
   }
 
   // We always need to add rel[a].plt to output if it has entries.
