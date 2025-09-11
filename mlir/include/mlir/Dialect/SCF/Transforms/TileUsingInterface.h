@@ -64,7 +64,7 @@ struct SCFTilingOptions {
   /// Function to have control over tile ordering within the scf.forall loop.
   /// This function takes the iterationDomain as parameter and returns:
   /// loop bounds : (lbs, ubs, steps)
-  /// InductionVarFn : compute old tile indexes from old ones.
+  /// InductionVarFn : compute old tile indices from new ones.
   SCFTileDistributionFn tileDistributionFunction = nullptr;
 
   SCFTilingOptions &
