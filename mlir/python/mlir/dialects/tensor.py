@@ -14,7 +14,11 @@ except ImportError as e:
 
 from typing import Sequence, Union
 from ._ods_common import _cext as _ods_cext
-from ._ods_common import get_op_result_or_op_results as _get_op_result_or_op_results
+from ._ods_common import (
+    get_op_result_or_op_results as _get_op_result_or_op_results,
+    _dispatch_mixed_values,
+    MixedValues,
+)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -65,3 +69,33 @@ generate = region_op(
     lambda result, dynamic_extents: GenerateOp(result, dynamic_extents),
     terminator=lambda args: YieldOp(args[0]),
 )
+
+
+def parallel_insert_slice(
+    source: Union[Operation, OpView, Value],
+    dest: Union[Operation, OpView, Value],
+    offsets: MixedValues,
+    sizes: MixedValues,
+    strides: MixedValues,
+):
+    if offsets is None:
+        offsets = []
+    if sizes is None:
+        sizes = []
+    if strides is None:
+        strides = []
+
+    offsets, _packed_offsets, static_offsets = _dispatch_mixed_values(offsets)
+    sizes, _packed_sizes, static_sizes = _dispatch_mixed_values(sizes)
+    strides, _packed_strides, static_strides = _dispatch_mixed_values(strides)
+
+    return ParallelInsertSliceOp(
+        source,
+        dest,
+        offsets,
+        sizes,
+        strides,
+        static_offsets,
+        static_sizes,
+        static_strides,
+    )

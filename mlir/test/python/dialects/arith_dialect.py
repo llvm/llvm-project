@@ -4,6 +4,7 @@ from functools import partialmethod
 from mlir.ir import *
 import mlir.dialects.arith as arith
 import mlir.dialects.func as func
+from mlir.util import is_float_type, is_integer_like_type
 from array import array
 
 
@@ -42,11 +43,9 @@ def testFastMathFlags():
 def testArithValue():
     def _binary_op(lhs, rhs, op: str) -> "ArithValue":
         op = op.capitalize()
-        if arith._is_float_type(lhs.type) and arith._is_float_type(rhs.type):
+        if is_float_type(lhs.type) and is_float_type(rhs.type):
             op += "F"
-        elif arith._is_integer_like_type(lhs.type) and arith._is_integer_like_type(
-            lhs.type
-        ):
+        elif is_integer_like_type(lhs.type) and is_integer_like_type(lhs.type):
             op += "I"
         else:
             raise NotImplementedError(f"Unsupported '{op}' operands: {lhs}, {rhs}")
