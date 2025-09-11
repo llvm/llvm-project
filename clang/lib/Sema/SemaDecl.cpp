@@ -8483,7 +8483,6 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
         if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
           const auto *VD = cast<ValueDecl>(ShadowedDecl);
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
-
           if (RD->getLambdaCaptureDefault() == LCD_None) {
             // Try to avoid warnings for lambdas with an explicit capture
             // list. Warn only when the lambda captures the shadowed decl
@@ -8514,12 +8513,11 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
       // Apply scoping logic to both VarDecl and BindingDecl with local storage
       if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
         bool HasLocalStorage = false;
-        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl))
           HasLocalStorage = VD->hasLocalStorage();
-        } else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl)) {
+        else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl))
           HasLocalStorage =
               cast<VarDecl>(BD->getDecomposedDecl())->hasLocalStorage();
-        }
 
         if (HasLocalStorage) {
           // A variable can't shadow a local variable or binding in an enclosing
@@ -8531,9 +8529,8 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
             // Only block literals, captured statements, and lambda expressions
             // can capture; other scopes don't.
             if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
-                !isLambdaCallOperator(ParentDC)) {
+                !isLambdaCallOperator(ParentDC))
               return;
-            }
           }
         }
       }
@@ -8583,7 +8580,6 @@ void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
     if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
       const auto *VD = cast<ValueDecl>(ShadowedDecl);
       SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
-
       Diag(Shadow.VD->getLocation(),
            CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
                                   : diag::warn_decl_shadow)
