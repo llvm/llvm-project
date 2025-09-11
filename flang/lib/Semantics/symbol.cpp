@@ -332,7 +332,7 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
             [&](const ProcEntityDetails &x) { return has<EntityDetails>(); },
             [&](const SubprogramDetails &) {
-              if (const auto *oldProc{detailsIf<ProcEntityDetails>()}) {
+              if (const auto *oldProc{this->detailsIf<ProcEntityDetails>()}) {
                 // Can replace bare "EXTERNAL dummy" with explicit INTERFACE
                 return oldProc->isDummy() && !oldProc->procInterface() &&
                     attrs().test(Attr::EXTERNAL) && !test(Flag::Function) &&
@@ -345,7 +345,7 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               return derived && derived->isForwardReferenced();
             },
             [&](const UseDetails &x) {
-              const auto *use{detailsIf<UseDetails>()};
+              const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
             [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },

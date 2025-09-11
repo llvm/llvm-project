@@ -4430,6 +4430,22 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [6.0:438]
+//
+// graph_id-clause ->
+//    GRAPH_ID(graph-id-value)                      // since 6.0
+struct OmpGraphIdClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphIdClause, common::Indirection<Expr>);
+};
+
+// Ref: [6.0:438-439]
+//
+// graph_reset-clause ->
+//    GRAPH_RESET[(graph-reset-expression)]         // since 6.0
+struct OmpGraphResetClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpGraphResetClause, common::Indirection<Expr>);
+};
+
 // Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
 struct OmpHintClause {
   WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);

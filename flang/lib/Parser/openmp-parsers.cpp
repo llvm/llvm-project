@@ -802,6 +802,10 @@ TYPE_PARSER(construct<OmpFailClause>(
     "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
     "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
 
+TYPE_PARSER(construct<OmpGraphIdClause>(expr))
+
+TYPE_PARSER(construct<OmpGraphResetClause>(expr))
+
 // 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(
     "CLOSE" >> pure(OmpProcBindClause::AffinityPolicy::Close) ||
@@ -1102,6 +1106,11 @@ TYPE_PARSER( //
     "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
     "GRAINSIZE" >> construct<OmpClause>(construct<OmpClause::Grainsize>(
                        parenthesized(Parser<OmpGrainsizeClause>{}))) ||
+    "GRAPH_ID" >> construct<OmpClause>(construct<OmpClause::GraphId>(
+                      parenthesized(Parser<OmpGraphIdClause>{}))) ||
+    "GRAPH_RESET" >>
+        construct<OmpClause>(construct<OmpClause::GraphReset>(
+            maybe(parenthesized(Parser<OmpGraphResetClause>{})))) ||
     "HAS_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
@@ -1872,6 +1881,7 @@ TYPE_PARSER( //
         llvm::omp::Directive::OMPD_target_teams_workdistribute) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_task) ||
+    MakeBlockConstruct(llvm::omp::Directive::OMPD_taskgraph) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_taskgroup) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_teams) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_teams_workdistribute) ||

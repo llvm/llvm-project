@@ -103,6 +103,17 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
                        "true, yet no overlapping binding was found");
 }
 
+static void reportInvalidHandleTyError(Module &M, ResourceClass RC,
+                                       ResourceInfo::ResourceBinding Binding) {
+  SmallString<160> Message;
+  raw_svector_ostream OS(Message);
+  StringRef RCName = getResourceClassName(RC);
+  OS << RCName << " at register " << Binding.LowerBound << " and space "
+     << Binding.Space << " is bound to a texture or typed buffer. " << RCName
+     << " root descriptors can only be Raw or Structured buffers.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void reportOverlappingRegisters(Module &M, const llvm::hlsl::Binding &R1,
                                        const llvm::hlsl::Binding &R2) {
   SmallString<128> Message;
@@ -217,10 +228,29 @@ static void validateRootSignature(Module &M,
   const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
   for (const ResourceInfo &RI : DRM) {
     const ResourceInfo::ResourceBinding &Binding = RI.getBinding();
-    ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
-    if (!BoundRegs.isBound(RC, Binding.Space, Binding.LowerBound,
-                           Binding.LowerBound + Binding.Size - 1))
+    const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+    dxil::ResourceClass RC = RTI.getResourceClass();
+    dxil::ResourceKind RK = RTI.getResourceKind();
+
+    const llvm::hlsl::Binding *Reg =
+        BoundRegs.findBoundReg(RC, Binding.Space, Binding.LowerBound,
+                               Binding.LowerBound + Binding.Size - 1);
+
+    if (Reg != nullptr) {
+      const auto *ParamInfo =
+          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+
+      if (RC != ResourceClass::SRV && RC != ResourceClass::UAV)
+        continue;
+
+      if (ParamInfo->Type == dxbc::RootParameterType::DescriptorTable)
+        continue;
+
+      if (RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer)
+        reportInvalidHandleTyError(M, RC, Binding);
+    } else {
       reportRegNotBound(M, RC, Binding);
+    }
   }
 }
 
