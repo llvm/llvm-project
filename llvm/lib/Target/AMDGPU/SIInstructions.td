@@ -4404,7 +4404,7 @@ def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
 
 class D16LoadGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins ptype1:$addr);
+  let InOperandList = (ins ptype1:$addr, type0:$src);
   let hasSideEffects = 0;
   let mayLoad = 1;
 }
