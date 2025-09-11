@@ -3,6 +3,8 @@
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
+@glob = external global i32
+
 define <16 x i1> @v16i1_0() {
 ; CHECK-LABEL: @v16i1_0(
 ; CHECK-NEXT:  entry:
@@ -336,6 +338,41 @@ entry:
   %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 0)
   ret <vscale x 16 x i1> %mask
 }
+
+
+define <vscale x 16 x i1> @nxv16i1_0_constexpr() {
+; CHECK-LABEL: @nxv16i1_0_constexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 ptrtoint (ptr @glob to i64))
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[MASK]]
+;
+entry:
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 ptrtoint (ptr @glob to i64))
+  ret <vscale x 16 x i1> %mask
+}
+
+define <vscale x 16 x i1> @nxv16i1_constexpr_0() {
+; CHECK-LABEL: @nxv16i1_constexpr_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 ptrtoint (ptr @glob to i64), i64 0)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[MASK]]
+;
+entry:
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 ptrtoint (ptr @glob to i64), i64 0)
+  ret <vscale x 16 x i1> %mask
+}
+
+define <vscale x 16 x i1> @nxv16i1_constexpr_constexpr() {
+; CHECK-LABEL: @nxv16i1_constexpr_constexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 ptrtoint (ptr @glob to i64), i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @glob, i64 2) to i64))
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[MASK]]
+;
+entry:
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 ptrtoint (ptr @glob to i64), i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @glob, i64 2) to i64))
+  ret <vscale x 16 x i1> %mask
+}
+
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
