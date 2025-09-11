@@ -3684,6 +3684,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     case Intrinsic::x86_mmx_packssdw:
       return Intrinsic::x86_mmx_packssdw;
+
+    case Intrinsic::x86_avx512_packssdw_512:
+    case Intrinsic::x86_avx512_packusdw_512:
+      return Intrinsic::x86_avx512_packssdw_512;
+
+    case Intrinsic::x86_avx512_packsswb_512:
+    case Intrinsic::x86_avx512_packuswb_512:
+      return Intrinsic::x86_avx512_packsswb_512;
+
     default:
       llvm_unreachable("unexpected intrinsic id");
     }
@@ -3696,6 +3705,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Shadow is propagated with the signed variant of the same intrinsic applied
   // to sext(Sa != zeroinitializer), sext(Sb != zeroinitializer).
   // MMXEltSizeInBits is used only for x86mmx arguments.
+  //
+  // TODO: consider using GetMinMaxUnsigned() to handle saturation precisely
   void handleVectorPackIntrinsic(IntrinsicInst &I,
                                  unsigned MMXEltSizeInBits = 0) {
     assert(I.arg_size() == 2);
@@ -5554,6 +5565,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorShiftIntrinsic(I, /* Variable */ true);
       break;
 
+    // Pack with Signed/Unsigned Saturation
     case Intrinsic::x86_sse2_packsswb_128:
     case Intrinsic::x86_sse2_packssdw_128:
     case Intrinsic::x86_sse2_packuswb_128:
@@ -5562,6 +5574,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_packssdw:
     case Intrinsic::x86_avx2_packuswb:
     case Intrinsic::x86_avx2_packusdw:
+    // e.g., <64 x i8> @llvm.x86.avx512.packsswb.512
+    //                     (<32 x i16> %a, <32 x i16> %b)
+    //       <32 x i16> @llvm.x86.avx512.packssdw.512
+    //                     (<16 x i32> %a, <16 x i32> %b)
+    // Note: AVX512 masked variants are auto-upgraded by LLVM.
+    case Intrinsic::x86_avx512_packsswb_512:
+    case Intrinsic::x86_avx512_packssdw_512:
+    case Intrinsic::x86_avx512_packuswb_512:
+    case Intrinsic::x86_avx512_packusdw_512:
       handleVectorPackIntrinsic(I);
       break;
 

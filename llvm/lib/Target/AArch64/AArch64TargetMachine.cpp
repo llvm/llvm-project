@@ -295,27 +295,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<AArch64_ELFTargetObjectFile>();
 }
 
-// Helper function to build a DataLayout string
-static std::string computeDataLayout(const Triple &TT,
-                                     const MCTargetOptions &Options,
-                                     bool LittleEndian) {
-  if (TT.isOSBinFormatMachO()) {
-    if (TT.getArch() == Triple::aarch64_32)
-      return "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-             "n32:64-S128-Fn32";
-    return "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-"
-           "Fn32";
-  }
-  if (TT.isOSBinFormatCOFF())
-    return "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-i64:64-i128:"
-           "128-n32:64-S128-Fn32";
-  std::string Endian = LittleEndian ? "e" : "E";
-  std::string Ptr32 = TT.getEnvironment() == Triple::GNUILP32 ? "-p:32:32" : "";
-  return Endian + "-m:e" + Ptr32 +
-         "-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-"
-         "n32:64-S128-Fn32";
-}
-
 static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
   if (CPU.empty() && TT.isArm64e())
     return "apple-a12";
@@ -368,11 +347,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT,
                                            bool LittleEndian)
-    : CodeGenTargetMachineImpl(
-          T, computeDataLayout(TT, Options.MCOptions, LittleEndian), TT,
-          computeDefaultCPU(TT, CPU), FS, Options,
-          getEffectiveRelocModel(TT, RM),
-          getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT,
+                               computeDefaultCPU(TT, CPU), FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian),
       UseNewSMEABILowering(EnableNewSMEABILowering) {
   initAsmInfo();

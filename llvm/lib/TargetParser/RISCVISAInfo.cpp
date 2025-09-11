@@ -287,11 +287,6 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
                                                   bool IgnoreUnknown) const {
   std::vector<std::string> Features;
   for (const auto &[ExtName, _] : Exts) {
-    // i is a base instruction set, not an extension (see
-    // https://github.com/riscv/riscv-isa-manual/blob/main/src/naming.adoc#base-integer-isa)
-    // and is not recognized in clang -cc1
-    if (ExtName == "i")
-      continue;
     if (IgnoreUnknown && !isSupportedExtension(ExtName))
       continue;
 

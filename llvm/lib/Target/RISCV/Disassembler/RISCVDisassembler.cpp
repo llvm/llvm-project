@@ -255,6 +255,15 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus
+DecodeGPRPairNoX0RegisterClass(MCInst &Inst, uint32_t RegNo, uint64_t Address,
+                               const MCDisassembler *Decoder) {
+  if (RegNo == 0)
+    return MCDisassembler::Fail;
+
+  return DecodeGPRPairRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
 static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                 uint64_t Address,
                                                 const MCDisassembler *Decoder) {

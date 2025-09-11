@@ -91,6 +91,13 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *call = dyn_cast<CallExpr>(E)) {
+      if (auto *Callee = call->getCalleeDecl()) {
+        if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
+            Callee->hasAttr<NSReturnsRetainedAttr>()) {
+          return callback(E, true);
+        }
+      }
+
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);

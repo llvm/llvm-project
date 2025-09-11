@@ -594,8 +594,6 @@ def : Pat<(i64 (sra (bswap GPR:$rs1), (i64 32))),
           (TH_REVW GPR:$rs1)>;
 def : Pat<(binop_allwusers<srl> (bswap GPR:$rs1), (i64 32)),
           (TH_REVW GPR:$rs1)>;
-def : Pat<(riscv_clzw GPR:$rs1),
-          (TH_FF0 (i64 (SLLI (i64 (XORI GPR:$rs1, -1)), 32)))>;
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
 let Predicates = [HasVendorXTHeadBs] in {

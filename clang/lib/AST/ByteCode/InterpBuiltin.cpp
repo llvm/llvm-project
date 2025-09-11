@@ -300,6 +300,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckDummy(S, OpPC, StrPtr.block(), AK_Read))
     return false;
 
+  if (!StrPtr.getFieldDesc()->isPrimitiveArray())
+    return false;
+
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
@@ -909,6 +912,9 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   APSInt CarryIn = popToAPSInt(S.Stk, LHST);
   APSInt RHS = popToAPSInt(S.Stk, RHST);
   APSInt LHS = popToAPSInt(S.Stk, LHST);
+
+  if (CarryOutPtr.isDummy())
+    return false;
 
   APSInt CarryOut;
 
