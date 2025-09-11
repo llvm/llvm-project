@@ -454,9 +454,16 @@ def NVVM_ReduxOp :
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
   }];
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-      auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
-      $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
+      auto [id, args, types] = 
+      NVVM::ReduxOp::getIIDAndArgsWithTypes(
+                        *op, moduleTranslation, builder);
+      $res = createIntrinsicCall(builder, id, args);
   }];
   let assemblyFormat = [{
     $kind $val `,` $mask_and_clamp  attr-dict `:` type($val) `->` type($res)
@@ -1210,11 +1217,17 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
   }];
 
   let assemblyFormat = "$scope $addr `,` $size (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
+  
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   let llvmBuilder = [{
-    createIntrinsicCall(
-        builder,
-        getUnidirectionalFenceProxyID($fromProxy, $toProxy, $scope, false),
-        {$addr, $size});
+    auto [intId, args, types] = 
+    NVVM::FenceProxyAcquireOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, intId, args);
   }];
 
   let hasVerifier = 1;
@@ -1238,9 +1251,16 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
   }];
 
   let assemblyFormat = "$scope (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
+
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   let llvmBuilder = [{
-    createIntrinsicCall(builder, getUnidirectionalFenceProxyID(
-                                     $fromProxy, $toProxy, $scope, true));
+    auto [intId, args, types] = NVVM::FenceProxyReleaseOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, intId, args);
   }];
 
   let hasVerifier = 1;
@@ -1319,11 +1339,15 @@ def NVVM_ShflOp :
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
   }];
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-      auto intId = getShflIntrinsicId(
-          $_resultType, $kind, static_cast<bool>($return_value_and_is_valid));
-      $res = createIntrinsicCall(builder,
-          intId, {$thread_mask, $val, $offset, $mask_and_clamp});
+      auto [intId, args, types] = NVVM::ShflOp::getIIDAndArgsWithTypes(
+          *op, moduleTranslation, builder);
+      $res = createIntrinsicCall(builder, intId, args);
   }];
   let assemblyFormat = [{
     $kind $thread_mask `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
@@ -1369,9 +1393,16 @@ def NVVM_VoteSyncOp
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-vote-sync)
   }];
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+      getIIDAndArgsWithTypes(Operation &op,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-    auto intId = getVoteSyncIntrinsicId($kind);
-    $res = createIntrinsicCall(builder, intId, {$mask, $pred});
+    auto [intId, args, types] = 
+    NVVM::VoteSyncOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, intId, args);
   }];
   let assemblyFormat = "$kind $mask `,` $pred attr-dict `->` type($res)";
   let hasVerifier = 1;
@@ -1469,15 +1500,14 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   let assemblyFormat = "$dst `,` $src `,` $size `,` `cache` `=` $modifier (`,` $cpSize^)? attr-dict `:` type(operands)";
   let hasVerifier = 1;
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
+    static NVVM::IIDArgsWithTypes
+      getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    auto id = NVVM::CpAsyncOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, translatedOperands);
-    createIntrinsicCall(builder, id, translatedOperands);
+    auto [id, args, types] = NVVM::CpAsyncOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -2468,10 +2498,16 @@ def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-store-instruction-stmatrix)
   }];
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-      auto intId = getStMatrixIntrinsicId($layout, $sources.size(), $shape, $eltType);
-      createIntrinsicCall(builder, intId, operands, operands[0]->getType());
+      auto [intId, args, types] = 
+      NVVM::StMatrixOp::getIIDAndArgsWithTypes(
+        *op, moduleTranslation, builder);
+      createIntrinsicCall(builder, intId, args, types);
   }];
   let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
   let hasVerifier = 1;
@@ -2486,10 +2522,16 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
 
   let summary = "cooperative matrix load";
 
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+      getIIDAndArgsWithTypes(Operation &op,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-      auto intId = getLdMatrixIntrinsicId($layout, $num, $shape, $eltType);
-      $res = createIntrinsicCall(builder, intId, operands, {operands[0]->getType()});
+      auto [intId, args, types] = 
+      NVVM::LdMatrixOp::getIIDAndArgsWithTypes(
+        *op, moduleTranslation, builder);
+      $res = createIntrinsicCall(builder, intId, args, types);
   }];
 
   string baseDescription = [{
@@ -2904,8 +2946,8 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
   let extraClassDeclaration = [{
     bool hasIntrinsic() { return !getPredicate(); }
 
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase& builder);
   }];
 
@@ -2926,7 +2968,7 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    auto [id, args, types] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -2992,8 +3034,8 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static NVVM::IDArgPair
-    getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,LLVM::ModuleTranslation &mt,
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase &builder);
     bool hasIntrinsic() { return !getPredicate() || !getTensormap(); }
   }];
@@ -3004,7 +3046,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
     }
   }];
   let llvmBuilder = [{
-    auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
+    auto [id, args, types] = NVVM::PrefetchOp::getIIDAndArgsWithTypes(*op,
                                           moduleTranslation, builder);
 
     if(op.getTensormap())
@@ -3046,13 +3088,13 @@ def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
   }];
 
   let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase& builder);
   }];
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
+    auto [id, args, types] = NVVM::CpAsyncBulkPrefetchOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3087,15 +3129,15 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
   }];
 
   let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase& builder);
   }];
 
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkTensorPrefetchOp::getIntrinsicIDAndArgs(
+    auto [id, args, types] = NVVM::CpAsyncBulkTensorPrefetchOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3156,35 +3198,17 @@ def NVVM_CpAsyncBulkTensorReduceOp :
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(int tensorDims,
-                                              NVVM::TMAReduxKind kind,
-                                              bool isIm2Col);
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase& builder);
   }];
 
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // shared_mem_ptr, tmaDesc, tensorDims
-    // cache_hint(if applicable) and flag(boolean)
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($tmaDescriptor);
-
-    for (auto v : op.getCoordinates())
-      translatedOperands.push_back(moduleTranslation.lookupValue(v));
-
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Undef = llvm::UndefValue::get(llvm::IntegerType::get(ctx, 64));
-
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Undef);
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    auto intId = NVVM::CpAsyncBulkTensorReduceOp::getIntrinsicID(
-                 op.getCoordinates().size(), $redKind,
-                 (op.getMode() == NVVM::TMAStoreMode::IM2COL));
-    createIntrinsicCall(builder, intId, translatedOperands);
+    auto [id, args, types] = NVVM::CpAsyncBulkTensorReduceOp::getIIDAndArgsWithTypes(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -3221,36 +3245,17 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
     (`l2_cache_hint` `=` $l2CacheHint^ )?
     attr-dict  `:` type($dstMem) `,` type($srcMem)
   }];
+  
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase& builder);
+  }];
 
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // dst, mbar, src, size
-    // multicast_mask, cache_hint,
-    // flag for multicast_mask,
-    // flag for cache_hint
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($dstMem);
-    translatedOperands.push_back($mbar);
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($size);
-
-    // Multicast, if available
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i16Unused = llvm::ConstantInt::get(llvm::Type::getInt16Ty(ctx), 0);
-    bool isMulticast = op.getMulticastMask() ? true : false;
-    translatedOperands.push_back(isMulticast ? $multicastMask : i16Unused);
-
-    // Cachehint, if available
-    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
-
-    // Flag arguments for multicast and cachehint
-    translatedOperands.push_back(builder.getInt1(isMulticast));
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    createIntrinsicCall(builder,
-      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster, translatedOperands);
+    auto [id, args, types] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIIDAndArgsWithTypes(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -3332,12 +3337,12 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
   }];
 
   let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase& builder);
   }];
   string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    auto [id, args, types] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIIDAndArgsWithTypes(
                       *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
@@ -3637,11 +3642,16 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-match-sync)
   }];
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-    auto intId = getMatchSyncIntrinsicId(
-        op.getVal().getType(), $kind);
-    $res = createIntrinsicCall(builder,
-        intId, {$thread_mask, $val});
+    auto [intId, args, types] = 
+    NVVM::MatchSyncOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, intId, args);
   }];
   let assemblyFormat = "$kind $thread_mask `,` $val attr-dict `:` type($val) `->` type($res)";
   let hasVerifier = 1;
@@ -3665,11 +3675,16 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk)
   }];
 
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-    auto intId = getStBulkIntrinsicId(
-          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
-    createIntrinsicCall(builder, intId,
-                      {$addr, $size, builder.getInt64($initVal)});
+    auto [intId, args, types] = 
+    NVVM::BulkStoreOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, intId, args);
   }];
   
   let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
@@ -3753,14 +3768,13 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMa<[100, 101]>]
   let assemblyFormat = "$addr `,` $nCols attr-dict `:` type(operands)";
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
+    static NVVM::IIDArgsWithTypes
+      getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05AllocOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
+    auto [id, args, types] = NVVM::Tcgen05AllocOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
 }
@@ -3781,14 +3795,13 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMa<[100, 10
   let assemblyFormat = "$taddr `,` $nCols attr-dict `:` type(operands)";
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
+    static NVVM::IIDArgsWithTypes
+      getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
   }];
   string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
+    auto [id, args, types] = NVVM::Tcgen05DeallocOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
 }
@@ -3885,15 +3898,14 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
+    static NVVM::IIDArgsWithTypes
+      getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05CommitOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
+    auto [id, args, types] = NVVM::Tcgen05CommitOp::getIIDAndArgsWithTypes(
+      *op, moduleTranslation, builder);
     createIntrinsicCall(builder, id, args);
   }];
 }
@@ -3997,12 +4009,14 @@ def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(Operation &op);
+    static NVVM::IIDArgsWithTypes getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto id = NVVM::Tcgen05CpOp::getIntrinsicID(*op);
-    createIntrinsicCall(builder, id, {$taddr, $smem_desc});
+    auto [id, args, types] = NVVM::Tcgen05CpOp::getIIDAndArgsWithTypes(*op,
+      moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -4167,24 +4181,16 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
 
   let hasVerifier = 1;
 
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-    llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
-    auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
-
-    unsigned num = $_resultType->isVectorTy()
-                       ? llvm::cast<llvm::VectorType>($_resultType)
-                             ->getElementCount()
-                             .getFixedValue()
-                       : 1;
-
-    auto ID = getTcgen05LdIntrinsicID($shape, num);
-    if (ID == llvm::Intrinsic::not_intrinsic)
-      llvm::report_fatal_error("unknow intrinsic signature for tcgen05.ld");
-
-    if ($offset)
-      $res = createIntrinsicCall(builder, ID, {$tmemAddr, $offset, Pack});
-    else
-      $res = createIntrinsicCall(builder, ID, {$tmemAddr, Pack});
+    auto [id, args, types] = 
+    NVVM::Tcgen05LdOp::getIIDAndArgsWithTypes(*op,
+      moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -4255,24 +4261,16 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
   }];
 
+  let extraClassDeclaration = [{
+    static NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   string llvmBuilder = [{
-    llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
-    auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
-
-    auto valTy = $val->getType();
-    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
-                                             ->getElementCount()
-                                             .getFixedValue()
-                                       : 1;
-
-    auto ID = getTcgen05StIntrinsicID($shape, num);
-    if (ID == llvm::Intrinsic::not_intrinsic)
-      llvm::report_fatal_error("unknow intrinsic signature for tcgen05.st");
-
-    if ($offset)
-      createIntrinsicCall(builder, ID, {$tmemAddr, $offset, $val, Unpack});
-    else
-      createIntrinsicCall(builder, ID, {$tmemAddr, $val, Unpack});
+    auto [id, args, types] = 
+    NVVM::Tcgen05StOp::getIIDAndArgsWithTypes(*op,
+      moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 
   let hasVerifier = 1;
@@ -4330,13 +4328,13 @@ def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
   let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
   
   let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::DotAccumulate4WayOp::getIntrinsicIDAndArgs(
+    auto [id, args, types] = NVVM::DotAccumulate4WayOp::getIIDAndArgsWithTypes(
                         *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
@@ -4384,13 +4382,13 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
   let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
   
   let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+    static mlir::NVVM::IIDArgsWithTypes
+    getIIDAndArgsWithTypes(Operation &op, LLVM::ModuleTranslation &mt,
                           llvm::IRBuilderBase &builder);
   }];
   
   string llvmBuilder = [{
-    auto [id, args] = NVVM::DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    auto [id, args, types] = NVVM::DotAccumulate2WayOp::getIIDAndArgsWithTypes(
                         *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
