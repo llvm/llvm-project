@@ -1818,6 +1818,168 @@ libc_support_library(
     ],
 )
 
+################################# ctype targets ################################
+
+libc_function(
+    name = "isalnum",
+    srcs = ["src/ctype/isalnum.cpp"],
+    hdrs = ["src/ctype/isalnum.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isalpha",
+    srcs = ["src/ctype/isalpha.cpp"],
+    hdrs = ["src/ctype/isalpha.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isascii",
+    srcs = ["src/ctype/isascii.cpp"],
+    hdrs = ["src/ctype/isascii.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isblank",
+    srcs = ["src/ctype/isblank.cpp"],
+    hdrs = ["src/ctype/isblank.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "iscntrl",
+    srcs = ["src/ctype/iscntrl.cpp"],
+    hdrs = ["src/ctype/iscntrl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isdigit",
+    srcs = ["src/ctype/isdigit.cpp"],
+    hdrs = ["src/ctype/isdigit.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isgraph",
+    srcs = ["src/ctype/isgraph.cpp"],
+    hdrs = ["src/ctype/isgraph.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "islower",
+    srcs = ["src/ctype/islower.cpp"],
+    hdrs = ["src/ctype/islower.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isprint",
+    srcs = ["src/ctype/isprint.cpp"],
+    hdrs = ["src/ctype/isprint.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "ispunct",
+    srcs = ["src/ctype/ispunct.cpp"],
+    hdrs = ["src/ctype/ispunct.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isspace",
+    srcs = ["src/ctype/isspace.cpp"],
+    hdrs = ["src/ctype/isspace.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isupper",
+    srcs = ["src/ctype/isupper.cpp"],
+    hdrs = ["src/ctype/isupper.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "isxdigit",
+    srcs = ["src/ctype/isxdigit.cpp"],
+    hdrs = ["src/ctype/isxdigit.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "toascii",
+    srcs = ["src/ctype/toascii.cpp"],
+    hdrs = ["src/ctype/toascii.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "tolower",
+    srcs = ["src/ctype/tolower.cpp"],
+    hdrs = ["src/ctype/tolower.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
+libc_function(
+    name = "toupper",
+    srcs = ["src/ctype/toupper.cpp"],
+    hdrs = ["src/ctype/toupper.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+    ],
+)
+
 ################################ fenv targets ################################
 
 libc_function(
