@@ -18,18 +18,22 @@ define i64 @test_double_to_ui64(double %x) {
 ;
 ; GISEL-X64-LABEL: test_double_to_ui64:
 ; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    cvttsd2si %xmm0, %rcx
 ; GISEL-X64-NEXT:    movsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
 ; GISEL-X64-NEXT:    movapd %xmm0, %xmm2
 ; GISEL-X64-NEXT:    subsd %xmm1, %xmm2
-; GISEL-X64-NEXT:    cvttsd2si %xmm2, %rdx
-; GISEL-X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; GISEL-X64-NEXT:    xorq %rdx, %rax
-; GISEL-X64-NEXT:    xorl %edx, %edx
-; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
-; GISEL-X64-NEXT:    setb %dl
-; GISEL-X64-NEXT:    andl $1, %edx
-; GISEL-X64-NEXT:    cmovneq %rcx, %rax
+; GISEL-X64-NEXT:    movsd {{.*#+}} xmm3 = [0.0E+0,0.0E+0]
+; GISEL-X64-NEXT:    ucomisd %xmm2, %xmm3
+; GISEL-X64-NEXT:    seta %al
+; GISEL-X64-NEXT:    xorb $1, %al
+; GISEL-X64-NEXT:    movzbl %al, %eax
+; GISEL-X64-NEXT:    andq $1, %rax
+; GISEL-X64-NEXT:    xorps %xmm2, %xmm2
+; GISEL-X64-NEXT:    cvtsi2sd %rax, %xmm2
+; GISEL-X64-NEXT:    mulsd %xmm1, %xmm2
+; GISEL-X64-NEXT:    subsd %xmm2, %xmm0
+; GISEL-X64-NEXT:    cvttsd2si %xmm0, %rcx
+; GISEL-X64-NEXT:    cvttsd2si %xmm2, %rax
+; GISEL-X64-NEXT:    addq %rcx, %rax
 ; GISEL-X64-NEXT:    retq
 ;
 ; AVX512-LABEL: test_double_to_ui64:
@@ -64,17 +68,11 @@ define zeroext i16 @test_double_to_ui16(double %x) {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
-; SDAG-AVX512-LABEL: test_double_to_ui16:
-; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvttsd2si %xmm0, %eax
-; SDAG-AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; SDAG-AVX512-NEXT:    retq
-;
-; GISEL-AVX512-LABEL: test_double_to_ui16:
-; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; GISEL-AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; GISEL-AVX512-NEXT:    retq
+; AVX512-LABEL: test_double_to_ui16:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    retq
 entry:
   %conv = fptoui double %x to i16
   ret i16 %conv
@@ -87,17 +85,11 @@ define zeroext i8 @test_double_to_ui8(double %x) {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
-; SDAG-AVX512-LABEL: test_double_to_ui8:
-; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvttsd2si %xmm0, %eax
-; SDAG-AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; SDAG-AVX512-NEXT:    retq
-;
-; GISEL-AVX512-LABEL: test_double_to_ui8:
-; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; GISEL-AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; GISEL-AVX512-NEXT:    retq
+; AVX512-LABEL: test_double_to_ui8:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
 entry:
   %conv = fptoui double %x to i8
   ret i8 %conv
@@ -117,18 +109,22 @@ define i64 @test_float_to_ui64(float %x) {
 ;
 ; GISEL-X64-LABEL: test_float_to_ui64:
 ; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    cvttss2si %xmm0, %rcx
 ; GISEL-X64-NEXT:    movss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; GISEL-X64-NEXT:    movaps %xmm0, %xmm2
 ; GISEL-X64-NEXT:    subss %xmm1, %xmm2
-; GISEL-X64-NEXT:    cvttss2si %xmm2, %rdx
-; GISEL-X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; GISEL-X64-NEXT:    xorq %rdx, %rax
-; GISEL-X64-NEXT:    xorl %edx, %edx
-; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
-; GISEL-X64-NEXT:    setb %dl
-; GISEL-X64-NEXT:    andl $1, %edx
-; GISEL-X64-NEXT:    cmovneq %rcx, %rax
+; GISEL-X64-NEXT:    movss {{.*#+}} xmm3 = [0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; GISEL-X64-NEXT:    ucomiss %xmm2, %xmm3
+; GISEL-X64-NEXT:    seta %al
+; GISEL-X64-NEXT:    xorb $1, %al
+; GISEL-X64-NEXT:    movzbl %al, %eax
+; GISEL-X64-NEXT:    andq $1, %rax
+; GISEL-X64-NEXT:    xorps %xmm2, %xmm2
+; GISEL-X64-NEXT:    cvtsi2ss %rax, %xmm2
+; GISEL-X64-NEXT:    mulss %xmm1, %xmm2
+; GISEL-X64-NEXT:    subss %xmm2, %xmm0
+; GISEL-X64-NEXT:    cvttss2si %xmm0, %rcx
+; GISEL-X64-NEXT:    cvttss2si %xmm2, %rax
+; GISEL-X64-NEXT:    addq %rcx, %rax
 ; GISEL-X64-NEXT:    retq
 ;
 ; AVX512-LABEL: test_float_to_ui64:
@@ -163,17 +159,11 @@ define zeroext i16 @test_float_to_ui16(float %x) {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
-; SDAG-AVX512-LABEL: test_float_to_ui16:
-; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvttss2si %xmm0, %eax
-; SDAG-AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; SDAG-AVX512-NEXT:    retq
-;
-; GISEL-AVX512-LABEL: test_float_to_ui16:
-; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvttss2usi %xmm0, %eax
-; GISEL-AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; GISEL-AVX512-NEXT:    retq
+; AVX512-LABEL: test_float_to_ui16:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    retq
 entry:
   %conv = fptoui float %x to i16
   ret i16 %conv
@@ -186,17 +176,11 @@ define zeroext i8 @test_float_to_ui8(float %x) {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
-; SDAG-AVX512-LABEL: test_float_to_ui8:
-; SDAG-AVX512:       # %bb.0: # %entry
-; SDAG-AVX512-NEXT:    vcvttss2si %xmm0, %eax
-; SDAG-AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; SDAG-AVX512-NEXT:    retq
-;
-; GISEL-AVX512-LABEL: test_float_to_ui8:
-; GISEL-AVX512:       # %bb.0: # %entry
-; GISEL-AVX512-NEXT:    vcvttss2usi %xmm0, %eax
-; GISEL-AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; GISEL-AVX512-NEXT:    retq
+; AVX512-LABEL: test_float_to_ui8:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
 entry:
   %conv = fptoui float %x to i8
   ret i8 %conv
@@ -389,3 +373,6 @@ entry:
   %conv = fptosi float %x to i33
   ret i33 %conv
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GISEL-AVX512: {{.*}}
+; SDAG-AVX512: {{.*}}
