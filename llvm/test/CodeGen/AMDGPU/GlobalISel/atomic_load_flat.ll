@@ -186,11 +186,11 @@ define <2 x i16> @atomic_load_flat_monotonic_i16_d16_hi_vector_insert(ptr %ptr, 
 ; GFX9-LABEL: atomic_load_flat_monotonic_i16_d16_hi_vector_insert:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    flat_load_ushort v0, v[0:1] glc
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
+; GFX9-NEXT:    flat_load_ushort v3, v[0:1] glc
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    flat_load_short_d16_hi v2, v[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_and_or_b32 v0, v2, v1, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i16, ptr %ptr monotonic, align 2
   %insert = insertelement <2 x i16> %vec, i16 %load, i32 1
@@ -260,10 +260,11 @@ define <2 x i16> @atomic_load_flat_monotonic_i16_d16_lo_vector_insert(ptr %ptr, 
 ; GFX9-LABEL: atomic_load_flat_monotonic_i16_d16_lo_vector_insert:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    flat_load_ushort v0, v[0:1] glc
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff0000
+; GFX9-NEXT:    flat_load_ushort v3, v[0:1] glc
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    flat_load_short_d16 v2, v[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_or_b32 v0, v2, v1, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i16, ptr %ptr monotonic, align 2
   %insert = insertelement <2 x i16> %vec, i16 %load, i32 0
