@@ -525,6 +525,9 @@ Improvements to Clang's diagnostics
 - The :doc:`ThreadSafetyAnalysis` attributes ``ACQUIRED_BEFORE(...)`` and
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
+- The :doc:`ThreadSafetyAnalysis` gains basic alias-analysis of capability
+  pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
+  both false positives but also false negatives through more precise analysis.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -554,6 +557,8 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fixed a failed assertion with a negative limit parameter value inside of
+  ``__has_embed``. (#GH157842)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
