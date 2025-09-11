@@ -36,8 +36,8 @@ struct StackEntry {
 
 } // namespace
 
-class UseConcisePreprocessorDirectivesCheck::UseConciseDirectivesPPCallbacks
-    final : public PPCallbacks {
+class UseConcisePreprocessorDirectivesCheck::
+    UseConciseDirectivesPPCallbacks final : public PPCallbacks {
 public:
   UseConciseDirectivesPPCallbacks(UseConcisePreprocessorDirectivesCheck &Check,
                                   const Preprocessor &PP)
