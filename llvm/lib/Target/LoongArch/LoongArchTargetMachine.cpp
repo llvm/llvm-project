@@ -58,8 +58,11 @@ static cl::opt<bool>
                            cl::init(false));
 
 static std::string computeDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit())
+  if (TT.isArch64Bit()) {
+    if (TT.isUEFI())
+      return "e-m:w-p:64:64-i64:64-i128:128-n32:64-S128";
     return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  }
   assert(TT.isArch32Bit() && "only LA32 and LA64 are currently supported");
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
@@ -89,6 +92,12 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
   }
 }
 
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatCOFF())
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
+  return std::make_unique<TargetLoweringObjectFileELF>();
+}
+
 LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
@@ -96,7 +105,7 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }
 
