@@ -582,8 +582,7 @@ void CodeGenModule::createOpenCLRuntime() {
 }
 
 void CodeGenModule::createOpenMPRuntime() {
-  if (!LangOpts.OMPHostIRFile.empty() &&
-      !llvm::sys::fs::exists(LangOpts.OMPHostIRFile))
+  if (!LangOpts.OMPHostIRFile.empty() && !FS->exists(LangOpts.OMPHostIRFile))
     Diags.Report(diag::err_omp_host_ir_file_not_found)
         << LangOpts.OMPHostIRFile;
 
