@@ -1275,12 +1275,16 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
+#  if __has_cpp_attribute(_Clang::__no_field_protection__)
+#    define _LIBCPP_NO_PFP [[_Clang::__no_field_protection__]]
+#  else
+#    define _LIBCPP_NO_PFP
+#  endif
+
 #  if defined(__POINTER_FIELD_PROTECTION__)
-#    define _LIBCPP_PFP [[clang::pointer_field_protection]]
-#    define _LIBCPP_NO_PFP [[clang::no_field_protection]]
+#    define _LIBCPP_PFP [[_Clang::__pointer_field_protection__]]
 #  else
 #    define _LIBCPP_PFP
-#    define _LIBCPP_NO_PFP
 #  endif
 
 #endif // __cplusplus

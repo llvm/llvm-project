@@ -355,6 +355,7 @@ DEFAULT_PARAMETERS = [
             AddCompileFlag("--rtlib=compiler-rt"),
             AddLinkFlag("--rtlib=compiler-rt"),
             AddLinkFlag("--unwindlib=libunwind"),
+            AddFeature("pfp"),
         ],
     ),
     Parameter(
