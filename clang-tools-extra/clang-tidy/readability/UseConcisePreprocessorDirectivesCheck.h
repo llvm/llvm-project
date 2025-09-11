@@ -28,6 +28,8 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
+  class UseConciseDirectivesPPCallbacks;
+
   const bool PreserveConsistency;
 };
 

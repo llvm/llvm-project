@@ -34,12 +34,14 @@ struct StackEntry {
   bool ApplyingRewritesWouldBreakConsistency = false;
 };
 
-class UseConciseDirectivesPPCallbacks final : public PPCallbacks {
+} // namespace
+
+class UseConcisePreprocessorDirectivesCheck::UseConciseDirectivesPPCallbacks
+    final : public PPCallbacks {
 public:
   UseConciseDirectivesPPCallbacks(UseConcisePreprocessorDirectivesCheck &Check,
-                                  const Preprocessor &PP,
-                                  bool PreserveConsistency)
-      : Check(Check), PP(PP), PreserveConsistency(PreserveConsistency) {}
+                                  const Preprocessor &PP)
+      : Check(Check), PP(PP) {}
 
   void Ifdef(SourceLocation, const Token &, const MacroDefinition &) override {
     Stack.emplace_back();
@@ -68,7 +70,7 @@ public:
 
     const auto &[Rewrites, ApplyingRewritesWouldBreakConsistency] =
         Stack.back();
-    if (!(PreserveConsistency && ApplyingRewritesWouldBreakConsistency)) {
+    if (!Check.PreserveConsistency || !ApplyingRewritesWouldBreakConsistency) {
       for (const auto &[DirectiveLoc, ConditionRange, Macro, Negated,
                         Directive] : Rewrites) {
         const StringRef Replacement =
@@ -191,11 +193,8 @@ private:
 
   UseConcisePreprocessorDirectivesCheck &Check;
   const Preprocessor &PP;
-  const bool PreserveConsistency;
   SmallVector<StackEntry, 4> Stack;
 };
-
-} // namespace
 
 UseConcisePreprocessorDirectivesCheck::UseConcisePreprocessorDirectivesCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -209,8 +208,8 @@ void UseConcisePreprocessorDirectivesCheck::storeOptions(
 
 void UseConcisePreprocessorDirectivesCheck::registerPPCallbacks(
     const SourceManager &, Preprocessor *PP, Preprocessor *) {
-  PP->addPPCallbacks(std::make_unique<UseConciseDirectivesPPCallbacks>(
-      *this, *PP, PreserveConsistency));
+  PP->addPPCallbacks(
+      std::make_unique<UseConciseDirectivesPPCallbacks>(*this, *PP));
 }
 
 } // namespace clang::tidy::readability
