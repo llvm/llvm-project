@@ -30,6 +30,14 @@ define i32 @bzhi32_a0(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_a0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_a0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mov r2, #1
@@ -67,6 +75,14 @@ define i32 @bzhi32_a1_indexzext(i32 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_a1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_a1_indexzext:
 ; V7A:       @ %bb.0:
@@ -107,6 +123,15 @@ define i32 @bzhi32_a2_load(ptr %w, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_a2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_a2_load:
 ; V7A:       @ %bb.0:
@@ -151,6 +176,15 @@ define i32 @bzhi32_a3_load_indexzext(ptr %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_a3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_a3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mov r2, #1
@@ -193,6 +227,14 @@ define i32 @bzhi32_a4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_a4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_a4_commutative:
 ; V7A:       @ %bb.0:
@@ -244,6 +286,25 @@ define i64 @bzhi64_a0(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bzhi64_a0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    mov.w r12, #1
+; V7M-NEXT:    subs.w lr, r2, #32
+; V7M-NEXT:    lsl.w r2, r12, r2
+; V7M-NEXT:    lsr.w r3, r12, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r3, r12, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs r2, #1
+; V7M-NEXT:    sbc r3, r3, #0
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bzhi64_a0:
 ; V7A:       @ %bb.0:
@@ -323,6 +384,26 @@ define i64 @bzhi64_a0_masked(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bzhi64_a0_masked:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    and r2, r2, #63
+; V7M-NEXT:    mov.w r12, #1
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    subs.w lr, r2, #32
+; V7M-NEXT:    lsl.w r2, r12, r2
+; V7M-NEXT:    lsr.w r3, r12, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r3, r12, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs r2, #1
+; V7M-NEXT:    sbc r3, r3, #0
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bzhi64_a0_masked:
 ; V7A:       @ %bb.0:
@@ -406,6 +487,25 @@ define i64 @bzhi64_a1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bzhi64_a1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    mov.w r12, #1
+; V7M-NEXT:    subs.w lr, r2, #32
+; V7M-NEXT:    lsl.w r2, r12, r2
+; V7M-NEXT:    lsr.w r3, r12, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r3, r12, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs r2, #1
+; V7M-NEXT:    sbc r3, r3, #0
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bzhi64_a1_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -482,6 +582,24 @@ define i64 @bzhi64_a2_load(ptr %w, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_a2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    movs r3, #1
+; V7M-NEXT:    subs.w r12, r2, #32
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    lsr.w r1, r3, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r3, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs r2, #1
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    sbc r1, r1, #0
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_a2_load:
 ; V7A:       @ %bb.0:
@@ -562,6 +680,24 @@ define i64 @bzhi64_a3_load_indexzext(ptr %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    ands r0, r3
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_a3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r2, r1, #32
+; V7M-NEXT:    movs r3, #1
+; V7M-NEXT:    subs.w r12, r1, #32
+; V7M-NEXT:    lsl.w r1, r3, r1
+; V7M-NEXT:    lsr.w r2, r3, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r3, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    subs r3, r1, #1
+; V7M-NEXT:    sbc r1, r2, #0
+; V7M-NEXT:    ldrd r0, r2, [r0]
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    ands r0, r3
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_a3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -646,6 +782,25 @@ define i64 @bzhi64_a4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bzhi64_a4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    mov.w r12, #1
+; V7M-NEXT:    subs.w lr, r2, #32
+; V7M-NEXT:    lsl.w r2, r12, r2
+; V7M-NEXT:    lsr.w r3, r12, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r3, r12, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs r2, #1
+; V7M-NEXT:    sbc r3, r3, #0
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bzhi64_a4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -715,6 +870,13 @@ define i32 @bzhi32_b0(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_b0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_b0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mvn r2, #0
@@ -748,6 +910,13 @@ define i32 @bzhi32_b1_indexzext(i32 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    lsl.w r1, r2, r1
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_b1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_b1_indexzext:
 ; V7A:       @ %bb.0:
@@ -784,6 +953,14 @@ define i32 @bzhi32_b2_load(ptr %w, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsl.w r1, r2, r1
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_b2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_b2_load:
 ; V7A:       @ %bb.0:
@@ -824,6 +1001,14 @@ define i32 @bzhi32_b3_load_indexzext(ptr %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_b3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_b3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
@@ -862,6 +1047,13 @@ define i32 @bzhi32_b4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsl.w r1, r2, r1
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_b4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_b4_commutative:
 ; V7A:       @ %bb.0:
@@ -904,6 +1096,19 @@ define i64 @bzhi64_b0(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    bic.w r0, r0, r12
 ; CHECK-NEXT:    bics r1, r3
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_b0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsl.w r12, r3, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl.w r12, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl r3, r2
+; V7M-NEXT:    bic.w r0, r0, r12
+; V7M-NEXT:    bics r1, r3
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_b0:
 ; V7A:       @ %bb.0:
@@ -963,6 +1168,19 @@ define i64 @bzhi64_b1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    bic.w r0, r0, r12
 ; CHECK-NEXT:    bics r1, r3
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_b1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsl.w r12, r3, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl.w r12, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl r3, r2
+; V7M-NEXT:    bic.w r0, r0, r12
+; V7M-NEXT:    bics r1, r3
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_b1_indexzext:
 ; V7A:       @ %bb.0:
@@ -1024,6 +1242,20 @@ define i64 @bzhi64_b2_load(ptr %w, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r3
 ; CHECK-NEXT:    bic.w r1, r2, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_b2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r1, #-1
+; V7M-NEXT:    subs.w r12, r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    ldrd r0, r2, [r0]
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r1, r12
+; V7M-NEXT:    bics r0, r3
+; V7M-NEXT:    bic.w r1, r2, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_b2_load:
 ; V7A:       @ %bb.0:
@@ -1090,6 +1322,20 @@ define i64 @bzhi64_b3_load_indexzext(ptr %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r1, r2
 ; CHECK-NEXT:    bics r0, r3
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_b3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    subs.w r12, r1, #32
+; V7M-NEXT:    lsl.w r3, r2, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    ldrd r0, r1, [r0]
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r2, r12
+; V7M-NEXT:    bics r1, r2
+; V7M-NEXT:    bics r0, r3
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_b3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -1158,6 +1404,19 @@ define i64 @bzhi64_b4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r1, r3
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_b4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsl.w r12, r3, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl.w r12, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl r3, r2
+; V7M-NEXT:    bic.w r0, r0, r12
+; V7M-NEXT:    bics r1, r3
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_b4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    subs r12, r2, #32
@@ -1216,29 +1475,33 @@ define i32 @bzhi32_c0(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_c0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_c0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c0:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c0:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -1256,21 +1519,28 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_c1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_c1_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c1_indexzext:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c1_indexzext:
@@ -1278,10 +1548,8 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %numhighbits = sub i8 32, %numlowbits
   %sh_prom = zext i8 %numhighbits to i32
@@ -1300,32 +1568,37 @@ define i32 @bzhi32_c2_load(ptr %w, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_c2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_c2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c2_load:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    ldr r0, [r0]
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c2_load:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
 ; V6M-NEXT:    ldr r0, [r0]
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %numhighbits = sub i32 32, %numlowbits
@@ -1345,23 +1618,31 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_c3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_c3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
 ; V7A-NEXT:    ldr r0, [r0]
-; V7A-NEXT:    mvn r2, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c3_load_indexzext:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
 ; V7A-T-NEXT:    ldr r0, [r0]
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c3_load_indexzext:
@@ -1369,11 +1650,9 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
 ; V6M-NEXT:    ldr r0, [r0]
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %numhighbits = sub i8 32, %numlowbits
@@ -1392,29 +1671,33 @@ define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_c4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_c4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bzhi32_c4_commutative:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    rsb.w r1, r1, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bzhi32_c4_commutative:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -1441,6 +1724,23 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r3
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bzhi64_c0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsbs.w lr, r2, #32
+; V7M-NEXT:    rsb.w r2, r2, #64
+; V7M-NEXT:    mov.w r12, #-1
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsr.w r2, r12, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r3, r3, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    ands r0, r3
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bzhi64_c0:
 ; V7A:       @ %bb.0:
@@ -1510,6 +1810,21 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r3
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_c1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r2, r2, #64
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    uxtb r2, r2
+; V7M-NEXT:    subs.w r12, r2, #32
+; V7M-NEXT:    lsr.w r2, r3, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r3, r3, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    ands r0, r3
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_c1_indexzext:
 ; V7A:       @ %bb.0:
@@ -1587,6 +1902,22 @@ define i64 @bzhi64_c2_load(ptr %w, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_c2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsbs.w r1, r2, #32
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    rsb.w r2, r2, #64
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl r3, r1
+; V7M-NEXT:    ldrd r0, r1, [r0]
+; V7M-NEXT:    mov.w r12, #-1
+; V7M-NEXT:    lsr.w r2, r12, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    ands r0, r3
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_c2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r5, lr}
@@ -1659,6 +1990,22 @@ define i64 @bzhi64_c3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    ands r0, r3
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_c3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #64
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    subs.w r2, r1, #32
+; V7M-NEXT:    lsr.w r1, r3, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl r3, r2
+; V7M-NEXT:    ldrd r0, r2, [r0]
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    ands r0, r3
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_c3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -1741,6 +2088,23 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bzhi64_c4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsbs.w lr, r2, #32
+; V7M-NEXT:    rsb.w r2, r2, #64
+; V7M-NEXT:    mov.w r12, #-1
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsr.w r2, r12, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r3, r3, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    ands r0, r3
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bzhi64_c4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -1806,6 +2170,13 @@ define i32 @bzhi32_d0(i32 %val, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_d0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_d0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r1, r1, #32
@@ -1841,6 +2212,14 @@ define i32 @bzhi32_d1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsls r0, r1
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_d1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_d1_indexzext:
 ; V7A:       @ %bb.0:
@@ -1882,6 +2261,14 @@ define i32 @bzhi32_d2_load(ptr %w, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_d2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_d2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
@@ -1922,6 +2309,15 @@ define i32 @bzhi32_d3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsls r0, r1
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_d3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_d3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -1985,6 +2381,31 @@ define i64 @bzhi64_d0(i64 %val, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    it pl
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bzhi64_d0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #64
+; V7M-NEXT:    rsbs.w r2, r2, #32
+; V7M-NEXT:    rsb.w lr, r3, #32
+; V7M-NEXT:    lsl.w r12, r1, r3
+; V7M-NEXT:    lsr.w r1, r0, lr
+; V7M-NEXT:    orr.w r1, r1, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r0, r2
+; V7M-NEXT:    lsl.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r12, r1, lr
+; V7M-NEXT:    lsr.w r0, r0, r3
+; V7M-NEXT:    orr.w r0, r0, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    lsr.w r1, r1, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bzhi64_d0:
 ; V7A:       @ %bb.0:
@@ -2071,6 +2492,30 @@ define i64 @bzhi64_d1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    it pl
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_d1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r2, r2, #64
+; V7M-NEXT:    uxtb r2, r2
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsl.w r12, r1, r2
+; V7M-NEXT:    lsr.w r1, r0, r3
+; V7M-NEXT:    orr.w r1, r1, r12
+; V7M-NEXT:    subs.w r12, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r0, r12
+; V7M-NEXT:    lsl.w r0, r0, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    lsr.w r0, r0, r2
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r12
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_d1_indexzext:
 ; V7A:       @ %bb.0:
@@ -2168,6 +2613,32 @@ define i64 @bzhi64_d2_load(ptr %w, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bzhi64_d2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r1, r2, #64
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    rsb.w lr, r1, #32
+; V7M-NEXT:    rsbs.w r2, r2, #32
+; V7M-NEXT:    lsl.w r12, r3, r1
+; V7M-NEXT:    lsr.w r3, r0, lr
+; V7M-NEXT:    orr.w r3, r3, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r3, r0, r2
+; V7M-NEXT:    lsl.w r0, r0, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r12, r3, lr
+; V7M-NEXT:    lsr.w r0, r0, r1
+; V7M-NEXT:    lsr.w r1, r3, r1
+; V7M-NEXT:    orr.w r0, r0, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r3, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bzhi64_d2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r5, r7, r11, lr}
@@ -2261,6 +2732,31 @@ define i64 @bzhi64_d3_load_indexzext(ptr %w, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_d3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r1, r1, #64
+; V7M-NEXT:    ldrd r0, r2, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    rsb.w r3, r1, #32
+; V7M-NEXT:    lsl.w r12, r2, r1
+; V7M-NEXT:    lsr.w r2, r0, r3
+; V7M-NEXT:    orr.w r2, r2, r12
+; V7M-NEXT:    subs.w r12, r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r0, r12
+; V7M-NEXT:    lsl.w r0, r0, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r3, r2, r3
+; V7M-NEXT:    lsr.w r0, r0, r1
+; V7M-NEXT:    lsr.w r1, r2, r1
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r2, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_d3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r5, r7, r11, lr}
@@ -2348,6 +2844,11 @@ define i32 @bzhi32_constant_mask32(i32 %val) nounwind {
 ; CHECK-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_constant_mask32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    bic r0, r0, #-2147483648
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_constant_mask32:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    bic r0, r0, #-2147483648
@@ -2374,6 +2875,12 @@ define i32 @bzhi32_constant_mask32_load(ptr %val) nounwind {
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_constant_mask32_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    bic r0, r0, #-2147483648
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_constant_mask32_load:
 ; V7A:       @ %bb.0:
@@ -2405,6 +2912,11 @@ define i32 @bzhi32_constant_mask16(i32 %val) nounwind {
 ; CHECK-NEXT:    bfc r0, #15, #17
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_constant_mask16:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    bfc r0, #15, #17
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_constant_mask16:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    bfc r0, #15, #17
@@ -2434,6 +2946,12 @@ define i32 @bzhi32_constant_mask16_load(ptr %val) nounwind {
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    bfc r0, #15, #17
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_constant_mask16_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    bfc r0, #15, #17
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_constant_mask16_load:
 ; V7A:       @ %bb.0:
@@ -2468,6 +2986,11 @@ define i32 @bzhi32_constant_mask8(i32 %val) nounwind {
 ; CHECK-NEXT:    and r0, r0, #127
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi32_constant_mask8:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    and r0, r0, #127
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi32_constant_mask8:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    and r0, r0, #127
@@ -2493,6 +3016,12 @@ define i32 @bzhi32_constant_mask8_load(ptr %val) nounwind {
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    and r0, r0, #127
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi32_constant_mask8_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    and r0, r0, #127
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi32_constant_mask8_load:
 ; V7A:       @ %bb.0:
@@ -2525,6 +3054,11 @@ define i64 @bzhi64_constant_mask64(i64 %val) nounwind {
 ; CHECK-NEXT:    bic r1, r1, #-1073741824
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_constant_mask64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    bic r1, r1, #-1073741824
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_constant_mask64:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    bic r1, r1, #-1073741824
@@ -2551,6 +3085,12 @@ define i64 @bzhi64_constant_mask64_load(ptr %val) nounwind {
 ; CHECK-NEXT:    ldrd r0, r1, [r0]
 ; CHECK-NEXT:    bic r1, r1, #-1073741824
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_constant_mask64_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldrd r0, r1, [r0]
+; V7M-NEXT:    bic r1, r1, #-1073741824
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_constant_mask64_load:
 ; V7A:       @ %bb.0:
@@ -2585,6 +3125,12 @@ define i64 @bzhi64_constant_mask32(i64 %val) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_constant_mask32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    bic r0, r0, #-2147483648
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_constant_mask32:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    bic r0, r0, #-2147483648
@@ -2615,6 +3161,13 @@ define i64 @bzhi64_constant_mask32_load(ptr %val) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bic r0, r0, #-2147483648
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_constant_mask32_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bic r0, r0, #-2147483648
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_constant_mask32_load:
 ; V7A:       @ %bb.0:
@@ -2650,6 +3203,12 @@ define i64 @bzhi64_constant_mask16(i64 %val) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_constant_mask16:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    bfc r0, #15, #17
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_constant_mask16:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    bfc r0, #15, #17
@@ -2683,6 +3242,13 @@ define i64 @bzhi64_constant_mask16_load(ptr %val) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bfc r0, #15, #17
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bzhi64_constant_mask16_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bfc r0, #15, #17
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bzhi64_constant_mask16_load:
 ; V7A:       @ %bb.0:
@@ -2721,6 +3287,12 @@ define i64 @bzhi64_constant_mask8(i64 %val) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_constant_mask8:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    and r0, r0, #127
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_constant_mask8:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    and r0, r0, #127
@@ -2751,6 +3323,13 @@ define i64 @bzhi64_constant_mask8_load(ptr %val) nounwind {
 ; CHECK-NEXT:    and r0, r0, #127
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bzhi64_constant_mask8_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    and r0, r0, #127
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bzhi64_constant_mask8_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
@@ -2776,5 +3355,3 @@ define i64 @bzhi64_constant_mask8_load(ptr %val) nounwind {
   %masked = and i64 %val1, 127
   ret i64 %masked
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; V7M: {{.*}}

@@ -31,6 +31,15 @@ define i32 @bextr32_a0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_a0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    movs r1, #1
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_a0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mov r12, #1
@@ -73,6 +82,15 @@ define i32 @bextr32_a0_arithmetic(i32 %val, i32 %numskipbits, i32 %numlowbits) n
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_a0_arithmetic:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    asrs r0, r1
+; V7M-NEXT:    movs r1, #1
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_a0_arithmetic:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mov r12, #1
@@ -114,6 +132,15 @@ define i32 @bextr32_a1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_a1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    movs r1, #1
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_a1_indexzext:
 ; V7A:       @ %bb.0:
@@ -159,6 +186,16 @@ define i32 @bextr32_a2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_a2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    movs r1, #1
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_a2_load:
 ; V7A:       @ %bb.0:
@@ -207,6 +244,16 @@ define i32 @bextr32_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_a3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    movs r1, #1
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_a3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
@@ -254,6 +301,15 @@ define i32 @bextr32_a4_commutative(i32 %val, i32 %numskipbits, i32 %numlowbits) 
 ; CHECK-NEXT:    subs r1, #1
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_a4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    movs r1, #1
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_a4_commutative:
 ; V7A:       @ %bb.0:
@@ -319,6 +375,36 @@ define i64 @bextr64_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    and.w r1, r1, r12
 ; CHECK-NEXT:    pop {r4, pc}
+;
+; V7M-LABEL: bextr64_a0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    mov.w lr, #1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    rsb.w r4, r12, #32
+; V7M-NEXT:    subs.w r3, r12, #32
+; V7M-NEXT:    lsr.w r4, lr, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r4, lr, r3
+; V7M-NEXT:    lsl.w r3, lr, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    subs r3, #1
+; V7M-NEXT:    sbc r12, r4, #0
+; V7M-NEXT:    rsb.w r4, r2, #32
+; V7M-NEXT:    lsl.w r4, r1, r4
+; V7M-NEXT:    orrs r0, r4
+; V7M-NEXT:    subs.w r4, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r4
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    and.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    and.w r1, r1, r12
+; V7M-NEXT:    pop {r4, pc}
 ;
 ; V7A-LABEL: bextr64_a0:
 ; V7A:       @ %bb.0:
@@ -438,6 +524,36 @@ define i64 @bextr64_a0_arithmetic(i64 %val, i64 %numskipbits, i64 %numlowbits) n
 ; CHECK-NEXT:    and.w r1, r12, r2
 ; CHECK-NEXT:    pop {r4, pc}
 ;
+; V7M-LABEL: bextr64_a0_arithmetic:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    mov.w lr, #1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    rsb.w r4, r12, #32
+; V7M-NEXT:    subs.w r3, r12, #32
+; V7M-NEXT:    lsr.w r4, lr, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r4, lr, r3
+; V7M-NEXT:    lsl.w r3, lr, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    subs r3, #1
+; V7M-NEXT:    sbc r12, r4, #0
+; V7M-NEXT:    rsb.w r4, r2, #32
+; V7M-NEXT:    lsl.w r4, r1, r4
+; V7M-NEXT:    orrs r0, r4
+; V7M-NEXT:    subs.w r4, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    asrpl.w r0, r1, r4
+; V7M-NEXT:    asr.w r2, r1, r2
+; V7M-NEXT:    and.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    asrpl r2, r1, #31
+; V7M-NEXT:    and.w r1, r12, r2
+; V7M-NEXT:    pop {r4, pc}
+;
 ; V7A-LABEL: bextr64_a0_arithmetic:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r4, lr}
@@ -554,6 +670,35 @@ define i64 @bextr64_a1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    and.w r1, r1, r12
 ; CHECK-NEXT:    pop {r4, pc}
+;
+; V7M-LABEL: bextr64_a1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    rsb.w r4, r3, #32
+; V7M-NEXT:    mov.w lr, #1
+; V7M-NEXT:    subs.w r12, r3, #32
+; V7M-NEXT:    lsl.w r3, lr, r3
+; V7M-NEXT:    lsr.w r4, lr, r4
+; V7M-NEXT:    lsr.w r0, r0, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r4, lr, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    subs r3, #1
+; V7M-NEXT:    sbc r12, r4, #0
+; V7M-NEXT:    rsb.w r4, r2, #32
+; V7M-NEXT:    lsl.w r4, r1, r4
+; V7M-NEXT:    orrs r0, r4
+; V7M-NEXT:    subs.w r4, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r4
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    and.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    and.w r1, r1, r12
+; V7M-NEXT:    pop {r4, pc}
 ;
 ; V7A-LABEL: bextr64_a1_indexzext:
 ; V7A:       @ %bb.0:
@@ -674,6 +819,37 @@ define i64 @bextr64_a2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    and.w r1, r1, r12
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bextr64_a2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    mov.w lr, #1
+; V7M-NEXT:    rsb.w r1, r12, #32
+; V7M-NEXT:    subs.w r3, r12, #32
+; V7M-NEXT:    lsr.w r1, lr, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, lr, r3
+; V7M-NEXT:    lsl.w r3, lr, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    subs.w lr, r3, #1
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    sbc r12, r1, #0
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    lsl.w r1, r3, r1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    orrs r0, r1
+; V7M-NEXT:    subs.w r1, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r3, r1
+; V7M-NEXT:    lsr.w r1, r3, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    and.w r0, r0, lr
+; V7M-NEXT:    and.w r1, r1, r12
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bextr64_a2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r4, r5, r6, lr}
@@ -793,6 +969,36 @@ define i64 @bextr64_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; CHECK-NEXT:    and.w r0, r0, lr
 ; CHECK-NEXT:    and.w r1, r1, r12
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bextr64_a3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    mov.w r12, #1
+; V7M-NEXT:    subs.w lr, r2, #32
+; V7M-NEXT:    lsl.w r2, r12, r2
+; V7M-NEXT:    lsr.w r3, r12, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r3, r12, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs.w lr, r2, #1
+; V7M-NEXT:    ldrd r0, r2, [r0]
+; V7M-NEXT:    sbc r12, r3, #0
+; V7M-NEXT:    rsb.w r3, r1, #32
+; V7M-NEXT:    lsl.w r3, r2, r3
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r1, #32
+; V7M-NEXT:    lsr.w r1, r2, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r2, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    and.w r0, r0, lr
+; V7M-NEXT:    and.w r1, r1, r12
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bextr64_a3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -915,6 +1121,36 @@ define i64 @bextr64_a4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
 ; CHECK-NEXT:    and.w r1, r1, r12
 ; CHECK-NEXT:    pop {r4, pc}
 ;
+; V7M-LABEL: bextr64_a4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    mov.w lr, #1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    rsb.w r4, r12, #32
+; V7M-NEXT:    subs.w r3, r12, #32
+; V7M-NEXT:    lsr.w r4, lr, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r4, lr, r3
+; V7M-NEXT:    lsl.w r3, lr, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    subs r3, #1
+; V7M-NEXT:    sbc r12, r4, #0
+; V7M-NEXT:    rsb.w r4, r2, #32
+; V7M-NEXT:    lsl.w r4, r1, r4
+; V7M-NEXT:    orrs r0, r4
+; V7M-NEXT:    subs.w r4, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r4
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    and.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    and.w r1, r1, r12
+; V7M-NEXT:    pop {r4, pc}
+;
 ; V7A-LABEL: bextr64_a4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r4, lr}
@@ -1025,6 +1261,25 @@ define i32 @bextr64_32_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_a0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    lsls r2, r1
+; V7M-NEXT:    subs r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    subs r1, r2, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_a0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -1099,6 +1354,22 @@ define i32 @bextr64_32_a1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_a1:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_a1:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -1169,6 +1440,22 @@ define i32 @bextr64_32_a2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_a2:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    movs r2, #1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    subs r1, #1
+; V7M-NEXT:    ands r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_a2:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -1234,6 +1521,14 @@ define i32 @bextr32_b0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_b0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    bics r0, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_b0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    lsr r0, r0, r1
@@ -1272,6 +1567,14 @@ define i32 @bextr32_b1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; CHECK-NEXT:    lsl.w r2, r3, r2
 ; CHECK-NEXT:    bics r0, r2
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_b1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    bics r0, r2
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_b1_indexzext:
 ; V7A:       @ %bb.0:
@@ -1314,6 +1617,15 @@ define i32 @bextr32_b2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bics r0, r2
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_b2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bics r0, r2
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_b2_load:
 ; V7A:       @ %bb.0:
@@ -1359,6 +1671,15 @@ define i32 @bextr32_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; CHECK-NEXT:    bics r0, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_b3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bics r0, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_b3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
@@ -1403,6 +1724,14 @@ define i32 @bextr32_b4_commutative(i32 %val, i32 %numskipbits, i32 %numlowbits) 
 ; CHECK-NEXT:    lsl.w r2, r3, r2
 ; CHECK-NEXT:    bics r0, r2
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_b4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    bics r0, r2
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_b4_commutative:
 ; V7A:       @ %bb.0:
@@ -1462,6 +1791,32 @@ define i64 @bextr64_b0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r1, r2
 ; CHECK-NEXT:    bics r0, r3
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bextr64_b0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    lsl.w r3, r2, r12
+; V7M-NEXT:    subs.w lr, r12, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r2, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    bics r1, r2
+; V7M-NEXT:    bics r0, r3
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bextr64_b0:
 ; V7A:       @ %bb.0:
@@ -1556,6 +1911,29 @@ define i64 @bextr64_b1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; CHECK-NEXT:    movpl r3, #0
 ; CHECK-NEXT:    bic.w r0, r12, r3
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr64_b1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsr.w r12, r0, r2
+; V7M-NEXT:    rsb.w r0, r2, #32
+; V7M-NEXT:    lsl.w r0, r1, r0
+; V7M-NEXT:    orr.w r12, r12, r0
+; V7M-NEXT:    subs.w r0, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r12, r1, r0
+; V7M-NEXT:    lsr.w r0, r1, r2
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    subs.w r1, r3, #32
+; V7M-NEXT:    lsl.w r3, r2, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl r2, r1
+; V7M-NEXT:    bic.w r1, r0, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    bic.w r0, r12, r3
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr64_b1_indexzext:
 ; V7A:       @ %bb.0:
@@ -1652,6 +2030,33 @@ define i64 @bextr64_b2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    bics r1, r2
 ; CHECK-NEXT:    bics r0, r3
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bextr64_b2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    lsl.w r1, r3, r1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    orrs r0, r1
+; V7M-NEXT:    subs.w r1, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r3, r1
+; V7M-NEXT:    lsr.w r1, r3, r2
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    lsl.w r3, r2, r12
+; V7M-NEXT:    subs.w lr, r12, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r2, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    bics r1, r2
+; V7M-NEXT:    bics r0, r3
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bextr64_b2_load:
 ; V7A:       @ %bb.0:
@@ -1757,6 +2162,32 @@ define i64 @bextr64_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; CHECK-NEXT:    bic.w r0, r12, r2
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bextr64_b3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    ldrd r12, r0, [r0]
+; V7M-NEXT:    rsb.w r3, r1, #32
+; V7M-NEXT:    lsl.w lr, r0, r3
+; V7M-NEXT:    lsr.w r3, r12, r1
+; V7M-NEXT:    orr.w r12, r3, lr
+; V7M-NEXT:    subs.w r3, r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r12, r0, r3
+; V7M-NEXT:    lsr.w r0, r0, r1
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    subs.w r1, r2, #32
+; V7M-NEXT:    lsl.w r2, r3, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl r3, r1
+; V7M-NEXT:    bic.w r1, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    bic.w r0, r12, r2
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bextr64_b3_load_indexzext:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldm r0, {r0, r3}
@@ -1861,6 +2292,32 @@ define i64 @bextr64_b4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
 ; CHECK-NEXT:    bics r0, r3
 ; CHECK-NEXT:    pop {r7, pc}
 ;
+; V7M-LABEL: bextr64_b4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    lsl.w r3, r2, r12
+; V7M-NEXT:    subs.w lr, r12, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r2, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    bics r1, r2
+; V7M-NEXT:    bics r0, r3
+; V7M-NEXT:    pop {r7, pc}
+;
 ; V7A-LABEL: bextr64_b4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -1953,6 +2410,24 @@ define i32 @bextr64_32_b0(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_b0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldrb.w r1, [sp]
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsls r2, r1
+; V7M-NEXT:    subs r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    bics r0, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_b0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -2027,6 +2502,21 @@ define i32 @bextr64_32_b1(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_b1:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldrb.w r1, [sp]
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_b1:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -2093,6 +2583,21 @@ define i32 @bextr64_32_b2(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; CHECK-NEXT:    bics r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_b2:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldrb.w r1, [sp]
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    lsl.w r1, r2, r1
+; V7M-NEXT:    bics r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_b2:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -2156,32 +2661,37 @@ define i32 @bextr32_c0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_c0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_c0:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    rsb r2, r2, #32
-; V7A-NEXT:    mvn r3, #0
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c0:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c0:
 ; V6M:       @ %bb.0:
+; V6M-NEXT:    movs r3, #32
+; V6M-NEXT:    subs r2, r3, r2
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    movs r1, #32
-; V6M-NEXT:    subs r1, r1, r2
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r2
+; V6M-NEXT:    lsrs r0, r2
 ; V6M-NEXT:    bx lr
   %shifted = lshr i32 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
@@ -2202,14 +2712,24 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_c1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_c1_indexzext:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    rsb r2, r2, #32
-; V7A-NEXT:    mvn r3, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    uxtb r2, r2
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    uxtb r1, r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c1_indexzext:
@@ -2217,10 +2737,9 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; V7A-T-NEXT:    uxtb r1, r1
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c1_indexzext:
@@ -2230,10 +2749,8 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; V6M-NEXT:    movs r1, #32
 ; V6M-NEXT:    subs r1, r1, r2
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %skip = zext i8 %numskipbits to i32
   %shifted = lshr i32 %val, %skip
@@ -2255,35 +2772,41 @@ define i32 @bextr32_c2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_c2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_c2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
-; V7A-NEXT:    rsb r2, r2, #32
-; V7A-NEXT:    mvn r3, #0
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c2_load:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    ldr r0, [r0]
-; V7A-T-NEXT:    rsb.w r2, r2, #32
-; V7A-T-NEXT:    mov.w r3, #-1
-; V7A-T-NEXT:    lsr.w r2, r3, r2
 ; V7A-T-NEXT:    lsrs r0, r1
-; V7A-T-NEXT:    ands r0, r2
+; V7A-T-NEXT:    rsb.w r1, r2, #32
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c2_load:
 ; V6M:       @ %bb.0:
-; V6M-NEXT:    ldr r3, [r0]
-; V6M-NEXT:    lsrs r3, r1
-; V6M-NEXT:    movs r0, #32
-; V6M-NEXT:    subs r1, r0, r2
-; V6M-NEXT:    movs r0, #0
-; V6M-NEXT:    mvns r0, r0
+; V6M-NEXT:    movs r3, #32
+; V6M-NEXT:    subs r2, r3, r2
+; V6M-NEXT:    ldr r0, [r0]
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    ands r0, r3
+; V6M-NEXT:    lsls r0, r2
+; V6M-NEXT:    lsrs r0, r2
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %shifted = lshr i32 %val, %numskipbits
@@ -2306,15 +2829,26 @@ define i32 @bextr32_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_c3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_c3_load_indexzext:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    rsb r2, r2, #32
 ; V7A-NEXT:    ldr r0, [r0]
-; V7A-NEXT:    mvn r3, #0
 ; V7A-NEXT:    uxtb r1, r1
-; V7A-NEXT:    uxtb r2, r2
-; V7A-NEXT:    lsr r2, r3, r2
-; V7A-NEXT:    and r0, r2, r0, lsr r1
+; V7A-NEXT:    lsr r0, r0, r1
+; V7A-NEXT:    rsb r1, r2, #32
+; V7A-NEXT:    uxtb r1, r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c3_load_indexzext:
@@ -2323,24 +2857,21 @@ define i32 @bextr32_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; V7A-T-NEXT:    uxtb r1, r1
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
 ; V7A-T-NEXT:    uxtb r1, r1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c3_load_indexzext:
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    uxtb r1, r1
-; V6M-NEXT:    ldr r3, [r0]
-; V6M-NEXT:    lsrs r3, r1
-; V6M-NEXT:    movs r0, #32
-; V6M-NEXT:    subs r0, r0, r2
-; V6M-NEXT:    uxtb r1, r0
-; V6M-NEXT:    movs r0, #0
-; V6M-NEXT:    mvns r0, r0
+; V6M-NEXT:    ldr r0, [r0]
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    ands r0, r3
+; V6M-NEXT:    movs r1, #32
+; V6M-NEXT:    subs r1, r1, r2
+; V6M-NEXT:    uxtb r1, r1
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    bx lr
   %val = load i32, ptr %w
   %skip = zext i8 %numskipbits to i32
@@ -2362,32 +2893,37 @@ define i32 @bextr32_c4_commutative(i32 %val, i32 %numskipbits, i32 %numlowbits) 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_c4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_c4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    rsb r1, r2, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr32_c4_commutative:
 ; V7A-T:       @ %bb.0:
 ; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    rsb.w r1, r2, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr32_c4_commutative:
 ; V6M:       @ %bb.0:
+; V6M-NEXT:    movs r3, #32
+; V6M-NEXT:    subs r2, r3, r2
 ; V6M-NEXT:    lsrs r0, r1
-; V6M-NEXT:    movs r1, #32
-; V6M-NEXT:    subs r1, r1, r2
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r2
+; V6M-NEXT:    lsrs r0, r2
 ; V6M-NEXT:    bx lr
   %shifted = lshr i32 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
@@ -2423,6 +2959,31 @@ define i64 @bextr64_c0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr64_c0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    ldr.w r12, [sp]
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    rsb.w r3, r12, #64
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    lsr.w r3, r2, r3
+; V7M-NEXT:    rsbs.w r12, r12, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r2, r2, r12
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr64_c0:
 ; V7A:       @ %bb.0:
@@ -2527,6 +3088,34 @@ define i64 @bextr64_c1_indexzext(i64 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; CHECK-NEXT:    and.w r0, r3, r12
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bextr64_c1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    uxtb r2, r2
+; V7M-NEXT:    lsr.w r12, r0, r2
+; V7M-NEXT:    rsb.w r0, r2, #32
+; V7M-NEXT:    lsl.w r0, r1, r0
+; V7M-NEXT:    orr.w r12, r12, r0
+; V7M-NEXT:    subs.w r0, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r12, r1, r0
+; V7M-NEXT:    rsb.w r0, r3, #64
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    uxtb r0, r0
+; V7M-NEXT:    subs.w lr, r0, #32
+; V7M-NEXT:    lsr.w r2, r3, r0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r3, r3, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    and.w r0, r3, r12
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bextr64_c1_indexzext:
 ; V7A:       @ %bb.0:
@@ -2640,6 +3229,32 @@ define i64 @bextr64_c2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_c2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    ldr.w r12, [sp]
+; V7M-NEXT:    lsl.w r1, r3, r1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    orrs r0, r1
+; V7M-NEXT:    subs.w r1, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r3, r1
+; V7M-NEXT:    lsr.w r1, r3, r2
+; V7M-NEXT:    rsb.w r3, r12, #64
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    rsbs.w r12, r12, #32
+; V7M-NEXT:    lsr.w r3, r2, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r2, r2, r12
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_c2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r4, r6, r8, lr}
@@ -2747,6 +3362,35 @@ define i64 @bextr64_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; CHECK-NEXT:    and.w r0, r3, r12
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
+;
+; V7M-LABEL: bextr64_c3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r7, lr}
+; V7M-NEXT:    push {r7, lr}
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsr.w r12, r0, r1
+; V7M-NEXT:    rsb.w r0, r1, #32
+; V7M-NEXT:    lsl.w r0, r3, r0
+; V7M-NEXT:    orr.w r12, r12, r0
+; V7M-NEXT:    subs.w r0, r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r12, r3, r0
+; V7M-NEXT:    rsb.w r0, r2, #64
+; V7M-NEXT:    lsr.w r1, r3, r1
+; V7M-NEXT:    mov.w r3, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    uxtb r0, r0
+; V7M-NEXT:    subs.w lr, r0, #32
+; V7M-NEXT:    lsr.w r2, r3, r0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r3, r3, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    and.w r0, r3, r12
+; V7M-NEXT:    ands r1, r2
+; V7M-NEXT:    pop {r7, pc}
 ;
 ; V7A-LABEL: bextr64_c3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -2867,6 +3511,31 @@ define i64 @bextr64_c4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_c4_commutative:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    ldr.w r12, [sp]
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    rsb.w r3, r12, #64
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    lsr.w r3, r2, r3
+; V7M-NEXT:    rsbs.w r12, r12, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r3, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r2, r2, r12
+; V7M-NEXT:    ands r1, r3
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_c4_commutative:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r4, r5, r11, lr}
@@ -2963,6 +3632,23 @@ define i32 @bextr64_32_c0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r2
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_c0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    mov.w r2, #-1
+; V7M-NEXT:    rsbs.w r1, r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl r2, r1
+; V7M-NEXT:    ands r0, r2
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_c0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r3, [sp]
@@ -3035,6 +3721,21 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_c1:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_c1:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -3044,8 +3745,8 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-NEXT:    orr r0, r0, r1, lsl r3
 ; V7A-NEXT:    lsrpl r0, r1, r2
 ; V7A-NEXT:    rsb r1, r12, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr64_32_c1:
@@ -3059,9 +3760,8 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r2
 ; V7A-T-NEXT:    rsb.w r1, r12, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr64_32_c1:
@@ -3072,10 +3772,8 @@ define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V6M-NEXT:    ldr r1, [sp, #8]
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    pop {r7, pc}
   %shifted = lshr i64 %val, %numskipbits
   %truncshifted = trunc i64 %shifted to i32
@@ -3104,6 +3802,21 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_c2:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_c2:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -3113,8 +3826,8 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-NEXT:    orr r0, r0, r1, lsl r3
 ; V7A-NEXT:    lsrpl r0, r1, r2
 ; V7A-NEXT:    rsb r1, r12, #32
-; V7A-NEXT:    mvn r2, #0
-; V7A-NEXT:    and r0, r0, r2, lsr r1
+; V7A-NEXT:    lsl r0, r0, r1
+; V7A-NEXT:    lsr r0, r0, r1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: bextr64_32_c2:
@@ -3128,9 +3841,8 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r2
 ; V7A-T-NEXT:    rsb.w r1, r12, #32
-; V7A-T-NEXT:    mov.w r2, #-1
-; V7A-T-NEXT:    lsr.w r1, r2, r1
-; V7A-T-NEXT:    ands r0, r1
+; V7A-T-NEXT:    lsls r0, r1
+; V7A-T-NEXT:    lsrs r0, r1
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: bextr64_32_c2:
@@ -3141,10 +3853,8 @@ define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; V6M-NEXT:    ldr r1, [sp, #8]
 ; V6M-NEXT:    movs r2, #32
 ; V6M-NEXT:    subs r1, r2, r1
-; V6M-NEXT:    movs r2, #0
-; V6M-NEXT:    mvns r2, r2
-; V6M-NEXT:    lsrs r2, r1
-; V6M-NEXT:    ands r0, r2
+; V6M-NEXT:    lsls r0, r1
+; V6M-NEXT:    lsrs r0, r1
 ; V6M-NEXT:    pop {r7, pc}
   %shifted = lshr i64 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
@@ -3167,6 +3877,14 @@ define i32 @bextr32_d0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; CHECK-NEXT:    lsls r0, r1
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_d0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_d0:
 ; V7A:       @ %bb.0:
@@ -3209,6 +3927,16 @@ define i32 @bextr32_d1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; CHECK-NEXT:    lsls r0, r1
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_d1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_d1_indexzext:
 ; V7A:       @ %bb.0:
@@ -3259,6 +3987,15 @@ define i32 @bextr32_d2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr32_d2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr32_d2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r0, [r0]
@@ -3305,6 +4042,17 @@ define i32 @bextr32_d3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; CHECK-NEXT:    lsls r0, r1
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: bextr32_d3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r0, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: bextr32_d3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -3388,6 +4136,43 @@ define i64 @bextr64_d0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    it pl
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    pop {r4, pc}
+;
+; V7M-LABEL: bextr64_d0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    rsb.w r3, r12, #64
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    rsb.w lr, r12, #32
+; V7M-NEXT:    rsb.w r12, r3, #32
+; V7M-NEXT:    lsls r1, r3
+; V7M-NEXT:    cmp.w lr, #0
+; V7M-NEXT:    lsr.w r4, r0, r12
+; V7M-NEXT:    orr.w r1, r1, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r0, lr
+; V7M-NEXT:    lsl.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r2, r1, r12
+; V7M-NEXT:    lsr.w r0, r0, r3
+; V7M-NEXT:    orr.w r0, r0, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, lr
+; V7M-NEXT:    lsr.w r1, r1, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    pop {r4, pc}
 ;
 ; V7A-LABEL: bextr64_d0:
 ; V7A:       @ %bb.0:
@@ -3510,6 +4295,44 @@ define i64 @bextr64_d1_indexzext(i64 %val, i8 %numskipbits, i8 %numlowbits) noun
 ; CHECK-NEXT:    it pl
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    pop {r4, pc}
+;
+; V7M-LABEL: bextr64_d1_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    uxtb.w lr, r2
+; V7M-NEXT:    subs.w r2, lr, #32
+; V7M-NEXT:    lsr.w r12, r0, lr
+; V7M-NEXT:    rsb.w r0, lr, #32
+; V7M-NEXT:    lsl.w r0, r1, r0
+; V7M-NEXT:    orr.w r0, r0, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    rsb.w r2, r3, #64
+; V7M-NEXT:    lsr.w r1, r1, lr
+; V7M-NEXT:    uxtb r2, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    rsb.w r12, r2, #32
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    sub.w r3, r2, #32
+; V7M-NEXT:    lsr.w r4, r0, r12
+; V7M-NEXT:    orrs r1, r4
+; V7M-NEXT:    cmp r3, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r0, r3
+; V7M-NEXT:    lsl.w r0, r0, r2
+; V7M-NEXT:    lsl.w r4, r1, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsr.w r0, r0, r2
+; V7M-NEXT:    orr.w r0, r0, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    pop {r4, pc}
 ;
 ; V7A-LABEL: bextr64_d1_indexzext:
 ; V7A:       @ %bb.0:
@@ -3645,6 +4468,44 @@ define i64 @bextr64_d2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    pop {r4, pc}
 ;
+; V7M-LABEL: bextr64_d2_load:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    ldrd r0, r3, [r0]
+; V7M-NEXT:    rsb.w r1, r2, #32
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    lsl.w r1, r3, r1
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    rsb.w lr, r12, #32
+; V7M-NEXT:    orrs r0, r1
+; V7M-NEXT:    subs.w r1, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r3, r1
+; V7M-NEXT:    rsb.w r1, r12, #64
+; V7M-NEXT:    lsr.w r2, r3, r2
+; V7M-NEXT:    rsb.w r12, r1, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r2, #0
+; V7M-NEXT:    cmp.w lr, #0
+; V7M-NEXT:    lsl.w r2, r2, r1
+; V7M-NEXT:    lsr.w r4, r0, r12
+; V7M-NEXT:    orr.w r2, r2, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r2, r0, lr
+; V7M-NEXT:    lsl.w r0, r0, r1
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r3, r2, r12
+; V7M-NEXT:    lsr.w r0, r0, r1
+; V7M-NEXT:    lsr.w r1, r2, r1
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r2, lr
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    pop {r4, pc}
+;
 ; V7A-LABEL: bextr64_d2_load:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -3773,6 +4634,45 @@ define i64 @bextr64_d3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) n
 ; CHECK-NEXT:    it pl
 ; CHECK-NEXT:    movpl r1, #0
 ; CHECK-NEXT:    pop {r4, pc}
+;
+; V7M-LABEL: bextr64_d3_load_indexzext:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    ldrd r0, lr, [r0]
+; V7M-NEXT:    uxtb r1, r1
+; V7M-NEXT:    rsb.w r2, r2, #64
+; V7M-NEXT:    subs.w r3, r1, #32
+; V7M-NEXT:    lsr.w r12, r0, r1
+; V7M-NEXT:    rsb.w r0, r1, #32
+; V7M-NEXT:    lsr.w r1, lr, r1
+; V7M-NEXT:    uxtb r2, r2
+; V7M-NEXT:    lsl.w r0, lr, r0
+; V7M-NEXT:    orr.w r0, r0, r12
+; V7M-NEXT:    rsb.w r12, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, lr, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    lsls r1, r2
+; V7M-NEXT:    sub.w r3, r2, #32
+; V7M-NEXT:    lsr.w r4, r0, r12
+; V7M-NEXT:    orrs r1, r4
+; V7M-NEXT:    cmp r3, #0
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r0, r3
+; V7M-NEXT:    lsl.w r0, r0, r2
+; V7M-NEXT:    lsl.w r4, r1, r12
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsr.w r0, r0, r2
+; V7M-NEXT:    orr.w r0, r0, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    pop {r4, pc}
 ;
 ; V7A-LABEL: bextr64_d3_load_indexzext:
 ; V7A:       @ %bb.0:
@@ -3915,6 +4815,40 @@ define i32 @bextr64_32_d0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind 
 ; CHECK-NEXT:    lsrpl.w r0, r1, lr
 ; CHECK-NEXT:    pop {r4, pc}
 ;
+; V7M-LABEL: bextr64_32_d0:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    .save {r4, lr}
+; V7M-NEXT:    push {r4, lr}
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    ldr.w r12, [sp, #8]
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orrs r0, r3
+; V7M-NEXT:    subs.w r3, r2, #32
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r3
+; V7M-NEXT:    lsr.w r1, r1, r2
+; V7M-NEXT:    rsb.w r3, r12, #64
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r1, #0
+; V7M-NEXT:    rsb.w lr, r12, #32
+; V7M-NEXT:    rsb.w r12, r3, #32
+; V7M-NEXT:    lsls r1, r3
+; V7M-NEXT:    cmp.w lr, #0
+; V7M-NEXT:    lsr.w r4, r0, r12
+; V7M-NEXT:    orr.w r1, r1, r4
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lslpl.w r1, r0, lr
+; V7M-NEXT:    lsl.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    movpl r0, #0
+; V7M-NEXT:    lsl.w r2, r1, r12
+; V7M-NEXT:    lsr.w r0, r0, r3
+; V7M-NEXT:    orr.w r0, r0, r2
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, lr
+; V7M-NEXT:    pop {r4, pc}
+;
 ; V7A-LABEL: bextr64_32_d0:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    .save {r11, lr}
@@ -4011,6 +4945,21 @@ define i32 @bextr64_32_d1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; CHECK-NEXT:    lsrs r0, r1
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: bextr64_32_d1:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    rsb.w r3, r2, #32
+; V7M-NEXT:    lsrs r0, r2
+; V7M-NEXT:    subs r2, #32
+; V7M-NEXT:    lsl.w r3, r1, r3
+; V7M-NEXT:    orr.w r0, r0, r3
+; V7M-NEXT:    it pl
+; V7M-NEXT:    lsrpl.w r0, r1, r2
+; V7M-NEXT:    ldr r1, [sp]
+; V7M-NEXT:    rsb.w r1, r1, #32
+; V7M-NEXT:    lsls r0, r1
+; V7M-NEXT:    lsrs r0, r1
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: bextr64_32_d1:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    rsb r3, r2, #32
@@ -4073,6 +5022,15 @@ define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    str.w r2, [r0, r1, lsl #2]
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: pr38938:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ldr r1, [r1]
+; V7M-NEXT:    ubfx r1, r1, #21, #10
+; V7M-NEXT:    ldr.w r2, [r0, r1, lsl #2]
+; V7M-NEXT:    adds r2, #1
+; V7M-NEXT:    str.w r2, [r0, r1, lsl #2]
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: pr38938:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ldr r1, [r1]
@@ -4122,6 +5080,11 @@ define i32 @c0_i32(i32 %arg) nounwind {
 ; CHECK-NEXT:    ubfx r0, r0, #19, #10
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c0_i32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ubfx r0, r0, #19, #10
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c0_i32:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ubfx r0, r0, #19, #10
@@ -4149,6 +5112,12 @@ define i32 @c1_i32(i32 %arg) nounwind {
 ; CHECK-NEXT:    movw r1, #4092
 ; CHECK-NEXT:    and.w r0, r1, r0, lsr #19
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c1_i32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movw r1, #4092
+; V7M-NEXT:    and.w r0, r1, r0, lsr #19
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c1_i32:
 ; V7A:       @ %bb.0:
@@ -4184,6 +5153,12 @@ define i32 @c2_i32(i32 %arg) nounwind {
 ; CHECK-NEXT:    movw r1, #4092
 ; CHECK-NEXT:    and.w r0, r1, r0, lsr #17
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c2_i32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movw r1, #4092
+; V7M-NEXT:    and.w r0, r1, r0, lsr #17
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c2_i32:
 ; V7A:       @ %bb.0:
@@ -4221,6 +5196,12 @@ define i32 @c4_i32_bad(i32 %arg) nounwind {
 ; CHECK-NEXT:    and.w r0, r1, r0, lsr #19
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c4_i32_bad:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mvn r1, #1
+; V7M-NEXT:    and.w r0, r1, r0, lsr #19
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c4_i32_bad:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mvn r1, #1
@@ -4253,6 +5234,12 @@ define i64 @c0_i64(i64 %arg) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c0_i64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ubfx r0, r1, #19, #10
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c0_i64:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ubfx r0, r1, #19, #10
@@ -4284,6 +5271,13 @@ define i64 @c1_i64(i64 %arg) nounwind {
 ; CHECK-NEXT:    and.w r0, r0, r1, lsr #19
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c1_i64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movw r0, #4092
+; V7M-NEXT:    and.w r0, r0, r1, lsr #19
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c1_i64:
 ; V7A:       @ %bb.0:
@@ -4323,6 +5317,13 @@ define i64 @c2_i64(i64 %arg) nounwind {
 ; CHECK-NEXT:    and.w r0, r0, r1, lsr #17
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c2_i64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movw r0, #4092
+; V7M-NEXT:    and.w r0, r0, r1, lsr #17
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c2_i64:
 ; V7A:       @ %bb.0:
@@ -4364,6 +5365,13 @@ define i64 @c4_i64_bad(i64 %arg) nounwind {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c4_i64_bad:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    mvn r0, #1
+; V7M-NEXT:    and.w r0, r0, r1, lsr #19
+; V7M-NEXT:    movs r1, #0
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c4_i64_bad:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mvn r0, #1
@@ -4403,6 +5411,12 @@ define void @c5_i32(i32 %arg, ptr %ptr) nounwind {
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c5_i32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ubfx r0, r0, #19, #10
+; V7M-NEXT:    str r0, [r1]
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c5_i32:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    ubfx r0, r0, #19, #10
@@ -4434,6 +5448,12 @@ define void @c6_i32(i32 %arg, ptr %ptr) nounwind {
 ; CHECK-NEXT:    ubfx r0, r0, #19, #12
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c6_i32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    ubfx r0, r0, #19, #12
+; V7M-NEXT:    str r0, [r1]
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c6_i32:
 ; V7A:       @ %bb.0:
@@ -4467,6 +5487,13 @@ define void @c7_i32(i32 %arg, ptr %ptr) nounwind {
 ; CHECK-NEXT:    and.w r0, r2, r0, lsr #17
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c7_i32:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movw r2, #4092
+; V7M-NEXT:    and.w r0, r2, r0, lsr #17
+; V7M-NEXT:    str r0, [r1]
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c7_i32:
 ; V7A:       @ %bb.0:
@@ -4511,6 +5538,13 @@ define void @c5_i64(i64 %arg, ptr %ptr) nounwind {
 ; CHECK-NEXT:    strd r1, r0, [r2]
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c5_i64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r0, #0
+; V7M-NEXT:    ubfx r1, r1, #19, #10
+; V7M-NEXT:    strd r1, r0, [r2]
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c5_i64:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    mov r0, #0
@@ -4548,6 +5582,13 @@ define void @c6_i64(i64 %arg, ptr %ptr) nounwind {
 ; CHECK-NEXT:    ubfx r1, r1, #19, #12
 ; CHECK-NEXT:    strd r1, r0, [r2]
 ; CHECK-NEXT:    bx lr
+;
+; V7M-LABEL: c6_i64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r0, #0
+; V7M-NEXT:    ubfx r1, r1, #19, #12
+; V7M-NEXT:    strd r1, r0, [r2]
+; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: c6_i64:
 ; V7A:       @ %bb.0:
@@ -4588,6 +5629,14 @@ define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
 ; CHECK-NEXT:    strd r1, r0, [r2]
 ; CHECK-NEXT:    bx lr
 ;
+; V7M-LABEL: c7_i64:
+; V7M:       @ %bb.0:
+; V7M-NEXT:    movs r0, #0
+; V7M-NEXT:    movw r3, #4092
+; V7M-NEXT:    and.w r1, r3, r1, lsr #17
+; V7M-NEXT:    strd r1, r0, [r2]
+; V7M-NEXT:    bx lr
+;
 ; V7A-LABEL: c7_i64:
 ; V7A:       @ %bb.0:
 ; V7A-NEXT:    movw r0, #4092
@@ -4623,5 +5672,3 @@ define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
   store i64 %tmp2, ptr %ptr
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; V7M: {{.*}}
