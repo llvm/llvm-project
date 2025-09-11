@@ -48,13 +48,13 @@ jobs:
 
       - name: Run baseline
         run: |
-          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
+          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
           baseline_commit=$(git merge-base refs/remotes/origin/${GITHUB_BASE_REF} ${GITHUB_SHA})
           ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${BENCHMARKS}
 
       - name: Run candidate
         run: |
-          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
+          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
           ./libcxx/utils/test-at-commit --commit ${GITHUB_SHA} -B build/candidate -- -sv -j1 --param optimization=speed ${BENCHMARKS}
 
       - name: Compare baseline and candidate runs
