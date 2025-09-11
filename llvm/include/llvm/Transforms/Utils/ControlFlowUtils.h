@@ -15,10 +15,13 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/CycleInfo.h"
 
 namespace llvm {
 
 class BasicBlock;
+class CallBrInst;
+class LoopInfo;
 class DomTreeUpdater;
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such
@@ -104,7 +107,8 @@ struct ControlFlowHub {
         : BB(BB), Succ0(Succ0), Succ1(Succ1) {}
   };
 
-  void addBranch(BasicBlock *BB, BasicBlock *Succ0, BasicBlock *Succ1) {
+  void addBranch(BasicBlock *BB, BasicBlock *Succ0,
+                 BasicBlock *Succ1 = nullptr) {
     assert(BB);
     assert(Succ0 || Succ1);
     Branches.emplace_back(BB, Succ0, Succ1);
@@ -118,6 +122,34 @@ struct ControlFlowHub {
            std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
 
   SmallVector<BranchDescriptor> Branches;
+
+  /// \brief Create a new intermediate target block for a callbr edge.
+  ///
+  /// This function creates a new basic block (the "target block") that sits
+  /// between a callbr instruction and one of its successors. The callbr's
+  /// successor is rewired to this new block, and the new block unconditionally
+  /// branches to the original successor. This is useful for normalizing control
+  /// flow, e.g., when transforming irreducible loops.
+  ///
+  /// \param CallBr         The callbr instruction whose edge is to be split.
+  /// \param Succ           The original successor basic block to be reached.
+  /// \param SuccIdx        The index of the successor in the callbr
+  ///                       instruction.
+  /// \param CI             Optional CycleInfo for updating cycle membership.
+  /// \param DTU            Optional DomTreeUpdater for updating the dominator
+  ///                       tree.
+  /// \param LI             Optional LoopInfo for updating loop membership.
+  /// \param UpdatedLI      Optional output flag indicating if LoopInfo has been
+  ///                       updated.
+  ///
+  /// \returns The newly created intermediate target block.
+  ///
+  /// \note This function updates PHI nodes, dominator tree, loop info, and
+  /// cycle info as needed.
+  static BasicBlock *
+  createCallBrTarget(CallBrInst *CallBr, BasicBlock *Succ, unsigned SuccIdx,
+                     CycleInfo *CI = nullptr, DomTreeUpdater *DTU = nullptr,
+                     LoopInfo *LI = nullptr, bool *UpdatedLI = nullptr);
 };
 
 } // end namespace llvm
