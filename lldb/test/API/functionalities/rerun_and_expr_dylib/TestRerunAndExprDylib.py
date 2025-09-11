@@ -28,6 +28,7 @@ def isUbuntu18_04():
 class TestRerunExprDylib(TestBase):
     @skipTestIfFn(isUbuntu18_04, bugnumber="rdar://103831050")
     @skipIfWindows
+    @skipIfRemote
     def test(self):
         """
         Tests whether re-launching a process without destroying
