@@ -540,8 +540,7 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
 
   // Samplers cannot be mixed with other resources in a descriptor table.
   if (HasSampler && HasOtherRangeType)
-    return make_error<TableSamplerMixinError>(OtherRangeType,
-                                              Location);
+    return make_error<TableSamplerMixinError>(OtherRangeType, Location);
   return Error::success();
 }
 
