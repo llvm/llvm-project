@@ -61,6 +61,7 @@
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
 # CHECK:       Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
 # CHECK:       LineEntry: [0x0000000140001000-0x0000000140001004): /tmp/a.cpp:2
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 
@@ -71,6 +72,7 @@
 # CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
 # CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
 # CHECK:       LineEntry: [0x0000000140001004-0x000000014000100c): /tmp/a.h:5
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001039) -> DW_OP_breg7 RSP+44
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
@@ -84,6 +86,7 @@
 # CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
 # CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
 # CHECK:       LineEntry: [0x0000000140001010-0x0000000140001018): /tmp/a.h:7
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001039) -> DW_OP_breg7 RSP+44
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x000000014000102d) -> DW_OP_reg26 XMM9
@@ -99,6 +102,7 @@
 # CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
 # CHECK-NEXT:            id = {{.*}}, range = [0x14000101c-0x140001039), name = "Class1::bar", decl = b.h:4
 # CHECK:       LineEntry: [0x000000014000101c-0x0000000140001022): /tmp/b.h:5
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x000000014000101c, 0x000000014000101e) -> DW_OP_reg24 XMM7
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "bar_local", type = "int", valid ranges = <block>, location = [0x000000014000101c, 0x0000000140001039) -> DW_OP_breg7 RSP+52
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
@@ -118,6 +122,7 @@
 # CHECK-NEXT:            id = {{.*}}, range = [0x14000101c-0x140001039), name = "Class1::bar", decl = b.h:4
 # CHECK-NEXT:            id = {{.*}}, range = [0x14000102a-0x140001039), name = "Namespace2::Class2::func", decl = c.h:4
 # CHECK:       LineEntry: [0x000000014000102a-0x0000000140001031): /tmp/c.h:5
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = [0x000000014000102a, 0x0000000140001039) -> DW_OP_reg24 XMM7
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "func_local", type = "int", valid ranges = <block>, location = [0x000000014000102a, 0x0000000140001039) -> DW_OP_breg7 RSP+48
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "bar_local", type = "int", valid ranges = <block>, location = [0x000000014000101c, 0x0000000140001039) -> DW_OP_breg7 RSP+52
@@ -132,6 +137,7 @@
 # CHECK:       Function: id = {{.*}}, name = "main", range = [0x0000000140001000-0x0000000140001046)
 # CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
 # CHECK:       LineEntry: [0x0000000140001039-0x000000014000103d): /tmp/a.cpp:3
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001045) -> DW_OP_reg3 RBX
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "main_local", type = "int", valid ranges = <block>, location = [0x0000000140001004, 0x0000000140001046) -> DW_OP_breg7 RSP+48
 
@@ -142,6 +148,7 @@
 # CHECK:         Blocks: id = {{.*}}, range = [0x140001000-0x140001046)
 # CHECK-NEXT:            id = {{.*}}, ranges = [0x140001004-0x140001039)[0x14000103f-0x140001046), name = "Namespace1::foo", decl = a.h:4
 # CHECK:       LineEntry: [0x0000000140001044-0x0000000140001046): /tmp/a.h:8
+# CHECK-NEXT:  Symbol: id = {{.*}}, range = [0x0000000140001000-0x0000000140001046), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "x", type = "int", valid ranges = <block>, location = <empty>, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "foo_local", type = "int", valid ranges = <block>, location = [0x0000000140001044, 0x0000000140001046) -> DW_OP_breg7 RSP+44
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001044, 0x0000000140001045) -> DW_OP_reg26 XMM9
