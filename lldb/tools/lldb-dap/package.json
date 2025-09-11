@@ -422,7 +422,7 @@
                     "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `[\"FOO=1\", \"BAR\"]`",
                     "items": {
                       "type": "string",
-                      "pattern": "^((\\w+=.*)|^\\w+)$"
+                      "pattern": "^\\w+(=.*)?$"
                     },
                     "default": []
                   }
@@ -689,7 +689,7 @@
                     "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `[\"FOO=1\", \"BAR\"]`",
                     "items": {
                       "type": "string",
-                      "pattern": "^((\\w+=.*)|^\\w+)$"
+                      "pattern": "^\\w+(=.*)?$"
                     },
                     "default": []
                   }
