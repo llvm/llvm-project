@@ -449,6 +449,7 @@ HexagonTargetLowering::initializeHVXLowering() {
   // Include cases which are not hander earlier
   setOperationAction(ISD::UINT_TO_FP, MVT::v32i1, Custom);
   setOperationAction(ISD::UINT_TO_FP, MVT::v64i1, Custom);
+  setOperationAction(ISD::SINT_TO_FP, MVT::v32i1, Custom);
 
   setTargetDAGCombine({ISD::CONCAT_VECTORS, ISD::TRUNCATE, ISD::VSELECT});
 }
@@ -2337,7 +2338,7 @@ HexagonTargetLowering::LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
   return ExpandHvxFpToInt(Op, DAG);
 }
 
-// For vector type v32i1 uint_to_fp to v32f32:
+// For vector type v32i1 uint_to_fp/sint_to_fp to v32f32:
 // R1 = #1, R2 holds the v32i1 param
 // V1 = vsplat(R1)
 // V2 = vsplat(R2)
@@ -2464,7 +2465,7 @@ HexagonTargetLowering::LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const {
   MVT IntTy = ty(Op.getOperand(0)).getVectorElementType();
   MVT FpTy = ResTy.getVectorElementType();
 
-  if (Op.getOpcode() == ISD::UINT_TO_FP) {
+  if (Op.getOpcode() == ISD::UINT_TO_FP || Op.getOpcode() == ISD::SINT_TO_FP) {
     if (ResTy == MVT::v32f32 && ty(Op.getOperand(0)) == MVT::v32i1)
       return LowerHvxPred32ToFp(Op, DAG);
     if (ResTy == MVT::v64f16 && ty(Op.getOperand(0)) == MVT::v64i1)
