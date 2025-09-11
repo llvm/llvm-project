@@ -46,7 +46,8 @@
  * concept B = A<U> && __is_same(U, int);
  *
  * The normal form of b is is `__is_same(T, int) /T->U, inner most level/
- *                          && __is_same(U, int) {U->U} /T->U, outermost most level/
+ *                          && __is_same(U, int) {U->U} /T->U, outermost most
+ * level/
  *                            `
  *
  * After substitution in the mapping, we substitute in the constraint expression
@@ -858,25 +859,26 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     const ConceptIdConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
+  const ConceptReference *ConceptId = Constraint.getConceptId();
+
   std::optional<Sema::InstantiatingTemplate> InstTemplate;
-  InstTemplate.emplace(S, Constraint.getConceptId()->getBeginLoc(),
+  InstTemplate.emplace(S, ConceptId->getBeginLoc(),
                        Sema::InstantiatingTemplate::ConstraintsCheck{},
-                       Constraint.getConceptId()->getNamedConcept(),
-                       MLTAL.getInnermost(), Constraint.getSourceRange());
+                       ConceptId->getNamedConcept(), MLTAL.getInnermost(),
+                       Constraint.getSourceRange());
 
   unsigned Size = Satisfaction.Details.size();
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
   if (!E.isUsable()) {
-    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
-                                Constraint.getConceptId());
+    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size, ConceptId);
     return E;
   }
 
   // ConceptIdConstraint is only relevant for diagnostics,
   // so if the normalized constraint is satisfied, we should not
-  // substiture into the constraint.
+  // substitute into the constraint.
   if (Satisfaction.IsSatisfied)
     return E;
 
@@ -899,7 +901,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
              : PackSubstitutionIndex);
 
   const ASTTemplateArgumentListInfo *Ori =
-      Constraint.getConceptId()->getTemplateArgsAsWritten();
+      ConceptId->getTemplateArgsAsWritten();
   TemplateDeductionInfo Info(TemplateNameLoc);
   InstTemplate.emplace(
       S, TemplateNameLoc, Sema::InstantiatingTemplate::ConstraintSubstitution{},
@@ -935,13 +937,11 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   }
 
   CXXScopeSpec SS;
-  SS.Adopt(Constraint.getConceptId()->getNestedNameSpecifierLoc());
+  SS.Adopt(ConceptId->getNestedNameSpecifierLoc());
 
   ExprResult SubstitutedConceptId = S.CheckConceptTemplateId(
-      SS, Constraint.getConceptId()->getTemplateKWLoc(),
-      Constraint.getConceptId()->getConceptNameInfo(),
-      Constraint.getConceptId()->getFoundDecl(),
-      Constraint.getConceptId()->getNamedConcept(), &OutArgs,
+      SS, ConceptId->getTemplateKWLoc(), ConceptId->getConceptNameInfo(),
+      ConceptId->getFoundDecl(), ConceptId->getNamedConcept(), &OutArgs,
       /*DoCheckConstraintSatisfaction=*/false);
 
   if (SubstitutedConceptId.isInvalid() || Trap.hasErrorOccurred())
