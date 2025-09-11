@@ -1326,9 +1326,9 @@ public:
   /// Returns location of clause kind.
   SourceLocation getDefaultKindKwLoc() const { return KindKwLoc; }
 
-  OpenMPDefaultClauseVariableCategory getDefaultVC() { return VC; }
+  OpenMPDefaultClauseVariableCategory getDefaultVC() const { return VC; }
 
-  SourceLocation getDefaultVCLoc() { return VCLoc; }
+  SourceLocation getDefaultVCLoc() const { return VCLoc; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

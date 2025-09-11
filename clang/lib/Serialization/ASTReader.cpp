@@ -11647,7 +11647,7 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
   C->setDefaultKindKwLoc(Record.readSourceLocation());
   C->setDefaultVariableCategory(
-      static_cast<OpenMPDefaultClauseVariableCategory>(Record.readInt()));
+      Record.readEnum<OpenMPDefaultClauseVariableCategory>());
   C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
 }
 

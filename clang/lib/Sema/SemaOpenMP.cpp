@@ -1384,7 +1384,8 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     if (!VD->getType()->isScalarType())
       IterDA = DSA_none;
     break;
-  default:;
+  case DSA_VC_all:
+    break;
   }
 
   // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
