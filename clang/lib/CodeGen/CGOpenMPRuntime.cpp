@@ -7203,8 +7203,8 @@ private:
   llvm::DenseMap<const ValueDecl *, const OMPMapClause *> LambdasMap;
 
   /// Map from component lists to their attach pointer expressions.
-  mutable llvm::DenseMap<
-      OMPClauseMappableExprCommon::MappableExprComponentListRef, const Expr *>
+  llvm::DenseMap<OMPClauseMappableExprCommon::MappableExprComponentListRef,
+                 const Expr *>
       AttachPtrExprMap;
 
   /// Map from attach pointer expressions to their component depth.
@@ -7213,9 +7213,9 @@ private:
   /// The component-depth of `nullptr` (i.e. no attach-ptr) is `std::nullopt`.
   /// TODO: Not urgent, but we should ideally use the number of pointer
   /// dereferences in an expr as an indicator of its complexity, instead of the
-  /// component-depth. That would be needed for us to treat `p[10]`,
-  /// `*(p + 10)`, `*(p + 5 + 5)` together.
-  mutable llvm::DenseMap<const Expr *, std::optional<size_t>>
+  /// component-depth. That would be needed for us to treat `p[1]`, `*(p + 10)`,
+  /// `*(p + 5 + 5)` together.
+  llvm::DenseMap<const Expr *, std::optional<size_t>>
       AttachPtrComponentDepthMap = {{nullptr, std::nullopt}};
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
