@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only -std=c11
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -Wconstant-conversion -verify -fsyntax-only -std=c11 -Wno-pointer-sign
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -146,6 +146,16 @@ void test_different_underlying_types_for_pointers() {
   unsigned long __no_wrap *py = &y;
 
   px = py; // expected-warning {{incompatible pointer types assigning to 'int *' from '__no_wrap unsigned long *'}}
+}
+
+typedef unsigned long __no_wrap nw_ul;
+typedef signed long sl;
+
+void qux(nw_ul *ptr) {}
+
+void test_signed_unsigned_pointer_compatibility() {
+  sl a;
+  qux(&a);
 }
 
 // expected-warning@+1 {{conflicting 'overflow_behavior' attributes on the same type; 'no_wrap' takes precedence over 'wrap'}}

@@ -9198,7 +9198,8 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
       if (S.Context.hasSameType(LUnderlying, RUnderlying))
         return AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior;
 
-      return AssignConvertType::IncompatiblePointer;
+      ltrans = LUnderlying;
+      rtrans = RUnderlying;
     }
   }
 
