@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 namespace spirv {
@@ -96,8 +97,8 @@ createGlobalVarForGraphEntryPoint(OpBuilder &builder, spirv::GraphARMOp graphOp,
 
   OpBuilder::InsertionGuard moduleInsertionGuard(builder);
   builder.setInsertionPoint(graphOp.getOperation());
-  std::string varName = graphOp.getName().str() + (isArg ? "_arg_" : "_res_") +
-                        std::to_string(index);
+  std::string varName = llvm::formatv("{}_{}_{}", graphOp.getName(),
+                                      isArg ? "arg" : "res", index);
 
   Type varType = isArg ? graphOp.getFunctionType().getInput(index)
                        : graphOp.getFunctionType().getResult(index);
@@ -106,9 +107,9 @@ createGlobalVarForGraphEntryPoint(OpBuilder &builder, spirv::GraphARMOp graphOp,
       varType,
       abiInfo.getStorageClass().value_or(spirv::StorageClass::UniformConstant));
 
-  return builder.create<spirv::GlobalVariableOp>(
-      graphOp.getLoc(), pointerType, varName, abiInfo.getDescriptorSet(),
-      abiInfo.getBinding());
+  return spirv::GlobalVariableOp::create(builder, graphOp.getLoc(), pointerType,
+                                         varName, abiInfo.getDescriptorSet(),
+                                         abiInfo.getBinding());
 }
 
 /// Gets the global variables that need to be specified as interface variable
@@ -258,7 +259,7 @@ public:
 class ProcessGraphInterfaceVarABI final
     : public OpConversionPattern<spirv::GraphARMOp> {
 public:
-  using OpConversionPattern<spirv::GraphARMOp>::OpConversionPattern;
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(spirv::GraphARMOp graphOp, OpAdaptor adaptor,
@@ -380,7 +381,7 @@ LogicalResult ProcessGraphInterfaceVarABI::matchAndRewrite(
         SymbolRefAttr::get(rewriter.getContext(), var.getSymName()));
   }
 
-  // Update signature.
+  // Update graph signature.
   rewriter.modifyOpInPlace(graphOp, [&] {
     for (unsigned index = 0; index < numInputs; ++index) {
       graphOp.removeArgAttr(index, attrName);
@@ -390,10 +391,8 @@ LogicalResult ProcessGraphInterfaceVarABI::matchAndRewrite(
     }
   });
 
-  OpBuilder::InsertionGuard insertionGuard(rewriter);
-  rewriter.setInsertionPoint(graphOp);
-  rewriter.create<spirv::GraphEntryPointARMOp>(graphOp.getLoc(), graphOp,
-                                               interfaceVars);
+  spirv::GraphEntryPointARMOp::create(rewriter, graphOp.getLoc(), graphOp,
+                                      interfaceVars);
   return success();
 }
 
@@ -422,8 +421,8 @@ void LowerABIAttributesPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(context);
-  patterns.add<ProcessInterfaceVarABI>(typeConverter, context);
-  patterns.add<ProcessGraphInterfaceVarABI>(typeConverter, context);
+  patterns.add<ProcessInterfaceVarABI, ProcessGraphInterfaceVarABI>(
+      typeConverter, context);
 
   ConversionTarget target(*context);
   // "Legal" function ops should have no interface variable ABI attributes.
