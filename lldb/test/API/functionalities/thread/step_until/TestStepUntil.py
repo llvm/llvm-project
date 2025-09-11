@@ -1,10 +1,9 @@
 """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
-
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test_event.build_exception import BuildError
 
 
 class StepUntilTestCase(TestBase):
@@ -112,10 +111,15 @@ class StepUntilTestCase(TestBase):
     @no_debug_info_test
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
     @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipIf(compiler=no_match(["clang"]))
     def test_bad_line_discontinuous(self):
         """Test that we get an error if attempting to step outside the current
         function -- and the function is discontinuous"""
-        self.build(dictionary=self._build_dict_for_discontinuity())
+        try:
+            self.build(dictionary=self._build_dict_for_discontinuity())
+        except BuildError as ex:
+            self.skipTest(f"failed to build with linker script.")
+
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "At the start", lldb.SBFileSpec(self.main_source)
         )
