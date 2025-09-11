@@ -279,14 +279,11 @@ static cl::opt<bool> ShortenInstructions("shorten-instructions",
                                          cl::init(true),
                                          cl::cat(BoltOptCategory));
 
-// This flag is used to "gate" the negate-ra-state CFI handling.
-// Sometimes, binaries use pac-ret but not contain negate-ra-state CFIs. That
-// should cause no issues for BOLT.
-cl::opt<bool> DisallowPacret(
-    "disallow-pacret",
-    cl::desc("Disable processing binaries containing negate-ra-state DWARF "
-             "CFIs (e.g. binaries using pac-ret hardening)"),
-    cl::cat(BoltOptCategory));
+cl::opt<bool>
+    UpdateBranchProtection("update-branch-protection",
+                           cl::desc("Rewrites pac-ret DWARF CFI instructions "
+                                    "(AArch64-only, on by default)"),
+                           cl::init(true), cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace llvm {

@@ -3523,10 +3523,10 @@ void RewriteInstance::disassembleFunctions() {
     // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
     // function.
     if (Function.containedNegateRAState()) {
-      if (opts::DisallowPacret) {
-        BC->errs() << "BOLT-ERROR: --disallow-pacret flag was used, but "
-                   << Function.getPrintName()
-                   << " contains .cfi-negate-ra-state.\n";
+      if (!opts::UpdateBranchProtection) {
+        BC->errs()
+            << "BOLT-ERROR: --update-branch-protection is set to false, but "
+            << Function.getPrintName() << " contains .cfi-negate-ra-state.\n";
         exit(1);
       }
     }
