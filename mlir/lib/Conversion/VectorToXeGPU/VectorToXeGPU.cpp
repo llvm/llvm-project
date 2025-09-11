@@ -180,9 +180,9 @@ static void adjustStridesForPermutation(AffineMap permMap,
   strides = applyPermutation(strides, perms64);
 }
 
-// Computes memory strides for vector transfer operations, handling both
-// static and dynamic memrefs while applying permutation transformations
-// for XeGPU lowering.
+// Computes memory strides and a memref offset for vector transfer operations,
+// handling both static and dynamic memrefs while applying permutation
+// transformations for XeGPU lowering.
 static std::pair<SmallVector<Value>, Value>
 computeMemrefMeta(VectorTransferOpInterface xferOp, PatternRewriter &rewriter) {
   SmallVector<Value> strides;
@@ -264,7 +264,7 @@ computeMemrefMeta(VectorTransferOpInterface xferOp, PatternRewriter &rewriter) {
 //   %23 = arith.add %20, %21
 //   %local_offsets = arith.add %22, %23
 //   %orig_offset = %block_id_y * 4x2x6x32 // consider using affine map
-//   %offsets =  orig_offset + local_offsets
+//   %offsets =  memref_offset + orig_offset + local_offsets
 static Value computeOffsets(VectorTransferOpInterface xferOp,
                             PatternRewriter &rewriter, ArrayRef<Value> strides,
                             Value baseOffset) {
@@ -339,7 +339,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   return localOffsets;
 }
 
-// Collapse memref shape to 1D
+// Convert memref to i64 base pointer
 static Value memrefToIndexPtr(VectorTransferOpInterface xferOp,
                               PatternRewriter &rewriter) {
   Location loc = xferOp.getLoc();
