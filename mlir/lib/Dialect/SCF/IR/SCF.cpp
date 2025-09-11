@@ -681,7 +681,6 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
   for (auto &yieldingOp : terminator.getYieldingOps()) {
-    // Skip non-ParallelInsertSliceOp operations
     auto parallelInsertSliceOp =
         dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
     if (!parallelInsertSliceOp)
@@ -1912,9 +1911,10 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(yieldingOp);
-      if (inParallelOp)
+      if (auto inParallelOp =
+              dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
         inParallelOp.getUpdatedDestinations().assign(outputBlockArg);
+      }
     }
 
     // Cast results back to the original types.
