@@ -112,7 +112,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO()) {
-    if (TT.getArch() == Triple::x86_64)
+    if (TT.isX86_64())
       return std::make_unique<X86_64MachoTargetObjectFile>();
     return std::make_unique<TargetLoweringObjectFileMachO>();
   }
@@ -120,7 +120,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
 
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
 }
@@ -131,7 +131,7 @@ static std::string computeDataLayout(const Triple &TT) {
 
   Ret += DataLayout::getManglingComponent(TT);
   // X86 and x32 have 32 bit pointers.
-  if (!TT.isArch64Bit() || TT.isX32())
+  if (TT.isX86_32() || TT.isX32())
     Ret += "-p:32:32";
 
   // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
@@ -140,7 +140,7 @@ static std::string computeDataLayout(const Triple &TT) {
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
   // 128 bit integers are not specified in the 32-bit ABIs but are used
   // internally for lowering f128, so we match the alignment to that.
-  if (TT.isArch64Bit() || TT.isOSWindows())
+  if (TT.isX86_64() || TT.isOSWindows())
     Ret += "-i64:64-i128:128";
   else if (TT.isOSIAMCU())
     Ret += "-i64:32-f64:32";
@@ -150,7 +150,7 @@ static std::string computeDataLayout(const Triple &TT) {
   // Some ABIs align long double to 128 bits, others to 32.
   if (TT.isOSIAMCU())
     ; // No f80
-  else if (TT.isArch64Bit() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
+  else if (TT.isX86_64() || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
     Ret += "-f80:128";
   else
     Ret += "-f80:32";
@@ -159,13 +159,13 @@ static std::string computeDataLayout(const Triple &TT) {
     Ret += "-f128:32";
 
   // The registers can hold 8, 16, 32 or, in x86-64, 64 bits.
-  if (TT.isArch64Bit())
+  if (TT.isX86_64())
     Ret += "-n8:16:32:64";
   else
     Ret += "-n8:16:32";
 
   // The stack is aligned to 32 bits on some ABIs and 128 bits on others.
-  if ((!TT.isArch64Bit() && TT.isOSWindows()) || TT.isOSIAMCU())
+  if ((TT.isX86_32() && TT.isOSWindows()) || TT.isOSIAMCU())
     Ret += "-a:0:32-S32";
   else
     Ret += "-S128";
@@ -175,7 +175,7 @@ static std::string computeDataLayout(const Triple &TT) {
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
                                            std::optional<Reloc::Model> RM) {
-  bool is64Bit = TT.getArch() == Triple::x86_64;
+  bool is64Bit = TT.isX86_64();
   if (!RM) {
     // JIT codegen should use static relocations by default, since it's
     // typically executed in process and not relocatable.
@@ -217,7 +217,7 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT, bool JIT,
 static CodeModel::Model
 getEffectiveX86CodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
                          bool JIT) {
-  bool Is64Bit = TT.getArch() == Triple::x86_64;
+  bool Is64Bit = TT.isX86_64();
   if (CM) {
     if (*CM == CodeModel::Tiny)
       reportFatalUsageError("target does not support the tiny CodeModel");
@@ -488,7 +488,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.getArch() == Triple::x86_64) {
+    if (TT.isX86_64()) {
       addPass(createCFGuardDispatchPass());
     } else {
       addPass(createCFGuardCheckPass());
@@ -547,7 +547,7 @@ bool X86PassConfig::addILPOpts() {
 bool X86PassConfig::addPreISel() {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM->getTargetTriple();
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86)
+  if (TT.isOSWindows() && TT.isX86_32())
     addPass(createX86WinEHStatePass());
   return true;
 }
@@ -636,7 +636,7 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
-  if (TT.isOSWindows() && TT.getArch() == Triple::x86_64)
+  if (TT.isOSWindows() && TT.isX86_64())
     addPass(createX86AvoidTrailingCallPass());
 
   // Verify basic block incoming and outgoing cfa offset and register values and
@@ -673,7 +673,7 @@ void X86PassConfig::addPreEmitPass2() {
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
-  if (TT.isOSWindows() && (TT.getArch() == Triple::x86_64))
+  if (TT.isOSWindows() && TT.isX86_64())
     addPass(createX86WinEHUnwindV2Pass());
 }
 
