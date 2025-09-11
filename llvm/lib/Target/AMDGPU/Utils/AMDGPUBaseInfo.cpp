@@ -3533,6 +3533,54 @@ bool isPackedFP32Inst(unsigned Opc) {
   }
 }
 
+const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {
+  assert(isFixedDims() && "expect kind to be FixedDims");
+  return Dims;
+}
+
+std::string ClusterDimsAttr::to_string() const {
+  SmallString<10> Buffer;
+  raw_svector_ostream OS(Buffer);
+
+  switch (getKind()) {
+  case Kind::Unknown:
+    return "";
+  case Kind::NoCluster: {
+    OS << EncoNoCluster << ',' << EncoNoCluster << ',' << EncoNoCluster;
+    return Buffer.c_str();
+  }
+  case Kind::VariableDims: {
+    OS << EncoVariableDims << ',' << EncoVariableDims << ','
+       << EncoVariableDims;
+    return Buffer.c_str();
+  }
+  case Kind::FixedDims: {
+    OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
+    return Buffer.c_str();
+  }
+  }
+  llvm_unreachable("Unknown ClusterDimsAttr kind");
+}
+
+ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
+  std::optional<SmallVector<unsigned>> Attr =
+      getIntegerVecAttribute(F, "amdgpu-cluster-dims", /*Size=*/3);
+  ClusterDimsAttr::Kind AttrKind = Kind::FixedDims;
+
+  if (!Attr.has_value())
+    AttrKind = Kind::Unknown;
+  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+    AttrKind = Kind::NoCluster;
+  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+    AttrKind = Kind::VariableDims;
+
+  ClusterDimsAttr A(AttrKind);
+  if (AttrKind == Kind::FixedDims)
+    A.Dims = {(*Attr)[0], (*Attr)[1], (*Attr)[2]};
+
+  return A;
+}
+
 } // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
