@@ -131,32 +131,6 @@ using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
 
-struct FPFastMathDefaultInfo {
-  const Type *Ty = nullptr;
-  unsigned FastMathFlags = 0;
-  // When SPV_KHR_float_controls2 ContractionOff and SignzeroInfNanPreserve are
-  // deprecated, and we replace them with FPFastMathDefault appropriate flags
-  // instead. However, we have no guarantee about the order in which we will
-  // process execution modes. Therefore it could happen that we first process
-  // ContractionOff, setting AllowContraction bit to 0, and then we process
-  // FPFastMathDefault enabling AllowContraction bit, effectively invalidating
-  // ContractionOff. Because of that, it's best to keep separate bits for the
-  // different execution modes, and we will try and combine them later when we
-  // emit OpExecutionMode instructions.
-  bool ContractionOff = false;
-  bool SignedZeroInfNanPreserve = false;
-  bool FPFastMathDefault = false;
-
-  FPFastMathDefaultInfo() = default;
-  FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
-      : Ty(Ty), FastMathFlags(FastMathFlags) {}
-  bool operator==(const FPFastMathDefaultInfo &Other) const {
-    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags &&
-           ContractionOff == Other.ContractionOff &&
-           SignedZeroInfNanPreserve == Other.SignedZeroInfNanPreserve &&
-           FPFastMathDefault == Other.FPFastMathDefault;
-  }
-};
 
 // The struct contains results of the module analysis and methods
 // to access them.
@@ -191,7 +165,7 @@ struct ModuleAnalysisInfo {
   // first element is the smallest bit width, and the last element is the
   // largest bit width, therefore, we will have {half, float, double} in
   // the order of their bit widths.
-  DenseMap<const Function *, SmallVector<FPFastMathDefaultInfo, 3>>
+  DenseMap<const Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
   MCRegister getFuncReg(const Function *F) {

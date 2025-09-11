@@ -1011,20 +1011,6 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
   return foldImm(ResType->getOperand(2), MRI);
 }
 
-size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
-  switch (BitWidth) {
-  case 16: // half
-    return 0;
-  case 32: // float
-    return 1;
-  case 64: // double
-    return 2;
-  default:
-    report_fatal_error("Expected BitWidth to be 16, 32, 64", false);
-  }
-  llvm_unreachable("Unreachable code in computeFPFastMathDefaultInfoVecIndex");
-}
-
 MachineBasicBlock::iterator
 getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
   // Find the position to insert the OpVariable instruction.

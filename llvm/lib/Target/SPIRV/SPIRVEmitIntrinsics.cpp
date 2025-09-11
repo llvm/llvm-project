@@ -264,33 +264,6 @@ public:
   }
 };
 
-struct FPFastMathDefaultInfo {
-  const Type *Ty = nullptr;
-  unsigned FastMathFlags = 0;
-  // When SPV_KHR_float_controls2 ContractionOff and SignzeroInfNanPreserve
-  // are deprecated, and we replace them with FPFastMathDefault appropriate
-  // flags instead. However, we have no guarantee about the order in which we
-  // will process execution modes. Therefore it could happen that we first
-  // process ContractionOff, setting AllowContraction bit to 0, and then we
-  // process FPFastMathDefault enabling AllowContraction bit, effectively
-  // invalidating ContractionOff. Because of that, it's best to keep separate
-  // bits for the different execution modes, and we will try and combine them
-  // later when we emit OpExecutionMode instructions.
-  bool ContractionOff = false;
-  bool SignedZeroInfNanPreserve = false;
-  bool FPFastMathDefault = false;
-
-  FPFastMathDefaultInfo() = default;
-  FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
-      : Ty(Ty), FastMathFlags(FastMathFlags) {}
-  bool operator==(const FPFastMathDefaultInfo &Other) const {
-    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags &&
-           ContractionOff == Other.ContractionOff &&
-           SignedZeroInfNanPreserve == Other.SignedZeroInfNanPreserve &&
-           FPFastMathDefault == Other.FPFastMathDefault;
-  }
-};
-
 bool isConvergenceIntrinsic(const Instruction *I) {
   const auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
@@ -2277,10 +2250,9 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
   }
 }
 
-static SmallVector<FPFastMathDefaultInfo, 3> &
-getOrCreateFPFastMathDefaultInfoVec(
+static SPIRV::FPFastMathDefaultInfoVector &getOrCreateFPFastMathDefaultInfoVec(
     const Module &M,
-    DenseMap<Function *, SmallVector<FPFastMathDefaultInfo, 3>>
+    DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
         &FPFastMathDefaultInfoMap,
     Function *F) {
   auto it = FPFastMathDefaultInfoMap.find(F);
@@ -2290,7 +2262,7 @@ getOrCreateFPFastMathDefaultInfoVec(
   // If the map does not contain the entry, create a new one. Initialize it to
   // contain all 3 elements sorted by bit width of target type: {half, float,
   // double}.
-  SmallVector<FPFastMathDefaultInfo, 3> FPFastMathDefaultInfoVec;
+  SPIRV::FPFastMathDefaultInfoVector FPFastMathDefaultInfoVec;
   FPFastMathDefaultInfoVec.emplace_back(Type::getHalfTy(M.getContext()),
                                         SPIRV::FPFastMathMode::None);
   FPFastMathDefaultInfoVec.emplace_back(Type::getFloatTy(M.getContext()),
@@ -2300,11 +2272,13 @@ getOrCreateFPFastMathDefaultInfoVec(
   return FPFastMathDefaultInfoMap[F] = std::move(FPFastMathDefaultInfoVec);
 }
 
-static FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
-    SmallVector<FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec,
+static SPIRV::FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
+    SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec,
     const Type *Ty) {
   size_t BitWidth = Ty->getScalarSizeInBits();
-  int Index = computeFPFastMathDefaultInfoVecIndex(BitWidth);
+  int Index =
+      SPIRV::FPFastMathDefaultInfoVector::computeFPFastMathDefaultInfoVecIndex(
+          BitWidth);
   assert(Index >= 0 && Index < 3 &&
          "Expected FPFastMathDefaultInfo for half, float, or double");
   assert(FPFastMathDefaultInfoVec.size() == 3 &&
@@ -2352,7 +2326,7 @@ void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
   // type. The first element is the smallest bit width, and the last element
   // is the largest bit width, therefore, we will have {half, float, double}
   // in the order of their bit widths.
-  DenseMap<Function *, SmallVector<FPFastMathDefaultInfo, 3>>
+  DenseMap<Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
   for (unsigned i = 0; i < Node->getNumOperands(); i++) {
@@ -2372,9 +2346,9 @@ void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
               ->getZExtValue();
-      SmallVector<FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
           getOrCreateFPFastMathDefaultInfoVec(M, FPFastMathDefaultInfoMap, F);
-      FPFastMathDefaultInfo &Info =
+      SPIRV::FPFastMathDefaultInfo &Info =
           getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
       Info.FastMathFlags = Flags;
       Info.FPFastMathDefault = true;
@@ -2384,9 +2358,9 @@ void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
 
       // We need to save this info for every possible FP type, i.e. {half,
       // float, double, fp128}.
-      SmallVector<FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
           getOrCreateFPFastMathDefaultInfoVec(M, FPFastMathDefaultInfoMap, F);
-      for (FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
+      for (SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
         Info.ContractionOff = true;
       }
     } else if (EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve) {
@@ -2397,9 +2371,10 @@ void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
               cast<ConstantAsMetadata>(MDN->getOperand(2))->getValue())
               ->getZExtValue();
       // We need to save this info only for the FP type with TargetWidth.
-      SmallVector<FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
+      SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec =
           getOrCreateFPFastMathDefaultInfoVec(M, FPFastMathDefaultInfoMap, F);
-      int Index = computeFPFastMathDefaultInfoVecIndex(TargetWidth);
+      int Index = SPIRV::FPFastMathDefaultInfoVector::
+          computeFPFastMathDefaultInfoVecIndex(TargetWidth);
       assert(Index >= 0 && Index < 3 &&
              "Expected FPFastMathDefaultInfo for half, float, or double");
       assert(FPFastMathDefaultInfoVec.size() == 3 &&
@@ -2413,7 +2388,7 @@ void SPIRVEmitIntrinsics::insertConstantsForFPFastMathDefault(Module &M) {
     if (FPFastMathDefaultInfoVec.empty())
       continue;
 
-    for (const FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
+    for (const SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
       assert(Info.Ty && "Expected target type for FPFastMathDefaultInfo");
       // Skip if none of the execution modes was used.
       unsigned Flags = Info.FastMathFlags;
