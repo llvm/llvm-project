@@ -319,7 +319,7 @@ std::string LVIRReader::getRegisterName(LVSmall Opcode,
     //   dbgs() << "Printing Value: " << Operands[0] << " - "
     //          << DbgValueRanges->getVariableName(Operands[0]) << "\n";
     // });
-    return DbgValueRanges->getVariableName(Operands[0]);
+    return ValueNameMap.getName(Operands[0]);
   }
 
   llvm_unreachable("We shouldn't actually have any other reg types here!");
@@ -1074,8 +1074,6 @@ void LVIRReader::constructLine(LVScope *Scope, const DISubprogram *SP,
       Line->setAddress(CurrentOffset);
       Line->setName(Text);
       Parent->addElement(Line);
-
-      DbgValueRanges->addLine(I.getIterator(), CurrentOffset);
     }
   };
 
@@ -1901,10 +1899,12 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
       if (options().getPrintAnyLine())
         constructLine(Scope, SP, I, GenerateLineBeforePrologue);
 
+      InstrLineAddrMap[I.getIterator().getNodePtr()] = CurrentOffset;
+
       // Update code offset.
       updateLineOffset();
     }
-    DbgValueRanges->addLine(BB.end(), CurrentOffset);
+    InstrLineAddrMap[BB.end().getNodePtr()] = CurrentOffset;
   }
   GenerateLineBeforePrologue = false;
 
@@ -1934,7 +1934,7 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
     });
 
     auto AddLocationOp = [&](Value *V, bool IsMem) {
-      uint64_t RegValue = DbgValueRanges->addVariableName(V, Size);
+      uint64_t RegValue = ValueNameMap.addValue(V);
       if (IsMem)
         Symbol->addLocationOperands(dwarf::DW_OP_bregx, {RegValue, 0});
       else
@@ -1970,8 +1970,10 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
       AddLocation(DV);
     } else {
       for (DbgRangeEntry Entry : DbgValueRanges->getVariableRanges(DVA)) {
-        LVOffset Start = DbgValueRanges->getLine(Entry.Start);
-        LVOffset End = DbgValueRanges->getLine(Entry.End);
+        // These line addresses should have already been inserted into the
+        // InstrLineAddrMap, so we assume they are present here.
+        LVOffset Start = InstrLineAddrMap.at(Entry.Start.getNodePtr());
+        LVOffset End = InstrLineAddrMap.at(Entry.End.getNodePtr());
         Symbol->addLocation(llvm::dwarf::DW_AT_location, Start, End,
                             /*SectionOffset=*/0, /*OffsetOnEntry=*/0);
         DbgValueDef DV = Entry.Value;
