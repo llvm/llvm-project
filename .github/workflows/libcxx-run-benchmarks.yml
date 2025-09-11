@@ -7,25 +7,30 @@
 # That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
 # their results to be compared.
 name: Benchmark libc++
-on:
-  issue_comment:
-    types: [created, edited]
-  schedule:
-    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
-    - cron: '0 8 * * *'
 
 permissions:
   contents: read # Default everything to read-only
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+env:
+  CC: clang-22
+  CXX: clang++-22
+  COMMENT_BODY: ${{ github.event.comment.body  }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  benchmarks:
-    if: |
-      github.event.issue.pull_request
-      && contains(github.event.comment.body, '/libcxx-bot benchmark')
+  run-benchmarks:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/libcxx-bot benchmark')
 
     runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
     steps:
@@ -44,23 +49,16 @@ jobs:
           source .venv/bin/activate
           python -m pip install -r libcxx/utils/requirements.txt
 
-      - name: Extract benchmarks to run
-        run: |
-          BENCHMARKS=$(echo "${{ github.event.comment.body }}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
-
       - name: Run baseline
         run: |
+          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
           baseline_commit=$(git merge-base refs/remotes/origin/${GITHUB_BASE_REF} ${GITHUB_SHA})
           ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${BENCHMARKS}
-        env:
-          CC: clang-22
-          CXX: clang++-22
 
       - name: Run candidate
-        run: ./libcxx/utils/test-at-commit --commit ${GITHUB_SHA} -B build/candidate -- -sv -j1 --param optimization=speed ${BENCHMARKS}
-        env:
-          CC: clang-22
-          CXX: clang++-22
+        run: |
+          BENCHMARKS=$(echo "${COMMENT_BODY}" | sed -n 's/\/libcxx-bot benchmark (.+)/\1/p')
+          ./libcxx/utils/test-at-commit --commit ${GITHUB_SHA} -B build/candidate -- -sv -j1 --param optimization=speed ${BENCHMARKS}
 
       - name: Compare baseline and candidate runs
         run: ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks build/baseline) \
