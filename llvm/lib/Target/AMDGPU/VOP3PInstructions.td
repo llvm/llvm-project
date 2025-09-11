@@ -966,7 +966,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
-  // Restrict to VGPR only (VRegSrc_32) for the scale operands to workarond a
+  // Restrict to VGPR only (VRegSrc_32) for the scale operands to workaround a
   // hardware design defect: For all Inline/SGPR constants, SP HW use bits
   // [30:23] as the scale.
   // TODO: We may still be able to allow Inline Constants/SGPR, with a proper
