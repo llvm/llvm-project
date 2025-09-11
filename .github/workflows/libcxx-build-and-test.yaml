@@ -294,7 +294,9 @@ jobs:
           fetch-depth: 0 # This job requires access to all the Git branches so it can diff against (usually) main
           fetch-tags: true
       - name: benchmarks
+        # TODO: python3-venv should be taken from the Docker image instead
         run: |
+          sudo apt-get install -y python3-venv
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install -r libcxx/utils/requirements.txt
