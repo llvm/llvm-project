@@ -293,9 +293,12 @@ jobs:
         with:
           fetch-depth: 0 # This job requires access to all the Git branches so it can diff against (usually) main
           fetch-tags: true
-          # ref: main
       - name: benchmarks
-        run: libcxx/utils/ci/run-buildbot benchmark-comparison
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install -r libcxx/utils/requirements.txt
+          libcxx/utils/ci/run-buildbot benchmark-comparison
         env:
           CC: clang-22
           CXX: clang++-22
