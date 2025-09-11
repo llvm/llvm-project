@@ -6555,7 +6555,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     return false;
 
   SmallVector<int64_t> SortedOffsetsV;
-  for (auto [K, V] : OffsetToPointerOpIdxMap)
+  for (auto [K, _] : OffsetToPointerOpIdxMap)
     SortedOffsetsV.push_back(K);
   sort(SortedOffsetsV);
   if (NumOffsets > 1) {
@@ -6966,7 +6966,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   const unsigned Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase;
   SortedOffsetsFromBase.resize(Sz);
-  for (unsigned I : seq<int>(Sz)) {
+  for (unsigned I : seq<unsigned>(Sz)) {
     Value *Ptr =
         SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
     SortedOffsetsFromBase[I] =
