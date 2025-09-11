@@ -22,4 +22,11 @@ define <32 x float> @uitofp_i1(<32 x i16> %in0, <32 x i16> %in1) #0
    ret <32 x float> %out
 }
 
+define <32 x float> @sitofp_i1(<32 x i16> %in0, <32 x i16> %in1) #0
+{
+   %q1 = icmp eq <32 x i16> %in0, %in1
+   %fp0 = sitofp <32 x i1> %q1 to <32 x float>
+   %out = fadd <32 x float> %fp0, %fp0
+   ret <32 x float> %out
+}
 attributes #0 = { nounwind readnone "target-cpu"="hexagonv79" "target-features"="+hvxv79,+hvx-length128b" }
