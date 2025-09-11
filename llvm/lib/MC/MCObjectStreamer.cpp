@@ -28,7 +28,8 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
                                    std::unique_ptr<MCAsmBackend> TAB,
                                    std::unique_ptr<MCObjectWriter> OW,
                                    std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCStreamer(Context),      Assembler(std::make_unique<MCAssembler>(
+    : MCStreamer(Context),
+      Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
       EmitEHFrame(true), EmitDebugFrame(false), EmitSFrame(false) {
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
@@ -594,7 +595,6 @@ void MCObjectStreamer::emitSFrameCalculateFuncOffset(const MCSymbol *FuncBase,
   F->setSFrameFDE(FDEFrag);
   newFragment();
 }
-
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,

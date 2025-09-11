@@ -119,7 +119,6 @@ private:
   void relaxDwarfCallFrameFragment(MCFragment &F);
   void relaxSFrameFragment(MCFragment &DF);
 
-
 public:
   /// Construct a new assembler instance.
   //

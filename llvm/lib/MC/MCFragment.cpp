@@ -80,7 +80,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
-  case MCFragment::FT_DwarfFrame: 
+  case MCFragment::FT_DwarfFrame:
   case MCFragment::FT_SFrame: {
     if (isLinkerRelaxable())
       OS << " LinkerRelaxable";
