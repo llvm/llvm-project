@@ -952,14 +952,7 @@ __m128i test_mm_mask_abs_epi8(__m128i __W, __mmask16 __U, __m128i __A) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[ABS]], <16 x i8> %{{.*}}
   return _mm_mask_abs_epi8(__W,__U,__A); 
 }
-TEST_CONSTEXPR(match_v16qi(
-  _mm_mask_abs_epi8(
-    (__m128i)(__v16qi){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99},
-    (__mmask16)0x0001,
-    (__m128i)(__v16qi){(char)-1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
-  ),
-  1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99
-));
+TEST_CONSTEXPR(match_v16qi(_mm_mask_abs_epi8((__m128i)(__v16qi){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99}, (__mmask16)0x0001, (__m128i)(__v16qi){(char)-1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}), 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99));
 
 __m128i test_mm_maskz_abs_epi8(__mmask16 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_abs_epi8
