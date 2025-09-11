@@ -10,3 +10,17 @@ define float @src(float %arg1) {
   %v3 = call float @llvm.fabs.f32(float %v2)
   ret float %v3
 }
+
+define float @src2(float %arg1) {
+; CHECK-LABEL: define float @src2(
+; CHECK-SAME: float [[ARG1:%.*]]) {
+; CHECK-NEXT:    [[V2:%.*]] = fadd float [[ARG1]], 0.000000e+00
+; CHECK-NEXT:    [[V3:%.*]] = call float @llvm.fabs.f32(float [[V2]])
+; CHECK-NEXT:    [[V4:%.*]] = fsub float [[V2]], [[V3]]
+; CHECK-NEXT:    ret float [[V4]]
+;
+  %v2 = fadd float %arg1, 0.000000e+00
+  %v3 = call float @llvm.fabs.f32(float %v2)
+  %v4 = fsub float %v2, %v3
+  ret float %v4
+}
