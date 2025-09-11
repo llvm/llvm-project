@@ -544,10 +544,10 @@ static LogicalResult generateLoopNestUsingForallOp(
       SmallVector<Range> ranges;
       std::tie(ranges, updateInductionVar) =
           tileDistributionFn(rewriter, loc, loopRanges, tileSizes);
-      for (const auto& range : ranges) {
-          lbs.push_back(range.offset);
-          ubs.push_back(range.size);
-          steps.push_back(range.stride);
+      for (const Range &range : ranges) {
+        lbs.push_back(range.offset);
+        ubs.push_back(range.size);
+        steps.push_back(range.stride);
       }
     } else {
       std::tie(lbs, ubs, steps) =
