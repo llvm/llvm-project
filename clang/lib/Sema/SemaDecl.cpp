@@ -8363,8 +8363,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD->isFunctionPointerType() && !NewVD->isExternallyVisible()) {
     PointerAuthQualifier Q = NewVD->getType().getQualifiers().getPointerAuth();
     if (!Q || (!Q.isAddressDiscriminated() && Q.getExtraDiscriminator() == 0)) {
-      Diag(NewVD->getLocation(), diag::warn_ptrauth_weak_schema)
-          << NewVD << (Q ? 0 : 1);
+      Diag(NewVD->getLocation(), diag::warn_ptrauth_weak_schema) << NewVD << !Q;
     }
   }
 

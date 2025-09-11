@@ -5,6 +5,10 @@
 
 #include <ptrauth.h>
 
+#if defined(__PTRAUTH__) == defined(NO_PTRAUTH)
+#error expected pointer authentication state does not match actual
+#endif
+
 #if defined(NO_PTRAUTH)
 #define FN_PTR_AUTH(address_diversity, constant_discriminator)
 #else
