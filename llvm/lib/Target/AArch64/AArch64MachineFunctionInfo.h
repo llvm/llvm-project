@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ValueWithSentinel.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -38,7 +39,7 @@ class AArch64Subtarget;
 class MachineInstr;
 
 struct TPIDR2Object {
-  int FrameIndex = std::numeric_limits<int>::max();
+  ValueWithSentinelNumericMax<int> FrameIndex;
   unsigned Uses = 0;
 };
 
@@ -114,8 +115,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The stack slots used to add space between FPR and GPR accesses when using
   /// hazard padding. StackHazardCSRSlotIndex is added between GPR and FPR CSRs.
   /// StackHazardSlotIndex is added between (sorted) stack objects.
-  int StackHazardSlotIndex = std::numeric_limits<int>::max();
-  int StackHazardCSRSlotIndex = std::numeric_limits<int>::max();
+  ValueWithSentinelNumericMax<int> StackHazardSlotIndex;
+  ValueWithSentinelNumericMax<int> StackHazardCSRSlotIndex;
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
@@ -205,7 +206,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool HasSwiftAsyncContext = false;
 
   /// The stack slot where the Swift asynchronous context is stored.
-  int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
+  ValueWithSentinelNumericMax<int> SwiftAsyncContextFrameIdx;
 
   bool IsMTETagged = false;
 
@@ -372,16 +373,16 @@ public:
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
 
-      if (SwiftAsyncContextFrameIdx != std::numeric_limits<int>::max()) {
+      if (SwiftAsyncContextFrameIdx.has_value()) {
         int64_t Offset = MFI.getObjectOffset(getSwiftAsyncContextFrameIdx());
         int64_t ObjSize = MFI.getObjectSize(getSwiftAsyncContextFrameIdx());
         MinOffset = std::min<int64_t>(Offset, MinOffset);
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
 
-      if (StackHazardCSRSlotIndex != std::numeric_limits<int>::max()) {
-        int64_t Offset = MFI.getObjectOffset(StackHazardCSRSlotIndex);
-        int64_t ObjSize = MFI.getObjectSize(StackHazardCSRSlotIndex);
+      if (StackHazardCSRSlotIndex.has_value()) {
+        int64_t Offset = MFI.getObjectOffset(*StackHazardCSRSlotIndex);
+        int64_t ObjSize = MFI.getObjectSize(*StackHazardCSRSlotIndex);
         MinOffset = std::min<int64_t>(Offset, MinOffset);
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
       }
@@ -447,16 +448,16 @@ public:
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
 
   bool hasStackHazardSlotIndex() const {
-    return StackHazardSlotIndex != std::numeric_limits<int>::max();
+    return StackHazardSlotIndex.has_value();
   }
-  int getStackHazardSlotIndex() const { return StackHazardSlotIndex; }
+  int getStackHazardSlotIndex() const { return *StackHazardSlotIndex; }
   void setStackHazardSlotIndex(int Index) {
-    assert(StackHazardSlotIndex == std::numeric_limits<int>::max());
+    assert(!StackHazardSlotIndex.has_value());
     StackHazardSlotIndex = Index;
   }
-  int getStackHazardCSRSlotIndex() const { return StackHazardCSRSlotIndex; }
+  int getStackHazardCSRSlotIndex() const { return *StackHazardCSRSlotIndex; }
   void setStackHazardCSRSlotIndex(int Index) {
-    assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
+    assert(!StackHazardCSRSlotIndex.has_value());
     StackHazardCSRSlotIndex = Index;
   }
 
@@ -574,7 +575,9 @@ public:
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;
   }
-  int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
+  int getSwiftAsyncContextFrameIdx() const {
+    return *SwiftAsyncContextFrameIdx;
+  }
 
   bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
   bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;

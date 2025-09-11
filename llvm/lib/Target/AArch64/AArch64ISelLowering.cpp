@@ -3061,10 +3061,10 @@ AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
     BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STPXi))
         .addReg(MI.getOperand(0).getReg())
         .addReg(MI.getOperand(1).getReg())
-        .addFrameIndex(TPIDR2.FrameIndex)
+        .addFrameIndex(*TPIDR2.FrameIndex)
         .addImm(0);
   } else
-    MFI.RemoveStackObject(TPIDR2.FrameIndex);
+    MFI.RemoveStackObject(*TPIDR2.FrameIndex);
 
   BB->remove_instr(&MI);
   return BB;
@@ -9399,7 +9399,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (RequiresLazySave) {
     TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(
-        TPIDR2.FrameIndex,
+        *TPIDR2.FrameIndex,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
     Chain = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
@@ -9956,7 +9956,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // RESTORE_ZA pseudo.
     SDValue Glue;
     SDValue TPIDR2Block = DAG.getFrameIndex(
-        TPIDR2.FrameIndex,
+        *TPIDR2.FrameIndex,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
     Result = DAG.getCopyToReg(Result, DL, AArch64::X0, TPIDR2Block, Glue);
     Result =
