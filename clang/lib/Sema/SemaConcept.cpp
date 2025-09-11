@@ -462,6 +462,10 @@ private:
   ExprResult Evaluate(const FoldExpandedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
 
+  ExprResult EvaluateSlow(const ConceptIdConstraint &Constraint,
+                          const MultiLevelTemplateArgumentList &MLTAL,
+                          unsigned int Size);
+
   ExprResult Evaluate(const ConceptIdConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
 
@@ -855,35 +859,12 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   return Out;
 }
 
-ExprResult ConstraintSatisfactionChecker::Evaluate(
+ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const ConceptIdConstraint &Constraint,
-    const MultiLevelTemplateArgumentList &MLTAL) {
-
+    const MultiLevelTemplateArgumentList &MLTAL,
+    unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  std::optional<Sema::InstantiatingTemplate> InstTemplate;
-  InstTemplate.emplace(S, ConceptId->getBeginLoc(),
-                       Sema::InstantiatingTemplate::ConstraintsCheck{},
-                       ConceptId->getNamedConcept(), MLTAL.getInnermost(),
-                       Constraint.getSourceRange());
-
-  unsigned Size = Satisfaction.Details.size();
-
-  ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
-
-  if (!E.isUsable()) {
-    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size, ConceptId);
-    return E;
-  }
-
-  // ConceptIdConstraint is only relevant for diagnostics,
-  // so if the normalized constraint is satisfied, we should not
-  // substitute into the constraint.
-  if (Satisfaction.IsSatisfied)
-    return E;
-
-  // TODO: We might want to cache the substitution of concept id constraints
-  // as it can be slow in the SFINAE case.
   llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
@@ -903,7 +884,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   const ASTTemplateArgumentListInfo *Ori =
       ConceptId->getTemplateArgsAsWritten();
   TemplateDeductionInfo Info(TemplateNameLoc);
-  InstTemplate.emplace(
+  Sema::InstantiatingTemplate _(
       S, TemplateNameLoc, Sema::InstantiatingTemplate::ConstraintSubstitution{},
       const_cast<NamedDecl *>(Template), Info, Constraint.getSourceRange());
 
@@ -926,8 +907,8 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
         new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
-            SubstDiag.first,
-            allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
+                                                                       SubstDiag.first,
+                                                                       allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
     return ExprError();
   }
 
@@ -940,7 +921,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
       /*DoCheckConstraintSatisfaction=*/false);
 
   if (SubstitutedConceptId.isInvalid() || Trap.hasErrorOccurred())
-    return E;
+    return ExprError();
 
   if (Size != Satisfaction.Details.size()) {
     Satisfaction.Details.insert(
@@ -950,6 +931,69 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
                 ->getConceptReference()));
   }
   return SubstitutedConceptId;
+}
+
+ExprResult ConstraintSatisfactionChecker::Evaluate(
+    const ConceptIdConstraint &Constraint,
+    const MultiLevelTemplateArgumentList &MLTAL) {
+
+  const ConceptReference *ConceptId = Constraint.getConceptId();
+
+  UnsignedOrNone OuterPackSubstIndex =
+      Constraint.getPackSubstitutionIndex()
+          ? Constraint.getPackSubstitutionIndex()
+          : PackSubstitutionIndex;
+
+  Sema::InstantiatingTemplate _ (S, ConceptId->getBeginLoc(),
+                       Sema::InstantiatingTemplate::ConstraintsCheck{},
+                       ConceptId->getNamedConcept(), MLTAL.getInnermost(),
+                       Constraint.getSourceRange());
+
+  unsigned Size = Satisfaction.Details.size();
+
+  ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
+
+  if (!E.isUsable()) {
+    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size, ConceptId);
+    return E;
+  }
+
+  // ConceptIdConstraint is only relevant for diagnostics,
+  // so if the normalized constraint is satisfied, we should not
+  // substitute into the constraint.
+  if (Satisfaction.IsSatisfied)
+    return E;
+
+  llvm::FoldingSetNodeID ID;
+  ID.AddPointer(Constraint.getConceptId());
+  ID.AddInteger(OuterPackSubstIndex.toInternalRepresentation());
+  ID.AddBoolean(Constraint.hasParameterMapping());
+  HashParameterMapping(S, MLTAL, ID, OuterPackSubstIndex)
+      .VisitConstraint(Constraint);
+
+
+  if (auto Iter = S.UnsubstitutedConstraintSatisfactionCache.find(ID);
+      Iter != S.UnsubstitutedConstraintSatisfactionCache.end()) {
+
+    auto &Cached = Iter->second.Satisfaction;
+    Satisfaction.ContainsErrors = Cached.ContainsErrors;
+    Satisfaction.IsSatisfied = Cached.IsSatisfied;
+    Satisfaction.Details.insert(Satisfaction.Details.begin() + Size,
+                                Cached.Details.begin(), Cached.Details.end());
+    return Iter->second.SubstExpr;
+  }
+
+  ExprResult CE = EvaluateSlow(Constraint, MLTAL, Size);
+  if(CE.isInvalid())
+    return E;
+  UnsubstitutedConstraintSatisfactionCacheResult Cache;
+  Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
+  Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
+  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
+            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.SubstExpr = CE;
+  S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
+  return CE;
 }
 
 ExprResult ConstraintSatisfactionChecker::Evaluate(
