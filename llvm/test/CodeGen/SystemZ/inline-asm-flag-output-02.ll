@@ -318,7 +318,7 @@ entry:
 }
 
 ; Test-2(f2_1_*/f2_2_*/f2_3_*/f2_4_*).
-; TrueVal is const and FalseVal is non-const with mixed patterns involving
+; Both TrueVal and FalseVal are non-const with mixed patterns involving
 ; Binary Ops.
 
 ; Check 'add' for (cc != 0).
