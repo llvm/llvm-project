@@ -13,6 +13,7 @@
 #include "PluginManager.h"
 #include "OffloadPolicy.h"
 #include "Shared/Debug.h"
+#include "Shared/EnvironmentVar.h"
 #include "Shared/Profile.h"
 #include "device.h"
 
@@ -70,6 +71,12 @@ void PluginManager::deinit() {
 bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
   if (Plugin.is_initialized())
     return true;
+
+  // Disable Host Plugin when it is needed
+  IntEnvar DisableHostPlugin("OMPTARGET_DISABLE_HOST_PLUGIN", 0);
+  if (DisableHostPlugin.get() && !strcmp(Plugin.getName(), "x86_64")) {
+    return false;
+  }
 
   if (auto Err = Plugin.init()) {
     [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
