@@ -137,6 +137,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   uint64_t StackSizeZPR = 0;
   uint64_t StackSizePPR = 0;
 
+  /// Are SVE objects (vectors and predicates) split into separate regions on
+  /// the stack.
+  bool SplitSVEObjects = false;
+
   /// HasCalculatedStackSizeSVE indicates whether StackSizeZPR/PPR is valid.
   bool HasCalculatedStackSizeSVE = false;
 
@@ -324,7 +328,6 @@ public:
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
-
   bool hasCalleeSaveStackFreeSpace() const {
     return CalleeSaveStackHasFreeSpace;
   }
@@ -468,6 +471,9 @@ public:
     assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
     StackHazardCSRSlotIndex = Index;
   }
+
+  bool hasSplitSVEObjects() const { return SplitSVEObjects; }
+  void setSplitSVEObjects(bool s) { SplitSVEObjects = s; }
 
   SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
 
