@@ -600,6 +600,7 @@ namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
   std::optional<uint64_t> StackSizeSVE;
+  std::optional<bool> HasStackFrame;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -612,6 +613,7 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
     YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
+    YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
   }
 };
 
