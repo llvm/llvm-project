@@ -431,3 +431,18 @@ namespace InvalidConstexprFn {
   static_assert(sub(arr, arr) == 0);
   static_assert(add(arr[0]) == &arr[3]);
 }
+
+namespace BuiltinObjectSize {
+  constexpr int f0(int &a) {
+    return 1 / (__builtin_object_size(&a, 0) - 4);
+  }
+  constexpr int f1(int &a) {
+    return 1 / (__builtin_object_size(&a, 1) - 4);
+  }
+  constexpr int f2(int &a) {
+    return 1 / (__builtin_object_size(&a, 2) - 4);
+  }
+  constexpr int f3(int &a) {
+    return 1 / (__builtin_object_size(&a, 3) - 4);
+  }
+}

@@ -14,14 +14,21 @@ struct S {
   char a[N];
 };
 
+struct T {
+  int a, b, c;
+};
+
 extern S<2> &s2;
 static_assert(__builtin_object_size(s2.a, 0)); // expected-error {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_object_size(s2.a, 1) == 2);
 #if defined(STRICT0)
 // expected-error@-2 {{static assertion expression is not an integral constant expression}}
 #endif
-static_assert(__builtin_object_size(s2.a, 2) == 4);
+static_assert(__builtin_object_size(s2.a, 2)); // expected-error {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_object_size(s2.a, 3) == 2);
+#if defined(STRICT0)
+// expected-error@-2 {{static assertion expression is not an integral constant expression}}
+#endif
 
 extern S<1> &s1;
 static_assert(__builtin_object_size(s1.a, 0)); // expected-error {{static assertion expression is not an integral constant expression}}
@@ -29,8 +36,11 @@ static_assert(__builtin_object_size(s1.a, 1) == 1);
 #if defined(STRICT0) || defined(STRICT1)
 // expected-error@-2 {{static assertion expression is not an integral constant expression}}
 #endif
-static_assert(__builtin_object_size(s1.a, 2) == 4);
+static_assert(__builtin_object_size(s1.a, 2)); // expected-error {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_object_size(s1.a, 3) == 1);
+#if defined(STRICT0) || defined(STRICT1)
+// expected-error@-2 {{static assertion expression is not an integral constant expression}}
+#endif
 
 extern S<0> &s0;
 static_assert(__builtin_object_size(s0.a, 0)); // expected-error {{static assertion expression is not an integral constant expression}}
@@ -38,11 +48,26 @@ static_assert(__builtin_object_size(s0.a, 1) == 0);
 #if defined(STRICT0) || defined(STRICT1) || defined(STRICT2)
 // expected-error@-2 {{static assertion expression is not an integral constant expression}}
 #endif
-static_assert(__builtin_object_size(s0.a, 2) == 0);
+static_assert(__builtin_object_size(s0.a, 2)); // expected-error {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_object_size(s0.a, 3) == 0);
+#if defined(STRICT0) || defined(STRICT1) || defined(STRICT2)
+// expected-error@-2 {{static assertion expression is not an integral constant expression}}
+#endif
 
 extern EmptyS &empty;
 static_assert(__builtin_object_size(empty.a, 0)); // expected-error {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_object_size(empty.a, 1)); // expected-error {{static assertion expression is not an integral constant expression}}
-static_assert(__builtin_object_size(empty.a, 2) == 0);
+static_assert(__builtin_object_size(empty.a, 2)); // expected-error {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_object_size(empty.a, 3)); // expected-error {{static assertion expression is not an integral constant expression}}
+
+extern T &t;
+static_assert(__builtin_object_size(&t.b, 0)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(__builtin_object_size(&t.b, 1) == 4);
+static_assert(__builtin_object_size(&t.b, 2)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(__builtin_object_size(&t.b, 3) == 4);
+
+extern int &i;
+static_assert(__builtin_object_size(&i, 0)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(__builtin_object_size(&i, 1)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(__builtin_object_size(&i, 2)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(__builtin_object_size(&i, 3)); // expected-error {{static assertion expression is not an integral constant expression}}
