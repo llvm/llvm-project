@@ -341,26 +341,37 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.dap_server.request_setVariable(1, "x2", 9)["success"])
+        local_scope_ref = self.get_locals_scope_reference()
         self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x2", 9)["success"]
+        )
+        self.assertFalse(
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:0", 9)[
+                "success"
+            ]
         )
 
         self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:19", 19)[
+                "success"
+            ]
         )
         self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:21", 21)[
+                "success"
+            ]
         )
         self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", 23)["success"]
+            self.dap_server.request_setVariable(local_scope_ref, "x @ main.cpp:23", 23)[
+                "success"
+            ]
         )
 
         # The following should have no effect
         self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", "invalid")[
-                "success"
-            ]
+            self.dap_server.request_setVariable(
+                local_scope_ref, "x @ main.cpp:23", "invalid"
+            )["success"]
         )
 
         verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
@@ -370,7 +381,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.dap_server.request_setVariable(1, "x", 22)["success"])
+        self.assertTrue(
+            self.dap_server.request_setVariable(local_scope_ref, "x", 22)["success"]
+        )
         verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
@@ -709,7 +722,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 break
 
         self.assertFalse(
-            self.dap_server.request_setVariable(1, "(Return Value)", 20)["success"]
+            self.dap_server.request_setVariable(
+                self.get_locals_scope_reference(), "(Return Value)", 20
+            )["success"]
         )
 
     @skipIfWindows
@@ -831,3 +846,39 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(var_pt_x["value"], "11")
         var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
         self.assertEqual(var_pt_y["value"], "22")
+
+    @skipIfWindows
+    def test_variable_id_uniqueness_simple(self):
+        """
+        Simple regression test for variable ID uniqueness across frames.
+        Ensures variable IDs are not reused between different scopes/frames.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+
+        bp_line = line_number(source, "// breakpoint 3")
+        self.set_source_breakpoints(source, [bp_line])
+        self.continue_to_next_stop()
+
+        frames = self.get_stackFrames()
+        self.assertGreaterEqual(len(frames), 2, "Need at least 2 frames")
+
+        all_refs = set()
+
+        for i in range(min(3, len(frames))):
+            frame_id = frames[i]["id"]
+            scopes = self.dap_server.request_scopes(frame_id)["body"]["scopes"]
+
+            for scope in scopes:
+                ref = scope["variablesReference"]
+                if ref != 0:
+                    self.assertNotIn(
+                        ref, all_refs, f"Variable reference {ref} was reused!"
+                    )
+                    all_refs.add(ref)
+
+        self.assertGreater(len(all_refs), 0, "Should have found variable references")
+        for ref in all_refs:
+            response = self.dap_server.request_variables(ref)
+            self.assertTrue(response["success"], f"Failed to access reference {ref}")

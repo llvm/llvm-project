@@ -9,22 +9,43 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 #define LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/DenseMap.h"
+#include <map>
+#include <utility>
 
-#define VARREF_FIRST_VAR_IDX (int64_t)4
-#define VARREF_LOCALS (int64_t)1
-#define VARREF_GLOBALS (int64_t)2
-#define VARREF_REGS (int64_t)3
+#define VARREF_FIRST_VAR_IDX (int64_t)1
 
 namespace lldb_dap {
 
-struct Variables {
-  lldb::SBValueList locals;
-  lldb::SBValueList globals;
-  lldb::SBValueList registers;
+enum ScopeKind { Locals, Globals, Registers };
+/// Creates a `protocol::Scope` struct.
+///
+/// \param[in] kind
+///     The kind of scope to create
+///
+/// \param[in] variablesReference
+///     The value to place into the "variablesReference" key
+///
+/// \param[in] namedVariables
+///     The value to place into the "namedVariables" key
+///
+/// \param[in] expensive
+///     The value to place into the "expensive" key
+///
+/// \return
+///     A `protocol::Scope`
+protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
+                            int64_t namedVariables, bool expensive);
 
+struct ScopeData {
+  ScopeKind kind;
+  lldb::SBValueList scope;
+};
+
+struct Variables {
   /// Check if \p var_ref points to a variable that should persist for the
   /// entire duration of the debug session, e.g. repl expandable variables
   static bool IsPermanentVariableReference(int64_t var_ref);
@@ -39,6 +60,8 @@ struct Variables {
   /// If \p var_ref is invalid an empty SBValue is returned.
   lldb::SBValue GetVariable(int64_t var_ref) const;
 
+  lldb::SBValueList *GetScope(const uint32_t frame_id, const ScopeKind kind);
+
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
@@ -47,12 +70,21 @@ struct Variables {
 
   lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
 
+  /// Initialize a frame if it hasn't been already, otherwise do nothing
+  std::vector<protocol::Scope> ReadyFrame(uint32_t frame_id,
+                                          lldb::SBFrame &frame);
+  std::optional<ScopeData> GetScopeKind(const int64_t variablesReference);
+
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
 
 private:
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
+  int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
+
+  // Variable Reference,                 frame_id
+  std::map<int64_t, std::pair<ScopeKind, uint32_t>> m_scope_kinds;
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
@@ -62,7 +94,11 @@ private:
   /// These are the variables evaluated from debug console REPL.
   llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
 
-  int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
+  /// Key = frame_id
+  /// Value = (locals, globals Registers) scopes
+  std::map<uint32_t,
+           std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
+      m_frames;
   int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
 };
 
