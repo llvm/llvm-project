@@ -34,6 +34,9 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+constexpr auto logicalConstantExpr{logical(constantExpr)};
+constexpr auto scalarLogicalConstantExpr{scalar(logicalConstantExpr)};
+
 // Given a parser for a single element, and a parser for a list of elements
 // of the same type, create a parser that constructs the entire list by having
 // the single element be the head of the list, and the rest be the tail.
@@ -868,6 +871,8 @@ TYPE_PARSER(construct<OmpReductionClause>(
     maybe(nonemptyList(Parser<OmpReductionClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
+TYPE_PARSER(construct<OmpReplayableClause>(scalarLogicalConstantExpr))
+
 // OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpInReductionClause>(
     maybe(nonemptyList(Parser<OmpInReductionClause::Modifier>{}) / ":"),
@@ -876,6 +881,8 @@ TYPE_PARSER(construct<OmpInReductionClause>(
 TYPE_PARSER(construct<OmpTaskReductionClause>(
     maybe(nonemptyList(Parser<OmpTaskReductionClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
+
+TYPE_PARSER(construct<OmpTransparentClause>(scalarIntExpr))
 
 // OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
 // OMP 5.2 2.13.4 allocate-clause -> ALLOCATE ([allocate-modifier
@@ -1192,6 +1199,8 @@ TYPE_PARSER( //
     "READ" >> construct<OmpClause>(construct<OmpClause::Read>()) ||
     "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||
     "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
+    "REPLAYABLE" >> construct<OmpClause>(construct<OmpClause::Replayable>(
+                        maybe(parenthesized(Parser<OmpReplayableClause>{})))) ||
     "REVERSE_OFFLOAD" >>
         construct<OmpClause>(construct<OmpClause::ReverseOffload>()) ||
     "SAFELEN" >> construct<OmpClause>(construct<OmpClause::Safelen>(
@@ -1215,6 +1224,9 @@ TYPE_PARSER( //
                           parenthesized(scalarIntExpr))) ||
     "TO" >> construct<OmpClause>(construct<OmpClause::To>(
                 parenthesized(Parser<OmpToClause>{}))) ||
+    "TRANSPARENT" >>
+        construct<OmpClause>(construct<OmpClause::Transparent>(
+            maybe(parenthesized(Parser<OmpTransparentClause>{})))) ||
     "USE" >> construct<OmpClause>(construct<OmpClause::Use>(
                  parenthesized(Parser<OmpObject>{}))) ||
     "USE_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::UseDevicePtr>(
