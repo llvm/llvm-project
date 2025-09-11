@@ -293,6 +293,7 @@ jobs:
         with:
           fetch-depth: 0 # This job requires access to all the Git branches so it can diff against (usually) main
           fetch-tags: true
+          ref: main
       - name: benchmarks
         run: libcxx/utils/ci/run-buildbot benchmark-comparison
         env:
