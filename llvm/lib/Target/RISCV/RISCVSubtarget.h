@@ -186,6 +186,17 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
+  bool hasCLZLike() const {
+    return HasStdExtZbb || HasVendorXTHeadBb ||
+           (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCTZLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCPOPLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
 
   bool hasCZEROLike() const {
