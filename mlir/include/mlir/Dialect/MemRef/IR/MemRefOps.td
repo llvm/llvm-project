@@ -13,6 +13,7 @@ include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
@@ -529,7 +530,7 @@ def MemRef_CastOp : MemRef_Op<"cast", [
 // CopyOp
 //===----------------------------------------------------------------------===//
 
-def CopyOp : MemRef_Op<"copy", [SameOperandsElementType,
+def CopyOp : MemRef_Op<"copy", [CopyOpInterface, SameOperandsElementType,
     SameOperandsShape]> {
 
   let description = [{

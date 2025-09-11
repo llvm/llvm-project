@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   CallInterfaces.cpp
   CastInterfaces.cpp
   ControlFlowInterfaces.cpp
+  CopyOpInterface.cpp
   DataLayoutInterfaces.cpp
   DerivedAttributeOpInterface.cpp
   DestinationStyleOpInterface.cpp
@@ -42,6 +43,7 @@ endfunction(add_mlir_interface_library)
 add_mlir_interface_library(CallInterfaces)
 add_mlir_interface_library(CastInterfaces)
 add_mlir_interface_library(ControlFlowInterfaces)
+add_mlir_interface_library(CopyOpInterface)
 add_mlir_interface_library(DataLayoutInterfaces)
 add_mlir_interface_library(DerivedAttributeOpInterface)
 add_mlir_interface_library(DestinationStyleOpInterface)

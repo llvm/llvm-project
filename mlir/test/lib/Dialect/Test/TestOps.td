@@ -23,6 +23,7 @@ include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -2321,10 +2322,10 @@ def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
 }
 
 //===----------------------------------------------------------------------===//
-// Copy Operation Test 
+// Test CopyOpInterface
 //===----------------------------------------------------------------------===//
 
-def CopyOp : TEST_Op<"copy", []> {
+def CopyOp : TEST_Op<"copy", [CopyOpInterface]> {
   let description = [{
     Represents a copy operation.
   }];
