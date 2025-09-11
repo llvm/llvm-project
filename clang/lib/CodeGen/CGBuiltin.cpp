@@ -4575,18 +4575,48 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
+    Value *TypeSize = ConstantInt::get(
+        SizeVal->getType(),
+        getContext()
+            .getTypeSizeInChars(E->getArg(0)->getType()->getPointeeType())
+            .getQuantity());
     if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate)
-      SizeVal = Builder.CreateMul(
-          SizeVal,
-          ConstantInt::get(
-              SizeVal->getType(),
-              getContext()
-                  .getTypeSizeInChars(E->getArg(0)->getType()->getPointeeType())
-                  .getQuantity()));
+      SizeVal = Builder.CreateMul(SizeVal, TypeSize);
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
     auto *I = Builder.CreateMemMove(Dest, Src, SizeVal, false);
     addInstToNewSourceAtom(I, nullptr);
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate) {
+      if (getContext().hasPFPFields(
+              E->getArg(0)->getType()->getPointeeType())) {
+        BasicBlock *Entry = Builder.GetInsertBlock();
+        BasicBlock *Loop = createBasicBlock("loop");
+        BasicBlock *LoopEnd = createBasicBlock("loop.end");
+        Builder.CreateCondBr(
+            Builder.CreateICmpEQ(SizeVal,
+                                 ConstantInt::get(SizeVal->getType(), 0)),
+            LoopEnd, Loop);
+
+        EmitBlock(Loop);
+        PHINode *Offset = Builder.CreatePHI(SizeVal->getType(), 2);
+        Offset->addIncoming(ConstantInt::get(SizeVal->getType(), 0), Entry);
+        Address DestRec = Dest.withPointer(
+            Builder.CreateInBoundsGEP(Int8Ty, Dest.getBasePointer(), {Offset}),
+            KnownNonNull);
+        Address SrcRec = Src.withPointer(
+            Builder.CreateInBoundsGEP(Int8Ty, Src.getBasePointer(), {Offset}),
+            KnownNonNull);
+        emitPFPTrivialRelocation(DestRec, SrcRec,
+                                 E->getArg(0)->getType()->getPointeeType());
+
+        Value *NextOffset = Builder.CreateAdd(Offset, TypeSize);
+        Offset->addIncoming(NextOffset, Loop);
+        Builder.CreateCondBr(Builder.CreateICmpEQ(NextOffset, SizeVal), LoopEnd,
+                             Loop);
+
+        EmitBlock(LoopEnd);
+      }
+    }
     return RValue::get(Dest, *this);
   }
   case Builtin::BImemset:
