@@ -2949,19 +2949,17 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
     if (!this->emitSetLocal(*SubExprT, LocalIndex, E))
       return false;
     return this->emitGetPtrLocal(LocalIndex, E);
-  } else {
+  }
 
-    if (!this->checkLiteralType(SubExpr))
+  if (!this->checkLiteralType(SubExpr))
+    return false;
+  const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
+  if (UnsignedOrNone LocalIndex =
+          allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
-
-    const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
-    if (UnsignedOrNone LocalIndex =
-            allocateLocal(E, Inner->getType(), E->getExtendingDecl())) {
-      InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
-      if (!this->emitGetPtrLocal(*LocalIndex, E))
-        return false;
-      return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
-    }
+    return this->visitInitializer(SubExpr) && this->emitFinishInit(E);
   }
   return false;
 }
