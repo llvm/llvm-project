@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(MLIR REQUIRED CONFIG)
 
-
   # Define the default argument to use by `lit` when testing.
   set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
 
