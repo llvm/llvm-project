@@ -69,7 +69,7 @@ void cb_cchar(const char *__counted_by(len) s, size_t len);
 // expected-note@+1 3{{consider using 'std::span' and passing '.first(...).data()' to the parameter 's'}}
 void cb_cchar_42(const char *__counted_by(42) s);
 
-// expected-note@+1 19{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+// expected-note@+1 31{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void cb_int(int *__counted_by(count) p, size_t count);
 
 // expected-note@+1 34{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
@@ -646,6 +646,49 @@ namespace output_param_test {
   };
 
 } // namespace output_param_test
+
+namespace pointer_is_call_test {
+int *__counted_by(len) fn_cb(size_t len);
+int *__counted_by(42) fn_cb_const();
+int *__counted_by(a + b) fn_cb_plus(size_t a, size_t b);
+int *__counted_by(*p) fn_cb_deref(size_t *p);
+
+struct T {
+  size_t size() const;
+  size_t n;
+};
+
+void test1(size_t n, size_t n2, size_t *p, T * t) {
+  cb_int(fn_cb(n), n);
+  //cb_int(fn_cb(*&n), n);
+  //cb_int(fn_cb(*&n), *&n);
+  cb_int(fn_cb(n), *&n);
+  cb_int(fn_cb(n), 42);    // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb(n2), n);   // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb(n), n + 1); // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+
+  cb_int(fn_cb(t->size()), t->size());
+  cb_int(fn_cb(t->n), t->n);
+  cb_int(fn_cb(t->size()), t->n); // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb(t->n), t->size()); // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+
+  cb_int(fn_cb_const(), 42);
+  cb_int(fn_cb_const(), 43);     // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb_const(), n);      // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb_const(), n + 1);  // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+
+  cb_int(fn_cb_plus(n, n2), n + n2);
+  cb_int(fn_cb_plus(n, n), n + n);
+  cb_int(fn_cb_plus(n, n2), n + n);  // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb_plus(n, n), n * 2);   // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+
+  cb_int(fn_cb_deref(p), *p);
+  cb_int(fn_cb_deref(&n), n);
+  cb_int(fn_cb_deref(&n), *&n);
+  cb_int(fn_cb_deref(p), n);    // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(fn_cb_deref(&n), *p);  // expected-warning {{unsafe assignment to function parameter of count-attributed type}}
+}
+} // namespace pointer_is_call_test
 
 
 static void previous_infinite_loop(int * __counted_by(n) p, size_t n) {
