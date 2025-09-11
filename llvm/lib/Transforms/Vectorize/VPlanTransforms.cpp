@@ -349,7 +349,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *BlockInMask = PredRecipe->getMask();
   auto *MaskDef = BlockInMask->getDefiningRecipe();
   auto *BOMRecipe = new VPBranchOnMaskRecipe(
-      BlockInMask, MaskDef ? MaskDef->getDebugLoc() : DebugLoc());
+      BlockInMask, MaskDef ? MaskDef->getDebugLoc() : DebugLoc::getUnknown());
   auto *Entry =
       Plan.createVPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
 
@@ -864,8 +864,8 @@ static VPValue *optimizeLatchExitInductionUser(
     Type *StepTy = TypeInfo.inferScalarType(Step);
     auto *Zero = Plan.getOrAddLiveIn(ConstantInt::get(StepTy, 0));
     return B.createPtrAdd(EndValue,
-                          B.createNaryOp(Instruction::Sub, {Zero, Step}), {},
-                          "ind.escape");
+                          B.createNaryOp(Instruction::Sub, {Zero, Step}),
+                          DebugLoc::getUnknown(), "ind.escape");
   }
   if (ScalarTy->isFloatingPointTy()) {
     const auto &ID = WideIV->getInductionDescriptor();
@@ -1308,6 +1308,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        auto *Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
+        Clone->insertBefore(RepOrWidenR);
+        auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
+                                      {Clone->getOperand(0)});
+        Ext->insertBefore(Clone);
+        Clone->setOperand(0, Ext);
+        RepR->eraseFromParent();
+        continue;
+      }
+
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
@@ -2043,9 +2057,9 @@ void VPlanTransforms::cse(VPlan &Plan) {
         // V must dominate Def for a valid replacement.
         if (!VPDT.dominates(V->getParent(), VPBB))
           continue;
-        // Drop poison-generating flags when reusing a value.
+        // Only keep flags present on both V and Def.
         if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
-          RFlags->dropPoisonGeneratingFlags();
+          RFlags->intersectFlags(*cast<VPRecipeWithIRFlags>(Def));
         Def->replaceAllUsesWith(V);
         continue;
       }
@@ -2215,10 +2229,10 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantInductionCasts, Plan);
 
   runPass(simplifyRecipes, Plan);
-  runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
-  runPass(narrowToSingleScalarRecipes, Plan);
+  runPass(simplifyBlends, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan);
   runPass(removeBranchOnConst, Plan);
@@ -2312,7 +2326,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
   // Now create the ActiveLaneMaskPhi recipe in the main loop using the
   // preheader ActiveLaneMask instruction.
-  auto *LaneMaskPhi = new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc());
+  auto *LaneMaskPhi =
+      new VPActiveLaneMaskPHIRecipe(EntryALM, DebugLoc::getUnknown());
   LaneMaskPhi->insertAfter(CanonicalIVPHI);
 
   // Create the active lane mask for the next iteration of the loop before the
@@ -2539,11 +2554,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     VPBuilder Builder(LoopRegion->getPreheaderVPBB());
     MaxEVL = Builder.createScalarZExtOrTrunc(
         MaxEVL, Type::getInt32Ty(Plan.getContext()),
-        TypeInfo.inferScalarType(MaxEVL), DebugLoc());
+        TypeInfo.inferScalarType(MaxEVL), DebugLoc::getUnknown());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    VPValue *PrevEVL =
-        Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    VPValue *PrevEVL = Builder.createScalarPhi(
+        {MaxEVL, &EVL}, DebugLoc::getUnknown(), "prev.evl");
 
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
@@ -2673,7 +2688,7 @@ void VPlanTransforms::addExplicitVectorLength(
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
-  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
+  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc::getUnknown());
   EVLPhi->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
@@ -2687,10 +2702,11 @@ void VPlanTransforms::addExplicitVectorLength(
     VPValue *AVLSafe =
         Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, *MaxSafeElements));
     VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
-    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc(), "safe_avl");
+    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc::getUnknown(),
+                               "safe_avl");
   }
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
-                                     DebugLoc());
+                                     DebugLoc::getUnknown());
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
@@ -3117,8 +3133,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   VPValue *SplatStep = Builder.createNaryOp(VPInstruction::Broadcast, Step);
 
   Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, Flags);
-  Init =
-      Builder.createNaryOp(AddOp, {SplatStart, Init}, Flags, {}, "induction");
+  Init = Builder.createNaryOp(AddOp, {SplatStart, Init}, Flags,
+                              DebugLoc::getUnknown(), "induction");
 
   // Create the widened phi of the vector IV.
   auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), nullptr,
@@ -4015,9 +4031,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
-  auto NarrowOp = [](VPValue *V) -> VPValue * {
+  SmallPtrSet<VPValue *, 4> NarrowedOps;
+  auto NarrowOp = [&NarrowedOps](VPValue *V) -> VPValue * {
     auto *R = V->getDefiningRecipe();
-    if (!R)
+    if (!R || NarrowedOps.contains(V))
       return V;
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
@@ -4027,6 +4044,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
           /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
+      NarrowedOps.insert(L);
       return L;
     }
 
@@ -4034,6 +4052,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       assert(RepR->isSingleScalar() &&
              isa<LoadInst>(RepR->getUnderlyingInstr()) &&
              "must be a single scalar load");
+      NarrowedOps.insert(RepR);
       return RepR;
     }
     auto *WideLoad = cast<VPWidenLoadRecipe>(R);
@@ -4047,6 +4066,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                     /*IsUniform*/ true,
                                     /*Mask*/ nullptr, *WideLoad);
     N->insertBefore(WideLoad);
+    NarrowedOps.insert(N);
     return N;
   };
 
