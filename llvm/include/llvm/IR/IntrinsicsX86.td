@@ -1867,29 +1867,29 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx512_vpdpbusd_128 :
       ClangBuiltin<"__builtin_ia32_vpdpbusd128">,
-      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty,
-                             llvm_v4i32_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v16i8_ty,
+                             llvm_v16i8_ty], [IntrNoMem]>;
   def int_x86_avx512_vpdpbusd_256 :
       ClangBuiltin<"__builtin_ia32_vpdpbusd256">,
-      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_v8i32_ty,
-                             llvm_v8i32_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_v32i8_ty,
+                             llvm_v32i8_ty], [IntrNoMem]>;
   def int_x86_avx512_vpdpbusd_512 :
       ClangBuiltin<"__builtin_ia32_vpdpbusd512">,
-      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_v16i32_ty,
-                             llvm_v16i32_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_v64i8_ty,
+                             llvm_v64i8_ty], [IntrNoMem]>;
 
   def int_x86_avx512_vpdpbusds_128 :
       ClangBuiltin<"__builtin_ia32_vpdpbusds128">,
-      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty,
-                             llvm_v4i32_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v16i8_ty,
+                             llvm_v16i8_ty], [IntrNoMem]>;
   def int_x86_avx512_vpdpbusds_256 :
       ClangBuiltin<"__builtin_ia32_vpdpbusds256">,
-      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_v8i32_ty,
-                             llvm_v8i32_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_v32i8_ty,
+                             llvm_v32i8_ty], [IntrNoMem]>;
   def int_x86_avx512_vpdpbusds_512 :
       ClangBuiltin<"__builtin_ia32_vpdpbusds512">,
-      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_v16i32_ty,
-                             llvm_v16i32_ty], [IntrNoMem]>;
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_v64i8_ty,
+                             llvm_v64i8_ty], [IntrNoMem]>;
 
   def int_x86_avx512_vpdpwssd_128 :
       ClangBuiltin<"__builtin_ia32_vpdpwssd128">,

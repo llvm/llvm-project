@@ -478,7 +478,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   ConstantInt *ConstIndex =
       ConstantInt::get(OffsetType, IndexQuot.getSExtValue());
-  Value *IndexAdd = Builder.CreateAdd(ConstIndex, Offset);
+  Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
   return IndexAdd;

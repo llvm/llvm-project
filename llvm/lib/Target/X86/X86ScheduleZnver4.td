@@ -1534,9 +1534,9 @@ def Zn4WriteVFIXUPIMMPDZrr_VRANGESDrr : SchedWriteRes<[Zn4FPFMisc01]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteVFIXUPIMMPDZrr_VRANGESDrr], (instregex
-	"VFIXUPIMM(S|P)(S|D)(Z|Z128|Z256?)rrik", "VFIXUPIMM(S|P)(S|D)(Z?|Z128?|Z256?)rrikz", 
+        "VFIXUPIMM(S|P)(S|D)(Z|Z128|Z256?)rrik", "VFIXUPIMM(S|P)(S|D)(Z?|Z128?|Z256?)rrikz", 
         "VFIXUPIMM(S|P)(S|D)(Z128|Z256?)rri",  "VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)",
-	"VRANGE(S|P)(S|D)(Z|Z128|Z256?)rri(b?)k","VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)kz"
+        "VRANGE(S|P)(S|D)(Z|Z128|Z256?)rri(b?)k","VRANGE(S|P)(S|D)(Z?|Z128?|Z256?)rri(b?)kz"
 	)>;
 
 // SCALE & REDUCE instructions
@@ -1567,7 +1567,7 @@ def Zn4WriteBUSDr_VPMADDr: SchedWriteRes<[Zn4FPFMisc01]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteBUSDr_VPMADDr], (instregex
-	"VPDP(BU|WS)(S|P)(S|D|DS)(Z|Z128|Z256)(r|rk|rkz)",
+        "VPDP(BU|WS)(S|P)(S|D|DS)(Z|Z128|Z256)(r|rk|rkz)",
         "VPMADD52(H|L)UQ(Z|Z128|Z256)(r|rk|rkz)"
 	)>;
 
@@ -1586,7 +1586,7 @@ def : InstRW<[Zn4WriteSHIFTrr], (instregex
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z256?)(ri|rik|rikz)",
         "(V?)P(ROL|ROR)(D|Q)(Z?|Z128?)(ri|rik|rikz)",
-	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
+        "VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
 	)>;
 
 def Zn4WriteSHIFTri: SchedWriteRes<[Zn4FPFMisc01]> {
@@ -1598,24 +1598,40 @@ def : InstRW<[Zn4WriteSHIFTri], (instregex
         "VP(SLL|SRL|SRA)(D|Q|W)(Z|Z128|Z256?)(ri|rik|rikz)"
 	)>;
 
-// ALIGN Instructions
-def Zn4WriteALIGN: SchedWriteRes<[Zn4FPFMisc12]> {
+// ALIGNR Instructions
+def Zn4WriteALIGNR: SchedWriteRes<[Zn4FPFMisc12]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [1];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn4WriteALIGNR], (instregex
+        "(V?)PALIGNR(Y?|Z128?|Z256?)(rri|rrik|rrikz)"
+	)>;
+def Zn4WriteALIGNRZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 2;
   let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
-def : InstRW<[Zn4WriteALIGN], (instregex
-        "(V?)PALIGNR(Z?|Z128?|Z256?)(rri|rrik|rrikz)"
+def : InstRW<[Zn4WriteALIGNRZ], (instregex
+        "(V?)PALIGNRZ(rri|rrik|rrikz)"
 	)>;
 
-//PACK Instructions
+// PACK Instructions
 def Zn4WritePACK: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 2;
-  let ReleaseAtCycles = [2];
+  let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WritePACK], (instregex
-        "(V?)PACK(SS|US)(DW|WB)(Z?|Z128?|Z256?)(rr|rrk|rrkz)"
+        "(V?)PACK(SS|US)(DW|WB)(Y?|Z128?|Z256?)(rr|rrk|rrkz)"
+	)>;
+def Zn4WritePACKZ: SchedWriteRes<[Zn4FPFMisc12]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [2];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn4WritePACKZ], (instregex
+        "(V?)PACK(SS|US)(DW|WB)Z(rr|rrk|rrkz)"
 	)>;
 
 // MAX and MIN Instructions
