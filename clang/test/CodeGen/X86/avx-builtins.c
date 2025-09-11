@@ -1540,18 +1540,21 @@ __m256 test_mm256_set_m128(__m128 A, __m128 B) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_set_m128(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set_m128((__m128){10.0f, 20.0f, 30.0f, 40.0f}, (__m128){1.0f, 2.0f, 3.0f, 4.0f}), 1.0f, 2.0f, 3.0f, 4.0f, 10.0f, 20.0f, 30.0f, 40.0f));
 
 __m256d test_mm256_set_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_set_m128d
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128d(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set_m128d((__m128d){10.0, 20.0}, (__m128d){1.0, 2.0}), 1.0, 2.0, 10.0, 20.0));
 
 __m256i test_mm256_set_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_set_m128i
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128i(A, B);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_set_m128i((__m128i){10LL, 20LL}, (__m128i){1LL, 2LL}), 1LL, 2LL, 10LL, 20LL));
 
 __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
   // CHECK-LABEL: test_mm256_set_pd
@@ -1778,18 +1781,21 @@ __m256 test_mm256_setr_m128(__m128 A, __m128 B) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_setr_m128(A, B);
 }
+TEST_CONSTEXPR(match_m256(_mm256_setr_m128((__m128){1.0f, 2.0f, 3.0f, 4.0f}, (__m128){10.0f, 20.0f, 30.0f, 40.0f}), 1.0f, 2.0f, 3.0f, 4.0f, 10.0f, 20.0f, 30.0f, 40.0f));
 
 __m256d test_mm256_setr_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_setr_m128d
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128d(A, B);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_setr_m128d((__m128d){1.0, 2.0}, (__m128d){10.0, 20.0}), 1.0, 2.0, 10.0, 20.0));
 
 __m256i test_mm256_setr_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_setr_m128i
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128i(A, B);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_setr_m128i((__m128i){1LL, 2LL}, (__m128i){10LL, 20LL}), 1LL, 2LL, 10LL, 20LL));
 
 __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
   // CHECK-LABEL: test_mm256_setr_pd
