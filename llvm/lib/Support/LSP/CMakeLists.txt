@@ -3,6 +3,6 @@ add_llvm_component_library(LLVMSupportLSP
   Transport.cpp
   Logging.cpp
 
-  DEPENDS
-  LLVMSupport
+  LINK_COMPONENTS
+  Support
 )
