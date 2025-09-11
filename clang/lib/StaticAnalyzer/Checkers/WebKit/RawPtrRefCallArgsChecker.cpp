@@ -122,9 +122,22 @@ public:
             return;
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
-        QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
+        auto MemberCallQT = MemberCallExpr->getObjectType();
+        QualType ArgType = MemberCallQT.getCanonicalType();
         std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
-        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(E))
+
+        // Sometimes, canonical type erroneously turns Ref<T> into T.
+        // Workaround this problem by checking again if the original type was
+        // a SubstTemplateTypeParmType of a safe smart pointer type (e.g. Ref).
+        bool IsSafePtr = false;
+        if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(MemberCallQT)) {
+          if (auto *Decl = Subst->getAssociatedDecl()) {
+            if (auto *CXXRD = dyn_cast<CXXRecordDecl>(Decl))
+              IsSafePtr = isSafePtr(CXXRD);
+          }
+        }
+
+        if (IsUnsafe && *IsUnsafe && !IsSafePtr && !isPtrOriginSafe(E))
           reportBugOnThis(E, D);
       }
 
