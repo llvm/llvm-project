@@ -920,13 +920,13 @@ bool VPlanTransforms::legalizeUnclassifiedPhis(VPlan &Plan) {
   using namespace VPlanPatternMatch;
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    if (!isa<VPWidenPHIRecipe>(&PhiR))
+    if (!isa<VPPhi>(&PhiR))
       continue;
 
     // Check if PhiR is a min/max reduction that has a user inside the loop
     // outside the min/max reduction chain. The other user must be the compare
     // of a FindLastIV reduction chain.
-    auto *MinMaxPhiR = cast<VPWidenPHIRecipe>(&PhiR);
+    auto *MinMaxPhiR = cast<VPPhi>(&PhiR);
     auto *MinMaxOp = dyn_cast_or_null<VPSingleDefRecipe>(
         MinMaxPhiR->getOperand(1)->getDefiningRecipe());
     if (!MinMaxOp)

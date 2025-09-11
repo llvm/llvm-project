@@ -8593,9 +8593,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(SingleDef, Range);
       if (!Recipe) {
-        if (isa<VPWidenPHIRecipe>(SingleDef))
+        if (isa<VPPhi>(SingleDef))
           continue;
         Recipe = RecipeBuilder.handleReplication(Instr, R.operands(), Range);
+      }
 
       RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {

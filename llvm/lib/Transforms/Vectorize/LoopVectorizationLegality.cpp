@@ -801,7 +801,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   // For each block in the loop.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for hazards.
-    PHINode *UnclassifiedPhi = nullptr;
     for (Instruction &I : *BB) {
       Result &= canVectorizeInstr(I);
       if (!DoExtraAnalysis && !Result)
@@ -809,7 +808,22 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     }
   }
 
-  if (size(TheLoop->getHeader()->phis()):
+  if (range_size(TheLoop->getHeader()->phis()) != FixedOrderRecurrences.size() +
+                                                      Inductions.size() +
+                                                      Reductions.size() &&
+      none_of(TheLoop->getHeader()->phis(), [this](PHINode &P) {
+        auto I = Reductions.find(&P);
+        return I != Reductions.end() &&
+               RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+                   I->second.getRecurrenceKind());
+      })) {
+    reportVectorizationFailure("Found an unidentified PHI",
+                               "value that could not be identified as "
+                               "reduction is used outside the loop",
+                               "NonReductionValueUsedOutsideLoop", ORE, TheLoop,
+                               &*TheLoop->getHeader()->phis().begin());
+    return false;
+  }
 
   if (!PrimaryInduction) {
     if (Inductions.empty()) {
