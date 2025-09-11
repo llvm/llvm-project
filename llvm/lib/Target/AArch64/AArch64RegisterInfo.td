@@ -1164,25 +1164,22 @@ class PPRVectorListMul<int ElementWidth, int NumRegs> : PPRVectorList<ElementWid
                                                                 ", AArch64::PPRMul2RegClassID>";
 }
 
+class PPR2MulRegOp<string Suffix, int Size, ElementSizeEnum ES>
+    : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'"#Suffix#"'>"> {
+  ElementSizeEnum ElementSize;
+  let ElementSize = ES;
+  let ParserMatchClass = PPRVectorListMul<Size, 2>;
+}
+
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
     DecoderMethod = "DecodePPR2Mul2RegisterClass" in {
-  def PP_b_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = PPRVectorListMul<8, 2>;
-  }
 
-  def PP_h_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = PPRVectorListMul<16, 2>;
-  }
+  def PP_b_mul_r : PPR2MulRegOp<"b", 8,  ElementSizeB>;
+  def PP_h_mul_r : PPR2MulRegOp<"h", 16, ElementSizeH>;
+  def PP_s_mul_r : PPR2MulRegOp<"s", 32, ElementSizeS>;
+  def PP_d_mul_r : PPR2MulRegOp<"d", 64, ElementSizeD>;
 
-  def PP_s_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = PPRVectorListMul<32, 2>;
-  }
-
-  def PP_d_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = PPRVectorListMul<64, 2>;
-  }
-}  // end let EncoderMethod/DecoderMethod
-
+} // end let EncoderMethod/DecoderMethod
 
 //===----------------------------------------------------------------------===//
 // SVE vector register classes
