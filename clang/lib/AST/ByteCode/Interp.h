@@ -1527,15 +1527,10 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
+  assert(Temp);
+
   const Pointer &Ptr = S.P.getGlobal(I);
-
-  const T Value = S.Stk.peek<T>();
-  APValue APV = Value.toAPValue(S.getASTContext());
-  APValue *Cached = Temp->getOrCreateValue(true);
-  *Cached = APV;
-
   assert(Ptr.getDeclDesc()->asExpr());
-
   S.SeenGlobalTemporaries.push_back(
       std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
 
@@ -1550,19 +1545,11 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
 inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
                                const LifetimeExtendedTemporaryDecl *Temp) {
   assert(Temp);
-  const Pointer &P = S.Stk.peek<Pointer>();
-  APValue *Cached = Temp->getOrCreateValue(true);
 
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
   S.SeenGlobalTemporaries.push_back(
-      std::make_pair(P.getDeclDesc()->asExpr(), Temp));
-
-  if (std::optional<APValue> APV =
-          P.toRValue(S.getASTContext(), Temp->getTemporaryExpr()->getType())) {
-    *Cached = *APV;
-    return true;
-  }
-
-  return false;
+      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+  return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
