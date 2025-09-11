@@ -20,6 +20,7 @@
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
@@ -279,6 +280,12 @@ public:
   /// which are guaranteed to be the first strings in the argument string
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
+
+  /// getSubcommand - Return the active subcommand, if one exists.
+  LLVM_ABI StringRef getSubcommand(
+      const ArrayRef<OptTable::Command> Commands,
+      std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+      std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
 
   /// @}
   /// @name Argument Lookup Utilities
