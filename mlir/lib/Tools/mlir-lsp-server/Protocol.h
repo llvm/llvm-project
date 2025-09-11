@@ -20,9 +20,9 @@
 #ifndef LIB_MLIR_TOOLS_MLIRLSPSERVER_PROTOCOL_H_
 #define LIB_MLIR_TOOLS_MLIRLSPSERVER_PROTOCOL_H_
 
-#include "llvm/Support/LSP/Protocol.h"
+#include "mlir/Tools/lsp-server-support/Protocol.h"
 
-namespace llvm {
+namespace mlir {
 namespace lsp {
 //===----------------------------------------------------------------------===//
 // MLIRConvertBytecodeParams
@@ -54,6 +54,6 @@ struct MLIRConvertBytecodeResult {
 llvm::json::Value toJSON(const MLIRConvertBytecodeResult &value);
 
 } // namespace lsp
-} // namespace llvm
+} // namespace mlir
 
 #endif
