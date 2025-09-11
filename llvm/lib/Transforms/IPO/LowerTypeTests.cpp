@@ -573,28 +573,11 @@ public:
 };
 } // end anonymous namespace
 
-/// Build a bit set for TypeId using the object layouts in
-/// GlobalLayout.
-static BitSetInfo
-buildBitSet(Metadata *TypeId,
-            const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  BitSetBuilder BSB;
-
+/// Build a bit set for list of offsets.
+static BitSetInfo buildBitSet(ArrayRef<uint64_t> Offsets) {
   // Compute the byte offset of each address associated with this type
   // identifier.
-  for (const auto &GlobalAndOffset : GlobalLayout) {
-    for (MDNode *Type : GlobalAndOffset.first->types()) {
-      if (Type->getOperand(1) != TypeId)
-        continue;
-      uint64_t Offset =
-          cast<ConstantInt>(
-              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
-              ->getZExtValue();
-      BSB.addOffset(GlobalAndOffset.second + Offset);
-    }
-  }
-
-  return BSB.build();
+  return BitSetBuilder(Offsets).build();
 }
 
 /// Build a test that bit BitOffset mod sizeof(Bits)*8 is set in
@@ -1161,21 +1144,47 @@ void LowerTypeTestsModule::importFunction(Function *F,
   F->setVisibility(Visibility);
 }
 
-void LowerTypeTestsModule::lowerTypeTestCalls(
-    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  // For each type identifier in this disjoint set...
+static auto
+buildBitSets(ArrayRef<Metadata *> TypeIds,
+             const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+  DenseMap<Metadata *, SmallVector<uint64_t, 16>> OffsetsByTypeID;
+  // Pre-populate the map with interesting type identifiers.
+  for (Metadata *TypeId : TypeIds)
+    OffsetsByTypeID[TypeId];
+  for (const auto &[Mem, MemOff] : GlobalLayout) {
+    for (MDNode *Type : Mem->types()) {
+      auto It = OffsetsByTypeID.find(Type->getOperand(1));
+      if (It == OffsetsByTypeID.end())
+        continue;
+      uint64_t Offset =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
+              ->getZExtValue();
+      It->second.push_back(MemOff + Offset);
+    }
+  }
+
+  SmallVector<std::pair<Metadata *, BitSetInfo>> BitSets;
+  BitSets.reserve(TypeIds.size());
   for (Metadata *TypeId : TypeIds) {
-    // Build the bitset.
-    BitSetInfo BSI = buildBitSet(TypeId, GlobalLayout);
+    BitSets.emplace_back(TypeId, buildBitSet(OffsetsByTypeID[TypeId]));
     LLVM_DEBUG({
       if (auto MDS = dyn_cast<MDString>(TypeId))
         dbgs() << MDS->getString() << ": ";
       else
         dbgs() << "<unnamed>: ";
-      BSI.print(dbgs());
+      BitSets.back().second.print(dbgs());
     });
+  }
 
+  return BitSets;
+}
+
+void LowerTypeTestsModule::lowerTypeTestCalls(
+    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
+    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+  // For each type identifier in this disjoint set...
+  for (const auto &[TypeId, BSI] : buildBitSets(TypeIds, GlobalLayout)) {
     ByteArrayInfo *BAI = nullptr;
     TypeIdLowering TIL;
 
