@@ -15,6 +15,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -578,6 +579,12 @@ public:
 
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
+
+  bool Pre(const parser::OpenMPUtilityConstruct &x) {
+    PushContext(x.source, parser::omp::GetOmpDirectiveName(x).v);
+    return true;
+  }
+  void Post(const parser::OpenMPUtilityConstruct &) { PopContext(); }
 
   bool Pre(const parser::OmpDeclareVariantDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_variant);
@@ -1790,6 +1797,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_target:
   case llvm::omp::Directive::OMPD_target_data:
   case llvm::omp::Directive::OMPD_task:
+  case llvm::omp::Directive::OMPD_taskgraph:
   case llvm::omp::Directive::OMPD_taskgroup:
   case llvm::omp::Directive::OMPD_teams:
   case llvm::omp::Directive::OMPD_workdistribute:
