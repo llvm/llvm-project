@@ -16,10 +16,9 @@
 #include "MipsRegisterInfo.h"
 
 namespace llvm {
-
 class Mips16RegisterInfo : public MipsRegisterInfo {
 public:
-  Mips16RegisterInfo();
+  Mips16RegisterInfo(const MipsSubtarget &STI);
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
 
