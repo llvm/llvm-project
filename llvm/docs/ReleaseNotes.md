@@ -75,6 +75,10 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
+  profile data to guide the machine outliner
+  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
+
 Changes to Vectorizers
 ----------------------------------------
 
@@ -152,6 +156,7 @@ Changes to the LLVM tools
 ---------------------------------
 
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
+* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 
 Changes to LLDB
 ---------------------------------

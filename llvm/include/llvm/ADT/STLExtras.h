@@ -58,26 +58,6 @@ template <typename T> struct make_const_ref {
   using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
 
-namespace detail {
-template <class, template <class...> class Op, class... Args> struct detector {
-  using value_t = std::false_type;
-};
-template <template <class...> class Op, class... Args>
-struct detector<std::void_t<Op<Args...>>, Op, Args...> {
-  using value_t = std::true_type;
-};
-} // end namespace detail
-
-/// Detects if a given trait holds for some set of arguments 'Args'.
-/// For example, the given trait could be used to detect if a given type
-/// has a copy assignment operator:
-///   template<class T>
-///   using has_copy_assign_t = decltype(std::declval<T&>()
-///                                                 = std::declval<const T&>());
-///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
-template <template <class...> class Op, class... Args>
-using is_detected = typename detail::detector<void, Op, Args...>::value_t;
-
 /// This class provides various trait information about a callable object.
 ///   * To access the number of arguments: Traits::num_args
 ///   * To access the type of an argument: Traits::arg_t<Index>
@@ -535,31 +515,22 @@ public:
 
 namespace detail {
 
-template <bool is_bidirectional> struct fwd_or_bidi_tag_impl {
-  using type = std::forward_iterator_tag;
-};
-
-template <> struct fwd_or_bidi_tag_impl<true> {
-  using type = std::bidirectional_iterator_tag;
-};
-
-/// Helper which sets its type member to forward_iterator_tag if the category
-/// of \p IterT does not derive from bidirectional_iterator_tag, and to
-/// bidirectional_iterator_tag otherwise.
-template <typename IterT> struct fwd_or_bidi_tag {
-  using type = typename fwd_or_bidi_tag_impl<std::is_base_of<
-      std::bidirectional_iterator_tag,
-      typename std::iterator_traits<IterT>::iterator_category>::value>::type;
-};
+/// A type alias which is std::bidirectional_iterator_tag if the category of
+/// \p IterT derives from it, and std::forward_iterator_tag otherwise.
+template <typename IterT>
+using fwd_or_bidi_tag = std::conditional_t<
+    std::is_base_of_v<std::bidirectional_iterator_tag,
+                      typename std::iterator_traits<IterT>::iterator_category>,
+    std::bidirectional_iterator_tag, std::forward_iterator_tag>;
 
 } // namespace detail
 
 /// Defines filter_iterator to a suitable specialization of
 /// filter_iterator_impl, based on the underlying iterator's category.
 template <typename WrappedIteratorT, typename PredicateT>
-using filter_iterator = filter_iterator_impl<
-    WrappedIteratorT, PredicateT,
-    typename detail::fwd_or_bidi_tag<WrappedIteratorT>::type>;
+using filter_iterator =
+    filter_iterator_impl<WrappedIteratorT, PredicateT,
+                         detail::fwd_or_bidi_tag<WrappedIteratorT>>;
 
 /// Convenience function that takes a range of elements and a predicate,
 /// and return a new filter_iterator range.

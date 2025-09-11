@@ -5316,7 +5316,8 @@ ASTContext::getTypedefType(ElaboratedTypeKeyword Keyword,
   }
 
   llvm::FoldingSetNodeID ID;
-  TypedefType::Profile(ID, Keyword, Qualifier, Decl, UnderlyingType);
+  TypedefType::Profile(ID, Keyword, Qualifier, Decl,
+                       *TypeMatchesDeclOrNone ? QualType() : UnderlyingType);
 
   void *InsertPos = nullptr;
   if (FoldingSetPlaceholder<TypedefType> *Placeholder =
@@ -14194,7 +14195,11 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     FunctionProtoType::ExtProtoInfo EPIX = FX->getExtProtoInfo(),
                                     EPIY = FY->getExtProtoInfo();
     assert(EPIX.ExtInfo == EPIY.ExtInfo);
-    assert(EPIX.ExtParameterInfos == EPIY.ExtParameterInfos);
+    assert(!EPIX.ExtParameterInfos == !EPIY.ExtParameterInfos);
+    assert(!EPIX.ExtParameterInfos ||
+           llvm::equal(
+               llvm::ArrayRef(EPIX.ExtParameterInfos, FX->getNumParams()),
+               llvm::ArrayRef(EPIY.ExtParameterInfos, FY->getNumParams())));
     assert(EPIX.RefQualifier == EPIY.RefQualifier);
     assert(EPIX.TypeQuals == EPIY.TypeQuals);
     assert(EPIX.Variadic == EPIY.Variadic);
