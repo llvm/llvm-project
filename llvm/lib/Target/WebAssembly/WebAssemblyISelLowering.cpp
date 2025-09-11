@@ -2183,13 +2183,10 @@ SDValue performLowerPartialReduction(SDNode *N, SelectionDAG &DAG) {
     SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
     SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS);
 
-    SDValue LowLow = DAG.getNode(LowOpc, DL, MVT::v4i32, MulLow);
-    SDValue LowHigh = DAG.getNode(LowOpc, DL, MVT::v4i32, MulHigh);
-    SDValue HighLow = DAG.getNode(HighOpc, DL, MVT::v4i32, MulLow);
-    SDValue HighHigh = DAG.getNode(HighOpc, DL, MVT::v4i32, MulHigh);
-
-    SDValue AddLow = DAG.getNode(ISD::ADD, DL, MVT::v4i32, LowLow, HighLow);
-    SDValue AddHigh = DAG.getNode(ISD::ADD, DL, MVT::v4i32, LowHigh, HighHigh);
+    SDValue AddLow =
+        DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL, MVT::v4i32, MulLow);
+    SDValue AddHigh = DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL,
+                                  MVT::v4i32, MulHigh);
     SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, AddLow, AddHigh);
     return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
   }

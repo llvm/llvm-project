@@ -108,9 +108,13 @@ jobs:
 
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
+          echo "Building runtimes: ${runtimes_to_build}"
+          echo "Running runtimes checks targets: ${runtimes_check_targets}"
 
           echo "windows-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "windows-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+          echo "windows-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
+          echo "windows-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
       - name: Build and Test
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
@@ -118,7 +122,7 @@ jobs:
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
-          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
+          bash -c "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; export SCCACHE_GCS_RW_MODE=READ_WRITE; export SCCACHE_IDLE_TIMEOUT=0; mkdir artifacts; SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server; .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\" \"${{ steps.vars.outputs.windows-runtimes }}\" \"${{ steps.vars.outputs.windows-runtimes-check-targets }}\""
       - name: Upload Artifacts
         # In some cases, Github will fail to upload the artifact. We want to
         # continue anyways as a failed artifact upload is an infra failure, not

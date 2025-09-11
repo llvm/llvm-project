@@ -2078,7 +2078,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
-      return llvm::createStringError("Could not evaluate %s.",
+      return llvm::createStringError("could not evaluate %s",
                                      DW_OP_value_to_name(op));
     }
 

@@ -47,7 +47,8 @@ public:
     OS << "Error while parsing " << BlockName << " block: ";
     OS << formatv(Fmt, Vals...);
     return make_error<StringError>(
-        Buffer, std::make_error_code(std::errc::illegal_byte_sequence));
+        std::move(Buffer),
+        std::make_error_code(std::errc::illegal_byte_sequence));
   }
 
   Error expectBlock();
@@ -67,7 +68,12 @@ protected:
   using BitstreamBlockParserHelperBase::BitstreamBlockParserHelperBase;
   Derived &derived() { return *static_cast<Derived *>(this); }
 
+  /// Parse a record and fill in the fields in the parser.
+  /// The subclass can statically override this method.
   Error parseRecord(unsigned Code) { return unexpectedRecord(Code); }
+
+  /// Parse a subblock and fill in the fields in the parser.
+  /// The subclass can statically override this method.
   Error parseSubBlock(unsigned Code) { return unexpectedBlock(Code); }
 
 public:
@@ -148,6 +154,9 @@ public:
     std::optional<uint64_t> KeyIdx;
     std::optional<uint64_t> ValueIdx;
     std::optional<RemarkLoc> Loc;
+
+    Argument(std::optional<uint64_t> KeyIdx, std::optional<uint64_t> ValueIdx)
+        : KeyIdx(KeyIdx), ValueIdx(ValueIdx) {}
   };
 
   /// The parsed content: depending on the remark, some fields might be empty.
