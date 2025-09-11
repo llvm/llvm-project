@@ -285,9 +285,13 @@ conversions. A context-unaware conversion function converts a `Type` into a
 `Type`. A context-aware conversion function converts a `Value` into a type. The
 latter allows users to customize type conversion rules based on the IR.
 
-Note: When there is at least one context-aware type conversion function, the
-result of type conversions can no longer be cached, which can increase
-compilation time. Use this feature with caution!
+Note: context-aware type conversion functions impact the ability of the
+framework to cache the conversion result. In the absence of a context-aware
+conversion, all context-free type conversions can be cached. Otherwise only the
+context-free conversions added after a context-aware type conversion can be
+cached (conversions are applied in reverse order). 
+As such it is advised to add context-aware conversions as early as possible in
+the sequence of `addConversion` calls (so that they apply last).
 
 A `materialization` describes how a list of values should be converted to a
 list of values with specific types. An important distinction from a
