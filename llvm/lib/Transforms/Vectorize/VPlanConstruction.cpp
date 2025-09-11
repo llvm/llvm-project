@@ -532,20 +532,19 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   createExtractsForLiveOuts(Plan, MiddleVPBB);
 }
 
-static void simplifyPlanWithSCEV(VPlan &Plan, ScalarEvolution &SE) {
-  auto SimplifyWithSCEV = [&](VPValue *VPV) -> VPValue * {
-    Value *UV = VPV->getUnderlyingValue();
-    if (!UV || !SE.isSCEVable(UV->getType()))
-      return nullptr;
-    auto *S = SE.getSCEV(UV);
-    if (auto *C = dyn_cast<SCEVConstant>(S))
+/// Check \p Plan's live-in and replace them with constants, if they can be
+/// simplified via SCEV.
+static void simplifyLiveInsWithSCEV(VPlan &Plan, ScalarEvolution &SE) {
+  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
+    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, SE);
+    if (auto *C = dyn_cast<SCEVConstant>(Expr))
       return Plan.getOrAddLiveIn(C->getValue());
     return nullptr;
   };
 
   for (VPValue *LiveIn : Plan.getLiveIns()) {
-    if (auto *Simp = SimplifyWithSCEV(LiveIn))
-      LiveIn->replaceAllUsesWith(Simp);
+    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
+      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
   }
 }
 
@@ -555,7 +554,7 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   PlainCFGBuilder Builder(TheLoop, &LI);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
-  simplifyPlanWithSCEV(*VPlan0, *PSE.getSE());
+  simplifyLiveInsWithSCEV(*VPlan0, *PSE.getSE());
   return VPlan0;
 }
 
