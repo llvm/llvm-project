@@ -6383,40 +6383,40 @@ bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
 
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
-    case AMDGPU::V_CVT_PK_BF8_F32_e64:
-    case AMDGPU::V_CVT_PK_FP8_F32_e64:
-    case AMDGPU::V_MQSAD_PK_U16_U8_e64:
-    case AMDGPU::V_MQSAD_U32_U8_e64:
-    case AMDGPU::V_PK_ADD_F16:
-    case AMDGPU::V_PK_ADD_F32:
-    case AMDGPU::V_PK_ADD_I16:
-    case AMDGPU::V_PK_ADD_U16:
-    case AMDGPU::V_PK_ASHRREV_I16:
-    case AMDGPU::V_PK_FMA_F16:
-    case AMDGPU::V_PK_FMA_F32:
-    case AMDGPU::V_PK_FMAC_F16_e32:
-    case AMDGPU::V_PK_FMAC_F16_e64:
-    case AMDGPU::V_PK_LSHLREV_B16:
-    case AMDGPU::V_PK_LSHRREV_B16:
-    case AMDGPU::V_PK_MAD_I16:
-    case AMDGPU::V_PK_MAD_U16:
-    case AMDGPU::V_PK_MAX_F16:
-    case AMDGPU::V_PK_MAX_I16:
-    case AMDGPU::V_PK_MAX_U16:
-    case AMDGPU::V_PK_MIN_F16:
-    case AMDGPU::V_PK_MIN_I16:
-    case AMDGPU::V_PK_MIN_U16:
-    case AMDGPU::V_PK_MOV_B32:
-    case AMDGPU::V_PK_MUL_F16:
-    case AMDGPU::V_PK_MUL_F32:
-    case AMDGPU::V_PK_MUL_LO_U16:
-    case AMDGPU::V_PK_SUB_I16:
-    case AMDGPU::V_PK_SUB_U16:
-    case AMDGPU::V_QSAD_PK_U16_U8_e64:
-      return true;
-    default:
-      return false;
-    }
+  case AMDGPU::V_CVT_PK_BF8_F32_e64:
+  case AMDGPU::V_CVT_PK_FP8_F32_e64:
+  case AMDGPU::V_MQSAD_PK_U16_U8_e64:
+  case AMDGPU::V_MQSAD_U32_U8_e64:
+  case AMDGPU::V_PK_ADD_F16:
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_I16:
+  case AMDGPU::V_PK_ADD_U16:
+  case AMDGPU::V_PK_ASHRREV_I16:
+  case AMDGPU::V_PK_FMA_F16:
+  case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMAC_F16_e32:
+  case AMDGPU::V_PK_FMAC_F16_e64:
+  case AMDGPU::V_PK_LSHLREV_B16:
+  case AMDGPU::V_PK_LSHRREV_B16:
+  case AMDGPU::V_PK_MAD_I16:
+  case AMDGPU::V_PK_MAD_U16:
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_PK_MAX_I16:
+  case AMDGPU::V_PK_MAX_U16:
+  case AMDGPU::V_PK_MIN_F16:
+  case AMDGPU::V_PK_MIN_I16:
+  case AMDGPU::V_PK_MIN_U16:
+  case AMDGPU::V_PK_MOV_B32:
+  case AMDGPU::V_PK_MUL_F16:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_LO_U16:
+  case AMDGPU::V_PK_SUB_I16:
+  case AMDGPU::V_PK_SUB_U16:
+  case AMDGPU::V_QSAD_PK_U16_U8_e64:
+    return true;
+  default:
+    return false;
+  }
 }
 
 void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,

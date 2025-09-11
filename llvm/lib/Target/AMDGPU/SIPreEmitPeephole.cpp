@@ -582,9 +582,8 @@ void SIPreEmitPeephole::createListOfPackedInstr(
       // instructions have latency of 1.
       // TODO: improve latency handling of possible inserted instructions
       TotalCyclesBetweenCandidates += 2;
-      // if (!(TotalCyclesBetweenCandidates > NumMFMACycles)) {
-      InstrsToUnpack.insert(&Instr);
-      // }
+      if (!(TotalCyclesBetweenCandidates >= NumMFMACycles - 1))
+        InstrsToUnpack.insert(&Instr);
     }
   }
   return;
