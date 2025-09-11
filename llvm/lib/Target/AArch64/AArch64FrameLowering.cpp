@@ -3494,9 +3494,9 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << *HazardSlotIndex
                         << "\n");
       AFI->setStackHazardCSRSlotIndex(*HazardSlotIndex);
-      if ((unsigned)*HazardSlotIndex < MinCSFrameIndex)
+      if (static_cast<unsigned>(*HazardSlotIndex) < MinCSFrameIndex)
         MinCSFrameIndex = *HazardSlotIndex;
-      if ((unsigned)*HazardSlotIndex > MaxCSFrameIndex)
+      if (static_cast<unsigned>(*HazardSlotIndex) > MaxCSFrameIndex)
         MaxCSFrameIndex = *HazardSlotIndex;
     }
 
@@ -3529,9 +3529,9 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     LLVM_DEBUG(dbgs() << "Created CSR Hazard at slot " << *HazardSlotIndex
                       << "\n");
     AFI->setStackHazardCSRSlotIndex(*HazardSlotIndex);
-    if ((unsigned)*HazardSlotIndex < MinCSFrameIndex)
+    if (static_cast<unsigned>(*HazardSlotIndex) < MinCSFrameIndex)
       MinCSFrameIndex = *HazardSlotIndex;
-    if ((unsigned)*HazardSlotIndex > MaxCSFrameIndex)
+    if (static_cast<unsigned>(*HazardSlotIndex) > MaxCSFrameIndex)
       MaxCSFrameIndex = *HazardSlotIndex;
   }
 

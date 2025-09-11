@@ -29,36 +29,35 @@ public:
     assert(Value != Sentinel && "Value is sentinel (use default constructor)");
   };
 
-  ValueWithSentinel &operator=(T const &NewValue) {
-    assert(NewValue != Sentinel && "Assigned to sentinel (use .clear())");
+  ValueWithSentinel &operator=(const T &NewValue) {
+    assert(NewValue != Sentinel && "NewValue is sentinel (use .clear())");
     Value = NewValue;
     return *this;
   }
 
-  bool operator==(ValueWithSentinel const &Other) const {
+  bool operator==(const ValueWithSentinel &Other) const {
     return Value == Other.Value;
   }
 
-  bool operator!=(ValueWithSentinel const &Other) const {
+  bool operator!=(const ValueWithSentinel &Other) const {
     return !(*this == Other);
   }
 
-  T &operator*() {
-    assert(has_value() && "Invalid value");
+  T &value() {
+    assert(has_value() && ".value() called on sentinel");
     return Value;
   }
-  const T &operator*() const {
-    return const_cast<ValueWithSentinel &>(*this).operator*();
+  const T &value() const {
+    return const_cast<ValueWithSentinel &>(*this).value();
   }
 
-  T *operator->() { return &operator*(); }
-  T const *operator->() const { return &operator*(); }
-
-  T &value() { return operator*(); }
-  T const &value() const { return operator*(); }
+  T &operator*() { return value(); }
+  const T &operator*() const { return value(); }
 
   bool has_value() const { return Value != Sentinel; }
+
   explicit operator bool() const { return has_value(); }
+  explicit operator T() const { return value(); }
 
   void clear() { Value = Sentinel; }
 
