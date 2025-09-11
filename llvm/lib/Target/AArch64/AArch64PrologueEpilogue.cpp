@@ -541,6 +541,9 @@ void AArch64PrologueEmitter::emitPrologue() {
   // to determine the end of the prologue.
   DebugLoc DL;
 
+  if (AFI->getArgumentStackToRestore())
+    HasWinCFI = true;
+
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
