@@ -17611,6 +17611,18 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
   Info.InConstantContext = InConstantContext;
   LValue LV;
   CheckedTemporaries CheckedTemps;
+
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val,
+                                              ConstantExprKind::Normal))
+      return false;
+
+    LV.setFrom(Ctx, Result.Val);
+    return CheckLValueConstantExpression(
+        Info, getExprLoc(), Ctx.getLValueReferenceType(getType()), LV,
+        ConstantExprKind::Normal, CheckedTemps);
+  }
+
   if (!EvaluateLValue(this, LV, Info) || !Info.discardCleanups() ||
       Result.HasSideEffects ||
       !CheckLValueConstantExpression(Info, getExprLoc(),

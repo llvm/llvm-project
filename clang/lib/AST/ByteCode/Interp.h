@@ -1527,6 +1527,8 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
+  if (S.EvalMode == EvaluationMode::ConstantFold)
+    return false;
   assert(Temp);
 
   const Pointer &Ptr = S.P.getGlobal(I);
@@ -1544,6 +1546,8 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
 /// 3) Initialized global with index \I with that
 inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
                                const LifetimeExtendedTemporaryDecl *Temp) {
+  if (S.EvalMode == EvaluationMode::ConstantFold)
+    return false;
   assert(Temp);
 
   const Pointer &Ptr = S.Stk.peek<Pointer>();
