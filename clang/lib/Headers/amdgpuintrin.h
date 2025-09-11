@@ -165,14 +165,22 @@ __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
 
 // Returns true if the flat pointer points to AMDGPU 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
-  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)((
-      void [[clang::opencl_generic]] *)ptr));
+#if (!defined(__OPENCL_C_VERSION__) && !defined(__OPENCL_CPP_VERSION__)) ||    \
+    defined(__opencl_c_generic_address_space)
+  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)(ptr));
+#else
+  return false;
+#endif
 }
 
 // Returns true if the flat pointer points to AMDGPU 'private' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
-  return __builtin_amdgcn_is_private((void [[clang::address_space(0)]] *)((
-      void [[clang::opencl_generic]] *)ptr));
+#if (!defined(__OPENCL_C_VERSION__) && !defined(__OPENCL_CPP_VERSION__)) ||    \
+    defined(__opencl_c_generic_address_space)
+  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)(ptr));
+#else
+  return true;
+#endif
 }
 
 // Terminates execution of the associated wavefront.
