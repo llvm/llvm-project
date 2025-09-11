@@ -41,6 +41,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -361,11 +362,10 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
          page += pageSize)
       LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
 #else
+#define DEBUG_TYPE "lld-madvise"
     if (madvise((void *)buff.data(), buff.size(), MADV_WILLNEED) < 0)
-#ifndef NDEBUG
-      llvm::errs() << "madvise() error " << strerror(errno)
-#endif
-          ;
+      LLVM_DEBUG(llvm::dbgs() << "madvise() error: " << strerror(errno));
+#undef DEBUG_TYPE
 #endif
   };
 
