@@ -24,7 +24,7 @@ concurrency:
 jobs:
   benchmarks:
     if: |
-      github.event.issue.pull_request # Ensure the comment is on a PR
+      github.event.issue.pull_request
       && contains(github.event.comment.body, '/libcxx-bot benchmark')
 
     runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
