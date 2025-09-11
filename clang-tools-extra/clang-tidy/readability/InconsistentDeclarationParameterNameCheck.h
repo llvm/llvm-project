@@ -25,7 +25,7 @@ public:
   InconsistentDeclarationParameterNameCheck(StringRef Name,
                                             ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
+        IgnoreMacros(Options.get("IgnoreMacros", true)),
         Strict(Options.get("Strict", false)) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

@@ -3,15 +3,15 @@
 
 ; Reference run: variables remain defined at all time when not using
 ; --enable-var-scope option.
-RUN: FileCheck --check-prefixes CHECK,LOCAL3,GLOBAL --input-file %s %s
+RUN: FileCheck --check-prefixes CHECK,CHECK-LOCAL-BOTH,CHECK-GLOBAL --input-file %s %s
 
-RUN: FileCheck --check-prefixes CHECK,GLOBAL --enable-var-scope --input-file %s %s
-RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL1 --enable-var-scope --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefix ERRUNDEFLOCAL %s
-RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL2 --enable-var-scope --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefix ERRUNDEFLOCNUM %s
-RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,LOCAL3 --enable-var-scope --input-file %s %s 2>&1 \
-RUN:   | FileCheck --check-prefixes ERRUNDEFLOCAL,ERRUNDEFLOCNUM %s
+RUN: FileCheck --check-prefixes CHECK,CHECK-GLOBAL --enable-var-scope --input-file %s %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,CHECK-LOCAL-TEXT --enable-var-scope --input-file %s %s 2>&1 \
+RUN:   | FileCheck --implicit-check-not "undefined variable:" --check-prefixes ERRUNDEF,ERRUNDEF-LOCAL %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,CHECK-LOCAL-NUM --enable-var-scope --input-file %s %s 2>&1 \
+RUN:   | FileCheck --implicit-check-not "undefined variable:" --check-prefixes ERRUNDEF,ERRUNDEF-LOCNUM %s
+RUN: %ProtectFileCheckOutput not FileCheck --check-prefixes CHECK,CHECK-LOCAL-BOTH --enable-var-scope --input-file %s %s 2>&1 \
+RUN:   | FileCheck --implicit-check-not "undefined variable:" --check-prefixes ERRUNDEF,ERRUNDEF-LOCAL,ERRUNDEF-LOCNUM %s
 
 local1
 global1
@@ -23,15 +23,47 @@ global2
 CHECK: [[LOCAL]][[#LOCNUM+1]]
 CHECK: [[$GLOBAL]][[#$GLOBNUM+1]]
 
-barrier:
-CHECK-LABEL: barrier
+// Barrier to clear local variables
+barrier1:
+CHECK-LABEL: barrier1
 
 local3
 global3
-LOCAL1: [[LOCAL]]3
-LOCAL2: local[[#LOCNUM+2]]
-LOCAL3: [[LOCAL]][[#LOCNUM+2]]
-GLOBAL: [[$GLOBAL]][[#$GLOBNUM+2]]
+CHECK-LOCAL-TEXT: [[LOCAL]]3
+CHECK-LOCAL-NUM: local[[#LOCNUM+2]]
+CHECK-LOCAL-BOTH: [[LOCAL]][[#LOCNUM+2]]
+CHECK-GLOBAL: [[$GLOBAL]][[#$GLOBNUM+2]]
 
-ERRUNDEFLOCAL: undefined variable: LOCAL
-ERRUNDEFLOCNUM: undefined variable: LOCNUM
+// Barrier to continue FileCheck execution even after the first fail
+barrier2:
+CHECK-LABEL: barrier2
+
+// Reassign the variables to check that clearing-after-reassigning works
+local4
+global4
+CHECK: [[LOCAL:loc[^[:digit:]]*]][[#LOCNUM:]]
+CHECK: [[$GLOBAL:glo[^[:digit:]]*]][[#$GLOBNUM:]]
+
+// Barrier to clear local variables
+barrier3:
+CHECK-LABEL: barrier3
+
+local5
+global5
+CHECK-LOCAL-TEXT: [[LOCAL]]5
+CHECK-LOCAL-NUM: local[[#LOCNUM+1]]
+CHECK-LOCAL-BOTH: [[LOCAL]][[#LOCNUM+1]]
+CHECK-GLOBAL: [[$GLOBAL]][[#$GLOBNUM+1]]
+
+
+// Check that the tests fail as expected
+ERRUNDEF-LOCAL: undefined variable: LOCAL
+ERRUNDEF-LOCNUM: undefined variable: LOCNUM
+ERRUNDEF-LOCAL: undefined variable: LOCAL
+ERRUNDEF-LOCNUM: undefined variable: LOCNUM
+
+// Look for "Input was:" to only match the error messages before the input-context.
+//
+// The regex /([[:space:]]|.)*/ matches all remaining characters,
+// to avoid fails due to --implicit-check-not
+ERRUNDEF: {{^Input was:([[:space:]]|.)*}}

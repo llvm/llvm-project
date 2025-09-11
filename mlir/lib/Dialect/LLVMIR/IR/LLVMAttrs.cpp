@@ -306,8 +306,8 @@ DICompositeTypeAttr::withRecId(DistinctAttr recId) {
   return DICompositeTypeAttr::get(
       getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
       getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
-      getAlignInBits(), getElements(), getDataLocation(), getRank(),
-      getAllocated(), getAssociated());
+      getAlignInBits(), getDataLocation(), getRank(), getAllocated(),
+      getAssociated(), getElements());
 }
 
 DIRecursiveTypeAttrInterface

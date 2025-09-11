@@ -28,7 +28,7 @@ driver_executable("lld") {
   deps = [
     "//lld/COFF",
     "//lld/ELF",
-    "//lld/MachO:MachO",
+    "//lld/MachO",
     "//lld/MinGW",
     "//lld/wasm",
     "//llvm/lib/Support",
