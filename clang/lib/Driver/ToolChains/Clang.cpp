@@ -6477,6 +6477,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     Args.AddLastArg(CmdArgs, options::OPT_index_unit_output_path);
     Args.AddLastArg(CmdArgs, options::OPT_index_ignore_macros);
     Args.AddLastArg(CmdArgs, options::OPT_index_ignore_pcms);
+    Args.AddLastArg(CmdArgs, options::OPT_index_store_compress);
 
     // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
     // invocation so that the index action knows what the out file is.
