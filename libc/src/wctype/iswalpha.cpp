@@ -14,6 +14,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(bool, iswalpha, (wint_t c)) { return internal::iswalpha(c); }
+LLVM_LIBC_FUNCTION(int, iswalpha, (wint_t c)) { return internal::iswalpha(c); }
 
 } // namespace LIBC_NAMESPACE_DECL

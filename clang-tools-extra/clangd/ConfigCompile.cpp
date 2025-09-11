@@ -727,6 +727,12 @@ struct FragmentCompiler {
         C.Hover.ShowAKA = ShowAKA;
       });
     }
+    if (F.MacroContentsLimit) {
+      Out.Apply.push_back(
+          [Limit(**F.MacroContentsLimit)](const Params &, Config &C) {
+            C.Hover.MacroContentsLimit = Limit;
+          });
+    }
   }
 
   void compile(Fragment::InlayHintsBlock &&F) {

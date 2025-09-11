@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -72,6 +73,7 @@ class PHIEliminationImpl {
   LiveIntervals *LIS = nullptr;
   MachineLoopInfo *MLI = nullptr;
   MachineDominatorTree *MDT = nullptr;
+  MachinePostDominatorTree *PDT = nullptr;
 
   /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions
   /// in predecessor basic blocks.
@@ -123,17 +125,22 @@ public:
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     auto *MDTWrapper =
         P->getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    auto *PDTWrapper =
+        P->getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
     LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+    PDT = PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
   }
 
   PHIEliminationImpl(MachineFunction &MF, MachineFunctionAnalysisManager &AM)
       : LV(AM.getCachedResult<LiveVariablesAnalysis>(MF)),
         LIS(AM.getCachedResult<LiveIntervalsAnalysis>(MF)),
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
-        MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)), MFAM(&AM) {}
+        MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
+        PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
+        MFAM(&AM) {}
 
   bool run(MachineFunction &MF);
 };
@@ -172,6 +179,7 @@ PHIEliminationPass::run(MachineFunction &MF,
   PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachinePostDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
@@ -197,6 +205,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -204,15 +213,8 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
 bool PHIEliminationImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
-  MachineDominatorTree *MDT = nullptr;
-  if (P) {
-    auto *MDTWrapper =
-        P->getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-    MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
-  } else {
-    MDT = MFAM->getCachedResult<MachineDominatorTreeAnalysis>(MF);
-  }
-  MachineDomTreeUpdater MDTU(MDT, MachineDomTreeUpdater::UpdateStrategy::Lazy);
+  MachineDomTreeUpdater MDTU(MDT, PDT,
+                             MachineDomTreeUpdater::UpdateStrategy::Lazy);
 
   bool Changed = false;
 

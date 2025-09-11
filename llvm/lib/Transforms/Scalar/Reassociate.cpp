@@ -878,7 +878,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
 // only that it mostly looks like one.
 static bool isLoadCombineCandidate(Instruction *Or) {
   SmallVector<Instruction *, 8> Worklist;
-  SmallSet<Instruction *, 8> Visited;
+  SmallPtrSet<Instruction *, 8> Visited;
 
   auto Enqueue = [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);

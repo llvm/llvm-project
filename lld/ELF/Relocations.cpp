@@ -176,7 +176,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
-static bool isAbsolute(const Symbol &sym) {
+bool elf::isAbsolute(const Symbol &sym) {
   if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
@@ -273,12 +273,12 @@ template <class ELFT> static bool isReadOnly(SharedSymbol &ss) {
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer to different places at runtime.
 template <class ELFT>
-static SmallSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
+static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
   using Elf_Sym = typename ELFT::Sym;
 
   const auto &file = cast<SharedFile>(*ss.file);
 
-  SmallSet<SharedSymbol *, 4> ret;
+  SmallPtrSet<SharedSymbol *, 4> ret;
   for (const Elf_Sym &s : file.template getGlobalELFSyms<ELFT>()) {
     if (s.st_shndx == SHN_UNDEF || s.st_shndx == SHN_ABS ||
         s.getType() == STT_TLS || s.st_value != ss.value)
@@ -2151,15 +2151,14 @@ static int getHexagonPacketOffset(const InputSection &isec,
   for (unsigned i = 0;; i++) {
     if (i == 3 || rel.offset < (i + 1) * 4)
       return i * 4;
-    uint32_t instWord = 0;
-    const ArrayRef<uint8_t> instWordContents =
-        data.drop_front(rel.offset - (i + 1) * 4);
-    memcpy(&instWord, instWordContents.data(), sizeof(instWord));
+    uint32_t instWord =
+        read32(isec.getCtx(), data.data() + (rel.offset - (i + 1) * 4));
     if (((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_PACKET) ||
         ((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_DUPLEX))
       return i * 4;
   }
 }
+
 static int64_t getPCBias(Ctx &ctx, const InputSection &isec,
                          const Relocation &rel) {
   if (ctx.arg.emachine == EM_ARM) {

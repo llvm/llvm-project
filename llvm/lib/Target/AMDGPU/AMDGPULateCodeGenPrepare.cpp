@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -545,7 +546,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    // Invalidates UniformityInfo
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;

@@ -1320,12 +1320,10 @@ void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
   // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
   const char *ABIName = nullptr;
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     ABIName = A->getValue();
-  } else {
-    std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
-    ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
-  }
+  else
+    ABIName = llvm::ARM::computeDefaultTargetABI(Triple).data();
 
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName);
@@ -1738,7 +1736,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
                     options::OPT_fno_ptrauth_objc_interface_sel);
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_objc_class_ro,
                     options::OPT_fno_ptrauth_objc_class_ro);
-
   if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
     handlePAuthABI(Args, CmdArgs);
 
@@ -2733,17 +2730,40 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
-static std::string ComplexArithmeticStr(LangOptions::ComplexRangeKind Range) {
-  return (Range == LangOptions::ComplexRangeKind::CX_None)
-             ? ""
-             : "-fcomplex-arithmetic=" + complexRangeKindToStr(Range);
-}
+static void EmitComplexRangeDiag(const Driver &D, StringRef LastOpt,
+                                 LangOptions::ComplexRangeKind Range,
+                                 StringRef NewOpt,
+                                 LangOptions::ComplexRangeKind NewRange) {
+  //  Do not emit a warning if NewOpt overrides LastOpt in the following cases.
+  //
+  // | LastOpt               | NewOpt                |
+  // |-----------------------|-----------------------|
+  // | -fcx-limited-range    | -fno-cx-limited-range |
+  // | -fno-cx-limited-range | -fcx-limited-range    |
+  // | -fcx-fortran-rules    | -fno-cx-fortran-rules |
+  // | -fno-cx-fortran-rules | -fcx-fortran-rules    |
+  // | -ffast-math           | -fno-fast-math        |
+  // | -ffp-model=           | -ffast-math           |
+  // | -ffp-model=           | -fno-fast-math        |
+  // | -ffp-model=           | -ffp-model=           |
+  // | -fcomplex-arithmetic= | -fcomplex-arithmetic= |
+  if (LastOpt == NewOpt || NewOpt.empty() || LastOpt.empty() ||
+      (LastOpt == "-fcx-limited-range" && NewOpt == "-fno-cx-limited-range") ||
+      (LastOpt == "-fno-cx-limited-range" && NewOpt == "-fcx-limited-range") ||
+      (LastOpt == "-fcx-fortran-rules" && NewOpt == "-fno-cx-fortran-rules") ||
+      (LastOpt == "-fno-cx-fortran-rules" && NewOpt == "-fcx-fortran-rules") ||
+      (LastOpt == "-ffast-math" && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-ffast-math") ||
+      (LastOpt.starts_with("-ffp-model=") && NewOpt == "-fno-fast-math") ||
+      (LastOpt.starts_with("-ffp-model=") &&
+       NewOpt.starts_with("-ffp-model=")) ||
+      (LastOpt.starts_with("-fcomplex-arithmetic=") &&
+       NewOpt.starts_with("-fcomplex-arithmetic=")))
+    return;
 
-static void EmitComplexRangeDiag(const Driver &D, std::string str1,
-                                 std::string str2) {
-  if (str1 != str2 && !str2.empty() && !str1.empty()) {
-    D.Diag(clang::diag::warn_drv_overriding_option) << str1 << str2;
-  }
+  D.Diag(clang::diag::warn_drv_overriding_complex_range)
+      << LastOpt << NewOpt << complexRangeKindToStr(Range)
+      << complexRangeKindToStr(NewRange);
 }
 
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
@@ -2800,31 +2820,29 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   StringRef BFloat16ExcessPrecision = "";
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
   std::string ComplexRangeStr;
-  std::string GccRangeComplexOption;
-  std::string LastComplexRangeOption;
+  StringRef LastComplexRangeOption;
 
-  auto setComplexRange = [&](LangOptions::ComplexRangeKind NewRange) {
-    // Warn if user expects to perform full implementation of complex
-    // multiplication or division in the presence of nnan or ninf flags.
-    if (Range != NewRange)
-      EmitComplexRangeDiag(D,
-                           !GccRangeComplexOption.empty()
-                               ? GccRangeComplexOption
-                               : ComplexArithmeticStr(Range),
-                           ComplexArithmeticStr(NewRange));
+  auto setComplexRange = [&](StringRef NewOption,
+                             LangOptions::ComplexRangeKind NewRange) {
+    // Warn if user overrides the previously set complex number
+    // multiplication/division option.
+    if (Range != LangOptions::ComplexRangeKind::CX_None && Range != NewRange)
+      EmitComplexRangeDiag(D, LastComplexRangeOption, Range, NewOption,
+                           NewRange);
+    LastComplexRangeOption = NewOption;
     Range = NewRange;
   };
 
   // Lambda to set fast-math options. This is also used by -ffp-model=fast
-  auto applyFastMath = [&](bool Aggressive) {
+  auto applyFastMath = [&](bool Aggressive, StringRef CallerOption) {
     if (Aggressive) {
       HonorINFs = false;
       HonorNaNs = false;
-      setComplexRange(LangOptions::ComplexRangeKind::CX_Basic);
+      setComplexRange(CallerOption, LangOptions::ComplexRangeKind::CX_Basic);
     } else {
       HonorINFs = true;
       HonorNaNs = true;
-      setComplexRange(LangOptions::ComplexRangeKind::CX_Promoted);
+      setComplexRange(CallerOption, LangOptions::ComplexRangeKind::CX_Promoted);
     }
     MathErrno = false;
     AssociativeMath = true;
@@ -2876,54 +2894,18 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     default: continue;
 
     case options::OPT_fcx_limited_range:
-      if (GccRangeComplexOption.empty()) {
-        if (Range != LangOptions::ComplexRangeKind::CX_Basic)
-          EmitComplexRangeDiag(D, renderComplexRangeOption(Range),
-                               "-fcx-limited-range");
-      } else {
-        if (GccRangeComplexOption != "-fno-cx-limited-range")
-          EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-limited-range");
-      }
-      GccRangeComplexOption = "-fcx-limited-range";
-      LastComplexRangeOption = A->getSpelling();
-      Range = LangOptions::ComplexRangeKind::CX_Basic;
+      setComplexRange(A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Basic);
       break;
     case options::OPT_fno_cx_limited_range:
-      if (GccRangeComplexOption.empty()) {
-        EmitComplexRangeDiag(D, renderComplexRangeOption(Range),
-                             "-fno-cx-limited-range");
-      } else {
-        if (GccRangeComplexOption != "-fcx-limited-range" &&
-            GccRangeComplexOption != "-fno-cx-fortran-rules")
-          EmitComplexRangeDiag(D, GccRangeComplexOption,
-                               "-fno-cx-limited-range");
-      }
-      GccRangeComplexOption = "-fno-cx-limited-range";
-      LastComplexRangeOption = A->getSpelling();
-      Range = LangOptions::ComplexRangeKind::CX_Full;
+      setComplexRange(A->getSpelling(), LangOptions::ComplexRangeKind::CX_Full);
       break;
     case options::OPT_fcx_fortran_rules:
-      if (GccRangeComplexOption.empty())
-        EmitComplexRangeDiag(D, renderComplexRangeOption(Range),
-                             "-fcx-fortran-rules");
-      else
-        EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-fortran-rules");
-      GccRangeComplexOption = "-fcx-fortran-rules";
-      LastComplexRangeOption = A->getSpelling();
-      Range = LangOptions::ComplexRangeKind::CX_Improved;
+      setComplexRange(A->getSpelling(),
+                      LangOptions::ComplexRangeKind::CX_Improved);
       break;
     case options::OPT_fno_cx_fortran_rules:
-      if (GccRangeComplexOption.empty()) {
-        EmitComplexRangeDiag(D, renderComplexRangeOption(Range),
-                             "-fno-cx-fortran-rules");
-      } else {
-        if (GccRangeComplexOption != "-fno-cx-limited-range")
-          EmitComplexRangeDiag(D, GccRangeComplexOption,
-                               "-fno-cx-fortran-rules");
-      }
-      GccRangeComplexOption = "-fno-cx-fortran-rules";
-      LastComplexRangeOption = A->getSpelling();
-      Range = LangOptions::ComplexRangeKind::CX_Full;
+      setComplexRange(A->getSpelling(), LangOptions::ComplexRangeKind::CX_Full);
       break;
     case options::OPT_fcomplex_arithmetic_EQ: {
       LangOptions::ComplexRangeKind RangeVal;
@@ -2941,25 +2923,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             << A->getSpelling() << Val;
         break;
       }
-      if (!GccRangeComplexOption.empty()) {
-        if (GccRangeComplexOption != "-fcx-limited-range") {
-          if (GccRangeComplexOption != "-fcx-fortran-rules") {
-            if (RangeVal != LangOptions::ComplexRangeKind::CX_Improved)
-              EmitComplexRangeDiag(D, GccRangeComplexOption,
-                                   ComplexArithmeticStr(RangeVal));
-          } else {
-            EmitComplexRangeDiag(D, GccRangeComplexOption,
-                                 ComplexArithmeticStr(RangeVal));
-          }
-        } else {
-          if (RangeVal != LangOptions::ComplexRangeKind::CX_Basic)
-            EmitComplexRangeDiag(D, GccRangeComplexOption,
-                                 ComplexArithmeticStr(RangeVal));
-        }
-      }
-      LastComplexRangeOption =
-          Args.MakeArgString(A->getSpelling() + A->getValue());
-      Range = RangeVal;
+      setComplexRange(Args.MakeArgString(A->getSpelling() + Val), RangeVal);
       break;
     }
     case options::OPT_ffp_model_EQ: {
@@ -2987,19 +2951,20 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             << Args.MakeArgString("-ffp-model=" + Val);
       if (Val == "fast") {
         FPModel = Val;
-        applyFastMath(false);
+        applyFastMath(false, Args.MakeArgString(A->getSpelling() + Val));
         // applyFastMath sets fp-contract="fast"
         LastFpContractOverrideOption = "-ffp-model=fast";
       } else if (Val == "aggressive") {
         FPModel = Val;
-        applyFastMath(true);
+        applyFastMath(true, Args.MakeArgString(A->getSpelling() + Val));
         // applyFastMath sets fp-contract="fast"
         LastFpContractOverrideOption = "-ffp-model=aggressive";
       } else if (Val == "precise") {
         FPModel = Val;
         FPContract = "on";
         LastFpContractOverrideOption = "-ffp-model=precise";
-        setComplexRange(LangOptions::ComplexRangeKind::CX_Full);
+        setComplexRange(Args.MakeArgString(A->getSpelling() + Val),
+                        LangOptions::ComplexRangeKind::CX_Full);
       } else if (Val == "strict") {
         StrictFPModel = true;
         FPExceptionBehavior = "strict";
@@ -3008,11 +2973,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffp-model=strict";
         TrappingMath = true;
         RoundingFPMath = true;
-        setComplexRange(LangOptions::ComplexRangeKind::CX_Full);
+        setComplexRange(Args.MakeArgString(A->getSpelling() + Val),
+                        LangOptions::ComplexRangeKind::CX_Full);
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
-      LastComplexRangeOption = A->getSpelling();
       break;
     }
 
@@ -3197,8 +3162,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         continue;
       [[fallthrough]];
     case options::OPT_ffast_math:
-      applyFastMath(true);
-      LastComplexRangeOption = A->getSpelling();
+      applyFastMath(true, A->getSpelling());
       if (A->getOption().getID() == options::OPT_Ofast)
         LastFpContractOverrideOption = "-Ofast";
       else
@@ -3216,15 +3180,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ApproxFunc = false;
       SignedZeros = true;
       restoreFPContractState();
-      // If the last specified option related to complex range is not
-      // -ffast-math or -ffp-model=, emit warning.
-      if (LastComplexRangeOption != "-ffast-math" &&
-          LastComplexRangeOption != "-ffp-model=" &&
-          Range != LangOptions::ComplexRangeKind::CX_Full)
-        EmitComplexRangeDiag(D, LastComplexRangeOption, "-fno-fast-math");
-      Range = LangOptions::ComplexRangeKind::CX_None;
+      if (Range != LangOptions::ComplexRangeKind::CX_Full)
+        setComplexRange(A->getSpelling(),
+                        LangOptions::ComplexRangeKind::CX_None);
+      else
+        Range = LangOptions::ComplexRangeKind::CX_None;
       LastComplexRangeOption = "";
-      GccRangeComplexOption = "";
       LastFpContractOverrideOption = "";
       break;
     } // End switch (A->getOption().getID())
@@ -3804,7 +3765,9 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_disable_llvm_passes,
       options::OPT_fnative_half_type,
       options::OPT_hlsl_entrypoint,
-      options::OPT_fdx_rootsignature_version};
+      options::OPT_fdx_rootsignature_define,
+      options::OPT_fdx_rootsignature_version,
+      options::OPT_fhlsl_spv_use_unknown_image_format};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -4396,10 +4359,15 @@ static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
 
 static void
 renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
-                   const ArgList &Args, bool IRInput, ArgStringList &CmdArgs,
-                   const InputInfo &Output,
+                   const ArgList &Args, types::ID InputType,
+                   ArgStringList &CmdArgs, const InputInfo &Output,
                    llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
                    DwarfFissionKind &DwarfFission) {
+  bool IRInput = isLLVMIR(InputType);
+  bool PlainCOrCXX = isDerivedFromC(InputType) && !isCuda(InputType) &&
+                     !isHIP(InputType) && !isObjC(InputType) &&
+                     !isOpenCL(InputType);
+
   if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
                    options::OPT_fno_debug_info_for_profiling, false) &&
       checkDebugInfoOption(
@@ -4593,9 +4561,20 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       CmdArgs.push_back("-gembed-source");
   }
 
+  // Enable Key Instructions by default if we're emitting DWARF, the language is
+  // plain C or C++, and optimisations are enabled.
+  Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
+  bool KeyInstructionsOnByDefault =
+      EmitDwarf && PlainCOrCXX && OptLevel &&
+      !OptLevel->getOption().matches(options::OPT_O0);
   if (Args.hasFlag(options::OPT_gkey_instructions,
-                   options::OPT_gno_key_instructions, false))
+                   options::OPT_gno_key_instructions,
+                   KeyInstructionsOnByDefault))
     CmdArgs.push_back("-gkey-instructions");
+
+  if (!Args.hasFlag(options::OPT_gstructor_decl_linkage_names,
+                    options::OPT_gno_structor_decl_linkage_names, true))
+    CmdArgs.push_back("-gno-structor-decl-linkage-names");
 
   if (EmitCodeView) {
     CmdArgs.push_back("-gcodeview");
@@ -5438,13 +5417,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsAssertBuild = true;
 #endif
 
-  // Disable the verification pass in asserts builds unless otherwise specified.
+  // Disable the verification pass in no-asserts builds unless otherwise
+  // specified.
   if (Args.hasFlag(options::OPT_fno_verify_intermediate_code,
                    options::OPT_fverify_intermediate_code, !IsAssertBuild)) {
     CmdArgs.push_back("-disable-llvm-verifier");
   }
 
-  // Discard value names in assert builds unless otherwise specified.
+  // Discard value names in no-asserts builds unless otherwise specified.
   if (Args.hasFlag(options::OPT_fdiscard_value_names,
                    options::OPT_fno_discard_value_names, !IsAssertBuild)) {
     if (Args.hasArg(options::OPT_fdiscard_value_names) &&
@@ -5984,12 +5964,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fno_knr_functions);
 
-  // This is a coarse approximation of what llvm-gcc actually does, both
-  // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
-  // complicated ways.
   auto SanitizeArgs = TC.getSanitizerArgs(Args);
   Args.AddLastArg(CmdArgs,
                   options::OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
+
+  // This is a coarse approximation of what llvm-gcc actually does, both
+  // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
+  // complicated ways.
   bool IsAsyncUnwindTablesDefault =
       TC.getDefaultUnwindTableLevel(Args) == ToolChain::UnwindTableLevel::Asynchronous;
   bool IsSyncUnwindTablesDefault =
@@ -6061,8 +6042,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::codegenoptions::DebugInfoKind DebugInfoKind =
       llvm::codegenoptions::NoDebugInfo;
   DwarfFissionKind DwarfFission = DwarfFissionKind::None;
-  renderDebugOptions(TC, D, RawTriple, Args, types::isLLVMIR(InputType),
-                     CmdArgs, Output, DebugInfoKind, DwarfFission);
+  renderDebugOptions(TC, D, RawTriple, Args, InputType, CmdArgs, Output,
+                     DebugInfoKind, DwarfFission);
 
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
@@ -6744,7 +6725,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
         !Triple.isX86() &&
         !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
-                                Triple.getArch() == llvm::Triple::ppc64)))
+                                Triple.getArch() == llvm::Triple::ppc64 ||
+                                Triple.getArch() == llvm::Triple::ppc64le)))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||
@@ -9119,10 +9101,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_flto_partitions_EQ,
       OPT_flto_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
-  auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
-    return Set.contains(A->getOption().getID()) ||
-           (A->getOption().getGroup().isValid() &&
-            Set.contains(A->getOption().getGroup().getID()));
+  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
+    // Don't forward -mllvm to toolchains that don't support LLVM.
+    return TC.HasNativeLLVMSupport() || A->getOption().getID() != OPT_mllvm;
+  };
+  auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
+                           const ToolChain &TC) {
+    return (Set.contains(A->getOption().getID()) ||
+            (A->getOption().getGroup().isValid() &&
+             Set.contains(A->getOption().getGroup().getID()))) &&
+           ShouldForwardForToolChain(A, TC);
   };
 
   ArgStringList CmdArgs;
@@ -9141,9 +9129,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());
-        else if (ShouldForward(CompilerOptions, A))
+        else if (ShouldForward(CompilerOptions, A, *TC))
           A->render(Args, CompilerArgs);
-        else if (ShouldForward(LinkerOptions, A))
+        else if (ShouldForward(LinkerOptions, A, *TC))
           A->render(Args, LinkerArgs);
       }
 

@@ -194,8 +194,8 @@ TEST(ToolInvocation, TestMapVirtualFile) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-Idef");
@@ -221,8 +221,8 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-Idef");
@@ -248,8 +248,8 @@ TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
@@ -278,8 +278,8 @@ TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
@@ -325,8 +325,8 @@ TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   // Note: intentional error; user probably meant -ferror-limit=0.
@@ -352,8 +352,8 @@ TEST(ToolInvocation, CC1Args) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-cc1");
@@ -373,8 +373,8 @@ TEST(ToolInvocation, CC1ArgsInvalid) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-cc1");

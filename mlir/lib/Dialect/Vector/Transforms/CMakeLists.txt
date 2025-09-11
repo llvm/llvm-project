@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorBitCast.cpp
   LowerVectorBroadcast.cpp
   LowerVectorContract.cpp
+  LowerVectorFromElements.cpp
   LowerVectorGather.cpp
   LowerVectorInterleave.cpp
   LowerVectorMask.cpp

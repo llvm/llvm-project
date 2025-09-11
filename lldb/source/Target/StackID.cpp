@@ -10,9 +10,27 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
+
+StackID::StackID(lldb::addr_t pc, lldb::addr_t cfa,
+                 SymbolContextScope *symbol_scope, Process *process)
+    : m_pc(pc), m_cfa(cfa), m_symbol_scope(symbol_scope) {
+  if (process) {
+    m_pc = process->FixCodeAddress(m_pc);
+    m_cfa = process->FixDataAddress(m_cfa);
+  }
+}
+
+void StackID::SetPC(lldb::addr_t pc, Process *process) {
+  m_pc = process ? process->FixCodeAddress(pc) : pc;
+}
+
+void StackID::SetCFA(lldb::addr_t cfa, Process *process) {
+  m_cfa = process ? process->FixDataAddress(cfa) : cfa;
+}
 
 void StackID::Dump(Stream *s) {
   s->Printf("StackID (pc = 0x%16.16" PRIx64 ", cfa = 0x%16.16" PRIx64
@@ -45,16 +63,7 @@ bool lldb_private::operator==(const StackID &lhs, const StackID &rhs) {
 }
 
 bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
-  if (lhs.GetCallFrameAddress() != rhs.GetCallFrameAddress())
-    return true;
-
-  SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
-  SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
-
-  if (lhs_scope == nullptr && rhs_scope == nullptr)
-    return lhs.GetPC() != rhs.GetPC();
-
-  return lhs_scope != rhs_scope;
+  return !(lhs == rhs);
 }
 
 bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {

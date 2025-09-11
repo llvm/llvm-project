@@ -37,6 +37,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclBase.h"
@@ -251,7 +252,7 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
 }
 
 static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
     return {};
 
@@ -285,7 +286,9 @@ static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return {};
 
-  return FunctionCallLabel{/*module_id=*/module_id,
+  // Note, discriminator is added by Clang during mangling.
+  return FunctionCallLabel{/*discriminator=*/{},
+                           /*module_id=*/module_id,
                            /*symbol_id=*/die_id,
                            /*.lookup_name=*/name}
       .toString();
@@ -2223,12 +2226,24 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (class_name) {
       dwarf->GetObjCMethods(class_name, [&](DWARFDIE method_die) {
         method_die.ResolveType();
-        return true;
+        return IterationAction::Continue;
       });
 
       for (DelayedAddObjCClassProperty &property : delayed_properties)
         property.Finalize();
     }
+  } else if (Language::LanguageIsObjC(
+                 static_cast<LanguageType>(die.GetAttributeValueAsUnsigned(
+                     DW_AT_APPLE_runtime_class, eLanguageTypeUnknown)))) {
+    /// The forward declaration was C++ but the definition is Objective-C.
+    /// We currently don't handle such situations. In such cases, keep the
+    /// forward declaration without a definition to avoid violating Clang AST
+    /// invariants.
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "WARNING: Type completion aborted because forward declaration for "
+             "'{0}' is C++ while definition is Objective-C.",
+             llvm::StringRef(die.GetName()));
+    return {};
   }
 
   if (!bases.empty()) {
@@ -2508,7 +2523,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
       // If the mangled name is not present in the DWARF, generate the
       // demangled name using the decl context. We skip if the function is
       // "main" as its name is never mangled.
-      func_name.SetValue(ConstructDemangledNameFromDWARF(die));
+      func_name.SetDemangledName(ConstructDemangledNameFromDWARF(die));
+      // Ensure symbol is preserved (as the mangled name).
+      func_name.SetMangledName(ConstString(name));
     } else
       func_name.SetValue(ConstString(name));
 

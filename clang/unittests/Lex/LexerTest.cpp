@@ -795,7 +795,7 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
                                     PP->getSourceManager(), PP->getLangOpts(),
                                     /*IgnoreWhiteSpace=*/false));
-    EXPECT_TRUE(Tok.isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
     EXPECT_TRUE(Tok.is(tok::hash));
   }
 
@@ -811,7 +811,7 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     EXPECT_FALSE(Lexer::getRawToken(PP->getMainFileFirstPPTokenLoc(), Tok,
                                     PP->getSourceManager(), PP->getLangOpts(),
                                     /*IgnoreWhiteSpace=*/false));
-    EXPECT_TRUE(Tok.isFirstPPToken());
+    EXPECT_TRUE(PP->getMainFileFirstPPTokenLoc() == Tok.getLocation());
     EXPECT_TRUE(Tok.is(tok::raw_identifier));
     EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
   }

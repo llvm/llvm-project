@@ -65,22 +65,22 @@ entry:
 
 ; 2) Lifetime markers.
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 ; CHECK-LABEL: define ptr @testLifetime(
 ; CHECK: entry:
 ; CHECK-NEXT: %obj = alloca i8
-; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr %obj)
-; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr %obj)
+; CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %obj)
+; CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %obj)
 ; CHECK-NEXT: ret ptr %call.i
 ; CHECK-NEXT: }
 define ptr @testLifetime(ptr %call.i) {
 entry:
   %obj = alloca i8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %obj)
+  call void @llvm.lifetime.start.p0(ptr %obj)
   %0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call.i) nounwind
-  call void @llvm.lifetime.end.p0(i64 8, ptr %obj)
+  call void @llvm.lifetime.end.p0(ptr %obj)
   %1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %call.i) nounwind
   ret ptr %call.i
 }

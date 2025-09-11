@@ -451,6 +451,65 @@ TEST_F(ConstantRangeTest, Trunc) {
   EXPECT_EQ(SevenOne.truncate(2), ConstantRange(APInt(2, 3), APInt(2, 1)));
 }
 
+TEST_F(ConstantRangeTest, TruncNuw) {
+  auto Range = [](unsigned NumBits, unsigned Lower, unsigned Upper) {
+    return ConstantRange(APInt(NumBits, Lower), APInt(NumBits, Upper));
+  };
+  // trunc([0, 4), 3->2) = full
+  EXPECT_TRUE(
+      Range(3, 0, 4).truncate(2, TruncInst::NoUnsignedWrap).isFullSet());
+  // trunc([0, 3), 3->2) = [0, 3)
+  EXPECT_EQ(Range(3, 0, 3).truncate(2, TruncInst::NoUnsignedWrap),
+            Range(2, 0, 3));
+  // trunc([1, 3), 3->2) = [1, 3)
+  EXPECT_EQ(Range(3, 1, 3).truncate(2, TruncInst::NoUnsignedWrap),
+            Range(2, 1, 3));
+  // trunc([1, 5), 3->2) = [1, 0)
+  EXPECT_EQ(Range(3, 1, 5).truncate(2, TruncInst::NoUnsignedWrap),
+            Range(2, 1, 0));
+  // trunc([4, 7), 3->2) = empty
+  EXPECT_TRUE(
+      Range(3, 4, 7).truncate(2, TruncInst::NoUnsignedWrap).isEmptySet());
+  // trunc([4, 0), 3->2) = empty
+  EXPECT_TRUE(
+      Range(3, 4, 0).truncate(2, TruncInst::NoUnsignedWrap).isEmptySet());
+  // trunc([4, 1), 3->2) = [0, 1)
+  EXPECT_EQ(Range(3, 4, 1).truncate(2, TruncInst::NoUnsignedWrap),
+            Range(2, 0, 1));
+  // trunc([3, 1), 3->2) = [3, 1)
+  EXPECT_EQ(Range(3, 3, 1).truncate(2, TruncInst::NoUnsignedWrap),
+            Range(2, 3, 1));
+  // trunc([3, 0), 3->2) = [3, 0)
+  EXPECT_EQ(Range(3, 3, 0).truncate(2, TruncInst::NoUnsignedWrap),
+            Range(2, 3, 0));
+  // trunc([1, 0), 2->1) = [1, 0)
+  EXPECT_EQ(Range(2, 1, 0).truncate(1, TruncInst::NoUnsignedWrap),
+            Range(1, 1, 0));
+  // trunc([2, 1), 2->1) = [0, 1)
+  EXPECT_EQ(Range(2, 2, 1).truncate(1, TruncInst::NoUnsignedWrap),
+            Range(1, 0, 1));
+}
+
+TEST_F(ConstantRangeTest, TruncNuwExhaustive) {
+  EnumerateConstantRanges(4, [&](const ConstantRange &CR) {
+    unsigned NumBits = 3;
+    ConstantRange Trunc = CR.truncate(NumBits, TruncInst::NoUnsignedWrap);
+    SmallBitVector Elems(1 << NumBits);
+    ForeachNumInConstantRange(CR, [&](const APInt &N) {
+      if (N.isIntN(NumBits))
+        Elems.set(N.getZExtValue());
+    });
+    TestRange(Trunc, Elems, PreferSmallest, {CR});
+  });
+  EnumerateConstantRanges(3, [&](const ConstantRange &CR) {
+    ConstantRange Trunc = CR.truncate(1, TruncInst::NoUnsignedWrap);
+    EXPECT_EQ(CR.contains(APInt::getZero(3)),
+              Trunc.contains(APInt::getZero(1)));
+    EXPECT_EQ(CR.contains(APInt::getOneBitSet(3, 0)),
+              Trunc.contains(APInt::getAllOnes(1)));
+  });
+}
+
 TEST_F(ConstantRangeTest, ZExt) {
   ConstantRange ZFull = Full.zeroExtend(20);
   ConstantRange ZEmpty = Empty.zeroExtend(20);

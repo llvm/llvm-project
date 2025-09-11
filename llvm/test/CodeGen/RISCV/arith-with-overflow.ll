@@ -12,7 +12,7 @@ define i1 @sadd(i32 %a, i32 %b, ptr %c) nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    add a3, a0, a1
 ; RV32I-NEXT:    slt a0, a3, a0
-; RV32I-NEXT:    slti a1, a1, 0
+; RV32I-NEXT:    srli a1, a1, 31
 ; RV32I-NEXT:    xor a0, a1, a0
 ; RV32I-NEXT:    sw a3, 0(a2)
 ; RV32I-NEXT:    ret

@@ -26,7 +26,6 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
 
 using namespace llvm;
@@ -224,7 +223,7 @@ public:
       return true;
     if (expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    auto WasmSym = cast<MCSymbolWasm>(Sym);
+    auto WasmSym = static_cast<const MCSymbolWasm *>(Sym);
     if (WasmSym->isFunction()) {
       // Ignore .size directives for function symbols.  They get their size
       // set automatically based on their content.
@@ -241,9 +240,9 @@ public:
     if (!Lexer->is(AsmToken::Identifier))
       return error("Expected label after .type directive, got: ",
                    Lexer->getTok());
-    auto WasmSym = cast<MCSymbolWasm>(
-                     getStreamer().getContext().getOrCreateSymbol(
-                       Lexer->getTok().getString()));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(
+        getStreamer().getContext().getOrCreateSymbol(
+            Lexer->getTok().getString()));
     Lex();
     if (!(isNext(AsmToken::Comma) && isNext(AsmToken::At) &&
           Lexer->is(AsmToken::Identifier)))

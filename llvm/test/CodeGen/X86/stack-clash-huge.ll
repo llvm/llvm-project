@@ -16,13 +16,13 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X64-NEXT:    cmpq %r11, %rsp
 ; CHECK-X64-NEXT:    jne .LBB0_1
 ; CHECK-X64-NEXT:  # %bb.2:
-; CHECK-X64-NEXT:    subq $1928, %rsp # imm = 0x788
+; CHECK-X64-NEXT:    subq $1944, %rsp # imm = 0x798
 ; CHECK-X64-NEXT:    .cfi_def_cfa_register %rsp
-; CHECK-X64-NEXT:    .cfi_def_cfa_offset 2399999888
-; CHECK-X64-NEXT:    movl $1, 264(%rsp)
-; CHECK-X64-NEXT:    movl $1, 28664(%rsp)
-; CHECK-X64-NEXT:    movl -128(%rsp), %eax
-; CHECK-X64-NEXT:    movl $2399999880, %ecx # imm = 0x8F0D1788
+; CHECK-X64-NEXT:    .cfi_def_cfa_offset 2399999904
+; CHECK-X64-NEXT:    movl $1, 280(%rsp)
+; CHECK-X64-NEXT:    movl $1, 28680(%rsp)
+; CHECK-X64-NEXT:    movl -112(%rsp), %eax
+; CHECK-X64-NEXT:    movl $2399999896, %ecx # imm = 0x8F0D1798
 ; CHECK-X64-NEXT:    addq %rcx, %rsp
 ; CHECK-X64-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X64-NEXT:    retq
@@ -39,13 +39,13 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X86-NEXT:    cmpl %eax, %esp
 ; CHECK-X86-NEXT:    jne .LBB0_1
 ; CHECK-X86-NEXT:  # %bb.2:
-; CHECK-X86-NEXT:    subl $2060, %esp # imm = 0x80C
+; CHECK-X86-NEXT:    subl $2076, %esp # imm = 0x81C
 ; CHECK-X86-NEXT:    .cfi_def_cfa_register %esp
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 2400000016
-; CHECK-X86-NEXT:    movl $1, 392(%esp)
-; CHECK-X86-NEXT:    movl $1, 28792(%esp)
-; CHECK-X86-NEXT:    movl (%esp), %eax
-; CHECK-X86-NEXT:    movl $2400000012, %ecx # imm = 0x8F0D180C
+; CHECK-X86-NEXT:    .cfi_def_cfa_offset 2400000032
+; CHECK-X86-NEXT:    movl $1, 408(%esp)
+; CHECK-X86-NEXT:    movl $1, 28808(%esp)
+; CHECK-X86-NEXT:    movl 16(%esp), %eax
+; CHECK-X86-NEXT:    movl $2400000028, %ecx # imm = 0x8F0D181C
 ; CHECK-X86-NEXT:    addl %ecx, %esp
 ; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl
@@ -62,13 +62,13 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X32-NEXT:    cmpl %r11d, %esp
 ; CHECK-X32-NEXT:    jne .LBB0_1
 ; CHECK-X32-NEXT:  # %bb.2:
-; CHECK-X32-NEXT:    subl $1928, %esp # imm = 0x788
+; CHECK-X32-NEXT:    subl $1944, %esp # imm = 0x798
 ; CHECK-X32-NEXT:    .cfi_def_cfa_register %rsp
-; CHECK-X32-NEXT:    .cfi_def_cfa_offset 2399999888
-; CHECK-X32-NEXT:    movl $1, 264(%esp)
-; CHECK-X32-NEXT:    movl $1, 28664(%esp)
-; CHECK-X32-NEXT:    movl -128(%esp), %eax
-; CHECK-X32-NEXT:    movl $2399999880, %ecx # imm = 0x8F0D1788
+; CHECK-X32-NEXT:    .cfi_def_cfa_offset 2399999904
+; CHECK-X32-NEXT:    movl $1, 280(%esp)
+; CHECK-X32-NEXT:    movl $1, 28680(%esp)
+; CHECK-X32-NEXT:    movl -112(%esp), %eax
+; CHECK-X32-NEXT:    movl $2399999896, %ecx # imm = 0x8F0D1798
 ; CHECK-X32-NEXT:    addl %ecx, %esp
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X32-NEXT:    retq

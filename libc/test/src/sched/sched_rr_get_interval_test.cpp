@@ -14,6 +14,7 @@
 #include "src/unistd/getuid.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/sched_macros.h"
 #include "hdr/types/struct_timespec.h"
 
 TEST(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {

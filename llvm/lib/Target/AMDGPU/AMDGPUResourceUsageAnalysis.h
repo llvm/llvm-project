@@ -35,6 +35,7 @@ public:
     int32_t NumVGPR = 0;
     int32_t NumAGPR = 0;
     int32_t NumExplicitSGPR = 0;
+    int32_t NumNamedBarrier = 0;
     uint64_t CalleeSegmentSize = 0;
     uint64_t PrivateSegmentSize = 0;
     bool UsesVCC = false;

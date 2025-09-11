@@ -8,7 +8,7 @@ target triple = "arm64-apple-macosx14.0.0"
 define i32 @test_invariant_replicate_region(i32 %x, i1 %c) {
 ; CHECK-LABEL: define i32 @test_invariant_replicate_region(
 ; CHECK-SAME: i32 [[X:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
@@ -52,10 +52,9 @@ define i32 @test_invariant_replicate_region(i32 %x, i1 %c) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[REM_1:%.*]] = urem i32 10, [[X]]
