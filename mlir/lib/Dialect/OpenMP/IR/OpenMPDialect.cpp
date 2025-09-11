@@ -3191,7 +3191,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               }
 
               SmallString<64> Name("canonloop");
-              for (std::string s : reverse(components)) {
+              for (const std::string &s : reverse(components)) {
                 Name += '_';
                 Name += s;
               }

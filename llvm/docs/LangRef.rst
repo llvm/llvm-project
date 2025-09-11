@@ -14632,6 +14632,8 @@ Semantics:
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
       must match the target's :ref:`alloca address space <alloca_addrspace>` type.
 
+.. _int_prefetch:
+
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
