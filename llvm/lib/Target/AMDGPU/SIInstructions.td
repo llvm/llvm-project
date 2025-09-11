@@ -326,28 +326,57 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
 // clang-format off
-defvar int_amdgcn_wave_reduce_ = "int_amdgcn_wave_reduce_";
+
 multiclass
-    AMDGPUWaveReducePseudoGenerator<string Op, string DataType> {
+    AMDGPUWaveReducePseudoGenerator<string Op, string DataType, ValueType ty, RegisterClass RetReg, SrcRegOrImm9 Reg> {
   let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
     def !toupper(Op) #"_PSEUDO_" #DataType
-        : VPseudoInstSI<(outs SGPR_32 : $sdst),
-                        (ins VSrc_b32 : $src, VSrc_b32 : $strategy),
-                        [(set i32 : $sdst, (!cast<AMDGPUWaveReduce>(int_amdgcn_wave_reduce_ #Op) i32 : $src, i32 : $strategy))]> {}
+        : VPseudoInstSI<(outs RetReg : $sdst),
+                        (ins Reg : $src, VSrc_b32 : $strategy),
+                        [(set ty : $sdst, (!cast<AMDGPUWaveReduce>("int_amdgcn_wave_reduce_" #Op) ty : $src, i32 : $strategy))]> {}
   }
 }
 // clang-format on
 
+class WaveReduceOp<string OpName, string TypeStr, ValueType Ty,
+                   RegisterClass ReturnRegisterClass, SrcRegOrImm9 RC> {
+  string Name = OpName;
+  string TypeString = TypeStr;
+  ValueType VT = Ty;
+  RegisterClass RetReg = ReturnRegisterClass;
+  SrcRegOrImm9 Reg = RC;
+}
+
 // Input list : [Operation_name,
-//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B)]
+//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B),
+//              bit-width
+//              output register class,
+//              input register class]
 defvar Operations = [
-  ["umin", "U32"], ["min", "I32"], ["umax", "U32"], ["max", "I32"],
-  ["add", "I32"], ["sub", "I32"], ["and", "B32"], ["or", "B32"],
-  ["xor", "B32"]
+  WaveReduceOp<"umin", "U32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"min", "I32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"umax", "U32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"max", "I32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"add", "I32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"sub", "I32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"and", "B32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"or", "B32", i32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"xor", "B32", i32, SGPR_32, VSrc_b32>,
+
+  WaveReduceOp<"umin", "U64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"min", "I64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"umax", "U64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"max", "I64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"add", "U64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"sub", "U64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"and", "B64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"or", "B64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
 ];
 
 foreach Op = Operations in {
-  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op[0], Op[1]>;
+  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op.Name, Op.TypeString,
+                                                      Op.VT, Op.RetReg, Op.Reg>;
 }
 
 let usesCustomInserter = 1, Defs = [VCC] in {
@@ -2585,9 +2614,9 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
-// 64-bit version
+foreach vt = [i64, v2i32] in {
 def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<xor> i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+  (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
@@ -2596,6 +2625,7 @@ def : AMDGPUPatIgnoreCopies <
               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
+}
 
 def : AMDGPUPat <
   (fcopysign f32:$src0, f32:$src1),
@@ -4372,6 +4402,21 @@ def G_AMDGPU_BUFFER_LOAD_FORMAT_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
+
+class D16LoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr, type0:$src);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_LOAD_D16_LO : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_LO_U8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_LO_I8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI_U8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI_I8 : D16LoadGenericInstruction;
+
 
 class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
