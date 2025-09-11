@@ -6268,8 +6268,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
   case Intrinsic::aarch64_sme_cntsd: {
     auto Flags = SDNodeFlags();
-    Flags.setNoUnsignedWrap(true);
-    Flags.setNoSignedWrap(true);
     Flags.setExact(true);
     SDValue Bytes = DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(),
                                 DAG.getConstant(1, DL, MVT::i32));
