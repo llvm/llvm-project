@@ -131,7 +131,6 @@ using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
 
-
 // The struct contains results of the module analysis and methods
 // to access them.
 struct ModuleAnalysisInfo {
