@@ -20,9 +20,11 @@ class MachineModuleInfo;
 class MachineFunction;
 class Module;
 
+using MFGetterFnT = std::function<MachineFunction *(const Function &)>;
+
 class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
   const Function &TheFunction;
-  const MachineModuleInfo &TheMMI;
+  MFGetterFnT MachineFunctionGetterFn;
   unsigned MDNStartSlot = 0, MDNEndSlot = 0;
 
   void processMachineFunctionMetadata(AbstractSlotTrackerStorage *AST,
@@ -34,8 +36,7 @@ class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
                               bool ShouldInitializeAllMetadata);
 
 public:
-  MachineModuleSlotTracker(const MachineModuleInfo &MMI,
-                           const MachineFunction *MF,
+  MachineModuleSlotTracker(MFGetterFnT Fn, const MachineFunction *MF,
                            bool ShouldInitializeAllMetadata = true);
   ~MachineModuleSlotTracker() override;
 
