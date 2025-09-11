@@ -913,6 +913,9 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   APSInt RHS = popToAPSInt(S.Stk, RHST);
   APSInt LHS = popToAPSInt(S.Stk, LHST);
 
+  if (CarryOutPtr.isDummy())
+    return false;
+
   APSInt CarryOut;
 
   APSInt Result;
