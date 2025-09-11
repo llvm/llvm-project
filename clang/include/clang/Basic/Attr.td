@@ -5240,3 +5240,14 @@ def NonString : InheritableAttr {
   let Subjects = SubjectList<[Var, Field]>;
   let Documentation = [NonStringDocs];
 }
+
+def ModularFormat : InheritableAttr {
+  let Spellings = [Clang<"modular_format">];
+  let Args = [
+    IdentifierArgument<"ModularImplFn">,
+    StringArgument<"ImplName">,
+    VariadicStringArgument<"Aspects">
+  ];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [ModularFormatDocs];
+}
