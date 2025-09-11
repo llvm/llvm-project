@@ -233,6 +233,11 @@ void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
                              kmp_int32 num_threads) {
   KA_TRACE(20, ("__kmpc_push_num_threads: enter T#%d num_threads=%d\n",
                 global_tid, num_threads));
+  // we'll do serial initialize first, as otherwise the assert on global_tid can
+  // fail when omp is not initialized and this function is called
+  if (!TCR_4(__kmp_init_serial)) {
+    __kmp_serial_initialize();
+  }
   __kmp_assert_valid_gtid(global_tid);
   __kmp_push_num_threads(loc, global_tid, num_threads);
 }
@@ -1165,6 +1170,8 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
     // KMP_D_LOCK_FUNC(&idx, destroy)((kmp_dyna_lock_t *)&idx);
   }
   KMP_DEBUG_ASSERT(*lck != NULL);
+  // save the reverse critical section global lock reference
+  ilk->rev_ptr_critSec = crit;
 }
 
 // Fast-path acquire tas lock

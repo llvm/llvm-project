@@ -6139,6 +6139,7 @@ void __kmp_internal_end_atexit(void) {
      Windows dynamic, there is DllMain(THREAD_DETACH). For Windows static, there
      is nothing.  Thus, the workaround is applicable only for Windows static
      stat library. */
+  __kmp_in_atexit = TRUE;
   __kmp_internal_end_library(-1);
 #if KMP_OS_WINDOWS
   __kmp_close_console();
@@ -6952,9 +6953,9 @@ void __kmp_unregister_library(void) {
   value = __kmp_env_get(name);
 #endif
 
-  KMP_DEBUG_ASSERT(__kmp_registration_flag != 0);
-  KMP_DEBUG_ASSERT(__kmp_registration_str != NULL);
-  if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
+  // if omp is not initialized and we exit, then we don't need to free anything
+  if (__kmp_registration_flag != 0 && __kmp_registration_str != NULL) {
+    if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
     if (__kmp_shm_available) {
@@ -6967,7 +6968,7 @@ void __kmp_unregister_library(void) {
 #else
     __kmp_env_unset(name);
 #endif
-  }
+    }
 
 #if defined(KMP_USE_SHM)
   if (shm_name)
@@ -6975,8 +6976,9 @@ void __kmp_unregister_library(void) {
   if (temp_reg_status_file_name)
     KMP_INTERNAL_FREE(temp_reg_status_file_name);
 #endif
-
   KMP_INTERNAL_FREE(__kmp_registration_str);
+  }
+
   KMP_INTERNAL_FREE(value);
   KMP_INTERNAL_FREE(name);
 
@@ -8343,6 +8345,10 @@ void __kmp_cleanup(void) {
 
   __kmpc_destroy_allocator(KMP_GTID_SHUTDOWN, __kmp_def_allocator);
   __kmp_def_allocator = omp_default_mem_alloc;
+#ifdef KMP_TDATA_GTID
+  /*reset __kmp_gtid to initial value*/
+  __kmp_gtid = KMP_GTID_DNE;
+#endif
 
   KA_TRACE(10, ("__kmp_cleanup: exit\n"));
 }
