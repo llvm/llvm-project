@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Program.h"
-#include "llvm/CAS/MappedFileRegionBumpPtr.h"
+#include "llvm/CAS/MappedFileRegionArena.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ExponentialBackoff.h"
@@ -83,17 +83,17 @@ protected:
 
 #if LLVM_ENABLE_ONDISK_CAS
 
-TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
+TEST_F(CASProgramTest, MappedFileRegionArenaTest) {
   auto TestAllocator = [](StringRef Path) {
-    auto NewFileConstructor = [&](MappedFileRegionBumpPtr &Alloc) -> Error {
+    auto NewFileConstructor = [&](MappedFileRegionArena &Alloc) -> Error {
       Alloc.initializeHeader(0);
       return Error::success();
     };
 
-    std::optional<MappedFileRegionBumpPtr> Alloc;
+    std::optional<MappedFileRegionArena> Alloc;
     ASSERT_THAT_ERROR(
-        MappedFileRegionBumpPtr::create(Path, /*Capacity=*/10 * 1024 * 1024,
-                                        /*HeaderOffset=*/0, NewFileConstructor)
+        MappedFileRegionArena::create(Path, /*Capacity=*/10 * 1024 * 1024,
+                                      /*HeaderOffset=*/0, NewFileConstructor)
             .moveInto(Alloc),
         Succeeded());
 
@@ -123,13 +123,13 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   }
 
   SmallString<128> FilePath;
-  sys::fs::createUniqueDirectory("MappedFileRegionBumpPtr", FilePath);
+  sys::fs::createUniqueDirectory("MappedFileRegionArena", FilePath);
   sys::path::append(FilePath, "allocation-file");
 
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ProgramID);
   StringRef Argv[] = {
-      Executable, "--gtest_filter=CASProgramTest.MappedFileRegionBumpPtrTest"};
+      Executable, "--gtest_filter=CASProgramTest.MappedFileRegionArenaTest"};
 
   // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
   std::string EnvVar = "LLVM_CAS_TEST_MAPPED_FILE_REGION=";
@@ -153,9 +153,9 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrTest) {
   sys::fs::remove_directories(sys::path::parent_path(FilePath));
 }
 
-TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
+TEST_F(CASProgramTest, MappedFileRegionArenaSizeTest) {
   using namespace std::chrono_literals;
-  auto NewFileConstructor = [&](MappedFileRegionBumpPtr &Alloc) -> Error {
+  auto NewFileConstructor = [&](MappedFileRegionArena &Alloc) -> Error {
     Alloc.initializeHeader(0);
     return Error::success();
   };
@@ -168,33 +168,33 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
       }
     } while (Backoff.waitForNextAttempt());
 
-    std::optional<MappedFileRegionBumpPtr> Alloc;
-    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/1024,
-                                                      /*HeaderOffset=*/0,
-                                                      NewFileConstructor)
+    std::optional<MappedFileRegionArena> Alloc;
+    ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/1024,
+                                                    /*HeaderOffset=*/0,
+                                                    NewFileConstructor)
                           .moveInto(Alloc),
                       Succeeded());
     ASSERT_TRUE(Alloc->capacity() == 2048);
 
     Alloc.reset();
-    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/4096,
-                                                      /*HeaderOffset=*/0,
-                                                      NewFileConstructor)
+    ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/4096,
+                                                    /*HeaderOffset=*/0,
+                                                    NewFileConstructor)
                           .moveInto(Alloc),
                       Succeeded());
     ASSERT_TRUE(Alloc->capacity() == 2048);
     Alloc.reset();
 
     ASSERT_THAT_ERROR(
-        MappedFileRegionBumpPtr::create(File, /*Capacity=*/2048,
-                                        /*HeaderOffset=*/32, NewFileConstructor)
+        MappedFileRegionArena::create(File, /*Capacity=*/2048,
+                                      /*HeaderOffset=*/32, NewFileConstructor)
             .moveInto(Alloc),
         FailedWithMessage(
             "specified header offset (32) does not match existing config (0)"));
 
-    ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(File, /*Capacity=*/2048,
-                                                      /*HeaderOffset=*/0,
-                                                      NewFileConstructor)
+    ASSERT_THAT_ERROR(MappedFileRegionArena::create(File, /*Capacity=*/2048,
+                                                    /*HeaderOffset=*/0,
+                                                    NewFileConstructor)
                           .moveInto(Alloc),
                       Succeeded());
 
@@ -202,24 +202,24 @@ TEST_F(CASProgramTest, MappedFileRegionBumpPtrSizeTest) {
   }
 
   SmallString<128> FilePath;
-  sys::fs::createUniqueDirectory("MappedFileRegionBumpPtr", FilePath);
+  sys::fs::createUniqueDirectory("MappedFileRegionArena", FilePath);
   sys::path::append(FilePath, "allocation-file");
 
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ProgramID);
   StringRef Argv[] = {
       Executable,
-      "--gtest_filter=CASProgramTest.MappedFileRegionBumpPtrSizeTest"};
+      "--gtest_filter=CASProgramTest.MappedFileRegionArenaSizeTest"};
 
   // Add LLVM_PROGRAM_TEST_LOCKED_FILE to the environment of the child.
   std::string EnvVar = "LLVM_CAS_TEST_MAPPED_FILE_REGION=";
   EnvVar += FilePath.str();
   addEnvVar(EnvVar);
 
-  std::optional<MappedFileRegionBumpPtr> Alloc;
-  ASSERT_THAT_ERROR(MappedFileRegionBumpPtr::create(FilePath, /*Capacity=*/2048,
-                                                    /*HeaderOffset=*/0,
-                                                    NewFileConstructor)
+  std::optional<MappedFileRegionArena> Alloc;
+  ASSERT_THAT_ERROR(MappedFileRegionArena::create(FilePath, /*Capacity=*/2048,
+                                                  /*HeaderOffset=*/0,
+                                                  NewFileConstructor)
                         .moveInto(Alloc),
                     Succeeded());
 

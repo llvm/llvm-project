@@ -582,8 +582,7 @@ void CodeGenModule::createOpenCLRuntime() {
 }
 
 void CodeGenModule::createOpenMPRuntime() {
-  if (!LangOpts.OMPHostIRFile.empty() &&
-      !llvm::sys::fs::exists(LangOpts.OMPHostIRFile))
+  if (!LangOpts.OMPHostIRFile.empty() && !FS->exists(LangOpts.OMPHostIRFile))
     Diags.Report(diag::err_omp_host_ir_file_not_found)
         << LangOpts.OMPHostIRFile;
 
@@ -6376,10 +6375,18 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
+  auto GetPriority = [this](const auto *Attr) -> int {
+    Expr *E = Attr->getPriority();
+    if (E) {
+      return E->EvaluateKnownConstInt(this->getContext()).getExtValue();
+    }
+    return Attr->DefaultPriority;
+  };
+
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
-    AddGlobalCtor(Fn, CA->getPriority());
+    AddGlobalCtor(Fn, GetPriority(CA));
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
-    AddGlobalDtor(Fn, DA->getPriority(), true);
+    AddGlobalDtor(Fn, GetPriority(DA), true);
   if (getLangOpts().OpenMP && D->hasAttr<OMPDeclareTargetDeclAttr>())
     getOpenMPRuntime().emitDeclareTargetFunction(D, GV);
 }
@@ -7537,7 +7544,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::HLSLRootSignature:
-    // Will be handled by attached function
+    getHLSLRuntime().addRootSignature(cast<HLSLRootSignatureDecl>(D));
     break;
   case Decl::HLSLBuffer:
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));

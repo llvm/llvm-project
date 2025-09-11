@@ -962,6 +962,9 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
   // Only handle supported cast operations
   switch (CastOpcode) {
   case Instruction::BitCast:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::Trunc:
     break;
   default:
     return false;

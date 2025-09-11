@@ -3,7 +3,7 @@ add_llvm_component_library(LLVMCAS
   ActionCaches.cpp
   BuiltinCAS.cpp
   InMemoryCAS.cpp
-  MappedFileRegionBumpPtr.cpp
+  MappedFileRegionArena.cpp
   ObjectStore.cpp
   OnDiskCommon.cpp
 

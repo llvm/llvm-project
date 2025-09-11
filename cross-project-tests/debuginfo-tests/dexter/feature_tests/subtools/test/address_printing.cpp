@@ -12,7 +12,7 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck --dump-input-context=999999999 %s
+// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s
 
 // CHECK: Resolved Addresses:
 // CHECK-NEXT: 'x_2': 0x[[X2_VAL:[0-9a-f]+]]
