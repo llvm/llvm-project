@@ -13,10 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/OptBisect.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Range.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstdlib>
 
 using namespace llvm;
 
@@ -30,12 +33,49 @@ static OptDisable &getOptDisabler() {
   return OptDisabler;
 }
 
-static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
-                                   cl::init(OptBisect::Disabled), cl::Optional,
-                                   cl::cb<void, int>([](int Limit) {
-                                     getOptBisector().setLimit(Limit);
-                                   }),
-                                   cl::desc("Maximum optimization to perform"));
+static cl::opt<int> OptBisectLimit(
+    "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
+    cl::cb<void, int>([](int Limit) {
+      if (Limit == -1)
+        // -1 means run all passes.
+        getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
+      else if (Limit == 0)
+        // 0 means run no passes.
+        getOptBisector().setRanges({{0, 0}});
+      else if (Limit > 0)
+        // Convert limit to range 1-Limit.
+        getOptBisector().setRanges({{1, Limit}});
+      else
+        llvm_unreachable(
+            ("Invalid limit for -opt-bisect-limit: " + llvm::utostr(Limit))
+                .c_str());
+    }),
+    cl::desc(
+        "Maximum optimization to perform (equivalent to -opt-bisect=1-N)"));
+
+static cl::opt<std::string> OptBisectRanges(
+    "opt-bisect", cl::Hidden, cl::Optional,
+    cl::cb<void, const std::string &>([](const std::string &RangeStr) {
+      if (RangeStr == "-1") {
+        // -1 means run all passes.
+        getOptBisector().setRanges({{1, std::numeric_limits<int>::max()}});
+        return;
+      }
+
+      auto Ranges = RangeUtils::parseRanges(RangeStr);
+      if (!Ranges) {
+        handleAllErrors(Ranges.takeError(), [&](const StringError &E) {
+          errs() << "Error: Invalid range specification for -opt-bisect: "
+                 << RangeStr << " (" << E.getMessage() << ")\n";
+        });
+        exit(1);
+      }
+      getOptBisector().setRanges(std::move(*Ranges));
+    }),
+    cl::desc("Run optimization passes only for the specified ranges. "
+             "Format: '1-10,20-30,45' runs passes 1-10, 20-30, and 45, where "
+             "index 1 is the first pass. Supply '0' to run no passes and -1 to "
+             "run all passes."));
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
@@ -66,7 +106,10 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   assert(isEnabled());
 
   int CurBisectNum = ++LastBisectNum;
-  bool ShouldRun = (BisectLimit == -1 || CurBisectNum <= BisectLimit);
+
+  // Check if current pass number falls within any of the specified ranges.
+  bool ShouldRun = RangeUtils::contains(BisectRanges, CurBisectNum);
+
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
