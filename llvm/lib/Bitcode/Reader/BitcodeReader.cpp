@@ -1609,7 +1609,7 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           if (!Disc)
             return error("ptrauth disc operand must be ConstantInt");
 
-          auto *DeactivationSymbol =
+          Constant *DeactivationSymbol =
               ConstOps.size() > 4 ? ConstOps[4]
                                   : ConstantPointerNull::get(cast<PointerType>(
                                         ConstOps[3]->getType()));
