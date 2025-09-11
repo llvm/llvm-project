@@ -9,7 +9,7 @@ define void @test_xsave(ptr %ptr, i32 %hi, i32 %lo) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   $edx = COPY [[COPY1]]
   ; CHECK-NEXT:   $eax = COPY [[COPY]]
   ; CHECK-NEXT:   XSAVE [[COPY2]], 1, $noreg, 0, $noreg, implicit $edx, implicit $eax
@@ -26,7 +26,7 @@ define void @test_xsave64(ptr %ptr, i32 %hi, i32 %lo) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   $edx = COPY [[COPY1]]
   ; CHECK-NEXT:   $eax = COPY [[COPY]]
   ; CHECK-NEXT:   XSAVE64 [[COPY2]], 1, $noreg, 0, $noreg, implicit $edx, implicit $eax
@@ -43,7 +43,7 @@ define void @test_xrstor(ptr %ptr, i32 %hi, i32 %lo) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   $edx = COPY [[COPY1]]
   ; CHECK-NEXT:   $eax = COPY [[COPY]]
   ; CHECK-NEXT:   XRSTOR [[COPY2]], 1, $noreg, 0, $noreg, implicit $edx, implicit $eax
@@ -60,7 +60,7 @@ define void @test_xrstor64(ptr %ptr, i32 %hi, i32 %lo) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64_norex2 = COPY $rdi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   $edx = COPY [[COPY1]]
   ; CHECK-NEXT:   $eax = COPY [[COPY]]
   ; CHECK-NEXT:   XRSTOR64 [[COPY2]], 1, $noreg, 0, $noreg, implicit $edx, implicit $eax
