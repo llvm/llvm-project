@@ -2835,14 +2835,14 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
                                   const CallExpr *Call, unsigned BuiltinID) {
   PrimType MaskT = *S.getContext().classify(Call->getArg(2));
   APSInt Mask = popToAPSInt(S.Stk, MaskT);
-  const Pointer &TrueElem = S.Stk.pop<Pointer>();
-  const Pointer &FalseElem = S.Stk.pop<Pointer>();
+  const Pointer &TrueVec = S.Stk.pop<Pointer>();
+  const Pointer &FalseVec = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  assert(FalseElem.getNumElems() == TrueElem.getNumElems());
-  assert(FalseElem.getNumElems() == Dst.getNumElems());
-  unsigned NumElems = FalseElem.getNumElems();
-  PrimType ElemT = FalseElem.getFieldDesc()->getPrimType();
+  assert(FalseVec.getNumElems() == TrueVec.getNumElems());
+  assert(FalseVec.getNumElems() == Dst.getNumElems());
+  unsigned NumElems = FalseVec.getNumElems();
+  PrimType ElemT = FalseVec.getFieldDesc()->getPrimType();
   PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
 
   for (unsigned I = 0; I != NumElems; ++I) {
@@ -2850,12 +2850,12 @@ static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
     if (ElemT == PT_Float) {
       assert(DstElemT == PT_Float);
       Dst.elem<Floating>(I) =
-          MaskBit ? TrueElem.elem<Floating>(I) : FalseElem.elem<Floating>(I);
+          MaskBit ? TrueVec.elem<Floating>(I) : FalseVec.elem<Floating>(I);
     } else {
       APSInt Elem;
       INT_TYPE_SWITCH(ElemT, {
-        Elem = MaskBit ? TrueElem.elem<T>(I).toAPSInt()
-                       : FalseElem.elem<T>(I).toAPSInt();
+        Elem = MaskBit ? TrueVec.elem<T>(I).toAPSInt()
+                       : FalseVec.elem<T>(I).toAPSInt();
       });
       INT_TYPE_SWITCH_NO_BOOL(DstElemT,
                               { Dst.elem<T>(I) = static_cast<T>(Elem); });
