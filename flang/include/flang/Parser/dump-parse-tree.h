@@ -583,6 +583,8 @@ public:
   NODE(OmpFromClause, Modifier)
   NODE(parser, OmpGrainsizeClause)
   NODE(OmpGrainsizeClause, Modifier)
+  NODE(parser, OmpGraphIdClause)
+  NODE(parser, OmpGraphResetClause)
   NODE(parser, OmpHintClause)
   NODE(parser, OmpHoldsClause)
   NODE(parser, OmpIfClause)
