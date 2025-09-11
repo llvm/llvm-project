@@ -11959,10 +11959,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateAsRValue(Info, E->getArg(2), SourceC))
       return false;
 
-    assert(SourceF.getKind() == clang::APValue::Vector);
-    assert(SourceT.getKind() == clang::APValue::Vector);
-    assert(SourceC.getKind() == clang::APValue::Int);
-
     const APInt &C = SourceC.getInt();
     unsigned SourceLen = SourceF.getVectorLength();
     SmallVector<APValue, 32> ResultElements;
