@@ -11,10 +11,7 @@ declare double @llvm.sqrt.f64(double)
 define float @frsqrt_f32(float %a) nounwind {
 ; LA32F-LABEL: frsqrt_f32:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fsqrt.s $fa0, $fa0
-; LA32F-NEXT:    lu12i.w $a0, 260096
-; LA32F-NEXT:    movgr2fr.w $fa1, $a0
-; LA32F-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA32F-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-NEXT:    ret
 ;
 ; LA32F-FRECIPE-LABEL: frsqrt_f32:
@@ -564,15 +561,14 @@ define double @sqrt_simplify_before_recip_4_uses_f64(double %x, ptr %p1, ptr %p2
 define float @sqrt_simplify_before_recip_3_uses_f32(float %x, ptr %p1, ptr %p2) nounwind {
 ; LA32F-LABEL: sqrt_simplify_before_recip_3_uses_f32:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fsqrt.s $fa0, $fa0
-; LA32F-NEXT:    lu12i.w $a2, 260096
-; LA32F-NEXT:    movgr2fr.w $fa1, $a2
-; LA32F-NEXT:    fdiv.s $fa1, $fa1, $fa0
+; LA32F-NEXT:    fsqrt.s $fa1, $fa0
+; LA32F-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-NEXT:    lu12i.w $a2, 270976
 ; LA32F-NEXT:    movgr2fr.w $fa2, $a2
-; LA32F-NEXT:    fdiv.s $fa2, $fa2, $fa0
-; LA32F-NEXT:    fst.s $fa1, $a0, 0
+; LA32F-NEXT:    fdiv.s $fa2, $fa2, $fa1
+; LA32F-NEXT:    fst.s $fa0, $a0, 0
 ; LA32F-NEXT:    fst.s $fa2, $a1, 0
+; LA32F-NEXT:    fmov.s $fa0, $fa1
 ; LA32F-NEXT:    ret
 ;
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_f32:
@@ -636,19 +632,18 @@ define float @sqrt_simplify_before_recip_3_uses_f32(float %x, ptr %p1, ptr %p2) 
 define float @sqrt_simplify_before_recip_4_uses_f32(float %x, ptr %p1, ptr %p2, ptr %p3) nounwind {
 ; LA32F-LABEL: sqrt_simplify_before_recip_4_uses_f32:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fsqrt.s $fa0, $fa0
-; LA32F-NEXT:    lu12i.w $a3, 260096
-; LA32F-NEXT:    movgr2fr.w $fa1, $a3
-; LA32F-NEXT:    fdiv.s $fa1, $fa1, $fa0
+; LA32F-NEXT:    fsqrt.s $fa1, $fa0
+; LA32F-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-NEXT:    lu12i.w $a3, 270976
 ; LA32F-NEXT:    movgr2fr.w $fa2, $a3
-; LA32F-NEXT:    fdiv.s $fa2, $fa2, $fa0
+; LA32F-NEXT:    fdiv.s $fa2, $fa2, $fa1
 ; LA32F-NEXT:    lu12i.w $a3, 271040
 ; LA32F-NEXT:    movgr2fr.w $fa3, $a3
-; LA32F-NEXT:    fdiv.s $fa3, $fa3, $fa0
-; LA32F-NEXT:    fst.s $fa1, $a0, 0
+; LA32F-NEXT:    fdiv.s $fa3, $fa3, $fa1
+; LA32F-NEXT:    fst.s $fa0, $a0, 0
 ; LA32F-NEXT:    fst.s $fa2, $a1, 0
 ; LA32F-NEXT:    fst.s $fa3, $a2, 0
+; LA32F-NEXT:    fmov.s $fa0, $fa1
 ; LA32F-NEXT:    ret
 ;
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_4_uses_f32:

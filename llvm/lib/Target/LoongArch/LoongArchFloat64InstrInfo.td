@@ -162,6 +162,11 @@ def : PatFpr<fneg, FNEG_D, FPR64>;
 def : PatFpr<fabs, FABS_D, FPR64>;
 def : PatFpr<fsqrt, FSQRT_D, FPR64>;
 def : Pat<(fdiv fpimm1, (fsqrt FPR64:$fj)), (FRSQRT_D FPR64:$fj)>;
+let Predicates = [IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_d_lo_hi (i32 0), (i32 1072693248)),
+                (fsqrt FPR64:$fj)),
+          (FRSQRT_D FPR64:$fj)>;
+} // Predicates = [IsLA32]
 def : Pat<(fcopysign FPR64:$fj, FPR32:$fk),
           (FCOPYSIGN_D FPR64:$fj, (FCVT_D_S FPR32:$fk))>;
 def : Pat<(fcopysign FPR32:$fj, FPR64:$fk),
@@ -267,6 +272,10 @@ def : Pat<(f64 (fpextend FPR32:$src)), (FCVT_D_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR64:$src), (FRECIP_D $src)>;
+let Predicates = [IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_d_lo_hi (i32 0), (i32 1072693248)), FPR64:$src),
+          (FRECIP_D FPR64:$src)>;
+} // Predicates = [IsLA32]
 
 let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation

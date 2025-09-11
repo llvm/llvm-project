@@ -189,6 +189,14 @@ def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
 def : Pat<(fdiv fpimm1, (fsqrt FPR32:$fj)), (FRSQRT_S FPR32:$fj)>;
+let Predicates = [HasBasicF, IsLA64] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), (fsqrt FPR32:$fj)),
+          (FRSQRT_S FPR32:$fj)>;
+} // Predicates = [HasBasicF, IsLA64]
+let Predicates = [HasBasicF, IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w (i32 1065353216)), (fsqrt FPR32:$fj)),
+          (FRSQRT_S FPR32:$fj)>;
+} // Predicates = [HasBasicF, IsLA32]
 def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
 def : Pat<(is_fpclass FPR32:$fj, (i32 timm:$mask)),
           (SLTU R0, (ANDI (MOVFR2GR_S (FCLASS_S FPR32:$fj)),
@@ -299,6 +307,14 @@ def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
+let Predicates = [HasBasicF, IsLA64] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), FPR32:$src),
+          (FRECIP_S $src)>;
+} // Predicates = [HasBasicF, IsLA64]
+let Predicates = [HasBasicF, IsLA32] in {
+def : Pat<(fdiv (loongarch_movgr2fr_w (i32 1065353216)), FPR32:$src),
+          (FRECIP_S $src)>;
+} // Predicates = [HasBasicF, IsLA32]
 
 let Predicates = [HasFrecipe] in {
 // FP approximate reciprocal operation

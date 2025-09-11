@@ -67,26 +67,17 @@ define double @fsqrt_f64(double %a) nounwind {
 define float @frsqrt_f32(float %a) nounwind {
 ; LA32F-LABEL: frsqrt_f32:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fsqrt.s $fa0, $fa0
-; LA32F-NEXT:    lu12i.w $a0, 260096
-; LA32F-NEXT:    movgr2fr.w $fa1, $a0
-; LA32F-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA32F-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: frsqrt_f32:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fsqrt.s $fa0, $fa0
-; LA32D-NEXT:    lu12i.w $a0, 260096
-; LA32D-NEXT:    movgr2fr.w $fa1, $a0
-; LA32D-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA32D-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: frsqrt_f32:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    fsqrt.s $fa0, $fa0
-; LA64F-NEXT:    lu12i.w $a0, 260096
-; LA64F-NEXT:    movgr2fr.w $fa1, $a0
-; LA64F-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA64F-NEXT:    frsqrt.s $fa0, $fa0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: frsqrt_f32:
@@ -115,11 +106,7 @@ define double @frsqrt_f64(double %a) nounwind {
 ;
 ; LA32D-LABEL: frsqrt_f64:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fsqrt.d $fa0, $fa0
-; LA32D-NEXT:    movgr2fr.w $fa1, $zero
-; LA32D-NEXT:    lu12i.w $a0, 261888
-; LA32D-NEXT:    movgr2frh.w $fa1, $a0
-; LA32D-NEXT:    fdiv.d $fa0, $fa1, $fa0
+; LA32D-NEXT:    frsqrt.d $fa0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: frsqrt_f64:

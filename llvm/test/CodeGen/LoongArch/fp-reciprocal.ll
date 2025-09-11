@@ -8,23 +8,17 @@
 define float @f32_reciprocal(float %a) nounwind {
 ; LA32F-LABEL: f32_reciprocal:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    lu12i.w $a0, 260096
-; LA32F-NEXT:    movgr2fr.w $fa1, $a0
-; LA32F-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA32F-NEXT:    frecip.s $fa0, $fa0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: f32_reciprocal:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    lu12i.w $a0, 260096
-; LA32D-NEXT:    movgr2fr.w $fa1, $a0
-; LA32D-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA32D-NEXT:    frecip.s $fa0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: f32_reciprocal:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    lu12i.w $a0, 260096
-; LA64F-NEXT:    movgr2fr.w $fa1, $a0
-; LA64F-NEXT:    fdiv.s $fa0, $fa1, $fa0
+; LA64F-NEXT:    frecip.s $fa0, $fa0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: f32_reciprocal:
@@ -51,10 +45,7 @@ define double @f64_reciprocal(double %a) nounwind {
 ;
 ; LA32D-LABEL: f64_reciprocal:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    movgr2fr.w $fa1, $zero
-; LA32D-NEXT:    lu12i.w $a0, 261888
-; LA32D-NEXT:    movgr2frh.w $fa1, $a0
-; LA32D-NEXT:    fdiv.d $fa0, $fa1, $fa0
+; LA32D-NEXT:    frecip.d $fa0, $fa0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: f64_reciprocal:
