@@ -4033,6 +4033,47 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
+def CIR_AtomicXchg : CIR_Op<"atomic.xchg", [
+  AllTypesMatch<["result", "val"]>
+]> {
+  let summary = "Atomic exchange";
+  let description = [{
+    C/C++ atomic exchange operation. This operation implements the C/C++
+    builtin function `__atomic_exchange`, `__atomic_exchange_n`, and
+    `__c11_atomic_exchange`.
+
+    This operation takes two arguments: a pointer `ptr` and a value `val`. The
+    operation atomically replaces the value of the object pointed-to by `ptr`
+    with `val`, and returns the original value of the object.
+
+    Example:
+
+    ```mlir
+    %res = cir.atomic.xchg(%ptr : !cir.ptr<!u64i>,
+                           %val : !u64i,
+                           seq_cst) : !u64i
+    ```
+  }];
+
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
+                       CIR_AnyType:$val,
+                       Arg<CIR_MemOrder, "memory order">:$mem_order,
+                       UnitAttr:$is_volatile);
+
+  let assemblyFormat = [{
+    `(`
+      $ptr `:` qualified(type($ptr)) `,`
+      $val `:` type($val) `,`
+      $mem_order
+    `)`
+    (`volatile` $is_volatile^)?
+    `:` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 def CIR_AtomicCmpXchg : CIR_Op<"atomic.cmpxchg", [
   AllTypesMatch<["old", "expected", "desired"]>
 ]> {
