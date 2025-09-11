@@ -2832,7 +2832,7 @@ static bool interp__builtin_select(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_blend(InterpState &S, CodePtr OpPC,
-                                  const CallExpr *Call, unsigned BuiltinID) {
+                                  const CallExpr *Call) {
   PrimType MaskT = *S.getContext().classify(Call->getArg(2));
   APSInt Mask = popToAPSInt(S.Stk, MaskT);
   const Pointer &TrueVec = S.Stk.pop<Pointer>();
@@ -3538,7 +3538,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendw256:
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
-    return interp__builtin_blend(S, OpPC, Call, BuiltinID);
+    return interp__builtin_blend(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
