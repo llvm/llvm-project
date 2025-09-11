@@ -149,3 +149,75 @@ body:             |
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_vgpr17 = nofpexcept V_PK_MUL_F32 0, killed $sgpr30_sgpr31, 8, killed $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
+
+...
+---
+name:            test_pk_add_unpacking_f32
+tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
+body:             |
+  bb.0.entry:
+    liveins: $sgpr4_sgpr5
+    early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    renamable $vgpr4 = V_MOV_B32_e32 2, implicit $exec
+    renamable $vgpr5 = V_MOV_B32_e32 1, implicit $exec
+    renamable $vgpr2 = V_MOV_B32_e32 4, implicit $exec
+    renamable $vgpr3 = V_MOV_B32_e32 3, implicit $exec
+    renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM killed renamable $sgpr40_sgpr41, 0, 0
+    early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
+    $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr30 = V_ACCVGPR_WRITE_B32_e64 $sgpr14, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr29 = V_ACCVGPR_WRITE_B32_e64 $sgpr13, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr28 = V_ACCVGPR_WRITE_B32_e64 $sgpr12, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr27 = V_ACCVGPR_WRITE_B32_e64 $sgpr11, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr26 = V_ACCVGPR_WRITE_B32_e64 $sgpr10, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr25 = V_ACCVGPR_WRITE_B32_e64 $sgpr9, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr24 = V_ACCVGPR_WRITE_B32_e64 $sgpr8, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr23 = V_ACCVGPR_WRITE_B32_e64 $sgpr7, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr22 = V_ACCVGPR_WRITE_B32_e64 $sgpr6, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr21 = V_ACCVGPR_WRITE_B32_e64 $sgpr5, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr20 = V_ACCVGPR_WRITE_B32_e64 $sgpr4, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr19 = V_ACCVGPR_WRITE_B32_e64 $sgpr3, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr18 = V_ACCVGPR_WRITE_B32_e64 $sgpr2, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr17 = V_ACCVGPR_WRITE_B32_e64 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    $agpr16 = V_ACCVGPR_WRITE_B32_e64 $sgpr0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $sgpr18, implicit $exec, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $sgpr19, implicit $exec, implicit $exec
+    early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_vgpr5, killed $vgpr2_vgpr3, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    renamable $vgpr2_vgpr3 = nofpexcept V_PK_ADD_F32 8, killed $sgpr2_sgpr3, 8, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $vgpr6_vgpr7 = nofpexcept V_PK_ADD_F32 8, killed $sgpr6_sgpr7, 8, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $vgpr4_vgpr5 = nofpexcept V_PK_ADD_F32 8, killed $sgpr4_sgpr5, 8, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $vgpr10_vgpr11 = nofpexcept V_PK_ADD_F32 8, killed $sgpr10_sgpr11, 8, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+
+
+...
+---
+name:            test_pk_fma_unpacking_f32
+tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
+body:             |
+  bb.0.entry:
+    liveins: $sgpr4_sgpr5
+    early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
+    renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr44_sgpr45_sgpr46_sgpr47 = S_LOAD_DWORDX4_IMM renamable $sgpr40_sgpr41, 0, 0
+    renamable $sgpr48_sgpr49_sgpr50_sgpr51 = S_LOAD_DWORDX4_IMM renamable $sgpr42_sgpr43, 0, 0
+    early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_sgpr43, 0, 0
+    early-clobber renamable $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr40_sgpr41, 0, 0
+    $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr44_sgpr45, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr44_sgpr45_sgpr46_sgpr47
+    $vgpr2_vgpr3 = V_MOV_B64_e32 killed $sgpr46_sgpr47, implicit $exec, implicit $sgpr44_sgpr45_sgpr46_sgpr47, implicit $exec
+    $vgpr4_vgpr5 = V_MOV_B64_e32 $sgpr48_sgpr49, implicit $exec, implicit-def $vgpr4_vgpr5_vgpr6_vgpr7, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+    $vgpr6_vgpr7 = V_MOV_B64_e32 killed $sgpr50_sgpr51, implicit $exec, implicit $sgpr48_sgpr49_sgpr50_sgpr51, implicit $exec
+    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_vgpr1_vgpr2_vgpr3, killed $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
+    renamable $vgpr16_vgpr17 = nofpexcept V_PK_FMA_F32 0, killed $sgpr30_sgpr31, 8, killed $vgpr4_vgpr5, 8, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
