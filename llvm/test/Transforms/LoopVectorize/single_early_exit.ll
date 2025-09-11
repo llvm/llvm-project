@@ -514,6 +514,59 @@ exit:
 
 declare i32 @llvm.smin.i32(i32, i32)
 
+@A = external global [100 x {i32, i8} ]
+
+define ptr @btc_and_max_btc_require_predicates(ptr noalias %start, i64 %offset) {
+; CHECK-LABEL: define ptr @btc_and_max_btc_require_predicates(
+; CHECK-SAME: ptr noalias [[START:%.*]], i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[END:%.*]] = getelementptr i32, ptr [[START]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[PRE_1:%.*]] = icmp ult i64 [[OFFSET]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_1]])
+; CHECK-NEXT:    [[PRE_2:%.*]] = icmp ugt i64 [[OFFSET]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE_2]])
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi ptr [ @A, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi ptr [ [[START]], [[ENTRY]] ], [ [[IV_2_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[IV_1]], align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_2_NEXT]] = getelementptr i8, ptr [[IV_2]], i64 40
+; CHECK-NEXT:    [[IV_1_NEXT]] = getelementptr i8, ptr [[IV_1]], i64 40
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[IV_2]], [[END]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ [[IV_1]], [[LOOP_HEADER]] ], [ [[IV_2]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+entry:
+  %end = getelementptr i32, ptr %start, i64 %offset
+  %pre.1 = icmp ult i64 %offset, 100
+  call void @llvm.assume(i1 %pre.1)
+  %pre.2 = icmp ugt i64 %offset, 1
+  call void @llvm.assume(i1 %pre.2)
+  br label %loop.header
+
+loop.header:
+  %iv.1 = phi ptr [ @A, %entry ], [ %iv.1.next, %loop.latch ]
+  %iv.2 = phi ptr [ %start, %entry ], [ %iv.2.next, %loop.latch ]
+  %l = load i32, ptr %iv.1, align 4
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.2.next = getelementptr i8, ptr %iv.2, i64 40
+  %iv.1.next = getelementptr i8, ptr %iv.1, i64 40
+  %ec = icmp eq ptr %iv.2, %end
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  %res = phi ptr [ %iv.1, %loop.header ], [ %iv.2, %loop.latch ]
+  ret ptr %res
+}
+
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

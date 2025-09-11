@@ -3826,7 +3826,7 @@ public:
 
 public:
   EnumDecl *getEnumDecl() const {
-    return cast<clang::EnumType>(EnumType->getType())->getOriginalDecl();
+    return EnumType->getType()->castAs<clang::EnumType>()->getOriginalDecl();
   }
 
   static UsingEnumDecl *Create(ASTContext &C, DeclContext *DC,
