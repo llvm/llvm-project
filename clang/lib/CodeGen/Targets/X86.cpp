@@ -1521,7 +1521,8 @@ static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
   bool CallerHasFeat = CallerMap.lookup(Feature);
   bool CalleeHasFeat = CalleeMap.lookup(Feature);
   // No explicit features and the function is internal, be permissive.
-  if (!CallerHasFeat && !CalleeHasFeat && !Callee.isExternallyVisible())
+  if (!CallerHasFeat && !CalleeHasFeat &&
+      (!Callee.isExternallyVisible() || Callee.hasAttr<AlwaysInlineAttr>()))
     return false;
 
   if (!CallerHasFeat && !CalleeHasFeat)
