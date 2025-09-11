@@ -12116,8 +12116,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     SmallVector<APValue, 64> Result;
     Result.resize(NumElts, APValue(0));
 
-    bool IsLeft = (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
-                  E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
+    bool IsLeft =
+        (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
+         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
 
     SmallVector<APValue, 64> Result;
     Result.resize(NumElts, APValue(0));
@@ -12136,7 +12137,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           Indices.push_back(-1);
       }
     }
-   
+
     for (unsigned i = 0; i < NumElts; i++) {
       int src = Indices[i];
       if (src >= 0)
