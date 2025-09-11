@@ -9,6 +9,7 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
+            "Vector/td/unroll-elements.mlir",
             "Vector/vector-sink-transform.mlir",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
@@ -33,6 +34,7 @@ package(default_visibility = ["//visibility:public"])
             "LLVM/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
             "Transform/include/**/*.mlir",
+            "Vector/td/unroll-elements.mlir",
             "Vector/vector-sink-transform.mlir",
         ],
     )
