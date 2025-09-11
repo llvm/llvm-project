@@ -33,10 +33,10 @@ struct __lazy_compare_result {
   const _LHS& __lhs_;
   const _RHS& __rhs_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  __lazy_compare_result(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp,
-                        _LIBCPP_CTOR_LIFETIMEBOUND const _LHS& __lhs,
-                        _LIBCPP_CTOR_LIFETIMEBOUND const _RHS& __rhs)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_compare_result(
+      _LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp,
+      _LIBCPP_CTOR_LIFETIMEBOUND const _LHS& __lhs,
+      _LIBCPP_CTOR_LIFETIMEBOUND const _RHS& __rhs)
       : __comp_(__comp), __lhs_(__lhs), __rhs_(__rhs) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __less() const { return __comp_(__lhs_, __rhs_); }
@@ -50,7 +50,8 @@ template <class _Comparator, class _LHS, class _RHS, class = void>
 struct __lazy_synth_three_way_comparator {
   const _Comparator& __comp_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp)
       : __comp_(__comp) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_compare_result<_Comparator, _LHS, _RHS>
@@ -76,7 +77,8 @@ struct __lazy_synth_three_way_comparator<_Comparator,
                                                        __has_default_three_way_comparator_v<_LHS, _RHS> > > {
   // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
   // the comparator.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
 
   // Same comment as above.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __eager_compare_result

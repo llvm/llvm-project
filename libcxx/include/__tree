@@ -1318,7 +1318,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder __construct_node(_Args&&... __args);
 
   // TODO: Make this _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_HIDDEN _LIBCPP_CONSTEXPR_SINCE_CXX26 void destroy(__node_pointer __nd) _NOEXCEPT { (__tree_deleter(__node_alloc_))(__nd); }
+  _LIBCPP_HIDDEN _LIBCPP_CONSTEXPR_SINCE_CXX26 void destroy(__node_pointer __nd) _NOEXCEPT {
+    (__tree_deleter(__node_alloc_))(__nd);
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign(__tree& __t, false_type);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign(__tree& __t, true_type) _NOEXCEPT_(
