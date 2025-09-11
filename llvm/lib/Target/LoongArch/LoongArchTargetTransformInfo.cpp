@@ -111,4 +111,22 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
+InstructionCost LoongArchTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
+
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  switch (Kind) {
+  default:
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                                 SubTp, Args, CxtI);
+  // case TTI::SK_Broadcast:
+  // case TTI::SK_Reverse:
+  case TTI::SK_Transpose:
+    return 1;
+  }
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
