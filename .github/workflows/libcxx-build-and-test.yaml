@@ -29,10 +29,6 @@ on:
 permissions:
   contents: read # Default everything to read-only
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
