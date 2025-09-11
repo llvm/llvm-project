@@ -11,11 +11,11 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define FUNCTION mul_hi
+#define __CLC_FUNCTION mul_hi
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_INTEGER_MUL_HI_H__

@@ -1728,7 +1728,7 @@ bool CursorVisitor::VisitUsingTypeLoc(UsingTypeLoc TL) {
   if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
     return true;
 
-  auto *underlyingDecl = TL.getTypePtr()->desugar()->getAsTagDecl();
+  auto *underlyingDecl = TL.getTypePtr()->getAsTagDecl();
   if (underlyingDecl) {
     return Visit(MakeCursorTypeRef(underlyingDecl, TL.getNameLoc(), TU));
   }
@@ -1900,6 +1900,7 @@ DEFAULT_TYPELOC_IMPL(Record, TagType)
 DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
+DEFAULT_TYPELOC_IMPL(SubstBuiltinTemplatePack, Type)
 DEFAULT_TYPELOC_IMPL(Auto, Type)
 DEFAULT_TYPELOC_IMPL(BitInt, Type)
 DEFAULT_TYPELOC_IMPL(DependentBitInt, Type)
@@ -2153,8 +2154,8 @@ public:
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
   void VisitOMPParallelDirective(const OMPParallelDirective *D);
   void VisitOMPSimdDirective(const OMPSimdDirective *D);
-  void
-  VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
+  void VisitOMPCanonicalLoopNestTransformationDirective(
+      const OMPCanonicalLoopNestTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
   void VisitOMPStripeDirective(const OMPStripeDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
@@ -2836,8 +2837,10 @@ void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
 
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
-  for (VarDecl *V : C.getInitRecipes())
-    Visitor.AddDecl(V);
+  for (const OpenACCPrivateRecipe &R : C.getInitRecipes()) {
+    Visitor.AddDecl(R.AllocaDecl);
+    Visitor.AddStmt(R.InitExpr);
+  }
 }
 
 void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
@@ -2852,7 +2855,8 @@ void OpenACCClauseEnqueue::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   VisitVarList(C);
   for (const OpenACCFirstPrivateRecipe &R : C.getInitRecipes()) {
-    Visitor.AddDecl(R.RecipeDecl);
+    Visitor.AddDecl(R.AllocaDecl);
+    Visitor.AddStmt(R.InitExpr);
     Visitor.AddDecl(R.InitFromTemporary);
   }
 }
@@ -2928,6 +2932,10 @@ void OpenACCClauseEnqueue::VisitDeviceTypeClause(
 void OpenACCClauseEnqueue::VisitReductionClause(
     const OpenACCReductionClause &C) {
   VisitVarList(C);
+  for (const OpenACCReductionRecipe &R : C.getRecipes()) {
+    Visitor.AddDecl(R.AllocaDecl);
+    Visitor.AddStmt(R.InitExpr);
+  }
 }
 void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
@@ -3296,30 +3304,30 @@ void EnqueueVisitor::VisitOMPSimdDirective(const OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
-void EnqueueVisitor::VisitOMPLoopTransformationDirective(
-    const OMPLoopTransformationDirective *D) {
+void EnqueueVisitor::VisitOMPCanonicalLoopNestTransformationDirective(
+    const OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPStripeDirective(const OMPStripeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
 void EnqueueVisitor::VisitOMPForDirective(const OMPForDirective *D) {

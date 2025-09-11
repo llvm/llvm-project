@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-LABEL: define i32 @reduction_sum(
 ; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -25,12 +25,10 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM_TMP:%.*]] = phi i32 [ [[SUM:%.*]], %[[BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[BODY]] ], [ 0, %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM_TMP:%.*]] = phi i32 [ [[SUM:%.*]], %[[BODY]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i32, ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[SUM]] = add i32 [[SUM_TMP]], [[LOAD0]]

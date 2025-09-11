@@ -29,11 +29,12 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::objc {
-namespace {
 
 static constexpr StringRef WeakText = "__weak";
 static constexpr StringRef StrongText = "__strong";
 static constexpr StringRef UnsafeUnretainedText = "__unsafe_unretained";
+
+namespace {
 
 /// Matches ObjCIvarRefExpr, DeclRefExpr, or MemberExpr that reference
 /// Objective-C object (or block) variables or fields whose object lifetimes
@@ -48,6 +49,8 @@ AST_POLYMORPHIC_MATCHER(isObjCManagedLifetime,
           QT->getScalarTypeKind() == Type::STK_BlockPointer) &&
          QT.getQualifiers().getObjCLifetime() > Qualifiers::OCL_ExplicitNone;
 }
+
+} // namespace
 
 static std::optional<FixItHint>
 fixItHintReplacementForOwnershipString(StringRef Text, CharSourceRange Range,
@@ -92,8 +95,6 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
 
   return FixItHint::CreateInsertion(Range.getBegin(), "__unsafe_unretained ");
 }
-
-} // namespace
 
 void NSInvocationArgumentLifetimeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(

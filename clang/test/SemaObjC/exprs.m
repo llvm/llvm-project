@@ -36,3 +36,10 @@ void test_encode(void) {
   (void)@encode(Incomplete_ObjC_class*);
   (void)@encode(id);
 }
+
+void gh154046(void) {
+  (void)(const char[]) {
+    [0] = @encode(int),  // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[2]'}}
+    [1] = @encode(float) // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[2]'}}
+  }[1];
+}

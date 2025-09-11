@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class TargetLowering;
+class AArch64TargetLowering;
 
 class Function;
 class CallBase;
@@ -52,17 +52,25 @@ public:
 
   SMEAttrs() = default;
   SMEAttrs(unsigned Mask) { set(Mask); }
-  SMEAttrs(const Function &F, const TargetLowering *TLI = nullptr)
+  SMEAttrs(const Function &F, const AArch64TargetLowering *TLI = nullptr)
       : SMEAttrs(F.getAttributes()) {
     if (TLI)
       addKnownFunctionAttrs(F.getName(), *TLI);
   }
   SMEAttrs(const AttributeList &L);
-  SMEAttrs(StringRef FuncName, const TargetLowering &TLI) {
+  SMEAttrs(StringRef FuncName, const AArch64TargetLowering &TLI) {
     addKnownFunctionAttrs(FuncName, TLI);
   };
 
-  void set(unsigned M, bool Enable = true);
+  void set(unsigned M, bool Enable = true) {
+    if (Enable)
+      Bitmask |= M;
+    else
+      Bitmask &= ~M;
+#ifndef NDEBUG
+    validate();
+#endif
+  }
 
   // Interfaces to query PSTATE.SM
   bool hasStreamingBody() const { return Bitmask & SM_Body; }
@@ -148,7 +156,9 @@ public:
   }
 
 private:
-  void addKnownFunctionAttrs(StringRef FuncName, const TargetLowering &TLI);
+  void addKnownFunctionAttrs(StringRef FuncName,
+                             const AArch64TargetLowering &TLI);
+  void validate() const;
 };
 
 /// SMECallAttrs is a utility class to hold the SMEAttrs for a callsite. It has
@@ -165,7 +175,7 @@ public:
                SMEAttrs Callsite = SMEAttrs::Normal)
       : CallerFn(Caller), CalledFn(Callee), Callsite(Callsite) {}
 
-  SMECallAttrs(const CallBase &CB, const TargetLowering *TLI);
+  SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI);
 
   SMEAttrs &caller() { return CallerFn; }
   SMEAttrs &callee() { return IsIndirect ? Callsite : CalledFn; }
@@ -196,7 +206,7 @@ public:
   }
 
   bool requiresEnablingZAAfterCall() const {
-    return requiresLazySave() || requiresDisablingZABeforeCall();
+    return requiresDisablingZABeforeCall();
   }
 
   bool requiresPreservingAllZAState() const {

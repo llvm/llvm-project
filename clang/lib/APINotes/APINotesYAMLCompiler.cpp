@@ -462,6 +462,7 @@ struct Tag {
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+  std::optional<std::string> SwiftDestroyOp;
   std::optional<std::string> SwiftDefaultOwnership;
   std::optional<std::string> SwiftConformance;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
@@ -503,6 +504,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
     IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
     IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
+    IO.mapOptional("SwiftDestroyOp", T.SwiftDestroyOp);
     IO.mapOptional("SwiftDefaultOwnership", T.SwiftDefaultOwnership);
     IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
@@ -996,6 +998,8 @@ public:
       TI.SwiftRetainOp = T.SwiftRetainOp;
     if (T.SwiftReleaseOp)
       TI.SwiftReleaseOp = T.SwiftReleaseOp;
+    if (T.SwiftDestroyOp)
+      TI.SwiftDestroyOp = T.SwiftDestroyOp;
     if (T.SwiftDefaultOwnership)
       TI.SwiftDefaultOwnership = T.SwiftDefaultOwnership;
 

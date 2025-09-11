@@ -508,14 +508,15 @@ private:
 
   bool attributeCheckRescale(Operation *op) {
     if (auto rescale = dyn_cast<tosa::RescaleOp>(op)) {
-      if (rescale.getRoundingMode() == "DOUBLE_ROUND" &&
+      if (rescale.getRoundingMode() == RoundingMode::DOUBLE_ROUND &&
           !targetEnv.allows(Extension::doubleround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = DOUBLE_ROUND "
             << "requires extension [doubleround]";
         return false;
-      } else if (rescale.getRoundingMode() == "INEXACT_ROUND" &&
-                 !targetEnv.allows(Extension::inexactround)) {
+      }
+      if (rescale.getRoundingMode() == RoundingMode::INEXACT_ROUND &&
+          !targetEnv.allows(Extension::inexactround)) {
         op->emitOpError()
             << "failed attribute check: rounding_mode = INEXACT_ROUND "
             << "requires extension [inexactround]";
@@ -1122,7 +1123,7 @@ bool checkErrorIfRescale(Operation *op) {
   }
 
   // ERROR_IF(!scale32 && (rounding_mode == DOUBLE_ROUND))
-  if (!scale32 && roundingMode == "DOUBLE_ROUND") {
+  if (!scale32 && roundingMode == RoundingMode::DOUBLE_ROUND) {
     op->emitOpError() << "DOUBLE_ROUND is only allowed with scale32=true.";
     return false;
   }
@@ -1307,7 +1308,8 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
                Float8E5M2Type>(type);
-  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+  }
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:

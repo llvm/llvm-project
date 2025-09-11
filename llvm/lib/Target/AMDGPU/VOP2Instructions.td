@@ -105,7 +105,6 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let isCodeGenOnly = 0;
 
   let Constraints     = ps.Constraints;
-  let DisableEncoding = ps.DisableEncoding;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
@@ -114,7 +113,6 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
-  let DisableEncoding    = ps.DisableEncoding;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -418,12 +416,12 @@ def VOP_MADAK_F16_t16 : VOP_MADAK <f16> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
   let DstRC = getVALUDstForVT<DstVT, 1/*IsTrue16*/, 0/*IsVOP3Encoding*/>.ret;
-  let Ins32 = (ins VSrcT_f16_Lo128:$src0, VGPRSrc_16_Lo128:$src1, ImmOpType:$imm);
+  let Ins32 = (ins VSrcT_f16_Lo128:$src0, VGPROp_16_Lo128:$src1, ImmOpType:$imm);
 }
 def VOP_MADAK_F16_fake16 : VOP_MADAK <f16> {
   let IsTrue16 = 1;
   let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
-  let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, VGPRSrc_32_Lo128:$src1, ImmOpType:$imm);
+  let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, VGPROp_32_Lo128:$src1, ImmOpType:$imm);
 }
 def VOP_MADAK_F32 : VOP_MADAK <f32>;
 def VOP_MADAK_F64 : VOP_MADAK <f64>;
@@ -454,12 +452,12 @@ def VOP_MADMK_F16_t16 : VOP_MADMK <f16> {
   let IsTrue16 = 1;
   let IsRealTrue16 = 1;
   let DstRC = getVALUDstForVT<DstVT, 1/*IsTrue16*/, 0/*IsVOP3Encoding*/>.ret;
-  let Ins32 = (ins VSrcT_f16_Lo128:$src0, ImmOpType:$imm, VGPRSrc_16_Lo128:$src1);
+  let Ins32 = (ins VSrcT_f16_Lo128:$src0, ImmOpType:$imm, VGPROp_16_Lo128:$src1);
 }
 def VOP_MADMK_F16_fake16 : VOP_MADMK <f16> {
   let IsTrue16 = 1;
   let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
-  let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, ImmOpType:$imm, VGPRSrc_32_Lo128:$src1);
+  let Ins32 = (ins VSrcFake16_f16_Lo128:$src0, ImmOpType:$imm, VGPROp_32_Lo128:$src1);
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 def VOP_MADMK_F64 : VOP_MADMK <f64>;
@@ -498,14 +496,14 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                        HasClamp, HasModifiers, HasModifiers, HasOMod,
                        Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
-  let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
-  let InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
+  let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPROp_32:$src2X);
+  let InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y, VGPROp_32:$src2Y);
   let InsVOPD3X = (ins Src0ModVOPD3:$src0X_modifiers, Src0VOPD3:$src0X,
                        Src1ModVOPD3:$vsrc1X_modifiers, Src1RC32:$vsrc1X,
-                       VGPRSrc_32:$src2X);
+                       VGPROp_32:$src2X);
   let InsVOPD3Y = (ins Src0ModVOPD3:$src0Y_modifiers, Src0VOPD3:$src0Y,
                        Src1ModVOPD3:$vsrc1Y_modifiers, Src1RC32:$vsrc1Y,
-                       VGPRSrc_32:$src2Y);
+                       VGPROp_32:$src2Y);
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -567,7 +565,7 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let DstRC64 = getVALUDstForVT<DstVT, 1/*IsTrue*/, 1/*IsVOP3Encoding*/>.ret;
   let Src0RC64 = getVOP3SrcForVT<Src0VT, 1/*IsTrue16*/>.ret;
   let Src1RC64 = getVOP3SrcForVT<Src1VT, 1/*IsTrue16*/>.ret;
-  let Src0VOP3DPP = VGPRSrc_16;
+  let Src0VOP3DPP = VGPROp_16;
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
@@ -599,7 +597,7 @@ def VOP_MAC_F16_fake16 : VOP_MAC <f16> {
                      getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2, // stub argument
                      dpp8:$dpp8, Dpp8FI:$fi);
   let DstRC64 = getVALUDstForVT<DstVT>.ret;
-  let Src0VOP3DPP = VGPRSrc_32;
+  let Src0VOP3DPP = VGPROp_32;
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
@@ -798,7 +796,7 @@ def VOP2e_I16_I16_I16_I1_true16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
                     Src2RC64, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 0/*HasSrc2Mods*/, HasOMod,
                     Src0Mod, Src1Mod, Src2Mod, 1/*HasOpSel*/>.ret;
-  let Src0VOP3DPP = VGPRSrc_16;
+  let Src0VOP3DPP = VGPROp_16;
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<f16, DstVT, 0/*IsFake16*/>.ret;
   let Src1ModVOP3DPP = getSrcModVOP3VC<f16, 0/*IsFake16*/>.ret;
@@ -810,7 +808,7 @@ def VOP2e_I16_I16_I16_I1_fake16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
   let Src0Mod = getSrc0Mod<f16, DstVT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src1Mod = getSrcMod<f16, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
 
-  let Src0VOP3DPP = VGPRSrc_32;
+  let Src0VOP3DPP = VGPROp_32;
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<f16, DstVT, 1/*IsFake16*/>.ret;
   let Src1ModVOP3DPP = getSrcModVOP3VC<f16, 1/*IsFake16*/>.ret;
@@ -889,13 +887,13 @@ defm V_XOR_B32 : VOP2Inst <"v_xor_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, xor>;
 
 let mayRaiseFPException = 0 in {
 let OtherPredicates = [HasMadMacF32Insts] in {
-let Constraints = "$vdst = $src2", DisableEncoding="$src2",
+let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1 in {
 defm V_MAC_F32 : VOP2Inst <"v_mac_f32", VOP_MAC_F32>;
 
 let SubtargetPredicate = isGFX6GFX7GFX10 in
 defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_LEGACY_F32>;
-} // End Constraints = "$vdst = $src2", DisableEncoding="$src2",
+} // End Constraints = "$vdst = $src2",
   //     isConvertibleToThreeAddress = 1
 
 let isReMaterializable = 1 in
@@ -941,9 +939,9 @@ defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 // These are special and do not read the exec mask.
 let isConvergent = 1, Uses = []<Register> in {
 def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE, []>;
-let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in" in {
 def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []>;
-} // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
+} // End IsNeverUniform, $vdst = $vdst_in
 } // End isConvergent = 1
 
 foreach vt = Reg32Types.types in {
@@ -1026,9 +1024,9 @@ def : DivergentClampingBinOp<sub, V_SUB_CO_U32_e64>;
 def : DivergentBinOp<adde, V_ADDC_U32_e32>;
 def : DivergentBinOp<sube, V_SUBB_U32_e32>;
 
-class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
+class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst, ValueType vt = i64> :
   GCNPat<
-      (DivergentBinFrag<Op> i64:$src0, i64:$src1),
+      (DivergentBinFrag<Op> vt:$src0, vt:$src1),
       (REG_SEQUENCE VReg_64,
         (Inst
           (i32 (EXTRACT_SUBREG $src0, sub0)),
@@ -1044,6 +1042,10 @@ class divergent_i64_BinOp <SDPatternOperator Op, Instruction Inst> :
 def :  divergent_i64_BinOp <and, V_AND_B32_e64>;
 def :  divergent_i64_BinOp <or,  V_OR_B32_e64>;
 def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
+
+def :  divergent_i64_BinOp <and, V_AND_B32_e64, v2i32>;
+def :  divergent_i64_BinOp <or,  V_OR_B32_e64, v2i32>;
+def :  divergent_i64_BinOp <xor, V_XOR_B32_e64, v2i32>;
 
 // mul24 w/ 64 bit output.
 class mul24_64_Pat<SDPatternOperator Op, Instruction InstLo, Instruction InstHi> : GCNPat<
@@ -1175,7 +1177,6 @@ let True16Predicate = UseFakeTrue16Insts in {
 } // End FPDPRounding  = 1, isReMaterializable = 1, FixedSize = 1
 
 let Constraints = "$vdst = $src2",
-    DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in {
 let SubtargetPredicate = isGFX10Plus in {
@@ -1209,7 +1210,7 @@ let SubtargetPredicate = isGFX8GFX9 in {
 } // End isReMaterializable = 1
 
 // FIXME: Missing FPDPRounding
-let Constraints = "$vdst = $src2", DisableEncoding="$src2",
+let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1, isCommutable = 1 in {
 defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 }
@@ -1252,7 +1253,6 @@ def : GCNPat<
 >;
 
 let Constraints = "$vdst = $src2",
-    DisableEncoding = "$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
@@ -1261,7 +1261,6 @@ defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 let SubtargetPredicate = HasFmaLegacy32 in {
 
 let Constraints = "$vdst = $src2",
-    DisableEncoding = "$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
@@ -1270,14 +1269,12 @@ defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
 let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",
-    DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1,
     SchedRW = [WriteDoubleAdd] in
 defm V_FMAC_F64 : VOP2Inst <"v_fmac_f64", VOP_MAC_F64>;
 
 let Constraints = "$vdst = $src2",
-      DisableEncoding="$src2",
       isConvertibleToThreeAddress = 1,
       isCommutable = 1,
       IsDOT = 1 in {

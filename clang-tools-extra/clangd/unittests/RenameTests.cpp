@@ -17,9 +17,10 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
@@ -861,6 +862,25 @@ TEST(RenameTest, WithinFileRename) {
 
         void func([[Fo^o]] *f) {}
       )cpp",
+
+      // rename with explicit object parameter
+      R"cpp(
+      struct Foo {
+        int [[memb^er]] {};
+        auto&& getter1(this auto&& self) {
+          auto local = [&] {
+            return self.[[memb^er]];
+          }();
+          return local + self.[[memb^er]];
+        }
+        auto&& getter2(this Foo&& self) {
+          return self.[[memb^er]];
+        }
+        int normal() {
+          return this->[[mem^ber]] + [[memb^er]];
+        }
+      };
+    )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -868,6 +888,7 @@ TEST(RenameTest, WithinFileRename) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-xobjective-c++");
+    TU.ExtraArgs.push_back("-std=c++23");
     auto AST = TU.build();
     auto Index = TU.index();
     for (const auto &RenamePos : Code.points()) {

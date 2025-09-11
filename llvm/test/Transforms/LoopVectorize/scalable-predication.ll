@@ -9,7 +9,7 @@ define void @foo(i32 %val, ptr dereferenceable(1024) %ptr) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 -257, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

@@ -95,10 +95,20 @@ inline bool isStringLiteral(TokenKind K) {
 /// Return true if this is a "literal" kind, like a numeric
 /// constant, string, etc.
 inline bool isLiteral(TokenKind K) {
-  return K == tok::numeric_constant || K == tok::char_constant ||
-         K == tok::wide_char_constant || K == tok::utf8_char_constant ||
-         K == tok::utf16_char_constant || K == tok::utf32_char_constant ||
-         isStringLiteral(K) || K == tok::header_name || K == tok::binary_data;
+  const bool isInLiteralRange =
+      K >= tok::numeric_constant && K <= tok::utf32_string_literal;
+
+#if !NDEBUG
+  const bool isLiteralExplicit =
+      K == tok::numeric_constant || K == tok::char_constant ||
+      K == tok::wide_char_constant || K == tok::utf8_char_constant ||
+      K == tok::utf16_char_constant || K == tok::utf32_char_constant ||
+      isStringLiteral(K) || K == tok::header_name || K == tok::binary_data;
+  assert(isInLiteralRange == isLiteralExplicit &&
+         "TokenKind literals should be contiguous");
+#endif
+
+  return isInLiteralRange;
 }
 
 /// Return true if this is any of tok::annot_* kinds.

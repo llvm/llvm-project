@@ -713,9 +713,9 @@ if config.target_os == "Linux":
         if config.android:
             return
 
-        from distutils.version import LooseVersion
+        from packaging.version import Version
 
-        ver = LooseVersion(ver_string)
+        ver = Version(ver_string)
         any_glibc = False
         for required in [
             "2.19",
@@ -727,7 +727,7 @@ if config.target_os == "Linux":
             "2.38",
             "2.40",
         ]:
-            if ver >= LooseVersion(required):
+            if ver >= Version(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
             if any_glibc:
@@ -964,6 +964,23 @@ if config.memprof_shadow_scale:
     )
 else:
     config.available_features.add("memprof-shadow-scale-3")
+
+
+def target_page_size():
+    try:
+        proc = subprocess.Popen(
+            f"{emulator or ''} python3",
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        out, err = proc.communicate(b'import os; print(os.sysconf("SC_PAGESIZE"))')
+        return int(out)
+    except:
+        return 4096
+
+
+config.available_features.add(f"page-size-{target_page_size()}")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")

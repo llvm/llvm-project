@@ -9,8 +9,8 @@
 #include <clc/math/clc_half_recip.h>
 #include <clc/opencl/math/half_recip.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION half_recip
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION half_recip
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

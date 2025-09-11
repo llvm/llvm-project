@@ -6,7 +6,7 @@
 define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC1VF4-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
 ; IC1VF4-SAME: ptr [[A:%.*]]) {
-; IC1VF4-NEXT:  [[ENTRY:.*]]:
+; IC1VF4-NEXT:  [[ENTRY:.*:]]
 ; IC1VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1VF4:       [[VECTOR_PH]]:
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -32,12 +32,10 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP6]], i64 331
 ; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 19999, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
-; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC1VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ 19999, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC1VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; IC1VF4-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
 ; IC1VF4-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
@@ -51,7 +49,7 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ;
 ; IC4VF4-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
 ; IC4VF4-SAME: ptr [[A:%.*]]) {
-; IC4VF4-NEXT:  [[ENTRY:.*]]:
+; IC4VF4-NEXT:  [[ENTRY:.*:]]
 ; IC4VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF4:       [[VECTOR_PH]]:
 ; IC4VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -104,12 +102,10 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP18]], i64 331
 ; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
-; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 19999, %[[ENTRY]] ]
-; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
-; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ 19999, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC4VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; IC4VF4-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
 ; IC4VF4-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
@@ -123,7 +119,7 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ;
 ; IC4VF1-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
 ; IC4VF1-SAME: ptr [[A:%.*]]) {
-; IC4VF1-NEXT:  [[ENTRY:.*]]:
+; IC4VF1-NEXT:  [[ENTRY:.*:]]
 ; IC4VF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF1:       [[VECTOR_PH]]:
 ; IC4VF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -164,12 +160,10 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 331
 ; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 19999, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
-; IC4VF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF1-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[IV:%.*]] = phi i64 [ 19999, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; IC4VF1-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
 ; IC4VF1-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
@@ -204,7 +198,7 @@ exit:                                             ; preds = %loop
 define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC1VF4-LABEL: define i16 @select_decreasing_induction_icmp_table_i16(
 ; IC1VF4-SAME: i16 noundef [[VAL:%.*]]) {
-; IC1VF4-NEXT:  [[ENTRY:.*]]:
+; IC1VF4-NEXT:  [[ENTRY:.*:]]
 ; IC1VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1VF4:       [[VECTOR_PH]]:
 ; IC1VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[VAL]], i64 0
@@ -234,12 +228,10 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP7]], i16 0
 ; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
-; IC1VF4-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC1VF4-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[RDX:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC1VF4-NEXT:    [[GEP_TABLE_IV:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[IV]]
 ; IC1VF4-NEXT:    [[LD_TABLE:%.*]] = load i16, ptr [[GEP_TABLE_IV]], align 1
 ; IC1VF4-NEXT:    [[CMP_TABLE_VAL:%.*]] = icmp ugt i16 [[LD_TABLE]], [[VAL]]
@@ -486,7 +478,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ;
 ; IC4VF1-LABEL: define i16 @select_decreasing_induction_icmp_table_i16(
 ; IC4VF1-SAME: i16 noundef [[VAL:%.*]]) {
-; IC4VF1-NEXT:  [[ENTRY:.*]]:
+; IC4VF1-NEXT:  [[ENTRY:.*:]]
 ; IC4VF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF1:       [[VECTOR_PH]]:
 ; IC4VF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -532,12 +524,10 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[RDX_MINMAX5]], i16 0
 ; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
-; IC4VF1-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF1-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[RDX:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    [[GEP_TABLE_IV:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[IV]]
 ; IC4VF1-NEXT:    [[LD_TABLE:%.*]] = load i16, ptr [[GEP_TABLE_IV]], align 1
 ; IC4VF1-NEXT:    [[CMP_TABLE_VAL:%.*]] = icmp ugt i16 [[LD_TABLE]], [[VAL]]
@@ -573,7 +563,7 @@ exit:                                             ; preds = %loop
 define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC1VF4-LABEL: define i16 @select_decreasing_induction_icmp_table_half(
 ; IC1VF4-SAME: half noundef [[VAL:%.*]]) {
-; IC1VF4-NEXT:  [[ENTRY:.*]]:
+; IC1VF4-NEXT:  [[ENTRY:.*:]]
 ; IC1VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1VF4:       [[VECTOR_PH]]:
 ; IC1VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x half> poison, half [[VAL]], i64 0
@@ -603,12 +593,10 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP7]], i16 0
 ; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
-; IC1VF4-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC1VF4-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[RDX:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC1VF4-NEXT:    [[GEP_TABLE_IV:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[IV]]
 ; IC1VF4-NEXT:    [[LD_TABLE:%.*]] = load half, ptr [[GEP_TABLE_IV]], align 1
 ; IC1VF4-NEXT:    [[CMP_TABLE_VAL:%.*]] = fcmp ugt half [[LD_TABLE]], [[VAL]]
@@ -855,7 +843,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ;
 ; IC4VF1-LABEL: define i16 @select_decreasing_induction_icmp_table_half(
 ; IC4VF1-SAME: half noundef [[VAL:%.*]]) {
-; IC4VF1-NEXT:  [[ENTRY:.*]]:
+; IC4VF1-NEXT:  [[ENTRY:.*:]]
 ; IC4VF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF1:       [[VECTOR_PH]]:
 ; IC4VF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -901,12 +889,10 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[RDX_MINMAX5]], i16 0
 ; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
-; IC4VF1-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF1-NEXT:    [[RDX:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[RDX:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    [[GEP_TABLE_IV:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[IV]]
 ; IC4VF1-NEXT:    [[LD_TABLE:%.*]] = load half, ptr [[GEP_TABLE_IV]], align 1
 ; IC4VF1-NEXT:    [[CMP_TABLE_VAL:%.*]] = fcmp ugt half [[LD_TABLE]], [[VAL]]
@@ -943,7 +929,7 @@ exit:                                             ; preds = %loop
 define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC1VF4-LABEL: define i64 @select_decreasing_induction_icmp_iv_unsigned(
 ; IC1VF4-SAME: ptr [[A:%.*]]) {
-; IC1VF4-NEXT:  [[ENTRY:.*]]:
+; IC1VF4-NEXT:  [[ENTRY:.*:]]
 ; IC1VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1VF4:       [[VECTOR_PH]]:
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -969,12 +955,10 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC1VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP6]], i64 331
 ; IC1VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
-; IC1VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ]
-; IC1VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC1VF4:       [[LOOP]]:
-; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC1VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[IV:%.*]] = phi i64 [ 9223372036854775807, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC1VF4-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC1VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; IC1VF4-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
 ; IC1VF4-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
@@ -988,7 +972,7 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ;
 ; IC4VF4-LABEL: define i64 @select_decreasing_induction_icmp_iv_unsigned(
 ; IC4VF4-SAME: ptr [[A:%.*]]) {
-; IC4VF4-NEXT:  [[ENTRY:.*]]:
+; IC4VF4-NEXT:  [[ENTRY:.*:]]
 ; IC4VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF4:       [[VECTOR_PH]]:
 ; IC4VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1041,12 +1025,10 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP18]], i64 331
 ; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
-; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ]
-; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
-; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ 9223372036854775807, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC4VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; IC4VF4-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
 ; IC4VF4-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
@@ -1060,7 +1042,7 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ;
 ; IC4VF1-LABEL: define i64 @select_decreasing_induction_icmp_iv_unsigned(
 ; IC4VF1-SAME: ptr [[A:%.*]]) {
-; IC4VF1-NEXT:  [[ENTRY:.*]]:
+; IC4VF1-NEXT:  [[ENTRY:.*:]]
 ; IC4VF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF1:       [[VECTOR_PH]]:
 ; IC4VF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1101,12 +1083,10 @@ define i64 @select_decreasing_induction_icmp_iv_unsigned(ptr %a) {
 ; IC4VF1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 331
 ; IC4VF1-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF1:       [[SCALAR_PH]]:
-; IC4VF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ]
-; IC4VF1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ]
 ; IC4VF1-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF1:       [[LOOP]]:
-; IC4VF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF1-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[IV:%.*]] = phi i64 [ 9223372036854775807, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC4VF1-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; IC4VF1-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
 ; IC4VF1-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3

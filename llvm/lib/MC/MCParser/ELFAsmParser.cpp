@@ -22,7 +22,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstdint>

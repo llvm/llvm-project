@@ -600,7 +600,7 @@ struct BubbleDownVectorBitCastForExtract
 
     // Get the first element of the mixed position as integer.
     auto mixedPos = extractOp.getMixedPosition();
-    if (mixedPos.size() > 0 && !isa<Attribute>(mixedPos[0]))
+    if (!mixedPos.empty() && !isa<Attribute>(mixedPos[0]))
       return failure();
     uint64_t index = cast<IntegerAttr>(cast<Attribute>(mixedPos[0])).getInt();
 
@@ -2274,7 +2274,7 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
 
   LogicalResult matchAndRewrite(MulOpType mulOp,
                                 PatternRewriter &rewriter) const override {
-    auto resType = llvm::cast<VectorType>(mulOp.getResult().getType());
+    auto resType = llvm::dyn_cast<VectorType>(mulOp.getResult().getType());
     if (!resType)
       return failure();
     if (resType.getRank() != 2)

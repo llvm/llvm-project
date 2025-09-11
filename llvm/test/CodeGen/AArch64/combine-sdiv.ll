@@ -230,14 +230,11 @@ define <16 x i8> @combine_vec_sdiv_by_pow2b_v16i8(<16 x i8> %x) {
 ; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI14_1
-; CHECK-SD-NEXT:    movi v4.2d, #0xffffffffffffff00
 ; CHECK-SD-NEXT:    ushl v1.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI14_1]
 ; CHECK-SD-NEXT:    add v1.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-SD-NEXT:    sshl v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v4.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_pow2b_v16i8:
@@ -265,21 +262,17 @@ define <16 x i8> @combine_vec_sdiv_by_pow2b_v16i8(<16 x i8> %x) {
 define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 ; CHECK-SD-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI15_1
+; CHECK-SD-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-SD-NEXT:    cmlt v1.8h, v0.8h, #0
-; CHECK-SD-NEXT:    adrp x9, .LCPI15_3
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI15_1
+; CHECK-SD-NEXT:    ushl v1.8h, v1.8h, v2.8h
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI15_1]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI15_2
-; CHECK-SD-NEXT:    ldr q3, [x9, :lo12:.LCPI15_3]
-; CHECK-SD-NEXT:    ushl v1.8h, v1.8h, v2.8h
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI15_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-SD-NEXT:    add v1.8h, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    sshl v1.8h, v1.8h, v2.8h
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI15_2]
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_pow2b_v8i16:
@@ -308,28 +301,22 @@ define <8 x i16> @combine_vec_sdiv_by_pow2b_v8i16(<8 x i16> %x) {
 define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; CHECK-SD-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_1
+; CHECK-SD-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-SD-NEXT:    cmlt v2.8h, v0.8h, #0
 ; CHECK-SD-NEXT:    cmlt v3.8h, v1.8h, #0
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_1]
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_2
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI16_1
 ; CHECK-SD-NEXT:    ushl v2.8h, v2.8h, v4.8h
 ; CHECK-SD-NEXT:    ushl v3.8h, v3.8h, v4.8h
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_0
-; CHECK-SD-NEXT:    ldr q5, [x8, :lo12:.LCPI16_0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_3
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_1]
+; CHECK-SD-NEXT:    adrp x8, .LCPI16_2
 ; CHECK-SD-NEXT:    add v2.8h, v0.8h, v2.8h
 ; CHECK-SD-NEXT:    add v3.8h, v1.8h, v3.8h
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v5.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v5.16b
 ; CHECK-SD-NEXT:    sshl v2.8h, v2.8h, v4.8h
 ; CHECK-SD-NEXT:    sshl v3.8h, v3.8h, v4.8h
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_3]
-; CHECK-SD-NEXT:    and v2.16b, v2.16b, v4.16b
-; CHECK-SD-NEXT:    and v3.16b, v3.16b, v4.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_2]
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v4.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_pow2b_v16i16:
@@ -363,42 +350,32 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; CHECK-SD-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_1
+; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-SD-NEXT:    cmlt v4.8h, v0.8h, #0
 ; CHECK-SD-NEXT:    cmlt v5.8h, v1.8h, #0
 ; CHECK-SD-NEXT:    cmlt v7.8h, v2.8h, #0
 ; CHECK-SD-NEXT:    cmlt v16.8h, v3.8h, #0
-; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI17_1]
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_2
+; CHECK-SD-NEXT:    ldr q6, [x8, :lo12:.LCPI17_0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI17_1
 ; CHECK-SD-NEXT:    ushl v4.8h, v4.8h, v6.8h
 ; CHECK-SD-NEXT:    ushl v5.8h, v5.8h, v6.8h
 ; CHECK-SD-NEXT:    ushl v7.8h, v7.8h, v6.8h
 ; CHECK-SD-NEXT:    ushl v6.8h, v16.8h, v6.8h
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI17_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI17_1]
+; CHECK-SD-NEXT:    adrp x8, .LCPI17_2
 ; CHECK-SD-NEXT:    add v4.8h, v0.8h, v4.8h
 ; CHECK-SD-NEXT:    add v5.8h, v1.8h, v5.8h
-; CHECK-SD-NEXT:    ldr q17, [x8, :lo12:.LCPI17_0]
 ; CHECK-SD-NEXT:    add v7.8h, v2.8h, v7.8h
 ; CHECK-SD-NEXT:    add v6.8h, v3.8h, v6.8h
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_3
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v17.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v17.16b
-; CHECK-SD-NEXT:    and v2.16b, v2.16b, v17.16b
 ; CHECK-SD-NEXT:    sshl v4.8h, v4.8h, v16.8h
 ; CHECK-SD-NEXT:    sshl v5.8h, v5.8h, v16.8h
-; CHECK-SD-NEXT:    and v3.16b, v3.16b, v17.16b
 ; CHECK-SD-NEXT:    sshl v7.8h, v7.8h, v16.8h
 ; CHECK-SD-NEXT:    sshl v6.8h, v6.8h, v16.8h
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI17_3]
-; CHECK-SD-NEXT:    and v4.16b, v4.16b, v16.16b
-; CHECK-SD-NEXT:    and v5.16b, v5.16b, v16.16b
-; CHECK-SD-NEXT:    and v7.16b, v7.16b, v16.16b
-; CHECK-SD-NEXT:    and v6.16b, v6.16b, v16.16b
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v4.16b
-; CHECK-SD-NEXT:    orr v1.16b, v1.16b, v5.16b
-; CHECK-SD-NEXT:    orr v2.16b, v2.16b, v7.16b
-; CHECK-SD-NEXT:    orr v3.16b, v3.16b, v6.16b
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI17_2]
+; CHECK-SD-NEXT:    bif v0.16b, v4.16b, v16.16b
+; CHECK-SD-NEXT:    bif v1.16b, v5.16b, v16.16b
+; CHECK-SD-NEXT:    bif v2.16b, v7.16b, v16.16b
+; CHECK-SD-NEXT:    bif v3.16b, v6.16b, v16.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: combine_vec_sdiv_by_pow2b_v32i16:
@@ -904,29 +881,21 @@ define <16 x i8> @non_splat_minus_one_divisor_0(<16 x i8> %A) {
 define <16 x i8> @non_splat_minus_one_divisor_1(<16 x i8> %A) {
 ; CHECK-SD-LABEL: non_splat_minus_one_divisor_1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI26_1
+; CHECK-SD-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-SD-NEXT:    cmlt v1.16b, v0.16b, #0
-; CHECK-SD-NEXT:    adrp x9, .LCPI26_3
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI26_1
+; CHECK-SD-NEXT:    ushl v1.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_1]
 ; CHECK-SD-NEXT:    adrp x8, .LCPI26_2
-; CHECK-SD-NEXT:    ldr q3, [x9, :lo12:.LCPI26_3]
-; CHECK-SD-NEXT:    adrp x9, .LCPI26_5
-; CHECK-SD-NEXT:    ushl v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_2]
-; CHECK-SD-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-SD-NEXT:    add v1.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    sshl v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
-; CHECK-SD-NEXT:    adrp x8, .LCPI26_4
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_4]
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    ldr q3, [x9, :lo12:.LCPI26_5]
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_2]
+; CHECK-SD-NEXT:    adrp x8, .LCPI26_3
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI26_3]
 ; CHECK-SD-NEXT:    neg v1.16b, v0.16b
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: non_splat_minus_one_divisor_1:

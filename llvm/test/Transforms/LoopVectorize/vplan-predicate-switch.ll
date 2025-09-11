@@ -6,16 +6,21 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-NEXT:  IR %start2 = ptrtoint ptr %start to i64
+; CHECK-NEXT:  IR %end1 = ptrtoint ptr %end to i64
+; CHECK-NEXT:  IR %0 = sub i64 %end1, %start2
+; CHECK-NEXT:  EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<2>
+; CHECK-NEXT:  EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<%n.mod.vf> = urem ir<%0>, ir<2>
 ; CHECK-NEXT:   EMIT vp<[[VTC:%.+]]> = sub ir<%0>, vp<%n.mod.vf>
 ; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
 ; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[PTR]]>
