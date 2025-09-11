@@ -1,4 +1,4 @@
-# REQUIRESgithub-actions
+# REQUIRES: github-actions
 
 # RUN: echo "test full install" | tee %t
 # CHECK: test full install
