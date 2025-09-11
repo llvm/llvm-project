@@ -1380,9 +1380,7 @@ LValue
 CIRGenFunction::getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e) {
   assert(OpaqueValueMapping::shouldBindAsLValue(e));
 
-  llvm::DenseMap<const OpaqueValueExpr *, LValue>::iterator it =
-      opaqueLValues.find(e);
-
+  auto it = opaqueLValues.find(e);
   if (it != opaqueLValues.end())
     return it->second;
 
@@ -1394,9 +1392,7 @@ RValue
 CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
   assert(!OpaqueValueMapping::shouldBindAsLValue(e));
 
-  llvm::DenseMap<const OpaqueValueExpr *, RValue>::iterator it =
-      opaqueRValues.find(e);
-
+  auto it = opaqueRValues.find(e);
   if (it != opaqueRValues.end())
     return it->second;
 
