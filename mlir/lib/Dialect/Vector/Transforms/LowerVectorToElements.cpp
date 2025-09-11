@@ -34,8 +34,7 @@ struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
     }
     SmallVector<Value> vectors = *result;
 
-    // May be a large vector.
-    SmallVector<Value, 0> results;
+    SmallVector<Value> results;
     for (const Value &vector : vectors) {
       auto subElements =
           vector::ToElementsOp::create(rewriter, op.getLoc(), vector);
