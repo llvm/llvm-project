@@ -141,14 +141,16 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
 
 template <>
 lldb::BreakpointLocationSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointLocationSP>(
-    python::PythonObject &p, Status &error) {
-  lldb::SBBreakpointLocation *sb_break_loc = reinterpret_cast<lldb::SBBreakpointLocation *>(
-      python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(p.get()));
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::BreakpointLocationSP>(python::PythonObject &p, Status &error) {
+  lldb::SBBreakpointLocation *sb_break_loc =
+      reinterpret_cast<lldb::SBBreakpointLocation *>(
+          python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(p.get()));
 
   if (!sb_break_loc) {
     error = Status::FromErrorStringWithFormat(
-        "Couldn't cast lldb::SBBreakpointLocation to lldb::BreakpointLocationSP.");
+        "Couldn't cast lldb::SBBreakpointLocation to "
+        "lldb::BreakpointLocationSP.");
     return nullptr;
   }
 
@@ -225,20 +227,20 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
 template <>
 lldb::DescriptionLevel
-ScriptedPythonInterface::ExtractValueFromPythonObject<
-    lldb::DescriptionLevel>(python::PythonObject &p, Status &error) {
-    lldb::DescriptionLevel ret_val = lldb::eDescriptionLevelBrief;
-    llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
-    if (!unsigned_or_err) {
-      error = (Status::FromError(unsigned_or_err.takeError()));
-      return ret_val;
-    }
-    unsigned long long unsigned_val = *unsigned_or_err;
-    if (unsigned_val >= lldb::DescriptionLevel::kNumDescriptionLevels) {
-      error = Status("value too large for lldb::DescriptionLevel.");
-      return ret_val;
-    }
-    return static_cast<lldb::DescriptionLevel>(unsigned_val);
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error) {
+  lldb::DescriptionLevel ret_val = lldb::eDescriptionLevelBrief;
+  llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
+  if (!unsigned_or_err) {
+    error = (Status::FromError(unsigned_or_err.takeError()));
+    return ret_val;
+  }
+  unsigned long long unsigned_val = *unsigned_or_err;
+  if (unsigned_val >= lldb::DescriptionLevel::kNumDescriptionLevels) {
+    error = Status("value too large for lldb::DescriptionLevel.");
+    return ret_val;
+  }
+  return static_cast<lldb::DescriptionLevel>(unsigned_val);
 }
 
 #endif

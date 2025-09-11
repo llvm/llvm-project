@@ -27,14 +27,14 @@ public:
   virtual lldb::SearchDepth GetDepth() { return lldb::eSearchDepthModule; }
   virtual std::optional<std::string> GetShortHelp() { return nullptr; }
   /// WasHit returns the breakpoint location SP for the location that was "hit".
-  virtual lldb::BreakpointLocationSP WasHit(lldb::StackFrameSP frame_sp, 
-                          lldb::BreakpointLocationSP bp_loc_sp) { 
-      return LLDB_INVALID_BREAK_ID;
+  virtual lldb::BreakpointLocationSP
+  WasHit(lldb::StackFrameSP frame_sp, lldb::BreakpointLocationSP bp_loc_sp) {
+    return LLDB_INVALID_BREAK_ID;
   }
-  virtual std::optional<std::string> 
-      GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp, 
-                             lldb::DescriptionLevel level) { 
-      return {};
+  virtual std::optional<std::string>
+  GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
+                         lldb::DescriptionLevel level) {
+    return {};
   }
 };
 } // namespace lldb_private

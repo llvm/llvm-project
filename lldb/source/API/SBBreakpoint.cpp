@@ -567,8 +567,7 @@ SBError SBBreakpoint::AddLocation(SBAddress &address) {
   return error;
 }
 
-SBBreakpointLocation
-SBBreakpoint::AddFacadeLocation() {
+SBBreakpointLocation SBBreakpoint::AddFacadeLocation() {
   BreakpointSP bkpt_sp = GetSP();
   if (!bkpt_sp) {
     return {};

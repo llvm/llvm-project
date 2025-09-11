@@ -81,7 +81,8 @@ lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
   return breakpoint.m_opaque_wp.lock();
 }
 
-lldb::BreakpointLocationSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
+lldb::BreakpointLocationSP
+ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
     const lldb::SBBreakpointLocation &break_loc) const {
   return break_loc.m_opaque_wp.lock();
 }

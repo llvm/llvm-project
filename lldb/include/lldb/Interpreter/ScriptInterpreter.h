@@ -581,8 +581,8 @@ public:
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
 
-  lldb::BreakpointLocationSP
-  GetOpaqueTypeFromSBBreakpointLocation(const lldb::SBBreakpointLocation &break_loc) const;
+  lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
+      const lldb::SBBreakpointLocation &break_loc) const;
 
   lldb::ProcessAttachInfoSP
   GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;

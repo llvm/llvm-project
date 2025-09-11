@@ -32,9 +32,9 @@ BreakpointLocationList::Create(const Address &addr,
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // The location ID is just the size of the location list + 1
   lldb::break_id_t bp_loc_id = ++m_next_id;
-  BreakpointLocationSP bp_loc_sp(new 
-      BreakpointLocation(bp_loc_id, m_owner, addr, LLDB_INVALID_THREAD_ID, 
-      resolve_indirect_symbols));
+  BreakpointLocationSP bp_loc_sp(
+      new BreakpointLocation(bp_loc_id, m_owner, addr, LLDB_INVALID_THREAD_ID,
+                             resolve_indirect_symbols));
   m_locations.push_back(bp_loc_sp);
   m_address_to_location[addr] = bp_loc_sp;
   return bp_loc_sp;

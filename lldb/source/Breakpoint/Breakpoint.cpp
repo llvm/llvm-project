@@ -61,7 +61,8 @@ Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
 Breakpoint::~Breakpoint() {
   for (BreakpointLocationSP location_sp : m_locations.BreakpointLocations())
     location_sp->SetInvalid();
-  for (BreakpointLocationSP location_sp : m_facade_locations.BreakpointLocations())
+  for (BreakpointLocationSP location_sp :
+       m_facade_locations.BreakpointLocations())
     location_sp->SetInvalid();
 }
 
@@ -309,14 +310,15 @@ BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
 
 BreakpointLocationSP Breakpoint::AddFacadeLocation() {
   size_t next_id = m_facade_locations.GetSize() + 1;
-  BreakpointLocationSP break_loc_sp 
-      = std::make_shared<BreakpointLocation>(next_id, *this);
+  BreakpointLocationSP break_loc_sp =
+      std::make_shared<BreakpointLocation>(next_id, *this);
   break_loc_sp->m_is_facade = true;
   m_facade_locations.Add(break_loc_sp);
   return break_loc_sp;
 }
 
-BreakpointLocationSP Breakpoint::GetFacadeLocationByID(lldb::break_id_t loc_id) {
+BreakpointLocationSP
+Breakpoint::GetFacadeLocationByID(lldb::break_id_t loc_id) {
   return m_facade_locations.GetByIndex(loc_id - 1);
 }
 
@@ -328,13 +330,15 @@ break_id_t Breakpoint::FindLocationIDByAddress(const Address &addr) {
   return m_locations.FindIDByAddress(addr);
 }
 
-BreakpointLocationSP Breakpoint::FindLocationByID(break_id_t bp_loc_id, bool use_facade) {
+BreakpointLocationSP Breakpoint::FindLocationByID(break_id_t bp_loc_id,
+                                                  bool use_facade) {
   if (use_facade && m_facade_locations.GetSize())
     return GetFacadeLocationByID(bp_loc_id);
   return m_locations.FindByID(bp_loc_id);
 }
 
-BreakpointLocationSP Breakpoint::GetLocationAtIndex(size_t index, bool use_facade) {
+BreakpointLocationSP Breakpoint::GetLocationAtIndex(size_t index,
+                                                    bool use_facade) {
   if (use_facade && m_facade_locations.GetSize() > 0)
     return m_facade_locations.GetByIndex(index);
   return m_locations.GetByIndex(index);
@@ -904,13 +908,13 @@ bool Breakpoint::HasResolvedLocations() const {
   return GetNumResolvedLocations() > 0;
 }
 
-size_t Breakpoint::GetNumLocations(bool use_facade) const { 
+size_t Breakpoint::GetNumLocations(bool use_facade) const {
   if (use_facade) {
     size_t num_facade_locs = m_facade_locations.GetSize();
     if (num_facade_locs > 0)
       return num_facade_locs;
   }
-  return m_locations.GetSize(); 
+  return m_locations.GetSize();
 }
 
 void Breakpoint::AddName(llvm::StringRef new_name) {
@@ -936,14 +940,14 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
     s->Printf("Kind: %s\n", GetBreakpointKind());
   }
 
-  bool show_both_types = level == eDescriptionLevelVerbose 
-    && HasFacadeLocations() && show_locations;
+  bool show_both_types = level == eDescriptionLevelVerbose &&
+                         HasFacadeLocations() && show_locations;
   uint8_t display_mask = eDisplayFacade;
   if (show_both_types)
     display_mask |= eDisplayHeader;
-    
+
   GetDescriptionForType(s, level, display_mask, show_locations);
-  
+
   if (show_both_types) {
     display_mask = eDisplayReal | eDisplayHeader;
     GetDescriptionForType(s, level, display_mask, show_locations);
@@ -954,9 +958,10 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
                         GetTarget().GetDebugger().GetDisabledAnsiSuffix())
                         .c_str());
 }
-  
+
 void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
-                                       uint8_t display_type, bool show_locations) {
+                                       uint8_t display_type,
+                                       bool show_locations) {
   bool use_facade = (display_type & eDisplayFacade) != 0;
   const size_t num_locations = GetNumLocations(use_facade);
   const size_t num_resolved_locations = GetNumResolvedLocations(use_facade);
@@ -1052,7 +1057,6 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
     }
     s->IndentLess();
   }
-
 }
 
 void Breakpoint::GetResolverDescription(Stream *s) {

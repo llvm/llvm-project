@@ -45,8 +45,9 @@ break_id_t BreakpointSite::GetNextID() {
 // RETURNS - true if we should stop at this breakpoint, false if we
 // should continue.
 
-bool BreakpointSite::ShouldStop(StoppointCallbackContext *context,
-        BreakpointLocationCollection &stopping_bp_locs) {
+bool BreakpointSite::ShouldStop(
+    StoppointCallbackContext *context,
+    BreakpointLocationCollection &stopping_bp_locs) {
   m_hit_counter.Increment();
   // ShouldStop can do a lot of work, and might even come back and hit
   // this breakpoint site again.  So don't hold the m_constituents_mutex the

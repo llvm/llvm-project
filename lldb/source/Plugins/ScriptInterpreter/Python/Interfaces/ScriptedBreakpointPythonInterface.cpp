@@ -81,11 +81,11 @@ std::optional<std::string> ScriptedBreakpointPythonInterface::GetShortHelp() {
   return obj->GetAsString()->GetValue().str();
 }
 
-lldb::BreakpointLocationSP
-ScriptedBreakpointPythonInterface::WasHit(lldb::StackFrameSP frame_sp, lldb::BreakpointLocationSP bp_loc_sp) {
+lldb::BreakpointLocationSP ScriptedBreakpointPythonInterface::WasHit(
+    lldb::StackFrameSP frame_sp, lldb::BreakpointLocationSP bp_loc_sp) {
   Status py_error;
-  lldb::BreakpointLocationSP loc_sp 
-    = Dispatch<lldb::BreakpointLocationSP>("was_hit", py_error, frame_sp, bp_loc_sp);
+  lldb::BreakpointLocationSP loc_sp = Dispatch<lldb::BreakpointLocationSP>(
+      "was_hit", py_error, frame_sp, bp_loc_sp);
 
   if (py_error.Fail())
     return bp_loc_sp;
@@ -93,12 +93,12 @@ ScriptedBreakpointPythonInterface::WasHit(lldb::StackFrameSP frame_sp, lldb::Bre
   return loc_sp;
 }
 
-std::optional<std::string> 
+std::optional<std::string>
 ScriptedBreakpointPythonInterface::GetLocationDescription(
-    lldb::BreakpointLocationSP bp_loc_sp, 
-    lldb::DescriptionLevel level) {
+    lldb::BreakpointLocationSP bp_loc_sp, lldb::DescriptionLevel level) {
   Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_location_description", error, bp_loc_sp, level);
+  StructuredData::ObjectSP obj =
+      Dispatch("get_location_description", error, bp_loc_sp, level);
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error))

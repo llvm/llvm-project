@@ -381,11 +381,12 @@ bool BreakpointLocation::ValidForThisThread(Thread &thread) {
           .GetThreadSpecNoCreate());
 }
 
-BreakpointLocationSP BreakpointLocation::WasHit(StoppointCallbackContext *context)
-{
+BreakpointLocationSP
+BreakpointLocation::WasHit(StoppointCallbackContext *context) {
   // Only the BreakpointResolverScripted provides WasHit.
   BreakpointResolverSP resolver_sp = GetBreakpoint().GetResolver();
-  BreakpointResolverScripted *scripted = llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
+  BreakpointResolverScripted *scripted =
+      llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
   if (!scripted)
     return shared_from_this();
 
@@ -393,7 +394,8 @@ BreakpointLocationSP BreakpointLocation::WasHit(StoppointCallbackContext *contex
   if (!frame_sp)
     return shared_from_this();
 
-  BreakpointLocationSP return_loc_sp = scripted->WasHit(frame_sp, shared_from_this());
+  BreakpointLocationSP return_loc_sp =
+      scripted->WasHit(frame_sp, shared_from_this());
   // If this is a facade location, then we won't have bumped its hit count
   // while processing the original location hit.  Do so here.  We don't need
   // to bump the breakpoint's hit count, however, since hitting the real
@@ -401,10 +403,10 @@ BreakpointLocationSP BreakpointLocation::WasHit(StoppointCallbackContext *contex
   // Also we have to check the enabled state here, since we would never have
   // gotten here with a real location...
   if (return_loc_sp && return_loc_sp->IsFacade()) {
-     if (return_loc_sp->IsEnabled())
-       return_loc_sp->m_hit_counter.Increment();
-     else
-       return {};
+    if (return_loc_sp->IsEnabled())
+      return_loc_sp->m_hit_counter.Increment();
+    else
+      return {};
   }
   return return_loc_sp;
 }
@@ -414,8 +416,8 @@ BreakpointLocationSP BreakpointLocation::WasHit(StoppointCallbackContext *contex
 // here, since if the breakpoint is not for this thread, then the event won't
 // even get reported, so the check is redundant.
 
-bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context, 
-        lldb::BreakpointLocationSP &facade_loc_sp) {
+bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context,
+                                    lldb::BreakpointLocationSP &facade_loc_sp) {
   bool should_stop = true;
   Log *log = GetLog(LLDBLog::Breakpoints);
 
@@ -426,7 +428,7 @@ bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context,
 
   // Next check WasHit:
   BreakpointLocationSP loc_hit_sp = WasHit(context);
-  
+
   if (!loc_hit_sp) {
     // We bump the hit counts in StopInfoBreakpoint::ShouldStopSynchronous,
     // before we call into each location's ShouldStop.  So we need to undo
@@ -434,7 +436,7 @@ bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context,
     UndoBumpHitCount();
     return false;
   }
-  
+
   // If the location hit was not us, it was a facade location, in which case
   // we should use the facade location's callbacks, etc.  Those will all be
   // run in the asynchronous phase, so for now we just have to record the fact
@@ -494,7 +496,7 @@ lldb::BreakpointSiteSP BreakpointLocation::GetBreakpointSite() const {
 llvm::Error BreakpointLocation::ResolveBreakpointSite() {
   // This might be a facade location, which doesn't have an address.
   // In that case, don't attempt to make a site.
-  if (m_bp_site_sp  || IsFacade())
+  if (m_bp_site_sp || IsFacade())
     return llvm::Error::success();
 
   Process *process = m_owner.GetTarget().GetProcessSP().get();
@@ -547,15 +549,15 @@ llvm::Error BreakpointLocation::ClearBreakpointSite() {
 void BreakpointLocation::GetDescription(Stream *s,
                                         lldb::DescriptionLevel level) {
   SymbolContext sc;
-  
+
   // If this is a scripted breakpoint, give it a chance to describe its
   // locations:
   std::optional<std::string> scripted_opt;
   BreakpointResolverSP resolver_sp = GetBreakpoint().GetResolver();
-  BreakpointResolverScripted *scripted = 
+  BreakpointResolverScripted *scripted =
       llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
   if (scripted)
-        scripted_opt = scripted->GetLocationDescription(shared_from_this(), level);
+    scripted_opt = scripted->GetLocationDescription(shared_from_this(), level);
 
   bool is_scripted_desc = scripted_opt.has_value();
 
@@ -694,10 +696,10 @@ void BreakpointLocation::GetDescription(Stream *s,
   // If they don't add any scripted locations, we shouldn't consider them
   // resolved.
   bool is_resolved = is_scripted_desc || IsResolved();
-  // A scripted breakpoint might be resolved but not have a site.  Be sure to 
+  // A scripted breakpoint might be resolved but not have a site.  Be sure to
   // check for that.
-  bool is_hardware = !is_scripted_desc && IsResolved() && m_bp_site_sp 
-      && m_bp_site_sp->IsHardware();
+  bool is_hardware = !is_scripted_desc && IsResolved() && m_bp_site_sp &&
+                     m_bp_site_sp->IsHardware();
 
   if (level == lldb::eDescriptionLevelVerbose) {
     s->EOL();

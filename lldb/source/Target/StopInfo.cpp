@@ -157,7 +157,8 @@ public:
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           StoppointCallbackContext context(event_ptr, exe_ctx, true);
           bp_site_sp->BumpHitCounts();
-          m_should_stop = bp_site_sp->ShouldStop(&context, m_async_stopped_locs);
+          m_should_stop =
+              bp_site_sp->ShouldStop(&context, m_async_stopped_locs);
         } else {
           Log *log = GetLog(LLDBLog::Process);
 
@@ -345,8 +346,7 @@ protected:
         // local list.  That way if one of the breakpoint actions changes the
         // site, then we won't be operating on a bad list.
         BreakpointLocationCollection site_locations;
-        size_t num_constituents =
-            m_async_stopped_locs.GetSize();
+        size_t num_constituents = m_async_stopped_locs.GetSize();
 
         if (num_constituents == 0) {
           m_should_stop = true;
@@ -445,7 +445,7 @@ protected:
           // breakpoints, and the locations don't keep their constituents alive.
           // I'm just sticking the BreakpointSP's in a vector since I'm only
           // using it to locally increment their retain counts.
-          
+
           // We are holding onto the breakpoint locations that were hit
           // by this stop info between the "synchonous" ShouldStop and now.
           // But an intervening action might have deleted one of the breakpoints
@@ -465,8 +465,7 @@ protected:
 
           size_t num_valid_locs = valid_locs.GetSize();
           for (size_t j = 0; j < num_valid_locs; j++) {
-            lldb::BreakpointLocationSP bp_loc_sp 
-                = valid_locs.GetByIndex(j);
+            lldb::BreakpointLocationSP bp_loc_sp = valid_locs.GetByIndex(j);
             StreamString loc_desc;
             if (log) {
               bp_loc_sp->GetDescription(&loc_desc, eDescriptionLevelBrief);

@@ -597,8 +597,8 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
 
 template <>
 lldb::BreakpointLocationSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointLocationSP>(
-    python::PythonObject &p, Status &error);
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::BreakpointLocationSP>(python::PythonObject &p, Status &error);
 
 template <>
 lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
@@ -625,8 +625,8 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
 template <>
 lldb::DescriptionLevel
-ScriptedPythonInterface::ExtractValueFromPythonObject<
-    lldb::DescriptionLevel>(python::PythonObject &p, Status &error);
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error);
 
 } // namespace lldb_private
 

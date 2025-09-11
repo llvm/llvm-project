@@ -248,8 +248,8 @@ public:
   ///    Returns a pointer to the new location.
   lldb::BreakpointLocationSP AddLocation(const Address &addr,
                                          bool *new_location = nullptr);
-  /// Add a `facade` location to the breakpoint's collection of facade locations.  
-  /// This is only meant to be called by the breakpoint's resolver.
+  /// Add a `facade` location to the breakpoint's collection of facade
+  /// locations. This is only meant to be called by the breakpoint's resolver.
   /// Facade locations are placeholders that a scripted breakpoint can use to
   /// represent the stop locations provided by the breakpoint.  The scripted
   /// breakpoint should record the id of the facade location, and provide
@@ -263,7 +263,7 @@ public:
   /// \return
   ///    Returns a pointer to the new location.
   lldb::BreakpointLocationSP AddFacadeLocation();
-  
+
   lldb::BreakpointLocationSP GetFacadeLocationByID(lldb::break_id_t);
 
   /// Find a breakpoint location by Address.
@@ -293,14 +293,15 @@ public:
   ///    The ID specifying the location.
   ///
   /// \param[in] use_facade
-  /// If \b true, then prefer facade locations over "real" ones if they exist.  
+  /// If \b true, then prefer facade locations over "real" ones if they exist.
   ///
   /// \return
   ///    Returns a shared pointer to the location with ID \a bp_loc_id.  The
   ///    pointer
   ///    in the shared pointer will be nullptr if there is no location with that
   ///    ID.
-  lldb::BreakpointLocationSP FindLocationByID(lldb::break_id_t bp_loc_id, bool use_facade = true);
+  lldb::BreakpointLocationSP FindLocationByID(lldb::break_id_t bp_loc_id,
+                                              bool use_facade = true);
 
   /// Get breakpoint locations by index.
   ///
@@ -308,13 +309,14 @@ public:
   ///    The location index.
   ///
   /// \param[in] use_facade
-  /// If \b true, then prefer facade locations over "real" ones if they exist.  
+  /// If \b true, then prefer facade locations over "real" ones if they exist.
   ///
   /// \return
   ///     Returns a shared pointer to the location with index \a
   ///     index. The shared pointer might contain nullptr if \a index is
   ///     greater than then number of actual locations.
-  lldb::BreakpointLocationSP GetLocationAtIndex(size_t index, bool use_facade = true);
+  lldb::BreakpointLocationSP GetLocationAtIndex(size_t index,
+                                                bool use_facade = true);
 
   /// Removes all invalid breakpoint locations.
   ///
@@ -436,7 +438,7 @@ public:
   /// breakpoint sites.
   ///
   /// \param[in] use_facade
-  /// If \b true, then prefer facade locations over "real" ones if they exist.  
+  /// If \b true, then prefer facade locations over "real" ones if they exist.
   ///
   /// \return
   ///     The number locations resolved breakpoint sites.
@@ -451,7 +453,7 @@ public:
   /// Return the number of breakpoint locations.
   ///
   /// \param[in] use_facade
-  /// If \b true, then prefer facade locations over "real" ones if they exist.  
+  /// If \b true, then prefer facade locations over "real" ones if they exist.
   ///
   /// \return
   ///     The number breakpoint locations.
@@ -563,17 +565,14 @@ private:
 
   enum TypeDisplay {
     eDisplayFacade = 1,
-    eDisplayReal   = 1 << 1,
+    eDisplayReal = 1 << 1,
     eDisplayHeader = 1 << 2
   };
 
   void GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
-                      uint8_t display_type, bool show_locations);
-                      
-  bool HasFacadeLocations() {
-    return m_facade_locations.GetSize() != 0;
-  }
+                             uint8_t display_type, bool show_locations);
 
+  bool HasFacadeLocations() { return m_facade_locations.GetSize() != 0; }
 
 public:
   bool MatchesName(const char *name) {

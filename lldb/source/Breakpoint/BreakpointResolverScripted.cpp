@@ -160,17 +160,17 @@ void BreakpointResolverScripted::GetDescription(Stream *s) {
     s->Printf("python class = %s", m_class_name.c_str());
 }
 
-std::optional<std::string> 
-BreakpointResolverScripted::GetLocationDescription(
+std::optional<std::string> BreakpointResolverScripted::GetLocationDescription(
     lldb::BreakpointLocationSP bp_loc_sp, lldb::DescriptionLevel level) {
   CreateImplementationIfNeeded(GetBreakpoint());
-  if (m_interface_sp) 
+  if (m_interface_sp)
     return m_interface_sp->GetLocationDescription(bp_loc_sp, level);
   return {};
 }
 
 lldb::BreakpointLocationSP
-BreakpointResolverScripted::WasHit(lldb::StackFrameSP frame_sp, lldb::BreakpointLocationSP bp_loc_sp) {
+BreakpointResolverScripted::WasHit(lldb::StackFrameSP frame_sp,
+                                   lldb::BreakpointLocationSP bp_loc_sp) {
   if (m_interface_sp)
     return m_interface_sp->WasHit(frame_sp, bp_loc_sp);
 

@@ -157,12 +157,11 @@ public:
   /// Can only be called from a ScriptedBreakpointResolver...
   SBError
   AddLocation(SBAddress &address);
-  /// Add a "Facade location" to the breakpoint.  This returns the Facade 
-  /// Location that was added, which you can then use in 
+  /// Add a "Facade location" to the breakpoint.  This returns the Facade
+  /// Location that was added, which you can then use in
   /// get_location_description and was_hit in your breakpoint resolver.
   /// Can only be called from a ScriptedBreakpointResolver.
-  SBBreakpointLocation
-  AddFacadeLocation();
+  SBBreakpointLocation AddFacadeLocation();
 
   SBStructuredData SerializeToStructuredData();
 
