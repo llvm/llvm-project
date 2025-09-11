@@ -37,7 +37,7 @@ class FacadeExample:
         tmp_loc = self.cur_facade_loc
 
         self.cur_facade_loc = self.cur_facade_loc + 1
-        if self.cur_facade_loc == 5:
+        if self.cur_facade_loc == self.num_locs + 1:
             self.cur_facade_loc = 1
 
         if tmp_loc == self.loc_to_miss:
