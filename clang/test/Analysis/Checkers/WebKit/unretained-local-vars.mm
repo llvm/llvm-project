@@ -408,6 +408,21 @@ void use_const_local() {
 
 } // namespace const_global
 
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+
+unsigned foo() {
+  auto *string = provideNS();
+  auto *dictionary = provideCF();
+  return string.length + CFDictionaryGetCount(dictionary);
+}
+
+} // namespace ns_retained_return_value
+
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
 
