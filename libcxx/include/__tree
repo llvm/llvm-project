@@ -20,9 +20,11 @@
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
+#include <__new/launder.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -559,8 +561,7 @@ public:
 };
 
 template <class _VoidPtr>
-class _LIBCPP_STANDALONE_DEBUG
-__tree_node_base : public __tree_end_node<__rebind_pointer_t<_VoidPtr, __tree_node_base<_VoidPtr> > > {
+class __tree_node_base : public __tree_end_node<__rebind_pointer_t<_VoidPtr, __tree_node_base<_VoidPtr> > > {
 public:
   using pointer                            = __rebind_pointer_t<_VoidPtr, __tree_node_base>;
   using __end_node_pointer _LIBCPP_NODEBUG = __rebind_pointer_t<_VoidPtr, __tree_end_node<pointer> >;
@@ -573,22 +574,41 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __p) { __parent_ = static_cast<__end_node_pointer>(__p); }
 
-  ~__tree_node_base()                                  = delete;
+  _LIBCPP_HIDE_FROM_ABI __tree_node_base()             = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
+class __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
+// We use a union to avoid initialization during member initialization, which allows us
+// to use the allocator from the container to construct the `__node_value_type` in the
+// memory provided by the union member
+#ifndef _LIBCPP_CXX03_LANG
+
 private:
-  __node_value_type __value_;
+  union {
+    __node_value_type __value_;
+  };
 
 public:
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
+#else
 
+private:
+  _ALIGNAS_TYPE(__node_value_type) unsigned char __buffer_[sizeof(__node_value_type)];
+
+public:
+  _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return *reinterpret_cast<__node_value_type*>(__buffer_); }
+#endif
+
+  template <class _Alloc, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI explicit __tree_node(_Alloc& __na, _Args&&... __args) {
+    allocator_traits<_Alloc>::construct(__na, std::addressof(__get_value()), std::forward<_Args>(__args)...);
+  }
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
@@ -1816,7 +1836,7 @@ typename __tree<_Tp, _Compare, _Allocator>::__node_holder
 __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__get_value()), std::forward<_Args>(__args)...);
+  std::__construct_at(std::addressof(*__h), __na, std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
