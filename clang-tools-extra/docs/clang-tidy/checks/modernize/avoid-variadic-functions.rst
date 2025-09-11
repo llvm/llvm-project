@@ -6,8 +6,9 @@ modernize-avoid-variadic-functions
 Find all function definitions (but not declarations) of C-style variadic
 functions.
 
-Instead of C-style variadic functions, C++ function parameter pack or currying
-should be used.
+Instead of C-style variadic functions, C++ function parameter pack should be
+used.
+
 
 References
 ----------
