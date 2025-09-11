@@ -261,7 +261,9 @@ public:
     EarlyAllocSMESaveBuffer = Ptr;
   }
 
-  Register getEarlyAllocSMESaveBuffer() { return EarlyAllocSMESaveBuffer; }
+  Register getEarlyAllocSMESaveBuffer() const {
+    return EarlyAllocSMESaveBuffer;
+  }
 
   // Old SME ABI lowering state getters/setters:
   Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };

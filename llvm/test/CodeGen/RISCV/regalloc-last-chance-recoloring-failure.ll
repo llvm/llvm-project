@@ -115,7 +115,7 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    .cfi_def_cfa_offset 0
 ; SUBREGLIVENESS-NEXT:    ret
 entry:
-  %i = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55, i64 4)
+  %i = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55, i64 4)
   %i1 = tail call <vscale x 16 x half> @llvm.riscv.tuple.extract.v16f16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %i, i32 0)
   %i2 = call <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x half> poison, <vscale x 16 x half> poison, <vscale x 16 x i1> zeroinitializer, i64 7, i64 36, i64 0)
   call void @func()
