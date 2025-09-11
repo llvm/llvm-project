@@ -240,10 +240,9 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: findLastSet_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    not a1, a0
+; RV64XTHEADBB-NOB-NEXT:    slli a1, a0, 32
 ; RV64XTHEADBB-NOB-NEXT:    snez a0, a0
-; RV64XTHEADBB-NOB-NEXT:    slli a1, a1, 32
-; RV64XTHEADBB-NOB-NEXT:    th.ff0 a1, a1
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a1, a1
 ; RV64XTHEADBB-NOB-NEXT:    xori a1, a1, 31
 ; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NOB-NEXT:    or a0, a0, a1

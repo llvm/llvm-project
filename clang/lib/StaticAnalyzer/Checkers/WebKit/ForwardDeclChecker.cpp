@@ -272,7 +272,7 @@ public:
           ArgExpr = ArgExpr->IgnoreParenCasts();
       }
     }
-    if (isa<CXXNullPtrLiteralExpr>(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
+    if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {

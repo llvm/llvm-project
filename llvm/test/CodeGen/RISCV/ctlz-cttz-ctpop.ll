@@ -2004,9 +2004,8 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: test_ctlz_i32_zero_undef:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    not a0, a0
 ; RV64XTHEADBB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %tmp = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
   ret i32 %tmp
