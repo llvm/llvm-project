@@ -11,7 +11,6 @@ Checks: >
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,
-  -modernize-use-auto,
   -modernize-use-nodiscard,
   -modernize-use-trailing-return-type,
   performance-*,
