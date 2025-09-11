@@ -543,7 +543,15 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 
     Attribute mmra =
         rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
-    StringRef scope = "workgroup-one-as";
+    // Note: while there *is* a workgroup-one-as scope, this, when combined with
+    // the MMRA, will lead to the fence having no effect. This is because
+    // the codepaths for an atomic load or store will observe that a
+    // one-address-space atomic to LDS requires no synchronization because
+    // operations on LDS are totally ordered with respect to each other,
+    // and so will not emit the correct waitcnt operations that these fences
+    // are intended to produce. Therefore, we use a broader type of fence
+    // and rely on the MMRA to relax it to the semantics we want.
+    StringRef scope = "workgroup";
 
     auto relFence = LLVM::FenceOp::create(rewriter, loc,
                                           LLVM::AtomicOrdering::release, scope);
