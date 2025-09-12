@@ -424,15 +424,6 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
   if (isStrongerThan(L->getOrdering(), AtomicOrdering::Monotonic))
     return ModRefInfo::ModRef;
 
-  // For Monotonic and unordered atomic loads, if the locations are not NoAlias,
-  // we must be conservative and return ModRef to prevent unsafe reordering of
-  // accesses to the same memory.
-  if (L->isAtomic()){
-    if (Loc.Ptr &&
-        alias(MemoryLocation::get(L), Loc, AAQI, L) != AliasResult::NoAlias)
-      return ModRefInfo::ModRef;
-  }
-
   // If the load address doesn't alias the given address, it doesn't read
   // or write the specified memory.
   if (Loc.Ptr) {
@@ -440,6 +431,14 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
+
+  // At this point, the load's ordering is at most `Monotonic` (i.e., Monotonic,
+  // Unordered, or non-atomic), and it aliases with `Loc`. The condition
+  // `isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered)` is true only
+  // for `Monotonic` loads.
+  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a load just reads.
   return ModRefInfo::Ref;
 }
@@ -465,6 +464,13 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
     if (!isModSet(getModRefInfoMask(Loc)))
       return ModRefInfo::NoModRef;
   }
+
+  // At this point, the store's ordering is at most `Monotonic` (i.e.,
+  // Monotonic, Unordered, or non-atomic), and it aliases with `Loc`. The
+  // condition `isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered)` is
+  // true only for `Monotonic` stores.
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
+    return ModRefInfo::ModRef;
 
   // Otherwise, a store just writes.
   return ModRefInfo::ModRef;
