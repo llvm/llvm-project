@@ -357,6 +357,11 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
 
+  setOperationAction(ISD::STRICT_FSETCC,  MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCC,  MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
+
   if (Subtarget.hasMips32r2() ||
       getTargetMachine().getTargetTriple().isOSLinux())
     setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
@@ -661,7 +666,8 @@ static bool invertFPCondCodeUser(Mips::CondCode CC) {
 // Returns Op if setcc is not a floating point comparison.
 static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
   // must be a SETCC node
-  if (Op.getOpcode() != ISD::SETCC)
+  if (Op.getOpcode() != ISD::SETCC && Op.getOpcode() != ISD::STRICT_FSETCC 
+                                   && Op.getOpcode() != ISD::STRICT_FSETCCS)
     return Op;
 
   SDValue LHS = Op.getOperand(0);
@@ -1338,6 +1344,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::JumpTable:          return lowerJumpTable(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::SETCC:              return lowerSETCC(Op, DAG);
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:			return lowerFSETCC(Op, DAG);
   case ISD::VASTART:            return lowerVASTART(Op, DAG);
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
@@ -2225,6 +2233,24 @@ SDValue MipsTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue False = DAG.getConstant(0, DL, MVT::i32);
 
   return createCMovFP(DAG, Cond, True, False, DL);
+}
+
+SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
+  assert(!Subtarget.hasMips32r6() && !Subtarget.hasMips64r6());
+
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+
+  SDValue Cond = DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
+                     DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
+  SDValue True = DAG.getConstant(1, DL, MVT::i32);
+  SDValue False =  DAG.getConstant(0, DL, MVT::i32);
+  SDValue CMovFP = createCMovFP(DAG, Cond, True, False, DL);
+
+  return DAG.getMergeValues({CMovFP, Chain}, DL);
 }
 
 SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
