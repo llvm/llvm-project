@@ -1287,3 +1287,25 @@ template <class Tb, class Ub> concept A42b = Void<Tb> || A42<Ub>;
 template <class Tc> concept R42c = A42b<Tc, Tc&>;
 static_assert (R42c<void>);
 }
+
+namespace parameter_mapping_regressions {
+
+namespace case1 {
+
+template <template <class> class> using __meval = struct __q;
+template <template <class> class _Tp>
+concept __mvalid = requires { typename __meval<_Tp>; };
+template <class _Fn>
+concept __minvocable = __mvalid<_Fn::template __f>;
+template <class...> struct __mdefer_;
+template <class _Fn, class... _Args>
+  requires __minvocable<_Fn>
+struct __mdefer_<_Fn, _Args...> {};
+template <class = __q> struct __mtransform {
+  template <class> using __f = int;
+};
+struct __completion_domain_or_none_ : __mdefer_<__mtransform<>> {};
+
+}
+
+}

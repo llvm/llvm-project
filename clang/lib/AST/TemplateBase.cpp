@@ -606,8 +606,11 @@ TemplateArgumentLoc::TemplateArgumentLoc(ASTContext &Ctx,
       LocInfo(Ctx, TemplateKWLoc, QualifierLoc, TemplateNameLoc, EllipsisLoc) {
   assert(Argument.getKind() == TemplateArgument::Template ||
          Argument.getKind() == TemplateArgument::TemplateExpansion);
-  assert(QualifierLoc.getNestedNameSpecifier() ==
-         Argument.getAsTemplateOrTemplatePattern().getQualifier());
+  // We can't assume QualifierLoc.getNestedNameSpecifier() ==
+  // Argument.getAsTemplateOrTemplatePattern().getQualifier() at this point,
+  // because in template rewriting, we may substitute a DependentTemplateName
+  // (which has a NNSLoc) into a template template parameter (which
+  // doesn't have a NNSLoc).
 }
 
 NestedNameSpecifierLoc TemplateArgumentLoc::getTemplateQualifierLoc() const {
