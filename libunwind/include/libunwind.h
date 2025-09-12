@@ -15,6 +15,7 @@
 
 #include <__libunwind_config.h>
 
+#ifndef __wasm__
 #include <stdint.h>
 #include <stddef.h>
 
@@ -1300,5 +1301,6 @@ enum {
   UNW_LOONGARCH_F30 = 62,
   UNW_LOONGARCH_F31 = 63,
 };
+#endif
 
 #endif
