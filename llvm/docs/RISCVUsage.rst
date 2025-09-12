@@ -327,6 +327,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
 
+``experimental-zibi``
+  LLVM implements the `0.1 release specification <https://github.com/riscv/zibi/releases/tag/v0.1.0>`__.
+
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `1.0 release specification <https://github.com/riscv/riscv-cfi/releases/tag/v1.0>`__.
 

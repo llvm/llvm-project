@@ -52,6 +52,7 @@
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
 ; CHECK-NEXT:   experimental-zalasr              - 'Zalasr' (Load-Acquire and Store-Release Instructions).
+; CHECK-NEXT:   experimental-zibi                - 'Zibi' (Branch with Immediate).
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
 ; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
