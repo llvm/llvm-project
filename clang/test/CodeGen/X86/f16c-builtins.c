@@ -62,7 +62,7 @@ __m128i test_mm_cvtps_ph(__m128 a) {
   return _mm_cvtps_ph(a, 0);
 }
 
-__m128i test_mm256_cvtps_ph(__m256 a) {  
+__m128i test_mm256_cvtps_ph(__m256 a) {
   // CHECK-LABEL: test_mm256_cvtps_ph
   // CHECK: call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %{{.*}}, i32 0)
   return _mm256_cvtps_ph(a, 0);
