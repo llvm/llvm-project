@@ -20,6 +20,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -154,7 +155,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
 
   OS << "// Enum values for intrinsics.\n";
   bool First = true;
-  for (const auto &Int : Ints[*Set]) {
+  for (const CodeGenIntrinsic &Int : Ints[*Set]) {
     OS << "    " << Int.EnumName;
 
     // Assign a value to the first intrinsic in this target set so that all
@@ -167,7 +168,9 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << ", ";
     if (Int.EnumName.size() < 40)
       OS.indent(40 - Int.EnumName.size());
-    OS << formatv(" // {}\n", Int.Name);
+    OS << formatv(
+        " // {} ({})\n", Int.Name,
+        SrcMgr.getFormattedLocationNoOffset(Int.TheDef->getLoc().front()));
   }
 
   // Emit num_intrinsics into the target neutral enum.
@@ -455,15 +458,9 @@ struct FnAttributeComparator {
 
 struct AttributeComparator {
   bool operator()(const CodeGenIntrinsic *L, const CodeGenIntrinsic *R) const {
-    // Order all intrinsics with no functiona attributes before all intrinsics
-    // with function attributes.
-    bool HasFnAttrLHS = hasFnAttributes(*L);
-    bool HasFnAttrRHS = hasFnAttributes(*R);
-
-    // Order by argument attributes if function `hasFnAttributes` is equal.
-    // This is reliable because each side is already sorted internally.
-    return std::tie(HasFnAttrLHS, L->ArgumentAttributes) <
-           std::tie(HasFnAttrRHS, R->ArgumentAttributes);
+    // This comparator is used to unique just the argument attributes of an
+    // intrinsic without considering any function attributes.
+    return L->ArgumentAttributes < R->ArgumentAttributes;
   }
 };
 } // End anonymous namespace
@@ -659,7 +656,7 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
   //
   //   getIntrinsicArgAttributeSet(C, ArgAttrID, FT->getContainedType(ArgNo));
   //
-  // Create a table that records, for each argument attributes, the set of
+  // Create a table that records, for each argument attributes, the list of
   // <ArgNo, ArgAttrID> pairs that are needed to construct its argument
   // attributes. These tables for all intrinsics will be concatenated into one
   // large table and then for each intrinsic, we remember the Staring index and
@@ -667,79 +664,77 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
   // non-empty attributes), so that we can build the attribute list for an
   // intrinsic without using a switch-case.
 
-  // Find the max number of attributes to create the local array and create
-  // a concatenated list of <ArgNo, AttrID> pairs.
-  struct ArgNoAttrIDPair {
-    uint16_t ArgNo, ArgAttrID;
-    ArgNoAttrIDPair(uint16_t ArgNo, uint16_t ArgAttrID)
-        : ArgNo(ArgNo), ArgAttrID(ArgAttrID) {}
-  };
+  using ArgNoAttrIDPair = std::pair<uint16_t, uint16_t>;
 
-  // For each unique ID in UniqAttributes, reacord the starting index in the
-  // flattened ArgNoAttrIDPair table, and the number of non-empty arg
-  // attributes.
-  struct ArgAttributesInfo {
-    uint16_t StartIndex;
-    uint16_t NumAttrs;
-    ArgAttributesInfo(uint16_t StartIndex, uint16_t NumAttrs)
-        : StartIndex(StartIndex), NumAttrs(NumAttrs) {}
-  };
-  SmallVector<ArgNoAttrIDPair> ArgAttrIdTable;
-  SmallVector<ArgAttributesInfo> ArgAttributesInfoTable(UniqAttributes.size(),
-                                                        {0, 0});
+  // Emit the table of concatenated <ArgNo, AttrId> using SequenceToOffsetTable
+  // so that entries can be reused if possible. Individual sequences in this
+  // table do not have any terminator.
+  using ArgAttrIDSubTable = SmallVector<ArgNoAttrIDPair>;
+  SequenceToOffsetTable<ArgAttrIDSubTable> ArgAttrIdSequenceTable(std::nullopt);
+  SmallVector<ArgAttrIDSubTable> ArgAttrIdSubTables(
+      UniqAttributes.size()); // Indexed by UniqueID.
 
+  // Find the max number of attributes to create the local array.
   unsigned MaxNumAttrs = 0;
   for (const auto [IntPtr, UniqueID] : UniqAttributes) {
     const CodeGenIntrinsic &Int = *IntPtr;
-    unsigned NumAttrs = 0;
-    unsigned StartIndex = ArgAttrIdTable.size();
+    ArgAttrIDSubTable SubTable;
 
     for (const auto &[ArgNo, Attrs] : enumerate(Int.ArgumentAttributes)) {
       if (Attrs.empty())
         continue;
 
       uint16_t ArgAttrID = UniqArgAttributes.find(Attrs)->second;
-      ArgAttrIdTable.emplace_back((uint16_t)ArgNo, ArgAttrID);
-      ++NumAttrs;
+      SubTable.emplace_back((uint16_t)ArgNo, ArgAttrID);
     }
-
-    // Record the start index and size of the list for this unique ID.
-    if (NumAttrs)
-      ArgAttributesInfoTable[UniqueID] =
-          ArgAttributesInfo(StartIndex, NumAttrs);
-
-    NumAttrs += hasFnAttributes(Int);
+    ArgAttrIdSubTables[UniqueID] = SubTable;
+    if (!SubTable.empty())
+      ArgAttrIdSequenceTable.add(SubTable);
+    unsigned NumAttrs = SubTable.size() + hasFnAttributes(Int);
     MaxNumAttrs = std::max(MaxNumAttrs, NumAttrs);
   }
 
-  if (ArgAttrIdTable.size() >= std::numeric_limits<uint16_t>::max())
+  ArgAttrIdSequenceTable.layout();
+
+  if (ArgAttrIdSequenceTable.size() >= std::numeric_limits<uint16_t>::max())
     PrintFatalError("Size of ArgAttrIdTable exceeds supported limit");
 
-  // Emit the 2 tables (flattened ArgNo, ArgAttrID) and ArgAttrIdTableIndex
-  OS << R"(
-namespace {
-struct ArgNoAttrIDPair {
+  // Emit the 2 tables (flattened ArgNo, ArgAttrID) and ArgAttributesInfoTable.
+  OS << formatv(R"(
+namespace {{
+struct ArgNoAttrIDPair {{
   uint16_t ArgNo, ArgAttrID;
 };
 } // namespace
 
-static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {
-)";
-  for (const auto &[ArgNo, ArgAttrID] : ArgAttrIdTable)
-    OS << formatv("  {{{}, {}},\n", ArgNo, ArgAttrID);
-  OS << R"(}; // ArgAttrIdTable
+// Number of entries: {}
+static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {{
+)",
+                ArgAttrIdSequenceTable.size());
 
-namespace {
-struct ArgAttributesInfo {
+  ArgAttrIdSequenceTable.emit(OS, [](raw_ostream &OS, ArgNoAttrIDPair Elem) {
+    OS << formatv("{{{}, {}}", Elem.first, Elem.second);
+  });
+
+  OS << formatv(R"(}; // ArgAttrIdTable
+
+namespace {{
+struct ArgAttributesInfo {{
   uint16_t StartIndex;
   uint16_t NumAttrs;
 };
 } // namespace
- 
-static constexpr ArgAttributesInfo ArgAttributesInfoTable[] = {
-)";
-  for (const auto &[StartIndex, NumAttrs] : ArgAttributesInfoTable)
+
+// Number of entries: {}
+static constexpr ArgAttributesInfo ArgAttributesInfoTable[] = {{
+)",
+                ArgAttrIdSubTables.size());
+
+  for (const auto &SubTable : ArgAttrIdSubTables) {
+    unsigned NumAttrs = SubTable.size();
+    unsigned StartIndex = NumAttrs ? ArgAttrIdSequenceTable.get(SubTable) : 0;
     OS << formatv("  {{{}, {}},\n", StartIndex, NumAttrs);
+  }
   OS << "}; // ArgAttributesInfoTable\n";
 
   // Now emit the Intrinsic::getAttributes function. This will first map
@@ -756,7 +751,9 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
   uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
   uint8_t FnAttrID = PackedID >> 8;
   uint8_t ArgAttrID = PackedID & 0xFF;
-  std::pair<unsigned, AttributeSet> AS[{}];
+  using PairTy = std::pair<unsigned, AttributeSet>;
+  alignas(PairTy) char ASStorage[sizeof(PairTy) * {}];
+  PairTy *AS = reinterpret_cast<PairTy *>(ASStorage);
 
   // Construct an ArrayRef for easier range checking.
   ArrayRef<ArgAttributesInfo> ArgAttributesInfoTableAR(ArgAttributesInfoTable);

@@ -72,7 +72,7 @@ Some of the current limitations
  * Clang:
     * Including headers after importing the ``std`` module may fail. This is
       hard to solve and there is a work-around by first including all headers
-      `bug report <https://github.com/llvm/llvm-project/issues/61465>`__.
+      `bug report <https://llvm.org/PR61465>`__.
 
 Blockers
 ~~~~~~~~
@@ -88,8 +88,7 @@ Blockers
 
   * Clang
 
-    * Some concepts do not work properly
-      `bug report <https://github.com/llvm/llvm-project/issues/62943>`__.
+    * Some concepts do not work properly `bug report <https://llvm.org/PR61465>`__.
 
 
 Using in external projects

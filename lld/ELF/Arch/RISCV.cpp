@@ -1036,6 +1036,7 @@ void RISCV::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
     rela.setSymbolAndType(0, R_RISCV_ALIGN, false);
     rela.r_addend = r.second;
   }
+  synthesizedAligns.clear();
   // Replace the old relocation section with the new one in the output section.
   // addOrphanSections ensures that the output relocation section is processed
   // after osec.

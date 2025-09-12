@@ -12,7 +12,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/math/generic/explogxf.h"
+#include "src/__support/math/sinhfcoshf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -73,7 +73,8 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.
-  return static_cast<float>(exp_pm_eval</*is_sinh*/ true>(x));
+  return static_cast<float>(
+      math::sinhfcoshf_internal::exp_pm_eval</*is_sinh*/ true>(x));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

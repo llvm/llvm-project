@@ -287,6 +287,8 @@ namespace OverlappingStrings {
   constexpr bool may_overlap_4 = &"xfoo"[1] == &"xfoo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
 
 
+  /// Used to crash.
+  const bool x = &"ab"[0] == &"ba"[3];
 
 }
 

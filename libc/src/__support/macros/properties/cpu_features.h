@@ -59,6 +59,10 @@
 #endif // LIBC_TARGET_CPU_HAS_ARM_FPU_DOUBLE
 #endif // __ARM_FP
 
+#if defined(__ARM_NEON)
+#define LIBC_TARGET_CPU_HAS_ARM_NEON
+#endif
+
 #if defined(__riscv_flen)
 // https://github.com/riscv-non-isa/riscv-c-api-doc/blob/main/src/c-api.adoc
 #if defined(__riscv_zfhmin)

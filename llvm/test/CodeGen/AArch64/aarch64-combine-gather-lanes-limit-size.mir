@@ -1,0 +1,33 @@
+# RUN: llc -run-pass=machine-combiner -aarch64-search-limit=2 -mcpu=neoverse-n2 -mtriple=aarch64-none-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            negative_pattern_mbb_too_large
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3, $x4
+
+    ; CHECK-LABEL: name: negative_pattern_mbb_too_large
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64common = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
+    ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], killed [[COPY1]], 0, 1
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[LD_LANE_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, killed [[COPY2]]
+    ; CHECK-NEXT: [[LD_LANE_2:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_1]], 2, killed [[COPY3]]
+    ; CHECK-NEXT: [[LD_LANE_3:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_2]], 3, killed [[COPY4]]
+    ; CHECK-NEXT: $q0 = COPY [[LD_LANE_3]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = COPY $x1
+    %2:gpr64common = COPY $x2
+    %3:gpr64common = COPY $x3
+    %4:gpr64common = COPY $x4
+    %5:fpr32 = LDRSroX %0, killed %1, 0, 1
+    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %7:fpr128 = LD1i32 %6, 1, killed %2
+    %8:fpr128 = LD1i32 %7, 2, killed %3
+    %9:fpr128 = LD1i32 %8, 3, killed %4
+    $q0 = COPY %9
+    RET_ReallyLR implicit $q0

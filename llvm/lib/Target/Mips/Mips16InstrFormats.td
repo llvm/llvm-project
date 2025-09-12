@@ -62,7 +62,6 @@ class MipsInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
   let Inst{15-11} = Opcode;
 
   let Size=2;
-  field bits<16> SoftFail = 0;
 }
 
 //
@@ -75,7 +74,6 @@ class MipsInst16_32<dag outs, dag ins, string asmstr, list<dag> pattern,
   field bits<32> Inst;
 
   let Size=4;
-  field bits<32> SoftFail = 0;
 }
 
 class MipsInst16_EXTEND<dag outs, dag ins, string asmstr, list<dag> pattern,

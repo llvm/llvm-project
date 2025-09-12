@@ -15,6 +15,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include <cstdint>
 
@@ -100,6 +101,14 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
+    return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/false);
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
+    return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
   default:
     return false;
   }
@@ -143,6 +152,50 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
            << ArgExpr->getType();
 
   return false;
+}
+
+bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
+  bool Fail = false;
+
+  // First argument is a global or generic pointer.
+  Expr *PtrArg = TheCall->getArg(0);
+  QualType PtrTy = PtrArg->getType()->getPointeeType();
+  unsigned AS = getASTContext().getTargetAddressSpace(PtrTy.getAddressSpace());
+  if (AS != llvm::AMDGPUAS::FLAT_ADDRESS &&
+      AS != llvm::AMDGPUAS::GLOBAL_ADDRESS) {
+    Fail = true;
+    Diag(TheCall->getBeginLoc(), diag::err_amdgcn_coop_atomic_invalid_as)
+        << PtrArg->getSourceRange();
+  }
+
+  // Check atomic ordering
+  Expr *AtomicOrdArg = TheCall->getArg(IsStore ? 2 : 1);
+  Expr::EvalResult AtomicOrdArgRes;
+  if (!AtomicOrdArg->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
+    llvm_unreachable("Intrinsic requires imm for atomic ordering argument!");
+  auto Ord =
+      llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
+
+  // Atomic ordering cannot be acq_rel in any case, acquire for stores or
+  // release for loads.
+  if (!llvm::isValidAtomicOrderingCABI((unsigned)Ord) ||
+      (Ord == llvm::AtomicOrderingCABI::acq_rel) ||
+      Ord == (IsStore ? llvm::AtomicOrderingCABI::acquire
+                      : llvm::AtomicOrderingCABI::release)) {
+    return Diag(AtomicOrdArg->getBeginLoc(),
+                diag::warn_atomic_op_has_invalid_memory_order)
+           << 0 << AtomicOrdArg->getSourceRange();
+  }
+
+  // Last argument is a string literal
+  Expr *Arg = TheCall->getArg(TheCall->getNumArgs() - 1);
+  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
+    Fail = true;
+    Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+        << Arg->getSourceRange();
+  }
+
+  return Fail;
 }
 
 bool SemaAMDGPU::checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,

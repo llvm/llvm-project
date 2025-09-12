@@ -80,8 +80,8 @@ namespace llvm::RISCV {
 
 } // end namespace llvm::RISCV
 
-RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
-    : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
+RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
+    : RISCVGenInstrInfo(STI, RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
       STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
@@ -382,7 +382,7 @@ void RISCVInstrInfo::copyPhysRegVector(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
     const TargetRegisterClass *RegClass) const {
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
   RISCVVType::VLMUL LMul = RISCVRI::getLMul(RegClass->TSFlags);
   unsigned NF = RISCVRI::getNF(RegClass->TSFlags);
 
@@ -444,13 +444,7 @@ void RISCVInstrInfo::copyPhysRegVector(
     return {RISCVVType::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
             RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
   };
-  auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
-                                   uint16_t Encoding) {
-    MCRegister Reg = RISCV::V0 + Encoding;
-    if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVVType::LMUL_1)
-      return Reg;
-    return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
-  };
+
   while (I != NumRegs) {
     // For non-segment copying, we only do this once as the registers are always
     // aligned.
@@ -470,9 +464,9 @@ void RISCVInstrInfo::copyPhysRegVector(
 
     // Emit actual copying.
     // For reversed copying, the encoding should be decreased.
-    MCRegister ActualSrcReg = FindRegWithEncoding(
+    MCRegister ActualSrcReg = TRI->findVRegWithEncoding(
         RegClass, ReversedCopy ? (SrcEncoding - NumCopied + 1) : SrcEncoding);
-    MCRegister ActualDstReg = FindRegWithEncoding(
+    MCRegister ActualDstReg = TRI->findVRegWithEncoding(
         RegClass, ReversedCopy ? (DstEncoding - NumCopied + 1) : DstEncoding);
 
     auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), ActualDstReg);
@@ -3517,6 +3511,9 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
       return outliner::InstrType::Illegal;
   }
 
+  if (isLPAD(MI))
+    return outliner::InstrType::Illegal;
+
   return outliner::InstrType::Legal;
 }
 
@@ -4802,8 +4799,22 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   return Scaled;
 }
 
-/// Given two VL operands, do we know that LHS <= RHS?
+static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
+  assert(MO.isImm() || MO.getReg().isVirtual());
+  if (MO.isImm())
+    return MO.getImm();
+  const MachineInstr *Def =
+      MO.getParent()->getMF()->getRegInfo().getVRegDef(MO.getReg());
+  int64_t Imm;
+  if (isLoadImm(Def, Imm))
+    return Imm;
+  return std::nullopt;
+}
+
+/// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
 bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
+  assert((LHS.isImm() || LHS.getParent()->getMF()->getRegInfo().isSSA()) &&
+         (RHS.isImm() || RHS.getParent()->getMF()->getRegInfo().isSSA()));
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
@@ -4813,9 +4824,11 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
-  if (!LHS.isImm() || !RHS.isImm())
+  std::optional<int64_t> LHSImm = getEffectiveImm(LHS),
+                         RHSImm = getEffectiveImm(RHS);
+  if (!LHSImm || !RHSImm)
     return false;
-  return LHS.getImm() <= RHS.getImm();
+  return LHSImm <= RHSImm;
 }
 
 namespace {

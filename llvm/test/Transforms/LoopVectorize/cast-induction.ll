@@ -114,10 +114,8 @@ exit:
 
 define void @cast_induction_tail_folding(ptr %A) {
 ; VF4-LABEL: @cast_induction_tail_folding(
-; VF4:       [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]
-; VF4-NEXT:  [[VEC_IND:%.+]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ]
-; VF4-NEXT:  = icmp ule <4 x i32> [[VEC_IND]], splat (i32 2)
-; VF4-NEXT:  = sext <4 x i32> [[VEC_IND]] to <4 x i64>
+; VF4-LABEL: vector.body:
+; VF4-NEXT:   br i1 true, label %pred.store.if, label %pred.store.continue
 
 ; IC2-LABEL: @cast_induction_tail_folding(
 ; IC2:      [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]

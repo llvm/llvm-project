@@ -11,6 +11,7 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -23,6 +24,7 @@
 namespace mlir {
 namespace xegpu {
 class TensorDescType;
+class DistributeLayoutAttr;
 class LayoutAttr;
 class SliceAttr;
 } // namespace xegpu

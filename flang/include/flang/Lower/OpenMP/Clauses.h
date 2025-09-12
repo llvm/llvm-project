@@ -219,6 +219,7 @@ using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdTy, ExprTy>;
 using Doacross = tomp::clause::DoacrossT<TypeTy, IdTy, ExprTy>;
 using DynamicAllocators =
     tomp::clause::DynamicAllocatorsT<TypeTy, IdTy, ExprTy>;
+using DynGroupprivate = tomp::clause::DynGroupprivateT<TypeTy, IdTy, ExprTy>;
 using Enter = tomp::clause::EnterT<TypeTy, IdTy, ExprTy>;
 using Exclusive = tomp::clause::ExclusiveT<TypeTy, IdTy, ExprTy>;
 using Fail = tomp::clause::FailT<TypeTy, IdTy, ExprTy>;
@@ -228,6 +229,8 @@ using Firstprivate = tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>;
 using From = tomp::clause::FromT<TypeTy, IdTy, ExprTy>;
 using Full = tomp::clause::FullT<TypeTy, IdTy, ExprTy>;
 using Grainsize = tomp::clause::GrainsizeT<TypeTy, IdTy, ExprTy>;
+using GraphId = tomp::clause::GraphIdT<TypeTy, IdTy, ExprTy>;
+using GraphReset = tomp::clause::GraphResetT<TypeTy, IdTy, ExprTy>;
 using HasDeviceAddr = tomp::clause::HasDeviceAddrT<TypeTy, IdTy, ExprTy>;
 using Hint = tomp::clause::HintT<TypeTy, IdTy, ExprTy>;
 using Holds = tomp::clause::HoldsT<TypeTy, IdTy, ExprTy>;

@@ -169,8 +169,8 @@ frameInfo:
   stackProtector:  ''
   functionContext: ''
   cvBytesOfCalleeSavedRegisters: 48
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default, 
       callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 

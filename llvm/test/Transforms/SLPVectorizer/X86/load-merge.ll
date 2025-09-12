@@ -87,10 +87,8 @@ define <4 x float> @PR16739_byref_alt(ptr nocapture readonly dereferenceable(16)
 define <4 x float> @PR16739_byval(ptr nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[T1:%.*]] = load i64, ptr [[X]], align 16
-; CHECK-NEXT:    [[T8:%.*]] = lshr i64 [[T1]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <3 x i32> <i32 0, i32 poison, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> [[TMP2]], i64 [[T8]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <3 x i32> <i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <3 x i64> [[TMP2]], <i64 0, i64 32, i64 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <3 x i64> [[TMP3]] to <3 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <3 x i32> [[TMP4]] to <3 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
