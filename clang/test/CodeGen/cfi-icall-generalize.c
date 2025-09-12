@@ -32,3 +32,4 @@ void uni(void (*fn)(union Union), union Union arg1) {
 
 // CHECK: [[TYPE2]] = !{i64 0, !"_ZTSFvPFvPcES_E"}
 // CHECK: [[TYPE2_GENERALIZED]] = !{i64 0, !"_ZTSFvPvS_E.generalized"}
+
