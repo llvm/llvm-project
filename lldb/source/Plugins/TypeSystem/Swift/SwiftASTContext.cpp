@@ -3973,7 +3973,7 @@ SwiftASTContext::GetModuleImportProgressRAII(std::string category) {
                                                                      category);
 }
 
-static const char *g_invalid_context =
+static constexpr llvm::StringLiteral g_invalid_context =
     "could not initialize Swift compiler, run swift-healthcheck for more info";
 
 llvm::Expected<swift::ModuleDecl &>
