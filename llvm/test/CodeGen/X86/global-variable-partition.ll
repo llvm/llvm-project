@@ -29,11 +29,33 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN:     -data-sections=false -unique-section-names=false  \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=AGG,COMMON --dump-input=always
 
+;; Repeat the commands above with '-preserve-hot-data-section-prefix=false'
+
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -data-sections=true  -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=COMMON,NOHOT,MUT --dump-input=always
+
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -data-sections=true  -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=COMMON,NOHOT,MUT --dump-input=always
+
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic \
+; RUN:     -partition-static-data-sections=true \
+; RUN:     -data-sections=false -unique-section-names=false  \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=COMMON,NOHOT --dump-input=always
+
+
 ; For @.str and @.str.1
 ; COMMON:      .type .L.str,@object
 ; SYM-NEXT:    .section .rodata.str1.1.hot.
 ; UNIQ-NEXT:   .section	.rodata.str1.1.hot.,"aMS",@progbits,1
 ; AGG-NEXT:    .section	.rodata.str1.1.hot
+; NOHOT:       .section .rodata.str1.1,"aMS",@progbits,1
 ; COMMON-NEXT: .L.str:
 ; COMMON-NEXT:    "hot\t"
 ; COMMON:      .L.str.1:
@@ -44,24 +66,32 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SYM-NEXT:    .section	.data.rel.ro.hot.hot_relro_array
 ; UNIQ-NEXT:   .section	.data.rel.ro.hot.,"aw",@progbits,unique,1
 ; AGG-NEXT:    .section	.data.rel.ro.hot.,"aw",@progbits
+; NOHOT:       .section .data.rel.ro,"aw",@progbits
 
 ; For @hot_data, which is accessed by {cold_func, unprofiled_func, hot_func}.
 ; COMMON:      .type hot_data,@object
 ; SYM-NEXT:    .section	.data.hot.hot_data,"aw",@progbits
 ; UNIQ-NEXT:   .section	.data.hot.,"aw",@progbits,unique,2
 ; AGG-NEXT:    .section	.data.hot.,"aw",@progbits
+; The `.section` directive is omitted for .data with -unique-section-names=false.
+; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
+; MUT:       .section .data,"aw"
 
 ; For @hot_bss, which is accessed by {unprofiled_func, hot_func}.
 ; COMMON:      .type hot_bss,@object
 ; SYM-NEXT:    .section	.bss.hot.hot_bss,"aw",@nobits
 ; UNIQ-NEXT:   .section	.bss.hot.,"aw",@nobits,unique,3
 ; AGG-NEXT:    .section .bss.hot.,"aw",@nobits
+; The `.section` directive is omitted for .bss with -unique-section-names=false.
+; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
+; MUT:       .section .bss,"aw"
 
 ; For @.str.2
 ; COMMON:      .type .L.str.2,@object
 ; SYM-NEXT:    .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
 ; UNIQ-NEXT:   .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
 ; AGG-NEXT:    .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; NOHOT:       .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1 
 ; COMMON-NEXT: .L.str.2:
 ; COMMON-NEXT:    "cold%d\t%d\t%d\n"
 
@@ -70,12 +100,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SYM-NEXT:    .section	.bss.unlikely.cold_bss,"aw",@nobits
 ; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,4
 ; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
+; NOHOT:       .section	.bss.unlikely.,"aw",@nobits
 
 ; For @cold_data
 ; COMMON:      .type cold_data,@object
 ; SYM-NEXT:    .section	.data.unlikely.cold_data,"aw",@progbits
 ; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,5
 ; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
+; NOHOT:       .section	.data.unlikely.,"aw",@progbits
 
 ; For @cold_data_custom_foo_section
 ; It has an explicit section 'foo' and shouldn't have hot or unlikely suffix.
@@ -83,12 +115,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SYM-NEXT:    .section foo,"aw",@progbits
 ; UNIQ-NEXT:   .section foo,"aw",@progbits
 ; AGG-NEXT:    .section foo,"aw",@progbits
+; NOHOT:       .section	foo,"aw",@progbits
 
 ; For @cold_relro_array
 ; COMMON:      .type cold_relro_array,@object
 ; SYM-NEXT:    .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
 ; UNIQ-NEXT:   .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,6
 ; AGG-NEXT:    .section	.data.rel.ro.unlikely.,"aw",@progbits
+; NOHOT:       .section	.data.rel.ro.unlikely.,"aw",@progbits
 
 ; Currently static-data-splitter only analyzes access from code.
 ; @bss2 and @data3 are indirectly accessed by code through @hot_relro_array
@@ -99,12 +133,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SYM-NEXT:    .section	.bss.unlikely.bss2,"aw",@nobits
 ; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,7
 ; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
+; NOHOT:       .section	.bss.unlikely.,"aw",@nobits 
 
 ; For @data3
 ; COMMON:      .type data3,@object
 ; SYM-NEXT:    .section	.data.unlikely.data3,"aw",@progbits
 ; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,8
 ; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
+; NOHOT:       .section	.data.unlikely.,"aw",@progbits 
 
 ; For @data_with_unknown_hotness
 ; SYM: 	       .type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness
@@ -113,6 +149,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The `.section` directive is omitted for .data with -unique-section-names=false.
 ; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
 ; AGG:         .data
+; NOHOT:       .data
 ; COMMON:      .Ldata_with_unknown_hotness:
 
 ; For @hot_data_custom_bar_section
@@ -122,6 +159,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SYM:         hot_data_custom_bar_section
 ; UNIQ:        .section bar,"aw",@progbits
 ; AGG:         .section bar,"aw",@progbits
+; NOHOT:      .section bar,"aw",@progbits
 
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1

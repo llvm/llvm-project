@@ -7,17 +7,24 @@
 ; The static-data-splitter pass doesn't run.
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -function-sections=true \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
-; RUN:     -unique-section-names=true %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFAULT
+; RUN:     -unique-section-names=true %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFAULT,COMM
+
+; Repeat the command with -preserve-hot-data-section-prefix=false
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -function-sections=true \
+; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     -unique-section-names=true %s -o - 2>&1 | FileCheck %s --check-prefixes=DEFNOHOT,COMM
 
 ; DEFAULT: .section .rodata.hot.foo,"a",@progbits
-; DEFAULT:   .LJTI0_0:
-; DEFAULT:   .LJTI0_1:
-; DEFAULT:   .LJTI0_2:
-; DEFAULT:   .LJTI0_3:
-; DEFAULT: .section .rodata.func_without_profile,"a",@progbits
-; DEFAULT:   .LJTI1_0:
-; DEFAULT: .section .rodata.bar_prefix.bar,"a",@progbits
-; DEFAULT:   .LJTI2_0
+; DEFNOHOT: .section .rodata.foo,"a",@progbits
+; COMM:   .LJTI0_0:
+; COMM:   .LJTI0_1:
+; COMM:   .LJTI0_2:
+; COMM:   .LJTI0_3:
+; COMM: .section .rodata.func_without_profile,"a",@progbits
+; COMM:   .LJTI1_0:
+; COMM: .section .rodata.bar_prefix.bar,"a",@progbits
+; COMM:   .LJTI2_0
 
 ; Test that section names are uniqufied by numbers but not function names with
 ; {-function-sections, -unique-section-names=false}. Specifically, @foo jump
@@ -40,6 +47,14 @@
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
+;; Repeat the commands above with -preserve-hot-data-section-prefix=false
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NOHOT,JT
+
+
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -58,6 +73,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; NUM:          .section .rodata.hot.,"a",@progbits,unique,2
 ; FUNC:         .section .rodata.hot.foo,"a",@progbits
 ; FUNCLESS:     .section .rodata.hot.,"a",@progbits
+; NOHOT:        .section .rodata,"a",@progbits
 ; JT:           .LJTI0_0:
 ; JT:           .LJTI0_2:
 ; NUM:          .section .rodata.unlikely.,"a",@progbits,unique,3

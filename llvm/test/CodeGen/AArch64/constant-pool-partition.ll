@@ -1,11 +1,21 @@
 ; RUN: llc -mtriple=aarch64 -partition-static-data-sections \
 ; RUN:     -function-sections -unique-section-names=false \
-; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=HOT,COMM --dump-input=always
 
-; Repeat the RUN command above for big-endian systems.
+; RUN: llc -mtriple=aarch64 -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NOHOT,COMM --dump-input=always
+
+; Repeat the RUN commands above for big-endian systems.
 ; RUN: llc -mtriple=aarch64_be -partition-static-data-sections \
 ; RUN:     -function-sections -unique-section-names=false \
-; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=HOT,COMM --dump-input=always
+
+; RUN: llc -mtriple=aarch64_be -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NOHOT,COMM --dump-input=always
 
 ; Tests that constant pool hotness is aggregated across the module. The
 ; static-data-splitter processes data from cold_func first, unprofiled_func
@@ -19,77 +29,112 @@
 ;   function, constant pools for this constant should not have `.unlikely` suffix.
 
 ;; Constant pools for function @cold_func.
-; CHECK:       .section	.rodata.cst8.hot.,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI0_0:
-; CHECK-NEXT:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI0_1:
-; CHECK-NEXT:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
-; CHECK-NEXT:	.section	.rodata.cst8,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI0_2:
-; CHECK-NEXT:     .byte   0                               // 0x0
-; CHECK-NEXT:     .byte   4                               // 0x4
-; CHECK-NEXT:     .byte   8                               // 0x8
-; CHECK-NEXT:     .byte   12                              // 0xc
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
+; HOT:       .section	.rodata.cst8.hot.,"aM",@progbits,8
+; HOT-NEXT:     .p2align
+; HOT-NEXT:   .LCPI0_0:
+; HOT-NEXT:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; HOT-NEXT: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
+; HOT-NEXT:     .p2align
+; HOT-NEXT:   .LCPI0_1:
+; HOT-NEXT:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
+; HOT-NEXT:	.section	.rodata.cst8,"aM",@progbits,8
+; HOT-NEXT:     .p2align
+; HOT-NEXT:   .LCPI0_2:
+; HOT-NEXT:     .byte   0                               // 0x0
+; HOT-NEXT:     .byte   4                               // 0x4
+; HOT-NEXT:     .byte   8                               // 0x8
+; HOT-NEXT:     .byte   12                              // 0xc
+; HOT-NEXT:     .byte   255                             // 0xff
+; HOT-NEXT:     .byte   255                             // 0xff
+; HOT-NEXT:     .byte   255                             // 0xff
+; HOT-NEXT:     .byte   255                             // 0xff
+
+;; Constant pools for function @cold_func.
+; NOHOT:       .section	.rodata.cst8,"aM",@progbits,8
+; NOHOT-NEXT:     .p2align
+; NOHOT-NEXT:   .LCPI0_0:
+; NOHOT-NEXT:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; NOHOT-NEXT:   .LCPI0_2:
+; NOHOT-NEXT:     .byte   0                               // 0x0
+; NOHOT-NEXT:     .byte   4                               // 0x4
+; NOHOT-NEXT:     .byte   8                               // 0x8
+; NOHOT-NEXT:     .byte   12                              // 0xc
+; NOHOT-NEXT:     .byte   255                             // 0xff
+; NOHOT-NEXT:     .byte   255                             // 0xff
+; NOHOT-NEXT:     .byte   255                             // 0xff
+; NOHOT-NEXT:     .byte   255                             // 0xff
+; NOHOT-NEXT: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
+; NOHOT-NEXT:     .p2align
+; NOHOT-NEXT:   .LCPI0_1:
+; NOHOT-NEXT:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
 
 ;; Constant pools for function @unprofiled_func
-; CHECK:	    .section	.rodata.cst8,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI1_0:
-; CHECK-NEXT:     .byte   0                               // 0x0
-; CHECK-NEXT:     .byte   4                               // 0x4
-; CHECK-NEXT:     .byte   8                               // 0x8
-; CHECK-NEXT:     .byte   12                              // 0xc
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT: .section .rodata.cst16,"aM",@progbits,16
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI1_1:
-; CHECK-NEXT:     .word 2                                 // 0x2
-; CHECK-NEXT:     .word 3                                 // 0x3
-; CHECK-NEXT:     .word 5                                 // 0x5
-; CHECK-NEXT:     .word 7                                 // 0x7
-; CHECK-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI1_2:
-; CHECK-NEXT:     .word   442                             // 0x1ba
-; CHECK-NEXT:     .word   100                             // 0x64
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   0                               // 0x0
+; COMM:	    .section	.rodata.cst8,"aM",@progbits,8
+; COMM-NEXT:     .p2align
+; COMM-NEXT:   .LCPI1_0:
+; COMM-NEXT:     .byte   0                               // 0x0
+; COMM-NEXT:     .byte   4                               // 0x4
+; COMM-NEXT:     .byte   8                               // 0x8
+; COMM-NEXT:     .byte   12                              // 0xc
+; COMM-NEXT:     .byte   255                             // 0xff
+; COMM-NEXT:     .byte   255                             // 0xff
+; COMM-NEXT:     .byte   255                             // 0xff
+; COMM-NEXT:     .byte   255                             // 0xff
+
+; HOT-NEXT: .section .rodata.cst16,"aM",@progbits,16
+; HOT-NEXT:     .p2align
+; HOT-NEXT:   .LCPI1_1:
+; HOT-NEXT:     .word 2                                 // 0x2
+; HOT-NEXT:     .word 3                                 // 0x3
+; HOT-NEXT:     .word 5                                 // 0x5
+; HOT-NEXT:     .word 7                                 // 0x7
+; HOT-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
+; HOT-NEXT:     .p2align
+; HOT-NEXT:   .LCPI1_2:
+; HOT-NEXT:     .word   442                             // 0x1ba
+; HOT-NEXT:     .word   100                             // 0x64
+; HOT-NEXT:     .word   0                               // 0x0
+; HOT-NEXT:     .word   0                               // 0x0
+
+; NOHOT: .section .rodata.cst16,"aM",@progbits,16
+; NOHOT-NEXT:     .p2align
+; NOHOT-NEXT:   .LCPI1_1:
+; NOHOT-NEXT:     .word 2                                 // 0x2
+; NOHOT-NEXT:     .word 3                                 // 0x3
+; NOHOT-NEXT:     .word 5                                 // 0x5
+; NOHOT-NEXT:     .word 7                                 // 0x7
+; NOHOT-NEXT:   .LCPI1_2:
+; NOHOT-NEXT:     .word   442                             // 0x1ba
+; NOHOT-NEXT:     .word   100                             // 0x64
+; NOHOT-NEXT:     .word   0                               // 0x0
+; NOHOT-NEXT:     .word   0                               // 0x0
 
 ;; Constant pools for function @hot_func
-; CHECK:      .section        .rodata.cst8.hot.,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI2_0:
-; CHECK-NEXT:     .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
-; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI2_1:
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   100                             // 0x64
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   442                             // 0x1ba
-; CHECK-NEXT:   .LCPI2_2:
-; CHECK-NEXT:     .word   442                             // 0x1ba
-; CHECK-NEXT:     .word   100                             // 0x64
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   0                               // 0x0
+; HOT:      .section        .rodata.cst8.hot.,"aM",@progbits,8
+; NOHOT:    .section        .rodata.cst8,"aM",@progbits,8
+; COMM:     .p2align
+; COMM-NEXT:   .LCPI2_0:
+; COMM-NEXT:     .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; NOHOT:    .section        .rodata.cst16,"aM",@progbits,16
+; HOT-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
+; COMM:     .p2align
+; COMM-NEXT:   .LCPI2_1:
+; COMM-NEXT:     .word   0                               // 0x0
+; COMM-NEXT:     .word   100                             // 0x64
+; COMM-NEXT:     .word   0                               // 0x0
+; COMM-NEXT:     .word   442                             // 0x1ba
+; COMM-NEXT:   .LCPI2_2:
+; COMM-NEXT:     .word   442                             // 0x1ba
+; COMM-NEXT:     .word   100                             // 0x64
+; COMM-NEXT:     .word   0                               // 0x0
+; COMM-NEXT:     .word   0                               // 0x0
 
 ;; For global variable @val
 ;; The section name remains `.rodata.cst32` without hotness prefix because
 ;; the variable has external linkage and not analyzed. Compiler need symbolized
 ;; data access profiles to annotate such global variables' hotness.
-; CHECK:       .section	.rodata.cst32,"aM",@progbits,32
-; CHECK-NEXT:  .globl	val
+; COMM:       .section	.rodata.cst32,"aM",@progbits,32
+; COMM-NEXT:  .globl	val
 
 define i32 @cold_func(double %x, <16 x i8> %a, <16 x i8> %b) !prof !16 {
   %2 = tail call i32 (...) @func_taking_arbitrary_param(double 6.800000e-01)

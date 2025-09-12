@@ -673,7 +673,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         break;
       }
       default:
-        // Note this is unreachable code.
+        llvm_unreachable("Unknown jump table hotness");
         break;
       }
     } else if (std::optional<StringRef> Prefix = F->getSectionPrefix())
