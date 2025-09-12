@@ -343,37 +343,21 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
+  // We need to construct the vector value for a single-scalar value by
+  // broadcasting the scalar to all lanes.
+  // TODO: Replace by introducing Broadcast VPInstructions.
+  assert(IsSingleScalar && "must be a single-scalar at this point");
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
+  auto *LastInst = cast<Instruction>(get(Def, LastLane));
   auto NewIP = isa<PHINode>(LastInst)
                    ? LastInst->getParent()->getFirstNonPHIIt()
                    : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
-
-  // However, if we are vectorizing, we need to construct the vector values.
-  // If the value is known to be uniform after vectorization, we can just
-  // broadcast the scalar value corresponding to lane zero. Otherwise, we
-  // construct the vector values using insertelement instructions. Since the
-  // resulting vectors are stored in State, we will only generate the
-  // insertelements once.
-  Value *VectorValue = nullptr;
-  if (IsSingleScalar) {
-    VectorValue = GetBroadcastInstrs(ScalarValue);
-    set(Def, VectorValue);
-  } else {
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    assert(isa<VPInstruction>(Def) &&
-           "Explicit BuildVector recipes must have"
-           "handled packing for non-VPInstructions.");
-    // Initialize packing with insertelements to start from poison.
-    VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
-    for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
-      VectorValue = packScalarIntoVectorizedValue(Def, VectorValue, Lane);
-    set(Def, VectorValue);
-  }
+  Value *VectorValue = GetBroadcastInstrs(ScalarValue);
+  set(Def, VectorValue);
   Builder.restoreIP(OldIP);
   return VectorValue;
 }
