@@ -574,7 +574,7 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     // We need to make sure that this one operand does not end up in XZR, thus
     // require the address to be in a PointerRegClass register.
     const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    const TargetRegisterClass *TRC = TRI->getPointerRegClass(*MF);
+    const TargetRegisterClass *TRC = TRI->getPointerRegClass();
     SDLoc dl(Op);
     SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i64);
     SDValue NewOp =
