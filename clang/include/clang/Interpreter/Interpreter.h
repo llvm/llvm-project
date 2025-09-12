@@ -145,7 +145,7 @@ public:
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
-  llvm::Error ParseAndExecute(llvm::StringRef Code);
+  llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
 
   /// Undo N previous incremental inputs.
   llvm::Error Undo(unsigned N = 1);

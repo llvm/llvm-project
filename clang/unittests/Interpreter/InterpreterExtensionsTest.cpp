@@ -100,7 +100,7 @@ TEST_F(InterpreterExtensionsTest, FindRuntimeInterface) {
   Value V1;
   llvm::cantFail(I.ParseAndExecute("int x = 42;"));
   llvm::cantFail(I.ParseAndExecute("x", &V1));
-  EXPECT_FALSE(V1.isValid());
+  EXPECT_TRUE(V1.isAbsent());
   EXPECT_FALSE(V1.hasValue());
 }
 
