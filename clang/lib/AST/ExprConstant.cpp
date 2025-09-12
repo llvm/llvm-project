@@ -11573,7 +11573,10 @@ static bool handleVectorElementCast(EvalInfo &Info, const FPOptions FPO,
       << SourceTy << DestTy;
   return false;
 }
-
+// i should emplement SLLDQ, SRLDQ shift (intrinsics) in constant expression
+// handling inside this function
+// avx2intrin.h -> _mm256_slli_si256
+// emmintrin.h -> _mm_slli_si128
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -12099,6 +12102,46 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift: {
+    APSInt Amt;
+    if (!EvaluateInteger(E->getArg(1), Amt, Info))
+      return false;
+    unsigned ShiftVal = (unsigned)Amt.getZExtValue() & 0xff;
+
+    APValue Vec;
+    if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
+      return false;
+
+    unsigned NumElts = Vec.getVectorLength();
+    const unsigned LaneBytes = 16;
+    assert(NumElts % LaneBytes == 0);
+
+    SmallVector<APValue, 64> Result;
+    Result.resize(NumElts, APValue(0));
+
+    bool IsLeft =
+        (E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi128_byteshift ||
+         E->getBuiltinCallee() == X86::BI__builtin_ia32_pslldqi256_byteshift);
+
+    if (ShiftVal >= LaneBytes)
+      return Success(APValue(Result.data(), Result.size()), E);
+
+    for (unsigned laneBase = 0; laneBase < NumElts; laneBase += LaneBytes) {
+      for (unsigned i = 0; i < LaneBytes; ++i) {
+        int src = IsLeft ? (i + ShiftVal) : (int)i - (int)ShiftVal;
+
+        if (src >= 0 && (unsigned)src < LaneBytes)
+          Result[laneBase + i] = Vec.getVectorElt(laneBase + (unsigned)src);
+        else
+          Result[laneBase + i] = APValue(0);
+      }
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
   }
   }
 }
