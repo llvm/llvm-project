@@ -6,13 +6,13 @@ struct Base {
 };
 
 struct Derived : public Base {
-  int a;
+  int d;
 };
 
 int main() {
   Derived d;
   d.b = 1;
   d.x = 2;
-  d.a = 3;
+  d.d = 3;
   return 0; // Set breakpoint here
 }

@@ -32,6 +32,6 @@ class TestTypeLookupAnonBaseMember(TestBase):
         self.assertEqual(x.GetValueAsSigned(), 2)
 
         # d from Derived
-        a = d.GetChildMemberWithName("a")
-        self.assertTrue(a.IsValid())
-        self.assertEqual(a.GetValueAsSigned(), 3)
+        dd = d.GetChildMemberWithName("d")
+        self.assertTrue(dd.IsValid())
+        self.assertEqual(dd.GetValueAsSigned(), 3)
