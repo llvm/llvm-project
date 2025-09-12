@@ -713,9 +713,13 @@ if config.target_os == "Linux":
         if config.android:
             return
 
-        from packaging.version import Version
+        from packaging.version import Version, InvalidVersion
 
-        ver = Version(ver_string)
+        try:
+            ver = Version(ver_string)
+        except InvalidVersion:
+            return
+
         any_glibc = False
         for required in [
             "2.19",
