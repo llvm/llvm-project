@@ -990,7 +990,8 @@ static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
   EVT VT = EVT::getEVT(ScalarTy);
 
   TargetLowering::LegalizeAction LA = TLI.getOperationAction(ISD::FREM, VT);
-  if (LA != TargetLowering::LegalizeAction::LibCall)
+  if (LA != TargetLowering::LegalizeAction::LibCall &&
+      LA != TargetLowering::LegalizeAction::Expand)
     return false;
 
   bool MissingLibcall = !TLI.getLibcallName(fremToLibcall(ScalarTy));
