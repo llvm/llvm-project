@@ -44,5 +44,5 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // UNGENERALIZED: [[TYPE3]] = !{i32 874141567}
 // GENERALIZED: [[TYPE3]] = !{i32 954385378}
 
-// UNGENERALIZED: [[TYPE4]] = !{i32 -1619636625}
+// UNGENERALIZED: [[TYPE4]] = !{i32 -1954865805}
 // GENERALIZED: [[TYPE4]] = !{i32 -125078496}

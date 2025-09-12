@@ -45,5 +45,5 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // CHECK: ![[TYPE1]] = !{i32 -1143117868}
 // CHECK: ![[TYPE2]] = !{i32 -460921415}
 // CHECK: ![[TYPE3]] = !{i32 -333839615}
-// C: ![[TYPE4]] = !{i32 -650530463}
+// C: ![[TYPE4]] = !{i32 1186327125}
 // CPP: ![[TYPE4]] = !{i32 1766237188}

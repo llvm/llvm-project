@@ -2352,6 +2352,9 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   return Ty;
 }
 
+static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty,
+                                       bool GeneralizePointers);
+
 // Generalize pointer types to a void pointer with the qualifiers of the
 // originally pointed-to type, e.g. 'const char *' and 'char * const *'
 // generalize to 'const void *' while 'char *' and 'const char **' generalize to
@@ -2360,12 +2363,19 @@ static QualType GeneralizeType(ASTContext &Ctx, QualType Ty,
                                bool GeneralizePointers) {
   Ty = GeneralizeTransparentUnion(Ty);
 
-  if (!GeneralizePointers || !Ty->isPointerType())
+  if (!Ty->isPointerType())
+    return Ty;
+
+  QualType PTy = Ty->getPointeeType();
+  if (PTy->getAs<FunctionProtoType>() || PTy->getAs<FunctionNoProtoType>())
+    Ty = Ctx.getPointerType(
+        GeneralizeFunctionType(Ctx, PTy, GeneralizePointers));
+
+  if (!GeneralizePointers)
     return Ty;
 
   return Ctx.getPointerType(
-      QualType(Ctx.VoidTy)
-          .withCVRQualifiers(Ty->getPointeeType().getCVRQualifiers()));
+      QualType(Ctx.VoidTy).withCVRQualifiers(PTy.getCVRQualifiers()));
 }
 
 // Apply type generalization to a FunctionType's return and argument types

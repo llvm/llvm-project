@@ -39,5 +39,5 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // CHECK: ![[TYPE1]] = !{i64 0, !"_ZTSFvPFvu3i32ES_E.normalized"}
 // CHECK: ![[TYPE2]] = !{i64 0, !"_ZTSFvPFvu3i32S_ES_S_E.normalized"}
 // CHECK: ![[TYPE3]] = !{i64 0, !"_ZTSFvPFvu3i32S_S_ES_S_S_E.normalized"}
-// CHECK: ![[TYPE4]] = !{i64 0, !"_ZTSFvPFv5UnionEPu2i8E.normalized"}
+// CHECK: ![[TYPE4]] = !{i64 0, !"_ZTSFvPFvPu2i8ES0_E.normalized"}
 
