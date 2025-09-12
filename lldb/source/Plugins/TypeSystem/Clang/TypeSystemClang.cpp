@@ -6786,6 +6786,23 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
         }
 
         if (cxx_record_decl) {
+          for (const clang::CXXBaseSpecifier &base_spec : cxx_record_decl->bases()) {
+            uint32_t base_slot =
+                GetIndexForRecordBase(record_decl, &base_spec, omit_empty_base_classes);
+            if (base_slot == UINT32_MAX)
+              continue;
+
+            std::vector<uint32_t> save = child_indexes;
+            child_indexes.push_back(base_slot);
+            CompilerType base_type = GetType(base_spec.getType());
+            if (GetIndexOfChildMemberWithName(base_type.GetOpaqueQualType(),
+                                              name, omit_empty_base_classes,
+                                              child_indexes)) {
+              return child_indexes.size();
+            }
+            child_indexes = std::move(save);
+          }
+
           const clang::RecordDecl *parent_record_decl = cxx_record_decl;
 
           // Didn't find things easily, lets let clang do its thang...
