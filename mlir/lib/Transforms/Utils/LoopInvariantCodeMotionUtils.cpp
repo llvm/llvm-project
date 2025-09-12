@@ -171,8 +171,6 @@ void mlir::gatherResourceConflicts(LoopLikeOpInterface loopLike, Operation *op,
       bool writesConflict = hasLoopVariantInput(loopLike, op);
 
       for (const MemoryEffects::EffectInstance &effect : effects) {
-        LDBG() << "Effect: " << effect.getEffect()->getPriority() << " with resource: " << effect.getResource()->getName() << " op " << op->getName();
-
         bool conflict = false;
         bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
         
@@ -218,10 +216,6 @@ size_t mlir::moveLoopInvariantCode(
   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> resourceConflicts;
   gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
 
-  for (auto &item : resourceConflicts) {
-    LDBG() << "Resource: " << item.second.second.getResource()->getName() << " has conflict: " << item.second.first << " with effect: " << item.second.second.getEffect()->getPriority();
-  } 
-
   auto regions = loopLike.getLoopRegions();
   for (Region *region : regions) {
     LDBG() << "Original loop:\n" << *region->getParentOp();
@@ -247,12 +241,6 @@ size_t mlir::moveLoopInvariantCode(
 
       bool noMemoryConflicts = isMemoryEffectFree(op) 
         || !mayHaveMemoryEffectConflict(op, resourceConflicts);
-        
-      LDBG() << "isMemoryEffectFree: " << isMemoryEffectFree(op) 
-        << " mayHaveMemoryEffectConflict: " << mayHaveMemoryEffectConflict(op, resourceConflicts)
-        << " noMemoryConflicts: " << noMemoryConflicts
-        << " shouldMoveOutOfRegion: " << shouldMoveOutOfRegion(op, region)
-        << " canBeHoisted: " << canBeHoisted(op, definedOutside);
         
       if (!noMemoryConflicts
         || !shouldMoveOutOfRegion(op, region)
