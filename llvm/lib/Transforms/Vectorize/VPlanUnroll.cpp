@@ -463,15 +463,16 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
-/// Create a single-scalar clone of \p RepR for lane \p Lane. Use \p
-/// Def2LaneDefs to look up scalar definitions for operands of \RepR.
-static VPReplicateRecipe *
+/// Create a single-scalar clone of \p DefR (must be a VPReplicateRecipe or
+/// VPInstruction) for lane \p Lane. Use \p Def2LaneDefs to look up scalar
+/// definitions for operands of \DefR.
+static VPRecipeWithIRFlags *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
-             VPReplicateRecipe *RepR, VPLane Lane,
+             VPRecipeWithIRFlags *DefR, VPLane Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   // Collect the operands at Lane, creating extracts as needed.
   SmallVector<VPValue *> NewOps;
-  for (VPValue *Op : RepR->operands()) {
+  for (VPValue *Op : DefR->operands()) {
     // If Op is a definition that has been unrolled, directly use the clone for
     // the corresponding lane.
     auto LaneDefs = Def2LaneDefs.find(Op);
@@ -501,11 +502,24 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     NewOps.push_back(Ext);
   }
 
-  auto *New =
-      new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
-                            /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
-  New->transferFlags(*RepR);
-  New->insertBefore(RepR);
+  VPRecipeWithIRFlags *New;
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(DefR)) {
+    // TODO: have cloning of replicate recipes also provide the desired result
+    // coupled with setting its operands to NewOps (deriving IsSingleScalar and
+    // Mask from the operands?)
+    New =
+        new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
+                              /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+  } else {
+    assert(isa<VPInstruction>(DefR) &&
+           "DefR must be a VPReplicateRecipe or VPInstruction");
+    New = DefR->clone();
+    for (const auto &[Idx, Op] : enumerate(NewOps)) {
+      New->setOperand(Idx, Op);
+    }
+  }
+  New->transferFlags(*DefR);
+  New->insertBefore(DefR);
   return New;
 }
 
@@ -530,34 +544,38 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || RepR->isSingleScalar())
+      if (!isa<VPInstruction, VPReplicateRecipe>(&R) ||
+          (isa<VPReplicateRecipe>(&R) &&
+           cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
+          (isa<VPInstruction>(&R) &&
+           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
         continue;
 
-      VPBuilder Builder(RepR);
-      if (RepR->getNumUsers() == 0) {
-        // Create single-scalar version of RepR for all lanes.
+      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      VPBuilder Builder(DefR);
+      if (DefR->getNumUsers() == 0) {
+        // Create single-scalar version of DefR for all lanes.
         for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
-          cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Def2LaneDefs);
-        RepR->eraseFromParent();
+          cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
+        DefR->eraseFromParent();
         continue;
       }
-      /// Create single-scalar version of RepR for all lanes.
+      /// Create single-scalar version of DefR for all lanes.
       SmallVector<VPValue *> LaneDefs;
       for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
         LaneDefs.push_back(
-            cloneForLane(Plan, Builder, IdxTy, RepR, VPLane(I), Def2LaneDefs));
+            cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs));
 
-      Def2LaneDefs[RepR] = LaneDefs;
+      Def2LaneDefs[DefR] = LaneDefs;
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
-      RepR->replaceUsesWithIf(LaneDefs[0], [RepR](VPUser &U, unsigned) {
-        return U.onlyFirstLaneUsed(RepR);
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
+        return U.onlyFirstLaneUsed(DefR);
       });
 
-      // Update each build vector user that currently has RepR as its only
+      // Update each build vector user that currently has DefR as its only
       // operand, to have all LaneDefs as its operands.
-      for (VPUser *U : to_vector(RepR->users())) {
+      for (VPUser *U : to_vector(DefR->users())) {
         auto *VPI = dyn_cast<VPInstruction>(U);
         if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
                      VPI->getOpcode() != VPInstruction::BuildStructVector))
@@ -569,7 +587,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         for (VPValue *LaneDef : drop_begin(LaneDefs))
           VPI->addOperand(LaneDef);
       }
-      ToRemove.push_back(RepR);
+      ToRemove.push_back(DefR);
     }
   }
   for (auto *R : reverse(ToRemove))
