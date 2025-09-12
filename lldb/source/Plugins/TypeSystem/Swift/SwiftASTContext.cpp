@@ -1821,10 +1821,10 @@ void SwiftASTContext::ConfigureModuleValidation(
 #endif
   }
 
-  if (!validate_pcm) {
+  if (!validate_pcm)
     extra_args.push_back("-fno-modules-check-relocated");
-    LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation is disabled");
-  }
+  LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation is %s",
+             validate_pcm ? "disabled" : "enabled");
 }
 
 void SwiftASTContext::AddExtraClangArgs(
