@@ -14,7 +14,11 @@ T1 __attribute__((pure)) f3(void);
 void __attribute__((const)) f4(T1 a);
 void __attribute__((pure)) f5(T1 a);
 
-void *ps[] = { f0, f1, f2, f3, f4, f5 };
+// NOTE: The int parameters verifies non-ptr parameters are not a problem
+T1 __attribute__((const)) f6(void*, int);
+T1 __attribute__((pure)) f7(void*, int);
+
+void *ps[] = { f0, f1, f2, f3, f4, f5, f6, f7 };
 
 // CHECK: declare i32 @f0() [[RN:#[0-9]+]]
 // CHECK: declare i32 @f1() [[RO:#[0-9]+]]
@@ -22,6 +26,8 @@ void *ps[] = { f0, f1, f2, f3, f4, f5 };
 // CHECK: declare void @f3({{.*}} sret({{.*}}) align 4)
 // CHECK: declare void @f4({{.*}} byval({{.*}}) align 4)
 // CHECK: declare void @f5({{.*}} byval({{.*}}) align 4)
+// CHECK: declare void @f6({{.*}} sret({{.*}}) align 4, {{.*}} readnone{{.*}})
+// CHECK: declare void @f7({{.*}} sret({{.*}}) align 4, {{.*}} readonly{{.*}})
 
 // CHECK: attributes [[RN]] = { nounwind willreturn memory(none){{.*}} }
 // CHECK: attributes [[RO]] = { nounwind willreturn memory(read){{.*}} }
