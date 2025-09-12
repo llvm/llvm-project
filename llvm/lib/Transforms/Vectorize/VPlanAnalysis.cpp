@@ -527,8 +527,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
     // Ignore recipes that are never used within the loop and do not have side
     // effects.
-    if (all_of(R->definedValues(),
-               [&Ends](VPValue *Def) { return !Ends.count(Def); }) &&
+    if (none_of(R->definedValues(),
+                [&Ends](VPValue *Def) { return Ends.count(Def); }) &&
         !R->mayHaveSideEffects())
       continue;
 
@@ -596,7 +596,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     // Add the VPValues defined by the current recipe to the list of open
     // intervals.
     for (VPValue *DefV : R->definedValues())
-      OpenIntervals.insert(DefV);
+      if (Ends.contains(DefV))
+        OpenIntervals.insert(DefV);
   }
 
   // We also search for instructions that are defined outside the loop, but are
