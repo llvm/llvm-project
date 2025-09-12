@@ -33,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/KnownBits.h"
@@ -168,8 +169,6 @@ struct OperandInfo {
   void addField(unsigned Base, unsigned Width, unsigned Offset) {
     Fields.emplace_back(Base, Width, Offset);
   }
-
-  unsigned numFields() const { return Fields.size(); }
 
   ArrayRef<EncodingField> fields() const { return Fields; }
 };
@@ -517,6 +516,9 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  /// Set to true if decoding conflict was encountered.
+  bool HasConflict = false;
+
   struct Island {
     unsigned StartBit;
     unsigned NumBits;
@@ -558,6 +560,9 @@ public:
     // The last encoding ID is the ID of an encoding with the largest width.
     return Encodings[EncodingIDs.back()].getBitWidth();
   }
+
+  /// Returns true if any decoding conflicts were encountered.
+  bool hasConflict() const { return HasConflict; }
 
 private:
   /// Applies the given filter to the set of encodings this FilterChooser
@@ -684,6 +689,7 @@ void FilterChooser::applyFilter(const Filter &F) {
     // group of instructions whose segment values are variable.
     VariableFC = std::make_unique<FilterChooser>(Encodings, F.VariableIDs,
                                                  FilterBits, *this);
+    HasConflict |= VariableFC->HasConflict;
   }
 
   // Otherwise, create sub choosers.
@@ -695,9 +701,11 @@ void FilterChooser::applyFilter(const Filter &F) {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(FilterVal, std::make_unique<FilterChooser>(
-                                                Encodings, InferiorEncodingIDs,
-                                                InferiorFilterBits, *this));
+    auto [It, _] = FilterChooserMap.try_emplace(
+        FilterVal,
+        std::make_unique<FilterChooser>(Encodings, InferiorEncodingIDs,
+                                        InferiorFilterBits, *this));
+    HasConflict |= It->second->HasConflict;
   }
 }
 
@@ -1095,31 +1103,29 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     return;
   }
 
-  if (OpInfo.Fields.empty() && OpInfo.InitValue && IgnoreFullyDefinedOperands)
-    return;
-
-  // We need to construct the encoding of the operand from pieces if it is not
-  // encoded sequentially or has a non-zero constant part in the encoding.
-  bool UseInsertBits = OpInfo.numFields() > 1 || OpInfo.InitValue.value_or(0);
-
-  if (UseInsertBits) {
-    OS << Indent << "tmp = 0x";
-    OS.write_hex(OpInfo.InitValue.value_or(0));
-    OS << ";\n";
-  }
-
-  for (const auto &[Base, Width, Offset] : OpInfo.fields()) {
-    OS << Indent;
-    if (UseInsertBits)
-      OS << "insertBits(tmp, ";
-    else
-      OS << "tmp = ";
-    OS << "fieldFromInstruction(insn, " << Base << ", " << Width << ')';
-    if (UseInsertBits)
-      OS << ", " << Offset << ", " << Width << ')';
-    else if (Offset != 0)
+  if (OpInfo.fields().empty()) {
+    // Only a constant part. The old behavior is to not decode this operand.
+    if (IgnoreFullyDefinedOperands)
+      return;
+    // Initialize `tmp` with the constant part.
+    OS << Indent << "tmp = " << format_hex(*OpInfo.InitValue, 0) << ";\n";
+  } else if (OpInfo.fields().size() == 1 && !OpInfo.InitValue.value_or(0)) {
+    // One variable part and no/zero constant part. Initialize `tmp` with the
+    // variable part.
+    auto [Base, Width, Offset] = OpInfo.fields().front();
+    OS << Indent << "tmp = fieldFromInstruction(insn, " << Base << ", " << Width
+       << ')';
+    if (Offset)
       OS << " << " << Offset;
     OS << ";\n";
+  } else {
+    // General case. Initialize `tmp` with the constant part, if any, and
+    // insert the variable parts into it.
+    OS << Indent << "tmp = " << format_hex(OpInfo.InitValue.value_or(0), 0)
+       << ";\n";
+    for (auto [Base, Width, Offset] : OpInfo.fields())
+      OS << Indent << "insertBits(tmp, fieldFromInstruction(insn, " << Base
+         << ", " << Width << "), " << Offset << ", " << Width << ");\n";
   }
 
   StringRef Decoder = OpInfo.Decoder;
@@ -1592,7 +1598,7 @@ void FilterChooser::doFilter() {
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
   dump();
-  PrintFatalError("Decoding conflict encountered");
+  HasConflict = true;
 }
 
 void FilterChooser::dump() const {
@@ -2570,12 +2576,17 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   DecoderTableBuilder TableBuilder(Target, Encodings, TableInfo);
   unsigned OpcodeMask = 0;
 
+  bool HasConflict = false;
   for (const auto &[BitWidth, BWMap] : EncMap) {
     for (const auto &[Key, EncodingIDs] : BWMap) {
       auto [DecoderNamespace, HwModeID] = Key;
 
       // Emit the decoder for this (namespace, hwmode, width) combination.
       FilterChooser FC(Encodings, EncodingIDs);
+      HasConflict |= FC.hasConflict();
+      // Skip emitting table entries if a conflict has been detected.
+      if (HasConflict)
+        continue;
 
       // The decode table is cleared for each top level decoder function. The
       // predicates and decoders themselves, however, are shared across
@@ -2599,6 +2610,9 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
       TableInfo.Decoders.clear();
     }
   }
+
+  if (HasConflict)
+    PrintFatalError("Decoding conflict encountered");
 
   // Emit the decoder function for the last bucket. This will also emit the
   // single decoder function if SpecializeDecodersPerBitwidth = false.

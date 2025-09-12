@@ -15,13 +15,7 @@ import threading
 import typing
 import traceback
 from typing import Optional, Tuple
-
-import io
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
@@ -905,14 +899,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
-            # In Python 2.x, basestring is the base class for all string (including unicode)
-            # In Python 3.x, basestring no longer exist and str is always unicode
-            try:
-                str_type = basestring
-            except NameError:
-                str_type = str
             for i, arg in enumerate(args):
-                if isinstance(arg, str_type) and kDevNull in arg:
+                if isinstance(arg, str) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
@@ -1247,7 +1235,7 @@ def executeScriptInternal(
         ):
             for test_updater in litConfig.test_updaters:
                 try:
-                    update_output = test_updater(result, test)
+                    update_output = test_updater(result, test, commands)
                 except Exception as e:
                     output = out
                     output += err
