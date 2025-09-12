@@ -29,11 +29,11 @@ define void @foo() {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, ptr @d, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    store i32 1, ptr @a, align 4
 ; CHECK-NEXT:    store i32 1, ptr @d, align 4
 ; CHECK-NEXT:    [[CMP4_LE_LE_INV:%.*]] = icmp sgt i32 [[TMP0]], 0

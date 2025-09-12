@@ -19,12 +19,12 @@ void loop(int n) {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
 // CHECK-NEXT:    br i1 [[CMP]], label [[SIMD_IF_THEN:%.*]], label [[SIMD_IF_END:%.*]]
 // CHECK:       simd.if.then:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @j, align 4, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[J]]) #[[ATTR2:[0-9]+]]
-// CHECK-NEXT:    store ptr [[J]], ptr @u, align 8, !tbaa [[TBAA6:![0-9]+]], !llvm.access.group [[ACC_GRP8:![0-9]+]]
+// CHECK-NEXT:    store ptr [[J]], ptr @u, align 8, !tbaa [[TBAA2:![0-9]+]], !llvm.access.group [[ACC_GRP7:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @j, align 4, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    [[INC_LE:%.*]] = add i32 [[TMP0]], [[N]]
-// CHECK-NEXT:    store i32 [[INC_LE]], ptr [[J]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i32 [[INC_LE]], ptr @j, align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i32 [[INC_LE]], ptr [[J]], align 4, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 [[INC_LE]], ptr @j, align 4, !tbaa [[TBAA8]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[J]]) #[[ATTR2]]
 // CHECK-NEXT:    br label [[SIMD_IF_END]]
 // CHECK:       simd.if.end:

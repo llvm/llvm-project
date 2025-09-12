@@ -130,6 +130,7 @@ class IndVarSimplify {
   const DataLayout &DL;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
+  AliasAnalysis *AA;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
@@ -162,8 +163,9 @@ class IndVarSimplify {
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI, MemorySSA *MSSA, bool WidenIndVars)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
+                 TargetTransformInfo *TTI, AliasAnalysis *AA, MemorySSA *MSSA,
+                 bool WidenIndVars)
+      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI), AA(AA),
         WidenIndVars(WidenIndVars) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
@@ -1089,6 +1091,16 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
+
+  // Collect all store instructions that may modify memory in the loop.
+  SmallPtrSet<Instruction *, 8> Stores;
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      if (I.mayWriteToMemory())
+        Stores.insert(&I);
+    }
+  }
+
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
 
     // Skip BB Terminator.
@@ -1100,14 +1112,32 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       break;
 
     // Don't move instructions which might have side effects, since the side
-    // effects need to complete before instructions inside the loop.  Also don't
-    // move instructions which might read memory, since the loop may modify
-    // memory. Note that it's okay if the instruction might have undefined
-    // behavior: LoopSimplify guarantees that the preheader dominates the exit
-    // block.
-    if (I.mayHaveSideEffects() || I.mayReadFromMemory())
+    // effects need to complete before instructions inside the loop. Note that
+    // it's okay if the instruction might have undefined behavior: LoopSimplify
+    // guarantees that the preheader dominates the exit block.
+    if (I.mayHaveSideEffects())
       continue;
 
+    // Don't sink read instruction which's memory might be modified in the loop.
+    if (I.mayReadFromMemory()) {
+      if (LoadInst *Load = dyn_cast<LoadInst>(&I)) {
+        MemoryLocation Loc = MemoryLocation::get(Load);
+        bool isModified = false;
+
+        // Check if any store instruction in the loop modifies the loaded memory
+        // location.
+        for (Instruction *S : Stores) {
+          if (isModSet(AA->getModRefInfo(S, Loc))) {
+            isModified = true;
+            break;
+          }
+        }
+        if (isModified)
+          continue;
+      } else {
+        continue;
+      }
+    }
     // Skip debug or pseudo instructions.
     if (I.isDebugOrPseudoInst())
       continue;
@@ -2042,8 +2072,8 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
 
-  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
-                     WidenIndVars && AllowIVWidening);
+  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, &AR.AA,
+                     AR.MSSA, WidenIndVars && AllowIVWidening);
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 
