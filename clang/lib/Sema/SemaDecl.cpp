@@ -7628,12 +7628,12 @@ static bool isMainVar(DeclarationName Name, VarDecl *VD) {
 }
 
 void Sema::DiagnoseWeakPointerAuthenticationSchema(VarDecl *VD) {
-  if (Context.isPointerAuthenticationAvailable() &&
-      VD->isFunctionPointerType() && !VD->isExternallyVisible()) {
+  if (!Context.isPointerAuthenticationAvailable())
+    return;
+  if (VD->isFunctionPointerType() && !VD->isExternallyVisible()) {
     PointerAuthQualifier Q = VD->getType().getQualifiers().getPointerAuth();
-    if (!Q || (!Q.isAddressDiscriminated() && Q.getExtraDiscriminator() == 0)) {
+    if (!Q || (!Q.isAddressDiscriminated() && Q.getExtraDiscriminator() == 0))
       Diag(VD->getLocation(), diag::warn_ptrauth_weak_schema) << VD << !Q;
-    }
   }
 }
 
