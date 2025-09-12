@@ -316,7 +316,13 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  InstructionCost Cost(TTI::TCC_Basic);
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  EVT AccumEVT = EVT::getEVT(AccumType);
+  // TODO: Add i64 accumulator.
+  if (AccumEVT != MVT::i32)
+    return Invalid;
 
   // Possible options:
   // - i16x8.extadd_pairwise_i8x16_sx
@@ -324,23 +330,26 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
   // - i32x4.dot_i16x8_s
   // Only try to support dot, for now.
 
-  if (Opcode != Instruction::Add)
+  EVT InputEVT = EVT::getEVT(InputTypeA);
+  if (!((InputEVT == MVT::i16 && VF.getFixedValue() == 8) ||
+        (InputEVT == MVT::i8 && VF.getFixedValue() == 16))) {
+    return Invalid;
+  }
+
+  if (OpAExtend == TTI::PR_None)
     return Invalid;
 
-  if (!BinOp || *BinOp != Instruction::Mul)
-    return Invalid;
-
-  if (InputTypeA != InputTypeB)
-    return Invalid;
+  InstructionCost Cost(TTI::TCC_Basic);
+  if (!BinOp)
+    return Cost;
 
   if (OpAExtend != OpBExtend)
     return Invalid;
 
-  EVT InputEVT = EVT::getEVT(InputTypeA);
-  EVT AccumEVT = EVT::getEVT(AccumType);
+  if (*BinOp != Instruction::Mul)
+    return Invalid;
 
-  // TODO: Add i64 accumulator.
-  if (AccumEVT != MVT::i32)
+  if (InputTypeA != InputTypeB)
     return Invalid;
 
   // Signed inputs can lower to dot
