@@ -4208,7 +4208,8 @@ public:
     VisitSubCaptures(S);
   }
 
-  void VisitOMPLoopTransformationDirective(OMPLoopTransformationDirective *S) {
+  void VisitOMPCanonicalLoopNestTransformationDirective(
+      OMPCanonicalLoopNestTransformationDirective *S) {
     // Loop transformation directives do not introduce data sharing
     VisitStmt(S);
   }
@@ -9835,7 +9836,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             }
             return false;
           },
-          [&SemaRef, &Captures](OMPLoopTransformationDirective *Transform) {
+          [&SemaRef,
+           &Captures](OMPCanonicalLoopNestTransformationDirective *Transform) {
             Stmt *DependentPreInits = Transform->getPreInits();
             if (!DependentPreInits)
               return;

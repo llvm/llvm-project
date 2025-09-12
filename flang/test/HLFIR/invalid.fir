@@ -308,6 +308,12 @@ func.func @bad_cmpchar_2(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.
 }
 
 // -----
+func.func @bad_index_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
+  // expected-error@+1 {{'hlfir.index' op character arguments must have the same KIND}}
+  %0 = hlfir.index %arg0 in %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i32
+}
+
+// -----
 func.func @bad_any1(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.any' op result must have the same element type as MASK argument}}
   %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !fir.logical<8>

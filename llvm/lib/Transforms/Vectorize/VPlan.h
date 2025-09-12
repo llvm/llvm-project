@@ -716,11 +716,14 @@ public:
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
-public:
   void transferFlags(VPIRFlags &Other) {
     OpType = Other.OpType;
     AllFlags = Other.AllFlags;
   }
+
+  /// Only keep flags also present in \p Other. \p Other must have the same
+  /// OpType as the current object.
+  void intersectFlags(const VPIRFlags &Other);
 
   /// Drop all poison-generating flags.
   void dropPoisonGeneratingFlags() {
