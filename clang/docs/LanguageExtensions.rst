@@ -5901,6 +5901,22 @@ Each option has a corresponding flag:
 ``-fatomic-fine-grained-memory`` / ``-fno-atomic-fine-grained-memory``,
 and ``-fatomic-ignore-denormal-mode`` / ``-fno-atomic-ignore-denormal-mode``.
 
+To address correctness regressions on some targets, such as AMDGPU, a backward
+compatibility mode is available via the ``-f[no-]atomic-backward-compatible``
+flag. When this flag is enabled (default), the compiler keeps the older,
+more conservative behavior for floating-point atomic operations on gfx11 and
+gfx12 processors. In this mode, the compiler does not emit special metadata
+unless you explicitly request it with the ``[[clang::atomic]]`` attribute or
+specify ``-f[no-]atomic-*`` options. This preserves existing behavior and avoids
+source code changes.
+
+On AMDGPU, when backward compatibility mode is disabled, the compiler assumes
+that atomic operations are not used on fine-grained or remote memory. This
+corresponds to ``no_fine_grained_memory`` and ``no_remote_memory``. These
+assumptions allow the compiler to generate more efficient native instructions.
+However, they can cause correctness issues if atomic operations are used on
+fine-grained or remote memory.
+
 Code using the ``[[clang::atomic]]`` attribute can then selectively override
 the command-line defaults on a per-block basis. For instance:
 
