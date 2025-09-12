@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 
@@ -221,4 +221,95 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       U->set(V);
     }
   }
+}
+
+// Perform a single pass of simplification over the worklist of PHIs.
+static void simplifyPass(MutableArrayRef<PHINode *> Worklist,
+                         const DataLayout &DL) {
+  for (PHINode *&PHI : Worklist) {
+    if (Value *Simplified = simplifyInstruction(PHI, DL)) {
+      PHI->replaceAllUsesWith(Simplified);
+      PHI->eraseFromParent();
+      PHI = nullptr; // Mark as removed.
+    }
+  }
+}
+
+#ifndef NDEBUG // Should this be under EXPENSIVE_CHECKS?
+// New PHI nodes should not reference one another but they may reference
+// themselves or existing PHI nodes, and existing PHI nodes may reference new
+// PHI nodes.
+static bool
+PHIAreRefEachOther(const iterator_range<BasicBlock::phi_iterator> &NewPHIs) {
+  SmallPtrSet<PHINode *, 8> NewPHISet;
+  for (PHINode &PN : NewPHIs)
+    NewPHISet.insert(&PN);
+  for (PHINode &PHI : NewPHIs) {
+    for (Value *V : PHI.incoming_values()) {
+      PHINode *IncPHI = dyn_cast<PHINode>(V);
+      if (IncPHI && IncPHI != &PHI && NewPHISet.contains(IncPHI))
+        return true;
+    }
+  }
+  return false;
+}
+#endif
+
+bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
+                                   BasicBlock::phi_iterator FirstExistingPN) {
+
+  auto NewPHIs = make_range(BB->phis().begin(), FirstExistingPN);
+  assert(!PHIAreRefEachOther(NewPHIs));
+
+  auto ReplaceIfIdentical = [](PHINode &PHI, PHINode &ReplPHI) {
+    if (!PHI.isIdenticalToWhenDefined(&ReplPHI))
+      return false;
+    PHI.replaceAllUsesWith(&ReplPHI);
+    PHI.eraseFromParent();
+    return true;
+  };
+
+  // Deduplicate new PHIs first to reduce the number of comparisons on the
+  // following new -> existing pass.
+  bool Changed = false;
+  for (auto I = BB->phis().begin(); I != FirstExistingPN; ++I) {
+    for (auto J = std::next(I); J != FirstExistingPN;) {
+      Changed |= ReplaceIfIdentical(*J++, *I);
+    }
+  }
+
+  // Iterate over existing PHIs and replace identical new PHIs.
+  for (PHINode &ExistingPHI : make_range(FirstExistingPN, BB->phis().end())) {
+    auto I = BB->phis().begin();
+    assert(I != FirstExistingPN); // Should be at least one new PHI.
+    do {
+      Changed |= ReplaceIfIdentical(*I++, ExistingPHI);
+    } while (I != FirstExistingPN);
+    if (BB->phis().begin() == FirstExistingPN)
+      return Changed;
+  }
+  return Changed;
+}
+
+static void deduplicatePass(ArrayRef<PHINode *> Worklist) {
+  SmallDenseMap<BasicBlock *, unsigned> BBs;
+  for (PHINode *PHI : Worklist) {
+    if (PHI)
+      ++BBs[PHI->getParent()];
+  }
+
+  for (auto [BB, NumNewPHIs] : BBs) {
+    auto FirstExistingPN = std::next(BB->phis().begin(), NumNewPHIs);
+    EliminateNewDuplicatePHINodes(BB, FirstExistingPN);
+  }
+}
+
+void SSAUpdaterBulk::RewriteAndOptimizeAllUses(DominatorTree &DT) {
+  SmallVector<PHINode *, 4> PHIs;
+  RewriteAllUses(&DT, &PHIs);
+  if (PHIs.empty())
+    return;
+
+  simplifyPass(PHIs, PHIs.front()->getParent()->getDataLayout());
+  deduplicatePass(PHIs);
 }
