@@ -9312,6 +9312,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
+
   if (UseNewSMEABILowering) {
     if (CallAttrs.requiresLazySave() ||
         CallAttrs.requiresPreservingAllZAState())
