@@ -306,7 +306,7 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   return HasErrors ? 1 : 0;
 }
 
-static void StartRssThread(Fuzzer *F, size_t RssLimitMb);
+void StartRssThread(Fuzzer *F, size_t RssLimitMb);
 
 // Fuchsia needs to do some book checking before starting the RssThread,
 // so it has its own implementation.
@@ -320,7 +320,7 @@ static void RssThread(Fuzzer *F, size_t RssLimitMb) {
   }
 }
 
-static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
+void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
   if (!RssLimitMb)
     return;
   std::thread T(RssThread, F, RssLimitMb);

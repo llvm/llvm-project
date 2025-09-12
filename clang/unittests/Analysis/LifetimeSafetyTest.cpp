@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -20,6 +21,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
 
 // A helper class to run the full lifetime analysis on a piece of code
@@ -96,21 +98,18 @@ public:
     return OID;
   }
 
-  std::optional<LoanID> getLoanForVar(llvm::StringRef VarName) {
+  std::vector<LoanID> getLoansForVar(llvm::StringRef VarName) {
     auto *VD = findDecl<VarDecl>(VarName);
-    if (!VD)
-      return std::nullopt;
+    if (!VD) {
+      ADD_FAILURE() << "No VarDecl found for '" << VarName << "'";
+      return {};
+    }
     std::vector<LoanID> LID = Analysis.getLoanIDForVar(VD);
     if (LID.empty()) {
       ADD_FAILURE() << "Loan for '" << VarName << "' not found.";
-      return std::nullopt;
+      return {};
     }
-    // TODO: Support retrieving more than one loans to a var.
-    if (LID.size() > 1) {
-      ADD_FAILURE() << "More than 1 loans found for '" << VarName;
-      return std::nullopt;
-    }
-    return LID[0];
+    return LID;
   }
 
   std::optional<LoanSet> getLoansAtPoint(OriginID OID,
@@ -121,13 +120,12 @@ public:
     return Analysis.getLoansAtPoint(OID, PP);
   }
 
-  std::optional<llvm::DenseSet<LoanID>>
+  std::optional<std::vector<LoanID>>
   getExpiredLoansAtPoint(llvm::StringRef Annotation) {
     ProgramPoint PP = Runner.getProgramPoint(Annotation);
     if (!PP)
       return std::nullopt;
-    auto Expired = Analysis.getExpiredLoansAtPoint(PP);
-    return llvm::DenseSet<LoanID>{Expired.begin(), Expired.end()};
+    return Analysis.getExpiredLoansAtPoint(PP);
   }
 
 private:
@@ -197,12 +195,13 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
 
   std::vector<LoanID> ExpectedLoans;
   for (const auto &LoanVar : LoanVars) {
-    std::optional<LoanID> ExpectedLIDOpt = Info.Helper.getLoanForVar(LoanVar);
-    if (!ExpectedLIDOpt) {
+    std::vector<LoanID> ExpectedLIDs = Info.Helper.getLoansForVar(LoanVar);
+    if (ExpectedLIDs.empty()) {
       *result_listener << "could not find loan for var '" << LoanVar << "'";
       return false;
     }
-    ExpectedLoans.push_back(*ExpectedLIDOpt);
+    ExpectedLoans.insert(ExpectedLoans.end(), ExpectedLIDs.begin(),
+                         ExpectedLIDs.end());
   }
 
   return ExplainMatchResult(UnorderedElementsAreArray(ExpectedLoans),
@@ -221,17 +220,17 @@ MATCHER_P(AreExpiredAt, Annotation, "") {
                      << Annotation << "'";
     return false;
   }
-  std::vector<LoanID> ActualExpiredLoans(ActualExpiredSetOpt->begin(),
-                                         ActualExpiredSetOpt->end());
+  std::vector<LoanID> ActualExpiredLoans = *ActualExpiredSetOpt;
   std::vector<LoanID> ExpectedExpiredLoans;
   for (const auto &VarName : Info.LoanVars) {
-    auto LoanIDOpt = Helper.getLoanForVar(VarName);
-    if (!LoanIDOpt) {
+    auto LoanIDs = Helper.getLoansForVar(VarName);
+    if (LoanIDs.empty()) {
       *result_listener << "could not find a loan for variable '" << VarName
                        << "'";
       return false;
     }
-    ExpectedExpiredLoans.push_back(*LoanIDOpt);
+    ExpectedExpiredLoans.insert(ExpectedExpiredLoans.end(), LoanIDs.begin(),
+                                LoanIDs.end());
   }
   return ExplainMatchResult(UnorderedElementsAreArray(ExpectedExpiredLoans),
                             ActualExpiredLoans, result_listener);
@@ -728,6 +727,18 @@ TEST_F(LifetimeAnalysisTest, ReassignedPointerThenOriginalExpires) {
   EXPECT_THAT(NoLoans(), AreExpiredAt("p_has_s2"));
   EXPECT_THAT(LoansTo({"s2"}), AreExpiredAt("p_after_s2_expires"));
   EXPECT_THAT(LoansTo({"s1", "s2"}), AreExpiredAt("p_after_s1_expires"));
+}
+
+TEST_F(LifetimeAnalysisTest, NoDuplicateLoansForImplicitCastToConst) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      const MyObj* p = &a;
+      const MyObj* q = &a;
+      POINT(at_end);
+    }
+  )");
+  EXPECT_THAT(Helper->getLoansForVar("a"), SizeIs(2));
 }
 
 } // anonymous namespace

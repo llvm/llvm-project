@@ -17,7 +17,7 @@ using namespace clang;
 namespace {
 
 AST_MATCHER(NamedDecl, isOperatorDecl) {
-  DeclarationName::NameKind const NK = Node.getDeclName().getNameKind();
+  const DeclarationName::NameKind NK = Node.getDeclName().getNameKind();
   return NK != DeclarationName::Identifier &&
          NK != DeclarationName::CXXConstructorName &&
          NK != DeclarationName::CXXDestructorName;
@@ -104,7 +104,7 @@ void OverrideWithDifferentVisibilityCheck::check(
 
   const auto *const OverriddenFunction =
       Result.Nodes.getNodeAs<FunctionDecl>("base_func");
-  AccessSpecifier const ActualAccess = MatchedFunction->getAccess();
+  const AccessSpecifier ActualAccess = MatchedFunction->getAccess();
   AccessSpecifier OverriddenAccess = OverriddenFunction->getAccess();
 
   const CXXBaseSpecifier *InheritanceWithStrictVisibility = nullptr;
