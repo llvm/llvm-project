@@ -556,6 +556,10 @@ class AllShapesMatch<list<string> names> :
 class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
+// Checks that all type IDs match.
+class AllTypeIDsMatch<list<string> names> :
+    AllMatchSameOperatorTrait<names, "$_self.getType().getTypeID()", "type IDs">;
+
 // A type constraint that verifies that a shaped type matches the size and
 // element type of a container with element types. More specifically, it denotes
 // shapedArg.getType().getNumElements() == elementsArg.size() &&

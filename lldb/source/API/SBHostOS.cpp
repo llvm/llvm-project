@@ -86,15 +86,7 @@ SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
 
 SBFileSpec SBHostOS::GetUserHomeDirectory() {
   LLDB_INSTRUMENT();
-
-  FileSpec homedir;
-  FileSystem::Instance().GetHomeDirectory(homedir);
-  FileSystem::Instance().Resolve(homedir);
-
-  SBFileSpec sb_fspec;
-  sb_fspec.SetFileSpec(homedir);
-
-  return sb_fspec;
+  return HostInfo::GetUserHomeDir();
 }
 
 lldb::thread_t SBHostOS::ThreadCreate(const char *name,

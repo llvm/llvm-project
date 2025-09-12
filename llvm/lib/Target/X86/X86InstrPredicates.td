@@ -69,11 +69,8 @@ def NoAVX        : Predicate<"!Subtarget->hasAVX()">;
 def HasAVX       : Predicate<"Subtarget->hasAVX()">;
 def HasAVX2      : Predicate<"Subtarget->hasAVX2()">;
 def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
-def HasEVEX512   : Predicate<"Subtarget->hasEVEX512()">;
 def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
-def HasAVX10_1_512 : Predicate<"Subtarget->hasAVX10_1_512()">;
 def HasAVX10_2   : Predicate<"Subtarget->hasAVX10_2()">;
-def HasAVX10_2_512 : Predicate<"Subtarget->hasAVX10_2_512()">;
 def NoAVX10_2    : Predicate<"!Subtarget->hasAVX10_2()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
@@ -233,6 +230,13 @@ let RecomputePerFunction = 1 in {
                                         "!Subtarget->hasSSE41()">;
   def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
   def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+
+  def IsWin64CCFunc : Predicate<"Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
+  def IsNotWin64CCFunc : Predicate<"!Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
+  def IsHiPECCFunc : Predicate<"MF->getFunction().getCallingConv() == CallingConv::HiPE">;
+
+  def IsNotHiPECCFunc : Predicate<
+    "MF->getFunction().getCallingConv() != CallingConv::HiPE">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;

@@ -825,7 +825,8 @@ bool X86TargetLowering::lowerInterleavedLoad(
 bool X86TargetLowering::lowerInterleavedStore(Instruction *Store,
                                               Value *LaneMask,
                                               ShuffleVectorInst *SVI,
-                                              unsigned Factor) const {
+                                              unsigned Factor,
+                                              const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
 
@@ -836,7 +837,8 @@ bool X86TargetLowering::lowerInterleavedStore(Instruction *Store,
   auto *SI = dyn_cast<StoreInst>(Store);
   if (!SI)
     return false;
-  assert(!LaneMask && "Unexpected mask on store");
+  assert(!LaneMask && GapMask.popcount() == Factor &&
+         "Unexpected mask on store");
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.
