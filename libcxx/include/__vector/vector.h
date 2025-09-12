@@ -1161,24 +1161,6 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   return this->__end_;
 }
 
-// This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
-// the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
-// See https://llvm.org/PR154292
-template <class _If, class _Else>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool __cond, _If __if, _Else __else) {
-  if (__builtin_constant_p(__cond)) {
-    if (__cond)
-      __if();
-    else
-      __else();
-  } else {
-    if (__cond) [[__likely__]]
-      __if();
-    else
-      __else();
-  }
-}
-
 template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
@@ -1189,14 +1171,12 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
 #endif
     vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
   pointer __end = this->__end_;
-  std::__if_likely_else(
-      __end < this->__cap_,
-      [&] {
-        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-        ++__end;
-      },
-      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
-
+  if (__end < this->__cap_) {
+    __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+    ++__end;
+  } else {
+    __end = __emplace_back_slow_path(std::forward<_Args>(__args)...);
+  }
   this->__end_ = __end;
 #if _LIBCPP_STD_VER >= 17
   return *(__end - 1);
