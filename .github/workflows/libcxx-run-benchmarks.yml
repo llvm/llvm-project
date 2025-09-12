@@ -67,17 +67,18 @@ jobs:
           python -m pip install -r libcxx/utils/requirements.txt
           baseline_commit=$(git merge-base ${{ steps.vars.outputs.pr_base }} ${{ steps.vars.outputs.pr_head }})
           ./libcxx/utils/test-at-commit --commit ${baseline_commit} -B build/baseline -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
+          ./libcxx/utils/consolidate-benchmarks build/baseline | tee baseline.lnt
 
       - name: Run candidate
         run: |
           source .venv/bin/activate && cd repo
           ./libcxx/utils/test-at-commit --commit ${{ steps.vars.outputs.pr_head }} -B build/candidate -- -sv -j1 --param optimization=speed ${{ steps.vars.outputs.benchmarks }}
+          ./libcxx/utils/consolidate-benchmarks build/candidate | tee candidate.lnt
 
       - name: Compare baseline and candidate runs
         run: |
           source .venv/bin/activate && cd repo
-          ./libcxx/utils/compare-benchmarks <(./libcxx/utils/consolidate-benchmarks build/baseline) \
-                                            <(./libcxx/utils/consolidate-benchmarks build/candidate) | tee results.txt
+          ./libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt | tee results.txt
 
       - name: Update comment with results
         run: |
