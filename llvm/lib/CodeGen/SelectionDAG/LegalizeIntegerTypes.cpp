@@ -5254,9 +5254,9 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     SDValue MulLo, MulHi;
     TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, N->getOperand(0),
                            N->getOperand(1), MulLo, MulHi);
-    SDValue SRA =
-        DAG.getNode(ISD::SRA, dl, VT, MulLo,
-                    DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+    SDValue SRA = DAG.getNode(
+        ISD::SRA, dl, VT, MulLo,
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, dl));
     SDValue Overflow =
         DAG.getSetCC(dl, N->getValueType(1), MulHi, SRA, ISD::SETNE);
     SplitInteger(MulLo, Lo, Hi);
