@@ -89,7 +89,7 @@ static cl::opt<bool> EnableFMARegPressureReduction(
 void PPCInstrInfo::anchor() {}
 
 PPCInstrInfo::PPCInstrInfo(const PPCSubtarget &STI)
-    : PPCGenInstrInfo(STI, PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
+    : PPCGenInstrInfo(STI, RI, PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
                       /* CatchRetOpcode */ -1,
                       STI.isPPC64() ? PPC::BLR8 : PPC::BLR),
       Subtarget(STI), RI(STI.getTargetMachine()) {}
