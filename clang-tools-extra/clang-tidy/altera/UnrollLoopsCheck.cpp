@@ -208,18 +208,20 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
       return true;
     switch (Op->getOpcode()) {
     case (BO_AddAssign):
-      Iterations = ceil(float(EndValue - InitValue) / ConstantValue);
+      Iterations = std::ceil(float(EndValue - InitValue) / ConstantValue);
       break;
     case (BO_SubAssign):
-      Iterations = ceil(float(InitValue - EndValue) / ConstantValue);
+      Iterations = std::ceil(float(InitValue - EndValue) / ConstantValue);
       break;
     case (BO_MulAssign):
-      Iterations = 1 + (log((double)EndValue) - log((double)InitValue)) /
-                           log((double)ConstantValue);
+      Iterations =
+          1 + (std::log((double)EndValue) - std::log((double)InitValue)) /
+                  std::log((double)ConstantValue);
       break;
     case (BO_DivAssign):
-      Iterations = 1 + (log((double)InitValue) - log((double)EndValue)) /
-                           log((double)ConstantValue);
+      Iterations =
+          1 + (std::log((double)InitValue) - std::log((double)EndValue)) /
+                  std::log((double)ConstantValue);
       break;
     default:
       // All other operators are not handled; assume large bounds.
