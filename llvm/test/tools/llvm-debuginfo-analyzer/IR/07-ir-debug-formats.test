@@ -35,14 +35,14 @@
 ; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
 ; ONE-NEXT: [003]     2           {Parameter} 'ParamBool' -> 'bool'
 ; ONE-NEXT: [004]                   {Location}
-; ONE-NEXT: [005]                     {Entry} bregx 2ptr %ParamBool.addr+0
+; ONE-NEXT: [005]                     {Entry} bregx 2 ptr %ParamBool.addr+0
 ; ONE-NEXT: [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
 ; ONE-NEXT: [004]                   {Location}
-; ONE-NEXT: [005]                     {Entry} bregx 0ptr %ParamPtr.addr+0
+; ONE-NEXT: [005]                     {Entry} bregx 0 ptr %ParamPtr.addr+0
 ; ONE-NEXT: [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
 ; ONE-NEXT: [004]                   {Location}
-; ONE-NEXT: [005]                     {Entry} bregx 1ptr %ParamUnsigned.addr+0
+; ONE-NEXT: [005]                     {Entry} bregx 1 ptr %ParamUnsigned.addr+0
 ; ONE-NEXT: [003]                 {Block}
 ; ONE-NEXT: [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
 ; ONE-NEXT: [006]                       {Location}
-; ONE-NEXT: [007]                         {Entry} bregx 3ptr %CONSTANT+0
+; ONE-NEXT: [007]                         {Entry} bregx 3 ptr %CONSTANT+0
