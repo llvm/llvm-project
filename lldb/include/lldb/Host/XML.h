@@ -11,6 +11,11 @@
 
 #include "lldb/Host/Config.h"
 
+#if defined(_AIX)
+//FIXME for AIX
+#undef LLDB_ENABLE_LIBXML2
+#endif
+
 #if LLDB_ENABLE_LIBXML2
 #include <libxml/xmlreader.h>
 #endif
