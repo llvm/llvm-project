@@ -3732,7 +3732,7 @@ struct ScopedScavengeOrSpill {
     }
     FreeReg = SpillCandidate;
     SpillFI = MaybeSpillFI->value();
-    TII.storeRegToStackSlot(MBB, MBBI, FreeReg, false, *SpillFI, &RC, &TRI,
+    TII.storeRegToStackSlot(MBB, MBBI, FreeReg, false, *SpillFI, &RC,
                             Register());
   }
 
@@ -3745,8 +3745,7 @@ struct ScopedScavengeOrSpill {
 
   ~ScopedScavengeOrSpill() {
     if (hasSpilled())
-      TII.loadRegFromStackSlot(MBB, MBBI, FreeReg, *SpillFI, &RC, &TRI,
-                               Register());
+      TII.loadRegFromStackSlot(MBB, MBBI, FreeReg, *SpillFI, &RC, Register());
   }
 
 private:
