@@ -458,7 +458,9 @@ AST Matchers
   following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
-
+- Remove the ``dependentTemplateSpecializationType`` matcher, as the
+  corresponding AST node was removed. This matcher was never very useful, since
+  there was no way to match on its template name.
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
 

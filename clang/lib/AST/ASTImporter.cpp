@@ -1890,25 +1890,6 @@ ASTNodeImporter::VisitPackExpansionType(const PackExpansionType *T) {
                                                       /*ExpactPack=*/false);
 }
 
-ExpectedType ASTNodeImporter::VisitDependentTemplateSpecializationType(
-    const DependentTemplateSpecializationType *T) {
-  const DependentTemplateStorage &DTN = T->getDependentTemplateName();
-  auto QualifierOrErr = import(DTN.getQualifier());
-  if (!QualifierOrErr)
-    return QualifierOrErr.takeError();
-
-  SmallVector<TemplateArgument, 2> ToPack;
-  ToPack.reserve(T->template_arguments().size());
-  if (Error Err = ImportTemplateArguments(T->template_arguments(), ToPack))
-    return std::move(Err);
-
-  return Importer.getToContext().getDependentTemplateSpecializationType(
-      T->getKeyword(),
-      {*QualifierOrErr, Importer.Import(DTN.getName()),
-       DTN.hasTemplateKeyword()},
-      ToPack);
-}
-
 ExpectedType
 ASTNodeImporter::VisitDependentNameType(const DependentNameType *T) {
   auto ToQualifierOrErr = import(T->getQualifier());

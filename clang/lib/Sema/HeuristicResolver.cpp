@@ -41,8 +41,8 @@ public:
   resolveUsingValueDecl(const UnresolvedUsingValueDecl *UUVD);
   std::vector<const NamedDecl *>
   resolveDependentNameType(const DependentNameType *DNT);
-  std::vector<const NamedDecl *> resolveTemplateSpecializationType(
-      const DependentTemplateSpecializationType *DTST);
+  std::vector<const NamedDecl *>
+  resolveTemplateSpecializationType(const TemplateSpecializationType *TST);
   QualType resolveNestedNameSpecifierToType(NestedNameSpecifier NNS);
   QualType getPointeeType(QualType T);
   std::vector<const NamedDecl *>
@@ -373,8 +373,9 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) {
-  const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
+    const TemplateSpecializationType *TST) {
+  const DependentTemplateStorage &DTN =
+      *TST->getTemplateName().getAsDependentTemplateName();
   return resolveDependentMember(
       resolveNestedNameSpecifierToType(DTN.getQualifier()),
       DTN.getName().getIdentifier(), TemplateFilter);
@@ -596,8 +597,8 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentNameType(
 }
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) const {
-  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(DTST);
+    const TemplateSpecializationType *TST) const {
+  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(TST);
 }
 QualType HeuristicResolver::resolveNestedNameSpecifierToType(
     NestedNameSpecifier NNS) const {

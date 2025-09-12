@@ -1384,20 +1384,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
-  case Type::DependentTemplateSpecialization: {
-    const auto *Spec1 = cast<DependentTemplateSpecializationType>(T1);
-    const auto *Spec2 = cast<DependentTemplateSpecializationType>(T2);
-    if (Spec1->getKeyword() != Spec2->getKeyword())
-      return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->getDependentTemplateName(),
-                                  Spec2->getDependentTemplateName()))
-      return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
-                                  Spec2->template_arguments()))
-      return false;
-    break;
-  }
-
   case Type::PackExpansion:
     if (!IsStructurallyEquivalent(Context,
                                   cast<PackExpansionType>(T1)->getPattern(),

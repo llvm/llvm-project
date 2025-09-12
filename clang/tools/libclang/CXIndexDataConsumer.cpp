@@ -393,8 +393,6 @@ SourceLocation CXIndexDataConsumer::CXXBasesListInfo::getBaseLoc(
   // TypeLoc::getNameLoc()
   if (auto TTL = TL.getAs<DependentNameTypeLoc>())
     return TTL.getNameLoc();
-  if (auto TTL = TL.getAs<DependentTemplateSpecializationTypeLoc>())
-    return TTL.getTemplateNameLoc();
   if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
     return TTL.getTemplateNameLoc();
   if (auto TTL = TL.getAs<TagTypeLoc>())
