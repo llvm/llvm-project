@@ -26,8 +26,23 @@ void g(int** (*fp)(const char *, const char **)) {
   fp(0, 0);
 }
 
+union Union {
+  char *c;
+  long* n;
+} __attribute__((transparent_union));
+
+// CHECK: define{{.*}} void @uni({{.*}} !kcfi_type [[TYPE2:![0-9]+]]
+void uni(void (*fn)(union Union), union Union arg1) {
+  // UNGENERALIZED: call {{.*}} [ "kcfi"(i32 -1037059548) ]
+  // GENERALIZED: call {{.*}} [ "kcfi"(i32 422130955) ]
+    fn(arg1);
+}
+
 // UNGENERALIZED: [[TYPE]] = !{i32 1296635908}
 // GENERALIZED: [[TYPE]] = !{i32 -49168686}
 
 // UNGENERALIZED: [[TYPE3]] = !{i32 874141567}
 // GENERALIZED: [[TYPE3]] = !{i32 954385378}
+
+// UNGENERALIZED: [[TYPE2]] = !{i32 981319178}
+// GENERALIZED: [[TYPE2]] = !{i32 -1599950473}
