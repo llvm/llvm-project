@@ -13,7 +13,6 @@ include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
@@ -530,7 +529,7 @@ def MemRef_CastOp : MemRef_Op<"cast", [
 // CopyOp
 //===----------------------------------------------------------------------===//
 
-def CopyOp : MemRef_Op<"copy", [CopyOpInterface, SameOperandsElementType,
+def CopyOp : MemRef_Op<"copy", [SameOperandsElementType,
     SameOperandsShape]> {
 
   let description = [{
@@ -1214,7 +1213,7 @@ def LoadOp : MemRef_Op<"load",
 
     A set `nontemporal` attribute indicates that this load is not expected to
     be reused in the cache. For details, refer to the
-    [https://llvm.org/docs/LangRef.html#load-instruction](LLVM load instruction).
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
@@ -1947,7 +1946,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
 
     A set `nontemporal` attribute indicates that this store is not expected to
     be reused in the cache. For details, refer to the
-    [https://llvm.org/docs/LangRef.html#store-instruction](LLVM store instruction).
+    [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access

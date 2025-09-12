@@ -56,10 +56,26 @@ struct ComplexOpToROCDLLibraryCalls : public OpRewritePattern<Op> {
 private:
   std::string funcName;
 };
+
+// Rewrite complex.pow(z, w) -> complex.exp(w * complex.log(z))
+struct PowOpToROCDLLibraryCalls : public OpRewritePattern<complex::PowOp> {
+  using OpRewritePattern<complex::PowOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(complex::PowOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    Value logBase = complex::LogOp::create(rewriter, loc, op.getLhs());
+    Value mul = complex::MulOp::create(rewriter, loc, op.getRhs(), logBase);
+    Value exp = complex::ExpOp::create(rewriter, loc, mul);
+    rewriter.replaceOp(op, exp);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToROCDLLibraryCallsConversionPatterns(
     RewritePatternSet &patterns) {
+  patterns.add<PowOpToROCDLLibraryCalls>(patterns.getContext());
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float32Type>>(
       patterns.getContext(), "__ocml_cabs_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float64Type>>(
@@ -110,9 +126,10 @@ void ConvertComplexToROCDLLibraryCallsPass::runOnOperation() {
 
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
+  target.addLegalOp<complex::MulOp>();
   target.addIllegalOp<complex::AbsOp, complex::CosOp, complex::ExpOp,
-                      complex::LogOp, complex::SinOp, complex::SqrtOp,
-                      complex::TanOp, complex::TanhOp>();
+                      complex::LogOp, complex::PowOp, complex::SinOp,
+                      complex::SqrtOp, complex::TanOp, complex::TanhOp>();
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
 }

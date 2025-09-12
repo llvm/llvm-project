@@ -71,12 +71,21 @@ public:
     return m_obj5.get();
   }
 
+  CheckedObj* ensureObj6() {
+    if (!m_obj6)
+      const_cast<std::unique_ptr<CheckedObj>&>(m_obj6) = new CheckedObj;
+    if (m_obj6->next())
+      return (CheckedObj *)0;
+    return m_obj6.get();
+  }
+
 private:
   const std::unique_ptr<CheckedObj> m_obj1;
   std::unique_ptr<CheckedObj> m_obj2;
   const std::unique_ptr<CheckedObj> m_obj3;
   const std::unique_ptr<CheckedObj> m_obj4;
   const std::unique_ptr<CheckedObj> m_obj5;
+  const std::unique_ptr<CheckedObj> m_obj6;
 };
 
 void Foo::bar() {
@@ -87,6 +96,7 @@ void Foo::bar() {
   badEnsureObj4().method();
   // expected-warning@-1{{Call argument for 'this' parameter is unchecked and unsafe}}
   ensureObj5()->method();
+  ensureObj6()->method();
 }
 
 } // namespace call_args_const_unique_ptr

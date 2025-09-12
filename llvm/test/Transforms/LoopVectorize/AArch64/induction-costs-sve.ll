@@ -13,7 +13,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
+; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
@@ -36,7 +36,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP24:%.*]] = mul nuw i64 [[TMP23]], 8
+; DEFAULT-NEXT:    [[TMP24:%.*]] = shl nuw i64 [[TMP23]], 3
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP20]], i64 [[TMP24]]
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP20]], align 1
 ; DEFAULT-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP25]], align 1
@@ -44,17 +44,15 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP27:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD4]] to <vscale x 8 x i16>
 ; DEFAULT-NEXT:    [[TMP28:%.*]] = mul <vscale x 8 x i16> [[TMP26]], [[TMP13]]
 ; DEFAULT-NEXT:    [[TMP29:%.*]] = mul <vscale x 8 x i16> [[TMP27]], [[TMP13]]
-; DEFAULT-NEXT:    [[TMP30:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i16>
-; DEFAULT-NEXT:    [[TMP31:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD4]] to <vscale x 8 x i16>
-; DEFAULT-NEXT:    [[TMP32:%.*]] = or <vscale x 8 x i16> [[TMP28]], [[TMP30]]
-; DEFAULT-NEXT:    [[TMP33:%.*]] = or <vscale x 8 x i16> [[TMP29]], [[TMP31]]
+; DEFAULT-NEXT:    [[TMP32:%.*]] = or <vscale x 8 x i16> [[TMP28]], [[TMP26]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = or <vscale x 8 x i16> [[TMP29]], [[TMP27]]
 ; DEFAULT-NEXT:    [[TMP34:%.*]] = lshr <vscale x 8 x i16> [[TMP32]], splat (i16 1)
 ; DEFAULT-NEXT:    [[TMP35:%.*]] = lshr <vscale x 8 x i16> [[TMP33]], splat (i16 1)
 ; DEFAULT-NEXT:    [[TMP36:%.*]] = trunc <vscale x 8 x i16> [[TMP34]] to <vscale x 8 x i8>
 ; DEFAULT-NEXT:    [[TMP37:%.*]] = trunc <vscale x 8 x i16> [[TMP35]] to <vscale x 8 x i8>
 ; DEFAULT-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP41:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP42:%.*]] = mul nuw i64 [[TMP41]], 8
+; DEFAULT-NEXT:    [[TMP42:%.*]] = shl nuw i64 [[TMP41]], 3
 ; DEFAULT-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[TMP38]], i64 [[TMP42]]
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP36]], ptr [[TMP38]], align 1
 ; DEFAULT-NEXT:    store <vscale x 8 x i8> [[TMP37]], ptr [[TMP43]], align 1
@@ -104,7 +102,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 16
+; PRED-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 4
 ; PRED-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP0]], [[TMP12]]
 ; PRED-NEXT:    [[TMP14:%.*]] = icmp ugt i64 [[TMP0]], [[TMP12]]
 ; PRED-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i64 [[TMP13]], i64 0
@@ -118,8 +116,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP18]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; PRED-NEXT:    [[TMP17:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i16>
 ; PRED-NEXT:    [[TMP22:%.*]] = mul <vscale x 16 x i16> [[TMP17]], [[TMP16]]
-; PRED-NEXT:    [[TMP24:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i16>
-; PRED-NEXT:    [[TMP20:%.*]] = or <vscale x 16 x i16> [[TMP22]], [[TMP24]]
+; PRED-NEXT:    [[TMP20:%.*]] = or <vscale x 16 x i16> [[TMP22]], [[TMP17]]
 ; PRED-NEXT:    [[TMP21:%.*]] = lshr <vscale x 16 x i16> [[TMP20]], splat (i16 1)
 ; PRED-NEXT:    [[TMP23:%.*]] = trunc <vscale x 16 x i16> [[TMP21]] to <vscale x 16 x i8>
 ; PRED-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]

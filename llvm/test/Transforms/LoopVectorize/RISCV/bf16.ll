@@ -42,8 +42,8 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFBFMIN-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
 ; ZVFBFMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[TMP0]]
 ; ZVFBFMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
-; ZVFBFMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; ZVFBFMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ZVFBFMIN-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; ZVFBFMIN-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFBFMIN:       [[SCALAR_PH]]:
@@ -151,8 +151,8 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; ZVFBFMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP12]], [[TMP6]]
 ; ZVFBFMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP12]]
-; ZVFBFMIN-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; ZVFBFMIN-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; ZVFBFMIN-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; ZVFBFMIN-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFBFMIN:       [[SCALAR_PH]]:

@@ -37,6 +37,8 @@ public:
   MCSymbolWasm(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(Name, isTemporary) {}
 
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
   const MCExpr *getSize() const { return SymbolSize; }
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 

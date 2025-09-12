@@ -13,7 +13,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/identity.h"
 
 namespace clang {
 
@@ -57,7 +56,7 @@ private:
   ASTContext &Ctx;
 
   // Recursion protection sets
-  llvm::SmallSet<const DependentNameType *, 4> SeenDependentNameTypes;
+  llvm::SmallPtrSet<const DependentNameType *, 4> SeenDependentNameTypes;
 
   // Given a tag-decl type and a member name, heuristically resolve the
   // name to one or more declarations.
@@ -255,6 +254,21 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
+    // Check if the expression refers to an explicit object parameter of
+    // templated type. If so, heuristically treat it as having the type of the
+    // enclosing class.
+    if (!T.Type.isNull() &&
+        (T.Type->isUndeducedAutoType() || T.Type->isTemplateTypeParmType())) {
+      if (auto *DRE = dyn_cast_if_present<DeclRefExpr>(T.E)) {
+        auto *PrDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        if (PrDecl && PrDecl->isExplicitObjectParameter()) {
+          const auto *Parent =
+              dyn_cast<TagDecl>(PrDecl->getDeclContext()->getParent());
+          return {Ctx.getCanonicalTagType(Parent)};
+        }
+      }
+    }
+
     return T;
   };
   // As an additional protection against infinite loops, bound the number of
@@ -547,7 +561,7 @@ HeuristicResolverImpl::getFunctionProtoTypeLoc(const Expr *Fn) {
     // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
     // which has null parameters. Avoid these as they don't contain useful
     // information.
-    if (llvm::all_of(F.getParams(), llvm::identity<ParmVarDecl *>()))
+    if (!llvm::is_contained(F.getParams(), nullptr))
       return F;
   }
 

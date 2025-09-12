@@ -5,7 +5,7 @@ declare void @init_mem(ptr, i64);
 
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-LABEL: define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
-; VF4IC4-NEXT:  [[ENTRY:.*]]:
+; VF4IC4-NEXT:  [[ENTRY:.*:]]
 ; VF4IC4-NEXT:    [[SRC:%.*]] = alloca [128 x i32], align 4
 ; VF4IC4-NEXT:    call void @init_mem(ptr [[SRC]])
 ; VF4IC4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -26,9 +26,13 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD2]], splat (i32 10)
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD3]], splat (i32 10)
 ; VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; VF4IC4-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[TMP2]], [[TMP6]]
-; VF4IC4-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP9]], [[TMP7]]
-; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP8]]
+; VF4IC4-NEXT:    [[TMP14:%.*]] = freeze <4 x i1> [[TMP2]]
+; VF4IC4-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP6]]
+; VF4IC4-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP14]], [[TMP9]]
+; VF4IC4-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP7]]
+; VF4IC4-NEXT:    [[TMP16:%.*]] = or <4 x i1> [[TMP10]], [[TMP15]]
+; VF4IC4-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP8]]
+; VF4IC4-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP16]], [[TMP17]]
 ; VF4IC4-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP11]])
 ; VF4IC4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; VF4IC4-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
@@ -40,10 +44,9 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC4-NEXT:    br label %[[E1:.*]]
 ; VF4IC4:       [[SCALAR_PH]]:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4IC4-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF4IC4:       [[LOOP_HEADER]]:
-; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[SCALAR_PH]] ]
 ; VF4IC4-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
 ; VF4IC4-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
 ; VF4IC4-NEXT:    [[C_1:%.*]] = icmp eq i32 [[L]], 10

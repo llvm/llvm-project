@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx80        \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes COMMON,I16x2 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_90 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90                    \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:   | %ptxas-verify -arch=sm_90                                          \
@@ -12,7 +12,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53                      \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes COMMON,NO-I16x2 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53                    \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
@@ -635,7 +635,7 @@ declare <2 x i16> @test_callee(<2 x i16> %a, <2 x i16> %b) #0
 define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_call(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<5>;
+; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b32 %r2, [test_call_param_1];
@@ -658,7 +658,7 @@ define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_call_flipped(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<5>;
+; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
@@ -681,7 +681,7 @@ define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 define <2 x i16> @test_tailcall_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_tailcall_flipped(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<5>;
+; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];

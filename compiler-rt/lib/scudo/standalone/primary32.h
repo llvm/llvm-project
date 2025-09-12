@@ -511,6 +511,8 @@ uptr SizeClassAllocator32<Config>::tryReleaseToOS(uptr ClassId,
 
 template <typename Config>
 uptr SizeClassAllocator32<Config>::releaseToOS(ReleaseToOS ReleaseType) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSTraceName(ReleaseType));
+
   uptr TotalReleasedBytes = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     if (I == SizeClassMap::BatchClassId)
@@ -1056,6 +1058,8 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Sci->Mutex) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   const uptr BlockSize = getSizeByClassId(ClassId);
 
   DCHECK_GE(Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks);
