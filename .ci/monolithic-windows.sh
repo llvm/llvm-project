@@ -54,12 +54,12 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -DLLVM_INCLUDE_UTILS=ON \
       -DLLVM_INSTALL_UTILS=ON
 
-ninja -C "${BUILD_DIR}" -k 0 install
-
 start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+
+ninja -C "${BUILD_DIR}" -k 0 install
 
 if [[ "${runtime_targets}" != "" ]]; then
   start-group "ninja runtimes"
