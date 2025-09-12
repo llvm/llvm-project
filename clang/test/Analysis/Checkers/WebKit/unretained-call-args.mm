@@ -438,6 +438,34 @@ void use_const_local() {
 
 } // namespace const_global
 
+namespace var_decl_ref_singleton {
+
+static Class initSomeObject() { return nil; }
+static Class (*getSomeObjectClassSingleton)() = initSomeObject;
+
+bool foo(NSString *obj) {
+  return [obj isKindOfClass:getSomeObjectClassSingleton()];
+}
+
+class Bar {
+public:
+  Class someObject();
+  static Class staticSomeObject();
+};
+typedef Class (Bar::*SomeObjectSingleton)();
+
+bool bar(NSObject *obj, Bar *bar, SomeObjectSingleton someObjSingleton) {
+  return [obj isKindOfClass:(bar->*someObjSingleton)()];
+  // expected-warning@-1{{Call argument for parameter 'aClass' is unretained and unsafe}}
+}
+
+bool baz(NSObject *obj) {
+  Class (*someObjectSingleton)() = Bar::staticSomeObject;
+  return [obj isKindOfClass:someObjectSingleton()];
+}
+
+} // namespace var_decl_ref_singleton
+
 namespace ns_retained_return_value {
 
 NSString *provideNS() NS_RETURNS_RETAINED;
