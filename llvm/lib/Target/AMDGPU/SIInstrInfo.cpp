@@ -2598,7 +2598,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
     const MCInstrDesc &TID = get(NewOpcode);
     const TargetRegisterClass *NewRC =
-        RI.getAllocatableClass(getRegClass(TID, 0, &RI, *MF));
+        RI.getAllocatableClass(getRegClass(TID, 0, &RI));
     MRI.setRegClass(DestReg, NewRC);
 
     UseMO->setReg(DestReg);
@@ -3615,7 +3615,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_ACCVGPR_WRITE_B32_e64}) {
       const MCInstrDesc &MovDesc = get(MovOp);
 
-      const TargetRegisterClass *MovDstRC = getRegClass(MovDesc, 0, &RI, *MF);
+      const TargetRegisterClass *MovDstRC = getRegClass(MovDesc, 0, &RI);
       if (Is16Bit) {
         // We just need to find a correctly sized register class, so the
         // subregister index compatibility doesn't matter since we're statically
@@ -5976,8 +5976,7 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           const MCInstrDesc &TID, unsigned RCID) {
-  if (!ST.hasGFX90AInsts() && (((TID.mayLoad() || TID.mayStore()) &&
-                                !(TID.TSFlags & SIInstrFlags::Spill)))) {
+  if (!ST.hasGFX90AInsts() && (TID.mayLoad() || TID.mayStore())) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
@@ -6005,17 +6004,15 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
   return RI.getProperlyAlignedRC(RI.getRegClass(RCID));
 }
 
-const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
-    unsigned OpNum, const TargetRegisterInfo *TRI,
-    const MachineFunction &MF)
-  const {
+const TargetRegisterClass *
+SIInstrInfo::getRegClass(const MCInstrDesc &TID, unsigned OpNum,
+                         const TargetRegisterInfo *TRI) const {
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
-    // Special pseudos have no alignment requirement
+  // Special pseudos have no alignment requirement.
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO || isSpill(TID))
     return RI.getRegClass(RegClass);
-  }
 
   return adjustAllocatableRegClass(ST, RI, TID, RegClass);
 }
@@ -6754,8 +6751,8 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   if (moveFlatAddrToVGPR(MI))
     return;
 
-  const TargetRegisterClass *DeclaredRC = getRegClass(
-      MI.getDesc(), SAddr->getOperandNo(), &RI, *MI.getParent()->getParent());
+  const TargetRegisterClass *DeclaredRC =
+      getRegClass(MI.getDesc(), SAddr->getOperandNo(), &RI);
 
   Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI, DeclaredRC);
   SAddr->setReg(ToSGPR);
