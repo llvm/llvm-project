@@ -1,7 +1,6 @@
 // REQUIRES: crash-recovery
-
-// FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: target={{.*-windows-gnu}}
+// File path separator differences.
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t
