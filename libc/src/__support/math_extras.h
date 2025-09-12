@@ -55,13 +55,23 @@ mask_leading_zeros() {
 // Returns whether 'a + b' overflows, the result is stored in 'res'.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(a, b, &res);
+#else
+  res = a + b;
+  return (res < a) || (res < b);
+#endif // __builtin_add_overflow
 }
 
 // Returns whether 'a - b' overflows, the result is stored in 'res'.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T &res) {
+#if __has_builtin(__builtin_sub_overflow)
   return __builtin_sub_overflow(a, b, &res);
+#else
+  res = a - b;
+  return (res > a);
+#endif // __builtin_sub_overflow
 }
 
 #define RETURN_IF(TYPE, BUILTIN)                                               \
