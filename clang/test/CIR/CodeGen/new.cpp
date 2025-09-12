@@ -23,7 +23,6 @@ void test_basic_new() {
 // CHECK:   %[[EIGHT:.*]] = cir.const #cir.int<8>
 // CHECK:   %[[NEW_S:.*]] = cir.call @_Znwm(%[[EIGHT]])
 // CHECK:   %[[NEW_S_PTR:.*]] = cir.cast(bitcast, %[[NEW_S]]
-// CHECK:   cir.call @_ZN1SC1Ev(%[[NEW_S_PTR]])
 // CHECK:   cir.store{{.*}} %[[NEW_S_PTR]], %[[PS_ADDR]]
 // CHECK:   %[[FOUR:.*]] = cir.const #cir.int<4>
 // CHECK:   %[[NEW_INT:.*]] = cir.call @_Znwm(%[[FOUR]])
@@ -40,15 +39,12 @@ void test_basic_new() {
 // LLVM:   %[[PN_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:   %[[PD_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:   %[[NEW_S:.*]] = call{{.*}} ptr @_Znwm(i64 8)
-// LLVM:   call{{.*}} void @_ZN1SC1Ev(ptr %[[NEW_S]])
 // LLVM:   store ptr %[[NEW_S]], ptr %[[PS_ADDR]], align 8
 // LLVM:   %[[NEW_INT:.*]] = call{{.*}} ptr @_Znwm(i64 4)
 // LLVM:   store ptr %[[NEW_INT]], ptr %[[PN_ADDR]], align 8
 // LLVM:   %[[NEW_DOUBLE:.*]] = call{{.*}} ptr @_Znwm(i64 8)
 // LLVM:   store ptr %[[NEW_DOUBLE]], ptr %[[PD_ADDR]], align 8
 // LLVM:   ret void
-
-// NOTE: OGCG elides the constructor call here, but CIR does not.
 
 // OGCG: define{{.*}} void @_Z14test_basic_newv
 // OGCG:   %[[PS_ADDR:.*]] = alloca ptr, align 8
