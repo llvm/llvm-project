@@ -24,13 +24,11 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
                                   Function *Func) {
   assert(FuncDecl);
   assert(Func);
+  assert(FuncDecl->isThisDeclarationADefinition());
 
   // Manually created functions that haven't been assigned proper
   // parameters yet.
   if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
-    return;
-
-  if (!FuncDecl->isDefined())
     return;
 
   // Set up lambda captures.
@@ -87,7 +85,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   }
 
   // Set the function's code.
-  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
+  Func->setCode(FuncDecl, NextLocalOffset, std::move(Code), std::move(SrcMap),
                 std::move(Scopes), FuncDecl->hasBody());
   Func->setIsFullyCompiled(true);
 }
