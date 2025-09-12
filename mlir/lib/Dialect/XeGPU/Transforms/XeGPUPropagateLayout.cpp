@@ -116,18 +116,18 @@ public:
 SmallVector<int> LayoutInfo::getLaneLayout() const {
   if (!isAssigned())
     return {};
-  assert(storage.getLaneLayoutAsInt().size() &&
+  assert(storage.getEffectiveLaneLayoutAsInt().size() &&
          "Expected lane layout to be assigned");
-  return llvm::map_to_vector(storage.getLaneLayoutAsInt(),
+  return llvm::map_to_vector(storage.getEffectiveLaneLayoutAsInt(),
                              [](int64_t val) { return static_cast<int>(val); });
 }
 
 SmallVector<int> LayoutInfo::getLaneData() const {
   if (!isAssigned())
     return {};
-  assert(storage.getLaneDataAsInt().size() &&
+  assert(storage.getEffectiveLaneDataAsInt().size() &&
          "Expected lane data to be assigned");
-  return llvm::map_to_vector(storage.getLaneDataAsInt(),
+  return llvm::map_to_vector(storage.getEffectiveLaneDataAsInt(),
                              [](int64_t val) { return static_cast<int>(val); });
 }
 

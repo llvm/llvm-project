@@ -191,9 +191,6 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Get the rank of attribute",
                     "int64_t",
                     "getRank">,
-    InterfaceMethod<"Get the order field of the attribute as integer array",
-                    "DenseI32ArrayAttr",
-                    "getOrder">,
     InterfaceMethod<"Get the num of effective subgroups",
                     "int64_t",
                     "getNumSubgroups", (ins), [{
@@ -270,19 +267,19 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                         return true;
                       };
                       // Check sgLayout
-                      if (!checkTranspose($_self.getSgLayoutAsInt(), other.getSgLayoutAsInt(), perm))
+                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
                         return false;
                       // Check sgData
-                      if (!checkTranspose($_self.getSgDataAsInt(), other.getSgDataAsInt(), perm))
+                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
                         return false;
                       // Check instData
-                      if (!checkTranspose($_self.getInstDataAsInt(), other.getInstDataAsInt(), perm))
+                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
                         return false;
                       // Check laneLayout
-                      if (!checkTranspose($_self.getLaneLayoutAsInt(), other.getLaneLayoutAsInt(), perm))
+                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
                         return false;
                       // Check laneData
-                      if (!checkTranspose($_self.getLaneDataAsInt(), other.getLaneDataAsInt(), perm))
+                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
                         return false;
                       // Check order if both sides have order field.
                       if ($_self.getOrder() && other.getOrder()) {
@@ -293,7 +290,6 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       }
                       return true;
                     }]>,
-
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",

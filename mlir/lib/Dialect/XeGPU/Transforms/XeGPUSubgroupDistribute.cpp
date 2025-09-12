@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
@@ -34,6 +35,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 namespace mlir {
 namespace xegpu {
@@ -147,22 +149,29 @@ static Value resolveDistributedTy(Value orig, T expected,
 
 /// Helper function to check if the layout is packed. Layout is packed if it is
 /// 2D and lane_data[0] != 1 (data packed from col dimension).
-static bool hasPackedLayout(xegpu::LayoutAttr layout) {
-  if (layout == xegpu::LayoutAttr())
+/// TODO: Move to target info.
+static bool requirePacked(const xegpu::LayoutAttr layout) {
+  if (!layout)
     return false;
-  DenseI32ArrayAttr laneData = layout.getLaneData();
-  if (!laneData || laneData.size() != 2)
+  auto laneData = layout.getEffectiveLaneDataAsInt();
+  if (laneData.size() != 2)
     return false;
-  return laneData.asArrayRef()[0] != 1;
+  return laneData[0] != 1;
 }
 
-static bool hasTransposedLayout(xegpu::LayoutAttr layout) {
-  if (layout == xegpu::LayoutAttr())
+/// Helper function to check if the layout requires a transpose effect.
+static bool requireTranspose(const xegpu::LayoutAttr layout,
+                             const std::string &chipStr) {
+  // Return false for unsupported targets.
+  // TODO: Add more support or move to target info.
+  if (chipStr != "pvc" && chipStr != "bmg")
     return false;
-  DenseI32ArrayAttr laneLayout = layout.getLaneLayout();
-  if (!laneLayout || laneLayout.size() != 2)
+  if (!layout)
     return false;
-  return laneLayout.asArrayRef()[0] > 1 && laneLayout.asArrayRef()[1] == 1;
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  if (laneLayout.size() != 2)
+    return false;
+  return laneLayout[0] == xegpu::targetinfo::subgroupSize && laneLayout[1] == 1;
 }
 
 /// Given a GPUFuncOp, this pattern creates a new GPUFuncOp and moves the body
@@ -516,8 +525,15 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         loadOp->getAttrs());
     xegpu::removeLayoutAttrs(newLoadOp);
     // Set the packed attribute if the layout requires it.
-    newLoadOp.setPacked(hasPackedLayout(layout));
-    if (hasTransposedLayout(layout))
+    newLoadOp.setPacked(requirePacked(layout));
+    // Decide if this load op requires a transpose effect.
+    auto chipStr = xegpu::getChipStr(loadOp);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(
+          loadOp,
+          "xegpu::LoadNdOp require chip information to determine transpose "
+          "requirement");
+    if (requireTranspose(layout, chipStr.value()))
       newLoadOp.setTranspose(
           DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -1284,6 +1300,142 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
         rewriter, shapeCastOp.getLoc(), resultDistTy, source);
     rewriter.replaceAllUsesWith(newWarpOp.getResult(operandNumber),
                                 newShapeCast);
+    return success();
+  }
+};
+
+/// Sink a memref::ExtractAlignedPointerAsIndex op feeding into yield op of an
+/// enclosing `gpu.warp_execute_on_lane_0` region. This will simply move the op
+/// outside of the warp op.
+struct MemrefExtractAlignedPointerAsIndexDistribution final
+    : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand = getWarpResult(
+        warpOp, llvm::IsaPred<memref::ExtractAlignedPointerAsIndexOp>);
+    if (!operand)
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          "warp result is not a xegpu::MemrefExtractAlignedPointerAsIndex op");
+    auto extractOp =
+        operand->get().getDefiningOp<memref::ExtractAlignedPointerAsIndexOp>();
+    unsigned operandIdx = operand->getOperandNumber();
+    SmallVector<size_t> newRetIndices;
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, extractOp.getSource(),
+        TypeRange{extractOp.getSource().getType()}, newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    auto newExtractOp = memref::ExtractAlignedPointerAsIndexOp::create(
+        rewriter, newWarpOp.getLoc(), extractOp.getType(),
+        newWarpOp.getResult(newRetIndices[0]));
+    Value distributedVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(distributedVal, newExtractOp.getResult());
+    return success();
+  }
+};
+
+/// Distribute a vector::BitCastOp feeding into yield op of an enclosing
+/// `gpu.warp_execute_on_lane_0` region. Bitcast only impacts the innermost
+/// diemension of the source/result vectors. Equivalent vector::BitCastOp is
+/// created outside of the warp op with distributed source vector type (computed
+/// using assigned layout).
+struct VectorBitcastDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::BitCastOp>);
+    if (!operand)
+      return rewriter.notifyMatchFailure(
+          warpOp, "warp result is not a vector::BitCast op");
+    auto bitcastOp = operand->get().getDefiningOp<vector::BitCastOp>();
+    unsigned operandIdx = operand->getOperandNumber();
+    VectorType distributedSourceType =
+        getDistVecTypeBasedOnLaneLayout(
+            xegpu::getDistributeLayoutAttr(bitcastOp.getSource()),
+            bitcastOp.getSourceVectorType())
+            .value_or(VectorType());
+    if (!distributedSourceType)
+      return rewriter.notifyMatchFailure(
+          bitcastOp, "Failed to distribute the source vector type in "
+                     "vector::BitCast op");
+    VectorType distributedResultType =
+        cast<VectorType>(warpOp.getResult(operandIdx).getType());
+    SmallVector<size_t> newRetIndices;
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, bitcastOp.getSource(),
+        TypeRange{distributedSourceType}, newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    auto newBitcastOp = vector::BitCastOp::create(
+        rewriter, newWarpOp.getLoc(), distributedResultType,
+        newWarpOp.getResult(newRetIndices[0]));
+    Value distributedVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(distributedVal, newBitcastOp.getResult());
+    return success();
+  }
+};
+
+/// Distribute a vector::TransposeOp feeding into yield op of an enclosing
+/// `gpu.warp_execute_on_lane_0` region. Currently only 2D transposes are
+/// supported. In most cases, transpose is a no op because it is entirely
+/// handled using the layouts (e.g. 16x1 -> 1x16). However, if each lane owns
+/// multiple slices of data after distribution (e.g. 16x2 -> 2x16), a lane-local
+/// transpose (i.e. shuffle) is needed. Therefore, we create an equivalent
+/// vector::TransposeOp outside of the warp op with distributed source vector
+/// type (computed using assigned layout).
+struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::TransposeOp>);
+    if (!operand)
+      return rewriter.notifyMatchFailure(
+          warpOp, "warp result is not a vector::Transpose op");
+    auto transposeOp = operand->get().getDefiningOp<vector::TransposeOp>();
+    unsigned operandIdx = operand->getOperandNumber();
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(transposeOp.getVector());
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getDistributeLayoutAttr(transposeOp.getResult());
+    if (!sourceLayout || !resultLayout)
+      return rewriter.notifyMatchFailure(
+          transposeOp,
+          "the source or result vector of the transpose op lacks layout "
+          "attribute");
+    int64_t sourceRank = transposeOp.getSourceVectorType().getRank();
+    int64_t resultRank = transposeOp.getResultVectorType().getRank();
+    // Only 2D transposes are supported for now.
+    // TODO: Support nD transposes.
+    if (sourceRank != 2 || resultRank != 2)
+      return rewriter.notifyMatchFailure(
+          transposeOp, "the source or result vector of the transpose op "
+                       "does not have 2D layout");
+    ArrayRef<int64_t> perm = transposeOp.getPermutation();
+    // Result layout must be a transpose of source layout.
+    if (!resultLayout.isTransposeOf(sourceLayout, perm))
+      return rewriter.notifyMatchFailure(
+          transposeOp,
+          "the source or result vector layouts must be 2D transposes of each "
+          "other");
+    FailureOr<VectorType> distributedSourceTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(sourceLayout,
+                                        transposeOp.getSourceVectorType());
+    if (failed(distributedSourceTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          transposeOp, "Failed to distribute the source vector type in "
+                       "vector::Transpose op");
+    SmallVector<size_t> newRetIndices;
+    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, transposeOp.getVector(),
+        TypeRange{distributedSourceTypeOrFailure.value()}, newRetIndices);
+    rewriter.setInsertionPointAfter(newWarpOp);
+    auto newTransposeOp = vector::TransposeOp::create(
+        rewriter, newWarpOp.getLoc(), newWarpOp.getResult(newRetIndices[0]),
+        perm);
+    Value distributedVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(distributedVal, newTransposeOp.getResult());
     return success();
   }
 };
