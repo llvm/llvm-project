@@ -372,6 +372,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TCRETURNmi64   : PseudoI<(outs),
                                (ins i64mem_TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJumpLd]>;
+  def TCRETURN_WINmi64   : PseudoI<(outs),
+                               (ins i64mem_w64TC:$dst, i32imm:$offset),
+                               []>, Sched<[WriteJumpLd]>;
 
   def TAILJMPd64 : PseudoI<(outs), (ins i64i32imm_brtarget:$dst),
                            []>, Sched<[WriteJump]>;

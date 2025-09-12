@@ -283,6 +283,8 @@ Improvements to Clang's diagnostics
   pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
   both false positives but also false negatives through more precise analysis.
 
+- Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -456,7 +458,9 @@ AST Matchers
   following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
-
+- Remove the ``dependentTemplateSpecializationType`` matcher, as the
+  corresponding AST node was removed. This matcher was never very useful, since
+  there was no way to match on its template name.
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
 
@@ -466,6 +470,8 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
+- Add ``NumericLiteralCase`` option for enforcing character case in numeric
+  literals.
 
 libclang
 --------

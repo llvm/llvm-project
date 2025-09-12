@@ -1054,7 +1054,44 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
   return TranslateLanguage(item->m_compile_opts->getLanguage());
 }
 
-void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {}
+void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
+  auto *section_list = m_objfile_sp->GetSectionList();
+  if (!section_list)
+    return;
+
+  for (auto pid : m_index->publics().getPublicsTable()) {
+    PdbGlobalSymId global{pid, true};
+    CVSymbol sym = m_index->ReadSymbolRecord(global);
+    auto kind = sym.kind();
+    if (kind != S_PUB32)
+      continue;
+    PublicSym32 pub =
+        llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+
+    auto section_sp = section_list->FindSectionByID(pub.Segment);
+    if (!section_sp)
+      continue;
+
+    lldb::SymbolType type = eSymbolTypeData;
+    if ((pub.Flags & PublicSymFlags::Function) != PublicSymFlags::None ||
+        (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
+      type = eSymbolTypeCode;
+
+    symtab.AddSymbol(Symbol(/*symID=*/pid,
+                            /*name=*/pub.Name,
+                            /*type=*/type,
+                            /*external=*/true,
+                            /*is_debug=*/true,
+                            /*is_trampoline=*/false,
+                            /*is_artificial=*/false,
+                            /*section_sp=*/section_sp,
+                            /*value=*/pub.Offset,
+                            /*size=*/0,
+                            /*size_is_valid=*/false,
+                            /*contains_linker_annotations=*/false,
+                            /*flags=*/0));
+  }
+}
 
 size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());

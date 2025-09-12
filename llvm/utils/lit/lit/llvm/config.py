@@ -198,6 +198,9 @@ class LLVMConfig(object):
             if gmalloc_path_str is not None:
                 self.with_environment("DYLD_INSERT_LIBRARIES", gmalloc_path_str)
 
+        if not platform.system() == "Windows":
+            features.add("symlinks")
+
     def _find_git_windows_unix_tools(self, tools_needed):
         assert sys.platform == "win32"
         import winreg
@@ -230,7 +233,7 @@ class LLVMConfig(object):
             # For paths, we should be able to take a list of them and process
             # all of them.
             paths_to_add = value
-            if lit.util.is_string(paths_to_add):
+            if isinstance(paths_to_add, str):
                 paths_to_add = [paths_to_add]
 
             def norm(x):
@@ -259,7 +262,7 @@ class LLVMConfig(object):
         self.config.environment[variable] = value
 
     def with_system_environment(self, variables, append_path=False):
-        if lit.util.is_string(variables):
+        if isinstance(variables, str):
             variables = [variables]
         for v in variables:
             value = os.environ.get(v)
@@ -401,7 +404,7 @@ class LLVMConfig(object):
         if not search_dirs:
             search_dirs = [self.config.llvm_tools_dir]
 
-        if lit.util.is_string(search_dirs):
+        if isinstance(search_dirs, str):
             search_dirs = [search_dirs]
 
         tools = [x if isinstance(x, ToolSubst) else ToolSubst(x) for x in tools]
