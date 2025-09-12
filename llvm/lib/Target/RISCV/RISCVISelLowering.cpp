@@ -38,6 +38,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -402,12 +403,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Legal);
   }
 
-  if (Subtarget.hasStdExtZbb() ||
-      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  if (Subtarget.hasCTZLike()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
+  }
+
+  if (!Subtarget.hasCPOPLike()) {
     // TODO: These should be set to LibCall, but this currently breaks
     //   the Linux kernel build. See #101786. Lacks i128 tests, too.
     if (Subtarget.is64Bit())
@@ -417,11 +420,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  if (Subtarget.hasCLZLike()) {
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
-    if (Subtarget.is64Bit())
+    // Use default promotion for i32 without Zbb.
+    if (Subtarget.is64Bit() && Subtarget.hasStdExtZbb())
       setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
@@ -2156,13 +2159,11 @@ bool RISCVTargetLowering::signExtendConstant(const ConstantInt *CI) const {
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() ||
-         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
+  return Subtarget.hasCTZLike();
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
+  return Subtarget.hasCLZLike();
 }
 
 bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -2173,7 +2174,7 @@ bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
   // on the basis that it's possible the sinking+duplication of the AND in
   // CodeGenPrepare triggered by this hook wouldn't decrease the instruction
   // count and would increase code size (e.g. ANDI+BNEZ => BEXTI+BNEZ).
-  if (!Subtarget.hasStdExtZbs() && !Subtarget.hasVendorXTHeadBs())
+  if (!Subtarget.hasBEXTILike())
     return false;
   ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
   if (!Mask)
@@ -9141,9 +9142,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
-    const bool HasCZero =
-        VT.isScalarInteger() &&
-        (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps());
+    const bool HasCZero = VT.isScalarInteger() && Subtarget.hasCZEROLike();
 
     // (select c, 0, y) -> (c-1) & y
     if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
@@ -9281,8 +9280,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
-  if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
-      VT.isScalarInteger()) {
+  if (Subtarget.hasCZEROLike() && VT.isScalarInteger()) {
 
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
@@ -15487,9 +15485,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
 
   if (!Subtarget.hasConditionalMoveFusion()) {
     // (select cond, x, (and x, c)) has custom lowering with Zicond.
-    if ((!Subtarget.hasStdExtZicond() &&
-         !Subtarget.hasVendorXVentanaCondOps()) ||
-        N->getOpcode() != ISD::AND)
+    if (!Subtarget.hasCZEROLike() || N->getOpcode() != ISD::AND)
       return SDValue();
 
     // Maybe harmful when condition code has multiple use.
@@ -16761,29 +16757,37 @@ static SDValue performSETCCCombine(SDNode *N,
           combineVectorSizedSetCCEquality(VT, N0, N1, Cond, dl, DAG, Subtarget))
     return V;
 
-  if (DCI.isAfterLegalizeDAG() && isNullConstant(N1) &&
+  if (DCI.isAfterLegalizeDAG() && isa<ConstantSDNode>(N1) &&
       N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
       isa<ConstantSDNode>(N0.getOperand(1))) {
-    const APInt &AndRHSC =
-        cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+    const APInt &AndRHSC = N0.getConstantOperandAPInt(1);
     // (X & -(1 << C)) == 0 -> (X >> C) == 0 if the AND constant can't use ANDI.
-    if (!isInt<12>(AndRHSC.getSExtValue()) && AndRHSC.isNegatedPowerOf2()) {
+    if (isNullConstant(N1) && !isInt<12>(AndRHSC.getSExtValue()) &&
+        AndRHSC.isNegatedPowerOf2()) {
       unsigned ShiftBits = AndRHSC.countr_zero();
       SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, N0.getOperand(0),
                                   DAG.getConstant(ShiftBits, dl, OpVT));
       return DAG.getSetCC(dl, VT, Shift, N1, Cond);
     }
 
-    // Similar to above but handling the lower 32 bits by using srliw.
-    // FIXME: Handle the case where N1 is non-zero.
-    if (OpVT == MVT::i64 && AndRHSC.getZExtValue() <= 0xffffffff &&
-        isPowerOf2_32(-uint32_t(AndRHSC.getZExtValue()))) {
-      unsigned ShiftBits = llvm::countr_zero(AndRHSC.getZExtValue());
-      SDValue And = DAG.getNode(ISD::AND, dl, OpVT, N0.getOperand(0),
-                                DAG.getConstant(0xffffffff, dl, OpVT));
-      SDValue Shift = DAG.getNode(ISD::SRL, dl, OpVT, And,
-                                  DAG.getConstant(ShiftBits, dl, OpVT));
-      return DAG.getSetCC(dl, VT, Shift, N1, Cond);
+    // Similar to above but handling the lower 32 bits by using sraiw. Allow
+    // comparing with constants other than 0 if the constant can be folded into
+    // addi or xori after shifting.
+    uint64_t N1Int = cast<ConstantSDNode>(N1)->getZExtValue();
+    uint64_t AndRHSInt = AndRHSC.getZExtValue();
+    if (OpVT == MVT::i64 && AndRHSInt <= 0xffffffff &&
+        isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
+      unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
+      int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;
+      if (NewC >= -2048 && NewC <= 2048) {
+        SDValue SExt =
+            DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, OpVT, N0.getOperand(0),
+                        DAG.getValueType(MVT::i32));
+        SDValue Shift = DAG.getNode(ISD::SRA, dl, OpVT, SExt,
+                                    DAG.getConstant(ShiftBits, dl, OpVT));
+        return DAG.getSetCC(dl, VT, Shift,
+                            DAG.getSignedConstant(NewC, dl, OpVT), Cond);
+      }
     }
   }
 
@@ -18945,8 +18949,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
-      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps() ||
-       Subtarget.hasVendorXTHeadCondMov())) {
+      (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -19121,6 +19124,7 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget,
                                          const RISCVTargetLowering &TLI) {
+  using namespace SDPatternMatch;
   // Note: We intentionally do not check the legality of the reduction type.
   // We want to handle the m4/m8 *src*  types, and thus need to let illegal
   // intermediate types flow through here.
@@ -19128,11 +19132,10 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
       !InVec.getValueType().getVectorElementCount().isKnownMultipleOf(4))
     return SDValue();
 
-  // Recurse through adds (since generic dag canonicalizes to that
-  // form). TODO: Handle disjoint or here.
-  if (InVec->getOpcode() == ISD::ADD) {
-    SDValue A = InVec.getOperand(0);
-    SDValue B = InVec.getOperand(1);
+  // Recurse through adds/disjoint ors (since generic dag canonicalizes to that
+  // form).
+  SDValue A, B;
+  if (sd_match(InVec, m_AddLike(m_Value(A), m_Value(B)))) {
     SDValue AOpt = foldReduceOperandViaVQDOT(A, DL, DAG, Subtarget, TLI);
     SDValue BOpt = foldReduceOperandViaVQDOT(B, DL, DAG, Subtarget, TLI);
     if (AOpt || BOpt) {
@@ -19169,11 +19172,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
   // mul (zext a, zext b) -> partial_reduce_umla 0, a, b
   // mul (sext a, zext b) -> partial_reduce_ssmla 0, a, b
   // mul (zext a, sext b) -> partial_reduce_smla 0, b, a (swapped)
-  if (InVec.getOpcode() != ISD::MUL)
+  if (!sd_match(InVec, m_Mul(m_Value(A), m_Value(B))))
     return SDValue();
-
-  SDValue A = InVec.getOperand(0);
-  SDValue B = InVec.getOperand(1);
 
   if (!ISD::isExtOpcode(A.getOpcode()))
     return SDValue();
@@ -24842,6 +24842,7 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
     return isTypeLegal(VT) && Subtarget.hasStdExtZvbb();
   if (VT.isFixedLengthVector() && Subtarget.hasStdExtZvbb())
     return true;
+  // FIXME: Should use hasCPOPLike here.
   return Subtarget.hasStdExtZbb() &&
          (VT == MVT::i32 || VT == MVT::i64 || VT.isFixedLengthVector());
 }
@@ -24891,6 +24892,12 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       Op == Instruction::Freeze || Op == Instruction::Store)
     return false;
 
+  if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+    // Mark RVV intrinsic as supported.
+    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID()))
+      return false;
+  }
+
   if (Inst.getType()->isScalableTy())
     return true;
 
@@ -24930,7 +24937,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())
+  if (Subtarget.hasCZEROLike())
     return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
