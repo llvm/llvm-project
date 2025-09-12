@@ -6011,7 +6011,7 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  // Special pseudos have no alignment requirement
+  // Special pseudos have no alignment requirement.
   if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO || isSpill(TID))
     return RI.getRegClass(RegClass);
 
