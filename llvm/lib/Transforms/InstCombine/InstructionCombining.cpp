@@ -1363,6 +1363,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
+  SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
   if (isa<FPMathOperator>(&I)) {
@@ -1374,7 +1376,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
-  MDNode *ProfileData = nullptr;
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
@@ -1384,18 +1385,16 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     // We need an 'add' and exactly 1 arm of the select to have been simplified.
     if (Opcode != Instruction::Add || (!True && !False) || (True && False))
       return nullptr;
-    Value *N, *SI = nullptr;
+    Value *N;
     if (True && match(FVal, m_Neg(m_Value(N)))) {
       Value *Sub = Builder.CreateSub(Z, N);
-      SI = Builder.CreateSelect(Cond, True, Sub, I.getName());
+      return Builder.CreateSelect(Cond, True, Sub, I.getName(), SI);
     }
     if (False && match(TVal, m_Neg(m_Value(N)))) {
       Value *Sub = Builder.CreateSub(Z, N);
-      SI = Builder.CreateSelect(Cond, Sub, False, I.getName());
+      return Builder.CreateSelect(Cond, Sub, False, I.getName(), SI);
     }
-    if (!ProfcheckDisableMetadataFixes && SI)
-      cast<SelectInst>(SI)->setMetadata(LLVMContext::MD_prof, ProfileData);
-    return SI;
+    return nullptr;
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
@@ -1405,8 +1404,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     False = simplifyBinOp(Opcode, C, F, FMF, Q);
     // Profile weights for both LHS and RHS should be the same because they have
     // the same idempotent conditional.
-    ProfileData = cast<SelectInst>(LHS)->getMetadata(LLVMContext::MD_prof);
-    assert(ProfileData ==
+    assert(cast<SelectInst>(LHS)->getMetadata(LLVMContext::MD_prof) ==
                cast<SelectInst>(RHS)->getMetadata(LLVMContext::MD_prof) &&
            "LHS and RHS select statements have different metadata!");
 
@@ -1418,7 +1416,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     }
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
-    ProfileData = cast<SelectInst>(LHS)->getMetadata(LLVMContext::MD_prof);
     Cond = A;
     True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
     False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
@@ -1426,7 +1423,6 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
-    ProfileData = cast<SelectInst>(RHS)->getMetadata(LLVMContext::MD_prof);
     Cond = D;
     True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
@@ -1437,11 +1433,9 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!True || !False)
     return nullptr;
 
-  Value *SI = Builder.CreateSelect(Cond, True, False);
-  SI->takeName(&I);
-  if (!ProfcheckDisableMetadataFixes)
-    cast<SelectInst>(SI)->setMetadata(LLVMContext::MD_prof, ProfileData);
-  return SI;
+  Value *NewSI = Builder.CreateSelect(Cond, True, False, I.getName(), SI);
+  NewSI->takeName(&I);
+  return NewSI;
 }
 
 /// Freely adapt every user of V as-if V was changed to !V.
