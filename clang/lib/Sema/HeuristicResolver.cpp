@@ -13,7 +13,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/identity.h"
 
 namespace clang {
 
@@ -562,7 +561,7 @@ HeuristicResolverImpl::getFunctionProtoTypeLoc(const Expr *Fn) {
     // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
     // which has null parameters. Avoid these as they don't contain useful
     // information.
-    if (llvm::all_of(F.getParams(), llvm::identity<ParmVarDecl *>()))
+    if (!llvm::is_contained(F.getParams(), nullptr))
       return F;
   }
 
