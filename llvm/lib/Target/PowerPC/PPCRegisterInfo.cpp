@@ -2023,7 +2023,7 @@ Register PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   const TargetRegisterClass *RC = getPointerRegClass();
   Register BaseReg = MRI.createVirtualRegister(RC);
-  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
+  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this));
 
   BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);
@@ -2051,8 +2051,7 @@ void PPCRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   const MCInstrDesc &MCID = MI.getDesc();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  MRI.constrainRegClass(BaseReg,
-                        TII.getRegClass(MCID, FIOperandNum, this, MF));
+  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, FIOperandNum, this));
 }
 
 bool PPCRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
