@@ -16,8 +16,9 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>, %source: memref<8x16x32xf32>,
 // CHECK-COUNT2: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
-// CHECK:        xegpu.store %[[VAL]], %[[COLLAPSE]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, memref<4096xf32>, vector<8xindex>, vector<8xi1>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
 // CHECK:        gpu.return
 }
 
@@ -38,8 +39,9 @@ gpu.func @store_2D_memref(%vec: vector<8xf32>, %source: memref<8x32xf32>,
 // CHECK-COUNT1: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1]{{\]}} : memref<8x32xf32> into memref<256xf32>
-// CHECK:        xegpu.store %[[VAL]], %[[COLLAPSE]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, memref<256xf32>, vector<8xindex>, vector<8xi1>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x32xf32> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
 // CHECK:        gpu.return
 }
 
@@ -60,8 +62,9 @@ gpu.func @store_2D_vector(%vec: vector<8x16xf32>, %source: memref<8x16x32xf32>,
 // CHECK-COUNT2: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
-// CHECK:        xegpu.store %[[VAL]], %[[COLLAPSE]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8x16xf32>, memref<4096xf32>, vector<8x16xindex>, vector<8x16xi1>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 // CHECK:        gpu.return
 }
 
@@ -83,8 +86,9 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>, %source: memref<?x?x?xf32
 // CHECK-COUNT2: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<?x?x?xf32> into memref<?xf32>
-// CHECK:        xegpu.store %[[VAL]], %[[COLLAPSE]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8x16xf32>, memref<?xf32>, vector<8x16xindex>, vector<8x16xi1>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?xf32> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 // CHECK:        gpu.return
 }
 
@@ -106,8 +110,9 @@ gpu.func @store_dynamic_source2(%vec: vector<8x16xf32>, %source: memref<?x8x16xf
 // CHECK-COUNT2: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8x16xindex>
 // CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8x16xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<?x8x16xf32> into memref<?xf32>
-// CHECK:        xegpu.store %[[VAL]], %[[COLLAPSE]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8x16xf32>, memref<?xf32>, vector<8x16xindex>, vector<8x16xi1>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x8x16xf32> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 // CHECK:        gpu.return
 }
 
@@ -126,23 +131,33 @@ gpu.func @no_store_non_unit_inner_stride(
 
 // -----
 gpu.module @xevm_module {
-gpu.func @store_1D_aligned(%vec: vector<8xf32>, %source: memref<8x16x32xf32>,
-     %off1: index, %off2: index, %off3: index,
-     %indices: vector<8xindex>, %mask: vector<8xi1>) {
-  vector.scatter %source[%off1, %off2, %off3][%indices], %mask, %vec {alignment = 256}
-       : memref<8x16x32xf32>, vector<8xindex>, vector<8xi1>, vector<8xf32>
+gpu.func @scatter_into_subview(%vals: vector<8xf16>,
+                               %source: memref<4096x4096xf16>,
+                               %off1: index, %off2: index,
+                               %indices: vector<8xindex>,
+                               %mask: vector<8xi1>) {
+  %subview = memref.subview %source[%off1, %off2] [256, 256] [1, 1]
+      : memref<4096x4096xf16>
+        to memref<256x256xf16, strided<[4096, 1], offset: ?>>
+  vector.scatter %subview[%off1, %off2][%indices], %mask, %vals
+      : memref<256x256xf16, strided<[4096, 1], offset: ?>>,
+        vector<8xindex>, vector<8xi1>, vector<8xf16>
   gpu.return
 }
-// CHECK-LABEL:  @store_1D_aligned(
-// CHECK-SAME:   %[[VAL:.+]]: vector<8xf32>, %[[SRC:.+]]: memref<8x16x32xf32>,
-// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
+// CHECK-LABEL:  @scatter_into_subview(
+// CHECK-SAME:   %[[VALS:.+]]: vector<8xf16>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
+// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>, %[[MASK:.+]]: vector<8xi1>) {
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
-// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
-// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
-// CHECK:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
-// CHECK:        %[[COLLAPSE_ALIGN:.+]] = memref.assume_alignment %[[COLLAPSE]], 256 : memref<4096xf32>
-// CHECK:        xegpu.store %[[VAL]], %[[COLLAPSE_ALIGN]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, memref<4096xf32>, vector<8xindex>, vector<8xi1>
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1]
+// CHECK:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
+// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.addi %[[OFFSET]]{{.*}} : index
+// CHECK:        %[[BASE_OFF:.+]] = arith.addi {{.*}} : index
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast %[[BASE_OFF]] : index to vector<8xindex>
+// CHECK:        %[[LIN:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
+// CHECK:        %[[BASE_IDX:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE_IDX]] : index to i64
+// CHECK:        xegpu.store %[[VALS]], %[[BASE_I64]]{{\[}}%[[LIN]]{{\]}}, %[[MASK]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
 // CHECK:        gpu.return
 }

@@ -97,6 +97,9 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
+// Common preconditions for the lowering of vector.gather and vector.scatter:
+//  1. Source is a memref.
+//  2. The innermost dimension of the memref is contiguous (stride == 1)
 static LogicalResult gatherScatterPreconditions(PatternRewriter &rewriter,
                                                 Operation *op, Type baseType) {
   auto srcTy = dyn_cast<MemRefType>(baseType);
@@ -259,7 +262,7 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
     adjustStridesForPermutation(permMap, strides);
   }
 
-  return strides;
+  return {strides, offsetVal};
 }
 
 // This function compute the vectors of localOffsets for scattered load/stores.
@@ -374,15 +377,14 @@ template <
     typename = std::enable_if_t<llvm::is_one_of<
         std::decay_t<OpType>, vector::GatherOp, vector::ScatterOp>::value>>
 static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
-                            ArrayRef<Value> strides) {
+                            ArrayRef<Value> strides, Value baseOffset) {
   Location loc = gatScatOp.getLoc();
   SmallVector<Value> offsets = gatScatOp.getOffsets();
-  Value linearOffset = arith::ConstantIndexOp::create(rewriter, loc, 0);
   for (size_t i = 0; i < offsets.size(); ++i) {
     Value offsetContrib =
         arith::MulIOp::create(rewriter, loc, offsets[i], strides[i]);
-    linearOffset =
-        arith::AddIOp::create(rewriter, loc, linearOffset, offsetContrib);
+    baseOffset =
+        arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
   }
   Value indices = gatScatOp.getIndices();
   VectorType vecType = cast<VectorType>(indices.getType());
@@ -391,7 +393,7 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
       vector::BroadcastOp::create(
           rewriter, loc,
           VectorType::get(vecType.getShape(), rewriter.getIndexType()),
-          linearOffset)
+          baseOffset)
           .getResult();
   return arith::AddIOp::create(rewriter, loc, baseVector, indices).getResult();
 }
@@ -402,8 +404,7 @@ template <
         std::decay_t<OpType>, vector::TransferReadOp, vector::TransferWriteOp,
         vector::GatherOp, vector::ScatterOp>::value>>
 // Convert memref to i64 base pointer
-static Value memrefToIndexPtr(OpType xferOp,
-                              PatternRewriter &rewriter) {
+static Value memrefToIndexPtr(OpType xferOp, PatternRewriter &rewriter) {
   Location loc = xferOp.getLoc();
   auto indexPtr = memref::ExtractAlignedPointerAsIndexOp::create(
                       rewriter, loc, xferOp.getBase())
@@ -613,18 +614,13 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
     Location loc = gatherOp.getLoc();
     VectorType vectorType = gatherOp.getVectorType();
 
-    SmallVector<Value> strides = computeStrides(gatherOp, rewriter);
-    if (strides.empty())
+    auto meta = computeMemrefMeta(gatherOp, rewriter);
+    if (meta.first.empty())
       return rewriter.notifyMatchFailure(gatherOp, "Failed to compute strides");
 
-    Value localOffsets = computeOffsets(rewriter, gatherOp, strides);
-    Value flatMemref = collapseMemrefTo1D(gatherOp, rewriter);
-
-    if (auto alignment = gatherOp.getAlignment()) {
-      flatMemref = memref::AssumeAlignmentOp::create(rewriter, loc, flatMemref,
-                                                     alignment.value())
-                       .getResult();
-    }
+    Value localOffsets =
+        computeOffsets(rewriter, gatherOp, meta.first, meta.second);
+    Value flatMemref = memrefToIndexPtr(gatherOp, rewriter);
 
     auto xeGatherOp = xegpu::LoadGatherOp::create(
         rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
@@ -651,19 +647,14 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
       return failure();
 
     Location loc = scatterOp.getLoc();
-    SmallVector<Value> strides = computeStrides(scatterOp, rewriter);
-    if (strides.empty())
+    auto meta = computeMemrefMeta(scatterOp, rewriter);
+    if (meta.first.empty())
       return rewriter.notifyMatchFailure(scatterOp,
                                          "Failed to compute strides");
 
-    Value localOffsets = computeOffsets(rewriter, scatterOp, strides);
-    Value flatMemref = collapseMemrefTo1D(scatterOp, rewriter);
-
-    if (auto alignment = scatterOp.getAlignment()) {
-      flatMemref = memref::AssumeAlignmentOp::create(rewriter, loc, flatMemref,
-                                                     alignment.value())
-                       .getResult();
-    }
+    Value localOffsets =
+        computeOffsets(rewriter, scatterOp, meta.first, meta.second);
+    Value flatMemref = memrefToIndexPtr(scatterOp, rewriter);
 
     xegpu::StoreScatterOp::create(rewriter, loc, scatterOp.getValueToStore(),
                                   flatMemref, localOffsets, scatterOp.getMask(),
