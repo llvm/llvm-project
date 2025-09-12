@@ -61,8 +61,15 @@ static bool canBeHoisted(Operation *op,
 }
 
 /// Merges srcEffect's Memory Effect on its resource into the 
-/// resourceConflicts map, flagging resources if the srcEffect
-/// results in a conflict
+/// resourceConflicts map, flagging the resource if the srcEffect
+/// results in a conflict.
+///
+/// \param resourceConflicts The map to store resources' conflicts status.
+/// \param srcEffect The effect to merge into the resourceConflicts map.
+/// \param srcHasConflict Whether the srcEffect results in a conflict based 
+/// on higher level analysis.
+///
+/// resourceConflicts is modified by the function and will be non-empty
 static void mergeResource(
   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts,
   const MemoryEffects::EffectInstance &srcEffect,
@@ -110,9 +117,9 @@ static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
 
 /// Returns true if:
 /// (a) any of the resources used by op's Memory Effects have been
-/// flagged as having a conflict within the resourceConflicts map
+/// flagged as having a conflict within the resourceConflicts map OR
 /// (b) op doesn't have a MemoryEffectOpInterface or has one but
-/// without any specific effects
+/// without any specific effects.
 static bool mayHaveMemoryEffectConflict(Operation *op,
   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts) {
 
@@ -155,7 +162,7 @@ void mlir::gatherResourceConflicts(LoopLikeOpInterface loopLike, Operation *op,
 
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     // gather all effects on op
-    llvm::SmallVector<MemoryEffects::EffectInstance> effects =
+    SmallVector<MemoryEffects::EffectInstance> effects =
       MemoryEffects::getMemoryEffectsSorted(op);
 
     if (!effects.empty()) {
@@ -164,6 +171,8 @@ void mlir::gatherResourceConflicts(LoopLikeOpInterface loopLike, Operation *op,
       bool writesConflict = hasLoopVariantInput(loopLike, op);
 
       for (const MemoryEffects::EffectInstance &effect : effects) {
+        LDBG() << "Effect: " << effect.getEffect()->getPriority() << " with resource: " << effect.getResource()->getName() << " op " << op->getName();
+
         bool conflict = false;
         bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
         
@@ -173,8 +182,7 @@ void mlir::gatherResourceConflicts(LoopLikeOpInterface loopLike, Operation *op,
         if (isa<MemoryEffects::Read>(effect.getEffect()))
           writesConflict = true;
 
-        if (isWrite)
-          if (writesConflict)
+        if (isWrite && writesConflict)
             conflict = true;
 
         mergeResource(resourceConflicts, effect, conflict);
@@ -194,19 +202,25 @@ size_t mlir::moveLoopInvariantCode(
     function_ref<void(Operation *, Region *)> moveOutOfRegion) {
   size_t numMoved = 0;
 
+  // TODO: see if this can be spec'd in a meaningful way to add back later.
+  //
   // check that the loop isn't dead
   // auto isDead = loopLike.isZeroTrip();
   // if (!isDead.has_value() || isDead.value())
   //   return numMoved;
 
-  // go through loop body and map out resource usages
-  // op->regions are essentially merged sequentially
-  // e.g. an if's "then" and "else" regions are treated like one
-  // continuous region --> need to add fork checking
+  // Go through loop body and map out resource usages.
+  // op->regions are essentially merged sequentially.
+  // E.g., an if's "then" and "else" regions are treated like one
+  // continuous region --> need to add fork checking.
   //
-  // loop "do" and "then" regions also merged
+  // loop "do" and "then" regions also merged.
   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> resourceConflicts;
-  mlir::gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
+  gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
+
+  for (auto &item : resourceConflicts) {
+    LDBG() << "Resource: " << item.second.second.getResource()->getName() << " has conflict: " << item.second.first << " with effect: " << item.second.second.getEffect()->getPriority();
+  } 
 
   auto regions = loopLike.getLoopRegions();
   for (Region *region : regions) {
@@ -233,7 +247,13 @@ size_t mlir::moveLoopInvariantCode(
 
       bool noMemoryConflicts = isMemoryEffectFree(op) 
         || !mayHaveMemoryEffectConflict(op, resourceConflicts);
-
+        
+      LDBG() << "isMemoryEffectFree: " << isMemoryEffectFree(op) 
+        << " mayHaveMemoryEffectConflict: " << mayHaveMemoryEffectConflict(op, resourceConflicts)
+        << " noMemoryConflicts: " << noMemoryConflicts
+        << " shouldMoveOutOfRegion: " << shouldMoveOutOfRegion(op, region)
+        << " canBeHoisted: " << canBeHoisted(op, definedOutside);
+        
       if (!noMemoryConflicts
         || !shouldMoveOutOfRegion(op, region)
         || !canBeHoisted(op, definedOutside))

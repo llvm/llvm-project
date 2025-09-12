@@ -2978,7 +2978,7 @@ def TestEffectsResult : TEST_Op<"test_effects_result"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Test Ops with multiple effects for Loop Invariant Code Motion
+// Test Ops with multiple effects for Loop Invariant Code Motion.
 //===----------------------------------------------------------------------===//
 
 def TestResourceA : Resource<"TestResourceA">;
