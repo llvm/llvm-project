@@ -1117,8 +1117,7 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   //
   // We look for > at the end but if it does not contain any < then we
   // have something like operator>>. We check for the operator<=> case.
-  if (Name.starts_with("<") || !Name.ends_with(">") || Name.count("<") == 0 ||
-      Name.ends_with("<=>"))
+  if (!Name.ends_with(">") || Name.count("<") == 0 || Name.ends_with("<=>"))
     return {};
 
   // How many < until we have the start of the template parameters.
