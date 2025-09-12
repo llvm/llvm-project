@@ -8,13 +8,13 @@
 
 # RUN: not %{lit} --update-tests -v %S/Inputs/diff-test-update | FileCheck %s
 
-# RUN: diff %S/Inputs/diff-test-update/single-split-file.out %S/Inputs/diff-test-update/single-split-file.test
-# RUN: diff %S/Inputs/diff-test-update/single-split-file.out %S/Inputs/diff-test-update/single-split-file-populated.test
-# RUN: diff %S/Inputs/diff-test-update/multiple-split-file.out %S/Inputs/diff-test-update/multiple-split-file.test
-# RUN: diff %S/Inputs/diff-test-update/multiple-split-file.out %S/Inputs/diff-test-update/multiple-split-file-populated.test
-# RUN: diff %S/Inputs/diff-test-update/single-split-file-no-expected.out %S/Inputs/diff-test-update/single-split-file-no-expected.test
-# RUN: diff %S/Inputs/diff-test-update/split-c-comments.out %S/Inputs/diff-test-update/split-c-comments.test
-# RUN: diff %S/Inputs/diff-test-update/split-whitespace.out "%S/Inputs/diff-test-update/split whitespace.test"
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/single-split-file.out %S/Inputs/diff-test-update/single-split-file.test
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/single-split-file.out %S/Inputs/diff-test-update/single-split-file-populated.test
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/multiple-split-file.out %S/Inputs/diff-test-update/multiple-split-file.test
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/multiple-split-file.out %S/Inputs/diff-test-update/multiple-split-file-populated.test
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/single-split-file-no-expected.out %S/Inputs/diff-test-update/single-split-file-no-expected.test
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/split-c-comments.out %S/Inputs/diff-test-update/split-c-comments.test
+# RUN: diff --strip-trailing-cr %S/Inputs/diff-test-update/split-whitespace.out "%S/Inputs/diff-test-update/split whitespace.test"
 
 
 # CHECK: # update-diff-test: could not deduce source and target from {{.*}}1.in and {{.*}}2.in
