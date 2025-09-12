@@ -893,6 +893,7 @@ void X86SpeculativeLoadHardeningPass::unfoldCallAndJumpLoads(
       case X86::TAILJMPm64_REX:
       case X86::TAILJMPm:
       case X86::TCRETURNmi64:
+      case X86::TCRETURN_WINmi64:
       case X86::TCRETURNmi: {
         // Use the generic unfold logic now that we know we're dealing with
         // expected instructions.

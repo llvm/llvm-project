@@ -15,13 +15,7 @@ import threading
 import typing
 import traceback
 from typing import Optional, Tuple
-
-import io
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
@@ -1247,7 +1241,7 @@ def executeScriptInternal(
         ):
             for test_updater in litConfig.test_updaters:
                 try:
-                    update_output = test_updater(result, test)
+                    update_output = test_updater(result, test, commands)
                 except Exception as e:
                     output = out
                     output += err
