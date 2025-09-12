@@ -20,7 +20,7 @@
 #define __DEFAULT_FN_ATTRS256 \
   __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(256)))
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
 #define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
 #else
