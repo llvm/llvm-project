@@ -166,9 +166,9 @@ lldb::ValueObjectSP lldb_private::formatters::
     ValueObjectSP hash_sp = node_sp->GetChildMemberWithName("__hash_");
     if (!hash_sp || !value_sp) {
       node_sp = m_next_element->Cast(m_node_type.GetPointerType())
-                    ->Dereference(error);
+              ->Dereference(error);
       if (!node_sp || error.Fail())
-        return nullptr;
+          return nullptr;
 
       hash_sp = node_sp->GetChildMemberWithName("__hash_");
       if (!hash_sp)
