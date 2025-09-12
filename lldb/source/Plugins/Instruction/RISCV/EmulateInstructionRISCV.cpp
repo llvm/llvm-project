@@ -33,6 +33,10 @@ LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionRISCV, InstructionRISCV)
 
 namespace lldb_private {
 
+// RISC-V General Purpose Register numbers
+static constexpr uint32_t RISCV_GPR_SP = 2; // x2 is the stack pointer
+static constexpr uint32_t RISCV_GPR_FP = 8; // x8 is the frame pointer
+
 /// Returns all values wrapped in Optional, or std::nullopt if any of the values
 /// is std::nullopt.
 template <typename... Ts>
@@ -243,11 +247,10 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
     return false;
 
   // Set context type based on whether this is a stack-based load
-  if (inst.rs1.rs == 2) { // x2 is the stack pointer in RISC-V
+  if (inst.rs1.rs == RISCV_GPR_SP) // x2 is the stack pointer in RISC-V
     context.type = EmulateInstruction::eContextPopRegisterOffStack;
-  } else {
+  else
     context.type = EmulateInstruction::eContextRegisterLoad;
-  }
 
   // Set the context address information
   context.SetAddress(*addr);
@@ -284,11 +287,10 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
     return false;
 
   // Set context type based on whether this is a stack-based store
-  if (inst.rs1.rs == 2) { // x2 is the stack pointer in RISC-V
+  if (inst.rs1.rs == RISCV_GPR_SP) // x2 is the stack pointer in RISC-V
     context.type = EmulateInstruction::eContextPushRegisterOnStack;
-  } else {
+  else
     context.type = EmulateInstruction::eContextRegisterStore;
-  }
 
   // Set the context to show which register is being stored to which base
   // register + offset
@@ -797,12 +799,13 @@ public:
                [&](int64_t rs1) {
                  int64_t result = rs1 + int64_t(SignExt(inst.imm));
                  // Check if this is a stack pointer adjustment
-                 if (inst.rd.rd == 2 && inst.rs1.rs == 2) { // rd=sp, rs1=sp
+                 if (inst.rd.rd == RISCV_GPR_SP &&
+                     inst.rs1.rs == RISCV_GPR_SP) { // rd=sp, rs1=sp
                    EmulateInstruction::Context context;
                    context.type =
                        EmulateInstruction::eContextAdjustStackPointer;
                    context.SetImmediateSigned(SignExt(inst.imm));
-                   uint32_t sp_lldb_reg = GPREncodingToLLDB(2);
+                   uint32_t sp_lldb_reg = GPREncodingToLLDB(RISCV_GPR_SP);
                    RegisterValue registerValue;
                    registerValue.SetUInt64(result);
                    return m_emu.WriteRegister(context, eRegisterKindLLDB,
@@ -810,16 +813,17 @@ public:
                  }
                  // Check if this is setting up the frame pointer
                  // addi fp, sp, imm -> fp = sp + imm (frame pointer setup)
-                 if (inst.rd.rd == 8 && inst.rs1.rs == 2) { // rd=fp, rs1=sp
+                 if (inst.rd.rd == RISCV_GPR_FP &&
+                     inst.rs1.rs == RISCV_GPR_SP) { // rd=fp, rs1=sp
                    EmulateInstruction::Context context;
                    context.type = EmulateInstruction::eContextSetFramePointer;
                    auto sp_reg_info = m_emu.GetRegisterInfo(
-                       eRegisterKindLLDB, GPREncodingToLLDB(2));
+                       eRegisterKindLLDB, GPREncodingToLLDB(RISCV_GPR_SP));
                    if (sp_reg_info) {
                      context.SetRegisterPlusOffset(*sp_reg_info,
                                                    SignExt(inst.imm));
                    }
-                   uint32_t fp_lldb_reg = GPREncodingToLLDB(8);
+                   uint32_t fp_lldb_reg = GPREncodingToLLDB(RISCV_GPR_FP);
                    RegisterValue registerValue;
                    registerValue.SetUInt64(result);
                    return m_emu.WriteRegister(context, eRegisterKindLLDB,
