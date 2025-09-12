@@ -410,8 +410,12 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
 
   static constexpr _LIBCPP_HIDE_FROM_ABI _JoinViewIterator
   __compose(__segment_iterator __seg_iter, __local_iterator __local_iter) {
-    return _JoinViewIterator(
-        std::move(__seg_iter).__get_data(), std::move(__seg_iter).__get_iter(), std::move(__local_iter));
+    auto&& __outer = std::move(__seg_iter).__get_iter();
+    if (__local_iter == ranges::end(*__outer)) {
+      ++__outer;
+      return _JoinViewIterator(*std::move(__seg_iter).__get_data(), __outer);
+    }
+    return _JoinViewIterator(std::move(__seg_iter).__get_data(), __outer, std::move(__local_iter));
   }
 };
 
