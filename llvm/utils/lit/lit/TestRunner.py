@@ -92,12 +92,11 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1, ulimit={}):
+    def __init__(self, cwd, env, umask=-1):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
-        self.ulimit = ulimit
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -596,27 +595,6 @@ def executeBuiltinUmask(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinUlimit(cmd, shenv):
-    """executeBuiltinUlimit - Change the current limits."""
-    if os.name != "posix":
-        raise InternalShellError(cmd, "'ulimit' not supported on this system")
-    if len(cmd.args) != 3:
-        raise InternalShellError(cmd, "'ulimit' requires two arguments")
-    try:
-        new_limit = int(cmd.args[2])
-    except ValueError as err:
-        raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
-    if cmd.args[1] == "-v":
-        shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
-    elif cmd.args[1] == "-n":
-        shenv.ulimit["RLIMIT_NOFILE"] = new_limit
-    else:
-        raise InternalShellError(
-            cmd, "'ulimit' does not support option: %s" % cmd.args[1]
-        )
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
 def executeBuiltinColon(cmd, cmd_shenv):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return ShellCommandResult(cmd, "", "", 0, False)
@@ -771,7 +749,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
         "rm": executeBuiltinRm,
-        "ulimit": executeBuiltinUlimit,
         "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
@@ -936,19 +913,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # with some core utility distributions.
         if kIsWindows:
             args = quote_windows_command(args)
-
-        # Handle any resource limits. We do this by launching the command with
-        # a wrapper that sets the necessary limits. We use a wrapper rather than
-        # setting the limits in process as we cannot reraise the limits back to
-        # their defaults without elevated permissions.
-        if cmd_shenv.ulimit:
-            executable = sys.executable
-            args.insert(0, sys.executable)
-            args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
-            for limit in cmd_shenv.ulimit:
-                cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
-                    cmd_shenv.ulimit[limit]
-                )
 
         try:
             # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
