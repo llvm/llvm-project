@@ -335,7 +335,8 @@ public:
 // we synthesize a || b as select a, true, b
 // we synthesize a && b as select a, b, false
 // this function determines if SI is playing one of those roles.
-bool isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
+[[maybe_unused]] bool
+isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
   return ((isa<ConstantInt>(SI->getTrueValue()) &&
            (dyn_cast<ConstantInt>(SI->getTrueValue())->isOne())) ||
           (isa<ConstantInt>(SI->getFalseValue()) &&
