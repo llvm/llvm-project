@@ -93,6 +93,14 @@ private:
   /// downstream users.
   DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
   SetVector<const MachineInstr *> Worklist;
+
+  /// \returns all vector virtual registers that \p MI uses.
+  auto virtual_vec_uses(const MachineInstr &MI) const {
+    return make_filter_range(MI.uses(), [this](const MachineOperand &MO) {
+      return MO.isReg() && MO.getReg().isVirtual() &&
+             RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
+    });
+  }
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -1623,18 +1631,12 @@ static bool isPhysical(const MachineOperand &MO) {
   return MO.isReg() && MO.getReg().isPhysical();
 }
 
-static bool isVirtualVec(const MachineOperand &MO) {
-  return MO.isReg() && MO.getReg().isVirtual() &&
-         RISCVRegisterInfo::isRVVRegClass(
-             MO.getParent()->getMF()->getRegInfo().getRegClass(MO.getReg()));
-}
-
 /// Look through \p MI's operands and propagate what it demands to its uses.
 void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
   if (!isSupportedInstr(MI) || !checkUsers(MI) || any_of(MI.defs(), isPhysical))
     DemandedVLs[&MI] = DemandedVL::vlmax();
 
-  for (const MachineOperand &MO : make_filter_range(MI.uses(), isVirtualVec)) {
+  for (const MachineOperand &MO : virtual_vec_uses(MI)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
     DemandedVLs[Def] = DemandedVLs[Def].max(getMinimumVLForUser(MO));
