@@ -135,10 +135,10 @@ static bool HashHistogram;
 static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
+static bool Offloading;
 static bool ProgramHeaders;
 static bool SectionGroups;
 static bool VersionInfo;
-static bool Offloading;
 
 // Mach-O specific options.
 static bool MachODataInCode;
@@ -273,6 +273,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Memtag = Args.hasArg(OPT_memtag);
   opts::NeededLibraries = Args.hasArg(OPT_needed_libs);
   opts::Notes = Args.hasArg(OPT_notes);
+  opts::Offloading = Args.hasArg(OPT_offloading);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
@@ -289,7 +290,6 @@ static void parseOptions(const opt::InputArgList &Args) {
     }
   }
   opts::VersionInfo = Args.hasArg(OPT_version_info);
-  opts::Offloading = Args.hasArg(OPT_offloading);
 
   // Mach-O specific options.
   opts::MachODataInCode = Args.hasArg(OPT_macho_data_in_code);

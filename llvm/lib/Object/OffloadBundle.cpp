@@ -89,17 +89,17 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
     uint64_t EntryIDSize;
     StringRef EntryID;
 
-    if (Error EC = Reader.readInteger(EntryOffset))
-      return EC;
+    if (Error Err = Reader.readInteger(EntryOffset))
+      return Err;
 
-    if (Error EC = Reader.readInteger(EntrySize))
-      return EC;
+    if (Error Err = Reader.readInteger(EntrySize))
+      return Err;
 
-    if (Error EC = Reader.readInteger(EntryIDSize))
-      return EC;
+    if (Error Err = Reader.readInteger(EntryIDSize))
+      return Err;
 
-    if (Error EC = Reader.readFixedString(EntryID, EntryIDSize))
-      return EC;
+    if (Error Err = Reader.readFixedString(EntryID, EntryIDSize))
+      return Err;
 
     auto Entry = std::make_unique<OffloadBundleEntry>(
         EntryOffset + SectionOffset, EntrySize, EntryIDSize, EntryID);

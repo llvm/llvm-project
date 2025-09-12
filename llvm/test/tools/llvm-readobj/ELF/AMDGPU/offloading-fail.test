@@ -1,5 +1,4 @@
 ## Test that --offloading with a fatbin works correctly.
-# REQUIRES: target={{x86_64-.*-linux.*}}
 # REQUIRES: amdgpu-registered-target
 
 # RUN: yaml2obj %s -o %t.elf
