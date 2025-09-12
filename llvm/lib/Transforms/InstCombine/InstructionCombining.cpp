@@ -1374,7 +1374,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
-  MDNode *ProfileData;
+  MDNode *ProfileData = nullptr;
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
