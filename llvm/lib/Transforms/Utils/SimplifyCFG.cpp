@@ -7282,9 +7282,10 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
        Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
     return false;
 
-  // In the early optimization pipeline, disable formation of lookup tables
-  // and bit maps, as they may inhibit further optimization.
-  if (!ConvertSwitchToLookupTable && (AnyLookupTables || AnyBitMaps))
+  // In the early optimization pipeline, disable formation of lookup tables,
+  // bit maps and mask checks, as they may inhibit further optimization.
+  if (!ConvertSwitchToLookupTable &&
+      (AnyLookupTables || AnyBitMaps || NeedMask))
     return false;
 
   Builder.SetInsertPoint(SI);
