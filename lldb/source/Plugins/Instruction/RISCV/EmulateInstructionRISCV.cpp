@@ -112,6 +112,14 @@ static uint32_t FPREncodingToLLDB(uint32_t reg_encode) {
   return LLDB_INVALID_REGNUM;
 }
 
+// Helper function to get register info from GPR encoding
+static std::optional<RegisterInfo>
+GPREncodingToRegisterInfo(EmulateInstructionRISCV &emulator,
+                          uint32_t reg_encode) {
+  uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
+  return emulator.GetRegisterInfo(eRegisterKindLLDB, lldb_reg);
+}
+
 bool Rd::Write(EmulateInstructionRISCV &emulator, uint64_t value) {
   uint32_t lldb_reg = GPREncodingToLLDB(rd);
   EmulateInstruction::Context ctx;
@@ -239,9 +247,8 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   EmulateInstructionRISCV::Context context;
 
   // Get register info for base register
-  uint32_t rs1_lldb = GPREncodingToLLDB(inst.rs1.rs);
   std::optional<RegisterInfo> reg_info_rs1 =
-      emulator.GetRegisterInfo(eRegisterKindLLDB, rs1_lldb);
+      GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
 
   if (!reg_info_rs1)
     return false;
@@ -276,12 +283,10 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   EmulateInstructionRISCV::Context context;
 
   // Get register info for source and base registers
-  uint32_t rs1_lldb = GPREncodingToLLDB(inst.rs1.rs);
-  uint32_t rs2_lldb = GPREncodingToLLDB(inst.rs2.rs);
   std::optional<RegisterInfo> reg_info_rs1 =
-      emulator.GetRegisterInfo(eRegisterKindLLDB, rs1_lldb);
+      GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
   std::optional<RegisterInfo> reg_info_rs2 =
-      emulator.GetRegisterInfo(eRegisterKindLLDB, rs2_lldb);
+      GPREncodingToRegisterInfo(emulator, inst.rs2.rs);
 
   if (!reg_info_rs1 || !reg_info_rs2)
     return false;
