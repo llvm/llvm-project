@@ -874,22 +874,8 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   // Missing mandatory end block: this is checked in semantics because that
   // makes it easier to control the error messages.
   // The end block is mandatory when the construct is not applied to a strictly
-  // structured block (aka it is applied to a loosely structured block). In
-  // other words, the body doesn't contain exactly one parser::BlockConstruct.
-  auto isStrictlyStructuredBlock{[](const parser::Block &block) -> bool {
-    if (block.size() != 1) {
-      return false;
-    }
-    const parser::ExecutionPartConstruct &contents{block.front()};
-    auto *executableConstruct{
-        std::get_if<parser::ExecutableConstruct>(&contents.u)};
-    if (!executableConstruct) {
-      return false;
-    }
-    return std::holds_alternative<common::Indirection<parser::BlockConstruct>>(
-        executableConstruct->u);
-  }};
-  if (!endSpec && !isStrictlyStructuredBlock(block)) {
+  // structured block (aka it is applied to a loosely structured block).
+  if (!endSpec && !IsStrictlyStructuredBlock(block)) {
     llvm::omp::Directive dirId{beginSpec.DirId()};
     auto &msg{context_.Say(beginSpec.source,
         "Expected OpenMP END %s directive"_err_en_US,

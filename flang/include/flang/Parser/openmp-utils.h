@@ -155,6 +155,8 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
 }
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
+const BlockConstruct *GetFortranBlockConstruct(
+    const ExecutionPartConstruct &epc);
 
 } // namespace Fortran::parser::omp
 
