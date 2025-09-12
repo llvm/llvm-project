@@ -1429,6 +1429,9 @@ struct ConversionConfig {
 /// In the above example, %0 can be used instead of %3 and all cast ops are
 /// folded away.
 void reconcileUnrealizedCasts(
+    const DenseSet<UnrealizedConversionCastOp> &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
+void reconcileUnrealizedCasts(
     ArrayRef<UnrealizedConversionCastOp> castOps,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 
