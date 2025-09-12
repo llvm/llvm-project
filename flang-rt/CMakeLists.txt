@@ -255,11 +255,11 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
   add_compile_definitions(_LARGE_FILE_API)
 endif ()
 
-# Check whether the compiler can undefine a macro using the "-U" flag.
+# Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use
 #   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"
 # but some older versions of CMake don't define it for GCC itself.
-check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
+check_cxx_compiler_flag("-Wp,-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
