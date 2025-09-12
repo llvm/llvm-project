@@ -101,15 +101,11 @@ static std::string EnumToString(const Value &V) {
   llvm::raw_string_ostream SS(Str);
   ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
 
-  QualType DesugaredTy = V.getType().getDesugaredType(Ctx);
-  const EnumType *EnumTy = DesugaredTy.getNonReferenceType()->getAs<EnumType>();
-  assert(EnumTy && "Fail to cast to enum type");
-
-  EnumDecl *ED = EnumTy->getOriginalDecl()->getDefinitionOrSelf();
   uint64_t Data = V.convertTo<uint64_t>();
   bool IsFirst = true;
-  llvm::APSInt AP = Ctx.MakeIntValue(Data, DesugaredTy);
+  llvm::APSInt AP = Ctx.MakeIntValue(Data, V.getType());
 
+  auto *ED = V.getType()->castAsEnumDecl();
   for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E; ++I) {
     if (I->getInitVal() == AP) {
       if (!IsFirst)
@@ -665,8 +661,8 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
   if (VRef.getKind() == Value::K_PtrOrObj) {
     VRef.setPtr(va_arg(args, void *));
   } else {
-    if (const auto *ET = QT->getAs<EnumType>())
-      QT = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    if (const auto *ED = QT->getAsEnumDecl())
+      QT = ED->getIntegerType();
     switch (QT->castAs<BuiltinType>()->getKind()) {
     default:
       llvm_unreachable("unknown type kind!");
