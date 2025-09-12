@@ -3309,12 +3309,13 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
 /// Try to reconcile all given UnrealizedConversionCastOps and store the
 /// left-over ops in `remainingCastOps` (if provided). See documentation in
 /// DialectConversion.h for more details.
-/// The `isCastOpOfInterestFn` is used to filter the cast ops to proceed: the algorithm may
-/// visit an operand (or user) which is a cast op, but will not try to reconcile it if not in the
-/// filtered set.
+/// The `isCastOpOfInterestFn` is used to filter the cast ops to proceed: the
+/// algorithm may visit an operand (or user) which is a cast op, but will not
+/// try to reconcile it if not in the filtered set.
 template <typename RangeT>
 static void reconcileUnrealizedCastsImpl(
-    RangeT castOps, function_ref<bool(UnrealizedConversionCastOp)> isCastOpOfInterestFn,
+    RangeT castOps,
+    function_ref<bool(UnrealizedConversionCastOp)> isCastOpOfInterestFn,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
   // A worklist of cast ops to process.
   SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
@@ -3375,7 +3376,7 @@ static void reconcileUnrealizedCastsImpl(
         // Successfully inserted: process reachable input cast ops.
         for (Value v : op->getOperands())
           if (auto castOp = v.getDefiningOp<UnrealizedConversionCastOp>())
-            if (isCastOpFn(castOp))
+            if (isCastOpOfInterestFn(castOp))
               worklist.push_back(castOp);
       }
     }
@@ -3383,13 +3384,15 @@ static void reconcileUnrealizedCastsImpl(
 
   // Find all alive cast ops.
   for (UnrealizedConversionCastOp op : castOps) {
-     // The op may have been marked live already as being an operand of another live cast op.
-     if (liveOps.contains(op.getOperation()) continue;
+    // The op may have been marked live already as being an operand of another
+    // live cast op.
+    if (liveOps.contains(op.getOperation()))
+      continue;
     // If any of the users is not a cast op, mark the current op (and its
     // input ops) as live.
     if (llvm::any_of(op->getUsers(), [&](Operation *user) {
           auto castOp = dyn_cast<UnrealizedConversionCastOp>(user);
-          return !castOp || !isCastOpFn(castOp);
+          return !castOp || !isCastOpOfInterestFn(castOp);
         }))
       markOpLive(op);
   }
