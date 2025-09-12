@@ -25,8 +25,10 @@ using namespace llvm;
 
 namespace {
 
+static constexpr StringLiteral kSchemeAndHost = "lldb-mcp://debugger/";
+
 struct CommandToolArguments {
-  /// Either an id like '1' or a uri like 'lldb://sessions/1'.
+  /// Either an id like '1' or a uri like 'lldb-mcp://debugger/1'.
   std::string debugger;
   std::string command;
 };
@@ -46,8 +48,6 @@ createTextResult(std::string output, bool is_error = false) {
   text_result.isError = is_error;
   return text_result;
 }
-
-static constexpr StringLiteral kSchemeAndHost = "lldb-mcp://debugger/";
 
 std::string to_uri(DebuggerSP debugger) {
   return (kSchemeAndHost + std::to_string(debugger->GetID())).str();
@@ -129,8 +129,8 @@ DebuggerListTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
   // Return a nested Markdown list with debuggers and target.
   // Example output:
   //
-  // - lldb-mcp://debugger/0
   // - lldb-mcp://debugger/1
+  // - lldb-mcp://debugger/2
   //
   // FIXME: Use Structured Content when we adopt protocol version 2025-06-18.
   std::string output;
