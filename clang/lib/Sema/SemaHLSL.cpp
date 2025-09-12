@@ -3557,9 +3557,6 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
   if (SrcVecTy)
     SrcTy = SrcVecTy->getElementType();
 
-  if (ContainsBitField(DestTy))
-    return false;
-
   llvm::SmallVector<QualType> DestTypes;
   BuildFlattenedTypeList(DestTy, DestTypes);
 
@@ -3584,9 +3581,6 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
 
   if (SrcTy->isVectorType() &&
       (DestTy->isScalarType() || DestTy->isVectorType()))
-    return false;
-
-  if (ContainsBitField(DestTy) || ContainsBitField(SrcTy))
     return false;
 
   llvm::SmallVector<QualType> DestTypes;

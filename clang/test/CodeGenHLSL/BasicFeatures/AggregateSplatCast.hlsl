@@ -85,3 +85,41 @@ export void call5() {
   int1 A = {1};
   S s = (S)A;
 }
+
+struct BFields {
+  double D;
+  int E: 15;
+  int : 8;
+  float F;
+};
+
+struct Derived : BFields {
+  int G;
+};
+
+// derived struct with bitfields splat from scalar
+// CHECK-LABEL: call6
+// CHECK: [[AAddr:%.*]] = alloca i32, align 4
+// CHECK-NEXT: [[D:%.*]] = alloca %struct.Derived, align 1
+// CHECK-NEXT: store i32 %A, ptr [[AAddr]], align 4
+// CHECK-NEXT: [[B:%.*]] = load i32, ptr [[AAddr]], align 4
+// CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0
+// CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
+// CHECK-NEXT: [[Gep1:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0, i32 0
+// CHECK-NEXT: [[Gep2:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0, i32 2
+// CHECK-NEXT: [[Gep3:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 1
+// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[B]] to double
+// CHECK-NEXT: store double [[C]], ptr [[Gep1]], align 8
+// CHECK-NEXT: [[D:%.*]] = trunc i32 [[B]] to i24
+// CHECK-NEXT: [[BFL:%.*]] = load i24, ptr [[E]], align 1
+// CHECK-NEXT: [[BFV:%.*]] = and i24 [[D]], 32767
+// CHECK-NEXT: [[BFC:%.*]] = and i24 [[BFL]], -32768
+// CHECK-NEXT: [[BFS:%.*]] = or i24 [[BFC]], [[BFV]]
+// CHECK-NEXT: store i24 [[BFS]], ptr [[E]], align 1
+// CHECK-NEXT: [[C4:%.*]] = sitofp i32 [[B]] to float
+// CHECK-NEXT: store float [[C4]], ptr [[Gep2]], align 4
+// CHECK-NEXT: store i32 [[B]], ptr [[Gep3]], align 4
+// CHECK-NEXT: ret void
+export void call6(int A) {
+  Derived D = (Derived)A;
+}
