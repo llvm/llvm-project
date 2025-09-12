@@ -6168,6 +6168,11 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
                        N->getOperand(1),
                        DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getGRLenVT(),
                                    N->getOperand(2)));
+  case Intrinsic::loongarch_lasx_concat_128_s:
+  case Intrinsic::loongarch_lasx_concat_128_d:
+  case Intrinsic::loongarch_lasx_concat_128:
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   }
   return SDValue();
 }
