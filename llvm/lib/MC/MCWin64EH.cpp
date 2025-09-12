@@ -23,7 +23,7 @@ class MCSection;
 /// MCExpr that represents the epilog unwind code in an unwind table.
 class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
   const MCSymbol *Function;
-  const MCSymbol *FunctionEnd;
+  const MCSymbol *EndLabel;
   const MCSymbol *UnwindV2Start;
   const MCSymbol *EpilogEnd;
   uint8_t EpilogSize;
@@ -32,7 +32,7 @@ class MCUnwindV2EpilogTargetExpr final : public MCTargetExpr {
   MCUnwindV2EpilogTargetExpr(const WinEH::FrameInfo &FrameInfo,
                              const WinEH::FrameInfo::Epilog &Epilog,
                              uint8_t EpilogSize_)
-      : Function(FrameInfo.Function), FunctionEnd(FrameInfo.FuncletOrFuncEnd),
+      : Function(FrameInfo.Function), EndLabel(FrameInfo.End),
         UnwindV2Start(Epilog.UnwindV2Start), EpilogEnd(Epilog.End),
         EpilogSize(EpilogSize_), Loc(Epilog.Loc) {}
 
@@ -271,7 +271,7 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     // encoding for it. Because of our +1 trick for the size, this will only
     // work where that final terminator instruction is 1 byte long.
     auto LastEpilogToFuncEnd = GetOptionalAbsDifference(
-        OS->getAssembler(), info->FuncletOrFuncEnd, LastEpilog.UnwindV2Start);
+        OS->getAssembler(), info->End, LastEpilog.UnwindV2Start);
     LastEpilogIsAtEnd = (LastEpilogToFuncEnd == EpilogSize);
 
     // If we have an odd number of epilog codes, we need to add a padding code.
@@ -384,7 +384,7 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAssembler *Asm) const {
   // Calculate the offset to this epilog, and validate it's within the allowed
   // range.
-  auto Offset = GetOptionalAbsDifference(*Asm, FunctionEnd, UnwindV2Start);
+  auto Offset = GetOptionalAbsDifference(*Asm, EndLabel, UnwindV2Start);
   if (!Offset) {
     Asm->getContext().reportError(
         Loc, "Failed to evaluate epilog offset for Unwind v2 in " +
@@ -400,7 +400,7 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
     return false;
   }
 
-  // Sanity check that all epilogs are the same size.
+  // Validate that all epilogs are the same size.
   auto Size = GetOptionalAbsDifference(*Asm, EpilogEnd, UnwindV2Start);
   if (Size != (EpilogSize - 1)) {
     Asm->getContext().reportError(

@@ -152,3 +152,72 @@ mismatched_terminators:
 // CHECK-NEXT:       0x04: ALLOC_SMALL size=40
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
+
+chained:
+    .seh_proc chained
+    .seh_unwindversion 2
+    subq    $40, %rsp
+    .seh_stackalloc 40
+    .seh_endprologue
+    callq   c
+    testl   %eax, %eax
+    jle     .L_ELSE_3
+    movl    %eax, %ecx
+    .seh_startepilogue
+    addq    $40, %rsp
+    .seh_unwindv2start
+    .seh_endepilogue
+    jmp     c
+    .seh_splitchained
+.L_ELSE_3:
+    nop
+    .seh_startepilogue
+    addq    $40, %rsp
+    .seh_unwindv2start
+    .seh_endepilogue
+    jmp     b
+    .seh_endproc
+
+// CHECK:         RuntimeFunction {
+// CHECK-NEXT:    StartAddress: chained (0x30)
+// CHECK-NEXT:    EndAddress: chained [[EndDisp:\+0x[A-F0-9]+]] (0x34)
+// CHECK-NEXT:    UnwindInfoAddress: .xdata [[InfoDisp:\+0x[A-F0-9]+]] (0x38)
+// CHECK-NEXT:    UnwindInfo {
+// CHECK-NEXT:      Version: 2
+// CHECK-NEXT:      Flags [ (0x0)
+// CHECK-NEXT:      ]
+// CHECK-NEXT:      PrologSize: 4
+// CHECK-NEXT:      FrameRegister: -
+// CHECK-NEXT:      FrameOffset: -
+// CHECK-NEXT:      UnwindCodeCount: 3
+// CHECK-NEXT:      UnwindCodes [
+// CHECK-NEXT:        0x01: EPILOG atend=no, length=0x1
+// CHECK-NEXT:        0x05: EPILOG offset=0x5
+// CHECK-NEXT:        0x04: ALLOC_SMALL size=40
+// CHECK-NEXT:      ]
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// CHECK-NEXT:  RuntimeFunction {
+// CHECK-NEXT:    StartAddress: chained [[EndDisp]] (0x3C)
+// CHECK-NEXT:    EndAddress: chained +0x22 (0x40)
+// CHECK-NEXT:    UnwindInfoAddress: .xdata +0x40 (0x44)
+// CHECK-NEXT:    UnwindInfo {
+// CHECK-NEXT:      Version: 2
+// CHECK-NEXT:      Flags [ (0x4)
+// CHECK-NEXT:        ChainInfo (0x4)
+// CHECK-NEXT:      ]
+// CHECK-NEXT:      PrologSize: 0
+// CHECK-NEXT:      FrameRegister: -
+// CHECK-NEXT:      FrameOffset: -
+// CHECK-NEXT:      UnwindCodeCount: 2
+// CHECK-NEXT:      UnwindCodes [
+// CHECK-NEXT:        0x01: EPILOG atend=no, length=0x1
+// CHECK-NEXT:        0x05: EPILOG offset=0x5
+// CHECK-NEXT:      ]
+// CHECK-NEXT:      Chained {
+// CHECK-NEXT:        StartAddress: chained (0x48)
+// CHECK-NEXT:        EndAddress: chained [[EndDisp]] (0x4C)
+// CHECK-NEXT:        UnwindInfoAddress: .xdata [[InfoDisp]] (0x50)
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
