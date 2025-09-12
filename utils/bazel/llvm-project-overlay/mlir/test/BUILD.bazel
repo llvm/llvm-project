@@ -535,6 +535,7 @@ cc_library(
         "//mlir:MemRefToSPIRV",
         "//mlir:MemRefTransforms",
         "//mlir:Pass",
+        "//mlir:ReconcileUnrealizedCasts",
         "//mlir:Rewrite",
         "//mlir:SCFToSPIRV",
         "//mlir:SPIRVConversion",
