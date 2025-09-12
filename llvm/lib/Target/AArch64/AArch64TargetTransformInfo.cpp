@@ -2747,6 +2747,15 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineWhilelo(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  return IC.replaceInstUsesWith(
+      II,
+      IC.Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
+                                 {II.getType(), II.getOperand(0)->getType()},
+                                 {II.getOperand(0), II.getOperand(1)}));
+}
+
 static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
                                                      IntrinsicInst &II) {
   if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
@@ -2883,6 +2892,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEDupqLane(IC, II);
   case Intrinsic::aarch64_sve_insr:
     return instCombineSVEInsr(IC, II);
+  case Intrinsic::aarch64_sve_whilelo:
+    return instCombineWhilelo(IC, II);
   case Intrinsic::aarch64_sve_ptrue:
     return instCombinePTrue(IC, II);
   case Intrinsic::aarch64_sve_uxtb:
