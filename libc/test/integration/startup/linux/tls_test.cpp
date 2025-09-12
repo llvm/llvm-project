@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "test/IntegrationTest/test.h"
 
+#include <errno.h>
 #include <sys/mman.h>
 
 constexpr int threadLocalDataSize = 101;
