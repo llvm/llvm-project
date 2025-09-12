@@ -53,10 +53,10 @@ struct ShadowPtrInfoTy {
   int64_t PtrSize = sizeof(void *); // Size of the pointer/descriptor
 
   // Store the complete contents for both host and target pointers/descriptors.
-  // 128 bytes is chosen as the "Small" size to cover common Fortran
+  // 96 bytes is chosen as the "Small" size to cover simple Fortran
   // descriptors of up to 3 dimensions.
-  llvm::SmallVector<char, 128> HstPtrContent;
-  llvm::SmallVector<char, 128> TgtPtrContent;
+  llvm::SmallVector<char, 96> HstPtrContent;
+  llvm::SmallVector<char, 96> TgtPtrContent;
 
   ShadowPtrInfoTy(void **HstPtrAddr, void **TgtPtrAddr, void *TgtPteeBase,
                   int64_t PtrSize)
