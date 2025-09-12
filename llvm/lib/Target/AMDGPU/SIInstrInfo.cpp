@@ -5976,8 +5976,7 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           const MCInstrDesc &TID, unsigned RCID) {
-  if (!ST.hasGFX90AInsts() && (((TID.mayLoad() || TID.mayStore()) &&
-                                !(TID.TSFlags & SIInstrFlags::Spill)))) {
+  if (!ST.hasGFX90AInsts() && (TID.mayLoad() || TID.mayStore())) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
@@ -6012,10 +6011,9 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
-    // Special pseudos have no alignment requirement
+  // Special pseudos have no alignment requirement.
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO || isSpill(TID))
     return RI.getRegClass(RegClass);
-  }
 
   return adjustAllocatableRegClass(ST, RI, TID, RegClass);
 }
