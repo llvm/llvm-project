@@ -271,7 +271,8 @@ struct FlattenMemrefsPass
 
 } // namespace
 
-void memref::populateFlattenVectorMemrefPatterns(RewritePatternSet &patterns) {
+void memref::populateFlattenVectorOpsOnMemrefPatterns(
+    RewritePatternSet &patterns) {
   patterns.insert<MemRefRewritePattern<vector::LoadOp>,
                   MemRefRewritePattern<vector::StoreOp>,
                   MemRefRewritePattern<vector::TransferReadOp>,
@@ -291,5 +292,5 @@ void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
 
 void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
   populateFlattenMemrefOpsPatterns(patterns);
-  populateFlattenVectorMemrefPatterns(patterns);
+  populateFlattenVectorOpsOnMemrefPatterns(patterns);
 }

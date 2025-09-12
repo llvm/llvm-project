@@ -147,7 +147,7 @@ void populateExtractAddressComputationsPatterns(RewritePatternSet &patterns);
 
 /// Patterns for flattening multi-dimensional memref operations into
 /// one-dimensional memref operations.
-void populateFlattenVectorMemrefPatterns(RewritePatternSet &patterns);
+void populateFlattenVectorOpsOnMemrefPatterns(RewritePatternSet &patterns);
 void populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns);
 void populateFlattenMemrefsPatterns(RewritePatternSet &patterns);
 

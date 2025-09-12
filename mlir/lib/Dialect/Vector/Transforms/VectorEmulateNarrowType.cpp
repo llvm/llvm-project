@@ -823,8 +823,8 @@ private:
 /// bitcasting.
 ///
 /// Example: Storing `vector<6xi4>` is emulated by bitcasting to `vector<3xi8>`
-/// and storing with an adjusted mask, since each `i8` container element holds
-/// two `i4` values.
+/// (each `i8` container element holds two `i4` values) and storing with an
+/// adjusted mask .
 struct ConvertVectorMaskedStore final
     : OpConversionPattern<vector::MaskedStoreOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -943,8 +943,8 @@ struct ConvertVectorMaskedStore final
 /// bitcasting.
 ///
 /// Example: `vector.load` of `vector<4xi4>` from `memref<3x4xi4>` is emulated
-/// by loading `vector<2xi8>` from the linearized `memref<6xi8>` and bitcasting
-/// back, since each `i8` container holds two `i4` values.
+/// by loading `vector<2xi8>` from the linearized `memref<6xi8>` (each `i8`
+/// container holds two `i4` values) and bitcasting back.
 ///
 /// There are cases where the number of elements to load is not byte-aligned. In
 /// those cases, loads are converted to byte-aligned, byte-sized loads and the
@@ -2287,6 +2287,6 @@ void vector::populateVectorTransposeNarrowTypeRewritePatterns(
 void vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
     arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
-  memref::populateFlattenVectorMemrefPatterns(patterns);
+  memref::populateFlattenVectorOpsOnMemrefPatterns(patterns);
   vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
 }

@@ -177,11 +177,9 @@ struct TestMemRefFlattenAndVectorNarrowTypeEmulationPass
 
     RewritePatternSet patterns(ctx);
 
-    // Populate all necessary patterns for narrow type emulation and flattening
-    arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
     memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
-    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
-    memref::populateFlattenVectorMemrefPatterns(patterns);
+    vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
+        typeConverter, patterns);
 
     // Apply partial conversion
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
