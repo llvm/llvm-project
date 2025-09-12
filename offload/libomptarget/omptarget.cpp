@@ -403,6 +403,12 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
                    reinterpret_cast<uint64_t>(HstPteeBase);
   void *TgtPteeBase = reinterpret_cast<void *>(
       reinterpret_cast<uint64_t>(TgtPteeBegin) - Delta);
+  DP("HstPteeBase: " DPxMOD ", HstPteeBegin: " DPxMOD
+     ", Delta (HstPteeBegin - HstPteeBase): %" PRIu64 ".\n",
+     DPxPTR(HstPteeBase), DPxPTR(HstPteeBegin), Delta);
+  DP("TgtPteeBase (TgtPteeBegin - Delta): " DPxMOD ", TgtPteeBegin : " DPxMOD
+     "\n",
+     DPxPTR(TgtPteeBase), DPxPTR(TgtPteeBegin));
 
   // Add shadow pointer tracking
   // TODO: Support shadow-tracking of larger than VoidPtrSize pointers,

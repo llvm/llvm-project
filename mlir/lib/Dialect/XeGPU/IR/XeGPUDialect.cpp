@@ -91,7 +91,7 @@ genOffsetsComputingInsts(OpBuilder &builder, Location loc,
 // Checks if the given shape can be evenly distributed based on the layout
 // and data factors provided by the LayoutAttr.
 bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
-                                         xegpu::LayoutAttr attr) {
+                                         xegpu::DistributeLayoutAttr attr) {
   assert(attr && "Layout attribute is missing.");
 
   // Checks whether the given shape can be evenly distributed using the
@@ -104,52 +104,52 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
   // smaller than `layout[i] * data[i]`, allowing multiple compute units to
   // share the data.
   auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
-                           DenseI32ArrayAttr layout, DenseI32ArrayAttr data,
+                           SmallVector<int64_t> layout,
+                           SmallVector<int64_t> data,
                            bool rr = true) -> optional<SmallVector<int64_t>> {
     llvm::SmallVector<int64_t> newShape(shape);
-    if (layout) {
-      auto vec = llvm::to_vector_of<int64_t>(layout.asArrayRef());
-      if (vec.size() != shape.size())
+    if (layout.size()) {
+      if (layout.size() != shape.size())
         return std::nullopt;
-      auto ratio = computeShapeRatio(shape, vec);
+      auto ratio = computeShapeRatio(shape, layout);
       if (!ratio.has_value())
         return std::nullopt;
       newShape = ratio.value();
     }
 
-    if (data) {
-      auto vec = llvm::to_vector_of<int64_t>(data.asArrayRef());
-      if (vec.size() != shape.size())
+    if (data.size()) {
+      if (data.size() != shape.size())
         return std::nullopt;
-      auto ratio = computeShapeRatio(newShape, vec);
+      auto ratio = computeShapeRatio(newShape, data);
       if (!ratio.has_value() && rr)
-        ratio = computeShapeRatio(vec, newShape);
+        ratio = computeShapeRatio(data, newShape);
       if (!ratio.has_value())
         return std::nullopt;
 
       // if data is not null, we always return it for next phase.
-      newShape = vec;
+      newShape = data;
     }
     return newShape;
   };
 
   // check the sgLayout and sgData
-  auto maybeSgShape =
-      tryDistribute(shape, attr.getSgLayout(), attr.getSgData());
+  auto maybeSgShape = tryDistribute(shape, attr.getEffectiveSgLayoutAsInt(),
+                                    attr.getEffectiveSgDataAsInt());
   if (!maybeSgShape)
     return false;
   auto sgShape = maybeSgShape.value();
 
   // check InstData, it neither have layout nor need round-robin
   auto maybeInstShape =
-      tryDistribute(sgShape, nullptr, attr.getInstData(), false);
+      tryDistribute(sgShape, {}, attr.getEffectiveInstDataAsInt(), false);
   if (!maybeInstShape)
     return false;
   auto instShape = maybeInstShape.value();
 
   // check LaneLayout and LaneData
   auto maybeLaneShape =
-      tryDistribute(instShape, attr.getLaneLayout(), attr.getLaneData(), false);
+      tryDistribute(instShape, attr.getEffectiveLaneLayoutAsInt(),
+                    attr.getEffectiveLaneDataAsInt(), false);
   return maybeLaneShape.has_value();
 }
 
@@ -283,9 +283,10 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   if (!hasDefaultOrder())
     return mlir::emitError(loc, "order attribute is currently not supported.");
 
-  auto dims = llvm::map_to_vector(*getSgLayoutAsInt(), [&](int64_t d) -> Value {
-    return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
-  });
+  auto dims =
+      llvm::map_to_vector(getEffectiveSgLayoutAsInt(), [&](int64_t d) -> Value {
+        return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
+      });
 
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
@@ -299,14 +300,14 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
-  SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getSgDataAsInt())
-    sgShape = maybeSgShape.value();
-  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-    sgShape = derivedShape.value();
-  else
-    return failure();
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getEffectiveSgDataAsInt();
+  if (sgShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+      sgShape = derivedShape.value();
+    else
+      return failure();
+  }
 
   // delinearize Ids
   auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
@@ -386,14 +387,14 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
-  SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getSgDataAsInt())
-    sgShape = maybeSgShape.value();
-  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
-    sgShape = derivedShape.value();
-  else
-    return failure();
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getEffectiveSgDataAsInt();
+  if (sgShape.empty()) {
+    if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+      sgShape = derivedShape.value();
+    else
+      return failure();
+  }
 
   // delinearize Ids
   auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
@@ -408,6 +409,26 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
 
   return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
                                   shape);
+}
+
+bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
+  auto flattenedThis = flatten();
+  // If other is a LayoutAttr, just compare directly with parent of
+  // flattenedThis.
+  if (auto otherLayout = dyn_cast<xegpu::LayoutAttr>(other))
+    return flattenedThis.getParent() == otherLayout;
+  // If other is a SliceAttr, flatten it first before comparing.
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
+  // Both must have common parent LayoutAttr.
+  if (flattenedThis.getParent() != flattenedOther.getParent())
+    return false;
+  // otherFlattened's sliced dims must be a subset of flattenedThis's sliced
+  // dims.
+  llvm::SmallDenseSet<int64_t> thisDims(
+      flattenedThis.getDims().asArrayRef().begin(),
+      flattenedThis.getDims().asArrayRef().end());
+  return llvm::all_of(flattenedOther.getDims().asArrayRef(),
+                      [&](int64_t dim) { return thisDims.contains(dim); });
 }
 
 //===----------------------------------------------------------------------===//

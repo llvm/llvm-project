@@ -271,8 +271,6 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             mlir::Value extent = val;
             mlir::Value upperbound =
                 mlir::arith::SubIOp::create(builder, loc, extent, one);
-            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
-                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;
@@ -552,10 +550,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
 
   auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
     auto alloca = fir::AllocaOp::create(firBuilder, loc, ty);
-    return hlfir::DeclareOp::create(
-        firBuilder, loc, alloca, varName, /*shape=*/nullptr,
-        llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+    return hlfir::DeclareOp::create(firBuilder, loc, alloca, varName);
   };
 
   if (fir::isa_trivial(unwrappedTy)) {
@@ -576,10 +571,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       }
       auto alloca = fir::AllocaOp::create(
           firBuilder, loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
-      auto declareOp = hlfir::DeclareOp::create(
-          firBuilder, loc, alloca, varName, shape,
-          llvm::ArrayRef<mlir::Value>{},
-          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+      auto declareOp =
+          hlfir::DeclareOp::create(firBuilder, loc, alloca, varName, shape);
 
       if (initVal) {
         mlir::Type idxTy = firBuilder.getIndexType();
