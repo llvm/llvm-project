@@ -37,7 +37,6 @@ class ValueOrSentinel {
 public:
   constexpr ValueOrSentinel() = default;
   constexpr ValueOrSentinel(std::nullopt_t) {};
-
   constexpr ValueOrSentinel(T Value) : Value(Adjust::toRepresentation(Value)) {
     assert(this->Value != Sentinel &&
            "Value is sentinel (use default constructor)");
@@ -52,7 +51,6 @@ public:
   constexpr bool operator==(ValueOrSentinel Other) const {
     return Value == Other.Value;
   }
-
   constexpr bool operator!=(ValueOrSentinel Other) const {
     return !(*this == Other);
   }
@@ -63,12 +61,11 @@ public:
   }
   T operator*() const { return value(); }
 
-  bool has_value() const { return Value != Sentinel; }
-
   explicit operator T() const { return value(); }
   explicit constexpr operator bool() const { return has_value(); }
 
   constexpr void clear() { Value = Sentinel; }
+  constexpr bool has_value() const { return Value != Sentinel; }
 
   constexpr static ValueOrSentinel fromInternalRepresentation(unsigned Value) {
     return {std::nullopt, Value};
