@@ -6707,6 +6707,52 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
   return UINT32_MAX;
 }
 
+bool TypeSystemClang::FindInAnonRecordFields(const clang::RecordDecl *rd,
+                                             std::vector<uint32_t> &path,
+                                             llvm::StringRef name,
+                                             bool omit_empty_base_classes) {
+  uint32_t local_idx = 0;
+
+  // We need the visible base count to compute the child index offset
+  const clang::CXXRecordDecl *crd =
+      llvm::dyn_cast<clang::CXXRecordDecl>(rd);
+  const uint32_t bases =
+      TypeSystemClang::GetNumBaseClasses(crd, omit_empty_base_classes);
+
+  // We only treat anonymous record fields as transparent containers for further lookup.
+  for (auto it = rd->field_begin(), ie = rd->field_end();
+       it != ie; ++it, ++local_idx) {
+    llvm::StringRef fname = it->getName();
+    const bool is_anon = it->isAnonymousStructOrUnion() || fname.empty();
+
+    // named field, check for a match
+    if (!is_anon) {
+      if (fname == name) {
+        path.push_back(bases + local_idx);
+        return true;
+      }
+      continue;
+    }
+
+    // anonymous field, look inside only if it is a record type
+    if (!it->getType()->isRecordType())
+      continue;
+
+    const auto *inner_rt = it->getType()->castAs<clang::RecordType>();
+    const clang::RecordDecl *inner_rd = inner_rt->getOriginalDecl()->getDefinitionOrSelf();
+    if (!inner_rd)
+      continue;
+
+    // only descend into the "fields" of the anonymous record
+    // (do not traverse its bases here)
+    path.push_back(bases + local_idx);
+    if (FindInAnonRecordFields(inner_rd, path, name, omit_empty_base_classes))
+      return true;
+    path.pop_back();
+  }
+  return false;
+}
+
 // Look for a child member (doesn't include base classes, but it does include
 // their members) in the type hierarchy. Returns an index path into
 // "clang_type" on how to reach the appropriate member.
@@ -6766,16 +6812,21 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
           llvm::StringRef field_name = field->getName();
-          if (field_name.empty()) {
-            CompilerType field_type = GetType(field->getType());
-            std::vector<uint32_t> save_indices = child_indexes;
-            child_indexes.push_back(
-                child_idx + TypeSystemClang::GetNumBaseClasses(
-                                cxx_record_decl, omit_empty_base_classes));
-            if (field_type.GetIndexOfChildMemberWithName(
-                    name, omit_empty_base_classes, child_indexes))
-              return child_indexes.size();
-            child_indexes = std::move(save_indices);
+          const bool is_anon =
+              field->isAnonymousStructOrUnion() || field_name.empty();
+          if (is_anon) {
+            if (field->getType()->isRecordType()) {
+              const uint32_t this_slot =
+                  child_idx + TypeSystemClang::GetNumBaseClasses(
+                                  cxx_record_decl, omit_empty_base_classes);
+              std::vector<uint32_t> save_indices = child_indexes;
+              child_indexes.push_back(this_slot);
+              const auto *rt = field->getType()->castAs<clang::RecordType>();
+              const clang::RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+              if (rd && FindInAnonRecordFields(rd, child_indexes, name, omit_empty_base_classes))
+                return child_indexes.size();
+              child_indexes = std::move(save_indices);
+            }
           } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
