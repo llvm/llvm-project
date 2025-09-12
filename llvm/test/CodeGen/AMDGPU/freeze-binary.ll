@@ -142,108 +142,1062 @@ define <8 x float> @freeze_frem_vec(<8 x float> %input) nounwind {
 ; CHECK-LABEL: freeze_frem_vec:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_div_scale_f32 v11, null, 0x40400000, 0x40400000, v5
-; CHECK-NEXT:    v_div_scale_f32 v8, null, 0x40400000, 0x40400000, v2
-; CHECK-NEXT:    v_div_scale_f32 v20, s0, v5, 0x40400000, v5
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_rcp_f32_e32 v13, v11
-; CHECK-NEXT:    v_rcp_f32_e32 v10, v8
-; CHECK-NEXT:    v_div_scale_f32 v14, vcc_lo, v2, 0x40400000, v2
-; CHECK-NEXT:    v_trunc_f32_e32 v12, v0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_sub_f32_e32 v0, v0, v12
-; CHECK-NEXT:    s_waitcnt_depctr 0xfff
-; CHECK-NEXT:    v_fma_f32 v17, -v11, v13, 1.0
-; CHECK-NEXT:    v_fmac_f32_e32 v13, v17, v13
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_dual_mul_f32 v15, 0.5, v6 :: v_dual_mul_f32 v22, v20, v13
-; CHECK-NEXT:    v_trunc_f32_e32 v15, v15
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_dual_mul_f32 v9, 0.5, v1 :: v_dual_fmac_f32 v6, -2.0, v15
-; CHECK-NEXT:    v_trunc_f32_e32 v9, v9
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v0|, 1.0
+; CHECK-NEXT:    ; implicit-def: $vgpr8
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.1: ; %frem.else202
+; CHECK-NEXT:    v_bfi_b32 v8, 0x7fffffff, 0, v0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v0|, 1.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v8, v0, v8, vcc_lo
+; CHECK-NEXT:  ; %bb.2: ; %Flow568
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_8
+; CHECK-NEXT:  ; %bb.3: ; %frem.compute201
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v10, v0
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v9, |v0|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_div_scale_f32 v21, null, 0x40400000, 0x40400000, v6
-; CHECK-NEXT:    v_fmac_f32_e32 v1, -2.0, v9
-; CHECK-NEXT:    v_fma_f32 v9, -v8, v10, 1.0
-; CHECK-NEXT:    v_div_scale_f32 v12, s2, v6, 0x40400000, v6
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_rcp_f32_e32 v24, v21
-; CHECK-NEXT:    v_fmac_f32_e32 v10, v9, v10
-; CHECK-NEXT:    v_div_scale_f32 v16, null, 0x40400000, 0x40400000, v1
-; CHECK-NEXT:    v_div_scale_f32 v23, s1, v1, 0x40400000, v1
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; CHECK-NEXT:    v_mul_f32_e32 v19, v14, v10
-; CHECK-NEXT:    v_rcp_f32_e32 v18, v16
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_fma_f32 v15, -v8, v19, v14
-; CHECK-NEXT:    v_fmac_f32_e32 v19, v15, v10
-; CHECK-NEXT:    s_waitcnt_depctr 0xfff
-; CHECK-NEXT:    v_fma_f32 v15, -v16, v18, 1.0
-; CHECK-NEXT:    v_mul_f32_e32 v9, 0x3e800000, v3
-; CHECK-NEXT:    v_fma_f32 v8, -v8, v19, v14
-; CHECK-NEXT:    v_fma_f32 v14, -v11, v22, v20
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; CHECK-NEXT:    v_fmac_f32_e32 v18, v15, v18
-; CHECK-NEXT:    v_trunc_f32_e32 v9, v9
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; CHECK-NEXT:    v_div_fmas_f32 v8, v8, v10, v19
-; CHECK-NEXT:    s_mov_b32 vcc_lo, s0
-; CHECK-NEXT:    v_dual_mul_f32 v10, v23, v18 :: v_dual_mul_f32 v17, 0x3e800000, v4
-; CHECK-NEXT:    v_fmac_f32_e32 v22, v14, v13
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; CHECK-NEXT:    v_div_fixup_f32 v8, v8, 0x40400000, v2
-; CHECK-NEXT:    v_fma_f32 v14, -v21, v24, 1.0
-; CHECK-NEXT:    v_fma_f32 v15, -v16, v10, v23
-; CHECK-NEXT:    v_fmac_f32_e32 v3, -4.0, v9
-; CHECK-NEXT:    v_fma_f32 v11, -v11, v22, v20
-; CHECK-NEXT:    v_trunc_f32_e32 v8, v8
-; CHECK-NEXT:    v_fmac_f32_e32 v24, v14, v24
-; CHECK-NEXT:    v_fmac_f32_e32 v10, v15, v18
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; CHECK-NEXT:    v_div_fmas_f32 v11, v11, v13, v22
-; CHECK-NEXT:    v_fmac_f32_e32 v2, 0xc0400000, v8
-; CHECK-NEXT:    v_trunc_f32_e32 v13, v17
-; CHECK-NEXT:    s_mov_b32 vcc_lo, s1
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; CHECK-NEXT:    v_div_fixup_f32 v8, v11, 0x40400000, v5
-; CHECK-NEXT:    v_mul_f32_e32 v11, v12, v24
-; CHECK-NEXT:    v_fma_f32 v9, -v16, v10, v23
-; CHECK-NEXT:    v_trunc_f32_e32 v8, v8
-; CHECK-NEXT:    v_fmac_f32_e32 v4, -4.0, v13
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; CHECK-NEXT:    v_fma_f32 v13, -v21, v11, v12
-; CHECK-NEXT:    v_div_fmas_f32 v9, v9, v18, v10
-; CHECK-NEXT:    v_mul_f32_e32 v10, 0x3e800000, v0
-; CHECK-NEXT:    v_fmac_f32_e32 v5, 0xc0400000, v8
-; CHECK-NEXT:    v_trunc_f32_e32 v8, v7
-; CHECK-NEXT:    v_fmac_f32_e32 v11, v13, v24
-; CHECK-NEXT:    v_div_fixup_f32 v9, v9, 0x40400000, v1
-; CHECK-NEXT:    v_mul_f32_e32 v13, 0.5, v2
-; CHECK-NEXT:    s_mov_b32 vcc_lo, s2
-; CHECK-NEXT:    v_sub_f32_e32 v7, v7, v8
-; CHECK-NEXT:    v_trunc_f32_e32 v8, v10
-; CHECK-NEXT:    v_trunc_f32_e32 v9, v9
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; CHECK-NEXT:    v_dual_fmac_f32 v0, -4.0, v8 :: v_dual_fmac_f32 v1, 0xc0400000, v9
-; CHECK-NEXT:    v_mul_f32_e32 v8, 0.5, v5
-; CHECK-NEXT:    v_fma_f32 v10, -v21, v11, v12
-; CHECK-NEXT:    v_trunc_f32_e32 v12, v13
-; CHECK-NEXT:    v_trunc_f32_e32 v8, v8
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; CHECK-NEXT:    v_div_fmas_f32 v10, v10, v24, v11
-; CHECK-NEXT:    v_trunc_f32_e32 v11, v3
-; CHECK-NEXT:    v_fmac_f32_e32 v2, -2.0, v12
-; CHECK-NEXT:    v_trunc_f32_e32 v12, v4
-; CHECK-NEXT:    v_fmac_f32_e32 v5, -2.0, v8
-; CHECK-NEXT:    v_div_fixup_f32 v9, v10, 0x40400000, v6
-; CHECK-NEXT:    v_sub_f32_e32 v3, v3, v11
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, -1, v10
+; CHECK-NEXT:    v_ldexp_f32 v9, v9, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v8
+; CHECK-NEXT:    s_cbranch_execz .LBB10_7
+; CHECK-NEXT:  ; %bb.4: ; %frem.loop_body209.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, 11, v10
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_5: ; %frem.loop_body209
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v10, v9
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, -12, v8
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_trunc_f32_e32 v9, v9
-; CHECK-NEXT:    v_fmac_f32_e32 v6, 0xc0400000, v9
-; CHECK-NEXT:    v_mul_f32_e32 v10, 0x3e800000, v7
+; CHECK-NEXT:    v_rndne_f32_e32 v9, v10
+; CHECK-NEXT:    v_sub_f32_e32 v9, v10, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v11, 1.0, v9
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v9
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v9, v9, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_5
+; CHECK-NEXT:  ; %bb.6: ; %Flow566
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v9, v10
+; CHECK-NEXT:  .LBB10_7: ; %Flow567
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, -11, v8
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_trunc_f32_e32 v10, v10
-; CHECK-NEXT:    v_dual_sub_f32 v4, v4, v12 :: v_dual_fmac_f32 v7, -4.0, v10
+; CHECK-NEXT:    v_ldexp_f32 v8, v9, v8
+; CHECK-NEXT:    v_rndne_f32_e32 v9, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v8, v8, v9
+; CHECK-NEXT:    v_add_f32_e32 v9, 1.0, v8
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc_lo
+; CHECK-NEXT:    v_bfi_b32 v8, 0x7fffffff, v8, v0
+; CHECK-NEXT:  .LBB10_8: ; %Flow569
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v1|, 2.0
+; CHECK-NEXT:    ; implicit-def: $vgpr9
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.9: ; %frem.else171
+; CHECK-NEXT:    v_bfi_b32 v9, 0x7fffffff, 0, v1
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v1|, 2.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v1, v9, vcc_lo
+; CHECK-NEXT:  ; %bb.10: ; %Flow564
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_16
+; CHECK-NEXT:  ; %bb.11: ; %frem.compute170
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v11, v1
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v10, |v1|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, -2, v11
+; CHECK-NEXT:    v_ldexp_f32 v10, v10, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v9
+; CHECK-NEXT:    s_cbranch_execz .LBB10_15
+; CHECK-NEXT:  ; %bb.12: ; %frem.loop_body178.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, 10, v11
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_13: ; %frem.loop_body178
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v11, v10
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, -12, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v10, v11
+; CHECK-NEXT:    v_sub_f32_e32 v10, v11, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v12, 1.0, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v10
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v10, v12, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v10, v10, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_13
+; CHECK-NEXT:  ; %bb.14: ; %Flow562
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v10, v11
+; CHECK-NEXT:  .LBB10_15: ; %Flow563
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, -11, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v9, v10, v9
+; CHECK-NEXT:    v_rndne_f32_e32 v10, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v9, v9, v10
+; CHECK-NEXT:    v_add_f32_e32 v10, 1.0, v9
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v9, v10, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v9, v9, 1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v9, 0x7fffffff, v9, v1
+; CHECK-NEXT:  .LBB10_16: ; %Flow565
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_nlt_f32_e64 s0, 0x40400000, |v2|
+; CHECK-NEXT:    ; implicit-def: $vgpr10
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.17: ; %frem.else140
+; CHECK-NEXT:    v_bfi_b32 v10, 0x7fffffff, 0, v2
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, 0x40400000, |v2|
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v2, v10, vcc_lo
+; CHECK-NEXT:  ; %bb.18: ; %Flow560
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_24
+; CHECK-NEXT:  ; %bb.19: ; %frem.compute139
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v12, v2
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v11, |v2|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, -2, v12
+; CHECK-NEXT:    v_ldexp_f32 v11, v11, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v10
+; CHECK-NEXT:    s_cbranch_execz .LBB10_23
+; CHECK-NEXT:  ; %bb.20: ; %frem.loop_body147.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, 10, v12
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    .p2align 6
+; CHECK-NEXT:  .LBB10_21: ; %frem.loop_body147
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_mov_b32_e32 v12, v11
+; CHECK-NEXT:    v_dual_mul_f32 v11, 0x3f2aaaab, v12 :: v_dual_add_nc_u32 v10, -12, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v11, v11
+; CHECK-NEXT:    v_fmamk_f32 v11, v11, 0xbfc00000, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v13, 0x3fc00000, v11
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v11
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v11, v13, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v11, v11, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_21
+; CHECK-NEXT:  ; %bb.22: ; %Flow558
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v11, v12
+; CHECK-NEXT:  .LBB10_23: ; %Flow559
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, -11, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v10, v11, v10
+; CHECK-NEXT:    v_mul_f32_e32 v11, 0x3f2aaaab, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v11, v11
+; CHECK-NEXT:    v_fmamk_f32 v10, v11, 0xbfc00000, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v11, 0x3fc00000, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v10
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v10, v11, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v10, v10, 1
+; CHECK-NEXT:    v_bfi_b32 v10, 0x7fffffff, v10, v2
+; CHECK-NEXT:  .LBB10_24: ; %Flow561
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v3|, 4.0
+; CHECK-NEXT:    ; implicit-def: $vgpr11
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.25: ; %frem.else109
+; CHECK-NEXT:    v_bfi_b32 v11, 0x7fffffff, 0, v3
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v3|, 4.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v3, v11, vcc_lo
+; CHECK-NEXT:  ; %bb.26: ; %Flow556
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_32
+; CHECK-NEXT:  ; %bb.27: ; %frem.compute108
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v13, v3
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v12, |v3|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, -3, v13
+; CHECK-NEXT:    v_ldexp_f32 v12, v12, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v11
+; CHECK-NEXT:    s_cbranch_execz .LBB10_31
+; CHECK-NEXT:  ; %bb.28: ; %frem.loop_body116.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, 9, v13
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_29: ; %frem.loop_body116
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v13, v12
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, -12, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v12, v13
+; CHECK-NEXT:    v_sub_f32_e32 v12, v13, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v14, 1.0, v12
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v12
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v12, v14, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v12, v12, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_29
+; CHECK-NEXT:  ; %bb.30: ; %Flow554
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v12, v13
+; CHECK-NEXT:  .LBB10_31: ; %Flow555
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, -11, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v11, v12, v11
+; CHECK-NEXT:    v_rndne_f32_e32 v12, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v11, v11, v12
+; CHECK-NEXT:    v_add_f32_e32 v12, 1.0, v11
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v11, v12, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v11, v11, 2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v11, 0x7fffffff, v11, v3
+; CHECK-NEXT:  .LBB10_32: ; %Flow557
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v4|, 4.0
+; CHECK-NEXT:    ; implicit-def: $vgpr12
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.33: ; %frem.else78
+; CHECK-NEXT:    v_bfi_b32 v12, 0x7fffffff, 0, v4
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v4|, 4.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v4, v12, vcc_lo
+; CHECK-NEXT:  ; %bb.34: ; %Flow552
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_40
+; CHECK-NEXT:  ; %bb.35: ; %frem.compute77
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v14, v4
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v13, |v4|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, -3, v14
+; CHECK-NEXT:    v_ldexp_f32 v13, v13, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v12
+; CHECK-NEXT:    s_cbranch_execz .LBB10_39
+; CHECK-NEXT:  ; %bb.36: ; %frem.loop_body85.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, 9, v14
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_37: ; %frem.loop_body85
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v14, v13
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, -12, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v13, v14
+; CHECK-NEXT:    v_sub_f32_e32 v13, v14, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v15, 1.0, v13
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v13
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v13, v15, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v13, v13, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_37
+; CHECK-NEXT:  ; %bb.38: ; %Flow550
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v13, v14
+; CHECK-NEXT:  .LBB10_39: ; %Flow551
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, -11, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v12, v13, v12
+; CHECK-NEXT:    v_rndne_f32_e32 v13, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v12, v12, v13
+; CHECK-NEXT:    v_add_f32_e32 v13, 1.0, v12
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v12, v13, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v12, v12, 2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v12, 0x7fffffff, v12, v4
+; CHECK-NEXT:  .LBB10_40: ; %Flow553
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_nlt_f32_e64 s0, 0x40400000, |v5|
+; CHECK-NEXT:    ; implicit-def: $vgpr13
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.41: ; %frem.else47
+; CHECK-NEXT:    v_bfi_b32 v13, 0x7fffffff, 0, v5
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, 0x40400000, |v5|
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v5, v13, vcc_lo
+; CHECK-NEXT:  ; %bb.42: ; %Flow548
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_48
+; CHECK-NEXT:  ; %bb.43: ; %frem.compute46
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v15, v5
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v14, |v5|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, -2, v15
+; CHECK-NEXT:    v_ldexp_f32 v14, v14, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v13
+; CHECK-NEXT:    s_cbranch_execz .LBB10_47
+; CHECK-NEXT:  ; %bb.44: ; %frem.loop_body54.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, 10, v15
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    .p2align 6
+; CHECK-NEXT:  .LBB10_45: ; %frem.loop_body54
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_mov_b32_e32 v15, v14
+; CHECK-NEXT:    v_dual_mul_f32 v14, 0x3f2aaaab, v15 :: v_dual_add_nc_u32 v13, -12, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v14, v14
+; CHECK-NEXT:    v_fmamk_f32 v14, v14, 0xbfc00000, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v16, 0x3fc00000, v14
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v14
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v14, v16, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v14, v14, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_45
+; CHECK-NEXT:  ; %bb.46: ; %Flow546
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v14, v15
+; CHECK-NEXT:  .LBB10_47: ; %Flow547
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, -11, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v13, v14, v13
+; CHECK-NEXT:    v_mul_f32_e32 v14, 0x3f2aaaab, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v14, v14
+; CHECK-NEXT:    v_fmamk_f32 v13, v14, 0xbfc00000, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v14, 0x3fc00000, v13
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v13
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v13, v14, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v13, v13, 1
+; CHECK-NEXT:    v_bfi_b32 v13, 0x7fffffff, v13, v5
+; CHECK-NEXT:  .LBB10_48: ; %Flow549
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v6|, 2.0
+; CHECK-NEXT:    ; implicit-def: $vgpr14
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.49: ; %frem.else16
+; CHECK-NEXT:    v_bfi_b32 v14, 0x7fffffff, 0, v6
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v6|, 2.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v6, v14, vcc_lo
+; CHECK-NEXT:  ; %bb.50: ; %Flow544
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_56
+; CHECK-NEXT:  ; %bb.51: ; %frem.compute15
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v16, v6
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v15, |v6|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, -2, v16
+; CHECK-NEXT:    v_ldexp_f32 v15, v15, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v14
+; CHECK-NEXT:    s_cbranch_execz .LBB10_55
+; CHECK-NEXT:  ; %bb.52: ; %frem.loop_body23.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, 10, v16
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_53: ; %frem.loop_body23
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v16, v15
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, -12, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v15, v16
+; CHECK-NEXT:    v_sub_f32_e32 v15, v16, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v17, 1.0, v15
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v15
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v15, v17, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v15, v15, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_53
+; CHECK-NEXT:  ; %bb.54: ; %Flow542
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v15, v16
+; CHECK-NEXT:  .LBB10_55: ; %Flow543
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, -11, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v14, v15, v14
+; CHECK-NEXT:    v_rndne_f32_e32 v15, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v14, v14, v15
+; CHECK-NEXT:    v_add_f32_e32 v15, 1.0, v14
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v14, v15, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v14, v14, 1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v14, 0x7fffffff, v14, v6
+; CHECK-NEXT:  .LBB10_56: ; %Flow545
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v7|, 1.0
+; CHECK-NEXT:    ; implicit-def: $vgpr15
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.57: ; %frem.else
+; CHECK-NEXT:    v_bfi_b32 v15, 0x7fffffff, 0, v7
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v7|, 1.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v7, v15, vcc_lo
+; CHECK-NEXT:  ; %bb.58: ; %Flow540
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_64
+; CHECK-NEXT:  ; %bb.59: ; %frem.compute
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v17, v7
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v16, |v7|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, -1, v17
+; CHECK-NEXT:    v_ldexp_f32 v16, v16, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v15
+; CHECK-NEXT:    s_cbranch_execz .LBB10_63
+; CHECK-NEXT:  ; %bb.60: ; %frem.loop_body.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, 11, v17
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_61: ; %frem.loop_body
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v17, v16
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, -12, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v16, v17
+; CHECK-NEXT:    v_sub_f32_e32 v16, v17, v16
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v18, 1.0, v16
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v16
+; CHECK-NEXT:    v_cndmask_b32_e32 v16, v16, v18, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v16, v16, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_61
+; CHECK-NEXT:  ; %bb.62: ; %Flow538
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v16, v17
+; CHECK-NEXT:  .LBB10_63: ; %Flow539
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, -11, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v15, v16, v15
+; CHECK-NEXT:    v_rndne_f32_e32 v16, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v15, v15, v16
+; CHECK-NEXT:    v_add_f32_e32 v16, 1.0, v15
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v15, v16, vcc_lo
+; CHECK-NEXT:    v_bfi_b32 v15, 0x7fffffff, v15, v7
+; CHECK-NEXT:  .LBB10_64: ; %Flow541
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v0|
+; CHECK-NEXT:    v_cmp_nle_f32_e64 s0, 0x7f800000, |v2|
+; CHECK-NEXT:    v_cmp_nle_f32_e64 s1, 0x7f800000, |v3|
+; CHECK-NEXT:    v_cmp_nle_f32_e64 s2, 0x7f800000, |v4|
+; CHECK-NEXT:    v_cmp_nle_f32_e64 s3, 0x7f800000, |v5|
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v8, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v1|
+; CHECK-NEXT:    v_cmp_nle_f32_e64 s4, 0x7f800000, |v6|
+; CHECK-NEXT:    v_cmp_nle_f32_e64 s5, 0x7f800000, |v7|
+; CHECK-NEXT:    s_mov_b32 s7, exec_lo
+; CHECK-NEXT:    ; implicit-def: $vgpr8
+; CHECK-NEXT:    v_cmpx_ngt_f32_e64 |v0|, 4.0
+; CHECK-NEXT:    s_xor_b32 s7, exec_lo, s7
+; CHECK-NEXT:  ; %bb.65: ; %frem.else450
+; CHECK-NEXT:    v_bfi_b32 v1, 0x7fffffff, 0, v0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 s6, |v0|, 4.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e64 v8, v0, v1, s6
+; CHECK-NEXT:  ; %bb.66: ; %Flow536
+; CHECK-NEXT:    s_or_saveexec_b32 s6, s7
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v9, vcc_lo
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0x7fc00000, v10, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0x7fc00000, v11, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0x7fc00000, v12, s2
+; CHECK-NEXT:    v_cndmask_b32_e64 v5, 0x7fc00000, v13, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0x7fc00000, v14, s4
+; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0x7fc00000, v15, s5
+; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s6
+; CHECK-NEXT:    s_cbranch_execz .LBB10_72
+; CHECK-NEXT:  ; %bb.67: ; %frem.compute449
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v10, v0
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v9, |v0|
+; CHECK-NEXT:    s_mov_b32 s0, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, -3, v10
+; CHECK-NEXT:    v_ldexp_f32 v9, v9, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v8
+; CHECK-NEXT:    s_cbranch_execz .LBB10_71
+; CHECK-NEXT:  ; %bb.68: ; %frem.loop_body457.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, 9, v10
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:  .LBB10_69: ; %frem.loop_body457
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v10, v9
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, -12, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v9, v10
+; CHECK-NEXT:    v_sub_f32_e32 v9, v10, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v11, 1.0, v9
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v9
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v9, v9, 12
+; CHECK-NEXT:    s_or_b32 s1, vcc_lo, s1
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_69
+; CHECK-NEXT:  ; %bb.70: ; %Flow534
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_mov_b32_e32 v9, v10
+; CHECK-NEXT:  .LBB10_71: ; %Flow535
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_add_nc_u32_e32 v8, -11, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v8, v9, v8
+; CHECK-NEXT:    v_rndne_f32_e32 v9, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v8, v8, v9
+; CHECK-NEXT:    v_add_f32_e32 v9, 1.0, v8
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v8
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v8, v8, 2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v8, 0x7fffffff, v8, v0
+; CHECK-NEXT:  .LBB10_72: ; %Flow537
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
+; CHECK-NEXT:    v_cmp_nlt_f32_e64 s0, 0x40400000, |v1|
+; CHECK-NEXT:    ; implicit-def: $vgpr9
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.73: ; %frem.else419
+; CHECK-NEXT:    v_bfi_b32 v9, 0x7fffffff, 0, v1
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, 0x40400000, |v1|
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v1, v9, vcc_lo
+; CHECK-NEXT:  ; %bb.74: ; %Flow532
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_80
+; CHECK-NEXT:  ; %bb.75: ; %frem.compute418
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v11, v1
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v10, |v1|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, -2, v11
+; CHECK-NEXT:    v_ldexp_f32 v10, v10, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v9
+; CHECK-NEXT:    s_cbranch_execz .LBB10_79
+; CHECK-NEXT:  ; %bb.76: ; %frem.loop_body426.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, 10, v11
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    .p2align 6
+; CHECK-NEXT:  .LBB10_77: ; %frem.loop_body426
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_mov_b32_e32 v11, v10
+; CHECK-NEXT:    v_dual_mul_f32 v10, 0x3f2aaaab, v11 :: v_dual_add_nc_u32 v9, -12, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v10, v10
+; CHECK-NEXT:    v_fmamk_f32 v10, v10, 0xbfc00000, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v12, 0x3fc00000, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v10
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v10, v12, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v10, v10, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_77
+; CHECK-NEXT:  ; %bb.78: ; %Flow530
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v10, v11
+; CHECK-NEXT:  .LBB10_79: ; %Flow531
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v9, -11, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v9, v10, v9
+; CHECK-NEXT:    v_mul_f32_e32 v10, 0x3f2aaaab, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v10, v10
+; CHECK-NEXT:    v_fmamk_f32 v9, v10, 0xbfc00000, v9
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v10, 0x3fc00000, v9
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v9
+; CHECK-NEXT:    v_cndmask_b32_e32 v9, v9, v10, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v9, v9, 1
+; CHECK-NEXT:    v_bfi_b32 v9, 0x7fffffff, v9, v1
+; CHECK-NEXT:  .LBB10_80: ; %Flow533
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v2|, 2.0
+; CHECK-NEXT:    ; implicit-def: $vgpr10
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.81: ; %frem.else388
+; CHECK-NEXT:    v_bfi_b32 v10, 0x7fffffff, 0, v2
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v2|, 2.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v2, v10, vcc_lo
+; CHECK-NEXT:  ; %bb.82: ; %Flow528
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_88
+; CHECK-NEXT:  ; %bb.83: ; %frem.compute387
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v12, v2
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v11, |v2|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, -2, v12
+; CHECK-NEXT:    v_ldexp_f32 v11, v11, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v10
+; CHECK-NEXT:    s_cbranch_execz .LBB10_87
+; CHECK-NEXT:  ; %bb.84: ; %frem.loop_body395.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, 10, v12
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_85: ; %frem.loop_body395
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v12, v11
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, -12, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v11, v12
+; CHECK-NEXT:    v_sub_f32_e32 v11, v12, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v13, 1.0, v11
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v11
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v11, v13, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v11, v11, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_85
+; CHECK-NEXT:  ; %bb.86: ; %Flow526
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v11, v12
+; CHECK-NEXT:  .LBB10_87: ; %Flow527
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v10, -11, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v10, v11, v10
+; CHECK-NEXT:    v_rndne_f32_e32 v11, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v10, v10, v11
+; CHECK-NEXT:    v_add_f32_e32 v11, 1.0, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v10
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v10, v10, v11, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v10, v10, 1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v10, 0x7fffffff, v10, v2
+; CHECK-NEXT:  .LBB10_88: ; %Flow529
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v3|, 1.0
+; CHECK-NEXT:    ; implicit-def: $vgpr11
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.89: ; %frem.else357
+; CHECK-NEXT:    v_bfi_b32 v11, 0x7fffffff, 0, v3
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v3|, 1.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v3, v11, vcc_lo
+; CHECK-NEXT:  ; %bb.90: ; %Flow524
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_96
+; CHECK-NEXT:  ; %bb.91: ; %frem.compute356
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v13, v3
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v12, |v3|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, -1, v13
+; CHECK-NEXT:    v_ldexp_f32 v12, v12, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v11
+; CHECK-NEXT:    s_cbranch_execz .LBB10_95
+; CHECK-NEXT:  ; %bb.92: ; %frem.loop_body364.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, 11, v13
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_93: ; %frem.loop_body364
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v13, v12
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, -12, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v12, v13
+; CHECK-NEXT:    v_sub_f32_e32 v12, v13, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v14, 1.0, v12
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v12
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v12, v14, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v12, v12, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_93
+; CHECK-NEXT:  ; %bb.94: ; %Flow522
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v12, v13
+; CHECK-NEXT:  .LBB10_95: ; %Flow523
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v11, -11, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v11, v12, v11
+; CHECK-NEXT:    v_rndne_f32_e32 v12, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v11, v11, v12
+; CHECK-NEXT:    v_add_f32_e32 v12, 1.0, v11
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v11
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v11, v11, v12, vcc_lo
+; CHECK-NEXT:    v_bfi_b32 v11, 0x7fffffff, v11, v3
+; CHECK-NEXT:  .LBB10_96: ; %Flow525
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v4|, 1.0
+; CHECK-NEXT:    ; implicit-def: $vgpr12
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.97: ; %frem.else326
+; CHECK-NEXT:    v_bfi_b32 v12, 0x7fffffff, 0, v4
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v4|, 1.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v4, v12, vcc_lo
+; CHECK-NEXT:  ; %bb.98: ; %Flow520
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_104
+; CHECK-NEXT:  ; %bb.99: ; %frem.compute325
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v14, v4
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v13, |v4|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, -1, v14
+; CHECK-NEXT:    v_ldexp_f32 v13, v13, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v12
+; CHECK-NEXT:    s_cbranch_execz .LBB10_103
+; CHECK-NEXT:  ; %bb.100: ; %frem.loop_body333.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, 11, v14
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_101: ; %frem.loop_body333
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v14, v13
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, -12, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v13, v14
+; CHECK-NEXT:    v_sub_f32_e32 v13, v14, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v15, 1.0, v13
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v13
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v13, v15, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v13, v13, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_101
+; CHECK-NEXT:  ; %bb.102: ; %Flow518
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v13, v14
+; CHECK-NEXT:  .LBB10_103: ; %Flow519
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v12, -11, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v12, v13, v12
+; CHECK-NEXT:    v_rndne_f32_e32 v13, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v12, v12, v13
+; CHECK-NEXT:    v_add_f32_e32 v13, 1.0, v12
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v12, v12, v13, vcc_lo
+; CHECK-NEXT:    v_bfi_b32 v12, 0x7fffffff, v12, v4
+; CHECK-NEXT:  .LBB10_104: ; %Flow521
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v5|, 2.0
+; CHECK-NEXT:    ; implicit-def: $vgpr13
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.105: ; %frem.else295
+; CHECK-NEXT:    v_bfi_b32 v13, 0x7fffffff, 0, v5
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v5|, 2.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v5, v13, vcc_lo
+; CHECK-NEXT:  ; %bb.106: ; %Flow516
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_112
+; CHECK-NEXT:  ; %bb.107: ; %frem.compute294
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v15, v5
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v14, |v5|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, -2, v15
+; CHECK-NEXT:    v_ldexp_f32 v14, v14, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v13
+; CHECK-NEXT:    s_cbranch_execz .LBB10_111
+; CHECK-NEXT:  ; %bb.108: ; %frem.loop_body302.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, 10, v15
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_109: ; %frem.loop_body302
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v15, v14
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, -12, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v14, v15
+; CHECK-NEXT:    v_sub_f32_e32 v14, v15, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v16, 1.0, v14
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v14
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v14, v16, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v14, v14, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_109
+; CHECK-NEXT:  ; %bb.110: ; %Flow514
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v14, v15
+; CHECK-NEXT:  .LBB10_111: ; %Flow515
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v13, -11, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v13, v14, v13
+; CHECK-NEXT:    v_rndne_f32_e32 v14, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v13, v13, v14
+; CHECK-NEXT:    v_add_f32_e32 v14, 1.0, v13
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v13
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v13, v13, v14, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v13, v13, 1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v13, 0x7fffffff, v13, v5
+; CHECK-NEXT:  .LBB10_112: ; %Flow517
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_nlt_f32_e64 s0, 0x40400000, |v6|
+; CHECK-NEXT:    ; implicit-def: $vgpr14
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.113: ; %frem.else264
+; CHECK-NEXT:    v_bfi_b32 v14, 0x7fffffff, 0, v6
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, 0x40400000, |v6|
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v6, v14, vcc_lo
+; CHECK-NEXT:  ; %bb.114: ; %Flow512
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_120
+; CHECK-NEXT:  ; %bb.115: ; %frem.compute263
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v16, v6
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v15, |v6|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, -2, v16
+; CHECK-NEXT:    v_ldexp_f32 v15, v15, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v14
+; CHECK-NEXT:    s_cbranch_execz .LBB10_119
+; CHECK-NEXT:  ; %bb.116: ; %frem.loop_body271.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, 10, v16
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    .p2align 6
+; CHECK-NEXT:  .LBB10_117: ; %frem.loop_body271
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_mov_b32_e32 v16, v15
+; CHECK-NEXT:    v_dual_mul_f32 v15, 0x3f2aaaab, v16 :: v_dual_add_nc_u32 v14, -12, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v15, v15
+; CHECK-NEXT:    v_fmamk_f32 v15, v15, 0xbfc00000, v16
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v17, 0x3fc00000, v15
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v15
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v15, v17, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v15, v15, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_117
+; CHECK-NEXT:  ; %bb.118: ; %Flow510
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v15, v16
+; CHECK-NEXT:  .LBB10_119: ; %Flow511
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v14, -11, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v14, v15, v14
+; CHECK-NEXT:    v_mul_f32_e32 v15, 0x3f2aaaab, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v15, v15
+; CHECK-NEXT:    v_fmamk_f32 v14, v15, 0xbfc00000, v14
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v15, 0x3fc00000, v14
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v14
+; CHECK-NEXT:    v_cndmask_b32_e32 v14, v14, v15, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v14, v14, 1
+; CHECK-NEXT:    v_bfi_b32 v14, 0x7fffffff, v14, v6
+; CHECK-NEXT:  .LBB10_120: ; %Flow513
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_ngt_f32_e64 s0, |v7|, 4.0
+; CHECK-NEXT:    ; implicit-def: $vgpr15
+; CHECK-NEXT:    s_and_saveexec_b32 s1, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s1
+; CHECK-NEXT:  ; %bb.121: ; %frem.else233
+; CHECK-NEXT:    v_bfi_b32 v15, 0x7fffffff, 0, v7
+; CHECK-NEXT:    v_cmp_eq_f32_e64 vcc_lo, |v7|, 4.0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v7, v15, vcc_lo
+; CHECK-NEXT:  ; %bb.122: ; %Flow508
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_cbranch_execz .LBB10_128
+; CHECK-NEXT:  ; %bb.123: ; %frem.compute232
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v17, v7
+; CHECK-NEXT:    v_frexp_mant_f32_e64 v16, |v7|
+; CHECK-NEXT:    s_mov_b32 s1, exec_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, -3, v17
+; CHECK-NEXT:    v_ldexp_f32 v16, v16, 12
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; CHECK-NEXT:    v_cmpx_lt_i32_e32 12, v15
+; CHECK-NEXT:    s_cbranch_execz .LBB10_127
+; CHECK-NEXT:  ; %bb.124: ; %frem.loop_body240.preheader
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, 9, v17
+; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:  .LBB10_125: ; %frem.loop_body240
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_mov_b32_e32 v17, v16
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, -12, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_rndne_f32_e32 v16, v17
+; CHECK-NEXT:    v_sub_f32_e32 v16, v17, v16
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_f32_e32 v18, 1.0, v16
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v16
+; CHECK-NEXT:    v_cndmask_b32_e32 v16, v16, v18, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 13, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    v_ldexp_f32 v16, v16, 12
+; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s2
+; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    s_cbranch_execnz .LBB10_125
+; CHECK-NEXT:  ; %bb.126: ; %Flow
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; CHECK-NEXT:    v_mov_b32_e32 v16, v17
+; CHECK-NEXT:  .LBB10_127: ; %Flow507
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; CHECK-NEXT:    v_add_nc_u32_e32 v15, -11, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_ldexp_f32 v15, v16, v15
+; CHECK-NEXT:    v_rndne_f32_e32 v16, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_sub_f32_e32 v15, v15, v16
+; CHECK-NEXT:    v_add_f32_e32 v16, 1.0, v15
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v15
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cndmask_b32_e32 v15, v15, v16, vcc_lo
+; CHECK-NEXT:    v_ldexp_f32 v15, v15, 2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_bfi_b32 v15, 0x7fffffff, v15, v7
+; CHECK-NEXT:  .LBB10_128: ; %Flow509
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v0|
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v8, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v1|
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0x7fc00000, v9, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v2|
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0x7fc00000, v10, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v3|
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0x7fc00000, v11, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v4|
+; CHECK-NEXT:    v_cndmask_b32_e32 v4, 0x7fc00000, v12, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v5|
+; CHECK-NEXT:    v_cndmask_b32_e32 v5, 0x7fc00000, v13, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v6|
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, 0x7fc00000, v14, vcc_lo
+; CHECK-NEXT:    v_cmp_nle_f32_e64 vcc_lo, 0x7f800000, |v7|
+; CHECK-NEXT:    v_cndmask_b32_e32 v7, 0x7fc00000, v15, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %x = frem reassoc nsz arcp contract afn <8 x float> %input, <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 4.000000e+00, float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>
   %y = freeze <8 x float> %x

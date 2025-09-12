@@ -356,8 +356,9 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
 static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
 
-  Type *ReturnTy = I.getType();
-  assert(FRemExpander::canExpandType(ReturnTy->getScalarType()));
+  Type *Ty = I.getType();
+  assert(Ty->isFloatingPointTy() && "Instruction should have been scalarized");
+  assert(FRemExpander::canExpandType(Ty));
 
   FastMathFlags FMF = I.getFastMathFlags();
   // TODO Make use of those flags for optimization?
@@ -368,32 +369,10 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   B.setFastMathFlags(FMF);
   B.SetCurrentDebugLocation(I.getDebugLoc());
 
-  Type *ElemTy = ReturnTy->getScalarType();
-  const FRemExpander Expander = FRemExpander::create(B, ElemTy);
-
-  Value *Ret;
-  if (ReturnTy->isFloatingPointTy())
-    Ret = FMF.approxFunc()
-              ? Expander.buildApproxFRem(I.getOperand(0), I.getOperand(1))
-              : Expander.buildFRem(I.getOperand(0), I.getOperand(1), SQ);
-  else {
-    auto *VecTy = cast<FixedVectorType>(ReturnTy);
-
-    // This could use SplitBlockAndInsertForEachLane but the interface
-    // is a bit awkward for a constant number of elements and it will
-    // boil down to the same code.
-    // TODO Expand the FRem instruction only once and reuse the code.
-    Value *Nums = I.getOperand(0);
-    Value *Denums = I.getOperand(1);
-    Ret = PoisonValue::get(I.getType());
-    for (int I = 0, E = VecTy->getNumElements(); I != E; ++I) {
-      Value *Num = B.CreateExtractElement(Nums, I);
-      Value *Denum = B.CreateExtractElement(Denums, I);
-      Value *Rem = FMF.approxFunc() ? Expander.buildApproxFRem(Num, Denum)
-                                    : Expander.buildFRem(Num, Denum, SQ);
-      Ret = B.CreateInsertElement(Ret, Rem, I);
-    }
-  }
+  const FRemExpander Expander = FRemExpander::create(B, Ty);
+  Value *Ret = FMF.approxFunc()
+                   ? Expander.buildApproxFRem(I.getOperand(0), I.getOperand(1))
+                   : Expander.buildFRem(I.getOperand(0), I.getOperand(1), SQ);
 
   I.replaceAllUsesWith(Ret);
   Ret->takeName(&I);
@@ -948,11 +927,17 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
   Value *Result = PoisonValue::get(VTy);
   for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
     Value *Ext = Builder.CreateExtractElement(I->getOperand(0), Idx);
-    Value *Cast = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
-                                     I->getType()->getScalarType());
-    Result = Builder.CreateInsertElement(Result, Cast, Idx);
-    if (isa<Instruction>(Cast))
-      Replace.push_back(cast<Instruction>(Cast));
+    Value *Op;
+    if (isa<BinaryOperator>(I))
+      Op = Builder.CreateBinOp(
+          cast<BinaryOperator>(I)->getOpcode(), Ext,
+          Builder.CreateExtractElement(I->getOperand(1), Idx));
+    else
+      Op = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
+                              I->getType()->getScalarType());
+    Result = Builder.CreateInsertElement(Result, Op, Idx);
+    if (isa<Instruction>(Op))
+      Replace.push_back(cast<Instruction>(Op));
   }
   I->replaceAllUsesWith(Result);
   I->dropAllReferences();
@@ -989,6 +974,16 @@ static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
   return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
 }
 
+static void enqueueInstruction(Instruction &I,
+                               SmallVector<Instruction *, 4> &Replace,
+                               SmallVector<Instruction *, 4> &ReplaceVector) {
+
+  if (I.getOperand(0)->getType()->isVectorTy())
+    ReplaceVector.push_back(&I);
+  else
+    Replace.push_back(&I);
+}
+
 static bool runImpl(Function &F, const TargetLowering &TLI,
                     AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Replace;
@@ -1004,55 +999,37 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     return false;
 
   for (auto &I : instructions(F)) {
+    Type *Ty = I.getType();
+    // TODO: This pass doesn't handle scalable vectors.
+    if (Ty->isScalableTy())
+      continue;
+
     switch (I.getOpcode()) {
-    case Instruction::FRem: {
-      Type *Ty = I.getType();
-      // TODO: This pass doesn't handle scalable vectors.
-      if (Ty->isScalableTy())
-        continue;
-
-      if (targetSupportsFrem(TLI, Ty) ||
-          !FRemExpander::canExpandType(Ty->getScalarType()))
-        continue;
-
-      Replace.push_back(&I);
-      Modified = true;
-
+    case Instruction::FRem:
+      if (!targetSupportsFrem(TLI, Ty) &&
+          FRemExpander::canExpandType(Ty->getScalarType())) {
+        enqueueInstruction(I, Replace, ReplaceVector);
+        Modified = true;
+      }
       break;
-    }
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
-      // TODO: This pass doesn't handle scalable vectors.
-      if (I.getOperand(0)->getType()->isScalableTy())
-        continue;
-
-      auto *IntTy = cast<IntegerType>(I.getType()->getScalarType());
+      auto *IntTy = cast<IntegerType>(Ty->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      if (I.getOperand(0)->getType()->isVectorTy())
-        ReplaceVector.push_back(&I);
-      else
-        Replace.push_back(&I);
+      enqueueInstruction(I, Replace, ReplaceVector);
       Modified = true;
       break;
     }
     case Instruction::UIToFP:
     case Instruction::SIToFP: {
-      // TODO: This pass doesn't handle scalable vectors.
-      if (I.getOperand(0)->getType()->isScalableTy())
-        continue;
-
       auto *IntTy =
           cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      if (I.getOperand(0)->getType()->isVectorTy())
-        ReplaceVector.push_back(&I);
-      else
-        Replace.push_back(&I);
-      Modified = true;
+      enqueueInstruction(I, Replace, ReplaceVector);
       break;
     }
     default:
