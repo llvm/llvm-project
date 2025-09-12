@@ -12,4 +12,4 @@
 # if any fail.
 # CHECK: Passed
 # CHECK-NOT: Failed
-# UNSUPPORTED: target={{.*(windows|android).*}}
+# UNSUPPORTED: target={{.*(android).*}}
