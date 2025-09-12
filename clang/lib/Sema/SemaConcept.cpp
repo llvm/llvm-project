@@ -508,10 +508,7 @@ StringRef allocateStringFromConceptDiagnostic(const Sema &S,
   SmallString<128> DiagString;
   DiagString = ": ";
   Diag.EmitToString(S.getDiagnostics(), DiagString);
-  unsigned MessageSize = DiagString.size();
-  char *Mem = new (S.Context) char[MessageSize];
-  memcpy(Mem, DiagString.c_str(), MessageSize);
-  return StringRef(Mem, MessageSize);
+  return S.getASTContext().backupStr(DiagString);
 }
 
 } // namespace

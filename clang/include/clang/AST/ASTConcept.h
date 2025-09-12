@@ -44,7 +44,6 @@ using UnsatisfiedConstraintRecord =
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
 class ConstraintSatisfaction : public llvm::FoldingSetNode {
-private:
   // The template-like entity that 'owns' the constraint checked here (can be a
   // constrained entity or a concept).
   const NamedDecl *ConstraintOwner = nullptr;
