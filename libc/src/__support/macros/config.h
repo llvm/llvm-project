@@ -44,6 +44,7 @@
 #endif
 
 #define __builtin_expect(value, expectation) (value)
+#define __builtin_unreachable() __assume(0)
 
 #endif // LIBC_COMPILER_IS_MSVC
 
