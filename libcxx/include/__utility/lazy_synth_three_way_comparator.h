@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_LAZY_SYNTH_THREE_WAY_COMPARATOR_H
 
 #include <__config>
+#include <__type_traits/conjunction.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__utility/default_three_way_comparator.h>
@@ -69,11 +70,12 @@ struct __eager_compare_result {
 };
 
 template <class _Comparator, class _LHS, class _RHS>
-struct __lazy_synth_three_way_comparator<_Comparator,
-                                         _LHS,
-                                         _RHS,
-                                         __enable_if_t<__desugars_to_v<__less_tag, _Comparator, _LHS, _RHS> &&
-                                                       __has_default_three_way_comparator_v<_LHS, _RHS> > > {
+struct __lazy_synth_three_way_comparator<
+    _Comparator,
+    _LHS,
+    _RHS,
+    __enable_if_t<_And<__desugars_to<__less_tag, _Comparator, _LHS, _RHS>,
+                       __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
   // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
   // the comparator.
   _LIBCPP_HIDE_FROM_ABI __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
