@@ -36,7 +36,7 @@ template <typename T, T Sentinel,
 class ValueOrSentinel {
 public:
   constexpr ValueOrSentinel() = default;
-  constexpr ValueOrSentinel(std::nullopt_t){};
+  constexpr ValueOrSentinel(std::nullopt_t) {};
 
   constexpr ValueOrSentinel(T Value) : Value(Adjust::toRepresentation(Value)) {
     assert(this->Value != Sentinel &&
@@ -76,7 +76,7 @@ public:
   constexpr T toInternalRepresentation() const { return Value; }
 
 protected:
-  ValueOrSentinel(std::nullopt_t, T Value) : Value(Value){};
+  ValueOrSentinel(std::nullopt_t, T Value) : Value(Value) {};
 
   T Value{Sentinel};
 };
