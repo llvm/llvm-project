@@ -4390,8 +4390,20 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   const SCEV *TC =
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
+
+  // TODO: Maybe this could be removed when SCEV can evaluate expressions with
+  // 'vscale'.
+  // If TC is multiple of vscale, try to get estimated value:
+  if (match(TC, m_scev_Mul(m_SCEV(), m_SCEVVScale()))) {
+    if (std::optional<ElementCount> BestKnownTC =
+            getSmallBestKnownTC(PSE, OrigLoop)) {
+      unsigned EstimatedRuntimeTC =
+          estimateElementCount(*BestKnownTC, CM.getVScaleForTuning());
+      TC = SE.getConstant(TCType, EstimatedRuntimeTC);
+    }
+  }
   RemainingIterations =
-      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+      SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
   if (RemainingIterations->isZero())
