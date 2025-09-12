@@ -59,12 +59,11 @@ public:
   };
 
   /// Return true if the specified value is loop invariant.
-  bool isLoopInvariant(const Value *V, bool HasCoroSuspendInst = false) const;
+  bool isLoopInvariant(const Value *V) const;
 
   /// Return true if all the operands of the specified instruction are loop
   /// invariant.
-  bool hasLoopInvariantOperands(const Instruction *I,
-                                bool HasCoroSuspendInst = false) const;
+  bool hasLoopInvariantOperands(const Instruction *I) const;
 
   /// If the given value is an instruction inside of the loop and it can be
   /// hoisted, do so to make it trivially loop-invariant.
