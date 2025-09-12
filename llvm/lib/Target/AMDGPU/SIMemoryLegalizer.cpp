@@ -462,10 +462,6 @@ public:
                              SIAtomicScope Scope,
                              SIAtomicAddrSpace AddrSpace) const override;
 
-  bool enableStoreCacheBypass(const MachineBasicBlock::iterator &MI,
-                              SIAtomicScope Scope,
-                              SIAtomicAddrSpace AddrSpace) const override;
-
   bool enableRMWCacheBypass(const MachineBasicBlock::iterator &MI,
                             SIAtomicScope Scope,
                             SIAtomicAddrSpace AddrSpace) const override;
@@ -1359,41 +1355,6 @@ bool SIGfx90ACacheControl::enableLoadCacheBypass(
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
       // No cache to bypass.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  /// The scratch address space does not need the global memory caches
-  /// to be bypassed as all memory operations by the same thread are
-  /// sequentially consistent, and no other thread can access scratch
-  /// memory.
-
-  /// Other address spaces do not have a cache.
-
-  return Changed;
-}
-
-bool SIGfx90ACacheControl::enableStoreCacheBypass(
-    const MachineBasicBlock::iterator &MI,
-    SIAtomicScope Scope,
-    SIAtomicAddrSpace AddrSpace) const {
-  assert(!MI->mayLoad() && MI->mayStore());
-  bool Changed = false;
-
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      /// Do not set glc for store atomic operations as they implicitly write
-      /// through the L1 cache.
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No cache to bypass. Store atomics implicitly write through the L1
-      // cache.
       break;
     default:
       llvm_unreachable("Unsupported synchronization scope");
