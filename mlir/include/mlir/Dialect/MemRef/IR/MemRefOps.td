@@ -10,7 +10,11 @@
 #define MEMREF_OPS
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/MemRef/IR/MemRefAttrs.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/Dialect/MemRef/IR/MemRefInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -19,8 +23,6 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/SymbolInterfaces.td"
 
 /// A TypeAttr for memref types.
 def MemRefTypeAttr
@@ -153,7 +155,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       The `assume_alignment` operation takes a memref and an integer alignment
       value. It returns a new SSA value of the same memref type, but associated
       with the assumption that the underlying buffer is aligned to the given
-      alignment. 
+      alignment.
 
       If the buffer isn't aligned to the given alignment, its result is poison.
       This operation doesn't affect the semantics of a program where the
@@ -168,7 +170,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
   let extraClassDeclaration = [{
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
-    
+
     Value getViewSource() { return getMemref(); }
   }];
 
@@ -445,6 +447,78 @@ def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [OpBuilder<(ins), [{ /*nothing to do */ }]>];
+
+  let assemblyFormat = "attr-dict ($results^ `:` type($results))?";
+}
+
+//===----------------------------------------------------------------------===//
+// AliasDomainScopeOp
+//===----------------------------------------------------------------------===//
+
+def MemRef_AliasDomainScopeOp : MemRef_Op<"alias_domain_scope", [
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    SingleBlockImplicitTerminator<"AliasDomainScopeReturnOp">,
+    RecursiveMemoryEffects,
+    NoRegionArguments]> {
+  let summary = "aliasing domain scope for alias_scope annotations";
+  let description = [{
+    Defines a domain that will be associated with an alias scope for the ops
+    inside the region. In case of multiple nested `alias_domain_scope` ops the
+    innermost will take the precence.
+
+    Example:
+    ```
+    #alias_scope1 = #memref.alias_scope<id = distinct[0]<>, description = "scope">
+    #alias_scope2 = #memref.alias_scope<id = distinct[1]<>>
+
+    func.func @memref_alias_scope(%arg1 : memref<?xf32>, %arg2 : memref<?xf32>, %arg3: index) -> f32 {
+      %0 = memref.alias_domain_scope "The Domain" -> f32 {
+        %val = memref.load %arg1[%arg3] { alias = #memref.aliasing<alias_scopes=[#alias_scope1], noalias=[#alias_scope2]> } : memref<?xf32>
+        memref.store %val, %arg2[%arg3] { alias = #memref.aliasing<alias_scopes=[#alias_scope2], noalias=[#alias_scope1]> } : memref<?xf32>
+        memref.alias_domain_scope.return %val: f32
+      }
+      return %0 : f32
+    }
+    ```
+
+    The alias scopes are modeled against LLVM alias scopes, see the following
+    link for more details:
+    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
+  }];
+
+  let arguments = (ins OptionalAttr<StrAttr>:$description);
+  let results = (outs Variadic<AnyType>:$results);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat =
+      "( $description^ )? (`->` type($results)^)? $region attr-dict";
+
+  let extraClassDeclaration = [{
+    /// Inline op body into parent region and erase the op.
+    static void inlineIntoParent(RewriterBase &builder, AliasDomainScopeOp op);
+  }];
+}
+
+def MemRef_AliasDomainScopeReturnOp : MemRef_Op<"alias_domain_scope.return", [
+  Pure, ReturnLike, Terminator,
+  HasParent<"AliasDomainScopeOp">
+  ]> {
+
+  let summary = "terminator for alias_domain_scope operation";
+  let description = [{
+    `memref.alias_domain_scope.return` operation returns zero or more SSA values
+    from the region within `memref.alias_domain_scope`. If no values are returned,
+    the return operation may be omitted. Otherwise, it has to be present
+    to indicate which values are going to be returned. For example:
+
+    ```mlir
+    memref.alias_domain_scope.return %value
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($results^ `:` type($results))?";
 }
@@ -1195,7 +1269,8 @@ def LoadOp : MemRef_Op<"load",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+      DeclareOpInterfaceMethods<AliasAnalysisOpInterface>]> {
   let summary = "load operation";
   let description = [{
     The `load` op reads an element from a memref at the specified indices.
@@ -1220,8 +1295,14 @@ def LoadOp : MemRef_Op<"load",
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
     A value of 0 indicates no specific alignment requirement.
-    Example:
 
+    An optional `alias` attribute allows to specify the aliasing metadata for
+    the op and works in conjunction with `alias_domain_scope` op. If attribute
+    is missing op is assumed to potentially alias with any other load or store
+    op. Dropping this attribute during the transformations is safe and can only
+    result in missing optimizations.
+
+    Example:
     ```mlir
     %0 = memref.load %A[%a, %b] : memref<8x?xi32, #layout, memspace0>
     ```
@@ -1232,34 +1313,38 @@ def LoadOp : MemRef_Op<"load",
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
                        ConfinedAttr<OptionalAttr<I64Attr>,
-                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment,
+                       OptionalAttr<MemRef_AliasingAttr>:$alias);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>,
     OpBuilder<(ins "Type":$resultType,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, resultType, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>
   ];
 
@@ -1931,7 +2016,8 @@ def MemRef_StoreOp : MemRef_Op<"store",
                      "::llvm::cast<MemRefType>($_self).getElementType()">,
       MemRefsNormalizable,
       DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+      DeclareOpInterfaceMethods<AliasAnalysisOpInterface>]> {
   let summary = "store operation";
   let description = [{
     The `store` op stores an element into a memref at the specified indices.
@@ -1953,8 +2039,14 @@ def MemRef_StoreOp : MemRef_Op<"store",
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
     A value of 0 indicates no specific alignment requirement.
-    Example:
 
+    An optional `alias` attribute allows to specify the aliasing metadata for
+    the op and works in conjunction with `alias_domain_scope` op. If attribute
+    is missing op is assumed to potentially alias with any other load or store
+    op. Dropping this attribute during the transformations is safe and can only
+    result in missing optimizations.
+
+    Example:
     ```mlir
     memref.store %val, %A[%a, %b] : memref<8x?xi32, #layout, memspace0>
     ```
@@ -1966,17 +2058,19 @@ def MemRef_StoreOp : MemRef_Op<"store",
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
                        ConfinedAttr<OptionalAttr<I64Attr>,
-                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment,
+                       OptionalAttr<MemRef_AliasingAttr>:$alias);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"uint64_t", "0">:$alignment,
+                   CArg<"AliasingAttr", "nullptr">:$alias), [{
       return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
-                                    nullptr);
+                                    nullptr, alias);
     }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);
