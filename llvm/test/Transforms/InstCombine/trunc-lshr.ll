@@ -219,3 +219,77 @@ define i1 @negative_test_fold_ashr(i8 %x) {
   %trunc = trunc i8 %ashr to i1
   ret i1 %trunc
 }
+
+define i1 @fold_lshr_negated_power_of_2(i8 %x) {
+; CHECK-LABEL: define i1 @fold_lshr_negated_power_of_2(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %lshr = lshr i8 -16, %x
+  %trunc = trunc i8 %lshr to i1
+  ret i1 %trunc
+}
+
+define i1 @fold_ashr_negated_power_of_2(i8 %x) {
+; CHECK-LABEL: define i1 @fold_ashr_negated_power_of_2(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %ashr = ashr i8 -16, %x
+  %trunc = trunc i8 %ashr to i1
+  ret i1 %trunc
+}
+
+define i1 @fold_lshr_negated_power_of_2_multi_use(i8 %x) {
+; CHECK-LABEL: define i1 @fold_lshr_negated_power_of_2_multi_use(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 -16, [[X]]
+; CHECK-NEXT:    call void @use(i8 [[LSHR]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %lshr = lshr i8 -16, %x
+  call void @use(i8 %lshr)
+  %trunc = trunc i8 %lshr to i1
+  ret i1 %trunc
+}
+
+define i1 @fold_ashr_negated_power_of_2_multi_use(i8 %x) {
+; CHECK-LABEL: define i1 @fold_ashr_negated_power_of_2_multi_use(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 -16, [[X]]
+; CHECK-NEXT:    call void @use(i8 [[ASHR]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp ugt i8 [[X]], 3
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %ashr = ashr i8 -16, %x
+  call void @use(i8 %ashr)
+  %trunc = trunc i8 %ashr to i1
+  ret i1 %trunc
+}
+
+define i1 @negative_test_fold_lshr_negated_power_of_2(i8 %x) {
+; CHECK-LABEL: define i1 @negative_test_fold_lshr_negated_power_of_2(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 -17, [[X]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[LSHR]] to i1
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %lshr = lshr i8 -17, %x
+  %trunc = trunc i8 %lshr to i1
+  ret i1 %trunc
+}
+
+define i1 @negative_test_fold_ashr_negated_power_of_2(i8 %x) {
+; CHECK-LABEL: define i1 @negative_test_fold_ashr_negated_power_of_2(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[ASHR1:%.*]] = lshr i8 -17, [[X]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[ASHR1]] to i1
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %ashr = ashr i8 -17, %x
+  %trunc = trunc i8 %ashr to i1
+  ret i1 %trunc
+}
