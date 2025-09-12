@@ -31,8 +31,7 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-  const TargetRegisterClass *getPointerRegClass(const MachineFunction &MF,
-                                                unsigned Kind) const override;
+  const TargetRegisterClass *getPointerRegClass(unsigned Kind) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,

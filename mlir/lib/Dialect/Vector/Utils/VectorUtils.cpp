@@ -393,6 +393,41 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
   return success();
 }
 
+/// Takes a 2+ dimensional vector as an input
+/// returns n vector values produced by n vector.extract operations.
+/// I.e. calling unrollVectorValue([[%v]], rewriter) such that
+///
+///   %v : vector<nxaxb...>
+///
+/// will produce the following IR changes
+///
+///   %v0 = vector.extract %v[0] : vector<axbx...> from vector<nxaxb...>
+///   %v1 = vector.extract %v[1] : vector<axbx...> from vector<nxaxb...>
+///   ...
+///   %vnminusone = vector.extract %v[n-1] : vector<axbx...> from ...
+///
+/// and returns SmallVector<Value> r = {[[%v0]], [[%v1]], ..., [[%vnminusone]]}
+FailureOr<SmallVector<Value>>
+vector::unrollVectorValue(TypedValue<VectorType> vector,
+                          RewriterBase &rewriter) {
+  SmallVector<Value> subvectors;
+  VectorType ty = cast<VectorType>(vector.getType());
+  Location loc = vector.getLoc();
+  if (ty.getRank() < 2)
+    return rewriter.notifyMatchFailure(loc, "already 1-D");
+
+  // Unrolling doesn't take vscale into account. Pattern is disabled for
+  // vectors with leading scalable dim(s).
+  if (ty.getScalableDims().front())
+    return rewriter.notifyMatchFailure(loc, "cannot unroll scalable dim");
+
+  for (int64_t i = 0, e = ty.getShape().front(); i < e; ++i) {
+    subvectors.push_back(vector::ExtractOp::create(rewriter, loc, vector, i));
+  }
+
+  return subvectors;
+}
+
 LogicalResult vector::unrollVectorOp(Operation *op, PatternRewriter &rewriter,
                                      vector::UnrollVectorOpFn unrollFn) {
   assert(op->getNumResults() == 1 && "expected single result");

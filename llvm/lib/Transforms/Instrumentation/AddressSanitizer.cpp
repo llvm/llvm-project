@@ -1219,7 +1219,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
     std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());
     // Check that size is known and can be stored in IntptrTy.
-    if (!Size || !ConstantInt::isValueValidForType(IntptrTy, *Size))
+    // TODO: Add support for scalable vectors if possible.
+    if (!Size || Size->isScalable() ||
+        !ConstantInt::isValueValidForType(IntptrTy, *Size))
       return;
 
     bool DoPoison = (ID == Intrinsic::lifetime_end);
