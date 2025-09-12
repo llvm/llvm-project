@@ -365,6 +365,10 @@ LLVM_ABI bool setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
     std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt);
 
+// Return true if loop's estimated trip count based on branch weight metadata is
+// infinite, i.e. weight ratio is X:0.
+bool isInfiniteTripCount(Loop *L);
+
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially
 /// true.
