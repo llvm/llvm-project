@@ -6824,8 +6824,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
   MachineBasicBlock::iterator I = LoopBB.begin();
   Register CondReg;
-  int Idx = 0;
-  for (MachineOperand *ScalarOp : ScalarOps) {
+  for (auto [Idx, ScalarOp] : enumerate(ScalarOps)) {
     unsigned RegSize = TRI->getRegSizeInBits(ScalarOp->getReg(), MRI);
     unsigned NumSubRegs = RegSize / 32;
     Register VScalarOp = ScalarOp->getReg();
@@ -6943,7 +6942,6 @@ static void emitLoadScalarOpsFromVGPRLoop(
       }
       ScalarOp->setIsKill();
     }
-    Idx++;
   }
 
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
