@@ -21,6 +21,7 @@
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if LIBC_HAS_VECTOR_TYPE
@@ -242,7 +243,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  __builtin_memcpy(dst, src, n);
+  inline_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }
