@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs < %s | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32f -mattr=+f,+zbs,+xventanacondops < %s | FileCheck %s -check-prefix=RV32XVENTANACONDOPS
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+xventanacondops < %s | FileCheck %s -check-prefix=RV64XVENTANACONDOPS
-; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+xtheadcondmov < %s | FileCheck %s -check-prefix=RV64XTHEADCONDMOV
+; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+xtheadbs,+xtheadcondmov < %s | FileCheck %s -check-prefix=RV64XTHEADCONDMOV
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32f -mattr=+f,+zbs,+zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64f -mattr=+f,+zbs,+zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
 
@@ -126,7 +126,7 @@ define i64 @zero_singlebit1(i64 %rs1, i64 %rs2) {
 ;
 ; RV64XTHEADCONDMOV-LABEL: zero_singlebit1:
 ; RV64XTHEADCONDMOV:       # %bb.0:
-; RV64XTHEADCONDMOV-NEXT:    bexti a1, a1, 12
+; RV64XTHEADCONDMOV-NEXT:    th.tst a1, a1, 12
 ; RV64XTHEADCONDMOV-NEXT:    th.mvnez a0, zero, a1
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
@@ -179,9 +179,8 @@ define i64 @zero_singlebit2(i64 %rs1, i64 %rs2) {
 ;
 ; RV64XTHEADCONDMOV-LABEL: zero_singlebit2:
 ; RV64XTHEADCONDMOV:       # %bb.0:
-; RV64XTHEADCONDMOV-NEXT:    slli a1, a1, 51
-; RV64XTHEADCONDMOV-NEXT:    srai a1, a1, 63
-; RV64XTHEADCONDMOV-NEXT:    and a0, a1, a0
+; RV64XTHEADCONDMOV-NEXT:    th.tst a1, a1, 12
+; RV64XTHEADCONDMOV-NEXT:    th.mveqz a0, zero, a1
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
 ; RV32ZICOND-LABEL: zero_singlebit2:
@@ -4297,9 +4296,8 @@ define i64 @single_bit(i64 %x) {
 ;
 ; RV64XTHEADCONDMOV-LABEL: single_bit:
 ; RV64XTHEADCONDMOV:       # %bb.0: # %entry
-; RV64XTHEADCONDMOV-NEXT:    slli a1, a0, 53
-; RV64XTHEADCONDMOV-NEXT:    srai a1, a1, 63
-; RV64XTHEADCONDMOV-NEXT:    and a0, a1, a0
+; RV64XTHEADCONDMOV-NEXT:    andi a1, a0, 1024
+; RV64XTHEADCONDMOV-NEXT:    th.mveqz a0, zero, a1
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
 ; RV32ZICOND-LABEL: single_bit:
@@ -4353,9 +4351,8 @@ define i64 @single_bit2(i64 %x) {
 ;
 ; RV64XTHEADCONDMOV-LABEL: single_bit2:
 ; RV64XTHEADCONDMOV:       # %bb.0: # %entry
-; RV64XTHEADCONDMOV-NEXT:    slli a1, a0, 52
-; RV64XTHEADCONDMOV-NEXT:    srai a1, a1, 63
-; RV64XTHEADCONDMOV-NEXT:    and a0, a1, a0
+; RV64XTHEADCONDMOV-NEXT:    th.tst a1, a0, 11
+; RV64XTHEADCONDMOV-NEXT:    th.mveqz a0, zero, a1
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
 ; RV32ZICOND-LABEL: single_bit2:
