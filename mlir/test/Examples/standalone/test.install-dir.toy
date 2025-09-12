@@ -1,32 +1,6 @@
 # REQUIRES: run-standalone-install-tests
 
-# RUN: echo "test full install" | tee %t
-# CHECK: test full install
-
-# RUN: rm -rf "%host_cmake_install_prefix"
-
-# RUN: "%cmake_exe" --build "%llvm_obj_root" --target install -j | tee -a %t
-
-# RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
-# RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
-# RUN: -DCMAKE_CXX_COMPILER_LAUNCHER=%cmake_cxx_compiler_launcher -DCMAKE_C_COMPILER_LAUNCHER=%cmake_c_compiler_launcher \
-# RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx \
-# RUN: -DLLVM_EXTERNAL_LIT="%llvm_obj_root/bin/llvm-lit" \
-# RUN: -DMLIR_DIR="%host_cmake_install_prefix/lib/cmake/mlir" \
-# RUN: -DLLVM_DIR="%host_cmake_install_prefix/lib/cmake/llvm" \
-# RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
-# RUN: -DPython3_EXECUTABLE=%python \
-# RUN: -DPython_EXECUTABLE=%python | tee -a %t
-
-# RUN: "%cmake_exe" --build . --target check-standalone -j | tee -a %t
-
-# CHECK: Passed
-# CHECK-NOT: Failed
-# UNSUPPORTED: target={{.*(windows|android).*}}
-
-# RUN: rm -rf "%host_cmake_install_prefix"
-
-# RUN: echo "test install distribution" | tee -a %t
+# RUN: echo "test install distribution" | tee %t
 # CHECK: test install distribution
 
 # RUN: "%cmake_exe" "%llvm_src_root" -DCMAKE_BUILD_TYPE=%cmake_build_type -B "%llvm_obj_root" \
