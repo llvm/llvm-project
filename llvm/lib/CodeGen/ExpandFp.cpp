@@ -979,14 +979,22 @@ static RTLIB::Libcall fremToLibcall(Type *Ty) {
   llvm_unreachable("Unknown floating point type");
 }
 
-/* Return true if, according to \p LibInfo, the target either directly
-   supports the frem instruction for the \p Ty, has a custom lowering,
-   or uses a libcall. */
-static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
-  if (!TLI.isOperationExpand(ISD::FREM, EVT::getEVT(Ty)))
-    return true;
+/// Return true if the pass should expand a "frem" instruction of the
+/// given \p Ty for the target represented by \p TLI. Expansion
+/// should happen if the legalization for the scalar type uses a
+/// non-existing libcall. The scalar type is considered because it is
+/// easier to do so and it is highly unlikely that a vector type can
+/// be legalized without a libcall if the scalar type cannot.
+static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
+  Type *ScalarTy = Ty->getScalarType();
+  EVT VT = EVT::getEVT(ScalarTy);
 
-  return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
+  TargetLowering::LegalizeAction LA = TLI.getOperationAction(ISD::FREM, VT);
+  if (LA != TargetLowering::LegalizeAction::LibCall)
+    return false;
+
+  bool MissingLibcall = !TLI.getLibcallName(fremToLibcall(ScalarTy));
+  return MissingLibcall && FRemExpander::canExpandType(ScalarTy);
 }
 
 static bool runImpl(Function &F, const TargetLowering &TLI,
@@ -1000,8 +1008,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
-  if (MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS)
-    return false;
+  bool TargetSkipExpandLargeFp =
+      MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
 
   for (auto &I : instructions(F)) {
     switch (I.getOpcode()) {
@@ -1011,8 +1019,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (Ty->isScalableTy())
         continue;
 
-      if (targetSupportsFrem(TLI, Ty) ||
-          !FRemExpander::canExpandType(Ty->getScalarType()))
+      if (!shouldExpandFremType(TLI, Ty))
         continue;
 
       Replace.push_back(&I);
@@ -1022,6 +1029,9 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
+      if (TargetSkipExpandLargeFp)
+        continue;
+
       // TODO: This pass doesn't handle scalable vectors.
       if (I.getOperand(0)->getType()->isScalableTy())
         continue;
@@ -1039,6 +1049,9 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
     case Instruction::UIToFP:
     case Instruction::SIToFP: {
+      if (TargetSkipExpandLargeFp)
+        continue;
+
       // TODO: This pass doesn't handle scalable vectors.
       if (I.getOperand(0)->getType()->isScalableTy())
         continue;
