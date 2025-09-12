@@ -10,7 +10,7 @@
 # CHECK-DAG: UNRESOLVED: ignore-fail :: unresolved.txt
 # CHECK-DAG: XPASS: ignore-fail :: xpass.txt
 
-#      CHECK: Testing Time:
+# CHECK: Testing Time:
 # CHECK: Total Discovered Tests:
 # CHECK-NEXT:   Excluded : 2 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NEXT:   Unresolved : 1 {{\([0-9]*\.[0-9]*%\)}}
