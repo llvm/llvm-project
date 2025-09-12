@@ -17,51 +17,67 @@
 
 #include <cassert>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace llvm {
 
-template <typename T, T Sentinel> class ValueOrSentinel {
-public:
-  ValueOrSentinel() = default;
+namespace detail {
+/// An adjustment allows changing how the value is stored. An example use case
+/// is to use zero as a sentinel value.
+template <typename T> struct DefaultValueAdjustment {
+  constexpr static T toRepresentation(T Value) { return Value; }
+  constexpr static T fromRepresentation(T Value) { return Value; }
+};
+} // namespace detail
 
-  ValueOrSentinel(T Value) : Value(std::move(Value)) {
-    assert(Value != Sentinel && "Value is sentinel (use default constructor)");
+template <typename T, T Sentinel,
+          typename Adjust = detail::DefaultValueAdjustment<T>>
+class ValueOrSentinel {
+public:
+  constexpr ValueOrSentinel() = default;
+  constexpr ValueOrSentinel(std::nullopt_t){};
+
+  constexpr ValueOrSentinel(T Value) : Value(Adjust::toRepresentation(Value)) {
+    assert(this->Value != Sentinel &&
+           "Value is sentinel (use default constructor)");
   };
 
-  ValueOrSentinel &operator=(const T &NewValue) {
-    assert(NewValue != Sentinel && "NewValue is sentinel (use .clear())");
-    Value = NewValue;
+  constexpr ValueOrSentinel &operator=(T NewValue) {
+    Value = Adjust::toRepresentation(NewValue);
+    assert(Value != Sentinel && "NewValue is sentinel (use .clear())");
     return *this;
   }
 
-  bool operator==(const ValueOrSentinel &Other) const {
+  constexpr bool operator==(ValueOrSentinel Other) const {
     return Value == Other.Value;
   }
 
-  bool operator!=(const ValueOrSentinel &Other) const {
+  constexpr bool operator!=(ValueOrSentinel Other) const {
     return !(*this == Other);
   }
 
-  T &value() {
+  T value() const {
     assert(has_value() && ".value() called on sentinel");
-    return Value;
+    return Adjust::fromRepresentation(Value);
   }
-  const T &value() const {
-    return const_cast<ValueOrSentinel &>(*this).value();
-  }
-
-  T &operator*() { return value(); }
-  const T &operator*() const { return value(); }
+  T operator*() const { return value(); }
 
   bool has_value() const { return Value != Sentinel; }
 
-  explicit operator bool() const { return has_value(); }
   explicit operator T() const { return value(); }
+  explicit constexpr operator bool() const { return has_value(); }
 
-  void clear() { Value = Sentinel; }
+  constexpr void clear() { Value = Sentinel; }
 
-private:
+  constexpr static ValueOrSentinel fromInternalRepresentation(unsigned Value) {
+    return {std::nullopt, Value};
+  }
+  constexpr T toInternalRepresentation() const { return Value; }
+
+protected:
+  ValueOrSentinel(std::nullopt_t, T Value) : Value(Value){};
+
   T Value{Sentinel};
 };
 
