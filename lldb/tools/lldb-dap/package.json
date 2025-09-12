@@ -409,7 +409,7 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `{ \"FOO\": \"1\" }`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
                     "patternProperties": {
                       ".*": {
                         "type": "string"
@@ -419,7 +419,7 @@
                   },
                   {
                     "type": "array",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `[\"FOO=1\", \"BAR\"]`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
                     "items": {
                       "type": "string",
                       "pattern": "^\\w+(=.*)?$"
@@ -676,7 +676,7 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `{ \"FOO\": \"1\" }`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
                     "patternProperties": {
                       ".*": {
                         "type": "string"
@@ -686,7 +686,7 @@
                   },
                   {
                     "type": "array",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `[\"FOO=1\", \"BAR\"]`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
                     "items": {
                       "type": "string",
                       "pattern": "^\\w+(=.*)?$"
