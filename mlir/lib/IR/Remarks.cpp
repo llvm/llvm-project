@@ -248,17 +248,56 @@ RemarkEngine::initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
   return success();
 }
 
+/// Returns true if filter is already anchored like ^...$
+static bool isAnchored(llvm::StringRef s) {
+  s = s.trim();
+  return s.starts_with("^") && s.ends_with("$"); // note: startswith/endswith
+}
+
+/// Anchor the entire pattern so it matches the whole string.
+static std::string anchorWhole(llvm::StringRef filter) {
+  if (isAnchored(filter))
+    return filter.str();
+  return (llvm::Twine("^(") + filter + ")$").str();
+}
+
+/// Build a combined filter from cats.all and a category-specific pattern.
+/// If neither is present, return std::nullopt. Otherwise "(all|specific)"
+/// and anchor once. Also validate before returning.
+static std::optional<llvm::Regex>
+buildFilter(const mlir::remark::RemarkCategories &cats,
+            const std::optional<std::string> &specific) {
+  llvm::SmallVector<llvm::StringRef, 2> parts;
+  if (cats.all && !cats.all->empty())
+    parts.emplace_back(*cats.all);
+  if (specific && !specific->empty())
+    parts.emplace_back(*specific);
+
+  if (parts.empty())
+    return std::nullopt;
+
+  std::string joined = llvm::join(parts, "|");
+  std::string anchored = anchorWhole(joined);
+
+  llvm::Regex rx(anchored);
+  std::string err;
+  if (!rx.isValid(err))
+    return std::nullopt;
+
+  return rx;
+}
+
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
                            const RemarkCategories &cats)
     : printAsEmitRemarks(printAsEmitRemarks) {
   if (cats.passed)
-    passedFilter = llvm::Regex(cats.passed.value());
+    passedFilter = buildFilter(cats, cats.passed);
   if (cats.missed)
-    missFilter = llvm::Regex(cats.missed.value());
+    missFilter = buildFilter(cats, cats.missed);
   if (cats.analysis)
-    analysisFilter = llvm::Regex(cats.analysis.value());
+    analysisFilter = buildFilter(cats, cats.analysis);
   if (cats.failed)
-    failedFilter = llvm::Regex(cats.failed.value());
+    failedFilter = buildFilter(cats, cats.failed);
 }
 
 llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
