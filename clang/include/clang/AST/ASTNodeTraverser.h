@@ -620,6 +620,11 @@ public:
       Visit(E);
   }
 
+  void VisitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *D) {
+    for (const auto *E : D->varlist())
+      Visit(E);
+  }
+
   void VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
     Visit(D->getCombiner());
     if (const auto *Initializer = D->getInitializer())

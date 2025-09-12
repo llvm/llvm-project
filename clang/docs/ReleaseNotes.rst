@@ -517,6 +517,7 @@ OpenMP Support
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
+- Added parsing and semantic analysis support for ``groupprivate`` directive.
 
 Improvements
 ^^^^^^^^^^^^
