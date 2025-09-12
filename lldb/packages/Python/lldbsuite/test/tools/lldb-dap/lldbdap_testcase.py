@@ -21,6 +21,7 @@ class DAPTestCaseBase(TestBase):
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         connection: Optional[str] = None,
+        additional_args: Optional[list[str]] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
@@ -33,15 +34,17 @@ class DAPTestCaseBase(TestBase):
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
+            additional_args=additional_args or [],
         )
 
     def build_and_create_debug_adapter(
         self,
         lldbDAPEnv: Optional[dict[str, str]] = None,
         dictionary: Optional[dict] = None,
+        additional_args: Optional[list[str]] = None,
     ):
         self.build(dictionary=dictionary)
-        self.create_debug_adapter(lldbDAPEnv)
+        self.create_debug_adapter(lldbDAPEnv, additional_args=additional_args)
 
     def build_and_create_debug_adapter_for_attach(self):
         """Variant of build_and_create_debug_adapter that builds a uniquely
@@ -238,6 +241,13 @@ class DAPTestCaseBase(TestBase):
                 f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
 
+    def verify_invalidated_event(self, expected_areas):
+        event = self.dap_server.invalidated_event
+        self.dap_server.invalidated_event = None
+        self.assertIsNotNone(event)
+        areas = event["body"].get("areas", [])
+        self.assertEqual(set(expected_areas), set(areas))
+
     def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
@@ -349,13 +359,20 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
+    def set_variable(self, varRef, name, value, id=None):
+        """Set a variable."""
+        response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+        if response["success"]:
+            self.verify_invalidated_event(["variables"])
+        return response
+
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.dap_server.request_setVariable(1, name, str(value), id=id)
+        return self.set_variable(1, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.dap_server.request_setVariable(2, name, str(value), id=id)
+        return self.set_variable(2, name, str(value), id=id)
 
     def stepIn(
         self,
@@ -450,6 +467,25 @@ class DAPTestCaseBase(TestBase):
 
         return disassembled_instructions, disassembled_instructions[memoryReference]
 
+    def _build_error_message(self, base_message, response):
+        """Build a detailed error message from a DAP response.
+        Extracts error information from various possible locations in the response structure.
+        """
+        error_msg = base_message
+        if response:
+            if "message" in response:
+                error_msg += " (%s)" % response["message"]
+            elif "body" in response and "error" in response["body"]:
+                if "format" in response["body"]["error"]:
+                    error_msg += " (%s)" % response["body"]["error"]["format"]
+                else:
+                    error_msg += " (error in body)"
+            else:
+                error_msg += " (no error details available)"
+        else:
+            error_msg += " (no response)"
+        return error_msg
+
     def attach(
         self,
         *,
@@ -477,9 +513,8 @@ class DAPTestCaseBase(TestBase):
         if expectFailure:
             return response
         if not (response and response["success"]):
-            self.assertTrue(
-                response["success"], "attach failed (%s)" % (response["message"])
-            )
+            error_msg = self._build_error_message("attach failed", response)
+            self.assertTrue(response and response["success"], error_msg)
 
     def launch(
         self,
@@ -508,10 +543,8 @@ class DAPTestCaseBase(TestBase):
         if expectFailure:
             return response
         if not (response and response["success"]):
-            self.assertTrue(
-                response["success"],
-                "launch failed (%s)" % (response["body"]["error"]["format"]),
-            )
+            error_msg = self._build_error_message("launch failed", response)
+            self.assertTrue(response and response["success"], error_msg)
 
     def build_and_launch(
         self,
@@ -558,4 +591,6 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_writeMemory(
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )
+        if response["success"]:
+            self.verify_invalidated_event(["all"])
         return response

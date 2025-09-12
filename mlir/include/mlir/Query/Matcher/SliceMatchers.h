@@ -36,7 +36,7 @@
 ///              9
 ///
 /// Assuming all local orders match the numbering order:
-///     {5, 7, 6, 8, 9}
+///     {1, 5, 6, 7, 8, 9}
 namespace mlir::query::matcher {
 
 template <typename Matcher>

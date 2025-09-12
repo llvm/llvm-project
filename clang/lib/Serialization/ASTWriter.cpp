@@ -659,18 +659,6 @@ void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 
-void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
-       DependentTemplateSpecializationTypeLoc TL) {
-  addSourceLocation(TL.getElaboratedKeywordLoc());
-  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
-  addSourceLocation(TL.getTemplateKeywordLoc());
-  addSourceLocation(TL.getTemplateNameLoc());
-  addSourceLocation(TL.getLAngleLoc());
-  addSourceLocation(TL.getRAngleLoc());
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I));
-}
-
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   addSourceLocation(TL.getEllipsisLoc());
 }
@@ -1058,7 +1046,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_TEMPLATE_SPECIALIZATION);
   RECORD(TYPE_DEPENDENT_NAME);
-  RECORD(TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION);
   RECORD(TYPE_DEPENDENT_SIZED_ARRAY);
   RECORD(TYPE_PAREN);
   RECORD(TYPE_MACRO_QUALIFIED);
@@ -1710,9 +1697,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
+  SmallString<256> HSOpts_ModuleCachePath;
+  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
+                           HSOpts_ModuleCachePath);
+
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
-  AddString(HSOpts.ModuleCachePath, Record);
+  AddString(HSOpts_ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
   Record.push_back(HSOpts.DisableModuleHash);
   Record.push_back(HSOpts.ImplicitModuleMaps);
@@ -8547,6 +8538,7 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
+  VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getMessageString());
   Record.AddSourceLocation(C->getLParenLoc());
 }
@@ -8750,8 +8742,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
 
-    for (VarDecl *VD : PC->getInitRecipes())
-      AddDeclRef(VD);
+    for (const OpenACCPrivateRecipe &R : PC->getInitRecipes()) {
+      static_assert(sizeof(R) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
+    }
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8772,7 +8767,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
 
     for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(R) == 3 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
       AddDeclRef(R.InitFromTemporary);
     }
     return;
@@ -8894,8 +8891,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(RC);
 
     for (const OpenACCReductionRecipe &R : RC->getRecipes()) {
-      static_assert(sizeof(OpenACCReductionRecipe) == sizeof(int *));
-      AddDeclRef(R.RecipeDecl);
+      static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
+      AddDeclRef(R.AllocaDecl);
+      AddStmt(const_cast<Expr *>(R.InitExpr));
     }
     return;
   }

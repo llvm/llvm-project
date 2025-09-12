@@ -61,7 +61,7 @@ public:
     SourceLocation Loc = TL.getNameLoc();
     TypedefNameDecl *ND = TL.getDecl();
     if (ND->isTransparentTag()) {
-      TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
+      auto *Underlying = ND->getUnderlyingType()->castAsTagDecl();
       return IndexCtx.handleReference(Underlying, Loc, Parent,
                                       ParentDC, SymbolRoleSet(), Relations);
     }

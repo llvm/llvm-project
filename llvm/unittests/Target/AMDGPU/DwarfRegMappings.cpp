@@ -44,6 +44,9 @@ TEST(AMDGPU, TestWave64DwarfRegMapping) {
              {AMDGPU::VGPR1_LO16, AMDGPU::AGPR1_HI16, AMDGPU::SGPR1_HI16}) {
           EXPECT_EQ(MRI->getDwarfRegNum(LLSubReg, false), -1);
         }
+
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511, false), 3071);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512, false), -1);
       }
     }
   }
@@ -81,6 +84,15 @@ TEST(AMDGPU, TestWave32DwarfRegMapping) {
              {AMDGPU::VGPR1_LO16, AMDGPU::AGPR1_HI16, AMDGPU::SGPR1_HI16}) {
           EXPECT_EQ(MRI->getDwarfRegNum(LLSubReg, false), -1);
         }
+
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511, false), 2047);
+        EXPECT_EQ(MRI->getLLVMRegNum(2047, false), AMDGPU::VGPR511);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512, false), 3584);
+        EXPECT_EQ(MRI->getLLVMRegNum(3584, false), AMDGPU::VGPR512);
+
+        // Verify that subregisters have no dwarf encoding.
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511_LO16, false), -1);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512_LO16, false), -1);
       }
     }
   }
