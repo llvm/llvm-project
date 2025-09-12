@@ -66,7 +66,7 @@ static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 }
 
 static inline uptr MaybeRealWcsnlen(const wchar_t *s, uptr maxlen) {
-#if SANITIZER_INTERCEPT_STRNLEN
+#if SANITIZER_INTERCEPT_WCSLEN
   if (REAL(wcsnlen)) {
     return REAL(wcsnlen)(s, maxlen);
   }
