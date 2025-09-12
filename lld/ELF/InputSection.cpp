@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <optional>

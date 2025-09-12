@@ -5113,10 +5113,7 @@ void SemaCodeCompletion::CodeCompleteExpression(
     PreferredTypeIsPointer = Data.PreferredType->isAnyPointerType() ||
                              Data.PreferredType->isMemberPointerType() ||
                              Data.PreferredType->isBlockPointerType();
-    if (Data.PreferredType->isEnumeralType()) {
-      EnumDecl *Enum = Data.PreferredType->castAs<EnumType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+    if (auto *Enum = Data.PreferredType->getAsEnumDecl()) {
       // FIXME: collect covered enumerators in cases like:
       //        if (x == my_enum::one) { ... } else if (x == ^) {}
       AddEnumerators(Results, getASTContext(), Enum, SemaRef.CurContext,
@@ -6240,17 +6237,13 @@ void SemaCodeCompletion::CodeCompleteCase(Scope *S) {
   if (!Switch->getCond())
     return;
   QualType type = Switch->getCond()->IgnoreImplicit()->getType();
-  if (!type->isEnumeralType()) {
+  EnumDecl *Enum = type->getAsEnumDecl();
+  if (!Enum) {
     CodeCompleteExpressionData Data(type);
     Data.IntegralConstantExpression = true;
     CodeCompleteExpression(S, Data);
     return;
   }
-
-  // Code-complete the cases of a switch statement over an enumeration type
-  // by providing the list of
-  EnumDecl *Enum =
-      type->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
 
   // Determine which enumerators we have already seen in the switch statement.
   // FIXME: Ideally, we would also be able to look *past* the code-completion

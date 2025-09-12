@@ -629,6 +629,17 @@ public:
     return StoredDiagnostics.end();
   }
 
+  using diags_range = llvm::iterator_range<stored_diag_iterator>;
+  using const_diags_range = llvm::iterator_range<stored_diag_const_iterator>;
+
+  diags_range storedDiagnostics() {
+    return {stored_diag_begin(), stored_diag_end()};
+  }
+
+  const_diags_range storedDiagnostics() const {
+    return {stored_diag_begin(), stored_diag_end()};
+  }
+
   unsigned stored_diag_size() const { return StoredDiagnostics.size(); }
 
   stored_diag_iterator stored_diag_afterDriver_begin() {
