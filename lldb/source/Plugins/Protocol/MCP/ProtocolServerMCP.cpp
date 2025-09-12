@@ -66,7 +66,7 @@ void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
 
 void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
   Log *log = GetLog(LLDBLog::Host);
-  std::string client_name = llvm::formatv("client_{0}", m_instances.size() + 1);
+  std::string client_name = llvm::formatv("client_{0}", ++m_client_count);
   LLDB_LOG(log, "New MCP client connected: {0}", client_name);
 
   lldb::IOObjectSP io_sp = std::move(socket);
@@ -74,16 +74,26 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
       io_sp, io_sp, [client_name](llvm::StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "{0}: {1}", client_name, message);
       });
+  MCPTransport *transport_ptr = transport_up.get();
   auto instance_up = std::make_unique<lldb_protocol::mcp::Server>(
-      std::string(kName), std::string(kVersion), std::move(transport_up),
-      m_loop);
+      std::string(kName), std::string(kVersion), *transport_up,
+      /*log_callback=*/
+      [client_name](llvm::StringRef message) {
+        LLDB_LOG(GetLog(LLDBLog::Host), "{0} Server: {1}", client_name,
+                 message);
+      },
+      /*closed_callback=*/
+      [this, transport_ptr]() { m_instances.erase(transport_ptr); });
   Extend(*instance_up);
-  llvm::Error error = instance_up->Run();
-  if (error) {
-    LLDB_LOG_ERROR(log, std::move(error), "Failed to run MCP server: {0}");
+  llvm::Expected<MainLoop::ReadHandleUP> handle =
+      transport_up->RegisterMessageHandler(m_loop, *instance_up);
+  if (!handle) {
+    LLDB_LOG_ERROR(log, handle.takeError(), "Failed to run MCP server: {0}");
     return;
   }
-  m_instances.push_back(std::move(instance_up));
+  m_instances[transport_ptr] =
+      std::make_tuple<ServerUP, ReadHandleUP, TransportUP>(
+          std::move(instance_up), std::move(*handle), std::move(transport_up));
 }
 
 llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
