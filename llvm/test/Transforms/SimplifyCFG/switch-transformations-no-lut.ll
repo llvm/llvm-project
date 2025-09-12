@@ -401,6 +401,62 @@ end:
   ret i32 %idx
 }
 
+define i1 @single_value_with_mask(i32 %x) {
+; OPTNOLUT-LABEL: define i1 @single_value_with_mask(
+; OPTNOLUT-SAME: i32 [[X:%.*]]) {
+; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
+; OPTNOLUT-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[X]], 16
+; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 33
+; OPTNOLUT-NEXT:    br i1 [[TMP0]], label %[[SWITCH_HOLE_CHECK:.*]], label %[[DEFAULT:.*]]
+; OPTNOLUT:       [[DEFAULT]]:
+; OPTNOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
+; OPTNOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
+; OPTNOLUT-NEXT:    br label %[[END:.*]]
+; OPTNOLUT:       [[SWITCH_HOLE_CHECK]]:
+; OPTNOLUT-NEXT:    [[SWITCH_MASKINDEX:%.*]] = zext i32 [[SWITCH_TABLEIDX]] to i64
+; OPTNOLUT-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i64 4294967333, [[SWITCH_MASKINDEX]]
+; OPTNOLUT-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i64 [[SWITCH_SHIFTED]] to i1
+; OPTNOLUT-NEXT:    br i1 [[SWITCH_LOBIT]], label %[[END]], label %[[DEFAULT]]
+; OPTNOLUT:       [[END]]:
+; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ [[SEL]], %[[DEFAULT]] ], [ false, %[[SWITCH_HOLE_CHECK]] ]
+; OPTNOLUT-NEXT:    ret i1 [[RES]]
+;
+; TTINOLUT-LABEL: define i1 @single_value_with_mask(
+; TTINOLUT-SAME: i32 [[X:%.*]]) {
+; TTINOLUT-NEXT:  [[ENTRY:.*]]:
+; TTINOLUT-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[X]], 16
+; TTINOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 33
+; TTINOLUT-NEXT:    [[SWITCH_MASKINDEX:%.*]] = zext i32 [[SWITCH_TABLEIDX]] to i64
+; TTINOLUT-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i64 4294967333, [[SWITCH_MASKINDEX]]
+; TTINOLUT-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i64 [[SWITCH_SHIFTED]] to i1
+; TTINOLUT-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_LOBIT]], i1 false
+; TTINOLUT-NEXT:    br i1 [[OR_COND]], label %[[END:.*]], label %[[DEFAULT:.*]]
+; TTINOLUT:       [[DEFAULT]]:
+; TTINOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
+; TTINOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
+; TTINOLUT-NEXT:    br label %[[END]]
+; TTINOLUT:       [[END]]:
+; TTINOLUT-NEXT:    [[RES:%.*]] = phi i1 [ [[SEL]], %[[DEFAULT]] ], [ false, %[[ENTRY]] ]
+; TTINOLUT-NEXT:    ret i1 [[RES]]
+;
+entry:
+  switch i32 %x, label %default [
+  i32 18, label %end
+  i32 21, label %end
+  i32 48, label %end
+  i32 16, label %end
+  ]
+
+default:
+  %cmp = icmp eq i32 %x, 80
+  %sel = select i1 %cmp, i1 false, i1 true
+  br label %end
+
+end:
+  %res = phi i1 [ false, %entry ], [ false, %entry ], [ false, %entry ], [ false, %entry ], [ %sel, %default ]
+  ret i1 %res
+}
+
 define i32 @lookup_table(i32 %x) {
 ; OPTNOLUT-LABEL: define i32 @lookup_table(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
