@@ -2008,7 +2008,7 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   // Z = Op A
   // Where Op is such that we can ignore sign of 0 in fadd
   Value *A;
-  if (match(&I, m_OneUse(m_c_FAdd(m_Value(A), m_AnyZeroFP()))) &&
+  if (match(&I, m_OneUse(m_FAdd(m_Value(A), m_AnyZeroFP()))) &&
       canIgnoreSignBitOfZero(*I.use_begin()))
     return replaceInstUsesWith(I, A);
 
