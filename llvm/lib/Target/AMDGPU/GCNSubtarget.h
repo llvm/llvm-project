@@ -252,7 +252,6 @@ protected:
   bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
   bool HasSafeCUPrefetch = false;
-  bool HasCUStores = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -1016,8 +1015,6 @@ public:
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
   bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
-
-  bool hasCUStores() const { return HasCUStores; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1835,6 +1832,13 @@ public:
   bool hasScratchBaseForwardingHazard() const {
     return GFX1250Insts && getGeneration() == GFX12;
   }
+
+  /// \returns true if the subtarget supports clusters of workgroups.
+  bool hasClusters() const { return GFX1250Insts; }
+
+  /// \returns true if the subtarget requires a wait for xcnt before atomic
+  /// flat/global stores & rmw.
+  bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts; }
 };
 
 class GCNUserSGPRUsageInfo {
