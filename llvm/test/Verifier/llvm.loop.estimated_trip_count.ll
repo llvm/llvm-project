@@ -26,36 +26,43 @@ exit:
 
 ; No value.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count"}' >> %t
 ; RUN: not %{RUN} TOO-FEW
 
 ; i16 value.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i16 5}' >> %t
 ; RUN: %{RUN} GOOD
 
 ; i32 value.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i32 5}' >> %t
 ; RUN: %{RUN} GOOD
 
 ; i64 value.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i64 5}' >> %t
 ; RUN: not %{RUN} BAD-VALUE
 
 ; MDString value.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", !"5"}' >> %t
 ; RUN: not %{RUN} BAD-VALUE
 
 ; MDNode value.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", !2}' >> %t
 ; RUN: echo '!2 = !{i32 5}' >> %t
 ; RUN: not %{RUN} BAD-VALUE
 
 ; Too many values.
 ; RUN: cp %s %t
+; RUN: chmod u+w %t
 ; RUN: echo '!1 = !{!"llvm.loop.estimated_trip_count", i32 5, i32 5}' >> %t
 ; RUN: not %{RUN} TOO-MANY
