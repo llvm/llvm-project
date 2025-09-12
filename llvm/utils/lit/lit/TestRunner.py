@@ -899,14 +899,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
-            # In Python 2.x, basestring is the base class for all string (including unicode)
-            # In Python 3.x, basestring no longer exist and str is always unicode
-            try:
-                str_type = basestring
-            except NameError:
-                str_type = str
             for i, arg in enumerate(args):
-                if isinstance(arg, str_type) and kDevNull in arg:
+                if isinstance(arg, str) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
