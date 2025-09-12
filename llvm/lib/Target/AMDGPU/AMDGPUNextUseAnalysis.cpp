@@ -126,9 +126,9 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           }
         }
         LLVM_DEBUG(dbgs() << "\nCurr:";
-                   printVregDistances(Curr, EntryOff[MBBNum]);
+                   printVregDistances(Curr /*, 0 - we're at the block bottom*/);
                    dbgs() << "\nSucc:";
-                   printVregDistances(SuccDist, EntryOff[SuccNum]));
+                   printVregDistances(SuccDist, EntryOff[SuccNum], EdgeWeight));
 
         Curr.merge(SuccDist, EntryOff[SuccNum], EdgeWeight);
         LLVM_DEBUG(dbgs() << "\nCurr after merge:"; printVregDistances(Curr));
@@ -182,8 +182,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         ++Offset;
       }
 
-      if (Offset > 0)
-        --Offset;
+      // EntryOff needs the TOTAL instruction count for correct predecessor distances
+      // while InstrOffset uses individual instruction offsets for materialization
 
       LLVM_DEBUG(dbgs() << "\nFinal distances for MBB_" << MBB->getNumber()
                         << "." << MBB->getName() << "\n";
@@ -201,7 +201,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       Changed |= Changed4MBB;
     }
   }
-  dumpUsedInBlock();
+  // dumpUsedInBlock();
   // Dump complete analysis results for testing
   LLVM_DEBUG(dumpAllNextUseDistances(MF));
   T1->stopTimer();
@@ -409,7 +409,8 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
       if (Info.InstrDist.contains(&MI)) {
         const VRegDistances &Dists = Info.InstrDist.at(&MI);
         const unsigned SnapOff = Info.InstrOffset.lookup(&MI); // 0 if absent
-        const bool Any = printVregDistances(Dists, SnapOff, dbgs(), "      ");
+        const bool Any =
+            printVregDistances(Dists, SnapOff, 0, dbgs(), "      ");
         if (!Any)
           LLVM_DEBUG(dbgs() << "      (no register uses)\n");
       } else {
@@ -420,8 +421,8 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
 
     // Block-end dump (materialized with offset = 0).
     LLVM_DEBUG(dbgs() << "  Block End Distances:\n");
-    const bool AnyEnd =
-        printVregDistances(Info.Bottom, /*SnapshotOffset=*/0, dbgs(), "    ");
+    const bool AnyEnd = printVregDistances(Info.Bottom, /*SnapshotOffset=*/0,
+                                           /* EdgeWeight */ 0, dbgs(), "    ");
     if (!AnyEnd)
       LLVM_DEBUG(dbgs() << "    (no registers live at block end)\n");
   }
