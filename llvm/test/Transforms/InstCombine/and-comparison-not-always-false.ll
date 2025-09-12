@@ -136,3 +136,23 @@ common.ret:
   %common.ret.op = and i1 %6, %4
   ret i1 %common.ret.op
 }
+
+define i1 @test_no_change_su(i32 %0, i32 %1) {
+; CHECK-LABEL: define i1 @test_no_change_su(
+; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; CHECK-NEXT:  [[COMMON_RET:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i32 [[TMP0]], [[TMP4]]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = and i1 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]]
+;
+common.ret:
+  %2 = xor i32 %0, -1
+  %3 = icmp sle i32 %1, %2
+  %4 = xor i32 %1, -1
+  %5 = icmp ugt i32 %0, %4
+  %common.ret.op = and i1 %3, %5
+  ret i1 %common.ret.op
+}
