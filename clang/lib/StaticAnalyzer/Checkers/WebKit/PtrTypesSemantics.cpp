@@ -241,7 +241,7 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
     return;
 
   auto PointeeQT = QT->getPointeeType();
-  const RecordType *RT = PointeeQT->getAs<RecordType>();
+  const RecordType *RT = PointeeQT->getAsCanonical<RecordType>();
   if (!RT) {
     if (TD->hasAttr<ObjCBridgeAttr>() || TD->hasAttr<ObjCBridgeMutableAttr>()) {
       RecordlessTypes.insert(TD->getASTContext()
@@ -664,6 +664,10 @@ public:
       return true;
 
     return IsFunctionTrivial(Callee);
+  }
+
+  bool VisitGCCAsmStmt(const GCCAsmStmt *AS) {
+    return AS->getAsmString() == "brk #0xc471";
   }
 
   bool
