@@ -25,7 +25,7 @@ define i32 @BothBin(i1 %C) !prof !0 {
   ret i32 %V;
 }
 
-; CHECK: define i32 @NegBin(i1 %C) !prof ![[PROF0:[0-9]]]
+; CHECK: define i32 @NegBin(i1 %C) !prof ![[PROF0]]
 ; CHECK: %V = select i1 %C, i32 1010, i32 0, !prof ![[PROF1]]
 define i32 @NegBin(i1 %C) !prof !0 {
   %A = select i1 %C, i32 1000, i32 -10, !prof !1
