@@ -3385,12 +3385,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // TODO: apply range metadata for range check patterns?
     }
 
-    // Separate storage assumptions apply to the underlying allocations, not any
-    // particular pointer within them. When evaluating the hints for AA purposes
-    // we getUnderlyingObject them; by precomputing the answers here we can
-    // avoid having to do so repeatedly there.
     for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
       OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+
+      // Separate storage assumptions apply to the underlying allocations, not
+      // any particular pointer within them. When evaluating the hints for AA
+      // purposes we getUnderlyingObject them; by precomputing the answers here
+      // we can avoid having to do so repeatedly there.
       if (OBU.getTagName() == "separate_storage") {
         assert(OBU.Inputs.size() == 2);
         auto MaybeSimplifyHint = [&](const Use &U) {
@@ -3403,6 +3404,32 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(OBU.Inputs[0]);
         MaybeSimplifyHint(OBU.Inputs[1]);
+      }
+
+      // Try to remove redundant alignment assumptions.
+      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
+        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
+            *cast<AssumeInst>(II), II->arg_size() + Idx);
+        if (!RK || RK.AttrKind != Attribute::Alignment ||
+            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
+          continue;
+
+        // Don't try to remove align assumptions for pointers derived from
+        // arguments. We might lose information if the function gets inline and
+        // the align argument attribute disappears.
+        Value *UO = getUnderlyingObject(RK.WasOn);
+        if (!UO || isa<Argument>(UO))
+          continue;
+
+        // Compute known bits for the pointer, passing nullptr as context to
+        // avoid computeKnownBits using the assumption we are about to remove
+        // for reasoning.
+        KnownBits Known = computeKnownBits(RK.WasOn, /*CtxI=*/nullptr);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(),
+                               Value::MaxAlignmentExponent);
+        if ((1ULL << TZ) < RK.ArgValue)
+          continue;
+        return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
     }
 
