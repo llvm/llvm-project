@@ -25,6 +25,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #if defined _WIN64 || defined _WIN32
+// Avoid introducing min as a macro from Windows headers.
+#define NOMINMAX
 #include <windows.h>
 #elif defined __linux__
 #include <time.h>
