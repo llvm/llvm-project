@@ -61,7 +61,8 @@ transformComponent(StringRef Component,
 /// Matches against all suffixes reserved in the C++23 standard.
 static bool matchesReservedSuffix(StringRef Suffix) {
   static constexpr std::array<StringRef, 11> SortedReservedSuffixes = {
-      "d", "h", "i", "if", "il", "min", "ms", "ns", "s", "us", "y"};
+      "d", "h", "i", "if", "il", "min", "ms", "ns", "s", "us", "y",
+  };
 
   // This can be static_assert when we have access to constexpr is_sorted in
   // C++ 20.
