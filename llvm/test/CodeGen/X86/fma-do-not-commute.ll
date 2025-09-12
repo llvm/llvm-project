@@ -1,4 +1,4 @@
-; RUN: llc  -mattr=+fma -disable-cgp < %s -o - | FileCheck %s
+; RUN: llc -mattr=+fma -disable-cgp < %s -o - | FileCheck %s
 ; Check that the 2nd and 3rd arguments of fmaXXX231 reg1, reg2, mem3 are not commuted.
 ; <rdar://problem/16800495> 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
