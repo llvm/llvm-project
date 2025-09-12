@@ -1577,3 +1577,33 @@ func.func @push_extract_through_generic_rank0_operand(%arg0: tensor<128x128xf32>
 // CHECK:         %[[GENERIC:.+]] = linalg.generic
 // CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]]         
 // CHECK:         return %[[EXTRACT]]
+
+// -----
+// Test that if one extract doesnt pass the control function which in this case is set to
+// only allow extracts from the same block, then an extract from a later operand can still be pushed
+// down.
+func.func @push_extract_through_generic_secondextract(%arg0: tensor<128x128xf32>, %arg1: tensor<?x?xbf16>, %arg2: index) -> tensor<?x?xbf16> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %extracted_slice1 = tensor.extract_slice %arg0[%arg2, %arg2] [%arg2, %arg2] [1, 1] : tensor<128x128xf32> to tensor<?x?xf32>
+  %for = scf.for %arg3 = %c0 to %c32 step %arg2 iter_args(%arg4 = %arg1) -> tensor<?x?xbf16> {
+    %extracted_slice = tensor.extract_slice %arg0[%arg2, %arg2] [%arg2, %arg2] [1, 1] : tensor<128x128xf32> to tensor<?x?xf32>
+    %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,affine_map<(d0, d1) -> (d0, d1)> ,affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%extracted_slice1, %extracted_slice : tensor<?x?xf32>,  tensor<?x?xf32>) outs(%arg1 : tensor<?x?xbf16>) {
+    ^bb0(%in: f32, %in_1 : f32, %out: bf16):
+      %1 = arith.truncf %in : f32 to bf16
+      linalg.yield %1 : bf16
+    } -> tensor<?x?xbf16>
+    scf.yield %0 : tensor<?x?xbf16>
+  }
+ return %for : tensor<?x?xbf16>
+}
+
+// CHECK-LABEL: func.func @push_extract_through_generic_secondextract
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice
+// CHECK:         %[[FOR:.+]] = scf.for
+// CHECK:           %[[PAD:.+]] = tensor.pad %[[EXTRACT]]
+// CHECK:           %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:        ins(%[[PAD]], %[[ARG0]]
+// CHECK:           %[[EXTRACT2:.+]] =  tensor.extract_slice %[[GENERIC]]
+// CHECK:           scf.yield %[[EXTRACT2]]
