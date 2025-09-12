@@ -1947,9 +1947,13 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     if (converter.isRegisteredDummySymbol(sym))
       dummyScope = converter.dummyArgsScopeValue();
     auto [storage, storageOffset] = converter.getSymbolStorage(sym);
+    // For box addresses, shape information is already included, so we must
+    // not provide a shape operand.
+    mlir::Value shapeForDeclare =
+        fir::isBoxAddress(base.getType()) ? mlir::Value{} : shapeOrShift;
     auto newBase = hlfir::DeclareOp::create(
-        builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
-        storageOffset, attributes, dataAttr);
+        builder, loc, base, name, shapeForDeclare, lenParams, dummyScope,
+        storage, storageOffset, attributes, dataAttr);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
