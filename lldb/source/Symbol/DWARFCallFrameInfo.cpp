@@ -20,7 +20,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include <cstdint>
 #include <cstring>
+#include <limits>
 #include <list>
 #include <optional>
 
@@ -145,6 +147,27 @@ GetGNUEHPointer(const DataExtractor &DE, lldb::offset_t *offset_ptr,
     }
   }
   return baseAddress + addressValue;
+}
+
+// Check if the given cie_id value indicates a CIE (Common Information Entry)
+// as opposed to an FDE (Frame Description Entry).
+//
+// For eh_frame sections: CIE is marked with cie_id == 0
+// For debug_frame sections:
+//   - DWARF32: CIE is marked with cie_id ==
+//   std::numeric_limits<uint32_t>::max()
+//   - DWARF64: CIE is marked with cie_id ==
+//   std::numeric_limits<uint64_t>::max()
+static bool IsCIEMarker(uint64_t cie_id, bool is_64bit,
+                        DWARFCallFrameInfo::Type type) {
+  if (type == DWARFCallFrameInfo::EH)
+    return cie_id == 0;
+
+  // DWARF type
+  if (is_64bit)
+    return cie_id == std::numeric_limits<uint64_t>::max();
+
+  return cie_id == std::numeric_limits<uint32_t>::max();
 }
 
 DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
@@ -283,7 +306,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     GetCFIData();
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_id, end_offset;
-  bool is_64bit = (length == UINT32_MAX);
+  bool is_64bit = (length == std::numeric_limits<uint32_t>::max());
   if (is_64bit) {
     length = m_cfi_data.GetU64(&offset);
     cie_id = m_cfi_data.GetU64(&offset);
@@ -292,8 +315,9 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_id = m_cfi_data.GetU32(&offset);
     end_offset = cie_offset + length + 4;
   }
-  if (length > 0 && ((m_type == DWARF && cie_id == UINT32_MAX) ||
-                     (m_type == EH && cie_id == 0ul))) {
+
+  // Check if this is a CIE or FDE based on the CIE ID marker
+  if (length > 0 && IsCIEMarker(cie_id, is_64bit, m_type)) {
     size_t i;
     //    cie.offset = cie_offset;
     //    cie.length = length;
@@ -470,7 +494,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
     const dw_offset_t current_entry = offset;
     dw_offset_t cie_id, next_entry, cie_offset;
     uint32_t len = m_cfi_data.GetU32(&offset);
-    bool is_64bit = (len == UINT32_MAX);
+    bool is_64bit = (len == std::numeric_limits<uint32_t>::max());
     if (is_64bit) {
       len = m_cfi_data.GetU64(&offset);
       cie_id = m_cfi_data.GetU64(&offset);
@@ -493,11 +517,8 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       return;
     }
 
-    // An FDE entry contains CIE_pointer in debug_frame in same place as cie_id
-    // in eh_frame. CIE_pointer is an offset into the .debug_frame section. So,
-    // variable cie_offset should be equal to cie_id for debug_frame.
-    // FDE entries with cie_id == 0 shouldn't be ignored for it.
-    if ((cie_id == 0 && m_type == EH) || cie_id == UINT32_MAX || len == 0) {
+    // Check if this is a CIE or FDE based on the CIE ID marker
+    if (IsCIEMarker(cie_id, is_64bit, m_type) || len == 0) {
       auto cie_sp = ParseCIE(current_entry);
       if (!cie_sp) {
         // Cannot parse, the reason is already logged
@@ -568,7 +589,7 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
 
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_offset;
-  bool is_64bit = (length == UINT32_MAX);
+  bool is_64bit = (length == std::numeric_limits<uint32_t>::max());
   if (is_64bit) {
     length = m_cfi_data.GetU64(&offset);
     cie_offset = m_cfi_data.GetU64(&offset);
@@ -577,7 +598,8 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
   }
 
   // FDE entries with zeroth cie_offset may occur for debug_frame.
-  assert(!(m_type == EH && 0 == cie_offset) && cie_offset != UINT32_MAX);
+  assert(!(m_type == EH && 0 == cie_offset) &&
+         cie_offset != std::numeric_limits<uint32_t>::max());
 
   // Translate the CIE_id from the eh_frame format, which is relative to the
   // FDE offset, into a __eh_frame section offset
