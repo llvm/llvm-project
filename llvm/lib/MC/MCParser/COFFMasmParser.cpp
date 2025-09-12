@@ -443,8 +443,8 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   if (!getStreamer().getCurrentFragment())
     return Error(getTok().getLoc(), "expected section directive");
 
-  StringRef Label;
-  if (getParser().parseIdentifier(Label))
+  MCSymbol *Sym;
+  if (getParser().parseSymbol(Sym))
     return Error(Loc, "expected identifier for procedure");
   if (getLexer().is(AsmToken::Identifier)) {
     StringRef nextVal = getTok().getString();
@@ -459,12 +459,12 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       nextLoc = getTok().getLoc();
     }
   }
-  auto *Sym =
-      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Label));
 
   // Define symbol as simple external function
-  Sym->setExternal(true);
-  Sym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT);
+  auto *COFFSym = static_cast<MCSymbolCOFF *>(Sym);
+  COFFSym->setExternal(true);
+  COFFSym->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                   << COFF::SCT_COMPLEX_TYPE_SHIFT);
 
   bool Framed = false;
   if (getLexer().is(AsmToken::Identifier) &&
@@ -475,7 +475,7 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   }
   getStreamer().emitLabel(Sym, Loc);
 
-  CurrentProcedures.push_back(Label);
+  CurrentProcedures.push_back(Sym->getName());
   CurrentProceduresFramed.push_back(Framed);
   return false;
 }
