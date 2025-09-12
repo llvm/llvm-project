@@ -280,6 +280,9 @@ def parseOptionsAndInitTestdirs():
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
         configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
+        configuration.yaml2macho_core = shutil.which(
+            "yaml2macho-core", path=args.llvm_tools_dir
+        )
 
     if not configuration.get_filecheck_path():
         logging.warning("No valid FileCheck executable; some tests may fail...")

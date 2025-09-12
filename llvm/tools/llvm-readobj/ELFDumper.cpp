@@ -3601,7 +3601,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   OS.PadToColumn(2u);
   OS << "Version:";
   OS.PadToColumn(37u);
-  OS << utohexstr(e.e_ident[ELF::EI_VERSION]);
+  OS << utohexstr(e.e_ident[ELF::EI_VERSION], /*LowerCase=*/true);
   if (e.e_version == ELF::EV_CURRENT)
     OS << " (current)";
   OS << "\n";
@@ -3638,9 +3638,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
 
   Str = enumToString(e.e_machine, ArrayRef(ElfMachineType));
   printFields(OS, "Machine:", Str);
-  Str = "0x" + utohexstr(e.e_version);
+  Str = "0x" + utohexstr(e.e_version, /*LowerCase=*/true);
   printFields(OS, "Version:", Str);
-  Str = "0x" + utohexstr(e.e_entry);
+  Str = "0x" + utohexstr(e.e_entry, /*LowerCase=*/true);
   printFields(OS, "Entry point address:", Str);
   Str = to_string(e.e_phoff) + " (bytes into file)";
   printFields(OS, "Start of program headers:", Str);
@@ -3711,7 +3711,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
     } break;
     }
   }
-  Str = "0x" + utohexstr(e.e_flags);
+  Str = "0x" + utohexstr(e.e_flags, /*LowerCase=*/true);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
   printFields(OS, "Flags:", Str);
@@ -4088,12 +4088,12 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
 // returned as '<unknown>' followed by the type value.
 static std::string getSectionTypeOffsetString(unsigned Type) {
   if (Type >= SHT_LOOS && Type <= SHT_HIOS)
-    return "LOOS+0x" + utohexstr(Type - SHT_LOOS);
+    return "LOOS+0x" + utohexstr(Type - SHT_LOOS, /*LowerCase=*/true);
   else if (Type >= SHT_LOPROC && Type <= SHT_HIPROC)
-    return "LOPROC+0x" + utohexstr(Type - SHT_LOPROC);
+    return "LOPROC+0x" + utohexstr(Type - SHT_LOPROC, /*LowerCase=*/true);
   else if (Type >= SHT_LOUSER && Type <= SHT_HIUSER)
-    return "LOUSER+0x" + utohexstr(Type - SHT_LOUSER);
-  return "0x" + utohexstr(Type) + ": <unknown>";
+    return "LOUSER+0x" + utohexstr(Type - SHT_LOUSER, /*LowerCase=*/true);
+  return "0x" + utohexstr(Type, /*LowerCase=*/true) + ": <unknown>";
 }
 
 static std::string getSectionTypeString(unsigned Machine, unsigned Type) {
@@ -5722,9 +5722,9 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
     if (FlagsStr.empty())
-      OS << "0x" << utohexstr(Value);
+      OS << "0x" << utohexstr(Value, /*LowerCase=*/true);
     else
-      OS << "(0x" << utohexstr(Value) << ")";
+      OS << "(0x" << utohexstr(Value, /*LowerCase=*/true) << ")";
     return FreeBSDNote{"Feature flags", FlagsStr};
   }
   default:
@@ -7349,7 +7349,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       else
         TypeStr = "Unknown";
     }
-    W.printString("Type", TypeStr + " (0x" + utohexstr(E.e_type) + ")");
+    W.printString("Type", TypeStr + " (0x" +
+                              utohexstr(E.e_type, /*LowerCase=*/true) + ")");
 
     W.printEnum("Machine", E.e_machine, ArrayRef(ElfMachineType));
     W.printNumber("Version", E.e_version);
@@ -8246,7 +8247,7 @@ void LLVMELFDumper<ELFT>::printMemtag(
   {
     ListScope L(W, "Memtag Global Descriptors:");
     for (const auto &[Addr, BytesToTag] : Descriptors) {
-      W.printHex("0x" + utohexstr(Addr), BytesToTag);
+      W.printHex("0x" + utohexstr(Addr, /*LowerCase=*/true), BytesToTag);
     }
   }
 }

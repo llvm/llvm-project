@@ -201,8 +201,8 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // For array of structures, create a new array with a layout type
     // instead of the structure type.
     if (Ty->isStructureOrClassType()) {
-      llvm::Type *NewTy =
-          cast<llvm::TargetExtType>(createLayoutType(Ty->getAs<RecordType>()));
+      llvm::Type *NewTy = cast<llvm::TargetExtType>(
+          createLayoutType(Ty->getAsCanonical<RecordType>()));
       if (!NewTy)
         return false;
       assert(isa<llvm::TargetExtType>(NewTy) && "expected target type");
@@ -220,8 +220,8 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
 
   } else if (FieldTy->isStructureOrClassType()) {
     // Create a layout type for the structure
-    ElemLayoutTy =
-        createLayoutType(cast<RecordType>(FieldTy->getAs<RecordType>()));
+    ElemLayoutTy = createLayoutType(
+        cast<RecordType>(FieldTy->getAsCanonical<RecordType>()));
     if (!ElemLayoutTy)
       return false;
     assert(isa<llvm::TargetExtType>(ElemLayoutTy) && "expected target type");

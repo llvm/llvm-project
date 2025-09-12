@@ -3178,9 +3178,11 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // operations if the values are unused. fir.declare may be used to generate
 // debug information so we would like to keep this around even if the value
 // is not used.
-def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<DebuggingResource>]>,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+def fir_DeclareOp
+    : fir_Op<"declare", [AttrSizedOperandSegments,
+                         MemoryEffects<[MemAlloc<DebuggingResource>]>,
+                         DeclareOpInterfaceMethods<
+                             fir_FortranVariableStorageOpInterface>]> {
   let summary = "declare a variable";
 
   let description = [{
@@ -3203,6 +3205,11 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     It must always be provided for characters and parametrized derived types
     when memref is not a box value or address.
 
+    The storage and storage_offset operands are optional and are required
+    for FortranVariableStorageOpInterface, where they are documented.
+    If these operands are absent, then the storage of the declared variable
+    is only known to start where the memref operand points to.
+
     Example:
 
     CHARACTER(n), OPTIONAL, TARGET :: c(10:, 20:)
@@ -3220,21 +3227,22 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
    ```
   }];
 
-  let arguments = (ins
-    AnyRefOrBox:$memref,
-    Optional<AnyShapeOrShiftType>:$shape,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_DummyScopeType>:$dummy_scope,
-    Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
-  );
+  let arguments = (ins AnyRefOrBox:$memref,
+      Optional<AnyShapeOrShiftType>:$shape,
+      Variadic<AnyIntegerType>:$typeparams,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Optional<AnyReferenceLike>:$storage,
+      DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
+      Builtin_StringAttr:$uniq_name,
+      OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr);
 
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^)?
+    (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 
