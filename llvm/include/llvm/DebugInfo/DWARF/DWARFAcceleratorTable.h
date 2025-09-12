@@ -195,20 +195,16 @@ class LLVM_ABI AppleAcceleratorTable : public DWARFAcceleratorTable {
   /// Reads the I-th hash in the hash list.
   std::optional<uint32_t> readIthHash(uint32_t I) const {
     std::optional<uint64_t> OptOffset = getIthHashBase(I);
-    if (OptOffset) {
-      uint64_t Offset = *OptOffset;
-      return readU32FromAccel(Offset);
-    }
+    if (OptOffset)
+      return readU32FromAccel(*OptOffset);
     return std::nullopt;
   }
 
   /// Reads the I-th offset in the offset list.
   std::optional<uint32_t> readIthOffset(uint32_t I) const {
     std::optional<uint64_t> OptOffset = getIthOffsetBase(I);
-    if (OptOffset) {
-      uint64_t Offset = *OptOffset;
-      return readU32FromAccel(Offset);
-    }
+    if (OptOffset)
+      return readU32FromAccel(*OptOffset);
     return std::nullopt;
   }
 
