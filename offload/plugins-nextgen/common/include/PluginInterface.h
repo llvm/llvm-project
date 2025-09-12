@@ -1277,6 +1277,10 @@ struct MemoryInfoTy {
   TargetAllocTy Type;
   GenericDeviceTy *Device;
 
+  MemoryInfoTy(void *Base, size_t Size, TargetAllocTy Type,
+               GenericDeviceTy *Device)
+      : Base(Base), Size(Size), Type(Type), Device(Device) {}
+
   void *limit() const { return reinterpret_cast<char *>(Base) + Size; }
 };
 

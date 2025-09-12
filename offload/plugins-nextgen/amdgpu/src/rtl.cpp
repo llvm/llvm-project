@@ -3575,15 +3575,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
     // The pointer info struct contains an "agent" field, but that doesn't
     // necessarily map to the device that created it
-    MemoryInfoTy ToReturn;
-    ToReturn.Base = Info.agentBaseAddress;
-    ToReturn.Size = Info.sizeInBytes;
     auto UserData = hsa_utils::UserDataPair::getFromOpaqueValue(Info.userData);
-    ToReturn.Type = static_cast<TargetAllocTy>(UserData.getInt());
-    ToReturn.Device =
-        reinterpret_cast<GenericDeviceTy *>(UserData.getPointer());
-
-    return ToReturn;
+    return MemoryInfoTy(
+        /*Base=*/Info.agentBaseAddress, /*Size=*/Info.sizeInBytes,
+        /*Type=*/static_cast<TargetAllocTy>(UserData.getInt()),
+        /*Device=*/reinterpret_cast<GenericDeviceTy *>(UserData.getPointer()));
   }
 
 private:

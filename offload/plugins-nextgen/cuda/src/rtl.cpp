@@ -1541,17 +1541,17 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
     // Fast case, we have been given the base pointer directly
     if (MemoryInfo.contains(TgtPtr))
-      return MemoryInfo[TgtPtr];
+      return MemoryInfo.at(TgtPtr);
 
     // Slower case, we need to look up the base pointer first
     auto Loc = std::lower_bound(MemoryBases.begin(), MemoryBases.end(), TgtPtr,
                                 [&](const void *Iter, const void *Val) {
-                                  return MemoryInfo[Iter].limit() < Val;
+                                  return MemoryInfo.at(Iter).limit() < Val;
                                 });
-    if (Loc == MemoryBases.end() || TgtPtr > MemoryInfo[*Loc].limit())
+    if (Loc == MemoryBases.end() || TgtPtr > MemoryInfo.at(*Loc).limit())
       return Plugin::error(ErrorCode::NOT_FOUND,
                            "allocated memory information not found");
-    return MemoryInfo[*Loc];
+    return MemoryInfo.at(*Loc);
   }
 
 private:
@@ -1612,12 +1612,11 @@ void *CUDADeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
         std::lower_bound(CudaPlugin->MemoryBases.begin(),
                          CudaPlugin->MemoryBases.end(), MemAlloc),
         MemAlloc);
-    CudaPlugin->MemoryInfo[MemAlloc] = MemoryInfoTy{
-        /*Base=*/MemAlloc,
-        /*Size=*/Size,
-        /*Type=*/Kind,
-        /*Device=*/this,
-    };
+    CudaPlugin->MemoryInfo.emplace_or_assign(MemAlloc,
+                                             /*Base=*/MemAlloc,
+                                             /*Size=*/Size,
+                                             /*Type=*/Kind,
+                                             /*Device=*/this);
   }
   return MemAlloc;
 }
