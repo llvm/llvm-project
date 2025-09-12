@@ -4,6 +4,7 @@
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 
+
 constexpr bool match_m64(__m64 _v, unsigned long long a) {
   __v1du v = (__v1du)_v;
   return v[0] == a;

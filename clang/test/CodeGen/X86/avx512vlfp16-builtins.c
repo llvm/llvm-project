@@ -110,6 +110,7 @@ __m128h test_mm_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h
   // CHECK: insertelement <8 x half> {{.*}}, i32 7
   return _mm_set_ph(__h1, __h2, __h3, __h4, __h5, __h6, __h7, __h8);
 }
+TEST_CONSTEXPR(match_m128h(_mm_set_ph(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0), 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0));
 
 __m256h test_mm256_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                           _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,

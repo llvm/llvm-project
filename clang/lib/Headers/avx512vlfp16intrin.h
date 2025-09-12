@@ -42,7 +42,7 @@ static __inline__ _Float16 __DEFAULT_FN_ATTRS256 _mm256_cvtsh_h(__m256h __a) {
   return __a[0];
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_set_sh(_Float16 __h) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR _mm_set_sh(_Float16 __h) {
   return __extension__(__m128h){__h, 0, 0, 0, 0, 0, 0, 0};
 }
 
@@ -57,7 +57,7 @@ _mm256_set1_ph(_Float16 __h) {
                             __h, __h, __h, __h, __h, __h, __h, __h};
 }
 
-static __inline __m128h __DEFAULT_FN_ATTRS128
+static __inline __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
            _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8) {
   return (__m128h)(__v8hf){__h8, __h7, __h6, __h5, __h4, __h3, __h2, __h1};
