@@ -145,6 +145,9 @@ private:
       fir::FirOpBuilder &builder,
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
           &constant) {
+    using Element =
+        Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>>;
+
     static_assert(TC != Fortran::common::TypeCategory::Character,
                   "must be numerical or logical");
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
@@ -152,7 +155,24 @@ private:
                       : TC;
     attributeElementType =
         Fortran::lower::getFIRType(builder.getContext(), attrTc, KIND, {});
-    for (auto element : constant.values())
+
+    const std::vector<Element> &values = constant.values();
+    auto sameElements = [&]() -> bool {
+      if (values.empty())
+        return false;
+
+      return std::all_of(values.begin(), values.end(),
+                         [&](const auto &v) { return v == values.front(); });
+    };
+
+    if (sameElements()) {
+      auto attr = convertToAttribute<TC, KIND>(builder, values.front(),
+                                               attributeElementType);
+      attributes.assign(values.size(), attr);
+      return;
+    }
+
+    for (auto element : values)
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
   }
