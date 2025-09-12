@@ -6474,6 +6474,10 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                      const CallBase *Call) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::get_active_lane_mask:
+    if (match(Op1, m_Zero()))
+      return ConstantInt::getFalse(ReturnType);
+    break;
   case Intrinsic::abs:
     // abs(abs(x)) -> abs(x). We don't need to worry about the nsw arg here.
     // It is always ok to pick the earlier abs. We'll just lose nsw if its only
