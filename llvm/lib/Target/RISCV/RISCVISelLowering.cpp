@@ -24844,8 +24844,7 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
     return isTypeLegal(VT) && Subtarget.hasStdExtZvbb();
   if (VT.isFixedLengthVector() && Subtarget.hasStdExtZvbb())
     return true;
-  // FIXME: Should use hasCPOPLike here.
-  return Subtarget.hasStdExtZbb() &&
+  return Subtarget.hasCPOPLike() &&
          (VT == MVT::i32 || VT == MVT::i64 || VT.isFixedLengthVector());
 }
 
