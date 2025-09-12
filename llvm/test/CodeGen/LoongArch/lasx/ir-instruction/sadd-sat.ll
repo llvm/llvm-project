@@ -2,8 +2,8 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s --check-prefixes=CHECK,LA32
 ; RUN: llc -mtriple=loongarch64 -mattr=+lasx < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
-define <32 x i8> @vsadd_b(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-LABEL: vsadd_b:
+define <32 x i8> @xvsadd_b(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: xvsadd_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvadd.b $xr2, $xr0, $xr1
 ; CHECK-NEXT:    xvslt.b $xr0, $xr2, $xr0
@@ -17,8 +17,8 @@ define <32 x i8> @vsadd_b(<32 x i8> %a, <32 x i8> %b) {
   ret <32 x i8> %ret
 }
 
-define <16 x i16> @vsadd_h(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: vsadd_h:
+define <16 x i16> @xvsadd_h(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: xvsadd_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvadd.h $xr2, $xr0, $xr1
 ; CHECK-NEXT:    xvslt.h $xr0, $xr2, $xr0
@@ -32,8 +32,8 @@ define <16 x i16> @vsadd_h(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %ret
 }
 
-define <8 x i32> @vsadd_w(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: vsadd_w:
+define <8 x i32> @xvsadd_w(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: xvsadd_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvadd.w $xr2, $xr0, $xr1
 ; CHECK-NEXT:    xvslt.w $xr0, $xr2, $xr0
@@ -47,8 +47,8 @@ define <8 x i32> @vsadd_w(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %ret
 }
 
-define <4 x i64> @vsadd_d(<4 x i64> %a, <4 x i64> %b) {
-; LA32-LABEL: vsadd_d:
+define <4 x i64> @xvsadd_d(<4 x i64> %a, <4 x i64> %b) {
+; LA32-LABEL: xvsadd_d:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvadd.d $xr2, $xr0, $xr1
 ; LA32-NEXT:    xvslt.d $xr0, $xr2, $xr0
@@ -61,7 +61,7 @@ define <4 x i64> @vsadd_d(<4 x i64> %a, <4 x i64> %b) {
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr2, $xr1, $xr0
 ; LA32-NEXT:    ret
 ;
-; LA64-LABEL: vsadd_d:
+; LA64-LABEL: xvsadd_d:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvadd.d $xr2, $xr0, $xr1
 ; LA64-NEXT:    xvslt.d $xr0, $xr2, $xr0

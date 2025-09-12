@@ -2,8 +2,8 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s --check-prefixes=CHECK,LA32
 ; RUN: llc -mtriple=loongarch64 -mattr=+lasx < %s | FileCheck %s --check-prefixes=CHECK,LA64
 
-define <32 x i8> @vssub_b(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-LABEL: vssub_b:
+define <32 x i8> @xvssub_b(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: xvssub_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrepli.b $xr2, 0
 ; CHECK-NEXT:    xvslt.b $xr2, $xr2, $xr1
@@ -18,8 +18,8 @@ define <32 x i8> @vssub_b(<32 x i8> %a, <32 x i8> %b) {
   ret <32 x i8> %ret
 }
 
-define <16 x i16> @vssub_h(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: vssub_h:
+define <16 x i16> @xvssub_h(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: xvssub_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrepli.b $xr2, 0
 ; CHECK-NEXT:    xvslt.h $xr2, $xr2, $xr1
@@ -34,8 +34,8 @@ define <16 x i16> @vssub_h(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %ret
 }
 
-define <8 x i32> @vssub_w(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: vssub_w:
+define <8 x i32> @xvssub_w(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: xvssub_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrepli.b $xr2, 0
 ; CHECK-NEXT:    xvslt.w $xr2, $xr2, $xr1
@@ -50,8 +50,8 @@ define <8 x i32> @vssub_w(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %ret
 }
 
-define <4 x i64> @vssub_d(<4 x i64> %a, <4 x i64> %b) {
-; LA32-LABEL: vssub_d:
+define <4 x i64> @xvssub_d(<4 x i64> %a, <4 x i64> %b) {
+; LA32-LABEL: xvssub_d:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvrepli.b $xr2, 0
 ; LA32-NEXT:    xvslt.d $xr2, $xr2, $xr1
@@ -65,7 +65,7 @@ define <4 x i64> @vssub_d(<4 x i64> %a, <4 x i64> %b) {
 ; LA32-NEXT:    xvbitsel.v $xr0, $xr1, $xr2, $xr0
 ; LA32-NEXT:    ret
 ;
-; LA64-LABEL: vssub_d:
+; LA64-LABEL: xvssub_d:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvrepli.b $xr2, 0
 ; LA64-NEXT:    xvslt.d $xr2, $xr2, $xr1

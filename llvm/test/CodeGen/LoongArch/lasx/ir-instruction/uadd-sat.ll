@@ -2,8 +2,8 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s
 ; RUN: llc -mtriple=loongarch64 -mattr=+lasx < %s | FileCheck %s
 
-define <32 x i8> @vuadd_b(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-LABEL: vuadd_b:
+define <32 x i8> @xvuadd_b(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: xvuadd_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvxori.b $xr2, $xr1, 255
 ; CHECK-NEXT:    xvmin.bu $xr0, $xr0, $xr2
@@ -13,8 +13,8 @@ define <32 x i8> @vuadd_b(<32 x i8> %a, <32 x i8> %b) {
   ret <32 x i8> %ret
 }
 
-define <16 x i16> @vuadd_h(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: vuadd_h:
+define <16 x i16> @xvuadd_h(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: xvuadd_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrepli.b $xr2, -1
 ; CHECK-NEXT:    xvxor.v $xr2, $xr1, $xr2
@@ -25,8 +25,8 @@ define <16 x i16> @vuadd_h(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %ret
 }
 
-define <8 x i32> @vuadd_w(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: vuadd_w:
+define <8 x i32> @xvuadd_w(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: xvuadd_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrepli.b $xr2, -1
 ; CHECK-NEXT:    xvxor.v $xr2, $xr1, $xr2
@@ -37,8 +37,8 @@ define <8 x i32> @vuadd_w(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %ret
 }
 
-define <4 x i64> @vuadd_d(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: vuadd_d:
+define <4 x i64> @xvuadd_d(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: xvuadd_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrepli.b $xr2, -1
 ; CHECK-NEXT:    xvxor.v $xr2, $xr1, $xr2

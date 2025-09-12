@@ -2,8 +2,8 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s
 ; RUN: llc -mtriple=loongarch64 -mattr=+lasx < %s | FileCheck %s
 
-define <32 x i8> @vusub_b(<32 x i8> %a, <32 x i8> %b) {
-; CHECK-LABEL: vusub_b:
+define <32 x i8> @xvusub_b(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: xvusub_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmax.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr1
@@ -12,8 +12,8 @@ define <32 x i8> @vusub_b(<32 x i8> %a, <32 x i8> %b) {
   ret <32 x i8> %ret
 }
 
-define <16 x i16> @vusub_h(<16 x i16> %a, <16 x i16> %b) {
-; CHECK-LABEL: vusub_h:
+define <16 x i16> @xvusub_h(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: xvusub_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmax.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.h $xr0, $xr0, $xr1
@@ -22,8 +22,8 @@ define <16 x i16> @vusub_h(<16 x i16> %a, <16 x i16> %b) {
   ret <16 x i16> %ret
 }
 
-define <8 x i32> @vusub_w(<8 x i32> %a, <8 x i32> %b) {
-; CHECK-LABEL: vusub_w:
+define <8 x i32> @xvusub_w(<8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: xvusub_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmax.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.w $xr0, $xr0, $xr1
@@ -32,8 +32,8 @@ define <8 x i32> @vusub_w(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %ret
 }
 
-define <4 x i64> @vusub_d(<4 x i64> %a, <4 x i64> %b) {
-; CHECK-LABEL: vusub_d:
+define <4 x i64> @xvusub_d(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: xvusub_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmax.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.d $xr0, $xr0, $xr1
