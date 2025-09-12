@@ -685,12 +685,9 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       // the psABI to decide.
       if (EIT->getNumBits() <= 2 * XLen)
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
-      if (EIT->getNumBits() > 128 ||
-          (!getContext().getTargetInfo().hasInt128Type() &&
-           EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(
-            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-            /*ByVal=*/false);
+      return getNaturalAlignIndirect(
+          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
     }
 
     // All integral types are promoted to XLen width
