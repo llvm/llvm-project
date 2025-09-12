@@ -5975,12 +5975,8 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
-                          const MCInstrDesc &TID, unsigned RCID,
-                          bool IsAllocatable) {
-  if ((IsAllocatable || !ST.hasGFX90AInsts()) &&
-      (((TID.mayLoad() || TID.mayStore()) &&
-        !(TID.TSFlags & SIInstrFlags::Spill)) ||
-       (TID.TSFlags & SIInstrFlags::MIMG))) {
+                          const MCInstrDesc &TID, unsigned RCID) {
+  if (!ST.hasGFX90AInsts() && (TID.mayLoad() || TID.mayStore())) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
@@ -6015,12 +6011,11 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   auto RegClass = TID.operands()[OpNum].RegClass;
-  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
-    // Special pseudos have no alignment requirement
+  // Special pseudos have no alignment requirement.
+  if (TID.getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO || isSpill(TID))
     return RI.getRegClass(RegClass);
-  }
 
-  return adjustAllocatableRegClass(ST, RI, TID, RegClass, false);
+  return adjustAllocatableRegClass(ST, RI, TID, RegClass);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
@@ -6039,7 +6034,7 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
   }
 
   unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return adjustAllocatableRegClass(ST, RI, Desc, RCID, true);
+  return adjustAllocatableRegClass(ST, RI, Desc, RCID);
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
@@ -6127,12 +6122,10 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
     const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
     if (!SuperRC)
       return false;
-
-    DRC = RI.getMatchingSuperRegClass(SuperRC, DRC, MO.getSubReg());
-    if (!DRC)
-      return false;
+    return RI.getMatchingSuperRegClass(SuperRC, DRC, MO.getSubReg()) != nullptr;
   }
-  return RC->hasSuperClassEq(DRC);
+
+  return RI.getCommonSubClass(DRC, RC) != nullptr;
 }
 
 bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
@@ -6573,6 +6566,21 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
+
+  if (isWMMA(MI)) {
+    // scale_src has a register class restricted to low 256 VGPRs, we may need
+    // to insert a copy to the restricted VGPR class.
+    int ScaleSrc0Idx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src0);
+    if (ScaleSrc0Idx != -1) {
+      int ScaleSrc1Idx =
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_src1);
+      if (!isOperandLegal(MI, ScaleSrc0Idx))
+        legalizeOpWithMove(MI, ScaleSrc0Idx);
+      if (!isOperandLegal(MI, ScaleSrc1Idx))
+        legalizeOpWithMove(MI, ScaleSrc1Idx);
+    }
+  }
 
   // Fix the register class of packed FP32 instructions on gfx12+. See
   // SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more information.
@@ -10266,7 +10274,7 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 InstructionUniformity
 SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  unsigned opcode = MI.getOpcode();
+  unsigned Opcode = MI.getOpcode();
 
   auto HandleAddrSpaceCast = [this, &MRI](const MachineInstr &MI) {
     Register Dst = MI.getOperand(0).getReg();
@@ -10286,7 +10294,7 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   // If the target supports globally addressable scratch, the mapping from
   // scratch memory to the flat aperture changes therefore an address space cast
   // is no longer uniform.
-  if (opcode == TargetOpcode::G_ADDRSPACE_CAST)
+  if (Opcode == TargetOpcode::G_ADDRSPACE_CAST)
     return HandleAddrSpaceCast(MI);
 
   if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
@@ -10314,7 +10322,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
-  if (opcode == AMDGPU::G_LOAD) {
+  if (Opcode == AMDGPU::G_LOAD || Opcode == AMDGPU::G_ZEXTLOAD ||
+      Opcode == AMDGPU::G_SEXTLOAD) {
     if (MI.memoperands_empty())
       return InstructionUniformity::NeverUniform; // conservative assumption
 
@@ -10328,10 +10337,10 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
-  if (SIInstrInfo::isGenericAtomicRMWOpcode(opcode) ||
-      opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
-      opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||
-      AMDGPU::isGenericAtomic(opcode)) {
+  if (SIInstrInfo::isGenericAtomicRMWOpcode(Opcode) ||
+      Opcode == AMDGPU::G_ATOMIC_CMPXCHG ||
+      Opcode == AMDGPU::G_ATOMIC_CMPXCHG_WITH_SUCCESS ||
+      AMDGPU::isGenericAtomic(Opcode)) {
     return InstructionUniformity::NeverUniform;
   }
   return InstructionUniformity::Default;
