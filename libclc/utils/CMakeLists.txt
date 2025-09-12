@@ -1,6 +1,3 @@
-# Construct LLVM version define
-set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}" )
-
 # Setup prepare_builtins tools
 set( LLVM_LINK_COMPONENTS
   BitReader
