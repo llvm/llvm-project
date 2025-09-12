@@ -50,6 +50,27 @@ enum CheckSubobjectKind {
   CSK_VectorElement
 };
 
+enum class EvaluationMode {
+  /// Evaluate as a constant expression. Stop if we find that the expression
+  /// is not a constant expression.
+  ConstantExpression,
+
+  /// Evaluate as a constant expression. Stop if we find that the expression
+  /// is not a constant expression. Some expressions can be retried in the
+  /// optimizer if we don't constant fold them here, but in an unevaluated
+  /// context we try to fold them immediately since the optimizer never
+  /// gets a chance to look at it.
+  ConstantExpressionUnevaluated,
+
+  /// Fold the expression to a constant. Stop if we hit a side-effect that
+  /// we can't model.
+  ConstantFold,
+
+  /// Evaluate in any way we know how. Don't worry about side-effects that
+  /// can't be modeled.
+  IgnoreSideEffects,
+};
+
 namespace interp {
 class Frame;
 class SourceInfo;
@@ -148,6 +169,8 @@ public:
   /// Note that we still need to evaluate the expression normally when this
   /// is set; this is used when evaluating ICEs in C.
   bool CheckingForUndefinedBehavior = false;
+
+  EvaluationMode EvalMode;
 
 private:
   void addCallStack(unsigned Limit);

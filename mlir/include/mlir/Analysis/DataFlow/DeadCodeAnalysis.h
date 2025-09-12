@@ -229,6 +229,13 @@ private:
   /// considered an external callable.
   Operation *analysisScope;
 
+  /// Whether the analysis scope has a symbol table. This is used to avoid
+  /// resolving callables outside the analysis scope.
+  /// It is updated when recursing into a region in case where the top-level
+  /// operation does not have a symbol table, but one is encountered in a nested
+  /// region.
+  bool hasSymbolTable = false;
+
   /// A symbol table used for O(1) symbol lookups during simplification.
   SymbolTableCollection symbolTable;
 };

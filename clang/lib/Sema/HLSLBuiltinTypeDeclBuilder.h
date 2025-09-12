@@ -83,6 +83,10 @@ public:
   BuiltinTypeDeclBuilder &addCopyConstructor();
   BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
 
+  // Static create methods
+  BuiltinTypeDeclBuilder &addCreateFromBinding();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();

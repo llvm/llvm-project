@@ -1455,7 +1455,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return corresponds
                                                    to the swapped element of the first argument.
 
-
   llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
                                                    Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
@@ -1476,6 +1475,25 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
+  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx1250, ignored on earlier targets.
+                                                   First argument is flat, global, or constant address space pointer.
+                                                   Any other address space is not supported.
+                                                   On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   Second argument is rw and currently ignored. Can be 0 or 1.
+                                                   Third argument is locality, 0-3. Translates to memory scope:
+
+                                                   * 0 - SCOPE_SYS
+                                                   * 1 - SCOPE_DEV
+                                                   * 2 - SCOPE_SE
+                                                   * 3 - SCOPE_SE
+
+                                                   Note that SCOPE_CU is not generated and not safe on an invalid address.
+                                                   Fourth argument is cache type:
+
+                                                   * 0 - Instruction cache, currently ignored and no code is generated.
+                                                   * 1 - Data cache.
+
+                                                   Instruction cache prefetches are unsafe on invalid address.
   ==============================================   ==========================================================
 
 .. TODO::

@@ -20304,9 +20304,11 @@ ARMTargetLowering::getSingleConstraintMatchWeight(
 static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
   if (PR == 0 || VT == MVT::Other)
     return false;
-  return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
-         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64 &&
-          !VT.is64BitVector());
+  if (ARM::SPRRegClass.contains(PR))
+    return VT != MVT::f32 && VT != MVT::f16 && VT != MVT::i32;
+  if (ARM::DPRRegClass.contains(PR))
+    return VT != MVT::f64 && !VT.is64BitVector();
+  return false;
 }
 
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;

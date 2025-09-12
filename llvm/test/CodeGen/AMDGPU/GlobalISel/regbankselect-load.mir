@@ -119,10 +119,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32, align 32, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32, align 32, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32 + 16, basealign 32, addrspace 1)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s32>)
@@ -152,10 +151,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64, align 32, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64, align 32, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64 + 16, basealign 32, addrspace 1)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s64>)
@@ -192,16 +190,15 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32, align 64, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32, align 64, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 16, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
     ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
     ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 48, basealign 64, addrspace 1)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
@@ -238,16 +235,15 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64, align 64, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64, align 64, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 16, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
     ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = nuw inbounds G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
     ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 48, basealign 64, addrspace 1)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>), [[LOAD2]](<2 x s64>), [[LOAD3]](<2 x s64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64), [[UV4:%[0-9]+]]:vgpr(s64), [[UV5:%[0-9]+]]:vgpr(s64), [[UV6:%[0-9]+]]:vgpr(s64), [[UV7:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
@@ -368,10 +364,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32 + 16, basealign 32, addrspace 4)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s32>)
@@ -400,10 +395,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s128) = G_LOAD [[COPY1]](p4) :: (load (s128) from %ir.constant.not.uniform, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s128) = G_LOAD [[COPY]](p4) :: (load (s128) from %ir.constant.not.uniform, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(s128) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
     ; GCN-NEXT: [[MV:%[0-9]+]]:vgpr(s256) = G_MERGE_VALUES [[LOAD]](s128), [[LOAD1]](s128)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s256)
@@ -433,10 +427,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[COPY1]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[COPY]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s16>) = G_CONCAT_VECTORS [[LOAD]](<8 x s16>), [[LOAD1]](<8 x s16>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>), [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>), [[UV4:%[0-9]+]]:vgpr(<2 x s16>), [[UV5:%[0-9]+]]:vgpr(<2 x s16>), [[UV6:%[0-9]+]]:vgpr(<2 x s16>), [[UV7:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
@@ -465,10 +458,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64 + 16, basealign 32, addrspace 4)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s64>)
@@ -505,16 +497,15 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32, align 64, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32, align 64, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 16, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
     ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
     ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 48, basealign 64, addrspace 4)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
@@ -551,16 +542,15 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64, align 64, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64, align 64, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 16, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
     ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:sgpr(p4) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
     ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 48, basealign 64, addrspace 4)
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>), [[LOAD2]](<2 x s64>), [[LOAD3]](<2 x s64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64), [[UV4:%[0-9]+]]:vgpr(s64), [[UV5:%[0-9]+]]:vgpr(s64), [[UV6:%[0-9]+]]:vgpr(s64), [[UV7:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
@@ -736,8 +726,7 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s8), addrspace 4)
     ; GFX7-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ;
     ; GFX12-LABEL: name: extload_constant_i8_to_i32_uniform
@@ -762,8 +751,7 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s8), addrspace 1)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s8), addrspace 1, align 1)
@@ -782,8 +770,7 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s16), addrspace 4)
     ; GFX7-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ;
     ; GFX12-LABEL: name: extload_constant_i16_to_i32_uniform
@@ -808,8 +795,7 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s16), addrspace 1)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s16), addrspace 1, align 2)
@@ -845,8 +831,7 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s32), align 2, addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s32), align 2, addrspace 4)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 4, align 2)
@@ -865,8 +850,7 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s32), align 1, addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s32), align 1, addrspace 4)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 4, align 1)

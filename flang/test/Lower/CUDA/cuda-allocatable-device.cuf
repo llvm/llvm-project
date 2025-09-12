@@ -12,3 +12,11 @@ end module
 ! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.device_array
 ! CHECK: fir.insert_value %{{.*}}, %c6{{.*}}, ["genre"
 ! CHECK: fir.insert_value %{{.*}}, %c5{{.*}}, ["genre"
+
+program main
+  use m
+  type(device_array) :: local
+end
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: fir.call @_FortranAInitialize

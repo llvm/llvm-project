@@ -1567,7 +1567,7 @@ def Zn4WriteBUSDr_VPMADDr: SchedWriteRes<[Zn4FPFMisc01]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4WriteBUSDr_VPMADDr], (instregex
-        "VPDP(BU|WS)(S|P)(S|D|DS)(Z|Z128|Z256)(r|rk|rkz)",
+        "VPDP(BU|WS)(S|P)(S|D|DS)(Z?|Z128?|Z256?|Y?)r(r|rk|rkz)",
         "VPMADD52(H|L)UQ(Z|Z128|Z256)(r|rk|rkz)"
 	)>;
 

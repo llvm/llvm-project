@@ -2614,9 +2614,9 @@ def : AMDGPUPatIgnoreCopies <
                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
-// 64-bit version
+foreach vt = [i64, v2i32] in {
 def : AMDGPUPatIgnoreCopies <
-  (DivergentBinFrag<xor> i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+  (DivergentBinFrag<xor> vt:$z, (and vt:$x, (xor vt:$y, vt:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
@@ -2625,6 +2625,7 @@ def : AMDGPUPatIgnoreCopies <
               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
+}
 
 def : AMDGPUPat <
   (fcopysign f32:$src0, f32:$src1),
@@ -4401,6 +4402,21 @@ def G_AMDGPU_BUFFER_LOAD_FORMAT_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
+
+class D16LoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$addr, type0:$src);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_LOAD_D16_LO : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_LO_U8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_LO_I8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI_U8 : D16LoadGenericInstruction;
+def G_AMDGPU_LOAD_D16_HI_I8 : D16LoadGenericInstruction;
+
 
 class BufferStoreGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs);

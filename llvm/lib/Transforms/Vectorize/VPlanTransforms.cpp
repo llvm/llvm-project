@@ -1308,6 +1308,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        auto *Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
+        Clone->insertBefore(RepOrWidenR);
+        auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
+                                      {Clone->getOperand(0)});
+        Ext->insertBefore(Clone);
+        Clone->setOperand(0, Ext);
+        RepR->eraseFromParent();
+        continue;
+      }
+
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
@@ -2217,8 +2231,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(simplifyRecipes, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(simplifyBlends, Plan);
-  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan);
   runPass(removeBranchOnConst, Plan);
@@ -4017,9 +4031,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
-  auto NarrowOp = [](VPValue *V) -> VPValue * {
+  SmallPtrSet<VPValue *, 4> NarrowedOps;
+  auto NarrowOp = [&NarrowedOps](VPValue *V) -> VPValue * {
     auto *R = V->getDefiningRecipe();
-    if (!R)
+    if (!R || NarrowedOps.contains(V))
       return V;
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
@@ -4029,6 +4044,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
           /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
+      NarrowedOps.insert(L);
       return L;
     }
 
@@ -4036,6 +4052,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       assert(RepR->isSingleScalar() &&
              isa<LoadInst>(RepR->getUnderlyingInstr()) &&
              "must be a single scalar load");
+      NarrowedOps.insert(RepR);
       return RepR;
     }
     auto *WideLoad = cast<VPWidenLoadRecipe>(R);
@@ -4049,6 +4066,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                     /*IsUniform*/ true,
                                     /*Mask*/ nullptr, *WideLoad);
     N->insertBefore(WideLoad);
+    NarrowedOps.insert(N);
     return N;
   };
 

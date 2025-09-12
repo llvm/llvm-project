@@ -966,9 +966,14 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
   MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
+  // Restrict to VGPR only (VRegSrc_32) for the scale operands to workaround a
+  // hardware design defect: For all Inline/SGPR constants, SP HW use bits
+  // [30:23] as the scale.
+  // TODO: We may still be able to allow Inline Constants/SGPR, with a proper
+  // shift, to obtain a potentially better performance.
   let InOperandList = !con(BaseInst.InOperandList,
-    (ins VSrc_b32:$scale_src0,
-         VSrc_b32:$scale_src1,
+    (ins VRegSrc_32:$scale_src0,
+         VRegSrc_32:$scale_src1,
          op_sel0:$src0_modifiers,
          op_sel_hi0:$src1_modifiers));
   let AsmOperands =
@@ -1857,8 +1862,8 @@ defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : WMMAInstGFX12<"v_wmma_scale_f32_32x16
 defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : WMMAInstGFX12<"v_wmma_scale16_f32_32x16x128_f4", F32_32X16X128_F4_SCALE16_w32, "_w32">;
 } // End is_wmma_xdl = 1.
 
-defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3PInst<"v_wmma_ld_scale_paired_b32",   VOP_WMMA_LD_SCALE<i32, VCSrc_b32>>;
-defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64>>;
+defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3PInst<"v_wmma_ld_scale_paired_b32",   VOP_WMMA_LD_SCALE<i32, VCSrc_b32_Lo256>>;
+defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64_Lo256>>;
 } // End SubtargetPredicate = isGFX125xOnly
 } // End WaveSizePredicate = isWave32
 

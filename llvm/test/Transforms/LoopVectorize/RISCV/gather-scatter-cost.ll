@@ -184,3 +184,75 @@ loop:
 exit:
   ret void
 }
+
+define void @store_to_addr_generated_from_invariant_addr(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2, ptr %p3, i64 %N) {
+; CHECK-LABEL: @store_to_addr_generated_from_invariant_addr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[P0:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <vscale x 2 x i64> [[TMP1]], splat (i64 1)
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP2]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P1:%.*]], <vscale x 2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2p0.nxv2p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT1]], <vscale x 2 x ptr> align 8 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P3:%.*]], <vscale x 2 x i64> [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x ptr> align 1 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr i32, ptr [[P1]], i64 [[IV]]
+; CHECK-NEXT:    store ptr [[P0]], ptr [[ARRAYIDX11]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[P2]], align 4
+; CHECK-NEXT:    [[BITS_TO_GO:%.*]] = getelementptr i8, ptr [[P3]], i64 [[TMP10]]
+; CHECK-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[BITS_TO_GO]], align 4
+; CHECK-NEXT:    store i8 0, ptr [[BITS_TO_GO]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx11 = getelementptr i32, ptr %p1, i64 %iv
+  store ptr %p0, ptr %arrayidx11, align 8
+  %0 = load i64, ptr %p2, align 4
+  %bits_to_go = getelementptr i8, ptr %p3, i64 %0
+  store i32 0, ptr %bits_to_go, align 4
+  store i32 0, ptr %bits_to_go, align 4
+  store i8 0, ptr %bits_to_go, align 1
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv, %N
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
