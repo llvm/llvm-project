@@ -164,7 +164,7 @@ ALL_SWIFT_SOURCES = $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
 SWIFT_OBJECTS = $(strip $(ALL_SWIFT_SOURCES:.swift=.swift.o))
 
 ifeq "$(DISABLE_SWIFT_INTERFACE)" ""
-SWIFT_INTERFACE_FLAGS=-emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface
+SWIFT_INTERFACE_FLAGS=-swift-version 5 -emit-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface
 endif
 
 ifeq "$(SWIFT_WMO)" "1"
