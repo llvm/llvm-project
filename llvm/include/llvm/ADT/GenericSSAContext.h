@@ -54,7 +54,7 @@ public:
 
   // The null value for ValueRefT. For LLVM IR and MIR, this is simply the
   // default constructed value.
-  static constexpr ValueRefT *ValueRefNull = {};
+  static constexpr ValueRefT ValueRefNull = {};
 
   // An InstructionT usually defines one or more ValueT objects.
   using InstructionT = typename SSATraits::InstructionT;
@@ -95,6 +95,10 @@ public:
 
   static bool isConstantOrUndefValuePhi(const InstructionT &Instr);
   const BlockT *getDefBlock(ConstValueRefT value) const;
+
+  void getPhiInputs(const InstructionT &Instr,
+                    SmallVectorImpl<ConstValueRefT> &Values,
+                    SmallVectorImpl<const BlockT *> &Blocks) const;
 
   Printable print(const BlockT *block) const;
   Printable printAsOperand(const BlockT *BB) const;

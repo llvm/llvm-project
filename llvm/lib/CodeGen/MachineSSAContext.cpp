@@ -85,6 +85,20 @@ bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
 }
 
 template <>
+void MachineSSAContext::getPhiInputs(
+    const MachineInstr &Phi, SmallVectorImpl<Register> &Values,
+    SmallVectorImpl<const MachineBasicBlock *> &Blocks) const {
+  if (!Phi.isPHI())
+    return;
+  for (unsigned Idx = 1, End = Phi.getNumOperands(); Idx < End; Idx += 2) {
+    // FIXME: ideally we would turn undef values into ValueRefNull.
+    // This could reduce number of PHIs marked in taintAndPushPhiNodes().
+    Values.push_back(Phi.getOperand(Idx).getReg());
+    Blocks.push_back(Phi.getOperand(Idx + 1).getMBB());
+  }
+}
+
+template <>
 Intrinsic::ID MachineSSAContext::getIntrinsicID(const MachineInstr &MI) {
   if (auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->getIntrinsicID();
