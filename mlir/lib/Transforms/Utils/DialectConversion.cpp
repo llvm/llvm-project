@@ -3309,9 +3309,12 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
 /// Try to reconcile all given UnrealizedConversionCastOps and store the
 /// left-over ops in `remainingCastOps` (if provided). See documentation in
 /// DialectConversion.h for more details.
+/// The `isCastOpOfInterestFn` is used to filter the cast ops to proceed: the algorithm may
+/// visit an operand (or user) which is a cast op, but will not try to reconcile it if not in the
+/// filtered set.
 template <typename RangeT>
 static void reconcileUnrealizedCastsImpl(
-    RangeT castOps, function_ref<bool(UnrealizedConversionCastOp)> isCastOpFn,
+    RangeT castOps, function_ref<bool(UnrealizedConversionCastOp)> isCastOpOfInterestFn,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
   // A worklist of cast ops to process.
   SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
@@ -3363,9 +3366,9 @@ static void reconcileUnrealizedCastsImpl(
 
   // Helper function that marks the given op and transitively reachable input
   // cast ops as alive.
-  auto markOpLive = [&](Operation *op) {
+  auto markOpLive = [&](Operation *rootOp) {
     SmallVector<Operation *> worklist;
-    worklist.push_back(op);
+    worklist.push_back(rootOp);
     while (!worklist.empty()) {
       Operation *op = worklist.pop_back_val();
       if (liveOps.insert(op).second) {
@@ -3380,6 +3383,8 @@ static void reconcileUnrealizedCastsImpl(
 
   // Find all alive cast ops.
   for (UnrealizedConversionCastOp op : castOps) {
+     // The op may have been marked live already as being an operand of another live cast op.
+     if (liveOps.contains(op.getOperation()) continue;
     // If any of the users is not a cast op, mark the current op (and its
     // input ops) as live.
     if (llvm::any_of(op->getUsers(), [&](Operation *user) {
