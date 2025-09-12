@@ -582,8 +582,7 @@ void CodeGenModule::createOpenCLRuntime() {
 }
 
 void CodeGenModule::createOpenMPRuntime() {
-  if (!LangOpts.OMPHostIRFile.empty() &&
-      !llvm::sys::fs::exists(LangOpts.OMPHostIRFile))
+  if (!LangOpts.OMPHostIRFile.empty() && !FS->exists(LangOpts.OMPHostIRFile))
     Diags.Report(diag::err_omp_host_ir_file_not_found)
         << LangOpts.OMPHostIRFile;
 
@@ -7545,7 +7544,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::HLSLRootSignature:
-    // Will be handled by attached function
+    getHLSLRuntime().addRootSignature(cast<HLSLRootSignatureDecl>(D));
     break;
   case Decl::HLSLBuffer:
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));

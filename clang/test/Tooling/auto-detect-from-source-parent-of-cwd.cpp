@@ -1,5 +1,4 @@
-// Needs symlinks
-// UNSUPPORTED: system-windows
+// REQUIRES: symlinks
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/abc/def/ijk/qwe
