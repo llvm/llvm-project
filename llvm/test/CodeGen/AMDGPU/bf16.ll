@@ -7,10 +7,14 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefixes=GFX10
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 | FileCheck %s -check-prefixes=GFX11,GFX11TRUE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 | FileCheck %s -check-prefixes=GFX11,GFX11FAKE16
+<<<<<<< HEAD
 ; xUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 | FileCheck %s -check-prefixes=GFX1250,GFX1250TRUE16
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 | FileCheck %s -check-prefixes=GFX1250,GFX1250FAKE16
 
 ; FIXME: real-true16 version of gfx1250 test fails
+=======
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 | FileCheck %s -check-prefixes=GFX1250
+>>>>>>> b01cd5e2411a ([AMDGPU] Fix vector legalization for bf16 valu ops)
 
 define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_load_store:
@@ -10908,13 +10912,12 @@ define <2 x bfloat> @v_fadd_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-LABEL: v_fadd_v2bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v1
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NEXT:   s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:   s_wait_kmcnt 0x0
+; GFX1250-NEXT:   v_pk_add_bf16 v0, v0, v1
+; GFX1250-NEXT:   s_set_pc_i64 s[30:31]
   %op = fadd <2 x bfloat> %a, %b
   ret <2 x bfloat> %op
 }
@@ -11447,14 +11450,13 @@ define <4 x bfloat> @v_fadd_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v1, v1, v4, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GFX1250-LABEL: v_fadd_v4bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, v2
-; GFX1250-NEXT:    v_pk_add_bf16 v1, v1, v3
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-NEXT:   s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:   s_wait_kmcnt 0x0
+; GFX1250-NEXT:   v_pk_add_bf16 v0, v0, v2
+; GFX1250-NEXT:   v_pk_add_bf16 v1, v1, v3
+; GFX1250-NEXT:   s_set_pc_i64 s[30:31]
   %op = fadd <4 x bfloat> %a, %b
   ret <4 x bfloat> %op
 }
@@ -49361,7 +49363,10 @@ define <2 x bfloat> @v_fma_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat>
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+<<<<<<< HEAD
 ;
+=======
+>>>>>>> b01cd5e2411a ([AMDGPU] Fix vector legalization for bf16 valu ops)
 ; GFX1250-LABEL: v_fma_v2bf16:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -49978,7 +49983,10 @@ define <4 x bfloat> @v_fma_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat>
 ; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11FAKE16-NEXT:    v_perm_b32 v1, v4, v1, 0x7060302
 ; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+<<<<<<< HEAD
 ;
+=======
+>>>>>>> b01cd5e2411a ([AMDGPU] Fix vector legalization for bf16 valu ops)
 ; GFX1250-LABEL: v_fma_v4bf16:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
