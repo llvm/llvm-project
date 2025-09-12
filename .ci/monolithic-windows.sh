@@ -49,17 +49,12 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LLVM_BUILD_UTILS=ON \
-      -D LLVM_INCLUDE_UTILS=ON \
-      -D LLVM_INSTALL_UTILS=ON
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" 
 
 start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
-
-ninja -C "${BUILD_DIR}" -k 0 install
 
 if [[ "${runtime_targets}" != "" ]]; then
   start-group "ninja runtimes"
