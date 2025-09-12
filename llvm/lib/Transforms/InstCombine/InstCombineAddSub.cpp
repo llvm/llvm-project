@@ -3155,16 +3155,6 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   Value *X, *Y;
   Constant *C;
 
-  // B = fsub A, 0.0
-  // Z = Op B
-  // can be transformed into
-  // Z = Op A
-  // Where Op is such that we can ignore sign of 0 in fsub
-  Value *A;
-  if (match(&I, m_OneUse(m_FSub(m_Value(A), m_AnyZeroFP()))) &&
-      canIgnoreSignBitOfZero(*I.use_begin()))
-    return replaceInstUsesWith(I, A);
-
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)
   // Canonicalize to fadd to make analysis easier.
