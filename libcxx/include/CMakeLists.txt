@@ -454,6 +454,7 @@ set(files
   __fwd/pair.h
   __fwd/queue.h
   __fwd/span.h
+  __fwd/spanstream.h
   __fwd/sstream.h
   __fwd/stack.h
   __fwd/streambuf.h
@@ -1058,6 +1059,7 @@ set(files
   shared_mutex
   source_location
   span
+  spanstream
   sstream
   stack
   stdatomic.h
