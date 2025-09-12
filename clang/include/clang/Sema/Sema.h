@@ -3976,6 +3976,10 @@ public:
   void CheckVariableDeclarationType(VarDecl *NewVD);
   void CheckCompleteVariableDeclaration(VarDecl *VD);
 
+  // Warn about the use of a weak pointer authentication schema on a variable of
+  // function pointer type and internal linkage.
+  void DiagnoseWeakPointerAuthenticationSchema(VarDecl *VD);
+
   NamedDecl *ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                      TypeSourceInfo *TInfo,
                                      LookupResult &Previous,

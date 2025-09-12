@@ -7627,6 +7627,16 @@ static bool isMainVar(DeclarationName Name, VarDecl *VD) {
           VD->isExternC());
 }
 
+void Sema::DiagnoseWeakPointerAuthenticationSchema(VarDecl *VD) {
+  if (Context.isPointerAuthenticationAvailable() &&
+      VD->isFunctionPointerType() && !VD->isExternallyVisible()) {
+    PointerAuthQualifier Q = VD->getType().getQualifiers().getPointerAuth();
+    if (!Q || (!Q.isAddressDiscriminated() && Q.getExtraDiscriminator() == 0)) {
+      Diag(VD->getLocation(), diag::warn_ptrauth_weak_schema) << VD << !Q;
+    }
+  }
+}
+
 NamedDecl *Sema::ActOnVariableDeclarator(
     Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
@@ -8357,15 +8367,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                                    D.isFunctionDefinition());
   }
 
-  // Warn about the use of a weak pointer authentication schema on a variable
-  // with internal linkage.
-  if (Context.isPointerAuthenticationAvailable() &&
-      NewVD->isFunctionPointerType() && !NewVD->isExternallyVisible()) {
-    PointerAuthQualifier Q = NewVD->getType().getQualifiers().getPointerAuth();
-    if (!Q || (!Q.isAddressDiscriminated() && Q.getExtraDiscriminator() == 0)) {
-      Diag(NewVD->getLocation(), diag::warn_ptrauth_weak_schema) << NewVD << !Q;
-    }
-  }
+  DiagnoseWeakPointerAuthenticationSchema(NewVD);
 
   if (NewTemplate) {
     if (NewVD->isInvalidDecl())
