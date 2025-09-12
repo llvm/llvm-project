@@ -9,8 +9,6 @@
 // <vector>
 // vector<bool>
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // This test ensures that std::vector<bool> handles allocator types with small size types
 // properly. Related issue: https://llvm.org/PR121713.
 
