@@ -4243,7 +4243,7 @@ let Predicates = [HasSVE2p1_or_SME2] in {
             (UDOT_ZZZ_HtoS $Acc, $MulLHS, $MulRHS)>;
   def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
             (SDOT_ZZZ_HtoS $Acc, $MulLHS, $MulRHS)>;
-} // End HasSVE_or_SME
+} // End HasSVE2p1_or_SME2
 
 defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00, int_aarch64_sve_sqcvtn_x2>;
 defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01, int_aarch64_sve_uqcvtn_x2>;
