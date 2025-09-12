@@ -18,9 +18,13 @@ namespace llvm {
 namespace msf {
 class MappedBlockStream;
 }
+namespace codeview {
+class PublicSym32;
+}
 namespace pdb {
 struct PublicsStreamHeader;
 struct SectionOffset;
+class SymbolStream;
 
 class PublicsStream {
 public:
@@ -41,6 +45,20 @@ public:
   FixedStreamArray<SectionOffset> getSectionOffsets() const {
     return SectionOffsets;
   }
+
+  /// Find a public symbol by a segment and offset.
+  ///
+  /// In case there is more than one symbol (for example due to ICF), the first
+  /// one is returned.
+  ///
+  /// \return If a symbol was found, the symbol at the provided address is
+  ///     returned as well as the index of this symbol in the address map. If
+  ///     the binary was linked with ICF, there might be more symbols with the
+  ///     same address after the returned one. If no symbol is found,
+  ///     `std::nullopt` is returned.
+  LLVM_ABI std::optional<std::pair<codeview::PublicSym32, size_t>>
+  findByAddress(const SymbolStream &Symbols, uint16_t Segment,
+                uint32_t Offset) const;
 
 private:
   std::unique_ptr<msf::MappedBlockStream> Stream;

@@ -206,8 +206,10 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
-                             /*insertIntoFnEntryBlock=*/false);
+    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
+                                  /*insertIntoFnEntryBlock=*/false);
+    fnRetAlloca = addr;
+    returnValue = Address(addr, alignment);
   }
 }
 

@@ -187,12 +187,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       return inBounds;
     }
 
-    /// Wrapper for getBase, which replaced getSource.
-    [[deprecated("Use getBase instead!")]]
-    ::mlir::Value getSource() {
-        return $_op.getBase();
-    }
-
     /// Return the number of leading shaped dimensions (of the "source" operand)
     /// that do not participate in the permutation map.
     unsigned getLeadingShapedRank() {

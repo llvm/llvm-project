@@ -213,7 +213,18 @@ add_object_library(
 )
 
 add_header_library(
+  tuple
+  HDRS
+    tuple.h
+  DEPENDS
+    .utility
+)
+
+add_header_library(
   simd
   HDRS
     simd.h
+  DEPENDS
+    .utility
+    .tuple
 )

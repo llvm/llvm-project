@@ -438,6 +438,32 @@ void use_const_local() {
 
 } // namespace const_global
 
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+
+void foo() {
+  consumeNS(provideNS());
+  consumeCF(provideCF());
+}
+
+struct Base {
+  NSString *provideStr() NS_RETURNS_RETAINED;
+};
+
+struct Derived : Base {
+  void consumeStr(NSString *);
+
+  void foo() {
+    consumeStr(provideStr());
+  }
+};
+
+} // namespace ns_retained_return_value
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
@@ -456,6 +482,8 @@ void use_const_local() {
   // expected-warning@-1{{Call argument is unretained and unsafe}}
   // expected-warning@-2{{Call argument is unretained and unsafe}}
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get()];
+  [self doWork:__null];
+  [self doWork:nil];
 }
 
 - (SomeObj *)getSomeObj {
