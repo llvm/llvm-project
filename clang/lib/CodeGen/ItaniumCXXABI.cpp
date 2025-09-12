@@ -3954,6 +3954,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -4308,6 +4309,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   case Type::Atomic:
     // No fields, at least for the moment.
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::HLSLAttributedResource:
