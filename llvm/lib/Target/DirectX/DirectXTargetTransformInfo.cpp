@@ -48,6 +48,7 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_firstbituhigh:
   case Intrinsic::dx_frac:
   case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:
