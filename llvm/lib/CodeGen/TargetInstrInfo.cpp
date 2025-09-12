@@ -1830,6 +1830,28 @@ unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return ItinData->getStageLatency(MI.getDesc().getSchedClass());
 }
 
+unsigned
+TargetInstrInfo::getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                                 const MachineInstr &MI) const {
+  if (TargetSchedModel.hasInstrSchedModel()) {
+    const MCSchedClassDesc *SCDesc = TargetSchedModel.resolveSchedClass(&MI);
+    if (SCDesc->isValid())
+      return TargetSchedModel.computeInstrLatency(*SCDesc);
+  }
+
+  return defaultDefLatency(*TargetSchedModel.getMCSchedModel(), MI);
+}
+
+unsigned TargetInstrInfo::getOperandLatency(const TargetSchedModel &SchedModel,
+                                            const MachineInstr *DefMI,
+                                            unsigned DefOperIdx,
+                                            const MachineInstr *UseMI,
+                                            unsigned UseOperIdx) const {
+  // Keep the default hook minimal: delegate to the scheduling model so
+  // targets can override either side as needed.
+  return SchedModel.computeOperandLatency(DefMI, DefOperIdx, UseMI, UseOperIdx);
+}
+
 bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
                                        const MachineInstr &DefMI,
                                        unsigned DefIdx) const {
