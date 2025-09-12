@@ -45,6 +45,7 @@
 #include "llvm/Support/JSON.h"
 #include <array>
 #include <map>
+#include <optional>
 
 namespace llvm {
 
@@ -144,6 +145,73 @@ public:
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
 using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 
+/// Generic storage class for section-based vocabularies.
+/// VocabStorage provides a generic foundation for storing and accessing
+/// embeddings organized into sections.
+class VocabStorage {
+private:
+  /// Section-based storage
+  std::vector<std::vector<Embedding>> Sections;
+
+  size_t TotalSize = 0;
+  unsigned Dimension = 0;
+
+public:
+  /// Default constructor creates empty storage (invalid state)
+  VocabStorage() : Sections(), TotalSize(0), Dimension(0) {}
+
+  /// Create a VocabStorage with pre-organized section data
+  VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
+
+  VocabStorage(VocabStorage &&) = default;
+  VocabStorage &operator=(VocabStorage &&Other);
+
+  VocabStorage(const VocabStorage &) = delete;
+  VocabStorage &operator=(const VocabStorage &) = delete;
+
+  /// Get total number of entries across all sections
+  size_t size() const { return TotalSize; }
+
+  /// Get number of sections
+  unsigned getNumSections() const {
+    return static_cast<unsigned>(Sections.size());
+  }
+
+  /// Section-based access: Storage[sectionId][localIndex]
+  const std::vector<Embedding> &operator[](unsigned SectionId) const {
+    assert(SectionId < Sections.size() && "Invalid section ID");
+    return Sections[SectionId];
+  }
+
+  /// Get vocabulary dimension
+  unsigned getDimension() const { return Dimension; }
+
+  /// Check if vocabulary is valid (has data)
+  bool isValid() const { return TotalSize > 0; }
+
+  /// Iterator support for section-based access
+  class const_iterator {
+    const VocabStorage *Storage;
+    unsigned SectionId;
+    size_t LocalIndex;
+
+  public:
+    const_iterator(const VocabStorage *Storage, unsigned SectionId,
+                   size_t LocalIndex)
+        : Storage(Storage), SectionId(SectionId), LocalIndex(LocalIndex) {}
+
+    LLVM_ABI const Embedding &operator*() const;
+    LLVM_ABI const_iterator &operator++();
+    LLVM_ABI bool operator==(const const_iterator &Other) const;
+    LLVM_ABI bool operator!=(const const_iterator &Other) const;
+  };
+
+  const_iterator begin() const { return const_iterator(this, 0, 0); }
+  const_iterator end() const {
+    return const_iterator(this, getNumSections(), 0);
+  }
+};
+
 /// Class for storing and accessing the IR2Vec vocabulary.
 /// The Vocabulary class manages seed embeddings for LLVM IR entities. The
 /// seed embeddings are the initial learned representations of the entities
@@ -164,7 +232,7 @@ using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 class Vocabulary {
   friend class llvm::IR2VecVocabAnalysis;
 
-  // Vocabulary Slot Layout:
+  // Vocabulary Layout:
   // +----------------+------------------------------------------------------+
   // | Entity Type    | Index Range                                          |
   // +----------------+------------------------------------------------------+
@@ -175,8 +243,16 @@ class Vocabulary {
   // Note: "Similar" LLVM Types are grouped/canonicalized together.
   //       Operands include Comparison predicates (ICmp/FCmp).
   //       This can be extended to include other specializations in future.
-  using VocabVector = std::vector<ir2vec::Embedding>;
-  VocabVector Vocab;
+  enum class Section : unsigned {
+    Opcodes = 0,
+    CanonicalTypes = 1,
+    Operands = 2,
+    Predicates = 3,
+    MaxSections
+  };
+
+  // Use section-based storage for better organization and efficiency
+  VocabStorage Storage;
 
   static constexpr unsigned NumICmpPredicates =
       static_cast<unsigned>(CmpInst::LAST_ICMP_PREDICATE) -
@@ -228,9 +304,18 @@ public:
       NumICmpPredicates + NumFCmpPredicates;
 
   Vocabulary() = default;
-  LLVM_ABI Vocabulary(VocabVector &&Vocab) : Vocab(std::move(Vocab)) {}
+  LLVM_ABI Vocabulary(VocabStorage &&Storage) : Storage(std::move(Storage)) {}
 
-  LLVM_ABI bool isValid() const { return Vocab.size() == NumCanonicalEntries; };
+  Vocabulary(const Vocabulary &) = delete;
+  Vocabulary &operator=(const Vocabulary &) = delete;
+
+  Vocabulary(Vocabulary &&) = default;
+  Vocabulary &operator=(Vocabulary &&Other);
+
+  LLVM_ABI bool isValid() const {
+    return Storage.size() == NumCanonicalEntries;
+  }
+
   LLVM_ABI unsigned getDimension() const;
   /// Total number of entries (opcodes + canonicalized types + operand kinds +
   /// predicates)
@@ -251,12 +336,11 @@ public:
   /// Function to get vocabulary key for a given predicate
   LLVM_ABI static StringRef getVocabKeyForPredicate(CmpInst::Predicate P);
 
-  /// Functions to return the slot index or position of a given Opcode, TypeID,
-  /// or OperandKind in the vocabulary.
-  LLVM_ABI static unsigned getSlotIndex(unsigned Opcode);
-  LLVM_ABI static unsigned getSlotIndex(Type::TypeID TypeID);
-  LLVM_ABI static unsigned getSlotIndex(const Value &Op);
-  LLVM_ABI static unsigned getSlotIndex(CmpInst::Predicate P);
+  /// Functions to return flat index
+  LLVM_ABI static unsigned getIndex(unsigned Opcode);
+  LLVM_ABI static unsigned getIndex(Type::TypeID TypeID);
+  LLVM_ABI static unsigned getIndex(const Value &Op);
+  LLVM_ABI static unsigned getIndex(CmpInst::Predicate P);
 
   /// Accessors to get the embedding for a given entity.
   LLVM_ABI const ir2vec::Embedding &operator[](unsigned Opcode) const;
@@ -265,26 +349,21 @@ public:
   LLVM_ABI const ir2vec::Embedding &operator[](CmpInst::Predicate P) const;
 
   /// Const Iterator type aliases
-  using const_iterator = VocabVector::const_iterator;
+  using const_iterator = VocabStorage::const_iterator;
+
   const_iterator begin() const {
     assert(isValid() && "IR2Vec Vocabulary is invalid");
-    return Vocab.begin();
+    return Storage.begin();
   }
 
-  const_iterator cbegin() const {
-    assert(isValid() && "IR2Vec Vocabulary is invalid");
-    return Vocab.cbegin();
-  }
+  const_iterator cbegin() const { return begin(); }
 
   const_iterator end() const {
     assert(isValid() && "IR2Vec Vocabulary is invalid");
-    return Vocab.end();
+    return Storage.end();
   }
 
-  const_iterator cend() const {
-    assert(isValid() && "IR2Vec Vocabulary is invalid");
-    return Vocab.cend();
-  }
+  const_iterator cend() const { return end(); }
 
   /// Returns the string key for a given index position in the vocabulary.
   /// This is useful for debugging or printing the vocabulary. Do not use this
@@ -292,7 +371,7 @@ public:
   LLVM_ABI static StringRef getStringKey(unsigned Pos);
 
   /// Create a dummy vocabulary for testing purposes.
-  LLVM_ABI static VocabVector createDummyVocabForTest(unsigned Dim = 1);
+  LLVM_ABI static VocabStorage createDummyVocabForTest(unsigned Dim = 1);
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
                            ModuleAnalysisManager::Invalidator &Inv) const;
@@ -301,11 +380,15 @@ private:
   constexpr static unsigned NumCanonicalEntries =
       MaxOpcodes + MaxCanonicalTypeIDs + MaxOperandKinds + MaxPredicateKinds;
 
-  // Base offsets for slot layout to simplify index computation
+  // Base offsets for flat index computation
   constexpr static unsigned OperandBaseOffset =
       MaxOpcodes + MaxCanonicalTypeIDs;
   constexpr static unsigned PredicateBaseOffset =
       OperandBaseOffset + MaxOperandKinds;
+
+  /// Functions for predicate index calculations
+  static unsigned getPredicateLocalIndex(CmpInst::Predicate P);
+  static CmpInst::Predicate getPredicateFromLocalIndex(unsigned LocalIndex);
 
   /// String mappings for CanonicalTypeID values
   static constexpr StringLiteral CanonicalTypeNames[] = {
@@ -452,22 +535,22 @@ public:
 /// mapping between an entity of the IR (like opcode, type, argument, etc.) and
 /// its corresponding embedding.
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
-  using VocabVector = std::vector<ir2vec::Embedding>;
   using VocabMap = std::map<std::string, ir2vec::Embedding>;
-  VocabMap OpcVocab, TypeVocab, ArgVocab;
-  VocabVector Vocab;
+  std::optional<ir2vec::VocabStorage> Vocab;
 
-  Error readVocabulary();
+  Error readVocabulary(VocabMap &OpcVocab, VocabMap &TypeVocab,
+                       VocabMap &ArgVocab);
   Error parseVocabSection(StringRef Key, const json::Value &ParsedVocabValue,
                           VocabMap &TargetVocab, unsigned &Dim);
-  void generateNumMappedVocab();
+  void generateVocabStorage(VocabMap &OpcVocab, VocabMap &TypeVocab,
+                            VocabMap &ArgVocab);
   void emitError(Error Err, LLVMContext &Ctx);
 
 public:
   LLVM_ABI static AnalysisKey Key;
   IR2VecVocabAnalysis() = default;
-  LLVM_ABI explicit IR2VecVocabAnalysis(const VocabVector &Vocab);
-  LLVM_ABI explicit IR2VecVocabAnalysis(VocabVector &&Vocab);
+  LLVM_ABI explicit IR2VecVocabAnalysis(ir2vec::VocabStorage &&Vocab)
+      : Vocab(std::move(Vocab)) {}
   using Result = ir2vec::Vocabulary;
   LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);
 };

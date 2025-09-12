@@ -43,8 +43,11 @@ class FunctionPropertiesAnalysisTest : public testing::Test {
 public:
   FunctionPropertiesAnalysisTest() {
     auto VocabVector = ir2vec::Vocabulary::createDummyVocabForTest(1);
-    MAM.registerPass([&] { return IR2VecVocabAnalysis(VocabVector); });
-    IR2VecVocab = ir2vec::Vocabulary(std::move(VocabVector));
+    MAM.registerPass([VocabVector = std::move(VocabVector)]() mutable {
+      return IR2VecVocabAnalysis(std::move(VocabVector));
+    });
+    IR2VecVocab =
+        ir2vec::Vocabulary(ir2vec::Vocabulary::createDummyVocabForTest(1));
     MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -78,7 +81,7 @@ protected:
   FunctionPropertiesInfo buildFPI(Function &F) {
     // FunctionPropertiesInfo assumes IR2VecVocabAnalysis has been run to
     // use IR2Vec.
-    auto VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
+    auto &VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
     (void)VocabResult;
     return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
   }
