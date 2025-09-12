@@ -3934,13 +3934,13 @@ llvm::SmallBitVector ParallelInsertSliceOp::getDroppedDims() {
   return ::getDroppedDims(getSourceType().getShape(), getMixedSizes());
 }
 
-// ParallelCombiningOpInterface implementation
+// ParallelCombiningOpInterface implementation.
 MutableOperandRange ParallelInsertSliceOp::getUpdatedDestinations() {
   return getDestMutable();
 }
 
 Operation *ParallelInsertSliceOp::getIteratingParent() {
-  // Return the parent InParallelOpInterface's parent
+  // Return the parent InParallelOpInterface's parent.
   if (auto combiningOp =
           dyn_cast<InParallelOpInterface>(getOperation()->getParentOp())) {
     return combiningOp->getParentOp();

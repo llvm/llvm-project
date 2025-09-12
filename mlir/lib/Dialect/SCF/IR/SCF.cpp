@@ -1911,9 +1911,9 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      if (auto inParallelOp =
+      if (auto parallelCombingingOp =
               dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
-        inParallelOp.getUpdatedDestinations().assign(outputBlockArg);
+        parallelCombingingOp.getUpdatedDestinations().assign(outputBlockArg);
       }
     }
 
@@ -1974,8 +1974,8 @@ LogicalResult InParallelOp::verify() {
     return this->emitOpError("expected forall op parent");
 
   for (Operation &op : getRegion().front().getOperations()) {
-    auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(&op);
-    if (!inParallelOp) {
+    auto parallelCombiningOp = dyn_cast<ParallelCombiningOpInterface>(&op);
+    if (!parallelCombiningOp) {
       return this->emitOpError("expected only ParallelCombiningOpInterface")
              << " ops";
     }
@@ -2025,8 +2025,9 @@ OpResult InParallelOp::getParentResult(int64_t idx) {
 SmallVector<BlockArgument> InParallelOp::getDests() {
   SmallVector<BlockArgument> updatedDests;
   for (Operation &yieldingOp : getYieldingOps()) {
-    auto inParallelOp = dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
-    if (!inParallelOp)
+    auto parallelCombiningOp =
+        dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+    if (!parallelCombingingOp)
       continue;
     for (OpOperand &updatedOperand : inParallelOp.getUpdatedDestinations())
       updatedDests.push_back(cast<BlockArgument>(updatedOperand.get()));
