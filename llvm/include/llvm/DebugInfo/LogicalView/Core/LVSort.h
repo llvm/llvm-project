@@ -46,6 +46,7 @@ LLVM_ABI LVSortValue compareRange(const LVObject *LHS, const LVObject *RHS);
 LLVM_ABI LVSortValue sortByKind(const LVObject *LHS, const LVObject *RHS);
 LLVM_ABI LVSortValue sortByLine(const LVObject *LHS, const LVObject *RHS);
 LLVM_ABI LVSortValue sortByName(const LVObject *LHS, const LVObject *RHS);
+LLVM_ABI LVSortValue sortByOffset(const LVObject *LHS, const LVObject *RHS);
 
 } // end namespace logicalview
 } // end namespace llvm
