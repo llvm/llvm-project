@@ -1049,7 +1049,7 @@ static std::string makeDocStringForOp(const Operator &op) {
   std::string docString = "\n";
   llvm::raw_string_ostream os(docString);
   raw_indented_ostream identedOs(os);
-  os << R"(  """)" << "\n";
+  os << R"(  r""")" << "\n";
   identedOs.printReindented(desc, "  ");
   if (!StringRef(desc).ends_with("\n"))
     os << "\n";
