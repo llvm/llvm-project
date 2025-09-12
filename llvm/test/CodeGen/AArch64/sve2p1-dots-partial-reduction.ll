@@ -27,30 +27,32 @@ entry:
   ret <vscale x 4 x i32> %partial.reduce
 }
 
-define <vscale x 4 x i32> @udot_vl256(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) vscale_range(2,2) {
+define <vscale x 8 x i32> @udot_vl256(<vscale x 8 x i32> %acc, <vscale x 16 x i16> %a, <vscale x 16 x i16> %b) vscale_range(2,2) {
 ; CHECK-LABEL: udot_vl256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    udot z0.s, z1.h, z2.h
+; CHECK-NEXT:    udot z0.s, z2.h, z4.h
+; CHECK-NEXT:    udot z1.s, z3.h, z5.h
 ; CHECK-NEXT:    ret
 entry:
-  %a.wide = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
-  %b.wide = zext <vscale x 8 x i16> %b to <vscale x 8 x i32>
-  %mult = mul nuw nsw <vscale x 8 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %mult)
-  ret <vscale x 4 x i32> %partial.reduce
+  %a.wide = zext <vscale x 16 x i16> %a to <vscale x 16 x i32>
+  %b.wide = zext <vscale x 16 x i16> %b to <vscale x 16 x i32>
+  %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 8 x i32> %acc, <vscale x 16 x i32> %mult)
+  ret <vscale x 8 x i32> %partial.reduce
 }
 
-define <vscale x 4 x i32> @sdot_vl256(<vscale x 4 x i32> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) vscale_range(2,2) {
+define <vscale x 8 x i32> @sdot_vl256(<vscale x 8 x i32> %acc, <vscale x 16 x i16> %a, <vscale x 16 x i16> %b) vscale_range(2,2) {
 ; CHECK-LABEL: sdot_vl256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sdot z0.s, z1.h, z2.h
+; CHECK-NEXT:    sdot z0.s, z2.h, z4.h
+; CHECK-NEXT:    sdot z1.s, z3.h, z5.h
 ; CHECK-NEXT:    ret
 entry:
-  %a.wide = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
-  %b.wide = sext <vscale x 8 x i16> %b to <vscale x 8 x i32>
-  %mult = mul nuw nsw <vscale x 8 x i32> %a.wide, %b.wide
-  %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %mult)
-  ret <vscale x 4 x i32> %partial.reduce
+  %a.wide = sext <vscale x 16 x i16> %a to <vscale x 16 x i32>
+  %b.wide = sext <vscale x 16 x i16> %b to <vscale x 16 x i32>
+  %mult = mul nuw nsw <vscale x 16 x i32> %a.wide, %b.wide
+  %partial.reduce = tail call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 8 x i32> %acc, <vscale x 16 x i32> %mult)
+  ret <vscale x 8 x i32> %partial.reduce
 }
 
 define <4 x i32> @fixed_udot_s_h(<4 x i32> %acc, <8 x i16> %a, <8 x i16> %b) {
