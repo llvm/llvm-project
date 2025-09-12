@@ -3819,7 +3819,7 @@ Error BitcodeReader::parseConstants() {
       break;
     }
     case bitc::CST_CODE_PTRAUTH2: {
-      if (Record.size() < 4)
+      if (Record.size() < 5)
         return error("Invalid ptrauth record");
       // Ptr, Key, Disc, AddrDisc, DeactivationSymbol
       V = BitcodeConstant::create(
