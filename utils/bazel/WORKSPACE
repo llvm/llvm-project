@@ -186,9 +186,9 @@ maybe(
     http_archive,
     name = "nanobind",
     build_file = "@llvm-raw//utils/bazel/third_party_build:nanobind.BUILD",
-    sha256 = "8ce3667dce3e64fc06bfb9b778b6f48731482362fb89a43da156632266cd5a90",
-    strip_prefix = "nanobind-2.9.2",
-    url = "https://github.com/wjakob/nanobind/archive/refs/tags/v2.9.2.tar.gz",
+    sha256 = "bb35deaed7efac5029ed1e33880a415638352f757d49207a8e6013fefb6c49a7",
+    strip_prefix = "nanobind-2.4.0",
+    url = "https://github.com/wjakob/nanobind/archive/refs/tags/v2.4.0.tar.gz",
 )
 
 load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
