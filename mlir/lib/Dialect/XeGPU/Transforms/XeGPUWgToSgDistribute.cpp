@@ -52,9 +52,9 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
   if (layout && layout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt();
-    if (!layout.getSgDataAsInt().empty())
-      sgShape = layout.getSgDataAsInt();
+    SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
+    if (!layout.getEffectiveSgDataAsInt().empty())
+      sgShape = layout.getEffectiveSgDataAsInt();
     else if (auto maybeDerivedSgData = computeShapeRatio(shape, sgLayout))
       sgShape = *maybeDerivedSgData;
     SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
@@ -488,7 +488,7 @@ struct WgToSgVectorBroadcastOp
         VectorType::get(sgShape, resultType.getElementType());
 
     // Check if the output layout is distributable
-    SmallVector<int64_t> sgLayout = layout.getSgLayoutAsInt();
+    SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
     if (sgLayout.empty())
       return failure();
 
