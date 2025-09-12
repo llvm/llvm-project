@@ -529,6 +529,8 @@ Improvements to Clang's diagnostics
   pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
   both false positives but also false negatives through more precise analysis.
 
+- Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
