@@ -79,6 +79,7 @@ static bool DarwinLongFormat;
 static RadixTy Radix = RadixTy::decimal;
 static bool TotalSizes;
 static bool HasMachOFiles = false;
+static bool SkipPageZero = false;
 
 static std::vector<std::string> InputFilenames;
 
@@ -307,7 +308,9 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
         }
       } else {
         StringRef SegmentName = StringRef(Seg.segname);
-        if (SegmentName == "__TEXT")
+        if (SkipPageZero && SegmentName == "__PAGEZERO")
+          ; // Skip __PAGEZERO segment
+        else if (SegmentName == "__TEXT")
           total_text += Seg.vmsize;
         else if (SegmentName == "__DATA")
           total_data += Seg.vmsize;
@@ -333,7 +336,9 @@ static void printDarwinSegmentSizes(MachOObjectFile *MachO) {
         }
       } else {
         StringRef SegmentName = StringRef(Seg.segname);
-        if (SegmentName == "__TEXT")
+        if (SkipPageZero && SegmentName == "__PAGEZERO")
+          ; // Skip __PAGEZERO segment
+        else if (SegmentName == "__TEXT")
           total_text += Seg.vmsize;
         else if (SegmentName == "__DATA")
           total_data += Seg.vmsize;
@@ -914,6 +919,7 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
 
   ELFCommons = Args.hasArg(OPT_common);
   DarwinLongFormat = Args.hasArg(OPT_l);
+  SkipPageZero = Args.hasArg(OPT_z);
   TotalSizes = Args.hasArg(OPT_totals);
   StringRef V = Args.getLastArgValue(OPT_format_EQ, "berkeley");
   if (V == "berkeley")

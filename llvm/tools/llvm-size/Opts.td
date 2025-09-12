@@ -21,6 +21,8 @@ def grp_mach_o : OptionGroup<"kind">, HelpText<"OPTIONS (Mach-O specific)">;
 def arch_EQ : Joined<["--"], "arch=">, HelpText<"architecture(s) from a Mach-O file to dump">, Group<grp_mach_o>;
 def : Separate<["--", "-"], "arch">, Alias<arch_EQ>;
 def l : F<"l", "When format is darwin, use long format to include addresses and offsets">, Group<grp_mach_o>;
+def z : F<"z", "Do not include __PAGEZERO segment in totals">,
+        Group<grp_mach_o>;
 
 def : F<"A", "Alias for --format">, Alias<format_EQ>, AliasArgs<["sysv"]>;
 def : F<"B", "Alias for --format">, Alias<format_EQ>, AliasArgs<["berkeley"]>;
