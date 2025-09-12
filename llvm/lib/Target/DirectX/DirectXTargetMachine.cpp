@@ -19,6 +19,7 @@
 #include "DXILForwardHandleAccesses.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILLegalizePass.h"
+#include "DXILMemIntrinsics.h"
 #include "DXILOpLowering.h"
 #include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
@@ -57,6 +58,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
+  initializeDXILMemIntrinsicsLegacyPass(*PR);
   initializeDXILDataScalarizationLegacyPass(*PR);
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
@@ -109,6 +111,7 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
+    addPass(createDXILMemIntrinsicsLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
