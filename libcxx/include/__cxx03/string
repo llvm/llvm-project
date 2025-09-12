@@ -2866,13 +2866,13 @@ inline void basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
       "swapping non-equal allocators");
   if (!__is_long())
     __annotate_delete();
-  if (this != &__str && !__str.__is_long())
+  if (this != std::addressof(__str) && !__str.__is_long())
     __str.__annotate_delete();
   std::swap(__r_.first(), __str.__r_.first());
   std::__swap_allocator(__alloc(), __str.__alloc());
   if (!__is_long())
     __annotate_new(__get_short_size());
-  if (this != &__str && !__str.__is_long())
+  if (this != std::addressof(__str) && !__str.__is_long())
     __str.__annotate_new(__str.__get_short_size());
 }
 
