@@ -5193,13 +5193,13 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
   switch (II.getIntrinsicID()) {
   case Intrinsic::ptrmask: {
     const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
-        QueryingAA, IRPosition::value(*(II.getOperand(1))), DepClassTy::NONE);
+        QueryingAA, IRPosition::value(*II.getOperand(1)), DepClassTy::NONE);
     const auto *AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(II),
                                               DepClassTy::NONE);
     if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
       unsigned ShiftValue =
           std::min(ConstVals->getAssumedMinTrailingZeros(), (unsigned)63);
-      Align ConstAlign(1 << ShiftValue);
+      Align ConstAlign(UINT64_C(1) << ShiftValue);
       if (ConstAlign >= AlignAA->getKnownAlign())
         return Align(1);
     }
@@ -5219,15 +5219,14 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
   switch (II.getIntrinsicID()) {
   case Intrinsic::ptrmask: {
     const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
-        QueryingAA, IRPosition::value(*(II.getOperand(1))),
-        DepClassTy::REQUIRED);
+        QueryingAA, IRPosition::value(*II.getOperand(1)), DepClassTy::REQUIRED);
     const auto *AlignAA =
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II.getOperand(0))),
                             DepClassTy::REQUIRED);
     if (ConstVals && ConstVals->isValidState()) {
       unsigned ShiftValue =
           std::min(ConstVals->getAssumedMinTrailingZeros(), 63U);
-      Alignment = Align(1 << ShiftValue);
+      Alignment = Align(UINT64_C(1) << ShiftValue);
     }
     if (AlignAA && AlignAA->isValidState())
       Alignment = std::max(AlignAA->getAssumedAlign(), Alignment);
