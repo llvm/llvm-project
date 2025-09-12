@@ -8,25 +8,14 @@
 //
 /// \file
 /// This pass simplifies certain intrinsic calls when the arguments are uniform.
-/// also, this pass relies on the fact that uniformity analysis remains safe
-/// across valid transformations in LLVM. A transformation does not alter
-/// program behavior across threads: each instruction in the original IR
-/// continues to have a well-defined counterpart in the transformed IR, both
-/// statically and dynamically.
-///
-/// Valid transformations respect three invariants:
-/// 1. Use-def relationships are preserved. If one instruction produces a value
-///    and another consumes it, that dependency must remain intact.
-/// 2. Uniformity classification is preserved. Certain values are always uniform
-///    (constants, kernel arguments, convergent operations), while others are
-///    always divergent (atomics, most function calls). Transformations may turn
-///    divergent computations into uniform ones, but never the reverse.
-/// 3. Uniformity must hold not only at the point of value computation but also
-///    at all later uses of that value, consistently across the same set of
-///    threads.
-///
-/// Together, these invariants ensure that transformations in this pass are
-/// correctness-preserving and remain safe for uniformity analysis.
+/// It's true that this pass has transforms that can lead to a situation where
+/// some instruction whose operand was previously recognized as statically
+/// uniform is later on no longer recognized as statically uniform. However, the
+/// semantics of how programs execute don't (and must not, for this precise
+/// reason[0]) care about static uniformity, they only ever care about dynamic
+/// uniformity. And every instruction that's downstream and cares about dynamic
+/// uniformity must be convergent (and isel will introduce v_readfirstlane for
+/// them if their operands can't be proven statically uniform).
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
