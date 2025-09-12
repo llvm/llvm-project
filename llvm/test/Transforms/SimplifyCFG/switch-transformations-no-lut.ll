@@ -404,21 +404,19 @@ end:
 define i1 @single_value_with_mask(i32 %x) {
 ; OPTNOLUT-LABEL: define i1 @single_value_with_mask(
 ; OPTNOLUT-SAME: i32 [[X:%.*]]) {
-; OPTNOLUT-NEXT:  [[ENTRY:.*:]]
-; OPTNOLUT-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[X]], 16
-; OPTNOLUT-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 33
-; OPTNOLUT-NEXT:    br i1 [[TMP0]], label %[[SWITCH_HOLE_CHECK:.*]], label %[[DEFAULT:.*]]
+; OPTNOLUT-NEXT:  [[ENTRY:.*]]:
+; OPTNOLUT-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; OPTNOLUT-NEXT:      i32 18, label %[[END:.*]]
+; OPTNOLUT-NEXT:      i32 21, label %[[END]]
+; OPTNOLUT-NEXT:      i32 48, label %[[END]]
+; OPTNOLUT-NEXT:      i32 16, label %[[END]]
+; OPTNOLUT-NEXT:    ]
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
 ; OPTNOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
-; OPTNOLUT-NEXT:    br label %[[END:.*]]
-; OPTNOLUT:       [[SWITCH_HOLE_CHECK]]:
-; OPTNOLUT-NEXT:    [[SWITCH_MASKINDEX:%.*]] = zext i32 [[SWITCH_TABLEIDX]] to i64
-; OPTNOLUT-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i64 4294967333, [[SWITCH_MASKINDEX]]
-; OPTNOLUT-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i64 [[SWITCH_SHIFTED]] to i1
-; OPTNOLUT-NEXT:    br i1 [[SWITCH_LOBIT]], label %[[END]], label %[[DEFAULT]]
+; OPTNOLUT-NEXT:    br label %[[END]]
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ [[SEL]], %[[DEFAULT]] ], [ false, %[[SWITCH_HOLE_CHECK]] ]
+; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ [[SEL]], %[[DEFAULT]] ]
 ; OPTNOLUT-NEXT:    ret i1 [[RES]]
 ;
 ; TTINOLUT-LABEL: define i1 @single_value_with_mask(
