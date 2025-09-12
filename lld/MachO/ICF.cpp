@@ -413,37 +413,30 @@ void ICF::run() {
             if (a->keepUnique != b->keepUnique)
               return a->keepUnique > b->keepUnique;
           }
-          // Within each equivalence class, sort by primary (user) symbol name
-          // for determinism. Prefer the first non-local (external) symbol at
-          // offset 0.
-          auto getPrimarySymbolName = [](const ConcatInputSection *isec) {
-            const Symbol *firstLocalSymAtZero = nullptr;
-
-            // Single pass through symbols to find the best candidate
+          // Within each equivalence class, sort by symbol name for determinism.
+          // If a section has an external symbol at offset 0, use that name.
+          // If either section doesn't have such a symbol, retain the original
+          // order.
+          auto getExternalSymbolName =
+              [](const ConcatInputSection *isec) -> std::optional<StringRef> {
             for (const Symbol *sym : isec->symbols) {
-              if (auto *d = dyn_cast<Defined>(sym)) {
-                if (d->value == 0) {
-                  // If we find an external symbol at offset 0, return it
-                  // immediately
-                  if (d->isExternal())
-                    return d->getName();
-                  // Otherwise, remember the first local symbol at offset 0
-                  if (!firstLocalSymAtZero)
-                    firstLocalSymAtZero = sym;
-                }
+              if (const auto *d = dyn_cast<Defined>(sym)) {
+                if (d->value == 0 && d->isExternal())
+                  return d->getName();
               }
             }
-            // Return the local symbol at offset 0 if we found one
-            if (firstLocalSymAtZero)
-              return firstLocalSymAtZero->getName();
-
-            // Fallback: use section name
-            return isec->getName();
+            return std::nullopt;
           };
-          return getPrimarySymbolName(a) < getPrimarySymbolName(b);
+          auto nameA = getExternalSymbolName(a);
+          auto nameB = getExternalSymbolName(b);
+          // For determinism, define a strict ordering only when both sections
+          // have a primary symbol. Otherwise, they are considered equivalent
+          // (the expression returns false), preserving the stable sort order.
+          return nameA && nameB && *nameA < *nameB;
         }
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
+
   forEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, &ICF::equalsConstant);
   });
