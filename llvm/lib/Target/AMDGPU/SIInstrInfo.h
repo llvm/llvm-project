@@ -48,13 +48,10 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
-<<<<<<< HEAD
 /// Mark the MMO of cooperative load/store atomics.
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
-=======
->>>>>>> d98aa91d77c1 (fix format)
 struct V2PhysSCopyInfo {
   // Operands that need to replaced by waterfall
   SmallVector<MachineOperand *> MOs;
