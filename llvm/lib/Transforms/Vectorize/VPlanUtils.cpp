@@ -31,6 +31,30 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
+bool vputils::chainUsesScalarValues(const VPValue *Root) {
+  SmallVector<std::pair<const VPValue *, const VPUser *>> Worklist;
+  for (const VPUser *V : Root->users())
+    Worklist.emplace_back(Root, V);
+  while (!Worklist.empty()) {
+    auto [Op, U] = Worklist.pop_back_val();
+    if (isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenCallRecipe,
+            VPWidenGEPRecipe, VPWidenSelectRecipe, VPWidenIntrinsicRecipe>(U)) {
+      const VPValue *Def = cast<VPSingleDefRecipe>(U);
+      for (const VPUser *V : Def->users())
+        Worklist.emplace_back(Def, V);
+      continue;
+    }
+    if (isa<VPWidenMemoryRecipe>(U) && vputils::isSingleScalar(Op))
+      continue;
+    if (auto *VPI = dyn_cast<VPInstruction>(U))
+      if (VPI->isVectorToScalar() || VPI->isSingleScalar())
+        continue;
+    if (!U->usesScalars(Op))
+      return false;
+  }
+  return true;
+}
+
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());

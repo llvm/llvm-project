@@ -1414,16 +1414,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars or don't have only their
-      // scalar results used. In the latter case, we would introduce extra
-      // broadcasts.
+      // Only consider recipes that are single scalars whose scalar value is
+      // used by the final leaves in a recipe-chain walk: if the final leaves
+      // don't use the scalar value, it could introduce extra broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
-            return U->usesScalars(RepOrWidenR) ||
-                   match(cast<VPRecipeBase>(U),
-                         m_CombineOr(m_ExtractLastElement(m_VPValue()),
-                                     m_ExtractLastLanePerPart(m_VPValue())));
-          }))
+          !vputils::chainUsesScalarValues(RepOrWidenR))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
