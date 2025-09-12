@@ -40,6 +40,8 @@ Implemented Papers
 
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``
   is implemented in this release)
+- P2546R5: Debugging support (`Github <https://llvm.org/PR105392>`__)
+- P2810R4: ``is_debugger_present`` is_replaceable(`Github <https://llvm.org/PR105422>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
 
 Improvements and New Features
