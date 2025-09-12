@@ -802,8 +802,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     RISCVCC::CondCode CC;
     getOperandsForBranch(MI.getOperand(0).getReg(), CC, LHS, RHS, *MRI);
 
-    auto Bcc = MIB.buildInstr(RISCVCC::getBrCond(CC), {}, {LHS, RHS})
-                   .addMBB(MI.getOperand(1).getMBB());
+    auto Bcc =
+        MIB.buildInstr(RISCVCC::getBrCond(*Subtarget, CC), {}, {LHS, RHS})
+            .addMBB(MI.getOperand(1).getMBB());
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
   }
