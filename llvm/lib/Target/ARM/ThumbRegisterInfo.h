@@ -27,7 +27,7 @@ private:
   const bool IsThumb1Only;
 
 public:
-  ThumbRegisterInfo(const ARMSubtarget &STI);
+  explicit ThumbRegisterInfo(const ARMSubtarget &STI);
 
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,

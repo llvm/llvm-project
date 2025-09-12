@@ -41,7 +41,7 @@ public:
     GlobalPointer = 3,
   };
 
-  MipsRegisterInfo(const MipsSubtarget &STI);
+  explicit MipsRegisterInfo(const MipsSubtarget &STI);
 
   /// Get PIC indirect call register
   static unsigned getPICCallReg();

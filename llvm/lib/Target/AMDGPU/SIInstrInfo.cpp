@@ -5977,8 +5977,7 @@ static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           const MCInstrDesc &TID, unsigned RCID) {
   if (!ST.hasGFX90AInsts() && (((TID.mayLoad() || TID.mayStore()) &&
-                                !(TID.TSFlags & SIInstrFlags::Spill)) ||
-                               (TID.TSFlags & SIInstrFlags::MIMG))) {
+                                !(TID.TSFlags & SIInstrFlags::Spill)))) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
