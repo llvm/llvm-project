@@ -1307,6 +1307,9 @@ Error BasicELFBuilder::initSections() {
   return Error::success();
 }
 
+BasicELFBuilder::BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+BasicELFBuilder::~BasicELFBuilder() = default;
+
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   auto Data = ArrayRef<uint8_t>(
       reinterpret_cast<const uint8_t *>(MemBuf->getBufferStart()),

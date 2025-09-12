@@ -105,6 +105,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
   // Prolog information.
   SmallVector<int64_t> PushedRegs;
   bool HasStackAlloc = false;
+  bool HasSetFrame = false;
   unsigned ApproximatePrologCodeCount = 0;
 
   // Requested changes.
@@ -130,13 +131,18 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
         break;
 
       case X86::SEH_StackAlloc:
+        if (State != FunctionState::InProlog)
+          llvm_unreachable("SEH_StackAlloc outside of prolog");
+        // Assume a large alloc...
+        ApproximatePrologCodeCount += 3;
+        HasStackAlloc = true;
+        break;
+
       case X86::SEH_SetFrame:
         if (State != FunctionState::InProlog)
-          llvm_unreachable("SEH_StackAlloc or SEH_SetFrame outside of prolog");
-        // Assume a large alloc...
-        ApproximatePrologCodeCount +=
-            (MI.getOpcode() == X86::SEH_StackAlloc) ? 3 : 1;
-        HasStackAlloc = true;
+          llvm_unreachable("SEH_SetFrame outside of prolog");
+        ApproximatePrologCodeCount++;
+        HasSetFrame = true;
         break;
 
       case X86::SEH_SaveReg:
@@ -190,8 +196,30 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
         State = FunctionState::FinishedEpilog;
         break;
 
-      case X86::LEA64r:
       case X86::MOV64rr:
+        if (State == FunctionState::InEpilog) {
+          // If the prolog contains a stack allocation, then the first
+          // instruction in the epilog must be to adjust the stack pointer.
+          if (!HasSetFrame)
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "The epilog is setting frame back, but prolog did not set it");
+          if (PoppedRegCount > 0)
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "The epilog is setting the frame back after popping "
+                "registers");
+          if (HasStackDealloc)
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "Cannot set the frame back after the stack "
+                "allocation has been deallocated");
+        } else if (State == FunctionState::FinishedEpilog)
+          return rejectCurrentFunctionInternalError(
+              MF, Mode, "Unexpected mov instruction after the epilog");
+        break;
+
+      case X86::LEA64r:
       case X86::ADD64ri32:
         if (State == FunctionState::InEpilog) {
           // If the prolog contains a stack allocation, then the first
@@ -211,8 +239,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
           HasStackDealloc = true;
         } else if (State == FunctionState::FinishedEpilog)
           return rejectCurrentFunctionInternalError(
-              MF, Mode,
-              "Unexpected lea, mov or add instruction after the epilog");
+              MF, Mode, "Unexpected lea or add instruction after the epilog");
         break;
 
       case X86::POP64r:
@@ -278,11 +305,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  if (UnwindV2StartLocations.empty()) {
-    assert(State == FunctionState::InProlog &&
-           "If there are no epilogs, then there should be no prolog");
+  if (UnwindV2StartLocations.empty())
     return false;
-  }
 
   MachineBasicBlock &FirstMBB = MF.front();
   // Assume +1 for the "header" UOP_Epilog that contains the epilog size, and

@@ -93,11 +93,22 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-// TODO: localtime is not yet implemented and a temporary solution is to
-//       use gmtime, https://github.com/llvm/llvm-project/issues/107597
+LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *result) {
+  time_t seconds = *timer;
+  // Update the tm structure's year, month, day, etc. from seconds.
+  if (update_from_seconds(seconds, result) < 0) {
+    out_of_range();
+    return nullptr;
+  }
+
+  // TODO(zimirza): implement timezone database
+
+  return result;
+}
+
 LIBC_INLINE tm *localtime(const time_t *t_ptr) {
   static tm result;
-  return time_utils::gmtime_internal(t_ptr, &result);
+  return time_utils::localtime_internal(t_ptr, &result);
 }
 
 // Returns number of years from (1, year).

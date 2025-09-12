@@ -156,6 +156,7 @@ public:
   unsigned getPALMinorVersion();
   VersionTuple getPALVersion();
 
+  void updateHwStageMaximum(unsigned CC, StringRef field, unsigned Val);
   void setHwStage(unsigned CC, StringRef field, unsigned Val);
   void setHwStage(unsigned CC, StringRef field, bool Val);
   void setHwStage(unsigned CC, StringRef field, msgpack::Type Type,
