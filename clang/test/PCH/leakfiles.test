@@ -1,8 +1,8 @@
 // Test that compiling using a PCH doesn't leak file descriptors.
 // https://bugs.chromium.org/p/chromium/issues/detail?id=924225
 //
-// This test requires bash loops and ulimit.
-// UNSUPPORTED: target={{.*win32.*}}
+// This test uses ulimit.
+// UNSUPPORTED: system-windows
 //
 // Set up source files. lib/lib.h includes lots of lib*.h files in that dir.
 // client.c includes lib/lib.h, and also the individual files directly.
