@@ -226,13 +226,12 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 36
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 73, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[SCALAR_PH]] ], [ [[NEG_IV:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ [[TMP2]], [[SCALAR_PH]] ], [ [[NEG_IV:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[GEP_B]], align 8
 ; CHECK-NEXT:    [[NEG_IV]] = sub nsw i64 0, [[IV]]
