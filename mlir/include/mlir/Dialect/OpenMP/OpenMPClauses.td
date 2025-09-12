@@ -20,6 +20,7 @@
 #define OPENMP_CLAUSES
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -546,6 +547,58 @@ class OpenMP_HasDeviceAddrClauseSkip<
 }
 
 def OpenMP_HasDeviceAddrClause : OpenMP_HasDeviceAddrClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to hold heap allocation information.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_HeapAllocClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    MemoryEffects<[MemAlloc<DefaultResource>]>
+  ];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<IntLikeType>:$typeparams,
+    Variadic<IntLikeType>:$shape
+  );
+
+  // The custom parser doesn't parse `uniq_name` and `bindc_name`. This is
+  // handled by the attr-dict, which must be present in the operation's
+  // `assemblyFormat`.
+  let reqAssemblyFormat = [{
+    custom<HeapAllocClause>($in_type, $typeparams, type($typeparams), $shape,
+                            type($shape))
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType() { return getInTypeAttr().getValue(); }
+  }];
+
+  let description = [{
+    The `in_type` is the type of the object for which memory is being allocated.
+    For arrays, this can be a static or dynamic array type.
+
+    The optional `uniq_name` is a unique name for the allocated memory.
+
+    The optional `bindc_name` is a name used for C interoperability.
+
+    The `typeparams` are runtime type parameters for polymorphic or
+    parameterized types. These are typically integer values that define aspects
+    of a type not fixed at compile time.
+
+    The `shape` holds runtime shape operands for dynamic arrays. Each operand is
+    an integer value representing the extent of a specific dimension.
+  }];
+}
+
+def OpenMP_HeapAllocClause : OpenMP_HeapAllocClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.4.7] `inclusive` clause
