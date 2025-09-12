@@ -354,6 +354,23 @@ int FunctionComparator::cmpConstants(const Constant *L,
   if (!L->isNullValue() && R->isNullValue())
     return -1;
 
+  // Handle authenticated pointer constants produced by ConstantPtrAuth::get.
+  if (auto *PA1 = dyn_cast<ConstantPtrAuth>(L)) {
+    auto *PA2 = dyn_cast<ConstantPtrAuth>(R);
+    if (!PA2)
+      return cmpNumbers(L->getValueID(), R->getValueID());
+
+    if (int Res = cmpConstants(PA1->getPointer(), PA2->getPointer()))
+      return Res;
+    if (int Res = cmpConstants(PA1->getKey(), PA2->getKey()))
+      return Res;
+    if (int Res =
+            cmpConstants(PA1->getDiscriminator(), PA2->getDiscriminator()))
+      return Res;
+    return cmpConstants(PA1->getAddrDiscriminator(),
+                        PA2->getAddrDiscriminator());
+  }
+
   auto GlobalValueL = const_cast<GlobalValue *>(dyn_cast<GlobalValue>(L));
   auto GlobalValueR = const_cast<GlobalValue *>(dyn_cast<GlobalValue>(R));
   if (GlobalValueL && GlobalValueR) {
