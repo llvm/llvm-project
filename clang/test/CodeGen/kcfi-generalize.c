@@ -46,3 +46,4 @@ void uni(void (*fn)(union Union), union Union arg1) {
 
 // UNGENERALIZED: [[TYPE2]] = !{i32 981319178}
 // GENERALIZED: [[TYPE2]] = !{i32 -1599950473}
+

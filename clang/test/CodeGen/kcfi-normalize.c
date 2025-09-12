@@ -45,3 +45,4 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // CHECK: ![[TYPE2]] = !{i32 -460921415}
 // CHECK: ![[TYPE3]] = !{i32 -333839615}
 // CHECK: ![[TYPE4]] = !{i32 1766237188}
+
