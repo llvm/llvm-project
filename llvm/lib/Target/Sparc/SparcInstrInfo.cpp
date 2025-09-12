@@ -38,8 +38,8 @@ static cl::opt<unsigned>
 void SparcInstrInfo::anchor() {}
 
 SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
-    : SparcGenInstrInfo(ST, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(ST),
-      Subtarget(ST) {}
+    : SparcGenInstrInfo(ST, RI, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP),
+      RI(ST), Subtarget(ST) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of

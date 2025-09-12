@@ -24,7 +24,7 @@ class MipsSEInstrInfo : public MipsInstrInfo {
 public:
   explicit MipsSEInstrInfo(const MipsSubtarget &STI);
 
-  const MipsRegisterInfo &getRegisterInfo() const override;
+  const MipsSERegisterInfo &getRegisterInfo() const { return RI; }
 
   /// isLoadFromStackSlot - If the specified machine instruction is a direct
   /// load from a stack slot, return the virtual or physical register number of

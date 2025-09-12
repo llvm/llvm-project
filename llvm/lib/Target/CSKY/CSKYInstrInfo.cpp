@@ -25,7 +25,7 @@ using namespace llvm;
 #include "CSKYGenInstrInfo.inc"
 
 CSKYInstrInfo::CSKYInstrInfo(const CSKYSubtarget &STI)
-    : CSKYGenInstrInfo(STI, CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP),
+    : CSKYGenInstrInfo(STI, RI, CSKY::ADJCALLSTACKDOWN, CSKY::ADJCALLSTACKUP),
       STI(STI) {
   v2sf = STI.hasFPUv2SingleFloat();
   v2df = STI.hasFPUv2DoubleFloat();

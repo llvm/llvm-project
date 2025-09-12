@@ -24,8 +24,12 @@ namespace llvm {
 class LoongArchSubtarget;
 
 class LoongArchInstrInfo : public LoongArchGenInstrInfo {
+  const LoongArchRegisterInfo RegInfo;
+
 public:
   explicit LoongArchInstrInfo(const LoongArchSubtarget &STI);
+
+  const LoongArchRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
 

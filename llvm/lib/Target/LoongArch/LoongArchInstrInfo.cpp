@@ -26,9 +26,9 @@ using namespace llvm;
 #include "LoongArchGenInstrInfo.inc"
 
 LoongArchInstrInfo::LoongArchInstrInfo(const LoongArchSubtarget &STI)
-    : LoongArchGenInstrInfo(STI, LoongArch::ADJCALLSTACKDOWN,
+    : LoongArchGenInstrInfo(STI, RegInfo, LoongArch::ADJCALLSTACKDOWN,
                             LoongArch::ADJCALLSTACKUP),
-      STI(STI) {}
+      RegInfo(STI.getHwMode()), STI(STI) {}
 
 MCInst LoongArchInstrInfo::getNop() const {
   return MCInstBuilder(LoongArch::ANDI)
