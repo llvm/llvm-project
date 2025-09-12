@@ -1,11 +1,8 @@
 // RUN: split-file %s %t
 
-// RUN: clang++ --target=arm64-apple-macos11 \
-// RUN:   %t/stmt_seq_macho.cpp -o %t/stmt_seq_macho.o \
-// RUN:   -g -Oz -gdwarf-4 -c -mno-outline \
-// RUN:   -mllvm -emit-func-debug-line-table-offsets \
-// RUN:   -fdebug-compilation-dir=/private/tmp/stmt_seq \
-// RUN:   -fno-unwind-tables -fno-exceptions
+// RUN: llc -filetype=obj -mtriple=arm64-apple-macos11 \
+// RUN:   %t/stmt_seq_macho.ll -o %t/stmt_seq_macho.o \
+// RUN:   -emit-func-debug-line-table-offsets
 
 // RUN: llvm-dwarfdump -all %t/stmt_seq_macho.o | FileCheck %s
 
@@ -35,7 +32,7 @@
 // CHECK-NEXT:             0x0000000000000034     37      0      1   0             0       0  is_stmt
 // CHECK-NEXT:             0x0000000000000044     39     12      1   0             0       0  is_stmt prologue_end
 // CHECK-NEXT:             0x0000000000000050     40     12      1   0             0       0  is_stmt
-// CHECK-NEXT:             0x0000000000000058     40      9      1   0             0       0  is_stmt
+// CHECK-NEXT:             0x0000000000000058     40      9      1   0             0       0
 // CHECK-NEXT:             0x000000000000005c     41     12      1   0             0       0  is_stmt
 // CHECK-NEXT:             0x0000000000000068     42     12      1   0             0       0  is_stmt
 // CHECK-NEXT:             0x0000000000000070     41      9      1   0             0       0  is_stmt
@@ -46,6 +43,16 @@
 // CHECK-NEXT:             0x0000000000000098     34     85      1   0             0       0  is_stmt prologue_end
 // CHECK-NEXT:             0x000000000000009c     34     85      1   0             0       0  is_stmt end_sequence
 // CHECK-NEXT:             0x000000000000009c     34     86      1   0             0       0  is_stmt prologue_end
+
+
+#--- gen
+clang++ --target=arm64-apple-macos11 \
+  stmt_seq_macho.cpp \
+  -o stmt_seq_macho.ll -S -emit-llvm \
+  -g -Oz -gdwarf-4 -mno-outline \
+  -mllvm -emit-func-debug-line-table-offsets \
+  -fdebug-compilation-dir=/private/tmp/stmt_seq \
+  -fno-unwind-tables -fno-exceptions
 
 #--- stmt_seq_macho.cpp
 #define ATTRIB extern "C" __attribute__((noinline))
@@ -96,3 +103,228 @@ int main() {
     length_error e("test");
     return sum;
 }
+
+#--- stmt_seq_macho.ll
+; ModuleID = 'stmt_seq_macho.cpp'
+source_filename = "stmt_seq_macho.cpp"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64-apple-macosx11.0.0"
+
+%struct.length_error = type { i8 }
+
+@.str = private unnamed_addr constant [5 x i8] c"test\00", align 1, !dbg !0
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define void @function_empty_1() local_unnamed_addr #0 !dbg !16 {
+  ret void, !dbg !19
+}
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define void @function_empty_2() local_unnamed_addr #0 !dbg !20 {
+  ret void, !dbg !21
+}
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define void @function_empty_3() local_unnamed_addr #0 !dbg !22 {
+  ret void, !dbg !23
+}
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define range(i32 -2147483647, -2147483648) i32 @function1_copy1(i32 noundef %0) local_unnamed_addr #0 !dbg !24 {
+    #dbg_value(i32 %0, !29, !DIExpression(), !30)
+  %2 = add nsw i32 %0, 1, !dbg !31
+    #dbg_value(i32 %2, !29, !DIExpression(), !30)
+  ret i32 %2, !dbg !32
+}
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define range(i32 -2147483644, -2147483648) i32 @function3_copy1(i32 noundef %0) local_unnamed_addr #0 !dbg !33 {
+    #dbg_value(i32 %0, !35, !DIExpression(), !37)
+    #dbg_value(i32 %0, !36, !DIExpression(DW_OP_plus_uconst, 3, DW_OP_stack_value), !37)
+  %2 = add nsw i32 %0, 4, !dbg !38
+  ret i32 %2, !dbg !39
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none)) #1
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none)) #1
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define range(i32 -2147483648, 2147483626) i32 @function2_copy1(i32 noundef %0) local_unnamed_addr #0 !dbg !40 {
+    #dbg_value(i32 %0, !42, !DIExpression(), !43)
+  %2 = add nsw i32 %0, -22, !dbg !44
+  ret i32 %2, !dbg !45
+}
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define range(i32 -2147483644, -2147483648) i32 @function3_copy2(i32 noundef %0) local_unnamed_addr #0 !dbg !46 {
+    #dbg_value(i32 %0, !48, !DIExpression(), !50)
+    #dbg_value(i32 %0, !49, !DIExpression(DW_OP_plus_uconst, 3, DW_OP_stack_value), !50)
+  %2 = add nsw i32 %0, 4, !dbg !51
+  ret i32 %2, !dbg !52
+}
+
+; Function Attrs: minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none)
+define range(i32 -2147483648, 2147483626) i32 @function2_copy2(i32 noundef %0) local_unnamed_addr #0 !dbg !53 {
+    #dbg_value(i32 %0, !55, !DIExpression(), !57)
+  %2 = add nsw i32 %0, -22, !dbg !58
+    #dbg_value(i32 %2, !56, !DIExpression(), !57)
+  ret i32 %2, !dbg !59
+}
+
+; Function Attrs: minsize mustprogress norecurse nounwind optsize ssp
+define noundef i32 @main() local_unnamed_addr #2 !dbg !60 {
+  %1 = alloca %struct.length_error, align 1
+    #dbg_value(i32 0, !64, !DIExpression(), !80)
+  %2 = tail call i32 @function2_copy2(i32 noundef 3) #4, !dbg !81
+    #dbg_value(i32 %2, !64, !DIExpression(), !80)
+  %3 = tail call i32 @function3_copy2(i32 noundef 41) #4, !dbg !82
+  %4 = add nsw i32 %3, %2, !dbg !83
+    #dbg_value(i32 %4, !64, !DIExpression(), !80)
+  %5 = tail call i32 @function2_copy1(i32 noundef 11) #4, !dbg !84
+  %6 = add nsw i32 %4, %5, !dbg !85
+    #dbg_value(i32 %6, !64, !DIExpression(), !80)
+  %7 = tail call i32 @function1_copy1(i32 noundef 42) #4, !dbg !86
+  %8 = add nsw i32 %6, %7, !dbg !87
+    #dbg_value(i32 %8, !64, !DIExpression(), !80)
+  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %1) #5, !dbg !88
+    #dbg_declare(ptr %1, !65, !DIExpression(), !89)
+  %9 = call noundef ptr @_ZN12length_errorC1EPKc(ptr noundef nonnull align 1 dereferenceable(1) %1, ptr noundef nonnull @.str) #4, !dbg !89
+  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %1) #5, !dbg !90
+  ret i32 %8, !dbg !91
+}
+
+; Function Attrs: minsize mustprogress noinline nounwind optsize ssp
+define linkonce_odr noundef ptr @_ZN12length_errorC1EPKc(ptr noundef nonnull returned align 1 dereferenceable(1) %0, ptr noundef %1) unnamed_addr #3 !dbg !92 {
+    #dbg_value(ptr %0, !94, !DIExpression(), !97)
+    #dbg_value(ptr %1, !96, !DIExpression(), !97)
+  %3 = tail call noundef ptr @_ZN12length_errorC2EPKc(ptr noundef nonnull align 1 dereferenceable(1) %0, ptr noundef %1) #4, !dbg !98
+  ret ptr %0, !dbg !99
+}
+
+; Function Attrs: minsize mustprogress noinline nounwind optsize ssp
+define linkonce_odr noundef ptr @_ZN12length_errorC2EPKc(ptr noundef nonnull returned align 1 dereferenceable(1) %0, ptr noundef %1) unnamed_addr #3 !dbg !100 {
+    #dbg_value(ptr %0, !102, !DIExpression(), !104)
+    #dbg_value(ptr %1, !103, !DIExpression(), !104)
+  ret ptr %0, !dbg !105
+}
+
+attributes #0 = { minsize mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm-gpr64,+zcz" }
+attributes #1 = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { minsize mustprogress norecurse nounwind optsize ssp "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm-gpr64,+zcz" }
+attributes #3 = { minsize mustprogress noinline nounwind optsize ssp "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm-gpr64,+zcz" }
+attributes #4 = { minsize optsize }
+attributes #5 = { nounwind }
+
+!llvm.dbg.cu = !{!8}
+!llvm.module.flags = !{!10, !11, !12, !13, !14}
+!llvm.ident = !{!15}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(scope: null, file: !2, line: 46, type: !3, isLocal: true, isDefinition: true)
+!2 = !DIFile(filename: "stmt_seq_macho.cpp", directory: "/private/tmp/stmt_seq")
+!3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 40, elements: !6)
+!4 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !5)
+!5 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+!6 = !{!7}
+!7 = !DISubrange(count: 5)
+!8 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "Facebook clang version 15.76.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project f40fa6dd3d840937180d389e8d6b902ac45f7134)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !9, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!9 = !{!0}
+!10 = !{i32 7, !"Dwarf Version", i32 4}
+!11 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = !{i32 1, !"wchar_size", i32 4}
+!13 = !{i32 8, !"PIC Level", i32 2}
+!14 = !{i32 7, !"frame-pointer", i32 1}
+!15 = !{!"Facebook clang version 15.76.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project f40fa6dd3d840937180d389e8d6b902ac45f7134)"}
+!16 = distinct !DISubprogram(name: "function_empty_1", scope: !2, file: !2, line: 2, type: !17, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8)
+!17 = !DISubroutineType(types: !18)
+!18 = !{null}
+!19 = !DILocation(line: 2, column: 33, scope: !16)
+!20 = distinct !DISubprogram(name: "function_empty_2", scope: !2, file: !2, line: 3, type: !17, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8)
+!21 = !DILocation(line: 3, column: 33, scope: !20)
+!22 = distinct !DISubprogram(name: "function_empty_3", scope: !2, file: !2, line: 4, type: !17, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8)
+!23 = !DILocation(line: 4, column: 33, scope: !22)
+!24 = distinct !DISubprogram(name: "function1_copy1", scope: !2, file: !2, line: 6, type: !25, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, retainedNodes: !28)
+!25 = !DISubroutineType(types: !26)
+!26 = !{!27, !27}
+!27 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!28 = !{!29}
+!29 = !DILocalVariable(name: "a", arg: 1, scope: !24, file: !2, line: 6, type: !27)
+!30 = !DILocation(line: 0, scope: !24)
+!31 = !DILocation(line: 7, column: 10, scope: !24)
+!32 = !DILocation(line: 7, column: 3, scope: !24)
+!33 = distinct !DISubprogram(name: "function3_copy1", scope: !2, file: !2, line: 10, type: !25, scopeLine: 10, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, retainedNodes: !34)
+!34 = !{!35, !36}
+!35 = !DILocalVariable(name: "a", arg: 1, scope: !33, file: !2, line: 10, type: !27)
+!36 = !DILocalVariable(name: "b", scope: !33, file: !2, line: 11, type: !27)
+!37 = !DILocation(line: 0, scope: !33)
+!38 = !DILocation(line: 12, column: 14, scope: !33)
+!39 = !DILocation(line: 12, column: 5, scope: !33)
+!40 = distinct !DISubprogram(name: "function2_copy1", scope: !2, file: !2, line: 15, type: !25, scopeLine: 15, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, retainedNodes: !41)
+!41 = !{!42}
+!42 = !DILocalVariable(name: "a", arg: 1, scope: !40, file: !2, line: 15, type: !27)
+!43 = !DILocation(line: 0, scope: !40)
+!44 = !DILocation(line: 16, column: 14, scope: !40)
+!45 = !DILocation(line: 16, column: 5, scope: !40)
+!46 = distinct !DISubprogram(name: "function3_copy2", scope: !2, file: !2, line: 19, type: !25, scopeLine: 19, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, retainedNodes: !47)
+!47 = !{!48, !49}
+!48 = !DILocalVariable(name: "a", arg: 1, scope: !46, file: !2, line: 19, type: !27)
+!49 = !DILocalVariable(name: "b", scope: !46, file: !2, line: 20, type: !27)
+!50 = !DILocation(line: 0, scope: !46)
+!51 = !DILocation(line: 21, column: 14, scope: !46)
+!52 = !DILocation(line: 21, column: 5, scope: !46)
+!53 = distinct !DISubprogram(name: "function2_copy2", scope: !2, file: !2, line: 24, type: !25, scopeLine: 24, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, retainedNodes: !54)
+!54 = !{!55, !56}
+!55 = !DILocalVariable(name: "a", arg: 1, scope: !53, file: !2, line: 24, type: !27)
+!56 = !DILocalVariable(name: "result", scope: !53, file: !2, line: 25, type: !27)
+!57 = !DILocation(line: 0, scope: !53)
+!58 = !DILocation(line: 25, column: 20, scope: !53)
+!59 = !DILocation(line: 26, column: 5, scope: !53)
+!60 = distinct !DISubprogram(name: "main", scope: !2, file: !2, line: 37, type: !61, scopeLine: 37, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, retainedNodes: !63)
+!61 = !DISubroutineType(types: !62)
+!62 = !{!27}
+!63 = !{!64, !65}
+!64 = !DILocalVariable(name: "sum", scope: !60, file: !2, line: 38, type: !27)
+!65 = !DILocalVariable(name: "e", scope: !60, file: !2, line: 46, type: !66)
+!66 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "length_error", file: !2, line: 33, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !67, identifier: "_ZTS12length_error")
+!67 = !{!68, !76}
+!68 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !66, baseType: !69, extraData: i32 0)
+!69 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "logic_error", file: !2, line: 29, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !70, identifier: "_ZTS11logic_error")
+!70 = !{!71}
+!71 = !DISubprogram(name: "logic_error", scope: !69, file: !2, line: 30, type: !72, scopeLine: 30, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!72 = !DISubroutineType(types: !73)
+!73 = !{null, !74, !75}
+!74 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !69, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+!75 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!76 = !DISubprogram(name: "length_error", scope: !66, file: !2, line: 34, type: !77, scopeLine: 34, flags: DIFlagExplicit | DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!77 = !DISubroutineType(types: !78)
+!78 = !{null, !79, !75}
+!79 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !66, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+!80 = !DILocation(line: 0, scope: !60)
+!81 = !DILocation(line: 39, column: 12, scope: !60)
+!82 = !DILocation(line: 40, column: 12, scope: !60)
+!83 = !DILocation(line: 40, column: 9, scope: !60)
+!84 = !DILocation(line: 41, column: 12, scope: !60)
+!85 = !DILocation(line: 41, column: 9, scope: !60)
+!86 = !DILocation(line: 42, column: 12, scope: !60)
+!87 = !DILocation(line: 42, column: 9, scope: !60)
+!88 = !DILocation(line: 46, column: 5, scope: !60)
+!89 = !DILocation(line: 46, column: 18, scope: !60)
+!90 = !DILocation(line: 48, column: 1, scope: !60)
+!91 = !DILocation(line: 47, column: 5, scope: !60)
+!92 = distinct !DISubprogram(name: "length_error", linkageName: "_ZN12length_errorC1EPKc", scope: !66, file: !2, line: 34, type: !77, scopeLine: 34, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, declaration: !76, retainedNodes: !93)
+!93 = !{!94, !96}
+!94 = !DILocalVariable(name: "this", arg: 1, scope: !92, type: !95, flags: DIFlagArtificial | DIFlagObjectPointer)
+!95 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !66, size: 64)
+!96 = !DILocalVariable(name: "s", arg: 2, scope: !92, file: !2, line: 34, type: !75)
+!97 = !DILocation(line: 0, scope: !92)
+!98 = !DILocation(line: 34, column: 85, scope: !92)
+!99 = !DILocation(line: 34, column: 86, scope: !92)
+!100 = distinct !DISubprogram(name: "length_error", linkageName: "_ZN12length_errorC2EPKc", scope: !66, file: !2, line: 34, type: !77, scopeLine: 34, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !8, declaration: !76, retainedNodes: !101)
+!101 = !{!102, !103}
+!102 = !DILocalVariable(name: "this", arg: 1, scope: !100, type: !95, flags: DIFlagArtificial | DIFlagObjectPointer)
+!103 = !DILocalVariable(name: "s", arg: 2, scope: !100, file: !2, line: 34, type: !75)
+!104 = !DILocation(line: 0, scope: !100)
+!105 = !DILocation(line: 34, column: 86, scope: !100)
