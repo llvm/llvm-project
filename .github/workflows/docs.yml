@@ -60,7 +60,7 @@ jobs:
           fetch-depth: 2
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
-        uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
+        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46.0.5
         with:
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
