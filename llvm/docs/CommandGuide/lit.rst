@@ -316,7 +316,8 @@ The timing data is stored in the `test_exec_root` in a file named
 
 .. option:: --filter-failed
 
-  Run only those tests that previously failed.
+  Run only those tests that previously failed. Tests that have been newly added
+  but not yet run are not included.
 
 .. option:: --xfail LIST
 
