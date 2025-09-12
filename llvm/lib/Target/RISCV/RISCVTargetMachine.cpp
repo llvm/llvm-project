@@ -163,6 +163,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
 
+  // RISC-V supports the debug entry values.
+  setSupportsDebugEntryValues(true);
+
   if (TT.isOSFuchsia() && !TT.isArch64Bit())
     report_fatal_error("Fuchsia is only supported for 64-bit");
 
