@@ -525,6 +525,7 @@ private:
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
   Align Alignment;
+  MaybeAlign PreferredAlignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
   // If not -1u, the first linker-relaxable fragment's order within the
@@ -585,6 +586,19 @@ public:
       Alignment = MinAlignment;
   }
 
+  Align getPreferredAlignment() const {
+    if (!PreferredAlignment || Alignment > *PreferredAlignment)
+      return Alignment;
+    return *PreferredAlignment;
+  }
+
+  void ensurePreferredAlignment(Align PrefAlign) {
+    if (!PreferredAlignment || PrefAlign > *PreferredAlignment)
+      PreferredAlignment = PrefAlign;
+  }
+
+  Align getAlignmentForObjectFile(uint64_t Size) const;
+  
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
 

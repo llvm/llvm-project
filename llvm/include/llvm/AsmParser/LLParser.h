@@ -311,7 +311,7 @@ namespace llvm {
                                  GlobalValueSummary::ImportKind &Res);
     void parseOptionalDLLStorageClass(unsigned &Res);
     bool parseOptionalCallingConv(unsigned &CC);
-    bool parseOptionalAlignment(MaybeAlign &Alignment,
+    bool parseOptionalAlignment(lltok::Kind KW, MaybeAlign &Alignment,
                                 bool AllowParens = false);
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
