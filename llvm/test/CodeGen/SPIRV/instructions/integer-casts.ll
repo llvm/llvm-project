@@ -14,11 +14,11 @@
 ; CHECK-DAG: OpName [[ZEXT8_16:%.*]] "u8tou16"
 ; CHECK-DAG: OpName [[ZEXT16_32:%.*]] "u16tou32"
 
+; CHECK-DAG: OpName %[[#R16:]] "r16"
 ; CHECK-DAG: OpName %[[#R17:]] "r17"
 ; CHECK-DAG: OpName %[[#R18:]] "r18"
 ; CHECK-DAG: OpName %[[#R19:]] "r19"
 ; CHECK-DAG: OpName %[[#R20:]] "r20"
-; CHECK-DAG: OpName %[[#R21:]] "r21"
 
 ; CHECK-DAG: OpName [[TRUNC32_16v4:%.*]] "i32toi16v4"
 ; CHECK-DAG: OpName [[TRUNC32_8v4:%.*]] "i32toi8v4"
@@ -30,11 +30,11 @@
 ; CHECK-DAG: OpName [[ZEXT8_16v4:%.*]] "u8tou16v4"
 ; CHECK-DAG: OpName [[ZEXT16_32v4:%.*]] "u16tou32v4"
 
-; CHECK-DAG: OpDecorate %[[#R17]] FPRoundingMode RTZ
-; CHECK-DAG: OpDecorate %[[#R18]] FPRoundingMode RTE
-; CHECK-DAG: OpDecorate %[[#R19]] FPRoundingMode RTP
-; CHECK-DAG: OpDecorate %[[#R20]] FPRoundingMode RTN
-; CHECK-DAG: OpDecorate %[[#R21]] SaturatedConversion
+; CHECK-DAG: OpDecorate %[[#R16]] FPRoundingMode RTZ
+; CHECK-DAG: OpDecorate %[[#R17]] FPRoundingMode RTE
+; CHECK-DAG: OpDecorate %[[#R18]] FPRoundingMode RTP
+; CHECK-DAG: OpDecorate %[[#R19]] FPRoundingMode RTN
+; CHECK-DAG: OpDecorate %[[#R20]] SaturatedConversion
 
 ; CHECK-DAG: [[F32:%.*]] = OpTypeFloat 32
 ; CHECK-DAG: [[F16:%.*]] = OpTypeFloat 16
@@ -266,11 +266,11 @@ define <4 x i32>  @u16tou32v4(<4 x i16> %a) {
 ; CHECK: %[[#]] = OpSConvert [[U32v4]] %[[#]]
 ; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
 ; CHECK: %[[#]] = OpConvertUToF [[F32]] %[[#]]
+; CHECK: %[[#R16]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R17]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R18]] = OpFConvert [[F32v2]] %[[#]]
 ; CHECK: %[[#R19]] = OpFConvert [[F32v2]] %[[#]]
-; CHECK: %[[#R20]] = OpFConvert [[F32v2]] %[[#]]
-; CHECK: %[[#R21]] = OpConvertFToU [[U8]] %[[#]]
+; CHECK: %[[#R20]] = OpConvertFToU [[U8]] %[[#]]
 ; CHECK: OpFunctionEnd
 define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg_ptr, <4 x i8> %arg_v2) {
   %r1 = call spir_func i32 @__spirv_ConvertFToU(float 0.000000e+00)
