@@ -229,10 +229,6 @@ bb:
   ret <16 x float> %call235
 }
 
-; Function Attrs: convergent nocallback nofree nosync nounwind willreturn memory(none)
 declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.fp8.fp8(i64, i64, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #0
-
-; uselistorder directives
-uselistorder ptr @llvm.amdgcn.mfma.f32.32x32x16.fp8.fp8, { 3, 2, 1, 0 }
 
 attributes #0 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
