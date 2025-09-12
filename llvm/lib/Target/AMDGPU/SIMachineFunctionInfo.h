@@ -293,7 +293,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned PSInputEnable = 0;
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
-  bool DisableTBufferCombine = false;
+  bool RelaxedTBufferOOBMode = false;
 
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
@@ -364,6 +364,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
+    YamlIO.mapOptional("RelaxedTBufferOOBMode", MFI.RelaxedTBufferOOBMode,
+                       false);
   }
 };
 
@@ -530,8 +532,8 @@ private:
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
-  // Disable combining of TBUFFER instructions.
-  bool DisableTBufferCombine = false;
+  // Enable relaxed TBUFFER out-of-bounds mode. Default is false.
+  bool RelaxedTBufferOOBMode = false;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -1218,9 +1220,9 @@ public:
 
   AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
 
-  bool isTBufferCombineDisabled() const { return DisableTBufferCombine; }
-  void setDisableTBufferCombine(bool IsDisabled) {
-    DisableTBufferCombine = IsDisabled;
+  bool isRelaxedTBufferOOBMode() const { return RelaxedTBufferOOBMode; }
+  void setRelaxedTBufferOOBMode(bool Enabled) {
+    RelaxedTBufferOOBMode = Enabled;
   }
 };
 

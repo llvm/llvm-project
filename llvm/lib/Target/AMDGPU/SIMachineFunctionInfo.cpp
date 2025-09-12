@@ -198,8 +198,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
   ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
 
-  if (F.hasFnAttribute("amdgpu-disable-tbuffer-combine"))
-    setDisableTBufferCombine(true);
+  if (F.hasFnAttribute("amdgpu-relaxed-tbuffer-oob-mod"))
+    setRelaxedTBufferOOBMode(true);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
@@ -796,6 +796,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  RelaxedTBufferOOBMode = YamlMFI.RelaxedTBufferOOBMode;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

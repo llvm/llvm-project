@@ -4,7 +4,7 @@
 --- |
   target triple = "amdgcn"
 
-  define float @disable-tbuffer-combine(<4 x i32> %vec, i32 %index) #0 {
+  define float @relaxed-tbuffer-oob-mode(<4 x i32> %vec, i32 %index) #0 {
     %1 = call i32 @llvm.amdgcn.struct.tbuffer.load.i32(<4 x i32> %vec, i32 %index, i32 0, i32 0, i32 22, i32 0)
     %2 = call i32 @llvm.amdgcn.struct.tbuffer.load.i32(<4 x i32> %vec, i32 %index, i32 4, i32 0, i32 22, i32 0)
     %3 = call i32 @llvm.amdgcn.struct.tbuffer.load.i32(<4 x i32> %vec, i32 %index, i32 8, i32 0, i32 22, i32 0)
@@ -19,15 +19,17 @@
     ret float %res
   }
 
-  attributes #0 = {"amdgpu-disable-tbuffer-combine"}
+  attributes #0 = {"amdgpu-relaxed-tbuffer-oob-mod"}
 ...
 ---
-name:            disable-tbuffer-combine
+name:            relaxed-tbuffer-oob-mode
+machineFunctionInfo:
+  RelaxedTBufferOOBMode: true
 body:             |
   bb.0 (%ir-block.0):
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
 
-    ; CHECK-LABEL: name: disable-tbuffer-combine
+    ; CHECK-LABEL: name: relaxed-tbuffer-oob-mode
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
@@ -37,12 +39,15 @@ body:             |
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; CHECK-NEXT: [[TBUFFER_LOAD_FORMAT_X_IDXEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN [[COPY]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
-    ; CHECK-NEXT: [[TBUFFER_LOAD_FORMAT_X_IDXEN1:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN [[COPY]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
-    ; CHECK-NEXT: [[TBUFFER_LOAD_FORMAT_X_IDXEN2:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN [[COPY]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
-    ; CHECK-NEXT: [[TBUFFER_LOAD_FORMAT_X_IDXEN3:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN [[COPY]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 12, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
-    ; CHECK-NEXT: [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[TBUFFER_LOAD_FORMAT_X_IDXEN]], 0, killed [[TBUFFER_LOAD_FORMAT_X_IDXEN1]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, killed [[TBUFFER_LOAD_FORMAT_X_IDXEN2]], 0, killed [[TBUFFER_LOAD_FORMAT_X_IDXEN3]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[TBUFFER_LOAD_FORMAT_XYZW_IDXEN:%[0-9]+]]:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY]], [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 63, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 8)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vreg_96 = COPY [[TBUFFER_LOAD_FORMAT_XYZW_IDXEN]].sub0_sub1_sub2
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY killed [[TBUFFER_LOAD_FORMAT_XYZW_IDXEN]].sub3
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[COPY5]].sub0_sub1
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY5]].sub2
+    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY7]].sub0
+    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]].sub1
+    ; CHECK-NEXT: [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[COPY9]], 0, killed [[COPY10]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, killed [[COPY8]], 0, killed [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[V_ADD_F32_e64_]], 0, killed [[V_MUL_F32_e64_]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_ADD_F32_e64_1]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0

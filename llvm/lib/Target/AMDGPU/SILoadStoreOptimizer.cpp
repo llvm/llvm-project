@@ -2511,9 +2511,9 @@ SILoadStoreOptimizer::collectMergeableInsts(
 
       const MachineFunction *MF = MI.getParent()->getParent();
       const auto *MFI = MF->getInfo<SIMachineFunctionInfo>();
-      if (MFI->isTBufferCombineDisabled()) {
+      if (!MFI->isRelaxedTBufferOOBMode()) {
         LLVM_DEBUG(
-            dbgs() << "Skip TBUFFER combine: disabled by function attribute\n");
+            dbgs() << "Skip tbuffer combine: relaxed mode not enabled\n");
         continue;
       }
     }
