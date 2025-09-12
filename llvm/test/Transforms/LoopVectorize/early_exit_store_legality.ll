@@ -602,5 +602,40 @@ exit:
   ret void
 }
 
+;; ICE was caused by assert for the load used in the uncountable exit condition
+;; being guaranteed to execute.
+@e = external addrspace(21) global [4 x i8]
+define void @crash_conditional_load_for_uncountable_exit() {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %cont
+
+handler.out_of_bounds:
+  unreachable
+
+cont:
+  %h.06 = phi i64 [ 0, %entry ], [ %inc, %a.exit ]
+  %arrayidx = getelementptr i8, ptr addrspace(21) @e, i64 %h.06
+  br i1 false, label %cont1, label %handler.type_mismatch
+
+handler.type_mismatch:
+  unreachable
+
+cont1:
+  %0 = load i8, ptr addrspace(21) %arrayidx, align 1
+  store i16 0, ptr null, align 2
+  %cmp.not.i.i = icmp eq i8 %0, 0
+  br i1 %cmp.not.i.i, label %a.exit, label %if.then.i.i
+
+if.then.i.i:
+  unreachable
+
+a.exit:
+  %inc = add i64 %h.06, 1
+  br i1 true, label %handler.out_of_bounds, label %cont
+}
+
+
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

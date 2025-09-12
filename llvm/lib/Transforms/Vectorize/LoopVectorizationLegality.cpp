@@ -1903,11 +1903,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   SafetyInfo.computeLoopSafetyInfo(TheLoop);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
-  // FIXME: Currently, other restrictions prevent us from reaching this point
-  //        with a loop where the uncountable exit condition is determined
-  //        by a conditional load.
-  assert(SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop) &&
-         "Unhandled control flow in uncountable exit loop with side effects");
+  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+    reportVectorizationFailure(
+        "Load for uncountable exit not guaranteed to execute",
+        "ConditionalUncountableExitLoad", ORE, TheLoop);
+    return false;
+  }
 
   // Prohibit any potential aliasing with any instruction in the loop which
   // might store to memory.
