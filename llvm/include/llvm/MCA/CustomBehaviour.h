@@ -125,7 +125,7 @@ class Instrument {
 
 public:
   Instrument(StringRef Desc, StringRef Data) : Desc(Desc), Data(Data) {}
-  
+
   Instrument() : Instrument("", "") {}
 
   virtual ~Instrument() = default;
@@ -139,6 +139,7 @@ public:
 
 class LatencyInstrument : public Instrument {
   std::optional<unsigned> Latency;
+
 public:
   static const llvm::StringRef DESC_NAME;
   LatencyInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
