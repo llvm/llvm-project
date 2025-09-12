@@ -976,11 +976,9 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
                                     const TargetRegisterInfo *TRI) const {
   assert(getParent() && "Can't have an MBB reference here!");
   assert(getMF() && "Can't have an MF reference here!");
-  const MachineFunction &MF = *getMF();
-
   // Most opcodes have fixed constraints in their MCInstrDesc.
   if (!isInlineAsm())
-    return TII->getRegClass(getDesc(), OpIdx, TRI, MF);
+    return TII->getRegClass(getDesc(), OpIdx, TRI);
 
   if (!getOperand(OpIdx).isReg())
     return nullptr;

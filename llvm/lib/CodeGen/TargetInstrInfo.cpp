@@ -58,10 +58,9 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
-const TargetRegisterClass*
+const TargetRegisterClass *
 TargetInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                             const TargetRegisterInfo *TRI,
-                             const MachineFunction &MF) const {
+                             const TargetRegisterInfo *TRI) const {
   if (OpNum >= MCID.getNumOperands())
     return nullptr;
 
