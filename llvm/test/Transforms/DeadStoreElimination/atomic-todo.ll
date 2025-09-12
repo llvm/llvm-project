@@ -22,9 +22,15 @@ define i32 @test9() {
 }
 
 ; DSE across monotonic load (blocked if the atomic load's address isn't NoAlias)
-define i32 @test9a() {
+define i32 @test9a(ptr %ptr) {
+; CHECK-LABEL: @test9a(
+; CHECK-NEXT:    store i32 0, ptr @x, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    store i32 1, ptr @x, align 4
+; CHECK-NEXT:    ret i32 [[X]]
+;
   store i32 0, ptr @x
-  %x = load atomic i32, ptr @ptr monotonic, align 4
+  %x = load atomic i32, ptr %ptr monotonic, align 4
   store i32 1, ptr @x
   ret i32 %x
 }
