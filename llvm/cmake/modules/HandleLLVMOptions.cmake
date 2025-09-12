@@ -512,6 +512,17 @@ if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
   endif( LLVM_BUILD_32_BITS )
 endif( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
 
+# Check for lock-free 64 bit atomic operations to enable OnDiskCAS.
+CHECK_CXX_SOURCE_COMPILES("
+#include <atomic>
+#include <cstdint>
+static_assert(sizeof(std::atomic<int64_t>) == sizeof(uint64_t));
+int main() {
+  return 0;
+}
+" HAVE_LOCKFREE_ATOMICS64)
+option (LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${HAVE_LOCKFREE_ATOMICS64})
+
 # If building on a GNU specific 32-bit system, make sure off_t is 64 bits
 # so that off_t can stored offset > 2GB.
 # Android until version N (API 24) doesn't support it.
