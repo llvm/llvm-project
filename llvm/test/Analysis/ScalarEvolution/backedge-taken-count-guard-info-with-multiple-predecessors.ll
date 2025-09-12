@@ -377,7 +377,11 @@ define void @hang_due_to_unreachable_phi_inblock() personality ptr null {
           cleanup
   br label %7
 
-5:                                                ; No predecessors!
+self-loop:                                                ; preds = %1, %0
+  %dead = invoke ptr null(i64 0)
+          to label %self-loop unwind label %5
+
+5:                                                ; preds = %self-loop
   %6 = landingpad { ptr, i32 }
           cleanup
   br label %7
