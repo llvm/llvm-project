@@ -3706,7 +3706,7 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPReplicateRecipe, VPInstruction>(&R))
         continue;
-      auto *DefR = dyn_cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
       auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion =
             cast<VPRecipeBase>(U)->getParent()->getParent();
@@ -3715,8 +3715,8 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
       if ((isa<VPReplicateRecipe>(DefR) &&
            cast<VPReplicateRecipe>(DefR)->isSingleScalar()) ||
           (isa<VPInstruction>(DefR) &&
-           !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes()) ||
-          vputils::onlyFirstLaneUsed(DefR) ||
+           (vputils::onlyFirstLaneUsed(DefR) ||
+            !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes())) ||
           none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
         continue;
 

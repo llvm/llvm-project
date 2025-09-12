@@ -463,8 +463,8 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
-/// Create a single-scalar clone of \p DefR (must either be a VPReplicateRecipe
-/// or VPInstruction) for lane \p Lane. Use \p Def2LaneDefs to look up scalar
+/// Create a single-scalar clone of \p DefR (must be a VPReplicateRecipe or
+/// VPInstruction) for lane \p Lane. Use \p Def2LaneDefs to look up scalar
 /// definitions for operands of \DefR.
 static VPRecipeWithIRFlags *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
@@ -512,7 +512,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
                               /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
   } else {
     assert(isa<VPInstruction>(DefR) &&
-           "DefR must either be a VPReplicateRecipe or VPInstruction");
+           "DefR must be a VPReplicateRecipe or VPInstruction");
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
       New->setOperand(Idx, Op);
@@ -551,7 +551,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
            !cast<VPInstruction>(&R)->doesGeneratePerAllLanes()))
         continue;
 
-      auto *DefR = dyn_cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
       VPBuilder Builder(DefR);
       if (DefR->getNumUsers() == 0) {
         // Create single-scalar version of DefR for all lanes.

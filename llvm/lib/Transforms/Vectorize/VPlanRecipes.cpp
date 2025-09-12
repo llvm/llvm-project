@@ -1268,6 +1268,9 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+    // Before replicating by VF, Build(Struct)Vector uses all lanes of the
+    // operand, after replicating its operands only the first lane is used.
+    // Before replicating, it will only have a single operand.
     return getNumOperands() > 1;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
