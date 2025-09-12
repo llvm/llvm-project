@@ -273,7 +273,7 @@ Parts:
       NumRootParameters: 0
       RootParametersOffset: 24
       NumStaticSamplers: 0
-      StaticSamplersOffset: 0
+      StaticSamplersOffset: 24
       Parameters:      []
   - Name:            PSV0
     Size:            76

@@ -2770,10 +2770,7 @@ bool Sema::LookupInSuper(LookupResult &R, CXXRecordDecl *Class) {
   // members of Class itself.  That is, the naming class is Class, and the
   // access includes the access of the base.
   for (const auto &BaseSpec : Class->bases()) {
-    CXXRecordDecl *RD =
-        cast<CXXRecordDecl>(
-            BaseSpec.getType()->castAs<RecordType>()->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    auto *RD = BaseSpec.getType()->castAsCXXRecordDecl();
     LookupResult Result(*this, R.getLookupNameInfo(), R.getLookupKind());
     Result.setBaseObjectType(Context.getCanonicalTagType(Class));
     LookupQualifiedName(Result, RD);
@@ -3207,8 +3204,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        member’s class; else it has no associated class.
     case Type::Enum: {
       // FIXME: This should use the original decl.
-      EnumDecl *Enum =
-          cast<EnumType>(T)->getOriginalDecl()->getDefinitionOrSelf();
+      auto *Enum = T->castAsEnumDecl();
 
       DeclContext *Ctx = Enum->getDeclContext();
       if (CXXRecordDecl *EnclosingClass = dyn_cast<CXXRecordDecl>(Ctx))
@@ -4457,26 +4453,28 @@ void Sema::LookupVisibleDecls(DeclContext *Ctx, LookupNameKind Kind,
   H.lookupVisibleDecls(*this, Ctx, Kind, IncludeGlobalScope);
 }
 
+LabelDecl *Sema::LookupExistingLabel(IdentifierInfo *II, SourceLocation Loc) {
+  NamedDecl *Res = LookupSingleName(CurScope, II, Loc, LookupLabel,
+                                    RedeclarationKind::NotForRedeclaration);
+  // If we found a label, check to see if it is in the same context as us.
+  // When in a Block, we don't want to reuse a label in an enclosing function.
+  if (!Res || Res->getDeclContext() != CurContext)
+    return nullptr;
+  return cast<LabelDecl>(Res);
+}
+
 LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
                                      SourceLocation GnuLabelLoc) {
-  // Do a lookup to see if we have a label with this name already.
-  NamedDecl *Res = nullptr;
-
   if (GnuLabelLoc.isValid()) {
     // Local label definitions always shadow existing labels.
-    Res = LabelDecl::Create(Context, CurContext, Loc, II, GnuLabelLoc);
+    auto *Res = LabelDecl::Create(Context, CurContext, Loc, II, GnuLabelLoc);
     Scope *S = CurScope;
     PushOnScopeChains(Res, S, true);
     return cast<LabelDecl>(Res);
   }
 
   // Not a GNU local label.
-  Res = LookupSingleName(CurScope, II, Loc, LookupLabel,
-                         RedeclarationKind::NotForRedeclaration);
-  // If we found a label, check to see if it is in the same context as us.
-  // When in a Block, we don't want to reuse a label in an enclosing function.
-  if (Res && Res->getDeclContext() != CurContext)
-    Res = nullptr;
+  LabelDecl *Res = LookupExistingLabel(II, Loc);
   if (!Res) {
     // If not forward referenced or defined already, create the backing decl.
     Res = LabelDecl::Create(Context, CurContext, Loc, II);
@@ -4484,7 +4482,7 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
     assert(S && "Not in a function?");
     PushOnScopeChains(Res, S, true);
   }
-  return cast<LabelDecl>(Res);
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4577,6 +4575,13 @@ static void getNestedNameSpecifierIdentifiers(
       case Type::TemplateSpecialization: {
         TemplateName Name =
             cast<TemplateSpecializationType>(T)->getTemplateName();
+        if (const DependentTemplateName *DTN =
+                Name.getAsDependentTemplateName()) {
+          getNestedNameSpecifierIdentifiers(DTN->getQualifier(), Identifiers);
+          if (const auto *II = DTN->getName().getIdentifier())
+            Identifiers.push_back(II);
+          return;
+        }
         if (const QualifiedTemplateName *QTN =
                 Name.getAsQualifiedTemplateName()) {
           getNestedNameSpecifierIdentifiers(QTN->getQualifier(), Identifiers);
@@ -4584,15 +4589,6 @@ static void getNestedNameSpecifierIdentifiers(
         }
         if (const auto *TD = Name.getAsTemplateDecl(/*IgnoreDeduced=*/true))
           Identifiers.push_back(TD->getIdentifier());
-        return;
-      }
-      case Type::DependentTemplateSpecialization: {
-        const DependentTemplateStorage &S =
-            cast<DependentTemplateSpecializationType>(T)
-                ->getDependentTemplateName();
-        getNestedNameSpecifierIdentifiers(S.getQualifier(), Identifiers);
-        // FIXME: Should this dig into the Name as well?
-        // Identifiers.push_back(S.getName().getIdentifier());
         return;
       }
       case Type::SubstTemplateTypeParm:

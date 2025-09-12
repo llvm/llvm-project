@@ -62,17 +62,26 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr1", structured = false}
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Shape: %{{.*}} = fir.shape %[[EXTENT1:.*]] : (index) -> !fir.shape<1>
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Lower bound: %[[LB1]] = arith.constant 0 : index
+  // CHECK: Upper bound: %[[UB1]] = arith.subi %[[EXTENT1]], %c1{{.*}} : index
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr2", structured = false}
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
+  // CHECK: Shape: %{{.*}} = fir.shape_shift %c2{{.*}}, %[[EXTENT2:.*]] : (index, index) -> !fir.shapeshift<1>
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB2:.*]] : index) upperbound(%[[UB2:.*]] : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
+  // CHECK: Lower bound: %[[LB2]] = arith.constant 0 : index
+  // CHECK: Upper bound: %[[UB2]] = arith.subi %[[EXTENT2]], %c1{{.*}} : index
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr3", structured = false}
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<10xf32>>
   // CHECK: Type category: array
   // CHECK: Size: 40
   // CHECK: Offset: 0
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Shape: %{{.*}} = fir.shape %[[EXTENT3:.*]] : (index) -> !fir.shape<1>
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB3:.*]] : index) upperbound(%[[UB3:.*]] : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+  // CHECK: Lower bound: %[[LB3]] = arith.constant 0 : index
+  // CHECK: Upper bound: %[[UB3]] = arith.subi %[[EXTENT3]], %c1{{.*}} : index
 }
