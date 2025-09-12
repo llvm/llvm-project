@@ -263,6 +263,7 @@ def DeriveResultTypesVariadicOp : TestOp<"derive_result_types_variadic_op", [Fir
 // CHECK:     test.yield
 // CHECK:   }
 // CHECK:   ```
+// CHECK:   Add \"\"\" will not terminate the description.
 // CHECK:   """
 def DescriptionOp : TestOp<"description"> {
   let description = [{
@@ -275,6 +276,7 @@ def DescriptionOp : TestOp<"description"> {
       test.yield
     }
     ```
+    Add """ will not terminate the description.
   }];
 }
 
