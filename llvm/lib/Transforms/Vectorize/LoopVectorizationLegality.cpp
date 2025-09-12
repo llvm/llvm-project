@@ -1878,11 +1878,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
 
   // Make sure that the load address is not loop invariant; we want an
   // address calculation that we can rotate to the next vector iteration.
-  const SCEV *PtrScev = PSE.getSE()->getSCEV(Ptr);
-  if (!isa<SCEVAddRecExpr>(PtrScev)) {
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSE()->getSCEV(Ptr));
+  if (!AR || AR->getLoop() != TheLoop || !AR->isAffine()) {
     reportVectorizationFailure(
         "Uncountable exit condition depends on load with an address that is "
-        "not an add recurrence",
+        "not an add recurrence in the loop",
         "EarlyExitLoadInvariantAddress", ORE, TheLoop);
     return false;
   }

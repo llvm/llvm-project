@@ -57,7 +57,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/Version.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
@@ -1712,8 +1711,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   SmallString<256> HSOpts_ModuleCachePath;
-  CompilerInstance::normalizeModuleCachePath(
-      PP.getFileManager(), HSOpts.ModuleCachePath, HSOpts_ModuleCachePath);
+  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
+                           HSOpts_ModuleCachePath);
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);

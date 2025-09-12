@@ -553,14 +553,6 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 }
 
-void CompilerInstance::normalizeModuleCachePath(
-    FileManager &FileMgr, StringRef Path,
-    SmallVectorImpl<char> &NormalizedPath) {
-  NormalizedPath.assign(Path.begin(), Path.end());
-  FileMgr.makeAbsolutePath(NormalizedPath);
-  llvm::sys::path::remove_dots(NormalizedPath);
-}
-
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   assert(FileMgr && "Specific module cache path requires a FileManager");
 
