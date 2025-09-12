@@ -283,6 +283,12 @@ Improvements to Clang's diagnostics
   pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
   both false positives but also false negatives through more precise analysis.
 
+- A new warning ``-Wptrauth-weak-schema`` has been added to detect variable
+  declarations of function pointer type and internal linkage that use a weak
+  pointer authentication schema, either implicitly or by specifying a discriminator
+  with no diversifiers. This warning applies only to targets supporting pointer
+  authentication.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
