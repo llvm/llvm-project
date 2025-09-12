@@ -10025,7 +10025,8 @@ protected:
       EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     } else {
       EXPECT_EQ(FromD, FromDInherited->getPreviousDecl());
-      EXPECT_EQ(ToD, ToDInherited->getPreviousDecl());
+      // The order is reversed by the import process.
+      EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     }
   }
 
