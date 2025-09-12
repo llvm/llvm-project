@@ -49,7 +49,8 @@ public:
 } // namespace
 
 APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
-    : SM(SM), ImplicitAPINotes(LangOpts.APINotes) {}
+    : SM(SM), ImplicitAPINotes(LangOpts.APINotes),
+      VersionIndependentSwift(LangOpts.SwiftVersionIndependentAPINotes) {}
 
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.

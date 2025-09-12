@@ -75,7 +75,8 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_frame_index__s_add_i32__fi_materializedconst_0
-    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, 256, implicit-def $scc
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 256
+    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, [[S_MOV_B32_]], implicit-def $scc
     ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
     ; CHECK-NEXT: SI_RETURN implicit $sgpr4
     %0:sreg_32 = S_MOV_B32 %stack.0

@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef PYTHON_BINDINGS_TRANSFORM_DEBUG_EXTENSION_OPS
-#define PYTHON_BINDINGS_TRANSFORM_DEBUG_EXTENSION_OPS
+#ifndef PYTHON_BINDINGS_TRANSFORM_TUNE_EXTENSION_OPS
+#define PYTHON_BINDINGS_TRANSFORM_TUNE_EXTENSION_OPS
 
 include "mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.td"
 
-#endif // PYTHON_BINDINGS_TRANSFORM_DEBUG_EXTENSION_OPS
+#endif // PYTHON_BINDINGS_TRANSFORM_TUNE_EXTENSION_OPS

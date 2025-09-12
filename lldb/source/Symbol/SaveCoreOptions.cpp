@@ -124,16 +124,14 @@ void SaveCoreOptions::AddMemoryRegionToSave(
 const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
 }
-Status
-SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
+Status SaveCoreOptions::EnsureValidConfiguration() const {
   Status error;
   std::string error_str;
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
     error_str += "Cannot save a full core with a subset of threads\n";
 
-  if (m_process_sp && m_process_sp != process_sp)
-    error_str += "Cannot save core for process using supplied core options. "
-                 "Options were constructed targeting a different process. \n";
+  if (!m_process_sp)
+    error_str += "Need to assign a valid process\n";
 
   if (!error_str.empty())
     error = Status(error_str);
@@ -155,12 +153,13 @@ SaveCoreOptions::GetThreadsToSave() const {
   return thread_collection;
 }
 
-llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
+llvm::Expected<lldb_private::CoreFileMemoryRanges>
+SaveCoreOptions::GetMemoryRegionsToSave() {
   Status error;
   if (!m_process_sp)
     return Status::FromErrorString("Requires a process to be set.").takeError();
 
-  error = EnsureValidConfiguration(m_process_sp);
+  error = EnsureValidConfiguration();
   if (error.Fail())
     return error.takeError();
 
@@ -169,8 +168,31 @@ llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
   if (error.Fail())
     return error.takeError();
 
+  return ranges;
+}
+
+llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
+  Status error;
+  if (!m_process_sp)
+    return Status::FromErrorString("Requires a process to be set.").takeError();
+
+  error = EnsureValidConfiguration();
+  if (error.Fail())
+    return error.takeError();
+
+  CoreFileMemoryRanges ranges;
+  error = m_process_sp->CalculateCoreFileSaveRanges(*this, ranges);
+  if (error.Fail())
+    return error.takeError();
+
+  llvm::Expected<lldb_private::CoreFileMemoryRanges> core_file_ranges_maybe =
+      GetMemoryRegionsToSave();
+  if (!core_file_ranges_maybe)
+    return core_file_ranges_maybe.takeError();
+  const lldb_private::CoreFileMemoryRanges &core_file_ranges =
+      *core_file_ranges_maybe;
   uint64_t total_in_bytes = 0;
-  for (auto &core_range : ranges)
+  for (const auto &core_range : core_file_ranges)
     total_in_bytes += core_range.data.range.size();
 
   return total_in_bytes;

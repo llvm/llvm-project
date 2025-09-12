@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"

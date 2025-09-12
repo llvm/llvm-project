@@ -1533,7 +1533,9 @@ std::optional<std::pair<uint64_t, unsigned short>>
 fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                              const mlir::DataLayout &dl,
                              const fir::KindMapping &kindMap) {
-  if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(ty)) {
+  if (ty.isIntOrIndexOrFloat() ||
+      mlir::isa<mlir::ComplexType, mlir::VectorType,
+                mlir::DataLayoutTypeInterface>(ty)) {
     llvm::TypeSize size = dl.getTypeSize(ty);
     unsigned short alignment = dl.getTypeABIAlignment(ty);
     return std::pair{size, alignment};

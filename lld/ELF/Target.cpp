@@ -105,10 +105,9 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
     if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
       std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
-      Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
       ELFSyncStream msg(ctx, DiagLevel::None);
       if (isec->file)
-        msg << isec->getSrcMsg(dummy, loc - isecLoc);
+        msg << isec->getSrcMsg(*ctx.dummySym, loc - isecLoc);
       return {isec, objLoc + ": ", std::string(msg.str())};
     }
   }

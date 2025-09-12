@@ -77,7 +77,6 @@
 #include <cstdint>
 #include <deque>
 #include <iterator>
-#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -1978,14 +1977,13 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       continue;
 
     // Find all local variables associated with the backing storage.
-    auto CollectAssignsForStorage = [&](auto *DbgAssign) {
+    auto CollectAssignsForStorage = [&](DbgVariableRecord *DbgAssign) {
       // Skip variables from inlined functions - they are not local variables.
       if (DbgAssign->getDebugLoc().getInlinedAt())
         return;
       LLVM_DEBUG(errs() << " > DEF : " << *DbgAssign << "\n");
       EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
     };
-    for_each(at::getAssignmentMarkers(Base), CollectAssignsForStorage);
     for_each(at::getDVRAssignmentMarkers(Base), CollectAssignsForStorage);
   }
   return EscapedLocals;
@@ -2362,15 +2360,13 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
 // Updating the contextual profile after an inlining means, at a high level,
 // copying over the data of the callee, **intentionally without any value
 // scaling**, and copying over the callees of the inlined callee.
-llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                                        PGOContextualProfile &CtxProf,
-                                        bool MergeAttributes,
-                                        AAResults *CalleeAAR,
-                                        bool InsertLifetime,
-                                        Function *ForwardVarArgsTo) {
+llvm::InlineResult llvm::InlineFunction(
+    CallBase &CB, InlineFunctionInfo &IFI, PGOContextualProfile &CtxProf,
+    bool MergeAttributes, AAResults *CalleeAAR, bool InsertLifetime,
+    Function *ForwardVarArgsTo, OptimizationRemarkEmitter *ORE) {
   if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                          ForwardVarArgsTo);
+                          ForwardVarArgsTo, ORE);
 
   auto &Caller = *CB.getCaller();
   auto &Callee = *CB.getCalledFunction();
@@ -2388,7 +2384,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   const auto NumCalleeCallsites = CtxProf.getNumCallsites(Callee);
 
   auto Ret = InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                            ForwardVarArgsTo);
+                            ForwardVarArgsTo, ORE);
   if (!Ret.isSuccess())
     return Ret;
 
@@ -2458,20 +2454,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   return Ret;
 }
 
-/// This function inlines the called function into the basic block of the
-/// caller. This returns false if it is not possible to inline this call.
-/// The program is still in a well defined state if this occurs though.
-///
-/// Note that this only does one level of inlining.  For example, if the
-/// instruction 'call B' is inlined, and 'B' calls 'C', then the call to 'C' now
-/// exists in the instruction stream.  Similarly this will inline a recursive
-/// function by one level.
-llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                                        bool MergeAttributes,
-                                        AAResults *CalleeAAR,
-                                        bool InsertLifetime,
-                                        Function *ForwardVarArgsTo,
-                                        OptimizationRemarkEmitter *ORE) {
+llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
+                                           InlineFunctionInfo &IFI) {
   assert(CB.getParent() && CB.getFunction() && "Instruction not in function!");
 
   // FIXME: we don't inline callbr yet.
@@ -2488,7 +2472,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
-  Value *ConvergenceControlToken = nullptr;
   if (CB.hasOperandBundles()) {
     for (int i = 0, e = CB.getNumOperandBundles(); i != e; ++i) {
       auto OBUse = CB.getOperandBundleAt(i);
@@ -2504,7 +2487,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       if (Tag == LLVMContext::OB_kcfi)
         continue;
       if (Tag == LLVMContext::OB_convergencectrl) {
-        ConvergenceControlToken = OBUse.Inputs[0].get();
+        IFI.ConvergenceControlToken = OBUse.Inputs[0].get();
         continue;
       }
 
@@ -2522,28 +2505,22 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // fully implements convergence control tokens, there is no mixing of
   // controlled and uncontrolled convergent operations in the whole program.
   if (CB.isConvergent()) {
-    if (!ConvergenceControlToken &&
+    if (!IFI.ConvergenceControlToken &&
         getConvergenceEntry(CalledFunc->getEntryBlock())) {
       return InlineResult::failure(
           "convergent call needs convergencectrl operand");
     }
   }
 
-  // If the call to the callee cannot throw, set the 'nounwind' flag on any
-  // calls that we inline.
-  bool MarkNoUnwind = CB.doesNotThrow();
-
-  BasicBlock *OrigBB = CB.getParent();
-  Function *Caller = OrigBB->getParent();
+  const BasicBlock *OrigBB = CB.getParent();
+  const Function *Caller = OrigBB->getParent();
 
   // GC poses two hazards to inlining, which only occur when the callee has GC:
   //  1. If the caller has no GC, then the callee's GC must be propagated to the
   //     caller.
   //  2. If the caller has a differing GC, it is invalid to inline.
   if (CalledFunc->hasGC()) {
-    if (!Caller->hasGC())
-      Caller->setGC(CalledFunc->getGC());
-    else if (CalledFunc->getGC() != Caller->getGC())
+    if (Caller->hasGC() && CalledFunc->getGC() != Caller->getGC())
       return InlineResult::failure("incompatible GC");
   }
 
@@ -2561,34 +2538,31 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           ? Caller->getPersonalityFn()->stripPointerCasts()
           : nullptr;
   if (CalledPersonality) {
-    if (!CallerPersonality)
-      Caller->setPersonalityFn(CalledPersonality);
     // If the personality functions match, then we can perform the
     // inlining. Otherwise, we can't inline.
     // TODO: This isn't 100% true. Some personality functions are proper
     //       supersets of others and can be used in place of the other.
-    else if (CalledPersonality != CallerPersonality)
+    if (CallerPersonality && CalledPersonality != CallerPersonality)
       return InlineResult::failure("incompatible personality");
   }
 
   // We need to figure out which funclet the callsite was in so that we may
   // properly nest the callee.
-  Instruction *CallSiteEHPad = nullptr;
   if (CallerPersonality) {
     EHPersonality Personality = classifyEHPersonality(CallerPersonality);
     if (isScopedEHPersonality(Personality)) {
       std::optional<OperandBundleUse> ParentFunclet =
           CB.getOperandBundle(LLVMContext::OB_funclet);
       if (ParentFunclet)
-        CallSiteEHPad = cast<FuncletPadInst>(ParentFunclet->Inputs.front());
+        IFI.CallSiteEHPad = cast<FuncletPadInst>(ParentFunclet->Inputs.front());
 
       // OK, the inlining site is legal.  What about the target function?
 
-      if (CallSiteEHPad) {
+      if (IFI.CallSiteEHPad) {
         if (Personality == EHPersonality::MSVC_CXX) {
           // The MSVC personality cannot tolerate catches getting inlined into
           // cleanup funclets.
-          if (isa<CleanupPadInst>(CallSiteEHPad)) {
+          if (isa<CleanupPadInst>(IFI.CallSiteEHPad)) {
             // Ok, the call site is within a cleanuppad.  Let's check the callee
             // for catchpads.
             for (const BasicBlock &CalledBB : *CalledFunc) {
@@ -2608,13 +2582,34 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     }
   }
 
+  return InlineResult::success();
+}
+
+/// This function inlines the called function into the basic block of the
+/// caller. This returns false if it is not possible to inline this call.
+/// The program is still in a well defined state if this occurs though.
+///
+/// Note that this only does one level of inlining.  For example, if the
+/// instruction 'call B' is inlined, and 'B' calls 'C', then the call to 'C' now
+/// exists in the instruction stream.  Similarly this will inline a recursive
+/// function by one level.
+void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
+                              bool MergeAttributes, AAResults *CalleeAAR,
+                              bool InsertLifetime, Function *ForwardVarArgsTo,
+                              OptimizationRemarkEmitter *ORE) {
+  BasicBlock *OrigBB = CB.getParent();
+  Function *Caller = OrigBB->getParent();
+  Function *CalledFunc = CB.getCalledFunction();
+  assert(CalledFunc && !CalledFunc->isDeclaration() &&
+         "CanInlineCallSite should have verified direct call to definition");
+
   // Determine if we are dealing with a call in an EHPad which does not unwind
   // to caller.
   bool EHPadForCallUnwindsLocally = false;
-  if (CallSiteEHPad && isa<CallInst>(CB)) {
+  if (IFI.CallSiteEHPad && isa<CallInst>(CB)) {
     UnwindDestMemoTy FuncletUnwindMap;
     Value *CallSiteUnwindDestToken =
-        getUnwindDestToken(CallSiteEHPad, FuncletUnwindMap);
+        getUnwindDestToken(IFI.CallSiteEHPad, FuncletUnwindMap);
 
     EHPadForCallUnwindsLocally =
         CallSiteUnwindDestToken &&
@@ -2630,6 +2625,30 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   SmallVector<ReturnInst*, 8> Returns;
   ClonedCodeInfo InlinedFunctionInfo;
   Function::iterator FirstNewBlock;
+
+  // GC poses two hazards to inlining, which only occur when the callee has GC:
+  //  1. If the caller has no GC, then the callee's GC must be propagated to the
+  //     caller.
+  //  2. If the caller has a differing GC, it is invalid to inline.
+  if (CalledFunc->hasGC()) {
+    if (!Caller->hasGC())
+      Caller->setGC(CalledFunc->getGC());
+    else {
+      assert(CalledFunc->getGC() == Caller->getGC() &&
+             "CanInlineCallSite should have verified compatible GCs");
+    }
+  }
+
+  if (CalledFunc->hasPersonalityFn()) {
+    Constant *CalledPersonality =
+        CalledFunc->getPersonalityFn()->stripPointerCasts();
+    if (!Caller->hasPersonalityFn()) {
+      Caller->setPersonalityFn(CalledPersonality);
+    } else
+      assert(Caller->getPersonalityFn()->stripPointerCasts() ==
+                 CalledPersonality &&
+             "CanInlineCallSite should have verified compatible personality");
+  }
 
   { // Scope to destroy VMap after cloning.
     ValueToValueMapTy VMap;
@@ -2820,10 +2839,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
             IFI.GetAssumptionCache(*Caller).registerAssumption(II);
   }
 
-  if (ConvergenceControlToken) {
+  if (IFI.ConvergenceControlToken) {
     IntrinsicInst *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
     if (IntrinsicCall) {
-      IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
+      IntrinsicCall->replaceAllUsesWith(IFI.ConvergenceControlToken);
       IntrinsicCall->eraseFromParent();
     }
   }
@@ -2869,6 +2888,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      AI->getIterator(), I);
     }
   }
+
+  // If the call to the callee cannot throw, set the 'nounwind' flag on any
+  // calls that we inline.
+  bool MarkNoUnwind = CB.doesNotThrow();
 
   SmallVector<Value*,4> VarArgsToForward;
   SmallVector<AttributeSet, 4> VarArgsAttrs;
@@ -2980,31 +3003,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       if (hasLifetimeMarkers(AI))
         continue;
 
-      // Try to determine the size of the allocation.
-      ConstantInt *AllocaSize = nullptr;
-      if (ConstantInt *AIArraySize =
-          dyn_cast<ConstantInt>(AI->getArraySize())) {
-        auto &DL = Caller->getDataLayout();
-        Type *AllocaType = AI->getAllocatedType();
-        TypeSize AllocaTypeSize = DL.getTypeAllocSize(AllocaType);
-        uint64_t AllocaArraySize = AIArraySize->getLimitedValue();
+      std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());
+      if (Size && Size->isZero())
+        continue;
 
-        // Don't add markers for zero-sized allocas.
-        if (AllocaArraySize == 0)
-          continue;
-
-        // Check that array size doesn't saturate uint64_t and doesn't
-        // overflow when it's multiplied by type size.
-        if (!AllocaTypeSize.isScalable() &&
-            AllocaArraySize != std::numeric_limits<uint64_t>::max() &&
-            std::numeric_limits<uint64_t>::max() / AllocaArraySize >=
-                AllocaTypeSize.getFixedValue()) {
-          AllocaSize = ConstantInt::get(Type::getInt64Ty(AI->getContext()),
-                                        AllocaArraySize * AllocaTypeSize);
-        }
-      }
-
-      builder.CreateLifetimeStart(AI, AllocaSize);
+      builder.CreateLifetimeStart(AI);
       for (ReturnInst *RI : Returns) {
         // Don't insert llvm.lifetime.end calls between a musttail or deoptimize
         // call and a return.  The return kills all local allocas.
@@ -3014,7 +3017,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         if (InlinedDeoptimizeCalls &&
             RI->getParent()->getTerminatingDeoptimizeCall())
           continue;
-        IRBuilder<>(RI).CreateLifetimeEnd(AI, AllocaSize);
+        IRBuilder<>(RI).CreateLifetimeEnd(AI);
       }
     }
   }
@@ -3056,12 +3059,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // Update the lexical scopes of the new funclets and callsites.
   // Anything that had 'none' as its parent is now nested inside the callsite's
   // EHPad.
-  if (CallSiteEHPad) {
+  if (IFI.CallSiteEHPad) {
     for (Function::iterator BB = FirstNewBlock->getIterator(),
                             E = Caller->end();
          BB != E; ++BB) {
       // Add bundle operands to inlined call sites.
-      PropagateOperandBundles(BB, CallSiteEHPad);
+      PropagateOperandBundles(BB, IFI.CallSiteEHPad);
 
       // It is problematic if the inlinee has a cleanupret which unwinds to
       // caller and we inline it into a call site which doesn't unwind but into
@@ -3077,11 +3080,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
       if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I)) {
         if (isa<ConstantTokenNone>(CatchSwitch->getParentPad()))
-          CatchSwitch->setParentPad(CallSiteEHPad);
+          CatchSwitch->setParentPad(IFI.CallSiteEHPad);
       } else {
         auto *FPI = cast<FuncletPadInst>(I);
         if (isa<ConstantTokenNone>(FPI->getParentPad()))
-          FPI->setParentPad(CallSiteEHPad);
+          FPI->setParentPad(IFI.CallSiteEHPad);
       }
     }
   }
@@ -3237,7 +3240,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 
     // We are now done with the inlining.
-    return InlineResult::success();
+    return;
   }
 
   // Otherwise, we have the normal case, of more than one block to inline or
@@ -3405,6 +3408,19 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   if (MergeAttributes)
     AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
+}
 
-  return InlineResult::success();
+llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                                        bool MergeAttributes,
+                                        AAResults *CalleeAAR,
+                                        bool InsertLifetime,
+                                        Function *ForwardVarArgsTo,
+                                        OptimizationRemarkEmitter *ORE) {
+  llvm::InlineResult Result = CanInlineCallSite(CB, IFI);
+  if (Result.isSuccess()) {
+    InlineFunctionImpl(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
+                       ForwardVarArgsTo, ORE);
+  }
+
+  return Result;
 }

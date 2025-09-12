@@ -43,7 +43,8 @@ static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
       return false;
     }
 
-    return FriendType->getType()->getAsCXXRecordDecl() == Derived;
+    return declaresSameEntity(FriendType->getType()->getAsCXXRecordDecl(),
+                              Derived);
   });
 }
 
@@ -55,7 +56,8 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
       CRTP->getTemplateArgs().asArray(), [&](const TemplateArgument &Arg) {
         ++Idx;
         return Arg.getKind() == TemplateArgument::Type &&
-               Arg.getAsType()->getAsCXXRecordDecl() == Derived;
+               declaresSameEntity(Arg.getAsType()->getAsCXXRecordDecl(),
+                                  Derived);
       });
 
   return AnyOf ? CRTP->getSpecializedTemplate()
@@ -129,13 +131,10 @@ void CrtpConstructorAccessibilityCheck::check(
         << HintFriend;
   }
 
-  auto WithFriendHintIfNeeded =
-      [&](const DiagnosticBuilder &Diag,
-          bool NeedsFriend) -> const DiagnosticBuilder & {
+  auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
+                                    bool NeedsFriend) {
     if (NeedsFriend)
       Diag << HintFriend;
-
-    return Diag;
   };
 
   if (!CRTPDeclaration->hasUserDeclaredConstructor()) {

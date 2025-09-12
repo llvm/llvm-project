@@ -22,6 +22,7 @@
 #include "llvm/LinkAllIR.h"
 #include "llvm/LinkAllPasses.h"
 #include "llvm/Passes/PassPlugin.h"
+#include "llvm/Support/AlwaysTrue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
   initializeInstCombine(Registry);
   initializeTarget(Registry);
 
-  if (std::getenv("bar") == (char*) -1) {
+  if (!llvm::getNonFoldableAlwaysTrue()) {
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();

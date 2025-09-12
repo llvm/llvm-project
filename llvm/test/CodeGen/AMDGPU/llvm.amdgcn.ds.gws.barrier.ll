@@ -1,21 +1,21 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,LOOP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX9 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,LOOP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX9 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX9 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -asm-verbose=0 < %s | FileCheck -check-prefixes=GCN,NOLOOP,GFX10 %s
 
 ; Make sure the op is emitted bundled with a waitcnt with and without the retry loop, and the bundle is not removed by ExpandPostRAPseudos.
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos -verify-machineinstrs < %s | FileCheck -check-prefix=MIR %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos -verify-machineinstrs < %s | FileCheck -check-prefix=MIR %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -stop-after=postrapseudos -verify-machineinstrs < %s | FileCheck -check-prefix=MIR %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -stop-after=postrapseudos -verify-machineinstrs < %s | FileCheck -check-prefix=MIR %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos < %s | FileCheck -check-prefix=MIR %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos < %s | FileCheck -check-prefix=MIR %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -stop-after=postrapseudos < %s | FileCheck -check-prefix=MIR %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -stop-after=postrapseudos < %s | FileCheck -check-prefix=MIR %s
 
 
 ; Minimum offset

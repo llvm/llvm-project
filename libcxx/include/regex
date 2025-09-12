@@ -2120,7 +2120,7 @@ public:
       __ranges_.push_back(
           std::make_pair(__traits_.transform(__b.begin(), __b.end()), __traits_.transform(__e.begin(), __e.end())));
     } else {
-      if (__b.size() != 1 || __e.size() != 1)
+      if (__b.size() != 1 || __e.size() != 1 || char_traits<typename string_type::value_type>::lt(__e[0], __b[0]))
         std::__throw_regex_error<regex_constants::error_range>();
       if (__icase_) {
         __b[0] = __traits_.translate_nocase(__b[0]);

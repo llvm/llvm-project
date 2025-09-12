@@ -98,8 +98,7 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
 
 * :ref:`report-security-issue`
 
-* :doc:`QualGroup`  
-  LLVM Qualification Group
+* :doc:`QualGroup`
 
 Indices and tables
 ==================

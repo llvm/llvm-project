@@ -30,7 +30,7 @@
 /// %cmp = icmp eq i32, %x, 50
 /// br i1 %cmp, label %true, label %false
 /// true:
-/// %x.0 = call \@llvm.ssa_copy.i32(i32 %x)
+/// %x.0 = bitcast i32 %x to %x
 /// ret i32 %x.0
 /// false:
 /// ret i32 1
@@ -70,7 +70,7 @@ class raw_ostream;
 enum PredicateType { PT_Branch, PT_Assume, PT_Switch };
 
 /// Constraint for a predicate of the form "cmp Pred Op, OtherOp", where Op
-/// is the value the constraint applies to (the ssa.copy result).
+/// is the value the constraint applies to (the bitcast result).
 struct PredicateConstraint {
   CmpInst::Predicate Predicate;
   Value *OtherOp;
@@ -177,7 +177,6 @@ class PredicateInfo {
 public:
   LLVM_ABI PredicateInfo(Function &, DominatorTree &, AssumptionCache &,
                          BumpPtrAllocator &);
-  LLVM_ABI ~PredicateInfo();
 
   LLVM_ABI void verifyPredicateInfo() const;
 
@@ -200,10 +199,6 @@ private:
   // the Predicate Info, they belong to the ValueInfo structs in the ValueInfos
   // vector.
   DenseMap<const Value *, const PredicateBase *> PredicateMap;
-  // The set of ssa_copy declarations we created with our custom mangling.
-  SmallSet<AssertingVH<Function>, 20> CreatedDeclarations;
-  // Cache of ssa.copy declaration for a given type.
-  SmallDenseMap<Type *, Function *> DeclarationCache;
 };
 
 /// Printer pass for \c PredicateInfo.

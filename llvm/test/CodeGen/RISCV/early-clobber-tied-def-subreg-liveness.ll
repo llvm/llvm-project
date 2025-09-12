@@ -40,15 +40,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_45)
 ; CHECK-NEXT:    vle16.v v12, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vs2r.v v10, (a0) # vscale x 16-byte Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vs2r.v v12, (a0) # vscale x 16-byte Folded Spill
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vs2r.v v14, (a0) # vscale x 16-byte Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_40)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_40)
 ; CHECK-NEXT:    #APP
@@ -59,15 +51,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    addi a0, a0, 928
 ; CHECK-NEXT:    vmsbc.vx v0, v8, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl2r.v v10, (a0) # vscale x 16-byte Folded Reload
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl2r.v v12, (a0) # vscale x 16-byte Folded Reload
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vl2r.v v14, (a0) # vscale x 16-byte Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
@@ -91,14 +75,14 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> undef, ptr nonnull @__const._Z3foov.var_49, i64 2)
-  %1 = tail call <vscale x 8 x i8> @llvm.riscv.vle.nxv8i8.i64(<vscale x 8 x i8> undef, ptr nonnull @__const._Z3foov.var_48, i64 2)
-  %2 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> undef, ptr nonnull @__const._Z3foov.var_46, i64 2)
-  %3 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> undef, ptr nonnull @__const._Z3foov.var_45, i64 2)
+  %0 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> poison, ptr nonnull @__const._Z3foov.var_49, i64 2)
+  %1 = tail call <vscale x 8 x i8> @llvm.riscv.vle.nxv8i8.i64(<vscale x 8 x i8> poison, ptr nonnull @__const._Z3foov.var_48, i64 2)
+  %2 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> poison, ptr nonnull @__const._Z3foov.var_46, i64 2)
+  %3 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> poison, ptr nonnull @__const._Z3foov.var_45, i64 2)
   tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"() #2
-  %4 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> undef, ptr nonnull @__const._Z3foov.var_44, i64 2)
+  %4 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> poison, ptr nonnull @__const._Z3foov.var_44, i64 2)
   %5 = tail call i64 @llvm.riscv.vsetvli.i64(i64 2, i64 1, i64 1)
-  %6 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> undef, ptr nonnull @__const._Z3foov.var_40, i64 2)
+  %6 = tail call <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16> poison, ptr nonnull @__const._Z3foov.var_40, i64 2)
   %7 = tail call i64 @llvm.riscv.vsetvli.i64(i64 2, i64 1, i64 1)
   %8 = tail call <vscale x 8 x i1> @llvm.riscv.vmsbc.nxv8i16.i16.i64(<vscale x 8 x i16> %6, i16 -15456, i64 2)
   %9 = tail call i64 @llvm.riscv.vsetvli.i64(i64 2, i64 1, i64 1)

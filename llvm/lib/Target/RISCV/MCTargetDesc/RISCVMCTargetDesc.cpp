@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <bitset>
 
 #define GET_INSTRINFO_MC_DESC
@@ -305,6 +306,47 @@ public:
     }
   }
 
+  /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override {
+    uint32_t LoadInsnOpCode;
+    if (const Triple &T = STI.getTargetTriple(); T.isRISCV64())
+      LoadInsnOpCode = 0x3003; // ld
+    else if (T.isRISCV32())
+      LoadInsnOpCode = 0x2003; // lw
+    else
+      return {};
+
+    constexpr uint64_t FirstEntryAt = 32, EntrySize = 16;
+    if (PltContents.size() < FirstEntryAt + EntrySize)
+      return {};
+
+    std::vector<std::pair<uint64_t, uint64_t>> Results;
+    for (uint64_t EntryStart = FirstEntryAt,
+                  EntryStartEnd = PltContents.size() - EntrySize;
+         EntryStart <= EntryStartEnd; EntryStart += EntrySize) {
+      const uint32_t AuipcInsn =
+          support::endian::read32le(PltContents.data() + EntryStart);
+      const bool IsAuipc = (AuipcInsn & 0x7F) == 0x17;
+      if (!IsAuipc)
+        continue;
+
+      const uint32_t LoadInsn =
+          support::endian::read32le(PltContents.data() + EntryStart + 4);
+      const bool IsLoad = (LoadInsn & 0x707F) == LoadInsnOpCode;
+      if (!IsLoad)
+        continue;
+
+      const uint64_t GotPltSlotVA = PltSectionVA + EntryStart +
+                                    (AuipcInsn & 0xFFFFF000) +
+                                    SignExtend64<12>(LoadInsn >> 20);
+      Results.emplace_back(PltSectionVA + EntryStart, GotPltSlotVA);
+    }
+
+    return Results;
+  }
+
 private:
   static bool maybeReturnAddress(MCRegister Reg) {
     // X1 is used for normal returns, X5 for returns from outlined functions.
@@ -334,7 +376,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMC() {
-  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
+  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target(),
+                    &getTheRISCV32beTarget(), &getTheRISCV64beTarget()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);
     TargetRegistry::RegisterMCInstrInfo(*T, createRISCVMCInstrInfo);

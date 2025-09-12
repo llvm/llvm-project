@@ -36,8 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:b060022103f551d8ca1dad84122ef73927c86512
+    runs-on: llvm-premerge-libcxx-next-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -48,14 +47,14 @@ jobs:
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-21' ]
-        cxx: [ 'clang++-21' ]
+        cc: [  'clang-22' ]
+        cxx: [ 'clang++-22' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-15'
             cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -74,8 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
+    runs-on: llvm-premerge-libcxx-next-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -88,20 +86,20 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-21' ]
-        cxx: [ 'clang++-21' ]
+        cc: [ 'clang-22' ]
+        cxx: [ 'clang++-22' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-15'
             cxx: 'g++-15'
           - config: 'generic-cxx26'
+            cc: 'clang-21'
+            cxx: 'clang++-21'
+          - config: 'generic-cxx26'
             cc: 'clang-20'
             cxx: 'clang++-20'
-          - config: 'generic-cxx26'
-            cc: 'clang-19'
-            cxx: 'clang++-19'
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -130,6 +128,7 @@ jobs:
           'generic-abi-unstable',
           'generic-hardening-mode-debug',
           'generic-hardening-mode-extensive',
+          'generic-hardening-mode-extensive-observe-semantic',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
           'generic-merged',
@@ -149,28 +148,27 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'libcxx-self-hosted-linux' ]
+        machine: [ 'llvm-premerge-libcxx-next-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: libcxx-self-hosted-linux
+          machine: llvm-premerge-libcxx-next-runners
         - config: 'generic-asan'
-          machine: libcxx-self-hosted-linux
+          machine: llvm-premerge-libcxx-next-runners
         - config: 'generic-tsan'
-          machine: libcxx-self-hosted-linux
+          machine: llvm-premerge-libcxx-next-runners
         - config: 'generic-ubsan'
-          machine: libcxx-self-hosted-linux
+          machine: llvm-premerge-libcxx-next-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-self-hosted-linux
+          machine: llvm-premerge-libcxx-next-runners
     runs-on: ${{ matrix.machine }}
-    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-21
-          CXX: clang++-21
+          CC: clang-22
+          CXX: clang++-22
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -213,7 +211,7 @@ jobs:
           os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
@@ -254,7 +252,7 @@ jobs:
         - { config: mingw-dll-i686, mingw: true }
         - { config: mingw-incomplete-sysroot, mingw: true }
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
         run: |
           choco install -y ninja
@@ -262,11 +260,11 @@ jobs:
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=19.1.7 --allow-downgrade
+          choco install -y llvm --version=20.1.8 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250114/llvm-mingw-20250114-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw

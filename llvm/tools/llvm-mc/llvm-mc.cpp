@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
@@ -240,6 +242,23 @@ static cl::opt<ActionType> Action(
                           "Colored disassembly of strings of hex bytes")),
     cl::cat(MCCategory));
 
+static cl::opt<unsigned>
+    NumBenchmarkRuns("runs", cl::desc("Number of runs for benchmarking"),
+                     cl::cat(MCCategory));
+
+static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
+
+static cl::opt<unsigned> TimeTraceGranularity(
+    "time-trace-granularity",
+    cl::desc(
+        "Minimum time granularity (in microseconds) traced by time profiler"),
+    cl::init(500), cl::Hidden);
+
+static cl::opt<std::string>
+    TimeTraceFile("time-trace-file",
+                  cl::desc("Specify time trace file destination"),
+                  cl::value_desc("filename"));
+
 static const Target *GetTarget(const char *ProgName) {
   // Figure out the target triple.
   if (TripleName.empty())
@@ -371,6 +390,20 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
+
+  if (TimeTrace)
+    timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
+
+  auto TimeTraceScopeExit = make_scope_exit([]() {
+    if (!TimeTrace)
+      return;
+    if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
+      logAllUnhandledErrors(std::move(E), errs());
+      return;
+    }
+    timeTraceProfilerCleanup();
+  });
+
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
@@ -407,11 +440,11 @@ int main(int argc, char **argv) {
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
 
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   if (CompressDebugSections != DebugCompressionType::None) {
@@ -435,7 +468,7 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
   assert(STI && "Unable to create subtarget info!");
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
@@ -619,8 +652,8 @@ int main(int argc, char **argv) {
     break;
   }
   if (disassemble)
-    Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions, HexBytes);
+    Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
+                                    Ctx, MCOptions, HexBytes, NumBenchmarkRuns);
 
   // Keep output if no errors.
   if (Res == 0) {
@@ -628,5 +661,6 @@ int main(int argc, char **argv) {
     if (DwoOut)
       DwoOut->keep();
   }
+
   return Res;
 }

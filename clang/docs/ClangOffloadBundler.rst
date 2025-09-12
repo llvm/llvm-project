@@ -525,15 +525,15 @@ The compressed offload bundle begins with a header followed by the compressed bi
     This is a unique identifier to distinguish compressed offload bundles. The value is the string 'CCOB' (Compressed Clang Offload Bundle).
 
 - **Version Number (16-bit unsigned int)**:
-    This denotes the version of the compressed offload bundle format. The current version is `2`.
+    This denotes the version of the compressed offload bundle format. The current version is `3`.
 
 - **Compression Method (16-bit unsigned int)**:
     This field indicates the compression method used. The value corresponds to either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from the LLVM compression enumeration.
 
-- **Total File Size (32-bit unsigned int)**:
+- **Total File Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
     This is the total size (in bytes) of the file, including the header. Available in version 2 and above.
 
-- **Uncompressed Binary Size (32-bit unsigned int)**:
+- **Uncompressed Binary Size (unsigned int, 32-bit in v2, 64-bit in v3)**:
     This is the size (in bytes) of the binary data before it was compressed.
 
 - **Hash (64-bit unsigned int)**:
@@ -542,4 +542,4 @@ The compressed offload bundle begins with a header followed by the compressed bi
 - **Compressed Data**:
     The actual compressed binary data follows the header. Its size can be inferred from the total size of the file minus the header size.
 
-    > **Note**: Version 3 of the format is under development. It uses 64-bit fields for Total File Size and Uncompressed Binary Size to support files larger than 4GB. To experiment with version 3, set the environment variable `COMPRESSED_BUNDLE_FORMAT_VERSION=3`. This support is experimental and not recommended for production use.
+    > **Note**: Version 3 is now the default format. For backward compatibility with older HIP runtimes that support version 2 only, set the environment variable `COMPRESSED_BUNDLE_FORMAT_VERSION=2`.

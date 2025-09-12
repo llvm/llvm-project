@@ -8,10 +8,10 @@ define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapt
 ; GFX942-LABEL: global_load_lds_dword_saddr:
 ; GFX942:       ; %bb.0: ; %main_body
 ; GFX942-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    s_mov_b32 m0, s2
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    global_load_lds_dword v2, s[0:1] offset:32 nt
+; GFX942-NEXT:    global_load_lds_dword v1, s[0:1] offset:32 nt
 ; GFX942-NEXT:    s_getpc_b64 s[0:1]
 ; GFX942-NEXT:    s_add_u32 s0, s0, G@gotpcrel32@lo+4
 ; GFX942-NEXT:    s_addc_u32 s1, s1, G@gotpcrel32@hi+12
@@ -21,9 +21,9 @@ define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapt
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_mul_i32 s3, s3, 10
 ; GFX942-NEXT:    s_mul_i32 s2, s2, 10
-; GFX942-NEXT:    v_mov_b32_e32 v0, s2
-; GFX942-NEXT:    v_mov_b32_e32 v1, s3
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-NEXT:    v_mov_b32_e32 v3, s3
+; GFX942-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: global_load_lds_dword_saddr:
@@ -50,7 +50,6 @@ define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapt
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX90A-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, v4
-; GFX90A-NEXT:    ; implicit-def: $sgpr4
 ; GFX90A-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX90A-NEXT:    s_mov_b32 m0, s4
 ; GFX90A-NEXT:    s_nop 0

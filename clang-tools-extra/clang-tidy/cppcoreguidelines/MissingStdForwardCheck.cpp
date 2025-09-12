@@ -45,7 +45,7 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 
   QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
-  const auto *TemplateType = ParamType->getAs<TemplateTypeParmType>();
+  const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
     return false;
 
@@ -81,7 +81,7 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
 
 AST_MATCHER(VarDecl, hasIdentifier) {
   const IdentifierInfo *ID = Node.getIdentifier();
-  return ID != NULL && !ID->isPlaceholder();
+  return ID != nullptr && !ID->isPlaceholder();
 }
 
 } // namespace
@@ -132,8 +132,7 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
           hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
-              unless(anyOf(isDeleted(),
-                           hasDescendant(std::move(ForwardCallMatcher))))))),
+              unless(anyOf(isDeleted(), hasDescendant(ForwardCallMatcher)))))),
       this);
 }
 

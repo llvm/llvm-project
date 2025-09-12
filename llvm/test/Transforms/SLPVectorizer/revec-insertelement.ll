@@ -42,7 +42,7 @@ define void @test_missing_lanes_1_3(ptr %ptr, i32 %val0, i32 %val1) {
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[GETELEMENTPTR0]], align 4
 ; CHECK-NEXT:    [[GETELEMENTPTR1:%.*]] = getelementptr i32, ptr [[PTR]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP1]], i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr [[GETELEMENTPTR1]], align 4
 ; CHECK-NEXT:    [[GETELEMENTPTR3:%.*]] = getelementptr i32, ptr [[PTR]], i64 12
 ; CHECK-NEXT:    store <4 x i32> poison, ptr [[GETELEMENTPTR3]], align 4

@@ -145,7 +145,7 @@ private:
   // Shortcut to create an op from rewriter using loc as the first argument.
   template <typename T, typename... Args>
   T create(Args... args) {
-    return rewriter.create<T>(loc, std::forward<Args>(args)...);
+    return T::create(rewriter, loc, std::forward<Args>(args)...);
   }
 
   // Creates dimension op of type T, with the result casted to int32.

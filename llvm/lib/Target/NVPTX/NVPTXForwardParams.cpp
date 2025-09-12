@@ -56,15 +56,12 @@ static bool traverseMoveUse(MachineInstr &U, const MachineRegisterInfo &MRI,
   case NVPTX::LD_i16:
   case NVPTX::LD_i32:
   case NVPTX::LD_i64:
-  case NVPTX::LD_i8:
   case NVPTX::LDV_i16_v2:
   case NVPTX::LDV_i16_v4:
   case NVPTX::LDV_i32_v2:
   case NVPTX::LDV_i32_v4:
   case NVPTX::LDV_i64_v2:
-  case NVPTX::LDV_i64_v4:
-  case NVPTX::LDV_i8_v2:
-  case NVPTX::LDV_i8_v4: {
+  case NVPTX::LDV_i64_v4: {
     LoadInsts.push_back(&U);
     return true;
   }

@@ -12,7 +12,9 @@
 
 #include <type_traits>
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenACCRecipe.h"
 
 #include "clang/AST/ExprCXX.h"
 
@@ -969,6 +971,139 @@ public:
       applyToComputeOp(clause);
     } else {
       llvm_unreachable("Unknown construct kind in VisitAttachClause");
+    }
+  }
+
+  void VisitPrivateClause(const OpenACCPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto privateOp = mlir::acc::PrivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        privateOp.setDataClause(mlir::acc::DataClause::acc_private);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::PrivateRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     /*temporary=*/nullptr,
+                                     OpenACCReductionOperator::Invalid,
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType, privateOp.getResult());
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addPrivatization(builder.getContext(), privateOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitPrivateClause");
+    }
+  }
+
+  void VisitFirstPrivateClause(const OpenACCFirstPrivateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp,
+                               mlir::acc::SerialOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+        auto firstPrivateOp = mlir::acc::FirstprivateOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+
+        firstPrivateOp.setDataClause(mlir::acc::DataClause::acc_firstprivate);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::FirstprivateRecipeOp>(cgf,
+                                                                    builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     varRecipe.InitFromTemporary,
+                                     OpenACCReductionOperator::Invalid,
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType,
+                                     firstPrivateOp.getResult());
+
+          // TODO: OpenACC: The dialect is going to change in the near future to
+          // have these be on a different operation, so when that changes, we
+          // probably need to change these here.
+          operation.addFirstPrivatization(builder.getContext(), firstPrivateOp,
+                                          recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Unlike 'private', 'firstprivate' applies to the compute op, not the
+      // loop op.
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitFirstPrivateClause");
+    }
+  }
+
+  void VisitReductionClause(const OpenACCReductionClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::LoopOp>) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getRecipes())) {
+        CIRGenFunction::OpenACCDataOperandInfo opInfo =
+            cgf.getOpenACCDataOperandInfo(varExpr);
+
+        auto reductionOp = mlir::acc::ReductionOp::create(
+            builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
+            /*implicit=*/false, opInfo.name, opInfo.bounds);
+        reductionOp.setDataClause(mlir::acc::DataClause::acc_reduction);
+
+        {
+          mlir::OpBuilder::InsertionGuard guardCase(builder);
+          // TODO: OpenACC: At the moment this is a bit of a hacky way of doing
+          // this, and won't work when we get to bounds/etc. Do this for now to
+          // limit the scope of this refactor.
+          VarDecl *allocaDecl = varRecipe.AllocaDecl;
+          allocaDecl->setInit(varRecipe.InitExpr);
+          allocaDecl->setInitStyle(VarDecl::CallInit);
+
+          auto recipe =
+              OpenACCRecipeBuilder<mlir::acc::ReductionRecipeOp>(cgf, builder)
+                  .getOrCreateRecipe(cgf.getContext(), varExpr, allocaDecl,
+                                     /*temporary=*/nullptr,
+                                     clause.getReductionOp(),
+                                     Decl::castToDeclContext(cgf.curFuncDecl),
+                                     opInfo.baseType, reductionOp.getResult());
+
+          operation.addReduction(builder.getContext(), reductionOp, recipe);
+        }
+      }
+    } else if constexpr (isCombinedType<OpTy>) {
+      // Despite this being valid on ParallelOp or SerialOp, combined type
+      // applies to the 'loop'.
+      applyToLoopOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitReductionClause");
     }
   }
 };

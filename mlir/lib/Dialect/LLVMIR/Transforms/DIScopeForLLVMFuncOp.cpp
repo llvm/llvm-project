@@ -9,9 +9,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Pass/Pass.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
 
 namespace mlir {

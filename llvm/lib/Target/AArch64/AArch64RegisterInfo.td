@@ -305,7 +305,8 @@ def GPR64pi48 : RegisterOperand<GPR64, "printPostIncOperand<48>">;
 def GPR64pi64 : RegisterOperand<GPR64, "printPostIncOperand<64>">;
 
 // Condition code regclass.
-def CCR : RegisterClass<"AArch64", [i32], 32, (add NZCV)> {
+defvar FlagsVT = i32;
+def CCR : RegisterClass<"AArch64", [FlagsVT], 32, (add NZCV)> {
   let CopyCost = -1;  // Don't allow copying of status registers.
 
   // CCR is not allocatable.
@@ -982,7 +983,7 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 
 // Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
 // (without the use of the table-gen'd predicates).
-def SMEWithZPRPredicateSpills : HwMode<"", [Predicate<"false">]>;
+def SMEWithZPRPredicateSpills : HwMode<[Predicate<"false">]>;
 
 def PPRSpillFillRI : RegInfoByHwMode<
       [DefaultMode,              SMEWithZPRPredicateSpills],
@@ -1163,25 +1164,22 @@ class PPRVectorListMul<int ElementWidth, int NumRegs> : PPRVectorList<ElementWid
                                                                 ", AArch64::PPRMul2RegClassID>";
 }
 
+class PPR2MulRegOp<string Suffix, int Size, ElementSizeEnum ES>
+    : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'"#Suffix#"'>"> {
+  ElementSizeEnum ElementSize;
+  let ElementSize = ES;
+  let ParserMatchClass = PPRVectorListMul<Size, 2>;
+}
+
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 14>",
     DecoderMethod = "DecodePPR2Mul2RegisterClass" in {
-  def PP_b_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'b'>"> {
-    let ParserMatchClass = PPRVectorListMul<8, 2>;
-  }
 
-  def PP_h_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'h'>"> {
-    let ParserMatchClass = PPRVectorListMul<16, 2>;
-  }
+  def PP_b_mul_r : PPR2MulRegOp<"b", 8,  ElementSizeB>;
+  def PP_h_mul_r : PPR2MulRegOp<"h", 16, ElementSizeH>;
+  def PP_s_mul_r : PPR2MulRegOp<"s", 32, ElementSizeS>;
+  def PP_d_mul_r : PPR2MulRegOp<"d", 64, ElementSizeD>;
 
-  def PP_s_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'s'>"> {
-    let ParserMatchClass = PPRVectorListMul<32, 2>;
-  }
-
-  def PP_d_mul_r : RegisterOperand<PPR2Mul2, "printTypedVectorList<0,'d'>"> {
-    let ParserMatchClass = PPRVectorListMul<64, 2>;
-  }
-}  // end let EncoderMethod/DecoderMethod
-
+} // end let EncoderMethod/DecoderMethod
 
 //===----------------------------------------------------------------------===//
 // SVE vector register classes

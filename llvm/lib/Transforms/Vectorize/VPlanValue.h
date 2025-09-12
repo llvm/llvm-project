@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -37,17 +38,17 @@ struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPInterleaveRecipe;
+class VPInterleaveBase;
 class VPPhiAccessors;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
 // coming from the input IR and instructions which VPlan will generate if
 // executed.
-class VPValue {
+class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInterleaveRecipe;
+  friend class VPInterleaveBase;
   friend class VPlan;
   friend class VPExpressionRecipe;
 
@@ -334,6 +335,7 @@ public:
     VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
+    VPInterleaveEVLSC,
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,

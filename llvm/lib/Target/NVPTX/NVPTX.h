@@ -14,12 +14,12 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTX_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTX_H
 
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
-
 namespace llvm {
 class FunctionPass;
 class MachineFunctionPass;
@@ -164,7 +164,6 @@ enum Ordering : OrderingUnderlyingType {
       (OrderingUnderlyingType)AtomicOrdering::SequentiallyConsistent,
   Volatile = SequentiallyConsistent + 1,
   RelaxedMMIO = Volatile + 1,
-  LASTORDERING = RelaxedMMIO
 };
 
 using ScopeUnderlyingType = unsigned int;
@@ -174,7 +173,8 @@ enum Scope : ScopeUnderlyingType {
   Cluster = 2,
   Device = 3,
   System = 4,
-  LASTSCOPE = System
+  DefaultDevice = 5, //  For SM < 70: denotes PTX op implicit/default .gpu scope
+  LASTSCOPE = DefaultDevice
 };
 
 using AddressSpaceUnderlyingType = unsigned int;
@@ -224,10 +224,6 @@ enum CmpMode {
   LE,
   GT,
   GE,
-  LO,
-  LS,
-  HI,
-  HS,
   EQU,
   NEU,
   LTU,
@@ -237,9 +233,6 @@ enum CmpMode {
   NUM,
   // NAN is a MACRO
   NotANumber,
-
-  BASE_MASK = 0xFF,
-  FTZ_FLAG = 0x100
 };
 }
 

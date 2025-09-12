@@ -39,7 +39,7 @@ entry:
   %i = alloca i32, align 4
   store ptr %a, ptr %a.addr, align 8, !tbaa !3
   store float %b, ptr %b.addr, align 4, !tbaa !7
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.start.p0(ptr %i) #2
   store i32 0, ptr %i, align 4, !tbaa !9
   br label %for.cond
 
@@ -49,7 +49,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.end.p0(ptr %i) #2
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -73,8 +73,8 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { nounwind ssp uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" "unsafe-fp-math"="true" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

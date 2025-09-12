@@ -461,6 +461,8 @@ LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
 
     case AttrFeatureKind::Feature:
       Ret.Features.push_back("+" + Value.str());
+      if (Value == "lasx")
+        Ret.Features.push_back("+lsx");
       break;
     }
   }

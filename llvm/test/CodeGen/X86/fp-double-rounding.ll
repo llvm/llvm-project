@@ -1,20 +1,53 @@
-; RUN: llc < %s | FileCheck %s --check-prefix=CHECK --check-prefix=SAFE
-; RUN: llc < %s -enable-unsafe-fp-math | FileCheck %s --check-prefix=CHECK --check-prefix=UNSAFE
+; RUN: llc < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--"
 
+; CHECK-LABEL: double_rounding_safe:
+; CHECK: callq __trunctfdf2
+; CHECK-NEXT: cvtsd2ss %xmm0
+define void @double_rounding_safe(ptr %x, ptr %f) {
+entry:
+  %x.fp128 = load fp128, ptr %x, align 16
+  %x.double = fptrunc fp128 %x.fp128 to double
+  %x.float = fptrunc double %x.double to float
+  store float %x.float, ptr %f, align 4
+  ret void
+}
+
+; CHECK-LABEL: double_rounding_contract_fst:
+; CHECK: callq __trunctfdf2
+; CHECK-NEXT: cvtsd2ss %xmm0
+define void @double_rounding_contract_fst(ptr %x, ptr %f) {
+entry:
+  %x.fp128 = load fp128, ptr %x, align 16
+  %x.double = fptrunc contract fp128 %x.fp128 to double
+  %x.float = fptrunc double %x.double to float
+  store float %x.float, ptr %f, align 4
+  ret void
+}
+
+; CHECK-LABEL: double_rounding_contract_snd:
+; CHECK: callq __trunctfdf2
+; CHECK-NEXT: cvtsd2ss %xmm0
+define void @double_rounding_contract_snd(ptr %x, ptr %f) {
+entry:
+  %x.fp128 = load fp128, ptr %x, align 16
+  %x.double = fptrunc fp128 %x.fp128 to double
+  %x.float = fptrunc contract double %x.double to float
+  store float %x.float, ptr %f, align 4
+  ret void
+}
+
 ; CHECK-LABEL: double_rounding:
-; SAFE: callq __trunctfdf2
-; SAFE-NEXT: cvtsd2ss %xmm0
-; UNSAFE: callq __trunctfsf2
-; UNSAFE-NOT: cvt
+; CHECK: callq __trunctfsf2
+; CHECK-NOT: cvt
 define void @double_rounding(ptr %x, ptr %f) {
 entry:
-  %0 = load fp128, ptr %x, align 16
-  %1 = fptrunc fp128 %0 to double
-  %2 = fptrunc double %1 to float
-  store float %2, ptr %f, align 4
+  %x.fp128 = load fp128, ptr %x, align 16
+  %x.double = fptrunc contract fp128 %x.fp128 to double
+  %x.float = fptrunc contract double %x.double to float
+  store float %x.float, ptr %f, align 4
   ret void
 }
 
