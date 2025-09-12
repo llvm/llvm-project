@@ -307,8 +307,7 @@ body:             |
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GCN-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr4_vgpr5 = nofpexcept V_PK_FMA_F32 8, $sgpr30_sgpr31, 8, $vgpr4_vgpr5, 0, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr4 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 0, $vgpr5, 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr5 = nofpexcept V_MUL_F32_e64 0, killed $sgpr31, 0, $vgpr5, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: renamable $vgpr4_vgpr5 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_sgpr31, 12, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     early-clobber renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43 = S_LOAD_DWORDX8_IMM_ec killed renamable $sgpr4_sgpr5, 0, 0
     renamable $vgpr18 = V_MOV_B32_e32 0, implicit $exec
