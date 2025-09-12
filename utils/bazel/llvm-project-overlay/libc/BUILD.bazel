@@ -818,6 +818,7 @@ libc_support_library(
     hdrs = ["src/__support/arg_list.h"],
     deps = [
         ":__support_common",
+        ":string_memory_utils",
     ],
 )
 
@@ -5003,6 +5004,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
         ":__support_macros_attributes",
+        ":string_memory_utils",
     ],
 )
 
@@ -6945,6 +6947,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
+        ":string_memory_utils",
         ":types_size_t",
         ":types_wchar_t",
     ],
@@ -6968,6 +6971,7 @@ libc_function(
     hdrs = ["src/wchar/wmempcpy.h"],
     deps = [
         ":__support_common",
+        ":string_memory_utils",
         ":types_size_t",
         ":types_wchar_t",
     ],
