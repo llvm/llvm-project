@@ -1393,7 +1393,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       Value *Sub = Builder.CreateSub(Z, N);
       SI = Builder.CreateSelect(Cond, Sub, False, I.getName());
     }
-    if (!ProfcheckDisableMetadataFixes && !SI)
+    if (!ProfcheckDisableMetadataFixes && SI)
       cast<SelectInst>(SI)->setMetadata(LLVMContext::MD_prof, ProfileData);
     return SI;
   };
