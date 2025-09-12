@@ -1131,6 +1131,16 @@ public:
     return currentFunctionUnit;
   }
 
+  void checkCoarrayEnabled() override final {
+    if (!getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::Coarray))
+      fir::emitFatalError(
+          getCurrentLocation(),
+          "Not yet implemented: Multi-image features are experimental and are "
+          "disabled by default, use '-fcoarray' to enable.",
+          false);
+  }
+
   void registerTypeInfo(mlir::Location loc,
                         Fortran::lower::SymbolRef typeInfoSym,
                         const Fortran::semantics::DerivedTypeSpec &typeSpec,
