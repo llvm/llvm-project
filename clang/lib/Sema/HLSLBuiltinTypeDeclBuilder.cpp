@@ -130,7 +130,6 @@ private:
   StorageClass SC;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
-  llvm::SmallVector<VarDecl *> LocalVars;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
   // of arguments to forward to `callBuiltin` and other method builder methods.
@@ -145,7 +144,6 @@ private:
     _2,
     _3,
     _4,
-    LocalVar_0 = 64,
     Handle = 128,
     LastStmt
   };
@@ -365,17 +363,6 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
   }
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
-  if (PH >= PlaceHolder::LocalVar_0) {
-    unsigned Index = static_cast<unsigned>(PH) -
-                     static_cast<unsigned>(PlaceHolder::LocalVar_0);
-    assert(Index < LocalVars.size() && "local var index out of range");
-    VarDecl *VD = LocalVars[Index];
-    return DeclRefExpr::Create(
-        AST, NestedNameSpecifierLoc(), SourceLocation(), VD, false,
-        DeclarationNameInfo(VD->getDeclName(), SourceLocation()), VD->getType(),
-        VK_LValue);
-  }
-
   ParmVarDecl *ParamDecl = Method->getParamDecl(static_cast<unsigned>(PH));
   return DeclRefExpr::Create(
       AST, NestedNameSpecifierLoc(), SourceLocation(), ParamDecl, false,
