@@ -16,7 +16,6 @@ Checks: >
   performance-*,
   -performance-enum-size,
   -performance-no-int-to-ptr,
-  -performance-type-promotion-in-math-fn,
   -performance-unnecessary-value-param,
   readability-*,
   -readability-avoid-nested-conditional-operator,
