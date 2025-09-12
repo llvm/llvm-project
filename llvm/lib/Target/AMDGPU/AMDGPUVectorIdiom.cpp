@@ -46,12 +46,14 @@
 #include "AMDGPU.h"
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -122,7 +124,7 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: false arm "
                       << "(B) not dereferenceable for " << Size
                       << " bytes at align(1)\n");
-    LLVM_DEBUG(dbgs() << "    false arm (B) value: " << *B << "\n");
+    LLVM_DEBUG(dbgs() << "    false arm (B) value: " << *B << '\n');
     return false;
   }
 
@@ -132,7 +134,7 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
   if (AlignB < Align(1)) {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: known "
                       << "alignment of false arm (B) < 1: " << AlignB.value()
-                      << "\n");
+                      << '\n');
     return false;
   }
 
@@ -141,7 +143,7 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: true arm "
                       << "(A) not dereferenceable for " << Size
                       << " bytes at align(1)\n");
-    LLVM_DEBUG(dbgs() << "    true arm (A) value: " << *A << "\n");
+    LLVM_DEBUG(dbgs() << "    true arm (A) value: " << *A << '\n');
     return false;
   }
 
@@ -151,28 +153,19 @@ static bool bothArmsSafeToSpeculateLoads(Value *A, Value *B, uint64_t Size,
   if (AlignA < Align(1)) {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Not speculating loads: known "
                       << "alignment of true arm (A) < 1: " << AlignA.value()
-                      << "\n");
+                      << '\n');
     return false;
   }
 
   OutAlign = minAlign(AlignA, AlignB);
   LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Speculative loads allowed: "
-                    << "minAlign=" << OutAlign.value() << "\n");
+                    << "minAlign=" << OutAlign.value() << '\n');
   return true;
-}
-
-// With opaque pointers, ensure address spaces match and otherwise return Ptr.
-// Assumes the address space is the only property to validate for this cast.
-static Value *castPtrTo(Value *Ptr, unsigned ExpectedAS) {
-  auto *FromPTy = cast<PointerType>(Ptr->getType());
-  unsigned AS = FromPTy->getAddressSpace();
-  (void)ExpectedAS;
-  assert(AS == ExpectedAS && "Address space mismatch for castPtrTo");
-  return Ptr;
 }
 
 struct AMDGPUVectorIdiomImpl {
   const unsigned MaxBytes;
+  bool CFGChanged = false;
 
   AMDGPUVectorIdiomImpl(unsigned MaxBytes) : MaxBytes(MaxBytes) {}
 
@@ -182,12 +175,12 @@ struct AMDGPUVectorIdiomImpl {
   // calls. Assumptions:
   // - Non-volatile, constant length, within MaxBytes.
   // - Source and destination in the same address space.
-  bool transformSelectMemcpySource(MemTransferInst &MT, SelectInst &Sel,
+  bool transformSelectMemcpySource(MemCpyInst &MT, SelectInst &Sel,
                                    const DataLayout &DL,
                                    const DominatorTree *DT,
                                    AssumptionCache *AC) {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Considering memcpy(select-src): "
-                      << MT << "\n");
+                      << MT << '\n');
     // Note: SelectInst has no volatility, but keep the check for consistency
     // with original logic; emit a debug message if it ever triggers.
     IRBuilder<> B(&MT);
@@ -235,7 +228,7 @@ struct AMDGPUVectorIdiomImpl {
                         << "dereferenceable(" << DerefBytes << ")"
                         << (HasDerefOrNull ? " (or null)" : "")
                         << (HasNonNull ? ", nonnull" : "") << ", align "
-                        << ProvenSrcAlign.value() << "\n");
+                        << ProvenSrcAlign.value() << '\n');
       if (DerefBytes >= N && (!HasDerefOrNull || HasNonNull)) {
         LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Using memcpy source operand "
                           << "attributes at this use; accepting speculation\n");
@@ -247,40 +240,34 @@ struct AMDGPUVectorIdiomImpl {
                    << "enough for speculation: need dereferenceable(" << N
                    << ") and nonnull; got dereferenceable(" << DerefBytes << ")"
                    << (HasDerefOrNull ? " (or null)" : "")
-                   << (HasNonNull ? ", nonnull" : "") << "\n");
+                   << (HasNonNull ? ", nonnull" : "") << '\n');
       }
     } else {
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] memcpy source param has no "
                         << "dereferenceable bytes attribute; align "
-                        << ProvenSrcAlign.value() << "\n");
+                        << ProvenSrcAlign.value() << '\n');
     }
     if (!CanSpeculate)
       CanSpeculate =
           bothArmsSafeToSpeculateLoads(A, Bv, N, AlignAB, DL, AC, DT, &MT);
 
-    unsigned AS = cast<PointerType>(A->getType())->getAddressSpace();
-
     if (CanSpeculate) {
       Align MinAlign = std::min(AlignAB, DstAlign);
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-src) "
                         << "with value-level select; N=" << N
-                        << " minAlign=" << MinAlign.value() << "\n");
+                        << " minAlign=" << MinAlign.value() << '\n');
 
       Type *Ty = getIntOrVecTypeForSize(N, B.getContext(), MinAlign);
 
-      Value *PA = castPtrTo(A, AS);
-      Value *PB = castPtrTo(Bv, AS);
-      LoadInst *LA = B.CreateAlignedLoad(Ty, PA, MinAlign);
-      LoadInst *LB = B.CreateAlignedLoad(Ty, PB, MinAlign);
+      LoadInst *LA = B.CreateAlignedLoad(Ty, A, MinAlign);
+      LoadInst *LB = B.CreateAlignedLoad(Ty, Bv, MinAlign);
       Value *V = B.CreateSelect(Sel.getCondition(), LA, LB);
 
-      Value *PDst =
-          castPtrTo(Dst, cast<PointerType>(Dst->getType())->getAddressSpace());
-      (void)B.CreateAlignedStore(V, PDst, DstAlign);
+      (void)B.CreateAlignedStore(V, Dst, DstAlign);
 
       LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewrote memcpy(select-src) to "
                            "value-select loads/stores: "
-                        << MT << "\n");
+                        << MT << '\n');
       MT.eraseFromParent();
       return true;
     }
@@ -297,12 +284,12 @@ struct AMDGPUVectorIdiomImpl {
   // Rewrites memcpy when the destination is a select of pointers. To avoid
   // speculative stores, always splits the CFG and emits a memcpy per branch.
   // Assumptions mirror the source case.
-  bool transformSelectMemcpyDest(MemTransferInst &MT, SelectInst &Sel) {
+  bool transformSelectMemcpyDest(MemCpyInst &MT, SelectInst &Sel) {
     Value *DA = Sel.getTrueValue();
     Value *DB = Sel.getFalseValue();
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Rewriting memcpy(select-dst) via "
                       << "CFG split to avoid speculative stores: " << MT
-                      << "\n");
+                      << '\n');
 
     splitCFGForMemcpy(MT, Sel.getCondition(), DA, DB, false);
     LLVM_DEBUG(
@@ -316,8 +303,10 @@ struct AMDGPUVectorIdiomImpl {
   // Assumptions:
   // - MT has constant length and is non-volatile.
   // - TruePtr/FalsePtr are correct replacements for the selected operand.
-  void splitCFGForMemcpy(MemTransferInst &MT, Value *Cond, Value *TruePtr,
+  void splitCFGForMemcpy(MemCpyInst &MT, Value *Cond, Value *TruePtr,
                          Value *FalsePtr, bool IsSource) {
+    CFGChanged = true;
+
     Function *F = MT.getFunction();
     BasicBlock *Cur = MT.getParent();
     BasicBlock *ThenBB = BasicBlock::Create(F->getContext(), "memcpy.then", F);
@@ -373,19 +362,16 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   if (!AMDGPUVectorIdiomEnable)
     return PreservedAnalyses::all();
 
-  SmallVector<CallInst *, 8> Worklist;
+  SmallVector<MemCpyInst *, 8> Worklist;
   for (Instruction &I : instructions(F)) {
-    if (auto *CI = dyn_cast<CallInst>(&I)) {
-      if (isa<MemTransferInst>(CI))
-        Worklist.push_back(CI);
-    }
+    if (auto *MC = dyn_cast<MemCpyInst>(&I))
+      Worklist.push_back(MC);
   }
 
   bool Changed = false;
   AMDGPUVectorIdiomImpl Impl(MaxBytes);
 
-  for (CallInst *CI : Worklist) {
-    auto *MT = cast<MemTransferInst>(CI);
+  for (MemCpyInst *MT : Worklist) {
     Value *Dst = MT->getRawDest();
     Value *Src = MT->getRawSource();
     if (!isa<SelectInst>(Src) && !isa<SelectInst>(Dst))
@@ -399,28 +385,25 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
       Value *LenV = MT->getLength();
 
       auto dumpPtrForms = [&](StringRef Label, Value *V) {
-        dbgs() << "      " << Label << ": " << *V << "\n";
+        dbgs() << "      " << Label << ": " << *V << '\n';
 
-        // Strip pointer casts only
         Value *StripCasts = V->stripPointerCasts();
         if (StripCasts != V)
-          dbgs() << "        - stripCasts: " << *StripCasts << "\n";
+          dbgs() << "        - stripCasts: " << *StripCasts << '\n';
         else
           dbgs() << "        - stripCasts: (no change)\n";
 
-        // Strip GEPs and casts to the base object (older API: no DataLayout
-        // arg) Optionally increase MaxLookup if you want to chase deeper.
-        Value *Underlying = getUnderlyingObject(V /*, MaxLookup=6*/);
+        Value *Underlying = getUnderlyingObject(V);
         if (Underlying != V)
-          dbgs() << "        - underlying: " << *Underlying << "\n";
+          dbgs() << "        - underlying: " << *Underlying << '\n';
         else
           dbgs() << "        - underlying: (no change)\n";
       };
 
       auto dumpSelect = [&](StringRef Which, Value *V) {
         if (auto *SI = dyn_cast<SelectInst>(V)) {
-          dbgs() << "  - " << Which << " is Select: " << *SI << "\n";
-          dbgs() << "      cond: " << *SI->getCondition() << "\n";
+          dbgs() << "  - " << Which << " is Select: " << *SI << '\n';
+          dbgs() << "      cond: " << *SI->getCondition() << '\n';
           Value *T = SI->getTrueValue();
           Value *Fv = SI->getFalseValue();
           dumpPtrForms("true", T);
@@ -428,19 +411,19 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
         }
       };
 
-      dbgs() << "[AMDGPUVectorIdiom] Found memcpy: " << *MT << "\n"
-             << "  in function: " << F.getName() << "\n"
-             << "  - volatile=" << (MT->isVolatile() ? "true" : "false") << "\n"
+      dbgs() << "[AMDGPUVectorIdiom] Found memcpy: " << *MT << '\n'
+             << "  in function: " << F.getName() << '\n'
+             << "  - volatile=" << (MT->isVolatile() ? "true" : "false") << '\n'
              << "  - sameAS=" << (DstAS == SrcAS ? "true" : "false")
              << " (dstAS=" << DstAS << ", srcAS=" << SrcAS << ")\n"
              << "  - constLen=" << (isa<ConstantInt>(LenV) ? "true" : "false");
       if (auto *LCI = dyn_cast<ConstantInt>(LenV))
         dbgs() << " (N=" << LCI->getLimitedValue() << ")";
-      dbgs() << "\n"
+      dbgs() << '\n'
              << "  - srcIsSelect=" << (isa<SelectInst>(SrcV) ? "true" : "false")
-             << "\n"
+             << '\n'
              << "  - dstIsSelect=" << (isa<SelectInst>(DstV) ? "true" : "false")
-             << "\n";
+             << '\n';
 
       // Detailed dumps
       dumpSelect("src", SrcV);
@@ -487,5 +470,21 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
                       << "destination is a select of pointers\n");
   }
 
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // Be conservative: preserve only analyses we know remain valid.
+  PreservedAnalyses PA;
+  PA.preserve<AssumptionAnalysis>();
+  PA.preserve<TargetLibraryAnalysis>();
+  PA.preserve<TargetIRAnalysis>();
+
+  // If we didn't change the CFG, we can keep DT/LI/PostDT.
+  if (!Impl.CFGChanged) {
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserve<LoopAnalysis>();
+    PA.preserve<PostDominatorTreeAnalysis>();
+  }
+
+  return PA;
 }
