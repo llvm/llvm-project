@@ -2359,6 +2359,37 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   return DAG.getMergeValues({Val, Load.getValue(1)}, SL);
 }
 
+/// Coerce an argument which was passed in a different ABI type to the original
+/// expected value type.
+SDValue SITargetLowering::convertABITypeToValueType(SelectionDAG &DAG,
+                                                    SDValue Val,
+                                                    CCValAssign &VA,
+                                                    const SDLoc &SL) const {
+  EVT ValVT = VA.getValVT();
+
+  // If this is an 8 or 16-bit value, it is really passed promoted
+  // to 32 bits. Insert an assert[sz]ext to capture this, then
+  // truncate to the right size.
+  switch (VA.getLocInfo()) {
+  case CCValAssign::Full:
+    return Val;
+  case CCValAssign::BCvt:
+    return DAG.getNode(ISD::BITCAST, SL, ValVT, Val);
+  case CCValAssign::SExt:
+    Val = DAG.getNode(ISD::AssertSext, SL, VA.getLocVT(), Val,
+                      DAG.getValueType(ValVT));
+    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+  case CCValAssign::ZExt:
+    Val = DAG.getNode(ISD::AssertZext, SL, VA.getLocVT(), Val,
+                      DAG.getValueType(ValVT));
+    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+  case CCValAssign::AExt:
+    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+  default:
+    llvm_unreachable("Unknown loc info!");
+  }
+}
+
 SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
                                               CCValAssign &VA, const SDLoc &SL,
                                               SDValue Chain,
@@ -2379,7 +2410,6 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
 
   // Create load nodes to retrieve arguments from the stack.
   SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
-  SDValue ArgValue;
 
   // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
   ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
@@ -2402,10 +2432,15 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
     break;
   }
 
-  ArgValue = DAG.getExtLoad(
+  SDValue ArgValue = DAG.getExtLoad(
       ExtType, SL, VA.getLocVT(), Chain, FIN,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), MemVT);
-  return ArgValue;
+
+  SDValue ConvertedVal = convertABITypeToValueType(DAG, ArgValue, VA, SL);
+  if (ConvertedVal == ArgValue)
+    return ConvertedVal;
+
+  return DAG.getMergeValues({ConvertedVal, ArgValue.getValue(1)}, SL);
 }
 
 SDValue SITargetLowering::getPreloadedValue(
@@ -3396,30 +3431,7 @@ SDValue SITargetLowering::LowerFormalArguments(
           DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
     }
 
-    // If this is an 8 or 16-bit value, it is really passed promoted
-    // to 32 bits. Insert an assert[sz]ext to capture this, then
-    // truncate to the right size.
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
-      break;
-    case CCValAssign::SExt:
-      Val = DAG.getNode(ISD::AssertSext, DL, VT, Val, DAG.getValueType(ValVT));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
-      break;
-    case CCValAssign::ZExt:
-      Val = DAG.getNode(ISD::AssertZext, DL, VT, Val, DAG.getValueType(ValVT));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
-      break;
-    case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
-      break;
-    default:
-      llvm_unreachable("Unknown loc info!");
-    }
-
+    Val = convertABITypeToValueType(DAG, Val, VA, DL);
     InVals.push_back(Val);
   }
 
