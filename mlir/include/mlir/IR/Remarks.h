@@ -29,7 +29,7 @@ namespace mlir::remark {
 /// Define an the set of categories to accept. By default none are, the provided
 /// regex matches against the category names for each kind of remark.
 struct RemarkCategories {
-  std::optional<std::string> passed, missed, analysis, failed;
+  std::optional<std::string> all, passed, missed, analysis, failed;
 };
 
 /// Categories describe the outcome of an transformation, not the mechanics of
