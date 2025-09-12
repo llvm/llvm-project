@@ -28,7 +28,7 @@ void g(int** (*fp)(const char *, const char **)) {
 
 union Union {
   char *c;
-  long* n;
+  long *n;
 } __attribute__((transparent_union));
 
 // CHECK: define{{.*}} void @uni({{.*}} !kcfi_type [[TYPE2:![0-9]+]]
