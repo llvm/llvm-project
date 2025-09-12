@@ -238,3 +238,12 @@
 #if __has_embed("media/art.txt" if_empty))
 #endif
 
+// expected-error@+2 {{invalid value '-1'; must be positive}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed (__FILE__ limit(-1))
+#endif
+
+// expected-error@+2 {{invalid value '-100000000000000000'; must be positive}}\
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed (__FILE__ limit(-100000000000000000)) != __STDC_EMBED_NOT_FOUND__
+#endif
