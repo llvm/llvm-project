@@ -51,15 +51,15 @@ struct DemandedVL {
   bool operator!=(const DemandedVL &Other) const {
     return !VL.isIdenticalTo(Other.VL);
   }
-};
 
-static DemandedVL max(const DemandedVL &LHS, const DemandedVL &RHS) {
-  if (RISCV::isVLKnownLE(LHS.VL, RHS.VL))
-    return RHS;
-  if (RISCV::isVLKnownLE(RHS.VL, LHS.VL))
-    return LHS;
-  return DemandedVL::vlmax();
-}
+  DemandedVL max(const DemandedVL &X) const {
+    if (RISCV::isVLKnownLE(VL, X.VL))
+      return X;
+    if (RISCV::isVLKnownLE(X.VL, VL))
+      return *this;
+    return DemandedVL::vlmax();
+  }
+};
 
 class RISCVVLOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
@@ -1637,7 +1637,7 @@ void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
   for (const MachineOperand &MO : make_filter_range(MI.uses(), isVirtualVec)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
-    DemandedVLs[Def] = max(DemandedVLs[Def], getMinimumVLForUser(MO));
+    DemandedVLs[Def] = DemandedVLs[Def].max(getMinimumVLForUser(MO));
     if (DemandedVLs[Def] != Prev)
       Worklist.insert(Def);
   }
