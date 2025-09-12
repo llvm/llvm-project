@@ -422,24 +422,30 @@ bool WebAssemblyTargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
+  if (VT.getSizeInBits() > 128)
+    return true;
+
   auto Op1 = I->getOperand(1);
 
   if (auto *InputInst = dyn_cast<Instruction>(Op1)) {
-    if (InstructionOpcodeToISD(InputInst->getOpcode()) != ISD::MUL)
-      return true;
+    unsigned Opcode = InstructionOpcodeToISD(InputInst->getOpcode());
+    if (Opcode == ISD::MUL) {
+      if (isa<Instruction>(InputInst->getOperand(0)) &&
+          isa<Instruction>(InputInst->getOperand(1))) {
+        // dot only supports signed inputs but also support lowering unsigned.
+        if (cast<Instruction>(InputInst->getOperand(0))->getOpcode() !=
+            cast<Instruction>(InputInst->getOperand(1))->getOpcode())
+          return true;
 
-    if (isa<Instruction>(InputInst->getOperand(0)) &&
-        isa<Instruction>(InputInst->getOperand(1))) {
-      // dot only supports signed inputs but also support lowering unsigned.
-      if (cast<Instruction>(InputInst->getOperand(0))->getOpcode() !=
-          cast<Instruction>(InputInst->getOperand(1))->getOpcode())
-        return true;
-
-      EVT Op1VT = EVT::getEVT(Op1->getType());
-      if (Op1VT.getVectorElementType() == VT.getVectorElementType() &&
-          ((VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount()) ||
-           (VT.getVectorElementCount() * 4 == Op1VT.getVectorElementCount())))
-        return false;
+        EVT Op1VT = EVT::getEVT(Op1->getType());
+        if (Op1VT.getVectorElementType() == VT.getVectorElementType() &&
+            ((VT.getVectorElementCount() * 2 ==
+              Op1VT.getVectorElementCount()) ||
+             (VT.getVectorElementCount() * 4 == Op1VT.getVectorElementCount())))
+          return false;
+      }
+    } else if (ISD::isExtOpcode(Opcode)) {
+      return false;
     }
   }
   return true;
@@ -2117,77 +2123,93 @@ SDValue performLowerPartialReduction(SDNode *N, SelectionDAG &DAG) {
 
   assert(N->getValueType(0) == MVT::v4i32 && "can only support v4i32");
   SDLoc DL(N);
-  SDValue Mul = N->getOperand(2);
-  assert(Mul->getOpcode() == ISD::MUL && "expected mul input");
 
-  SDValue ExtendLHS = Mul->getOperand(0);
-  SDValue ExtendRHS = Mul->getOperand(1);
-  assert((ISD::isExtOpcode(ExtendLHS.getOpcode()) &&
-          ISD::isExtOpcode(ExtendRHS.getOpcode())) &&
-         "expected widening mul");
-  assert(ExtendLHS.getOpcode() == ExtendRHS.getOpcode() &&
-         "expected mul to use the same extend for both operands");
+  SDValue Input = N->getOperand(2);
+  if (Input->getOpcode() == ISD::MUL) {
+    SDValue ExtendLHS = Input->getOperand(0);
+    SDValue ExtendRHS = Input->getOperand(1);
+    assert((ISD::isExtOpcode(ExtendLHS.getOpcode()) &&
+            ISD::isExtOpcode(ExtendRHS.getOpcode())) &&
+           "expected widening mul or add");
+    assert(ExtendLHS.getOpcode() == ExtendRHS.getOpcode() &&
+           "expected binop to use the same extend for both operands");
 
-  SDValue ExtendInLHS = ExtendLHS->getOperand(0);
-  SDValue ExtendInRHS = ExtendRHS->getOperand(0);
-  bool IsSigned = ExtendLHS->getOpcode() == ISD::SIGN_EXTEND;
+    SDValue ExtendInLHS = ExtendLHS->getOperand(0);
+    SDValue ExtendInRHS = ExtendRHS->getOperand(0);
+    bool IsSigned = ExtendLHS->getOpcode() == ISD::SIGN_EXTEND;
+    unsigned LowOpc =
+        IsSigned ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+    unsigned HighOpc = IsSigned ? WebAssemblyISD::EXTEND_HIGH_S
+                                : WebAssemblyISD::EXTEND_HIGH_U;
+    SDValue LowLHS;
+    SDValue LowRHS;
+    SDValue HighLHS;
+    SDValue HighRHS;
 
-  if (ExtendInLHS->getValueType(0) == MVT::v8i16) {
-    if (IsSigned) {
-      // i32x4.dot_i16x8_s
-      SDValue Dot = DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32,
-                                ExtendInLHS, ExtendInRHS);
-      return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Dot);
+    auto AssignInputs = [&](MVT VT) {
+      LowLHS = DAG.getNode(LowOpc, DL, VT, ExtendInLHS);
+      LowRHS = DAG.getNode(LowOpc, DL, VT, ExtendInRHS);
+      HighLHS = DAG.getNode(HighOpc, DL, VT, ExtendInLHS);
+      HighRHS = DAG.getNode(HighOpc, DL, VT, ExtendInRHS);
+    };
+
+    if (ExtendInLHS->getValueType(0) == MVT::v8i16) {
+      if (IsSigned) {
+        // i32x4.dot_i16x8_s
+        SDValue Dot = DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32,
+                                  ExtendInLHS, ExtendInRHS);
+        return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Dot);
+      }
+
+      // (add (add (extmul_low_sx lhs, rhs), (extmul_high_sx lhs, rhs)))
+      MVT VT = MVT::v4i32;
+      AssignInputs(VT);
+      SDValue MulLow = DAG.getNode(ISD::MUL, DL, VT, LowLHS, LowRHS);
+      SDValue MulHigh = DAG.getNode(ISD::MUL, DL, VT, HighLHS, HighRHS);
+      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, MulLow, MulHigh);
+      return DAG.getNode(ISD::ADD, DL, VT, N->getOperand(1), Add);
+    } else {
+      assert(ExtendInLHS->getValueType(0) == MVT::v16i8 &&
+             "expected v16i8 input types");
+      AssignInputs(MVT::v8i16);
+      // Lower to a wider tree, using twice the operations compared to above.
+      if (IsSigned) {
+        // Use two dots
+        SDValue DotLHS =
+            DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, LowLHS, LowRHS);
+        SDValue DotRHS =
+            DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, HighLHS, HighRHS);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, DotLHS, DotRHS);
+        return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
+      }
+
+      SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+      SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS);
+
+      SDValue AddLow = DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL,
+                                   MVT::v4i32, MulLow);
+      SDValue AddHigh = DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL,
+                                    MVT::v4i32, MulHigh);
+      SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, AddLow, AddHigh);
+      return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
     }
-
-    unsigned LowOpc = WebAssemblyISD::EXTEND_LOW_U;
-    unsigned HighOpc = WebAssemblyISD::EXTEND_HIGH_U;
-
-    // (add (add (extmul_low_sx lhs, rhs), (extmul_high_sx lhs, rhs)))
-    SDValue LowLHS = DAG.getNode(LowOpc, DL, MVT::v4i32, ExtendInLHS);
-    SDValue LowRHS = DAG.getNode(LowOpc, DL, MVT::v4i32, ExtendInRHS);
-    SDValue HighLHS = DAG.getNode(HighOpc, DL, MVT::v4i32, ExtendInLHS);
-    SDValue HighRHS = DAG.getNode(HighOpc, DL, MVT::v4i32, ExtendInRHS);
-
-    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v4i32, LowLHS, LowRHS);
-    SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v4i32, HighLHS, HighRHS);
-    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, MulLow, MulHigh);
-    return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
   } else {
-    assert(ExtendInLHS->getValueType(0) == MVT::v16i8 &&
-           "expected v16i8 input types");
-    // Lower to a wider tree, using twice the operations compared to above.
-    if (IsSigned) {
-      // Use two dots
-      unsigned LowOpc = WebAssemblyISD::EXTEND_LOW_S;
-      unsigned HighOpc = WebAssemblyISD::EXTEND_HIGH_S;
-      SDValue LowLHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInLHS);
-      SDValue LowRHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInRHS);
-      SDValue HighLHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInLHS);
-      SDValue HighRHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInRHS);
-      SDValue DotLHS =
-          DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, LowLHS, LowRHS);
-      SDValue DotRHS =
-          DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, HighLHS, HighRHS);
-      SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, DotLHS, DotRHS);
+    // Accumulate the input using extadd_pairwise.
+    assert(ISD::isExtOpcode(Input.getOpcode()) && "expected extend");
+    bool IsSigned = Input->getOpcode() == ISD::SIGN_EXTEND;
+    unsigned PairwiseOpc = IsSigned ? WebAssemblyISD::EXT_ADD_PAIRWISE_S
+                                    : WebAssemblyISD::EXT_ADD_PAIRWISE_U;
+    SDValue ExtendIn = Input->getOperand(0);
+    if (ExtendIn->getValueType(0) == MVT::v8i16) {
+      SDValue Add = DAG.getNode(PairwiseOpc, DL, MVT::v4i32, ExtendIn);
       return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
     }
 
-    unsigned LowOpc = WebAssemblyISD::EXTEND_LOW_U;
-    unsigned HighOpc = WebAssemblyISD::EXTEND_HIGH_U;
-    SDValue LowLHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInLHS);
-    SDValue LowRHS = DAG.getNode(LowOpc, DL, MVT::v8i16, ExtendInRHS);
-    SDValue HighLHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInLHS);
-    SDValue HighRHS = DAG.getNode(HighOpc, DL, MVT::v8i16, ExtendInRHS);
-
-    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
-    SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS);
-
-    SDValue AddLow =
-        DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL, MVT::v4i32, MulLow);
-    SDValue AddHigh = DAG.getNode(WebAssemblyISD::EXT_ADD_PAIRWISE_U, DL,
-                                  MVT::v4i32, MulHigh);
-    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::v4i32, AddLow, AddHigh);
+    assert(ExtendIn->getValueType(0) == MVT::v16i8 &&
+           "expected v16i8 input types");
+    SDValue Add =
+        DAG.getNode(PairwiseOpc, DL, MVT::v4i32,
+                    DAG.getNode(PairwiseOpc, DL, MVT::v8i16, ExtendIn));
     return DAG.getNode(ISD::ADD, DL, MVT::v4i32, N->getOperand(1), Add);
   }
 }
