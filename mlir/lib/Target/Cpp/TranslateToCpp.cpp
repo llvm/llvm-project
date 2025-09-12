@@ -100,6 +100,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case<emitc::ConstantOp>([&](auto op) { return 17; })
       .Case<emitc::DivOp>([&](auto op) { return 13; })
       .Case<emitc::LoadOp>([&](auto op) { return 16; })
+      .Case<emitc::LiteralOp>([&](auto op) { return 17; })
       .Case<emitc::LogicalAndOp>([&](auto op) { return 4; })
       .Case<emitc::LogicalNotOp>([&](auto op) { return 15; })
       .Case<emitc::LogicalOrOp>([&](auto op) { return 3; })
@@ -450,6 +451,16 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::LoadOp loadOp) {
     return failure();
 
   return emitter.emitOperand(loadOp.getOperand());
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::LiteralOp literalOp) {
+  // If literalOp is used inside an expression, we treat it as an inlined one.
+  if (emitter.isPartOfCurrentExpression(literalOp.getResult()))
+    return emitter.ostream() << literalOp.getValue(), success();
+
+  emitter.cacheDeferredOpResult(literalOp.getResult(), literalOp.getValue());
+  return success();
 }
 
 static LogicalResult printBinaryOperation(CppEmitter &emitter,
@@ -1714,10 +1725,10 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
                 emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
                 emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
-                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
-                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
-                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
-                emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::LiteralOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
+                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubOp, emitc::SwitchOp, emitc::UnaryMinusOp,
+                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
@@ -1729,10 +1740,6 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           })
           .Case<emitc::GetFieldOp>([&](auto op) {
             cacheDeferredOpResult(op.getResult(), op.getFieldName());
-            return success();
-          })
-          .Case<emitc::LiteralOp>([&](auto op) {
-            cacheDeferredOpResult(op.getResult(), op.getValue());
             return success();
           })
           .Case<emitc::MemberOp>([&](auto op) {
