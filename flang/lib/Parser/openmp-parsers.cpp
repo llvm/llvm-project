@@ -15,6 +15,7 @@
 #include "stmt-parser.h"
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -24,6 +25,7 @@
 
 // OpenMP Directives and Clauses
 namespace Fortran::parser {
+using namespace Fortran::parser::omp;
 
 // Helper function to print the buffer contents starting at the current point.
 [[maybe_unused]] static std::string ahead(const ParseState &state) {
@@ -1280,16 +1282,6 @@ TYPE_PARSER(sourced(
         maybe(Parser<OmpClauseList>{}),
         pure(OmpDirectiveSpecification::Flags::None))))
 
-static bool IsFortranBlockConstruct(const ExecutionPartConstruct &epc) {
-  // ExecutionPartConstruct -> ExecutableConstruct
-  //   -> Indirection<BlockConstruct>
-  if (auto *ec{std::get_if<ExecutableConstruct>(&epc.u)}) {
-    return std::holds_alternative<common::Indirection<BlockConstruct>>(ec->u);
-  } else {
-    return false;
-  }
-}
-
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
   // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
   return dirSpec.DirId() == llvm::omp::Directive::OMPD_ordered &&
@@ -1307,7 +1299,7 @@ struct StrictlyStructuredBlockParser {
     // Detect BLOCK construct without parsing the entire thing.
     if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
       if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
-        if (IsFortranBlockConstruct(*epc)) {
+        if (GetFortranBlockConstruct(*epc) != nullptr) {
           Block body;
           body.emplace_back(std::move(*epc));
           return std::move(body);
