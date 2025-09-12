@@ -491,6 +491,14 @@ static DecodeStatus decodeUImmPlus1Operand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeImmZibiOperand(MCInst &Inst, uint32_t Imm,
+                                         int64_t Address,
+                                         const MCDisassembler *Decoder) {
+  assert(isUInt<5>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm ? Imm : -1LL));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
