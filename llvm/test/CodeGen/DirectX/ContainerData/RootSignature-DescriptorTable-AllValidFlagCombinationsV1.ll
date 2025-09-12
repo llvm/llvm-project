@@ -26,18 +26,18 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ; DXC-NEXT:       NumStaticSamplers: 0
 ; DXC-NEXT:       StaticSamplersOffset: 84
 ; DXC-NEXT:       Parameters:
-; DXC-NEXT:         - ParameterType:   0
-; DXC-NEXT:           ShaderVisibility: 0
+; DXC-NEXT:         - ParameterType:   DescriptorTable
+; DXC-NEXT:           ShaderVisibility: All
 ; DXC-NEXT:           Table:
 ; DXC-NEXT:             NumRanges:       2
 ; DXC-NEXT:             RangesOffset:    44
 ; DXC-NEXT:             Ranges:
-; DXC-NEXT:               - RangeType:       3
+; DXC-NEXT:               - RangeType:       Sampler
 ; DXC-NEXT:                 NumDescriptors:  1
 ; DXC-NEXT:                 BaseShaderRegister: 1
 ; DXC-NEXT:                 RegisterSpace:   0
 ; DXC-NEXT:                 OffsetInDescriptorsFromTableStart: 4294967295
-; DXC-NEXT:               - RangeType:       1
+; DXC-NEXT:               - RangeType:       UAV
 ; DXC-NEXT:                 NumDescriptors:  5
 ; DXC-NEXT:                 BaseShaderRegister: 1
 ; DXC-NEXT:                 RegisterSpace:   10
