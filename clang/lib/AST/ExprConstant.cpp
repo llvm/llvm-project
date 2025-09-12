@@ -12034,6 +12034,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         break;
       }
     }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
@@ -12045,7 +12048,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     APValue Vec;
     if (!Evaluate(Vec, Info, E->getArg(0)) || !Vec.isVector())
-      break;
+      return false;
 
     unsigned NumElts = Vec.getVectorLength();
     const unsigned LaneBytes = 16;
