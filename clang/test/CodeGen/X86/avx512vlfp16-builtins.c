@@ -37,6 +37,8 @@ __m128h test_mm_set_sh(_Float16 __h) {
   return _mm_set_sh(__h);
 }
 
+TEST_CONSTEXPR(match_m128h(_mm_set_sh(2.0), 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+
 __m128h test_mm_set1_ph(_Float16 h) {
   // CHECK-LABEL: test_mm_set1_ph
   // CHECK: insertelement <8 x half> {{.*}}, i32 0
