@@ -1653,7 +1653,7 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     return nullptr;
   }
   if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
-                   .FindCommonBlock(name->source)}) {
+              .FindCommonBlock(name->source)}) {
     name->symbol = cb;
     return cb;
   }
