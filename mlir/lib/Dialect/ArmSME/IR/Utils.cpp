@@ -14,6 +14,21 @@
 
 namespace mlir::arm_sme {
 
+unsigned getSizeInBytes(TypeSize type) {
+  switch (type) {
+  case arm_sme::TypeSize::Byte:
+    return 1;
+  case arm_sme::TypeSize::Half:
+    return 2;
+  case arm_sme::TypeSize::Word:
+    return 4;
+  case arm_sme::TypeSize::Double:
+    return 8;
+  }
+  llvm_unreachable("unknown type size");
+  return 0;
+}
+
 unsigned getSMETileSliceMinNumElts(Type type) {
   assert(isValidSMETileElementType(type) && "invalid tile type!");
   return MinStreamingVectorLengthInBits / type.getIntOrFloatBitWidth();

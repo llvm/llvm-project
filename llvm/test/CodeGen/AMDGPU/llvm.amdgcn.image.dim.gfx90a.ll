@@ -418,6 +418,114 @@ main_body:
   ret <4 x float> %v
 }
 
+define amdgpu_ps void @load_1d_agpr(<8 x i32> inreg %rsrc, i32 %s) {
+; GCN-LABEL: load_1d_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    image_load a[0:3], v0, s[0:7] dmask:0xf unorm
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; use a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_endpgm
+  %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %v)
+  ret  void
+}
+
+define amdgpu_ps void @load_2d_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+; GCN-LABEL: load_2d_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    image_load a[0:3], v[0:1], s[0:7] dmask:0xf unorm
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; use a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_endpgm
+  %v = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %v)
+  ret  void
+}
+
+define amdgpu_ps void @load_3d_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %r) {
+; GCN-LABEL: load_3d_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    image_load a[0:3], v[0:2], s[0:7] dmask:0xf unorm
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; use a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_endpgm
+  %v = call <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %v)
+  ret  void
+}
+
+define amdgpu_ps void @load_cube_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %slice) {
+; GCN-LABEL: load_cube_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    image_load a[0:3], v[0:2], s[0:7] dmask:0xf unorm da
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; use a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_endpgm
+  %v = call <4 x float> @llvm.amdgcn.image.load.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %v)
+  ret  void
+}
+
+define amdgpu_ps void @store_1d_agpr(<8 x i32> inreg %rsrc, i32 %s) {
+; GCN-LABEL: store_1d_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    image_store a[0:3], v0, s[0:7] dmask:0xf unorm
+; GCN-NEXT:    s_endpgm
+  %vdata = call <4 x float> asm "; def $0", "=a"()
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @store_2d_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+; GCN-LABEL: store_2d_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    image_store a[0:3], v[0:1], s[0:7] dmask:0xf unorm
+; GCN-NEXT:    s_endpgm
+  %vdata = call <4 x float> asm "; def $0", "=a"()
+  call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @store_3d_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %r) {
+; GCN-LABEL: store_3d_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    image_store a[0:3], v[0:2], s[0:7] dmask:0xf unorm
+; GCN-NEXT:    s_endpgm
+  %vdata = call <4 x float> asm "; def $0", "=a"()
+  call void @llvm.amdgcn.image.store.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @store_cube_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %slice) {
+; GCN-LABEL: store_cube_agpr:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ; def a[0:3]
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    image_store a[0:3], v[0:2], s[0:7] dmask:0xf unorm da
+; GCN-NEXT:    s_endpgm
+  %vdata = call <4 x float> asm "; def $0", "=a"()
+  call void @llvm.amdgcn.image.store.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #1
 declare {float,i32} @llvm.amdgcn.image.load.1d.f32i32.i32(i32, i32, <8 x i32>, i32, i32) #1
 declare {<2 x float>,i32} @llvm.amdgcn.image.load.1d.v2f32i32.i32(i32, i32, <8 x i32>, i32, i32) #1

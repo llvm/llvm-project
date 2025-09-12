@@ -610,8 +610,7 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
 }
 
 const TargetRegisterClass *
-AArch64RegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                      unsigned Kind) const {
+AArch64RegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &AArch64::GPR64spRegClass;
 }
 

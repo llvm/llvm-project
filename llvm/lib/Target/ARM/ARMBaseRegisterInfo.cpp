@@ -310,8 +310,7 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-ARMBaseRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
-                                                                         const {
+ARMBaseRegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &ARM::GPRRegClass;
 }
 

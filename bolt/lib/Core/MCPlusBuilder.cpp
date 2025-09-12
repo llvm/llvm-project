@@ -378,8 +378,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) const {
     setTailCall(Inst);
 }
 
-void MCPlusBuilder::printAnnotations(const MCInst &Inst,
-                                     raw_ostream &OS) const {
+void MCPlusBuilder::printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                                     bool PrintMemData) const {
   std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
   if (!FirstAnnotationOp)
     return;
@@ -390,7 +390,11 @@ void MCPlusBuilder::printAnnotations(const MCInst &Inst,
     const int64_t Value = extractAnnotationValue(Imm);
     const auto *Annotation = reinterpret_cast<const MCAnnotation *>(Value);
     if (Index >= MCAnnotation::kGeneric) {
-      OS << " # " << AnnotationNames[Index - MCAnnotation::kGeneric] << ": ";
+      std::string AnnotationName =
+          AnnotationNames[Index - MCAnnotation::kGeneric];
+      if (!PrintMemData && AnnotationName == "MemoryAccessProfile")
+        continue;
+      OS << " # " << AnnotationName << ": ";
       Annotation->print(OS);
     }
   }

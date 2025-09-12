@@ -154,8 +154,8 @@ public:
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
-  const TargetRegisterClass *getPointerRegClass(
-    const MachineFunction &MF, unsigned Kind = 0) const override;
+  const TargetRegisterClass *
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using

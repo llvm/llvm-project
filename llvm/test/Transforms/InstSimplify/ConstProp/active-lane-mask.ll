@@ -354,8 +354,7 @@ entry:
 define <vscale x 16 x i1> @nxv16i1_constexpr_0() {
 ; CHECK-LABEL: @nxv16i1_constexpr_0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 ptrtoint (ptr @glob to i64), i64 0)
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[MASK]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
 ;
 entry:
   %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 ptrtoint (ptr @glob to i64), i64 0)

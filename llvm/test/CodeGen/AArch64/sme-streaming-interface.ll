@@ -366,9 +366,10 @@ define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    rdsvl x3, #1
+; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    addvl x0, sp, #2
 ; CHECK-NEXT:    addvl x1, sp, #1
+; CHECK-NEXT:    lsr x3, x8, #3
 ; CHECK-NEXT:    mov x2, sp
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl foo
@@ -386,7 +387,7 @@ entry:
   %Data1 = alloca <vscale x 16 x i8>, align 16
   %Data2 = alloca <vscale x 16 x i8>, align 16
   %Data3 = alloca <vscale x 16 x i8>, align 16
-  %0 = tail call i64 @llvm.aarch64.sme.cntsb()
+  %0 = tail call i64 @llvm.aarch64.sme.cntsd()
   call void @foo(ptr noundef nonnull %Data1, ptr noundef nonnull %Data2, ptr noundef nonnull %Data3, i64 noundef %0)
   %1 = load <vscale x 16 x i8>, ptr %Data1, align 16
   %vecext = extractelement <vscale x 16 x i8> %1, i64 0
@@ -421,7 +422,7 @@ entry:
   ret void
 }
 
-declare i64 @llvm.aarch64.sme.cntsb()
+declare i64 @llvm.aarch64.sme.cntsd()
 
 declare void @foo(ptr noundef, ptr noundef, ptr noundef, i64 noundef)
 declare void @bar(ptr noundef, i64 noundef, i64 noundef, i32 noundef, i32 noundef, float noundef, float noundef, double noundef, double noundef)

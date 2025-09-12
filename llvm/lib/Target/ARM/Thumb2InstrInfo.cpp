@@ -46,7 +46,7 @@ PreferNoCSEL("prefer-no-csel", cl::Hidden,
              cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI) {}
+    : ARMBaseInstrInfo(STI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb2InstrInfo::getNop() const {

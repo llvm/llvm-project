@@ -419,12 +419,6 @@ llvm.func @arm_sme_tile_slice_to_vector_vert(%tileslice : i32,
 // -----
 
 llvm.func @arm_sme_streaming_vl() {
-  // CHECK: call i64 @llvm.aarch64.sme.cntsb()
-  %svl_b = "arm_sme.intr.cntsb"() : () -> i64
-  // CHECK: call i64 @llvm.aarch64.sme.cntsh()
-  %svl_h = "arm_sme.intr.cntsh"() : () -> i64
-  // CHECK: call i64 @llvm.aarch64.sme.cntsw()
-  %svl_w = "arm_sme.intr.cntsw"() : () -> i64
   // CHECK: call i64 @llvm.aarch64.sme.cntsd()
   %svl_d = "arm_sme.intr.cntsd"() : () -> i64
   llvm.return
