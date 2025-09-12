@@ -293,8 +293,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned PSInputEnable = 0;
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
-  bool RelaxedTBufferOOBMode = false;
-
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
@@ -303,6 +301,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
+  bool RelaxedTBufferOOBMode = false;
 
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
