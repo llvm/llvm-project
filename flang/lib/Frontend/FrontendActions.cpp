@@ -995,7 +995,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   // Create the pass manager.
   llvm::ModulePassManager mpm;
-  if (opts.PrepareForFullLTO)
+  if (opts.PrepareForFatLTO)
+    mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO, true);
+  else if (opts.PrepareForFullLTO)
     mpm = pb.buildLTOPreLinkDefaultPipeline(level);
   else if (opts.PrepareForThinLTO)
     mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
