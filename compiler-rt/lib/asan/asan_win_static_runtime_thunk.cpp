@@ -65,6 +65,10 @@ INTERCEPT_LIBRARY_FUNCTION_ASAN(strstr);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strtok);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(wcslen);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(wcsnlen);
+INTERCEPT_LIBRARY_FUNCTION_ASAN(wcscat);
+INTERCEPT_LIBRARY_FUNCTION_ASAN(wcsncat);
+INTERCEPT_LIBRARY_FUNCTION_ASAN(wcscpy);
+INTERCEPT_LIBRARY_FUNCTION_ASAN(wcsncpy);
 
 // Note: Don't intercept strtol(l). They are supposed to set errno for out-of-
 // range values, but since the ASan runtime is linked against the dynamic CRT,
