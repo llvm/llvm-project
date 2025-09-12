@@ -249,17 +249,29 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
   if (unwrapFirBox)
     asFortranDesc << accFirDescriptorPostfix.str();
 
-  // Updating descriptor must occur before the mapping of the data so that
-  // attached data pointer is not overwritten.
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, registerFuncOp.getArgument(0), asFortranDesc, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, descTy,
-          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+  // For descriptor, preserve old behavior when unwrapping FIR box: update.
+  if (unwrapFirBox) {
+    mlir::acc::UpdateDeviceOp updateDeviceOp =
+        createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+            builder, loc, registerFuncOp.getArgument(0), asFortranDesc, bounds,
+            /*structured=*/false, /*implicit=*/true,
+            mlir::acc::DataClause::acc_update_device, descTy,
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
+    llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+    createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands,
+                                        operandSegments);
+  } else {
+    // New behavior: start a structured region with declare_enter.
+    EntryOp descEntryOp = createDataEntryOp<EntryOp>(
+        builder, loc, registerFuncOp.getArgument(0), asFortranDesc, bounds,
+        /*structured=*/false, /*implicit=*/true, clause, descTy,
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    mlir::acc::DeclareEnterOp::create(
+        builder, loc,
+        mlir::acc::DeclareTokenType::get(descEntryOp.getContext()),
+        mlir::ValueRange(descEntryOp.getAccVar()));
+  }
 
   if (unwrapFirBox) {
     mlir::Value desc =
@@ -304,30 +316,58 @@ static void createDeclareDeallocFuncWithArg(
   }
 
   llvm::SmallVector<mlir::Value> bounds;
-  mlir::acc::GetDevicePtrOp entryOp =
-      createDataEntryOp<mlir::acc::GetDevicePtrOp>(
-          builder, loc, var, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/false, clause, var.getType(),
-          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
-                                   mlir::ValueRange(entryOp.getAccVar()));
+  if (unwrapFirBox) {
+    // Unwrap: delete device payload using getdeviceptr + declare_exit + ExitOp
+    mlir::acc::GetDevicePtrOp entryOp =
+        createDataEntryOp<mlir::acc::GetDevicePtrOp>(
+            builder, loc, var, asFortran, bounds,
+            /*structured=*/false, /*implicit=*/false, clause, var.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
+                                     mlir::ValueRange(entryOp.getAccVar()));
 
-  if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
-                std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
-    ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
-                   entryOp.getVar(), entryOp.getVarType(), entryOp.getBounds(),
-                   entryOp.getAsyncOperands(),
-                   entryOp.getAsyncOperandsDeviceTypeAttr(),
-                   entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
-                   /*structured=*/false, /*implicit=*/false,
-                   builder.getStringAttr(*entryOp.getName()));
-  else
-    ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
-                   entryOp.getBounds(), entryOp.getAsyncOperands(),
-                   entryOp.getAsyncOperandsDeviceTypeAttr(),
-                   entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
-                   /*structured=*/false, /*implicit=*/false,
-                   builder.getStringAttr(*entryOp.getName()));
+    if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
+                  std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getVar(), entryOp.getVarType(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+    else
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+  } else {
+    mlir::acc::GetDevicePtrOp entryOp =
+        createDataEntryOp<mlir::acc::GetDevicePtrOp>(
+            builder, loc, var, asFortran, bounds,
+            /*structured=*/false, /*implicit=*/false, clause, var.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
+                                     mlir::ValueRange(entryOp.getAccVar()));
+
+    if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
+                  std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getVar(), entryOp.getVarType(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+    else
+      ExitOp::create(builder, entryOp.getLoc(), entryOp.getAccVar(),
+                     entryOp.getBounds(), entryOp.getAsyncOperands(),
+                     entryOp.getAsyncOperandsDeviceTypeAttr(),
+                     entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(),
+                     /*structured=*/false, /*implicit=*/false,
+                     builder.getStringAttr(*entryOp.getName()));
+  }
 
   // Generate the post dealloc function.
   modBuilder.setInsertionPointAfter(preDeallocOp);
@@ -343,15 +383,28 @@ static void createDeclareDeallocFuncWithArg(
     asFortran << accFirDescriptorPostfix.str();
   }
 
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, var, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, var.getType(),
-          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+  if (unwrapFirBox) {
+    // Old behavior: update descriptor after deallocation.
+    mlir::acc::UpdateDeviceOp updateDeviceOp =
+        createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+            builder, loc, var, asFortran, bounds,
+            /*structured=*/false, /*implicit=*/true,
+            mlir::acc::DataClause::acc_update_device, var.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
+    llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+    createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands,
+                                        operandSegments);
+  } else {
+    // New behavior: end structured region with declare_exit.
+    mlir::acc::GetDevicePtrOp postEntryOp =
+        createDataEntryOp<mlir::acc::GetDevicePtrOp>(
+            builder, loc, var, asFortran, bounds,
+            /*structured=*/false, /*implicit=*/true, clause, var.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
+                                     mlir::ValueRange(postEntryOp.getAccVar()));
+  }
   modBuilder.setInsertionPointAfter(postDeallocOp);
   builder.restoreInsertionPoint(crtInsPt);
 }
@@ -3994,17 +4047,28 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
     asFortranDesc << accFirDescriptorPostfix.str();
   llvm::SmallVector<mlir::Value> bounds;
 
-  // Updating descriptor must occur before the mapping of the data so that
-  // attached data pointer is not overwritten.
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, addrOp, asFortranDesc, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, addrOp.getType(),
-          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+  // For unwrapFirBox=false this remains declare_enter; for unwrapFirBox=true,
+  // the descriptor post-alloc remains update behavior.
+  if (unwrapFirBox) {
+    mlir::acc::UpdateDeviceOp updDesc =
+        createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+            builder, loc, addrOp, asFortranDesc, bounds,
+            /*structured=*/false, /*implicit=*/true,
+            mlir::acc::DataClause::acc_update_device, addrOp.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    llvm::SmallVector<int32_t> seg{0, 0, 0, 1};
+    llvm::SmallVector<mlir::Value> ops{updDesc.getResult()};
+    createSimpleOp<mlir::acc::UpdateOp>(builder, loc, ops, seg);
+  } else {
+    EntryOp descEntryOp = createDataEntryOp<EntryOp>(
+        builder, loc, addrOp, asFortranDesc, bounds,
+        /*structured=*/false, /*implicit=*/true, clause, addrOp.getType(),
+        /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    mlir::acc::DeclareEnterOp::create(
+        builder, loc,
+        mlir::acc::DeclareTokenType::get(descEntryOp.getContext()),
+        mlir::ValueRange(descEntryOp.getAccVar()));
+  }
 
   if (unwrapFirBox) {
     auto loadOp = fir::LoadOp::create(builder, loc, addrOp.getResult());
@@ -4097,15 +4161,27 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   if (unwrapFirBox)
     asFortran << accFirDescriptorPostfix.str();
   llvm::SmallVector<mlir::Value> bounds;
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, addrOp, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, addrOp.getType(),
-          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+  if (unwrapFirBox) {
+    // Unwrap mode: update the descriptor after deallocation (no declare_exit).
+    mlir::acc::UpdateDeviceOp updDesc =
+        createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+            builder, loc, addrOp, asFortran, bounds,
+            /*structured=*/false, /*implicit=*/true,
+            mlir::acc::DataClause::acc_update_device, addrOp.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    llvm::SmallVector<int32_t> seg{0, 0, 0, 1};
+    llvm::SmallVector<mlir::Value> ops{updDesc.getResult()};
+    createSimpleOp<mlir::acc::UpdateOp>(builder, loc, ops, seg);
+  } else {
+    // Default: end the structured declare region using declare_exit.
+    mlir::acc::GetDevicePtrOp descEntryOp =
+        createDataEntryOp<mlir::acc::GetDevicePtrOp>(
+            builder, loc, addrOp, asFortran, bounds,
+            /*structured=*/false, /*implicit=*/true, clause, addrOp.getType(),
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
+    mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
+                                     mlir::ValueRange(descEntryOp.getAccVar()));
+  }
   modBuilder.setInsertionPointAfter(postDeallocOp);
 }
 
