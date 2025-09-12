@@ -449,7 +449,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
         }
       } else {
         unwind_frame_sp = m_frames.front();
-        cfa = unwind_frame_sp->m_id.GetCallFrameAddress();
+        cfa = unwind_frame_sp->m_id.GetCallFrameAddressWithoutMetadata();
       }
     } else {
       // Check for interruption when building the frames.
