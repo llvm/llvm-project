@@ -197,8 +197,8 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2STRDi8));
-    AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
-    AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
+    AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
+    AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
     return;
   }
@@ -238,8 +238,8 @@ void Thumb2InstrInfo::loadRegFromStackSlot(
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2LDRDi8));
-    AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead, TRI);
-    AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
+    AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead);
+    AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
 
     if (DestReg.isPhysical())
