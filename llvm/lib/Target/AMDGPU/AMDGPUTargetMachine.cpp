@@ -1669,7 +1669,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
   // the register in LiveVariables, this would trigger a failure in verifier,
   // we should fix it and enable the verifier.
-  if (!WaveTransformCF && OptVGPRLiveRange)
+  if (OptVGPRLiveRange)
     insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeLegacyID);
 
   // This must be run immediately after phi elimination and before

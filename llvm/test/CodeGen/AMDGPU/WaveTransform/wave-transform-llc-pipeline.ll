@@ -348,6 +348,7 @@
 ; GCN-O3-NEXT:        Process Implicit Definitions
 ; GCN-O3-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O3-NEXT:        Live Variable Analysis
+; GCN-O3-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O3-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O3-NEXT:        Two-Address instruction pass
 ; GCN-O3-NEXT:        Slot index numbering
