@@ -934,28 +934,31 @@ struct WgToSgMultiDimReductionOp
     if (!srcType || !dstType)
       return failure();
 
-    // Only handle [m,1]->[m] or [1,m]->[m]
     // TODO: generalize it
     auto srcShape = srcType.getShape();
     auto dstShape = dstType.getShape();
     if (srcShape.size() != 2 || dstShape.size() != 1)
       return failure();
 
-    if (!((srcShape[1] == 1 && srcShape[0] == dstShape[0]) ||
-          (srcShape[0] == 1 && srcShape[1] == dstShape[0])))
-      return failure();
-
     xegpu::DistributeLayoutAttr layout =
-        xegpu::getDistributeLayoutAttr(op.getSource());
+        xegpu::getDistributeLayoutAttr(op.getResult());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
+    auto reductionDims = op.getReductionDims();
+    if (reductionDims.size() != 1)
+      return failure();
+
+    SmallVector<int64_t> sgLayout = llvm::cast<xegpu::SliceAttr>(layout)
+                                        .getParent()
+                                        .getEffectiveSgLayoutAsInt();
+    // Check that the sgLayout in the reduced dimension is 1.
+    if (sgLayout[reductionDims[0]] != 1)
+      return failure();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(srcShape, layout).first;
-    VectorType newDstType;
-    if (op.getReductionDims() == ArrayRef<int64_t>({0}))
-      newDstType = VectorType::get({sgShape[1]}, dstType.getElementType());
-    else
-      newDstType = VectorType::get({sgShape[0]}, dstType.getElementType());
+
+    VectorType newDstType =
+        VectorType::get({sgShape}, dstType.getElementType());
 
     SmallVector<Value> newReductions;
     for (auto [sgSrc, sgAcc] :
