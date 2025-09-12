@@ -198,6 +198,9 @@ class LLVMConfig(object):
             if gmalloc_path_str is not None:
                 self.with_environment("DYLD_INSERT_LIBRARIES", gmalloc_path_str)
 
+        if not platform.system() == "Windows":
+            features.add("symlinks")
+
     def _find_git_windows_unix_tools(self, tools_needed):
         assert sys.platform == "win32"
         import winreg
