@@ -2752,7 +2752,7 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
-    return true;
+    return Subtarget.hasVInstructions();
   case MVT::i64:
     return Subtarget.hasVInstructionsI64();
   case MVT::f16:
@@ -24840,12 +24840,17 @@ bool RISCVTargetLowering::areTwoSDNodeTargetMMOFlagsMergeable(
 }
 
 bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
-  if (VT.isScalableVector())
-    return isTypeLegal(VT) && Subtarget.hasStdExtZvbb();
-  if (VT.isFixedLengthVector() && Subtarget.hasStdExtZvbb())
-    return true;
-  return Subtarget.hasCPOPLike() &&
-         (VT == MVT::i32 || VT == MVT::i64 || VT.isFixedLengthVector());
+  if (VT.isVector()) {
+    EVT SVT = VT.getVectorElementType();
+    // If the element type is legal we can use cpop.v if it is enabled.
+    if (isLegalElementTypeForRVV(SVT))
+      return Subtarget.hasStdExtZvbb();
+    // If it will be scalarized, we might be able to use cpop.
+    return VT.isFixedLengthVector() && Subtarget.hasCPOPLike() &&
+           (SVT == MVT::i32 || SVT == MVT::i64);
+  }
+
+  return Subtarget.hasCPOPLike() && (VT == MVT::i32 || VT == MVT::i64);
 }
 
 unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,

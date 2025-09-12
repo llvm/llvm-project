@@ -18,8 +18,9 @@ define <4 x i1> @test_ult_2(<4 x i64> %x) {
 ;
 ; FAST-LABEL: define <4 x i1> @test_ult_2(
 ; FAST-SAME: <4 x i64> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; FAST-NEXT:    [[CTPOP:%.*]] = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> [[X]])
-; FAST-NEXT:    [[CMP1:%.*]] = icmp ult <4 x i64> [[CTPOP]], splat (i64 2)
+; FAST-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[X]], splat (i64 -1)
+; FAST-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[X]], [[TMP1]]
+; FAST-NEXT:    [[CMP1:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
 ; FAST-NEXT:    ret <4 x i1> [[CMP1]]
 ;
   %ctpop = call <4 x i64> @llvm.ctpop(<4 x i64> %x)
@@ -37,8 +38,9 @@ define <4 x i1> @test_ugt_1(<4 x i64> %x) {
 ;
 ; FAST-LABEL: define <4 x i1> @test_ugt_1(
 ; FAST-SAME: <4 x i64> [[X:%.*]]) #[[ATTR0]] {
-; FAST-NEXT:    [[CTPOP:%.*]] = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> [[X]])
-; FAST-NEXT:    [[CMP1:%.*]] = icmp ugt <4 x i64> [[CTPOP]], splat (i64 1)
+; FAST-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[X]], splat (i64 -1)
+; FAST-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[X]], [[TMP1]]
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ne <4 x i64> [[TMP2]], zeroinitializer
 ; FAST-NEXT:    ret <4 x i1> [[CMP1]]
 ;
   %ctpop = call <4 x i64> @llvm.ctpop(<4 x i64> %x)
@@ -56,8 +58,9 @@ define <4 x i1> @test_eq_1(<4 x i64> %x) {
 ;
 ; FAST-LABEL: define <4 x i1> @test_eq_1(
 ; FAST-SAME: <4 x i64> [[X:%.*]]) #[[ATTR0]] {
-; FAST-NEXT:    [[CTPOP:%.*]] = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> [[X]])
-; FAST-NEXT:    [[CMP1:%.*]] = icmp eq <4 x i64> [[CTPOP]], splat (i64 1)
+; FAST-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[X]], splat (i64 -1)
+; FAST-NEXT:    [[TMP2:%.*]] = xor <4 x i64> [[X]], [[TMP1]]
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ugt <4 x i64> [[TMP2]], [[TMP1]]
 ; FAST-NEXT:    ret <4 x i1> [[CMP1]]
 ;
   %ctpop = call <4 x i64> @llvm.ctpop(<4 x i64> %x)
@@ -75,8 +78,9 @@ define <4 x i1> @test_ne_1(<4 x i64> %x) {
 ;
 ; FAST-LABEL: define <4 x i1> @test_ne_1(
 ; FAST-SAME: <4 x i64> [[X:%.*]]) #[[ATTR0]] {
-; FAST-NEXT:    [[CTPOP:%.*]] = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> [[X]])
-; FAST-NEXT:    [[CMP1:%.*]] = icmp ne <4 x i64> [[CTPOP]], splat (i64 1)
+; FAST-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[X]], splat (i64 -1)
+; FAST-NEXT:    [[TMP2:%.*]] = xor <4 x i64> [[X]], [[TMP1]]
+; FAST-NEXT:    [[CMP1:%.*]] = icmp ule <4 x i64> [[TMP2]], [[TMP1]]
 ; FAST-NEXT:    ret <4 x i1> [[CMP1]]
 ;
   %ctpop = call <4 x i64> @llvm.ctpop(<4 x i64> %x)
