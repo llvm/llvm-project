@@ -285,6 +285,8 @@ Improvements to Clang's diagnostics
 
 - Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
 
+- Improved diagnostic location for templates declared inside local classes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
