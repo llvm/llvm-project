@@ -14,7 +14,7 @@
 ; STMT_SEQ:       DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]	(0x00000043)
 ; STMT_SEQ:   DW_AT_name {{.*}}func01
 ; STMT_SEQ:   DW_TAG_subprogram [[[ABBREV_CODE2]]]
-; STMT_SEQ:       DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]	(0x00000058)
+; STMT_SEQ:       DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]	(0x00000056)
 ; STMT_SEQ:   DW_AT_name {{.*}}main
 
 ;; Check the entire line sequence to see that it's correct
@@ -29,23 +29,22 @@
 ; STMT_SEQ-NEXT:  0x00000050: 05 DW_LNS_set_column (3)
 ; STMT_SEQ-NEXT:  0x00000052: 67 address += 6,  line += 1,  op-index += 0
 ; STMT_SEQ-NEXT:              0x0000000000000006      6      3      0   0             0       0  is_stmt
-; STMT_SEQ-NEXT:  0x00000053: 02 DW_LNS_advance_pc (addr += 2, op-index += 0)
-; STMT_SEQ-NEXT:  0x00000055: 00 DW_LNE_end_sequence
-; STMT_SEQ-NEXT:              0x0000000000000008      6      3      0   0             0       0  is_stmt end_sequence
-; STMT_SEQ-NEXT:  0x00000058: 04 DW_LNS_set_file (0)
-; STMT_SEQ-NEXT:  0x0000005a: 00 DW_LNE_set_address (0x00000008)
-; STMT_SEQ-NEXT:  0x00000061: 03 DW_LNS_advance_line (10)
-; STMT_SEQ-NEXT:  0x00000063: 01 DW_LNS_copy
+; STMT_SEQ-NEXT:  0x00000053: 00 DW_LNE_end_sequence
+; STMT_SEQ-NEXT:              0x0000000000000006      6      3      0   0             0       0  is_stmt end_sequence
+; STMT_SEQ-NEXT:  0x00000056: 04 DW_LNS_set_file (0)
+; STMT_SEQ-NEXT:  0x00000058: 00 DW_LNE_set_address (0x00000008)
+; STMT_SEQ-NEXT:  0x0000005f: 03 DW_LNS_advance_line (10)
+; STMT_SEQ-NEXT:  0x00000061: 01 DW_LNS_copy
 ; STMT_SEQ-NEXT:              0x0000000000000008     10      0      0   0             0       0  is_stmt
-; STMT_SEQ-NEXT:  0x00000064: 05 DW_LNS_set_column (10)
-; STMT_SEQ-NEXT:  0x00000066: 0a DW_LNS_set_prologue_end
-; STMT_SEQ-NEXT:  0x00000067: 83 address += 8,  line += 1,  op-index += 0
+; STMT_SEQ-NEXT:  0x00000062: 05 DW_LNS_set_column (10)
+; STMT_SEQ-NEXT:  0x00000064: 0a DW_LNS_set_prologue_end
+; STMT_SEQ-NEXT:  0x00000065: 83 address += 8,  line += 1,  op-index += 0
 ; STMT_SEQ-NEXT:              0x0000000000000010     11     10      0   0             0       0  is_stmt prologue_end
-; STMT_SEQ-NEXT:  0x00000068: 05 DW_LNS_set_column (3)
-; STMT_SEQ-NEXT:  0x0000006a: 9f address += 10,  line += 1,  op-index += 0
+; STMT_SEQ-NEXT:  0x00000066: 05 DW_LNS_set_column (3)
+; STMT_SEQ-NEXT:  0x00000068: 9f address += 10,  line += 1,  op-index += 0
 ; STMT_SEQ-NEXT:              0x000000000000001a     12      3      0   0             0       0  is_stmt
-; STMT_SEQ-NEXT:  0x0000006b: 02 DW_LNS_advance_pc (addr += 5, op-index += 0)
-; STMT_SEQ-NEXT:  0x0000006d: 00 DW_LNE_end_sequence
+; STMT_SEQ-NEXT:  0x00000069: 02 DW_LNS_advance_pc (addr += 5, op-index += 0)
+; STMT_SEQ-NEXT:  0x0000006b: 00 DW_LNE_end_sequence
 ; STMT_SEQ-NEXT:              0x000000000000001f     12      3      0   0             0       0  is_stmt end_sequence
 
 ; generated from:
