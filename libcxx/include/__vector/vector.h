@@ -247,7 +247,7 @@ public:
   using __split_buffer _LIBCPP_NODEBUG  = std::__split_buffer<_Tp, _Allocator&, __split_buffer_pointer_layout>;
   using __sentinel_type _LIBCPP_NODEBUG = pointer;
 
-  __vector_layout() = default;
+  _LIBCPP_HIDE_FROM_ABI __vector_layout() = default;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type const& __a)
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
@@ -879,7 +879,7 @@ private:
     if (__n > max_size())
       this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(__allocator_ref(), __n);
-    __set_valid_range(__allocation.ptr, size_type{0});
+    __set_valid_range(__allocation.ptr, static_cast<size_type>(0));
     __set_capacity(__allocation.count);
     __annotate_new(0);
   }
@@ -1010,8 +1010,7 @@ private:
   }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI auto __emplace_back_slow_path(_Args&&... __args)
-      -> __sentinel_type;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __sentinel_type __emplace_back_slow_path(_Args&&... __args);
 
   // The following functions are no-ops outside of AddressSanitizer mode.
   // We call annotations for every allocator, unless explicitly disabled.
@@ -1089,8 +1088,8 @@ private:
       clear();
       __annotate_delete();
       __alloc_traits::deallocate(__allocator_ref(), __raw_begin(), capacity());
-      __set_valid_range(nullptr, size_type{0});
-      __set_capacity(__sentinel_type{0});
+      __set_valid_range(nullptr, static_cast<size_type>(0));
+      __set_capacity(static_cast<__sentinel_type>(0));
     }
     __allocator_ref() = __c.__allocator_ref();
   }
@@ -1170,7 +1169,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__swap_out_circular_
       std::__to_address(__end_pointer()),
       std::__to_address(__new_begin));
   __v.__set_valid_range(__new_begin, __v.end());
-  __set_sentinel(size_type{0}); // All the objects have been destroyed by relocating them.
+  __set_sentinel(static_cast<size_type>(0)); // All the objects have been destroyed by relocating them.
   // __v.__size_ += __size_;
 
   __swap_layouts(__v);
@@ -1202,7 +1201,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer& __v, pointer
   std::__uninitialized_allocator_relocate(
       __allocator_ref(), std::__to_address(__raw_begin()), std::__to_address(__p), std::__to_address(__new_begin));
   __v.__set_valid_range(__new_begin, __v.size() + size());
-  __set_sentinel(size_type{0}); // All the objects have been destroyed by relocating them.
+  __set_sentinel(static_cast<size_type>(0)); // All the objects have been destroyed by relocating them.
 
   __swap_layouts(__v);
   __v.__set_data(__v.begin());
@@ -1216,8 +1215,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__vdeallocate() _NOE
     clear();
     __annotate_delete();
     __alloc_traits::deallocate(__allocator_ref(), __raw_begin(), capacity());
-    __set_valid_range(nullptr, size_type{0});
-    __set_capacity(size_type{0});
+    __set_valid_range(nullptr, static_cast<size_type>(0));
+    __set_capacity(static_cast<size_type>(0));
   }
 }
 
@@ -1313,8 +1312,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocato
     : __base(std::move(__x.__allocator_ref())) {
   __set_valid_range(__x.__raw_begin(), __x.__raw_sentinel());
   __set_capacity(__x.__raw_capacity());
-  __x.__set_valid_range(nullptr, size_type{0});
-  __x.__set_capacity(size_type{0});
+  __x.__set_valid_range(nullptr, static_cast<size_type>(0));
+  __x.__set_capacity(static_cast<size_type>(0));
 }
 
 template <class _Tp, class _Allocator>
@@ -1324,8 +1323,8 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
   if (__a == __x.__allocator_ref()) {
     __set_valid_range(__x.__raw_begin(), __x.__raw_sentinel());
     __set_capacity(__x.__raw_capacity());
-    __x.__set_valid_range(nullptr, size_type{0});
-    __x.__set_capacity(size_type{0});
+    __x.__set_valid_range(nullptr, static_cast<size_type>(0));
+    __x.__set_capacity(static_cast<size_type>(0));
   } else {
     typedef move_iterator<iterator> _Ip;
     __init_with_size(_Ip(__x.begin()), _Ip(__x.end()), __x.size());
@@ -1349,8 +1348,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector
   __move_assign_alloc(__c); // this can throw
   __set_valid_range(__c.__raw_begin(), __c.__raw_sentinel());
   __set_capacity(__c.__raw_capacity());
-  __c.__set_valid_range(nullptr, size_type{0});
-  __c.__set_capacity(size_type{0});
+  __c.__set_valid_range(nullptr, static_cast<size_type>(0));
+  __c.__set_capacity(static_cast<size_type>(0));
 }
 
 template <class _Tp, class _Allocator>
@@ -1452,8 +1451,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args)
-    -> __sentinel_type {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::__sentinel_type
+vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   __split_buffer __v(__recommend(size() + 1), size(), __allocator_ref());
   //    __v.emplace_back(std::forward<_Args>(__args)...);
   pointer __end = __v.end();
