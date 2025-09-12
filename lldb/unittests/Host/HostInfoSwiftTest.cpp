@@ -73,6 +73,26 @@ TEST_F(SwiftHostTest, ComputeSwiftResourceDirectory) {
 }
 
 #if defined(__APPLE__)
+TEST_F(SwiftHostTest, MacOSXToolchain) {
+  std::string path_to_liblldb =
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+      "OSX26.0.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework";
+  std::string path_to_swift_dir =
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+      "OSX26.0.xctoolchain/usr/lib/swift";
+  EXPECT_EQ(ComputeSwiftResourceDirectoryHelper(path_to_liblldb),
+            path_to_swift_dir);
+}
+TEST_F(SwiftHostTest, MacOSXXcode) {
+  std::string path_to_liblldb =
+      "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework";
+  std::string path_to_swift_dir =
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/"
+      "XcodeDefault.xctoolchain/usr/lib/swift";
+  EXPECT_EQ(ComputeSwiftResourceDirectoryHelper(path_to_liblldb),
+            path_to_swift_dir);
+}
+
 TEST_F(SwiftHostTest, MacOSX) {
   // test for LLDB.framework
   std::string path_to_liblldb = "/foo/bar/lib/LLDB.framework";
