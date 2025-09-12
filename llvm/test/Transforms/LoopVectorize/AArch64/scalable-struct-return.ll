@@ -70,7 +70,7 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks
 ; CHECK-SAME:  (ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]])
 ; CHECK:       entry:
-; CHECK:         br i1 false, label %scalar.ph, label %vector.memcheck
+; CHECK:         br label %vector.memcheck
 ; CHECK:       vector.memcheck:
 ; CHECK:       vector.body:
 ; CHECK:         call { <vscale x 4 x float>, <vscale x 4 x float> } @scalable_vec_masked_foo(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])

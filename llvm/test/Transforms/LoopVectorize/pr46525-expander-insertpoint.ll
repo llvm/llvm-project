@@ -18,7 +18,7 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[DIV]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], [[INC]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
@@ -35,13 +35,13 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = trunc i64 [[IV]] to i8
 ; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 1
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i8 [[V3]], 5
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[INC]]
-; CHECK-NEXT:    br i1 [[CMP15]], label [[LOOP]], label [[LOOP_EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP15]], label [[LOOP]], label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    [[DIV_1:%.*]] = udiv i64 [[Y]], [[ADD]]
 ; CHECK-NEXT:    [[V1:%.*]] = add i64 [[DIV_1]], 1
