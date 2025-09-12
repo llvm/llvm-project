@@ -72,6 +72,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -475,7 +476,9 @@ public:
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
                               getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA));
+                                  Fortran::common::LanguageFeature::CUDA),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::Coarray));
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
@@ -627,6 +630,17 @@ public:
   void bindSymbol(Fortran::lower::SymbolRef sym,
                   const fir::ExtendedValue &exval) override final {
     addSymbol(sym, exval, /*forced=*/true);
+  }
+
+  void bindSymbolStorage(
+      Fortran::lower::SymbolRef sym,
+      Fortran::lower::SymMap::StorageDesc storage) override final {
+    localSymbols.registerStorage(sym, std::move(storage));
+  }
+
+  Fortran::lower::SymMap::StorageDesc
+  getSymbolStorage(Fortran::lower::SymbolRef sym) override final {
+    return localSymbols.lookupStorage(sym);
   }
 
   void
@@ -1117,6 +1131,16 @@ public:
     return currentFunctionUnit;
   }
 
+  void checkCoarrayEnabled() override final {
+    if (!getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::Coarray))
+      fir::emitFatalError(
+          getCurrentLocation(),
+          "Not yet implemented: Multi-image features are experimental and are "
+          "disabled by default, use '-fcoarray' to enable.",
+          false);
+  }
+
   void registerTypeInfo(mlir::Location loc,
                         Fortran::lower::SymbolRef typeInfoSym,
                         const Fortran::semantics::DerivedTypeSpec &typeSpec,
@@ -1400,21 +1424,23 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
-        sym.has<Fortran::semantics::UseDetails>()) {
-      if (!shallowLookupSymbol(sym) &&
-          !GetSymbolDSA(sym).test(
-              Fortran::semantics::Symbol::Flag::OmpShared)) {
-        // Do concurrent loop variables are not mapped yet since they are local
-        // to the Do concurrent scope (same for OpenMP loops).
-        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
-        builder->setInsertionPointToStart(builder->getAllocaBlock());
-        mlir::Type tempTy = genType(sym);
-        mlir::Value temp =
-            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
-        bindIfNewSymbol(sym, temp);
-        builder->restoreInsertionPoint(insPt);
-      }
+    if (!shallowLookupSymbol(sym) &&
+        (isUnordered ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
+         GetSymbolDSA(sym).test(
+             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
+         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+      // Do concurrent loop variables are not mapped yet since they are
+      // local to the Do concurrent scope (same for OpenMP loops).
+      mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      builder->setInsertionPointToStart(builder->getAllocaBlock());
+      mlir::Type tempTy = genType(sym);
+      mlir::Value temp =
+          builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+      bindIfNewSymbol(sym, temp);
+      builder->restoreInsertionPoint(insPt);
     }
     auto entry = lookupSymbol(sym);
     (void)entry;
@@ -2060,10 +2086,10 @@ private:
     // TODO Promote to using `enableDelayedPrivatization` (which is enabled by
     // default unlike the staging flag) once the implementation of this is more
     // complete.
-    bool useDelayedPriv =
-        enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    bool useDelayedPriv = enableDelayedPrivatization && doConcurrentLoopOp;
     llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
-    llvm::SmallSet<const Fortran::semantics::Symbol *, 16> mightHaveReadHostSym;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
+        mightHaveReadHostSym;
 
     for (const Fortran::semantics::Symbol *symToPrivatize : info.localSymList) {
       if (useDelayedPriv) {
@@ -2183,6 +2209,11 @@ private:
     // Loops with induction variables inside OpenACC compute constructs
     // need special handling to ensure that the IVs are privatized.
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
+      // Open up a new scope for the loop variables.
+      localSymbols.pushScope();
+      auto scopeGuard =
+          llvm::make_scope_exit([&]() { localSymbols.popScope(); });
+
       mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
           *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
       bool success = loopOp != nullptr;
@@ -2199,6 +2230,8 @@ private:
         for (auto end = --eval.getNestedEvaluations().end(); iter != end;
              ++iter)
           genFIR(*iter, unstructuredContext);
+
+        builder->setInsertionPointAfter(loopOp);
         return;
       }
       // Fall back to normal loop handling.

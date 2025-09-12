@@ -1106,11 +1106,11 @@ public:
     return true;
   }
   bool VisitBreakStmt(BreakStmt *B) {
-    found(Break, B->getBreakLoc());
+    found(Break, B->getKwLoc());
     return true;
   }
   bool VisitContinueStmt(ContinueStmt *C) {
-    found(Continue, C->getContinueLoc());
+    found(Continue, C->getKwLoc());
     return true;
   }
   bool VisitSwitchCase(SwitchCase *C) {
@@ -1876,7 +1876,7 @@ static void fillSubTypes(const SymbolID &ID,
   });
 }
 
-using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 // Extracts parents from AST and populates the type hierarchy item.
 static void fillSuperTypes(const CXXRecordDecl &CXXRD, llvm::StringRef TUPath,

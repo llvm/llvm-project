@@ -53,6 +53,7 @@ class MapsForPrivatizedSymbolsPass
     : public flangomp::impl::MapsForPrivatizedSymbolsPassBase<
           MapsForPrivatizedSymbolsPass> {
 
+  // TODO Use `createMapInfoOp` from `flang/Utils/OpenMP.h`.
   omp::MapInfoOp createMapInfo(Location loc, Value var,
                                fir::FirOpBuilder &builder) {
     // Check if a value of type `type` can be passed to the kernel by value.

@@ -965,6 +965,23 @@ if config.memprof_shadow_scale:
 else:
     config.available_features.add("memprof-shadow-scale-3")
 
+
+def target_page_size():
+    try:
+        proc = subprocess.Popen(
+            f"{emulator or ''} python3",
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        out, err = proc.communicate(b'import os; print(os.sysconf("SC_PAGESIZE"))')
+        return int(out)
+    except:
+        return 4096
+
+
+config.available_features.add(f"page-size-{target_page_size()}")
+
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 

@@ -191,10 +191,21 @@ define i64 @icmp_ugt_constant_zero(i64 %a) nounwind {
 define i64 @icmp_ugt_constant_2047(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_ugt_constant_2047:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 2047
-; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    srli a0, a0, 11
+; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp ugt i64 %a, 2047
+  %2 = zext i1 %1 to i64
+  ret i64 %2
+}
+
+define i64 @icmp_ugt_constant_4095(i64 %a) nounwind {
+; RV64I-LABEL: icmp_ugt_constant_4095:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 12
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+  %1 = icmp ugt i64 %a, 4095
   %2 = zext i1 %1 to i64
   ret i64 %2
 }
@@ -270,8 +281,8 @@ define i64 @icmp_uge_constant_2047(i64 %a) nounwind {
 define i64 @icmp_uge_constant_2048(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_uge_constant_2048:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, 2047
-; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    srli a0, a0, 11
+; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp uge i64 %a, 2048
   %2 = zext i1 %1 to i64
@@ -754,10 +765,10 @@ define i64 @icmp_ne_zext_inreg_umin(i64 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 30141
 ; RV64I-NEXT:    addi a1, a1, -747
-; RV64I-NEXT:    bltu a0, a1, .LBB67_2
+; RV64I-NEXT:    bltu a0, a1, .LBB68_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:  .LBB67_2:
+; RV64I-NEXT:  .LBB68_2:
 ; RV64I-NEXT:    addi a0, a0, -123
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret

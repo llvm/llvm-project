@@ -45,7 +45,7 @@ exit:
 
 define i32 @add_reduction_select_operand_constant_but_non_uniform() {
 ; CHECK-LABEL: define i32 @add_reduction_select_operand_constant_but_non_uniform() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -63,12 +63,10 @@ define i32 @add_reduction_select_operand_constant_but_non_uniform() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 42, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD2_REASS:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[ADD2_REASS:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 42, %[[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ADD2_REASS]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[RDX_NEXT]] = add i32 0, [[RDX]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2_REASS]], 64

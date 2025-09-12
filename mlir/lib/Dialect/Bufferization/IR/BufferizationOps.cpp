@@ -463,8 +463,12 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // which otherwise could prevent removal of unnecessary allocs.
     Value canonicalSource = source;
     while (auto iface = dyn_cast_or_null<ViewLikeOpInterface>(
-               canonicalSource.getDefiningOp()))
+               canonicalSource.getDefiningOp())) {
+      if (canonicalSource != iface.getViewDest()) {
+        break;
+      }
       canonicalSource = iface.getViewSource();
+    }
 
     std::optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());

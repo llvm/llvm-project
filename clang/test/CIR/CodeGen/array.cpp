@@ -45,9 +45,9 @@ int dd[3][2] = {{1, 2}, {3, 4}, {5, 6}};
 // OGCG: [i32 3, i32 4], [2 x i32] [i32 5, i32 6]]
 
 int e[10] = {1, 2};
-// CIR: cir.global external @e = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
+// CIR: cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
 
-// LLVM: @e = global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// LLVM: @e = global <{ i32, i32, [8 x i32] }> <{ i32 1, i32 2, [8 x i32] zeroinitializer }>
 
 // OGCG: @e = global <{ i32, i32, [8 x i32] }> <{ i32 1, i32 2, [8 x i32] zeroinitializer }>
 
@@ -57,6 +57,28 @@ int f[5] = {1, 2};
 // LLVM: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
 
 // OGCG: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
+
+int g[16] = {1, 2, 3, 4, 5, 6, 7, 8};
+// CIR:      cir.global external @g = #cir.const_record<{
+// CIR-SAME:   #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME:                     #cir.int<3> : !s32i, #cir.int<4> : !s32i,
+// CIR-SAME:                     #cir.int<5> : !s32i, #cir.int<6> : !s32i,
+// CIR-SAME:                     #cir.int<7> : !s32i, #cir.int<8> : !s32i]>
+// CIR-SAME:                     : !cir.array<!s32i x 8>,
+// CIR-SAME:   #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct1
+
+// LLVM:       @g = global <{ [8 x i32], [8 x i32] }> 
+// LLVM-SAME:          <{ [8 x i32]
+// LLVM-SAME:              [i32 1, i32 2, i32 3, i32 4,
+// LLVM-SAME:               i32 5, i32 6, i32 7, i32 8],
+// LLVM-SAME:             [8 x i32] zeroinitializer }>
+
+// OGCG:       @g = global <{ [8 x i32], [8 x i32] }> 
+// OGCG-SAME:          <{ [8 x i32]
+// OGCG-SAME:              [i32 1, i32 2, i32 3, i32 4,
+// OGCG-SAME:               i32 5, i32 6, i32 7, i32 8],
+// OGCG-SAME:             [8 x i32] zeroinitializer }>
+
 
 extern int b[10];
 // CIR: cir.global "private" external @b : !cir.array<!s32i x 10>

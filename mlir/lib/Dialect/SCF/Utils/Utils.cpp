@@ -1233,6 +1233,7 @@ static void getPerfectlyNestedLoopsImpl(
 
 static Loops stripmineSink(scf::ForOp forOp, Value factor,
                            ArrayRef<scf::ForOp> targets) {
+  assert(!forOp.getUnsignedCmp() && "unsigned loops are not supported");
   auto originalStep = forOp.getStep();
   auto iv = forOp.getInductionVar();
 
@@ -1241,6 +1242,8 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
 
   Loops innerLoops;
   for (auto t : targets) {
+    assert(!t.getUnsignedCmp() && "unsigned loops are not supported");
+
     // Save information for splicing ops out of t when done
     auto begin = t.getBody()->begin();
     auto nOps = t.getBody()->getOperations().size();
@@ -1415,6 +1418,8 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
                                                 scf::ForOp source,
                                                 RewriterBase &rewriter) {
+  assert(source.getUnsignedCmp() == target.getUnsignedCmp() &&
+         "incompatible signedness");
   unsigned numTargetOuts = target.getNumResults();
   unsigned numSourceOuts = source.getNumResults();
 
@@ -1428,7 +1433,8 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
   rewriter.setInsertionPointAfter(source);
   scf::ForOp fusedLoop = scf::ForOp::create(
       rewriter, source.getLoc(), source.getLowerBound(), source.getUpperBound(),
-      source.getStep(), fusedInitArgs);
+      source.getStep(), fusedInitArgs, /*bodyBuilder=*/nullptr,
+      source.getUnsignedCmp());
 
   // Map original induction variables and operands to those of the fused loop.
   IRMapping mapping;
@@ -1505,4 +1511,42 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
 
   rewriter.replaceOp(forallOp, normalizedForallOp);
   return normalizedForallOp;
+}
+
+bool mlir::isPerfectlyNestedForLoops(
+    MutableArrayRef<LoopLikeOpInterface> loops) {
+  assert(!loops.empty() && "unexpected empty loop nest");
+  if (loops.size() == 1)
+    return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
+  for (auto [outerLoop, innerLoop] :
+       llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
+    auto outerFor = dyn_cast_or_null<scf::ForOp>(outerLoop.getOperation());
+    auto innerFor = dyn_cast_or_null<scf::ForOp>(innerLoop.getOperation());
+    if (!outerFor || !innerFor)
+      return false;
+    auto outerBBArgs = outerFor.getRegionIterArgs();
+    auto innerIterArgs = innerFor.getInitArgs();
+    if (outerBBArgs.size() != innerIterArgs.size())
+      return false;
+
+    for (auto [outerBBArg, innerIterArg] :
+         llvm::zip_equal(outerBBArgs, innerIterArgs)) {
+      if (!llvm::hasSingleElement(outerBBArg.getUses()) ||
+          innerIterArg != outerBBArg)
+        return false;
+    }
+
+    ValueRange outerYields =
+        cast<scf::YieldOp>(outerFor.getBody()->getTerminator())->getOperands();
+    ValueRange innerResults = innerFor.getResults();
+    if (outerYields.size() != innerResults.size())
+      return false;
+    for (auto [outerYield, innerResult] :
+         llvm::zip_equal(outerYields, innerResults)) {
+      if (!llvm::hasSingleElement(innerResult.getUses()) ||
+          outerYield != innerResult)
+        return false;
+    }
+  }
+  return true;
 }

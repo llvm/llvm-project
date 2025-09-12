@@ -9,11 +9,11 @@
 #ifndef __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_AND_H__
 #define __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_AND_H__
 
-#define FUNCTION atomic_fetch_and
+#define __CLC_FUNCTION atomic_fetch_and
 
 #define __CLC_BODY <clc/opencl/atomic/atomic_decl.inc>
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_AND_H__

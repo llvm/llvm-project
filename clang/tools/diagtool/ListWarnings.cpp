@@ -56,6 +56,9 @@ int ListWarnings::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
     if (DiagnosticIDs{}.isNote(diagID))
       continue;
 
+    if (DiagnosticIDs{}.isTrapDiag(diagID))
+      continue;
+
     if (!DiagnosticIDs{}.isWarningOrExtension(diagID))
       continue;
 

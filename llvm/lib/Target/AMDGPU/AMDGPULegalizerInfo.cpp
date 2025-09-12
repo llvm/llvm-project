@@ -26,6 +26,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -134,6 +135,14 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
 
     const int NewNumElts = (32 * NextMul32 + EltSize - 1) / EltSize;
     return std::pair(TypeIdx, LLT::fixed_vector(NewNumElts, EltTy));
+  };
+}
+
+// Retrieves the scalar type that's the same size as the mem desc
+static LegalizeMutation getScalarTypeFromMemDesc(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    return std::make_pair(TypeIdx, LLT::scalar(MemSize));
   };
 }
 
@@ -381,6 +390,16 @@ static LegalityPredicate isWideScalarExtLoadTruncStore(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
            Query.MMODescrs[0].MemoryTy.getSizeInBits() < Ty.getSizeInBits();
+  };
+}
+
+// If we have a truncating store or an extending load with a data size larger
+// than 32-bits and mem location is a power of 2
+static LegalityPredicate isTruncStoreToSizePowerOf2(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+    return isWideScalarExtLoadTruncStore(TypeIdx)(Query) &&
+           isPowerOf2_64(MemSize);
   };
 }
 
@@ -1635,11 +1654,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::pair(0, EltTy);
             })
-    .minScalar(0, S32)
-    .narrowScalarIf(isWideScalarExtLoadTruncStore(0), changeTo(0, S32))
-    .widenScalarToNextPow2(0)
-    .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
-    .lower();
+        .minScalar(0, S32)
+        .narrowScalarIf(isTruncStoreToSizePowerOf2(0),
+                        getScalarTypeFromMemDesc(0))
+        .widenScalarToNextPow2(0)
+        .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
+        .lower();
   }
 
   // FIXME: Unaligned accesses not lowered.
@@ -2062,13 +2082,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .lower();
 
-  // TODO: Only Try to form v2s16 with legal packed instructions.
-  getActionDefinitionsBuilder(G_FSHR)
-    .legalFor({{S32, S32}})
-    .lowerFor({{V2S16, V2S16}})
-    .clampMaxNumElementsStrict(0, S16, 2)
-    .scalarize(0)
-    .lower();
+  auto &FSHRActionDefs = getActionDefinitionsBuilder(G_FSHR);
+  FSHRActionDefs.legalFor({{S32, S32}})
+                              .clampMaxNumElementsStrict(0, S16, 2);
+  if (ST.hasVOP3PInsts())
+    FSHRActionDefs.lowerFor({{V2S16, V2S16}});
+  FSHRActionDefs.scalarize(0).lower();
 
   if (ST.hasVOP3PInsts()) {
     getActionDefinitionsBuilder(G_FSHL)
@@ -3394,10 +3413,7 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
 }
 
 static bool allowApproxFunc(const MachineFunction &MF, unsigned Flags) {
-  if (Flags & MachineInstr::FmAfn)
-    return true;
-  const auto &Options = MF.getTarget().Options;
-  return Options.ApproxFuncFPMath;
+  return Flags & MachineInstr::FmAfn;
 }
 
 static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
@@ -3502,8 +3518,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   const AMDGPUTargetMachine &TM =
       static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
-  if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn) ||
-      TM.Options.ApproxFuncFPMath) {
+  if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn)) {
     if (Ty == F16 && !ST.has16BitInsts()) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
@@ -7803,6 +7818,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+    assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
+    B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());
+    MI.eraseFromParent();
+    return true;
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
+    assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
+    B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
+    MI.eraseFromParent();
+    return true;
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

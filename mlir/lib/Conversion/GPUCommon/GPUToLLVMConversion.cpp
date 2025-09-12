@@ -532,6 +532,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     vector::populateVectorTransferLoweringPatterns(patterns,
                                                    /*maxTransferRank=*/1);
+    // Transform N-D vector.from_elements to 1-D vector.from_elements before
+    // conversion.
+    vector::populateVectorFromElementsLoweringPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }

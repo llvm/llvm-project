@@ -235,8 +235,10 @@ getUnderlyingObjectSet(Value pointerValue) {
   WalkContinuation walkResult = walkSlice(pointerValue, [&](Value val) {
     // Attempt to advance to the source of the underlying view-like operation.
     // Examples of view-like operations include GEPOp and AddrSpaceCastOp.
-    if (auto viewOp = val.getDefiningOp<ViewLikeOpInterface>())
-      return WalkContinuation::advanceTo(viewOp.getViewSource());
+    if (auto viewOp = val.getDefiningOp<ViewLikeOpInterface>()) {
+      if (val == viewOp.getViewDest())
+        return WalkContinuation::advanceTo(viewOp.getViewSource());
+    }
 
     // Attempt to advance to control flow predecessors.
     std::optional<SmallVector<Value>> controlFlowPredecessors =

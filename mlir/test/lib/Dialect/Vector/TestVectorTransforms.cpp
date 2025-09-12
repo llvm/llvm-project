@@ -344,36 +344,6 @@ struct TestVectorTransferOpt
   }
 };
 
-struct TestVectorTransferCollapseInnerMostContiguousDims
-    : public PassWrapper<TestVectorTransferCollapseInnerMostContiguousDims,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      TestVectorTransferCollapseInnerMostContiguousDims)
-
-  TestVectorTransferCollapseInnerMostContiguousDims() = default;
-  TestVectorTransferCollapseInnerMostContiguousDims(
-      const TestVectorTransferCollapseInnerMostContiguousDims &pass) = default;
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, affine::AffineDialect>();
-  }
-
-  StringRef getArgument() const final {
-    return "test-vector-transfer-collapse-inner-most-dims";
-  }
-
-  StringRef getDescription() const final {
-    return "Test lowering patterns that reduces the rank of the vector "
-           "transfer memory and vector operands.";
-  }
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    populateDropInnerMostUnitDimsXferOpPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-  }
-};
-
 struct TestVectorSinkPatterns
     : public PassWrapper<TestVectorSinkPatterns, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorSinkPatterns)
@@ -786,6 +756,50 @@ struct TestVectorGatherLowering
   }
 };
 
+struct TestUnrollVectorFromElements
+    : public PassWrapper<TestUnrollVectorFromElements,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnrollVectorFromElements)
+
+  StringRef getArgument() const final {
+    return "test-unroll-vector-from-elements";
+  }
+  StringRef getDescription() const final {
+    return "Test unrolling patterns for from_elements ops";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<func::FuncDialect, vector::VectorDialect, ub::UBDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorFromElementsLoweringPatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct TestUnrollVectorToElements
+    : public PassWrapper<TestUnrollVectorToElements,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnrollVectorToElements)
+
+  StringRef getArgument() const final {
+    return "test-unroll-vector-to-elements";
+  }
+  StringRef getDescription() const final {
+    return "Test unrolling patterns for to_elements ops";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<func::FuncDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorToElementsLoweringPatterns(patterns);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestFoldArithExtensionIntoVectorContractPatterns
     : public PassWrapper<TestFoldArithExtensionIntoVectorContractPatterns,
                          OperationPass<func::FuncOp>> {
@@ -1035,8 +1049,6 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorTransferOpt>();
 
-  PassRegistration<TestVectorTransferCollapseInnerMostContiguousDims>();
-
   PassRegistration<TestVectorSinkPatterns>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
@@ -1058,6 +1070,10 @@ void registerTestVectorLowerings() {
   PassRegistration<TestCreateVectorBroadcast>();
 
   PassRegistration<TestVectorGatherLowering>();
+
+  PassRegistration<TestUnrollVectorFromElements>();
+
+  PassRegistration<TestUnrollVectorToElements>();
 
   PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
 

@@ -1431,7 +1431,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ctlz:
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && ST->hasStdExtZvbb() && LT.second.isVector()) {
+    if (ST->hasStdExtZvbb() && LT.second.isVector()) {
       unsigned Op;
       switch (ICA.getID()) {
       case Intrinsic::cttz:
@@ -1564,6 +1564,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+InstructionCost
+RISCVTTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                        const SCEV *Ptr,
+                                        TTI::TargetCostKind CostKind) const {
+  // Address computations for vector indexed load/store likely require an offset
+  // and/or scaling.
+  if (ST->hasVInstructions() && PtrTy->isVectorTy())
+    return getArithmeticInstrCost(Instruction::Add, PtrTy, CostKind);
+
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
 InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
@@ -2415,6 +2427,24 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return BaseCost + SlideCost;
 }
 
+InstructionCost
+RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index) const {
+  if (isa<FixedVectorType>(Val))
+    return BaseT::getIndexedVectorInstrCostFromEnd(Opcode, Val, CostKind,
+                                                   Index);
+
+  // TODO: This code replicates what LoopVectorize.cpp used to do when asking
+  // for the cost of extracting the last lane of a scalable vector. It probably
+  // needs a more accurate cost.
+  ElementCount EC = cast<VectorType>(Val)->getElementCount();
+  assert(Index < EC.getKnownMinValue() && "Unexpected reverse index");
+  return getVectorInstrCost(Opcode, Val, CostKind,
+                            EC.getKnownMinValue() - 1 - Index, nullptr,
+                            nullptr);
+}
+
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -2711,6 +2741,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
 
 unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
   return RVVMinTripCount;
+}
+
+bool RISCVTTIImpl::preferAlternateOpcodeVectorization() const {
+  return ST->enableUnalignedVectorMem();
 }
 
 TTI::AddressingModeKind

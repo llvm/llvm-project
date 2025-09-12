@@ -294,7 +294,34 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
   solver.load<LivenessAnalysis>(symbolTable);
   LDBG() << "Initializing and running solver";
   (void)solver.initializeAndRun(op);
-  LDBG() << "RunLivenessAnalysis initialized for op: " << op->getName();
+  LDBG() << "RunLivenessAnalysis initialized for op: " << op->getName()
+         << " check on unreachable code now:";
+  // The framework doesn't visit operations in dead blocks, so we need to
+  // explicitly mark them as dead.
+  op->walk([&](Operation *op) {
+    if (op->getNumResults() == 0)
+      return;
+    for (auto result : llvm::enumerate(op->getResults())) {
+      if (getLiveness(result.value()))
+        continue;
+      LDBG() << "Result: " << result.index() << " of "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions())
+             << " has no liveness info (unreachable), mark dead";
+      solver.getOrCreateState<Liveness>(result.value());
+    }
+    for (auto &region : op->getRegions()) {
+      for (auto &block : region) {
+        for (auto blockArg : llvm::enumerate(block.getArguments())) {
+          if (getLiveness(blockArg.value()))
+            continue;
+          LDBG() << "Block argument: " << blockArg.index() << " of "
+                 << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                 << " has no liveness info, mark dead";
+          solver.getOrCreateState<Liveness>(blockArg.value());
+        }
+      }
+    }
+  });
 }
 
 const Liveness *RunLivenessAnalysis::getLiveness(Value val) {

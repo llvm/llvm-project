@@ -1500,12 +1500,13 @@ void IntegerRelation::addBound(BoundType type, ArrayRef<DynamicAPInt> expr,
 /// respect to a positive constant 'divisor'. Two constraints are added to the
 /// system to capture equivalence with the floordiv.
 ///      q = expr floordiv c    <=>   c*q <= expr <= c*q + c - 1.
-void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
-                                       const DynamicAPInt &divisor) {
+/// Returns the column position of the new local variable.
+unsigned IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
+                                           const DynamicAPInt &divisor) {
   assert(dividend.size() == getNumCols() && "incorrect dividend size");
   assert(divisor > 0 && "positive divisor expected");
 
-  appendVar(VarKind::Local);
+  unsigned newVar = appendVar(VarKind::Local);
 
   SmallVector<DynamicAPInt, 8> dividendCopy(dividend);
   dividendCopy.insert(dividendCopy.end() - 1, DynamicAPInt(0));
@@ -1513,6 +1514,28 @@ void IntegerRelation::addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
       getDivLowerBound(dividendCopy, divisor, dividendCopy.size() - 2));
   addInequality(
       getDivUpperBound(dividendCopy, divisor, dividendCopy.size() - 2));
+  return newVar;
+}
+
+unsigned IntegerRelation::addLocalModulo(ArrayRef<DynamicAPInt> exprs,
+                                         const DynamicAPInt &modulus) {
+  assert(exprs.size() == getNumCols() && "incorrect exprs size");
+  assert(modulus > 0 && "positive modulus expected");
+
+  /// Add a local variable for q = expr floordiv modulus
+  addLocalFloorDiv(exprs, modulus);
+
+  /// Add a local var to represent the result
+  auto resultIndex = appendVar(VarKind::Local);
+
+  SmallVector<DynamicAPInt, 8> exprsCopy(exprs);
+  /// Insert the two new locals before the constant
+  /// Add locals that correspond to `q` and `result` to compute
+  /// 0 = (expr - modulus * q) - result
+  exprsCopy.insert(exprsCopy.end() - 1,
+                   {DynamicAPInt(-modulus), DynamicAPInt(-1)});
+  addEquality(exprsCopy);
+  return resultIndex;
 }
 
 int IntegerRelation::findEqualityToConstant(unsigned pos, bool symbolic) const {

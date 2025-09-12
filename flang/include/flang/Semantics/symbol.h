@@ -811,6 +811,7 @@ public:
       AccCommonBlock, AccThreadPrivate, AccReduction, AccNone, AccPreDetermined,
       // OpenMP data-sharing attribute
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
+      OmpGroupPrivate,
       // OpenMP data-mapping attribute
       OmpMapTo, OmpMapFrom, OmpMapToFrom, OmpMapStorage, OmpMapDelete,
       OmpUseDevicePtr, OmpUseDeviceAddr, OmpIsDevicePtr, OmpHasDeviceAddr,

@@ -58,8 +58,7 @@ PackingOfContiguous::matchAndRewrite(fir::PackArrayOp op,
                                      mlir::PatternRewriter &rewriter) const {
   mlir::Value box = op.getArray();
   if (hlfir::isSimplyContiguous(box, !op.getInnermost())) {
-    rewriter.replaceAllUsesWith(op, box);
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, box);
     return mlir::success();
   }
   return mlir::failure();
