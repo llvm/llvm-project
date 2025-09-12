@@ -41,9 +41,22 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
+/// Map for newly created IR instructions and their uniformity.
+using NewUniformityMap = DenseMap<const Value *, bool>;
+
+/// Wrapper for querying uniformity info that first checks new instructions.
+static bool isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
+                                  const NewUniformityMap &NewUMap) {
+  Value *V = U.get();
+  if (auto It = NewUMap.find(V); It != NewUMap.end())
+    return !It->second; // divergent if marked false
+  return UI.isDivergentUse(U);
+}
+
 /// Optimizes uniform intrinsics.
 static bool optimizeUniformIntrinsic(IntrinsicInst &II,
-                                     const UniformityInfo &UI) {
+                                     const UniformityInfo &UI,
+                                     NewUniformityMap &NewUMap) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
 
   switch (IID) {
@@ -51,8 +64,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    // Check if the argument use is divergent
-    if (UI.isDivergentUse(II.getOperandUse(0)))
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, NewUMap))
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
@@ -61,7 +73,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    if (UI.isDivergentUse(II.getOperandUse(0)))
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, NewUMap))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
 
@@ -78,15 +90,17 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
         Value *OtherOp = Op0 == &II ? Op1 : Op0;
 
         if (Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) {
-          // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
+          // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
+          // Record uniformity: Src is uniform, and NOT preserves uniformity.
+          NewUMap[NotOp] = true;
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
           ICmp->eraseFromParent();
           Changed = true;
         } else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
-          // (icmp ne %ballot, 0)  -->  %ballot_arg
+          // Case: (icmp ne %ballot, 0) -> %ballot_arg
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
                             << *Src << '\n');
           ICmp->replaceAllUsesWith(Src);
@@ -106,9 +120,11 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   return false;
 }
 
-/// Iterate over the Intrinsics use in the Module to optimise.
+/// Iterate over intrinsics in the module to optimise.
 static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   bool IsChanged = false;
+  NewUniformityMap NewUMap;
+
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M) {
@@ -129,7 +145,7 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
         continue;
 
       const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
-      IsChanged |= optimizeUniformIntrinsic(*II, UI);
+      IsChanged |= optimizeUniformIntrinsic(*II, UI, NewUMap);
     }
   }
   return IsChanged;
