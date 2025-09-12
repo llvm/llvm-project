@@ -382,7 +382,7 @@ entry:
 define <1 x i64> @i64_zero_off2(<2 x i64> %arg1) {
 ; CHECK-LABEL: i64_zero_off2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d0, xzr
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <2 x i64> %arg1, <2 x i64> zeroinitializer, <1 x i32> <i32 2>

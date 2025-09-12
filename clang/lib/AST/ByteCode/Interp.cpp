@@ -792,19 +792,19 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
-  if (!Ptr.isBlockPointer()) {
-    if (Ptr.isZero()) {
-      const auto &Src = S.Current->getSource(OpPC);
+  if (Ptr.isZero()) {
+    const auto &Src = S.Current->getSource(OpPC);
 
-      if (Ptr.isField())
-        S.FFDiag(Src, diag::note_constexpr_null_subobject) << CSK_Field;
-      else
-        S.FFDiag(Src, diag::note_constexpr_access_null) << AK;
-    }
+    if (Ptr.isField())
+      S.FFDiag(Src, diag::note_constexpr_null_subobject) << CSK_Field;
+    else
+      S.FFDiag(Src, diag::note_constexpr_access_null) << AK;
     return false;
   }
-
   // Block pointers are the only ones we can actually read from.
+  if (!Ptr.isBlockPointer())
+    return false;
+
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
@@ -812,8 +812,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       return false;
     if (!CheckDummy(S, OpPC, Ptr.block(), AK))
       return false;
-    if (!CheckWeak(S, OpPC, Ptr.block()))
-      return false;
+    return CheckWeak(S, OpPC, Ptr.block());
   }
 
   if (!CheckConstant(S, OpPC, Ptr))
@@ -870,7 +869,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || Ptr.isZero())
     return false;
 
   if (!Ptr.block()->isAccessible()) {
@@ -1494,9 +1493,12 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
+  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  if (!Definition)
+    return;
+
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Func->getDecl()->getMostRecentDecl(),
-                   const_cast<Function *>(Func));
+      .compileFunc(Definition, const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,

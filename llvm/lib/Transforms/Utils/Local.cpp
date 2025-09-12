@@ -3397,8 +3397,8 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
     APInt const &API = APF.bitcastToAPInt();
-    if (auto Temp = API.getZExtValue())
-      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    if (uint64_t Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(Temp);
     return DIB.createConstantValueExpression(*API.getRawData());
   }
 
