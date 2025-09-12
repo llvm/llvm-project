@@ -519,8 +519,8 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ;
 ; LA32D-LABEL: test_d4:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fld.d $fa0, $a0, 24
-; LA32D-NEXT:    fld.d $fa1, $a0, 16
+; LA32D-NEXT:    fld.d $fa0, $a0, 16
+; LA32D-NEXT:    fld.d $fa1, $a0, 24
 ; LA32D-NEXT:    fld.d $fa2, $a0, 8
 ; LA32D-NEXT:    fld.d $fa3, $a0, 0
 ; LA32D-NEXT:    movgr2fr.w $fa4, $zero
@@ -532,15 +532,14 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ; LA32D-NEXT:    fmov.d $fa5, $fa4
 ; LA32D-NEXT:    movgr2frh.w $fa5, $a0
 ; LA32D-NEXT:    fadd.d $fa2, $fa2, $fa5
-; LA32D-NEXT:    lu12i.w $a0, 262272
-; LA32D-NEXT:    fmov.d $fa5, $fa4
-; LA32D-NEXT:    movgr2frh.w $fa5, $a0
-; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa5
+; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
+; LA32D-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI5_0)
 ; LA32D-NEXT:    lu12i.w $a0, 262400
 ; LA32D-NEXT:    movgr2frh.w $fa4, $a0
-; LA32D-NEXT:    fadd.d $fa0, $fa0, $fa4
-; LA32D-NEXT:    fst.d $fa0, $a1, 24
-; LA32D-NEXT:    fst.d $fa1, $a1, 16
+; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa4
+; LA32D-NEXT:    fadd.d $fa0, $fa0, $fa5
+; LA32D-NEXT:    fst.d $fa0, $a1, 16
+; LA32D-NEXT:    fst.d $fa1, $a1, 24
 ; LA32D-NEXT:    fst.d $fa2, $a1, 8
 ; LA32D-NEXT:    fst.d $fa3, $a1, 0
 ; LA32D-NEXT:    ret
@@ -741,12 +740,12 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ;
 ; LA32D-LABEL: test_d8:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fld.d $fa0, $a0, 56
-; LA32D-NEXT:    fld.d $fa1, $a0, 48
-; LA32D-NEXT:    fld.d $fa2, $a0, 40
-; LA32D-NEXT:    fld.d $fa3, $a0, 32
-; LA32D-NEXT:    fld.d $fa4, $a0, 24
-; LA32D-NEXT:    fld.d $fa5, $a0, 16
+; LA32D-NEXT:    fld.d $fa0, $a0, 48
+; LA32D-NEXT:    fld.d $fa1, $a0, 16
+; LA32D-NEXT:    fld.d $fa2, $a0, 56
+; LA32D-NEXT:    fld.d $fa3, $a0, 40
+; LA32D-NEXT:    fld.d $fa4, $a0, 32
+; LA32D-NEXT:    fld.d $fa5, $a0, 24
 ; LA32D-NEXT:    fld.d $fa6, $a0, 8
 ; LA32D-NEXT:    fld.d $fa7, $a0, 0
 ; LA32D-NEXT:    movgr2fr.w $ft0, $zero
@@ -758,23 +757,22 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA32D-NEXT:    fmov.d $ft2, $ft0
 ; LA32D-NEXT:    movgr2frh.w $ft2, $a0
 ; LA32D-NEXT:    fadd.d $fa6, $fa6, $ft2
-; LA32D-NEXT:    lu12i.w $a0, 262272
-; LA32D-NEXT:    fmov.d $ft3, $ft0
-; LA32D-NEXT:    movgr2frh.w $ft3, $a0
-; LA32D-NEXT:    fadd.d $fa5, $fa5, $ft3
 ; LA32D-NEXT:    lu12i.w $a0, 262400
 ; LA32D-NEXT:    movgr2frh.w $ft0, $a0
-; LA32D-NEXT:    fadd.d $fa4, $fa4, $ft0
-; LA32D-NEXT:    fadd.d $fa3, $fa3, $ft1
-; LA32D-NEXT:    fadd.d $fa2, $fa2, $ft2
-; LA32D-NEXT:    fadd.d $fa1, $fa1, $ft3
-; LA32D-NEXT:    fadd.d $fa0, $fa0, $ft0
-; LA32D-NEXT:    fst.d $fa0, $a1, 56
-; LA32D-NEXT:    fst.d $fa1, $a1, 48
-; LA32D-NEXT:    fst.d $fa2, $a1, 40
-; LA32D-NEXT:    fst.d $fa3, $a1, 32
-; LA32D-NEXT:    fst.d $fa4, $a1, 24
-; LA32D-NEXT:    fst.d $fa5, $a1, 16
+; LA32D-NEXT:    fadd.d $fa4, $fa4, $ft1
+; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
+; LA32D-NEXT:    fld.d $ft1, $a0, %pc_lo12(.LCPI6_0)
+; LA32D-NEXT:    fadd.d $fa5, $fa5, $ft0
+; LA32D-NEXT:    fadd.d $fa3, $fa3, $ft2
+; LA32D-NEXT:    fadd.d $fa2, $fa2, $ft0
+; LA32D-NEXT:    fadd.d $fa1, $fa1, $ft1
+; LA32D-NEXT:    fadd.d $fa0, $fa0, $ft1
+; LA32D-NEXT:    fst.d $fa0, $a1, 48
+; LA32D-NEXT:    fst.d $fa1, $a1, 16
+; LA32D-NEXT:    fst.d $fa2, $a1, 56
+; LA32D-NEXT:    fst.d $fa3, $a1, 40
+; LA32D-NEXT:    fst.d $fa4, $a1, 32
+; LA32D-NEXT:    fst.d $fa5, $a1, 24
 ; LA32D-NEXT:    fst.d $fa6, $a1, 8
 ; LA32D-NEXT:    fst.d $fa7, $a1, 0
 ; LA32D-NEXT:    ret

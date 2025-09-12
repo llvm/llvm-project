@@ -18,6 +18,7 @@
 #include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -40,6 +41,29 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-isel-lowering"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+
+enum MaterializeFPImm {
+  NoMaterializeFPImm,
+  MaterializeFPImm1Ins,
+  MaterializeFPImm2Ins,
+  MaterializeFPImm3Ins,
+  MaterializeFPImm4Ins
+};
+
+static cl::opt<MaterializeFPImm> MaterializeFPImmInsNum(
+    "loongarch-materialize-float-imm", cl::Hidden,
+    cl::desc("Maximum number of instructions used when materializing "
+             "floating-point immediates (default = 2)"),
+    cl::init(MaterializeFPImm2Ins),
+    cl::values(clEnumValN(NoMaterializeFPImm, "0", "Use constant pool"),
+               clEnumValN(MaterializeFPImm1Ins, "1",
+                          "Materialize FP immediate within 1 instruction"),
+               clEnumValN(MaterializeFPImm2Ins, "2",
+                          "Materialize FP immediate within 2 instructions"),
+               clEnumValN(MaterializeFPImm3Ins, "3",
+                          "Materialize FP immediate within 3 instructions"),
+               clEnumValN(MaterializeFPImm4Ins, "4",
+                          "Materialize FP immediate within 4 instructions")));
 
 static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
                                   cl::desc("Trap on integer division by zero."),
@@ -572,7 +596,7 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
     return SDValue();
 
   // If lsx enabled, use cheaper 'vldi' instruction if possible.
-  if (Subtarget.hasExtLSX() && isFPImmVLDILegal(FPVal, VT))
+  if (isFPImmVLDILegal(FPVal, VT))
     return SDValue();
 
   // Construct as integer, and move to float register.
@@ -590,10 +614,18 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
                        DL, VT, NewVal);
   }
   case MVT::f64: {
+    // If more than MaterializeFPImmInsNum instructions will be used to
+    // generate the INTVal, fallback to use floating point load from the
+    // constant pool.
+    auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
+    if (Seq.size() > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
+      return SDValue();
+
     if (Subtarget.is64Bit()) {
       SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i64);
       return DAG.getNode(LoongArchISD::MOVGR2FR_D, DL, VT, NewVal);
     }
+
     SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
     SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
     return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
