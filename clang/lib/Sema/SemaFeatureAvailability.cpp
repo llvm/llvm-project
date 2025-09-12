@@ -67,6 +67,11 @@ public:
 
   bool TraverseIfStmt(IfStmt *If);
 
+  // Ignore unguarded uses of enumerators inside case label expressions.
+  bool TraverseCaseStmt(CaseStmt *Case) {
+    return TraverseStmt(Case->getSubStmt());
+  }
+
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
     diagnoseDeclFeatureAvailability(DRE->getDecl(), DRE->getBeginLoc());
     return true;

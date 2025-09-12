@@ -235,6 +235,17 @@ void test7(void) {
     enum E e;
     e = EA;
     e = EB; // expected-error {{cannot use 'EB' because feature 'feature2' is unavailable in this context}}
+
+    switch (e) {
+    case EA: {
+      if (__builtin_available(domain:feature2))
+        e = EB;
+      break;
+    }
+    case EB: // no diagnostic
+      e = EB; // expected-error {{cannot use 'EB' because feature 'feature2' is unavailable in this context}}
+      break;
+    }
   }
 
   if (__builtin_available(domain:feature2)) {
