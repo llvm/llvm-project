@@ -7934,6 +7934,13 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
   return InternalId;
 }
 
+llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForFnType(QualType T) {
+  assert(isa<FunctionType>(T));
+  if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
+    return CreateMetadataIdentifierGeneralized(T);
+  return CreateMetadataIdentifierForType(T);
+}
+
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
   return CreateMetadataIdentifierImpl(T, MetadataIdMap, "");
 }
