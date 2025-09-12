@@ -5899,10 +5899,6 @@ bool Sema::CheckTemplateArgumentList(
                                     CTAK_Specified))
             return true;
           Arg = NewArgLoc.getArgument();
-          CTAI.CanonicalConverted.back().setIsDefaulted(
-              clang::isSubstitutedDefaultArgument(Context, Arg, *Param,
-                                                  CTAI.CanonicalConverted,
-                                                  Params->getDepth()));
         }
         ArgLoc =
             TemplateArgumentLoc(TemplateArgument::CreatePackCopy(Context, Args),
@@ -5913,10 +5909,6 @@ bool Sema::CheckTemplateArgumentList(
                                   RAngleLoc, SugaredArgumentPack.size(), CTAI,
                                   CTAK_Specified))
           return true;
-        CTAI.CanonicalConverted.back().setIsDefaulted(
-            clang::isSubstitutedDefaultArgument(Context, ArgLoc.getArgument(),
-                                                *Param, CTAI.CanonicalConverted,
-                                                Params->getDepth()));
         if (ArgIsExpansion && NonPackParameter) {
           // CWG1430/CWG2686: we have a pack expansion as an argument to an
           // alias template or concept, and it's not part of a parameter pack.
@@ -6062,9 +6054,6 @@ bool Sema::CheckTemplateArgumentList(
     if (CheckTemplateArgument(*Param, Arg, Template, TemplateLoc, RAngleLoc, 0,
                               CTAI, CTAK_Specified))
       return true;
-
-    CTAI.SugaredConverted.back().setIsDefaulted(true);
-    CTAI.CanonicalConverted.back().setIsDefaulted(true);
 
     // Core issue 150 (assumed resolution): if this is a template template
     // parameter, keep track of the default template arguments from the
