@@ -31,7 +31,7 @@ def _getTempPaths(test):
 
 def _checkBaseSubstitutions(substitutions):
     substitutions = [s for (s, _) in substitutions]
-    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{flags}", "%{exec}"]:
+    for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
 def _executeScriptInternal(test, litConfig, commands):
@@ -231,10 +231,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{compile_flags}   - Flags to use when compiling a test case
         %{link_flags}      - Flags to use when linking a test case
         %{flags}           - Flags to use either when compiling or linking a test case
-        %{benchmark_flags} - Flags to use when compiling benchmarks. These flags should provide access to
-                             GoogleBenchmark but shouldn't hardcode any optimization level or other settings,
-                             since the benchmarks should be run under the same configuration as the rest of
-                             the test suite.
         %{exec}            - A command to prefix the execution of executables
 
     Note that when building an executable (as opposed to only compiling a source
@@ -355,8 +351,23 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                         test.getFullName()
                     ),
                 )
+            # TODO: %{libcxx-dir} is not a base substitution
+            # TODO: We're building Google Benchmark for every test, which is super wasteful
+            configure = ['cmake', '-S', '%{libcxx-dir}/../third-party/benchmark', '-B', '%T/gbench-build']
+            configure += ['-D', 'CMAKE_INSTALL_PREFIX=%T/gbench']
+            configure += ['-D', 'CMAKE_CXX_COMPILER=%{cxx}']
+            configure += ['-D', 'CMAKE_BUILD_TYPE=Release']
+            configure += ['-D', 'CMAKE_CXX_FLAGS="%{flags} %{compile_flags} %{link_flags} -Wno-error"']
+            configure += ['-D', 'BENCHMARK_ENABLE_TESTING=OFF']
+            configure += ['-D', 'BENCHMARK_ENABLE_WERROR=OFF']
+            configure += ['-D', 'BENCHMARK_INSTALL_DOCS=OFF']
+            build = ['cmake', '--build', '%T/gbench-build', '--target', 'install']
+
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
+                "rm -rf %T/gbench %T/gbench-build",
+                "%dbg(CONFIGURING GBENCH) " + " ".join(configure),
+                "%dbg(BUILDING GBENCH) " + " ".join(build),
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -I %T/gbench/include -L %T/gbench/lib -l benchmark -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
                 steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
