@@ -93,6 +93,9 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
+  const unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  UCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
+
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());

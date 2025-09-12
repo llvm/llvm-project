@@ -1652,6 +1652,13 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_max:
+  case Intrinsic::amdgcn_wave_reduce_min:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_and:
+  case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor:
   case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
@@ -3672,6 +3679,13 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       return ConstantInt::get(Ty, C0->abs());
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax:
+    case Intrinsic::amdgcn_wave_reduce_max:
+    case Intrinsic::amdgcn_wave_reduce_min:
+    case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_and:
+    case Intrinsic::amdgcn_wave_reduce_or:
+    case Intrinsic::amdgcn_wave_reduce_xor:
       return dyn_cast<Constant>(Operands[0]);
     }
 
@@ -4238,6 +4252,13 @@ static Constant *ConstantFoldScalableVectorCall(
 
     return ConstantInt::getFalse(SVTy);
   }
+  case Intrinsic::get_active_lane_mask: {
+    auto *Op0 = dyn_cast<ConstantInt>(Operands[0]);
+    auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
+    if (Op0 && Op1 && Op0->getValue().uge(Op1->getValue()))
+      return ConstantVector::getNullValue(SVTy);
+    break;
+  }
   default:
     break;
   }
@@ -4606,6 +4627,57 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
   }
 
   return false;
+}
+
+Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
+                                   unsigned CastOp, const DataLayout &DL,
+                                   PreservedCastFlags *Flags) {
+  switch (CastOp) {
+  case Instruction::BitCast:
+    // Bitcast is always lossless.
+    return ConstantFoldCastOperand(Instruction::BitCast, C, InvCastTo, DL);
+  case Instruction::Trunc: {
+    auto *ZExtC = ConstantFoldCastOperand(Instruction::ZExt, C, InvCastTo, DL);
+    if (Flags) {
+      // Truncation back on ZExt value is always NUW.
+      Flags->NUW = true;
+      // Test positivity of C.
+      auto *SExtC =
+          ConstantFoldCastOperand(Instruction::SExt, C, InvCastTo, DL);
+      Flags->NSW = ZExtC == SExtC;
+    }
+    return ZExtC;
+  }
+  case Instruction::SExt:
+  case Instruction::ZExt: {
+    auto *InvC = ConstantExpr::getTrunc(C, InvCastTo);
+    auto *CastInvC = ConstantFoldCastOperand(CastOp, InvC, C->getType(), DL);
+    // Must satisfy CastOp(InvC) == C.
+    if (!CastInvC || CastInvC != C)
+      return nullptr;
+    if (Flags && CastOp == Instruction::ZExt) {
+      auto *SExtInvC =
+          ConstantFoldCastOperand(Instruction::SExt, InvC, C->getType(), DL);
+      // Test positivity of InvC.
+      Flags->NNeg = CastInvC == SExtInvC;
+    }
+    return InvC;
+  }
+  default:
+    return nullptr;
+  }
+}
+
+Constant *llvm::getLosslessUnsignedTrunc(Constant *C, Type *DestTy,
+                                         const DataLayout &DL,
+                                         PreservedCastFlags *Flags) {
+  return getLosslessInvCast(C, DestTy, Instruction::ZExt, DL, Flags);
+}
+
+Constant *llvm::getLosslessSignedTrunc(Constant *C, Type *DestTy,
+                                       const DataLayout &DL,
+                                       PreservedCastFlags *Flags) {
+  return getLosslessInvCast(C, DestTy, Instruction::SExt, DL, Flags);
 }
 
 void TargetFolder::anchor() {}

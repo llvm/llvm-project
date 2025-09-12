@@ -28,7 +28,7 @@ static unsigned getUnconditionalBranch(const MipsSubtarget &STI) {
 }
 
 MipsSEInstrInfo::MipsSEInstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI() {}
+    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI(STI) {}
 
 const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
   return RI;

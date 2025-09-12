@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
 #include <optional>
@@ -2102,15 +2103,15 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
 }
 
 static std::optional<Instruction *>
-instCombineSMECntsElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts,
-                       const AArch64Subtarget *ST) {
+instCombineSMECntsd(InstCombiner &IC, IntrinsicInst &II,
+                    const AArch64Subtarget *ST) {
   if (!ST->isStreaming())
     return std::nullopt;
 
-  // In streaming-mode, aarch64_sme_cnts is equivalent to aarch64_sve_cnt
+  // In streaming-mode, aarch64_sme_cntds is equivalent to aarch64_sve_cntd
   // with SVEPredPattern::all
-  Value *Cnt = IC.Builder.CreateElementCount(
-      II.getType(), ElementCount::getScalable(NumElts));
+  Value *Cnt =
+      IC.Builder.CreateElementCount(II.getType(), ElementCount::getScalable(2));
   Cnt->takeName(&II);
   return IC.replaceInstUsesWith(II, Cnt);
 }
@@ -2825,13 +2826,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
   case Intrinsic::aarch64_sme_cntsd:
-    return instCombineSMECntsElts(IC, II, 2, ST);
-  case Intrinsic::aarch64_sme_cntsw:
-    return instCombineSMECntsElts(IC, II, 4, ST);
-  case Intrinsic::aarch64_sme_cntsh:
-    return instCombineSMECntsElts(IC, II, 8, ST);
-  case Intrinsic::aarch64_sme_cntsb:
-    return instCombineSMECntsElts(IC, II, 16, ST);
+    return instCombineSMECntsd(IC, II, ST);
   case Intrinsic::aarch64_sve_ptest_any:
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
@@ -4969,6 +4964,23 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (!L->getExitBlock())
     return;
 
+  // Check if the loop contains any reductions that could be parallelized when
+  // unrolling. If so, enable partial unrolling, if the trip count is know to be
+  // a multiple of 2.
+  bool HasParellelizableReductions =
+      L->getNumBlocks() == 1 &&
+      any_of(L->getHeader()->phis(),
+             [&SE, L](PHINode &Phi) {
+               return canParallelizeReductionWhenUnrolling(Phi, L, &SE);
+             }) &&
+      isLoopSizeWithinBudget(L, TTI, 12, nullptr);
+  if (HasParellelizableReductions &&
+      SE.getSmallConstantTripMultiple(L, L->getExitingBlock()) % 2 == 0) {
+    UP.Partial = true;
+    UP.MaxCount = 4;
+    UP.AddAdditionalAccumulators = true;
+  }
+
   const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
@@ -4983,6 +4995,12 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
+
+  if (HasParellelizableReductions) {
+    UP.Runtime = true;
+    UP.DefaultUnrollRuntimeCount = 4;
+    UP.AddAdditionalAccumulators = true;
+  }
 
   // Try to unroll small loops, of few-blocks with low budget, if they have
   // load/store dependencies, to expose more parallel memory access streams,
