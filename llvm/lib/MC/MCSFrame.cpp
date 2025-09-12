@@ -474,6 +474,7 @@ void MCSFrameEmitter::encodeFuncOffset(MCContext &C, uint64_t Offset,
     // Offset is the difference between the function start label and the final
     // FRE's offset, which is the max offset for this FDE.
     FDEInfo<endianness::native> I;
+    I.Info = 0;
     if (isUInt<8>(Offset))
       I.setFREType(FREType::Addr1);
     else if (isUInt<16>(Offset))
@@ -483,6 +484,9 @@ void MCSFrameEmitter::encodeFuncOffset(MCContext &C, uint64_t Offset,
       I.setFREType(FREType::Addr4);
     }
     I.setFDEType(FDEType::PCInc);
+    // TODO: When we support pauth keys, this will need to be retrieved
+    // from the frag itself.
+    I.setPAuthKey(0);
 
     Out.push_back(I.getFuncInfo());
     return;
