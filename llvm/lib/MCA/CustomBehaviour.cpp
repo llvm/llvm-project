@@ -43,10 +43,10 @@ CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
   return std::vector<std::unique_ptr<View>>();
 }
 
-static const llvm::StringRef CustomInstrumentName = "CUSTOMIZE";
+const llvm::StringRef LatencyInstrument::DESC_NAME = "LATENCY";
 
 bool InstrumentManager::supportsInstrumentType(StringRef Type) const {
-  return EnableInstruments && Type == CustomInstrumentName;
+  return EnableInstruments && Type == LatencyInstrument::DESC_NAME;
 }
 
 bool InstrumentManager::canCustomize(
@@ -68,6 +68,10 @@ void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
 
 UniqueInstrument InstrumentManager::createInstrument(llvm::StringRef Desc,
                                                      llvm::StringRef Data) {
+  if (!EnableInstruments)
+    return std::make_unique<Instrument>(Desc, Data);
+  if (Desc == LatencyInstrument::DESC_NAME)
+    return std::make_unique<LatencyInstrument>(Data);
   return std::make_unique<Instrument>(Desc, Data);
 }
 

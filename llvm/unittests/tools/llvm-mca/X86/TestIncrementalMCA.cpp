@@ -235,6 +235,7 @@ TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
   ASSERT_TRUE(static_cast<bool>(Cycles));
 }
 
+// Test customization of instruction latency with instruments
 TEST_F(X86TestBase, TestInstructionCustomization) {
   const unsigned ExplicitLatency = 100;
   SmallVector<MCInst> MCIs;
@@ -245,7 +246,7 @@ TEST_F(X86TestBase, TestInstructionCustomization) {
   MCIs.push_back(InstructionToAdd);
   SmallVector<std::pair<StringRef, StringRef>> InstrDescs;
   InstrDescs.push_back(
-      std::make_pair(StringRef("CUSTOMIZE"), StringRef("Latency:100")));
+      std::make_pair(StringRef("LATENCY"), StringRef("100")));
 
   // Run the baseline.
   json::Object BaselineResult;

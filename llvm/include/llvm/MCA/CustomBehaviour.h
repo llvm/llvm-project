@@ -123,43 +123,45 @@ class Instrument {
   /// The instrumentation data
   const StringRef Data;
 
-  std::optional<unsigned> Latency;
-
 public:
-  Instrument(StringRef Desc, StringRef Data) : Desc(Desc), Data(Data) {
+  Instrument(StringRef Desc, StringRef Data) : Desc(Desc), Data(Data) {}
+  
+  Instrument() : Instrument("", "") {}
+
+  virtual ~Instrument() = default;
+
+  virtual bool canCustomize() const { return false; }
+  virtual void customize(InstrDesc &) const {}
+
+  StringRef getDesc() const { return Desc; }
+  StringRef getData() const { return Data; }
+};
+
+class LatencyInstrument : public Instrument {
+  std::optional<unsigned> Latency;
+public:
+  static const llvm::StringRef DESC_NAME;
+  LatencyInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
     // Skip spaces and tabs.
     unsigned Position = Data.find_first_not_of(" \t");
     if (Position >= Data.size())
       // We reached the end of the comment. Bail out.
       return;
     Data = Data.drop_front(Position);
-    auto [Name, Value] = Data.split(':');
-    if (Name.upper() == "LATENCY") {
-      Position = Value.find_first_not_of(" \t");
-      if (Position >= Value.size())
-        return;
-      auto Stripped = Value.drop_front(Position);
-      unsigned L = 0;
-      if (!Stripped.getAsInteger(10, L))
-        Latency = L;
-    }
+    unsigned L = 0;
+    if (!Data.getAsInteger(10, L))
+      Latency = L;
   }
 
-  Instrument() : Instrument("", "") {}
-
-  virtual ~Instrument() = default;
-
-  virtual bool canCustomize() const { return bool(Latency); }
-  virtual void customize(InstrDesc &ID) const {
+  bool canCustomize() const override { return bool(Latency); }
+  void customize(InstrDesc &ID) const override {
     if (Latency) {
+      // TODO Allow to customize a subset of ID.Writes
       for (auto &W : ID.Writes)
         W.Latency = *Latency;
       ID.MaxLatency = *Latency;
     }
   }
-
-  StringRef getDesc() const { return Desc; }
-  StringRef getData() const { return Data; }
 };
 
 using UniqueInstrument = std::unique_ptr<Instrument>;
