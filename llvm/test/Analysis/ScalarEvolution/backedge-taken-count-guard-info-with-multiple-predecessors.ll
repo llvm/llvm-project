@@ -366,36 +366,37 @@ exit:
 }
 
 define void @hang_due_to_unreachable_phi_inblock() personality ptr null {
-  br label %1
+bb:
+  br label %bb1
 
-1:                                                ; preds = %1, %0
-  %2 = invoke ptr null(i64 0)
-          to label %1 unwind label %3
+bb1:                                              ; preds = %bb1, %bb
+  %i = invoke ptr null()
+          to label %bb1 unwind label %bb2
 
-3:                                                ; preds = %1
-  %4 = landingpad { ptr, i32 }
+bb2:                                              ; preds = %bb1
+  %i3 = landingpad { ptr, i32 }
           cleanup
-  br label %7
+  br label %bb6
 
-self-loop:                                                ; preds = %1, %0
-  %dead = invoke ptr null(i64 0)
-          to label %self-loop unwind label %5
+self-loop:                                        ; preds = %self-loop
+  %dead = invoke ptr null()
+          to label %self-loop unwind label %bb4
 
-5:                                                ; preds = %self-loop
-  %6 = landingpad { ptr, i32 }
+bb4:                                              ; preds = %self-loop
+  %i5 = landingpad { ptr, i32 }
           cleanup
-  br label %7
+  br label %bb6
 
-7:                                                ; preds = %5, %3
-  %8 = phi ptr [ null, %5 ], [ null, %3 ]
-  br i1 false, label %13, label %9
+bb6:                                              ; preds = %bb4, %bb2
+  %i7 = phi ptr [ null, %bb4 ], [ null, %bb2 ]
+  br i1 false, label %bb12, label %bb8
 
-9:                                                ; preds = %9, %7
-  %10 = phi ptr [ %11, %9 ], [ null, %7 ]
-  %11 = getelementptr i8, ptr %10, i64 24
-  %12 = icmp eq ptr %10, null
-  br i1 %12, label %13, label %9
+bb8:                                              ; preds = %bb8, %bb6
+  %i9 = phi ptr [ %i10, %bb8 ], [ null, %bb6 ]
+  %i10 = getelementptr i8, ptr %i9, i64 24
+  %i11 = icmp eq ptr %i9, null
+  br i1 %i11, label %bb12, label %bb8
 
-13:                                               ; preds = %9, %7
+bb12:                                             ; preds = %bb8, %bb6
   resume { ptr, i32 } zeroinitializer
 }
