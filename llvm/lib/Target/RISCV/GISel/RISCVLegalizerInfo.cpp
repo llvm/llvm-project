@@ -572,7 +572,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64, s128});
+      .customFor(!ST.is64Bit(), {s32})
+      .customFor(ST.is64Bit(), {s32, s64})
+      .lowerFor({s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -867,6 +869,12 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
   RISCVMatInt::InstSeq SeqLo =
       RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
+}
+
+bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APImm) const {
+  if (APImm.isZero() || APImm.isExactlyValue(1.0))
+    return false;
+  return true;
 }
 
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
@@ -1358,7 +1366,12 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  // TODO: G_FCONSTANT
+  case TargetOpcode::G_FCONSTANT: {
+    const ConstantFP *ConstVal = MI.getOperand(1).getFPImm();
+    if (!shouldBeInFConstantPool(ConstVal->getValue()))
+      return true;
+    return Helper.lowerFConstant(MI);
+  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||

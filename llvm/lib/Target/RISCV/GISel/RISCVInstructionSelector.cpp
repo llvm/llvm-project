@@ -745,10 +745,19 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
         return false;
 
-      unsigned Opcode = Size == 64   ? RISCV::FMV_D_X
-                        : Size == 32 ? RISCV::FMV_W_X
-                                     : RISCV::FMV_H_X;
-      auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
+      unsigned Opcode = RISCV::INIT_UNDEF;
+      MachineInstrBuilder FMV;
+      if (Subtarget->hasStdExtF() || Subtarget->hasStdExtD() ||
+          Subtarget->hasStdExtZfh()) {
+        Opcode = Size == 64   ? RISCV::FMV_D_X
+                 : Size == 32 ? RISCV::FMV_W_X
+                              : RISCV::FMV_H_X;
+        FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
+      } else {
+        Opcode =
+            (Subtarget->is64Bit() && Size == 32) ? RISCV::ADDW : RISCV::ADD;
+        FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg, Register(RISCV::X0)});
+      }
       if (!FMV.constrainAllUses(TII, TRI, RBI))
         return false;
     } else {
