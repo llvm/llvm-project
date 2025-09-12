@@ -1406,6 +1406,9 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     // Profile weights for both LHS and RHS should be the same because they have
     // the same idempotent conditional.
     ProfileData = cast<SelectInst>(LHS)->getMetadata(LLVMContext::MD_prof);
+    assert(ProfileData ==
+               cast<SelectInst>(RHS)->getMetadata(LLVMContext::MD_prof) &&
+           "LHS and RHS select statements have different metadata!");
 
     if (LHS->hasOneUse() && RHS->hasOneUse()) {
       if (False && !True)
