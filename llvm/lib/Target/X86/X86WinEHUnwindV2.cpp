@@ -32,14 +32,21 @@ STATISTIC(MeetsUnwindV2Criteria,
 STATISTIC(FailsUnwindV2Criteria,
           "Number of functions that fail Unwind v2 criteria");
 
-static cl::opt<unsigned> MaximumUnwindCodes(
-    "x86-wineh-unwindv2-max-unwind-codes", cl::Hidden,
-    cl::desc("Maximum number of unwind codes permitted in each unwind info."),
-    cl::init(UINT8_MAX));
+static cl::opt<unsigned>
+    UnwindCodeThreshold("x86-wineh-unwindv2-unwind-codes-threshold", cl::Hidden,
+                        cl::desc("Maximum number of unwind codes before "
+                                 "splitting into a new unwind info."),
+                        cl::init(UINT8_MAX));
 
 static cl::opt<unsigned>
     ForceMode("x86-wineh-unwindv2-force-mode", cl::Hidden,
               cl::desc("Overwrites the Unwind v2 mode for testing purposes."));
+
+static cl::opt<unsigned> InstructionCountThreshold(
+    "x86-wineh-unwindv2-instruction-count-threshold", cl::Hidden,
+    cl::desc("Maximum number of (approximate) instructions before splitting "
+             "into a new unwind info."),
+    cl::init(1000));
 
 namespace {
 
@@ -67,6 +74,11 @@ enum class FunctionState {
   HasProlog,
   InEpilog,
   FinishedEpilog,
+};
+
+struct EpilogInfo {
+  MachineInstr *UnwindV2StartLocation;
+  unsigned ApproximateInstructionPosition;
 };
 
 } // end anonymous namespace
@@ -109,7 +121,9 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
   unsigned ApproximatePrologCodeCount = 0;
 
   // Requested changes.
-  SmallVector<MachineInstr *> UnwindV2StartLocations;
+  SmallVector<EpilogInfo> EpilogInfos;
+
+  unsigned ApproximateInstructionCount = 0;
 
   for (MachineBasicBlock &MBB : MF) {
     // Current epilog information. We assume that epilogs cannot cross basic
@@ -119,6 +133,9 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
     MachineInstr *UnwindV2StartLocation = nullptr;
 
     for (MachineInstr &MI : MBB) {
+      if (!MI.isPseudo() && !MI.isMetaInstruction())
+        ApproximateInstructionCount++;
+
       switch (MI.getOpcode()) {
       //
       // Prolog handling.
@@ -192,7 +209,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
         // epilog.
         if (!UnwindV2StartLocation)
           UnwindV2StartLocation = &MI;
-        UnwindV2StartLocations.push_back(UnwindV2StartLocation);
+        EpilogInfos.push_back(
+            {UnwindV2StartLocation, ApproximateInstructionCount});
         State = FunctionState::FinishedEpilog;
         break;
 
@@ -305,37 +323,39 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  if (UnwindV2StartLocations.empty())
+  if (EpilogInfos.empty())
     return false;
-
-  MachineBasicBlock &FirstMBB = MF.front();
-  // Assume +1 for the "header" UOP_Epilog that contains the epilog size, and
-  // that we won't be able to use the "last epilog at the end of function"
-  // optimization.
-  if (ApproximatePrologCodeCount + UnwindV2StartLocations.size() + 1 >
-      static_cast<unsigned>(MaximumUnwindCodes)) {
-    if (Mode == WinX64EHUnwindV2Mode::Required)
-      MF.getFunction().getContext().diagnose(DiagnosticInfoGenericWithLoc(
-          "Windows x64 Unwind v2 is required, but the function '" +
-              MF.getName() +
-              "' has too many unwind codes. Try splitting the function or "
-              "reducing the number of places where it exits early with a tail "
-              "call.",
-          MF.getFunction(), findDebugLoc(FirstMBB)));
-
-    FailsUnwindV2Criteria++;
-    return false;
-  }
 
   MeetsUnwindV2Criteria++;
 
-  // Emit the pseudo instruction that marks the start of each epilog.
+  // Walk the list of epilogs backwards and add new SEH pseudo instructions:
+  // * SEH_UnwindV2Start at the start of each epilog.
+  // * If the current instruction is too far away from where the last unwind
+  //   info ended OR there are too many unwind codes in the info, then add
+  //   SEH_SplitChained to finish the current info.
+  unsigned LastUnwindInfoEndPosition = ApproximateInstructionCount;
+  unsigned UnwindCodeCount = ApproximatePrologCodeCount + 1;
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  for (MachineInstr *MI : UnwindV2StartLocations) {
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+  for (auto &Info : llvm::reverse(EpilogInfos)) {
+    MachineBasicBlock &MBB = *Info.UnwindV2StartLocation->getParent();
+    BuildMI(MBB, Info.UnwindV2StartLocation,
+            Info.UnwindV2StartLocation->getDebugLoc(),
             TII->get(X86::SEH_UnwindV2Start));
+
+    if ((LastUnwindInfoEndPosition - Info.ApproximateInstructionPosition >=
+         InstructionCountThreshold) ||
+        (UnwindCodeCount >= UnwindCodeThreshold)) {
+      BuildMI(&MBB, Info.UnwindV2StartLocation->getDebugLoc(),
+              TII->get(X86::SEH_SplitChained));
+      LastUnwindInfoEndPosition = Info.ApproximateInstructionPosition;
+      // Doesn't reset to 0, as the prolog unwind codes are now in this info.
+      UnwindCodeCount = ApproximatePrologCodeCount + 1;
+    }
+
+    UnwindCodeCount++;
   }
   // Note that the function is using Unwind v2.
+  MachineBasicBlock &FirstMBB = MF.front();
   BuildMI(FirstMBB, FirstMBB.front(), findDebugLoc(FirstMBB),
           TII->get(X86::SEH_UnwindVersion))
       .addImm(2);
