@@ -972,10 +972,6 @@ def Vector_ScalableInsertOp :
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
     }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
-    }
   }];
 }
 
@@ -1026,10 +1022,6 @@ def Vector_ScalableExtractOp :
     }
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
-    }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
     }
   }];
 }
@@ -1084,10 +1076,6 @@ def Vector_InsertStridedSliceOp :
       return llvm::any_of(getStrides(), [](Attribute attr) {
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
-    }
-    /// Wrapper for getResult, which replaced getRes.
-    [[deprecated("Use getResult instead!")]] ::mlir::Value getRes() {
-      return getResult();
     }
   }];
 
@@ -1712,16 +1700,15 @@ def Vector_LoadOp : Vector_Op<"load", [
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "VectorType":$resultType,
@@ -1827,8 +1814,8 @@ def Vector_StoreOp : Vector_Op<"store", [
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
 
   let arguments = (ins
@@ -1837,8 +1824,7 @@ def Vector_StoreOp : Vector_Op<"store", [
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
@@ -1875,8 +1861,7 @@ def Vector_MaskedLoadOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -1915,8 +1900,8 @@ def Vector_MaskedLoadOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1968,8 +1953,7 @@ def Vector_MaskedStoreOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -2007,8 +1991,8 @@ def Vector_MaskedStoreOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2051,8 +2035,7 @@ def Vector_GatherOp :
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
@@ -2100,8 +2083,8 @@ def Vector_GatherOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     gather operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Examples:
 
@@ -2154,8 +2137,7 @@ def Vector_ScatterOp :
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2191,8 +2173,8 @@ def Vector_ScatterOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     scatter operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Examples:
 
@@ -2239,8 +2221,7 @@ def Vector_ExpandLoadOp :
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
@@ -2274,8 +2255,8 @@ def Vector_ExpandLoadOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
@@ -2328,8 +2309,7 @@ def Vector_CompressStoreOp :
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
-               ConfinedAttr<OptionalAttr<I64Attr>,
-                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
+               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
@@ -2362,8 +2342,8 @@ def Vector_CompressStoreOp :
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
+    memory at an address aligned to this boundary. Violating this requirement
+    triggers immediate undefined behavior.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 

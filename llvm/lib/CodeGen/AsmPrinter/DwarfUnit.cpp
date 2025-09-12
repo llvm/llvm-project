@@ -1351,6 +1351,13 @@ DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
       ContextDIE = &getUnitDie();
       // Build the decl now to ensure it precedes the definition.
       getOrCreateSubprogramDIE(SPDecl);
+      // Check whether the DIE for SP has already been created after the call
+      // above.
+      // FIXME: Should the creation of definition subprogram DIE during
+      // the creation of declaration subprogram DIE be allowed?
+      // See https://github.com/llvm/llvm-project/pull/154636.
+      if (DIE *SPDie = getDIE(SP))
+        return SPDie;
     }
   }
 
@@ -1403,11 +1410,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
-  assert(((LinkageName.empty() || DeclLinkageName.empty()) ||
-          LinkageName == DeclLinkageName) &&
-         "decl has a linkage name and it is different");
-  if (DeclLinkageName.empty() &&
-      // Always emit it for abstract subprograms.
+  // Always emit linkage name for abstract subprograms.
+  if (DeclLinkageName != LinkageName &&
       (DD->useAllLinkageNames() || DU->getAbstractScopeDIEs().lookup(SP)))
     addLinkageName(SPDie, LinkageName);
 

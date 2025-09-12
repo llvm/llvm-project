@@ -267,7 +267,7 @@ lldb::addr_t SBFrame::GetCFA() const {
   }
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
-    return frame->GetStackID().GetCallFrameAddress();
+    return frame->GetStackID().GetCallFrameAddressWithoutMetadata();
   return LLDB_INVALID_ADDRESS;
 }
 
@@ -1114,6 +1114,22 @@ bool SBFrame::IsArtificial() const {
 
   if (StackFrame *frame = exe_ctx->GetFramePtr())
     return frame->IsArtificial();
+
+  return false;
+}
+
+bool SBFrame::IsSynthetic() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return false;
+  }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->IsSynthetic();
 
   return false;
 }

@@ -12,7 +12,6 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 namespace LLVM {
 
 #define GEN_PASS_DECL
