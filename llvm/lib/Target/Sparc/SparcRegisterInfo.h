@@ -26,7 +26,7 @@ private:
   const bool Is64Bit;
 
 public:
-  SparcRegisterInfo(const SparcSubtarget &STI);
+  explicit SparcRegisterInfo(const SparcSubtarget &STI);
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
