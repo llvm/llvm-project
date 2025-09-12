@@ -83,7 +83,7 @@ private:
   // appropriate source modifers and operands into the unpacked instructions
   void addOperandAndMods(MachineInstrBuilder NewMI, unsigned SrcMods,
                          unsigned NegModifier, unsigned OpSelModifier,
-                         MachineOperand &SrcMO);
+                         const MachineOperand &SrcMO);
 
 public:
   bool run(MachineFunction &MF);
@@ -497,11 +497,11 @@ bool SIPreEmitPeephole::hasRWDependencies(const MachineInstr &PredMI,
 bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
     const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
-  bool IsFMA = (OpCode == AMDGPU::V_PK_FMA_F32) ? true : false;
+  bool IsFMA = OpCode == AMDGPU::V_PK_FMA_F32;
   MachineOperand DstMO = MI.getOperand(0);
   Register DstReg = DstMO.getReg();
-  Register SrcReg0 = MI.getOperand(2).getReg();
-  Register SrcReg1 = MI.getOperand(4).getReg();
+  Register SrcReg0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
+  Register SrcReg1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
 
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
   int Src0ModifiersIdx =
@@ -522,7 +522,7 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
       UnpackedDstReg == HiSrc1Reg ||
       TRI->regsOverlap(UnpackedDstReg, HiSrc1Reg))
     return true;
-  if (IsFMA) {
+  if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
     int Src2ModifiersIdx =
         AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src2_modifiers);
     unsigned Src2Mods = MI.getOperand(Src2ModifiersIdx).getImm();
@@ -559,7 +559,7 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder NewMI,
                                           unsigned SrcMods,
                                           unsigned NegModifier,
                                           unsigned OpSelModifier,
-                                          MachineOperand &SrcMO) {
+                                          const MachineOperand &SrcMO) {
   unsigned NewSrcMods = 0;
   //  If NEG or NEG_HI is true, we need to negate the corresponding 32 bit
   //  lane.
@@ -616,7 +616,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
       if (hasRWDependencies(BeginMI, Instr))
         return;
       if (canUnpackingIntroduceDependencies(Instr))
-        continue;
+        return;
       // If it is a packed instruction, we should subtract it's latency from the
       // overall latency calculation here, because the packed instruction will
       // be removed and replaced by 2 unpacked instructions
@@ -635,7 +635,6 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 }
 
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
-  MachineBasicBlock &MBB = *I.getParent();
   MachineOperand DstOp = I.getOperand(0);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
@@ -661,7 +660,7 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
     Op0LOp1L->setFlag(MachineInstr::MIFlag::FmContract);
     Op0HOp1H->setFlag(MachineInstr::MIFlag::FmContract);
   }
-  if (I.getOperand(0).getReg().isPhysical() && I.getOperand(0).isRenamable()) {
+  if (DstOp.getReg().isPhysical() && DstOp.isRenamable()) {
     LoDstOp.setIsRenamable(true);
     HiDstOp.setIsRenamable(true);
   }
@@ -676,14 +675,13 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   MachineBasicBlock &MBB = *I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
   MachineOperand &DstMO = I.getOperand(0);
-  MachineOperand &SrcMO1 = I.getOperand(2);
-  MachineOperand &SrcMO2 = I.getOperand(4);
+  const MachineOperand *SrcMO1 = TII->getNamedOperand(I, AMDGPU::OpName::src0);
+  const MachineOperand *SrcMO2 = TII->getNamedOperand(I, AMDGPU::OpName::src1);
   Register DstReg = DstMO.getReg();
   unsigned OpCode = I.getOpcode();
   Register UnpackedDstReg = IsHiBits ? TRI->getSubReg(DstReg, AMDGPU::sub1)
                                      : TRI->getSubReg(DstReg, AMDGPU::sub0);
 
-  bool IsFMA = (OpCode == AMDGPU::V_PK_FMA_F32) ? true : false;
   int ClampIdx = AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::clamp);
   int64_t ClampVal = I.getOperand(ClampIdx).getImm();
   int Src0ModifiersIdx =
@@ -700,15 +698,15 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
 
   MachineInstrBuilder NewMI = BuildMI(MBB, I, DL, TII->get(UnpackedOpcode));
   NewMI.addDef(UnpackedDstReg); // vdst
-  addOperandAndMods(NewMI, Src0Mods, NegModifier, OpSelModifier, SrcMO1);
-  addOperandAndMods(NewMI, Src1Mods, NegModifier, OpSelModifier, SrcMO2);
+  addOperandAndMods(NewMI, Src0Mods, NegModifier, OpSelModifier, *SrcMO1);
+  addOperandAndMods(NewMI, Src1Mods, NegModifier, OpSelModifier, *SrcMO2);
 
-  if (IsFMA) {
-    MachineOperand &SrcMO3 = I.getOperand(6);
+  if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
+    const MachineOperand *SrcMO3 = TII->getNamedOperand(I, AMDGPU::OpName::src2);
     int Src2ModifiersIdx =
         AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src2_modifiers);
     unsigned Src2Mods = I.getOperand(Src2ModifiersIdx).getImm();
-    addOperandAndMods(NewMI, Src2Mods, NegModifier, OpSelModifier, SrcMO3);
+    addOperandAndMods(NewMI, Src2Mods, NegModifier, OpSelModifier, *SrcMO3);
   }
   NewMI.addImm(ClampVal); // clamp
   // Packed instructions do not support output modifiers. safe to assign them 0
