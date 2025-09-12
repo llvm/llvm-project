@@ -266,7 +266,7 @@ private:
   LLVM_ATTRIBUTE_NOINLINE
   bool printSortedRecords(const VRegDistances::SortedRecords &Records,
                           unsigned VReg, unsigned SnapshotOffset,
-                          raw_ostream &O = dbgs(),
+                          int64_t EdgeWeigth = 0, raw_ostream &O = dbgs(),
                           StringRef Indent = "      ") const {
     bool Any = false;
     O << "\n";
@@ -274,8 +274,10 @@ private:
       const LaneBitmask UseMask = X.first;
       const int64_t Stored = X.second; // stored relative (may be negative)
 
-      // Use enhanced materialization for display that shows three-tier structure
-      PrintDist PDist = materializeForPrint(Stored, SnapshotOffset);
+      // Use enhanced materialization for display that shows three-tier
+      // structure
+      PrintDist PDist =
+          materializeForPrint(Stored + EdgeWeigth, SnapshotOffset);
 
       O << Indent << "Vreg: ";
       const LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
@@ -307,11 +309,12 @@ private:
   // Returns true if anything was printed.
   LLVM_ATTRIBUTE_NOINLINE
   bool printVregDistances(const VRegDistances &D, unsigned SnapshotOffset,
-                          raw_ostream &O = dbgs(),
+                          int64_t EdgeWeight = 0, raw_ostream &O = dbgs(),
                           StringRef Indent = "      ") const {
     bool Any = false;
     for (const auto &P : D) {
-      Any |= printSortedRecords(P.second, P.first, SnapshotOffset, O, Indent);
+      Any |= printSortedRecords(P.second, P.first, SnapshotOffset, EdgeWeight,
+                                O, Indent);
     }
     return Any;
   }
@@ -320,7 +323,7 @@ private:
   LLVM_ATTRIBUTE_NOINLINE
   bool printVregDistances(const VRegDistances &D,
                           raw_ostream &O = dbgs()) const {
-    return printVregDistances(D, /*SnapshotOffset=*/0, O);
+    return printVregDistances(D, /*SnapshotOffset=*/0, /*EdgeWeight*/ 0, O);
   }
 
   void clear() {
