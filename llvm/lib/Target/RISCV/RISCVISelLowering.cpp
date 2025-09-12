@@ -18950,7 +18950,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
 
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
-  if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
+  if (Subtarget.hasBEXTILike() && VT.isScalarInteger() &&
       (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
@@ -24939,8 +24939,8 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike())
-    return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
+  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())
+    return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
 
