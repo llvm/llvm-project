@@ -17,7 +17,7 @@ void g(int** (*fp)(const char *, const char **)) {
 
 union Union {
   char *c;
-  long* n;
+  long *n;
 } __attribute__((transparent_union));
 
 // CHECK: define{{.*}} void @uni({{.*}} !type [[TYPE2:![0-9]+]] !type [[TYPE2_GENERALIZED:![0-9]+]]
