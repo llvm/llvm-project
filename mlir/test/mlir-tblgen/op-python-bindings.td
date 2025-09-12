@@ -254,7 +254,7 @@ def DeriveResultTypesVariadicOp : TestOp<"derive_result_types_variadic_op", [Fir
 
 
 // CHECK: class DescriptionOp(_ods_ir.OpView):
-// CHECK:   """
+// CHECK:   r"""
 // CHECK:   This is a long description.
 // CHECK:   It has multiple lines.
 // CHECK:   A code block (to test the indent).
