@@ -1,6 +1,6 @@
 include(AddMLIRPython)
 
-# Specifies that all MLIR packages are co-located under the `mlir_standalone`
+# Specifies that all MLIR packages are co-located under the `MLIR_PYTHON_PACKAGE_PREFIX.`
 # top level package (the API has been embedded in a relocatable way).
 add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
 
