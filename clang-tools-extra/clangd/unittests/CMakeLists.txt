@@ -54,6 +54,7 @@ add_unittest(ClangdUnitTests ClangdTests
   DumpASTTests.cpp
   ExpectedTypeTest.cpp
   FeatureModulesTests.cpp
+  FeatureModulesRegistryTests.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
@@ -154,6 +155,8 @@ target_include_directories(ClangdTests PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
+add_subdirectory(feature-modules)
+
 clang_target_link_libraries(ClangdTests
   PRIVATE
   clangAST
@@ -183,6 +186,8 @@ target_link_libraries(ClangdTests
   clangTidy
   clangTidyUtils
   clangdSupport
+
+  ${FEATURE_MODULES}
   )
 
 if (CLANGD_ENABLE_REMOTE)

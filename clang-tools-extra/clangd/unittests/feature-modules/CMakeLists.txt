@@ -1,0 +1,2 @@
+add_subdirectory(dummy)
+set(FEATURE_MODULES ${FEATURE_MODULES} PARENT_SCOPE)
