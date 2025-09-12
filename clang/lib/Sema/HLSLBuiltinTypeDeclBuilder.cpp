@@ -138,15 +138,7 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
-  enum class PlaceHolder {
-    _0,
-    _1,
-    _2,
-    _3,
-    _4,
-    Handle = 128,
-    LastStmt
-  };
+  enum class PlaceHolder { _0, _1, _2, _3, _4, Handle = 128, LastStmt };
 
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(LocalVar &Var);
