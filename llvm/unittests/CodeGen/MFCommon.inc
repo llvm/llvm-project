@@ -75,6 +75,11 @@ public:
   }
 };
 
+class BogusTargetInstrInfo : public TargetInstrInfo {
+public:
+  BogusTargetInstrInfo() : TargetInstrInfo() {}
+};
+
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
@@ -95,7 +100,7 @@ private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;
   BogusTargetLowering TL;
-  TargetInstrInfo TII;
+  BogusTargetInstrInfo TII;
 };
 
 static TargetOptions getTargetOptionsForBogusMachine() {

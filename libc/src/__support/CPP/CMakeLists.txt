@@ -171,6 +171,7 @@ add_header_library(
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.complex_types
 )
 
@@ -209,4 +210,21 @@ add_object_library(
     libc.hdr.func.aligned_alloc
     libc.src.__support.common
     libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  tuple
+  HDRS
+    tuple.h
+  DEPENDS
+    .utility
+)
+
+add_header_library(
+  simd
+  HDRS
+    simd.h
+  DEPENDS
+    .utility
+    .tuple
 )

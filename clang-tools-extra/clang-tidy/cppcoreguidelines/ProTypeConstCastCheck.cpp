@@ -32,7 +32,7 @@ static bool hasVolatileQualifier(QualType Type) {
 ProTypeConstCastCheck::ProTypeConstCastCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)) {}
+      StrictMode(Options.get("StrictMode", false)) {}
 
 void ProTypeConstCastCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);

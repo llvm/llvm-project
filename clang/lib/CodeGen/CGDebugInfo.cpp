@@ -2177,24 +2177,47 @@ static bool isFunctionLocalClass(const CXXRecordDecl *RD) {
   return false;
 }
 
+llvm::StringRef
+CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
+  assert(Method);
+
+  const bool IsCtorOrDtor =
+      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+
+  if (IsCtorOrDtor && !CGM.getCodeGenOpts().DebugStructorDeclLinkageNames)
+    return {};
+
+  // In some ABIs (particularly Itanium) a single ctor/dtor
+  // corresponds to multiple functions. Attach a "unified"
+  // linkage name for those (which is the convention GCC uses).
+  // Otherwise, attach no linkage name.
+  if (IsCtorOrDtor && !CGM.getTarget().getCXXABI().hasConstructorVariants())
+    return {};
+
+  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Ctor, CXXCtorType::Ctor_Unified));
+
+  if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(Method))
+    return CGM.getMangledName(GlobalDecl(Dtor, CXXDtorType::Dtor_Unified));
+
+  return CGM.getMangledName(Method);
+}
+
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
-  bool IsCtorOrDtor =
-      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
+  assert(Method);
 
   StringRef MethodName = getFunctionName(Method);
   llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit);
 
-  // Since a single ctor/dtor corresponds to multiple functions, it doesn't
-  // make sense to give a single ctor/dtor a linkage name.
   StringRef MethodLinkageName;
   // FIXME: 'isFunctionLocalClass' seems like an arbitrary/unintentional
   // property to use here. It may've been intended to model "is non-external
   // type" but misses cases of non-function-local but non-external classes such
   // as those in anonymous namespaces as well as the reverse - external types
   // that are function local, such as those in (non-local) inline functions.
-  if (!IsCtorOrDtor && !isFunctionLocalClass(Method->getParent()))
-    MethodLinkageName = CGM.getMangledName(Method);
+  if (!isFunctionLocalClass(Method->getParent()))
+    MethodLinkageName = GetMethodLinkageName(Method);
 
   // Get the location for the method.
   llvm::DIFile *MethodDefUnit = nullptr;
@@ -2359,7 +2382,7 @@ void CGDebugInfo::CollectCXXBasesAux(
   for (const auto &BI : Bases) {
     const auto *Base =
         cast<CXXRecordDecl>(
-            BI.getType()->castAs<RecordType>()->getOriginalDecl())
+            BI.getType()->castAsCanonical<RecordType>()->getOriginalDecl())
             ->getDefinition();
     if (!SeenTypes.insert(Base).second)
       continue;
@@ -5921,8 +5944,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   // variable for each member of the anonymous union so that it's possible
   // to find the name of any field in the union.
   if (T->isUnionType() && DeclName.empty()) {
-    const RecordDecl *RD =
-        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *RD = T->castAsRecordDecl();
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     GVE = CollectAnonRecordDecls(RD, Unit, LineNo, LinkageName, Var, DContext);

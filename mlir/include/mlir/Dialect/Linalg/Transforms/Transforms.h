@@ -649,7 +649,7 @@ FailureOr<TilingInterface>
 rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
                   const PadTilingInterfaceOptions &constOptions,
                   SmallVector<tensor::PadOp> &padOps,
-                  PadSizeComputationFunction computePaddingSizeFun =
+                  const PadSizeComputationFunction &computePaddingSizeFun =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
@@ -1915,6 +1915,11 @@ using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
 void populateDataLayoutPropagationPatterns(
+    RewritePatternSet &patterns,
+    const ControlPropagationFn &controlPackUnPackPropagation);
+
+/// Patterns to sink extract slice across other operations.
+void populateExtractSliceSinkingPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation);
 
