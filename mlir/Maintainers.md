@@ -46,7 +46,7 @@ dialects, build system and language bindings.
 * ‘ptr’ Dialect ([fabianmcg](https://github.com/fabianmcg))
 
 #### Basic Compute Dialects
-* ‘arith’ Dialect (core)
+* ‘arith’ Dialect (core + [kuhar](https://github.com/kuhar))
 * ‘math’ Dialect (core)
 * Rewrite System Dialects (core)
 * Transform Dialect ([martin-luecke](https://github.com/martin-luecke), [ftynse](https://github.com/ftynse), [rolfmorel](https://github.com/rolfmorel))
