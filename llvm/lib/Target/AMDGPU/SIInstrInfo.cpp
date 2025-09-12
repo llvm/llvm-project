@@ -2570,7 +2570,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
     const MCInstrDesc &TID = get(NewOpcode);
     const TargetRegisterClass *NewRC =
-        RI.getAllocatableClass(getRegClass(TID, 0, &RI));
+        RI.getAllocatableClass(getRegClass(TID, 0));
     MRI.setRegClass(DestReg, NewRC);
 
     UseMO->setReg(DestReg);
@@ -3613,7 +3613,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_ACCVGPR_WRITE_B32_e64}) {
       const MCInstrDesc &MovDesc = get(MovOp);
 
-      const TargetRegisterClass *MovDstRC = getRegClass(MovDesc, 0, &RI);
+      const TargetRegisterClass *MovDstRC = getRegClass(MovDesc, 0);
       if (Is16Bit) {
         // We just need to find a correctly sized register class, so the
         // subregister index compatibility doesn't matter since we're statically
@@ -6028,9 +6028,8 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 // FIXME: This should not be an overridable function. All subtarget dependent
 // operand modifications should go through isLookupRegClassByHwMode in the
 // generic handling.
-const TargetRegisterClass *
-SIInstrInfo::getRegClass(const MCInstrDesc &TID, unsigned OpNum,
-                         const TargetRegisterInfo *TRI) const {
+const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
+                                                    unsigned OpNum) const {
   if (OpNum >= TID.getNumOperands())
     return nullptr;
   const MCOperandInfo &OpInfo = TID.operands()[OpNum];
@@ -6805,7 +6804,7 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
     return;
 
   const TargetRegisterClass *DeclaredRC =
-      getRegClass(MI.getDesc(), SAddr->getOperandNo(), &RI);
+      getRegClass(MI.getDesc(), SAddr->getOperandNo());
 
   Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI, DeclaredRC);
   SAddr->setReg(ToSGPR);

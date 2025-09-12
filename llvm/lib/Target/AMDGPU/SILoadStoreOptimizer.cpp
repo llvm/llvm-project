@@ -1336,11 +1336,9 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
     int Data1Idx = AMDGPU::getNamedOperandIdx(Write2Opc.getOpcode(),
                                               AMDGPU::OpName::data1);
 
-    const TargetRegisterClass *DataRC0 =
-        TII->getRegClass(Write2Opc, Data0Idx, TRI);
+    const TargetRegisterClass *DataRC0 = TII->getRegClass(Write2Opc, Data0Idx);
 
-    const TargetRegisterClass *DataRC1 =
-        TII->getRegClass(Write2Opc, Data1Idx, TRI);
+    const TargetRegisterClass *DataRC1 = TII->getRegClass(Write2Opc, Data1Idx);
 
     if (unsigned SubReg = Data0->getSubReg()) {
       DataRC0 = TRI->getMatchingSuperRegClass(MRI->getRegClass(Data0->getReg()),

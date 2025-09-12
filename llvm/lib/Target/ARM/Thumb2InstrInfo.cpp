@@ -564,7 +564,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx, TRI);
+  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
