@@ -3,8 +3,8 @@
 
 ; Verify that we check the source element of GEPs when performing a CSE.
 
-define void @cse_gep_source_element_type(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %n) {
-; CHECK-LABEL: define void @cse_gep_source_element_type(
+define void @cse_replicate_gep(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %n) {
+; CHECK-LABEL: define void @cse_replicate_gep(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
@@ -52,6 +52,101 @@ loop:
   store i32 %l.32, ptr %gep.B
   %gep.C = getelementptr i16, ptr %C, i64 %iv
   store i16 %l.16, ptr %gep.C
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @cse_wide_gep(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %n) {
+; CHECK-LABEL: define void @cse_wide_gep(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = add i64 [[INDEX1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX1]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX1]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX1]], 4
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[INDEX1]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX1]], 6
+; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[INDEX1]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP24]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP24]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i16, ptr [[A]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP24]]
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP32]]
+; CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 8
+; CHECK-NEXT:    store ptr [[TMP9]], ptr [[TMP25]], align 8
+; CHECK-NEXT:    store ptr [[TMP10]], ptr [[TMP26]], align 8
+; CHECK-NEXT:    store ptr [[TMP11]], ptr [[TMP27]], align 8
+; CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP28]], align 8
+; CHECK-NEXT:    store ptr [[TMP13]], ptr [[TMP29]], align 8
+; CHECK-NEXT:    store ptr [[TMP14]], ptr [[TMP30]], align 8
+; CHECK-NEXT:    store ptr [[TMP15]], ptr [[TMP31]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP24]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i16, ptr [[C]], i64 [[TMP32]]
+; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    store ptr [[TMP17]], ptr [[TMP33]], align 8
+; CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP34]], align 8
+; CHECK-NEXT:    store ptr [[TMP19]], ptr [[TMP35]], align 8
+; CHECK-NEXT:    store ptr [[TMP20]], ptr [[TMP36]], align 8
+; CHECK-NEXT:    store ptr [[TMP21]], ptr [[TMP37]], align 8
+; CHECK-NEXT:    store ptr [[TMP22]], ptr [[TMP38]], align 8
+; CHECK-NEXT:    store ptr [[TMP23]], ptr [[TMP39]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.A.32 = getelementptr i32, ptr %A, i64 %iv
+  %gep.A.16 = getelementptr i16, ptr %A, i64 %iv
+  %gep.B = getelementptr i32, ptr %B, i64 %iv
+  store ptr %gep.A.32, ptr %gep.B
+  %gep.C = getelementptr i16, ptr %C, i64 %iv
+  store ptr %gep.A.16, ptr %gep.C
   %iv.next = add nuw nsw i64 %iv, 1
   %exit.cond = icmp eq i64 %iv.next, %n
   br i1 %exit.cond, label %exit, label %loop
