@@ -69,6 +69,8 @@ FUNCTION_PASS("amdgpu-simplifylib", AMDGPUSimplifyLibCallsPass())
 FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
+FUNCTION_PASS("amdgpu-vector-idiom",
+              AMDGPUVectorIdiomCombinePass(/*MaxBytes=*/32))
 FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
 #undef FUNCTION_PASS
 
