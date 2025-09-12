@@ -284,7 +284,7 @@ buildFilter(const mlir::remark::RemarkCategories &cats,
   if (!rx.isValid(err))
     return std::nullopt;
 
-  return rx;
+  return std::make_optional<llvm::Regex>(std::move(rx));
 }
 
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
