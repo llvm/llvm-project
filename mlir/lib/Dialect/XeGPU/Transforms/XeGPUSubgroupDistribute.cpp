@@ -485,7 +485,14 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
           warpOp, "warp result is not a xegpu::LoadNd op");
 
     auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
-
+    // Chip information is required to decide if the layout requires transpose
+    // effect.
+    auto chipStr = xegpu::getChipStr(loadOp);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(
+          loadOp,
+          "xegpu::LoadNdOp require chip information to determine transpose "
+          "requirement");
     int64_t offsetSize = static_cast<int64_t>(loadOp.getOffsets().size());
     if ((offsetSize != 0) || loadOp.getConstOffsetsAttr())
       return failure();
@@ -526,13 +533,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
     xegpu::removeLayoutAttrs(newLoadOp);
     // Set the packed attribute if the layout requires it.
     newLoadOp.setPacked(requirePacked(layout));
-    // Decide if this load op requires a transpose effect.
-    auto chipStr = xegpu::getChipStr(loadOp);
-    if (!chipStr)
-      return rewriter.notifyMatchFailure(
-          loadOp,
-          "xegpu::LoadNdOp require chip information to determine transpose "
-          "requirement");
+    // Set the transpose attribute if the layout requires it.
     if (requireTranspose(layout, chipStr.value()))
       newLoadOp.setTranspose(
           DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
