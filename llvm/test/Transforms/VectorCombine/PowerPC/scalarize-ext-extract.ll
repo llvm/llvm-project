@@ -1,5 +1,5 @@
 ; RUN: opt -passes='vector-combine,dce' -S -mtriple=aarch64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefix=LE
-; RUN: opt -passes='vector-combine,dce' -S -mtriple=powerpc64-ibm-aix-xcoff   %s -o - | FileCheck %s --check-prefix=BE
+; RUN: opt -passes='vector-combine,dce' -S -mtriple=powerpc64-ibm-aix-xcoff     %s -o - | FileCheck %s --check-prefix=BE
 
 define i64 @g(<8 x i8> %v) {
   %z  = zext <8 x i8> %v to <8 x i64>

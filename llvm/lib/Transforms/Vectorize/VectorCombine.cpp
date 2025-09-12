@@ -2021,8 +2021,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     uint64_t ShiftAmt = DL->isBigEndian()
         ? (TotalBits - SrcEltSizeInBits - Idx * SrcEltSizeInBits)
         : (Idx * SrcEltSizeInBits);
-    Value *ShAmtVal = ConstantInt::get(PackedTy, ShiftAmt);
-    Value *LShr = Builder.CreateLShr(ScalarV, ShAmtVal);
+    Value *LShr = Builder.CreateLShr(ScalarV, ShiftAmt);
     Value *And = Builder.CreateAnd(LShr, Mask);
     U->replaceAllUsesWith(And);
   }
