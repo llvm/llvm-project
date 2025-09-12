@@ -67,7 +67,7 @@ public:
   constexpr void clear() { Value = Sentinel; }
   constexpr bool has_value() const { return Value != Sentinel; }
 
-  constexpr static ValueOrSentinel fromInternalRepresentation(unsigned Value) {
+  constexpr static ValueOrSentinel fromInternalRepresentation(T Value) {
     return {std::nullopt, Value};
   }
   constexpr T toInternalRepresentation() const { return Value; }
