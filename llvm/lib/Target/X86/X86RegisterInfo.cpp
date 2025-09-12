@@ -61,6 +61,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
 
   // Cache some information.
   Is64Bit = TT.isArch64Bit();
+  IsTarget64BitLP64 = Is64Bit && !TT.isX32();
   IsWin64 = Is64Bit && TT.isOSWindows();
   IsUEFI64 = Is64Bit && TT.isUEFI();
 
@@ -192,13 +193,11 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                    unsigned Kind) const {
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
   switch (Kind) {
   default: llvm_unreachable("Unexpected Kind in getPointerRegClass!");
   case 0: // Normal GPRs.
-    if (Subtarget.isTarget64BitLP64())
+    if (IsTarget64BitLP64)
       return &X86::GR64RegClass;
     // If the target is 64bit but we have been told to use 32bit addresses,
     // we can still use 64-bit register as long as we know the high bits
@@ -206,16 +205,16 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
     // Reflect that in the returned register class.
     return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
   case 1: // Normal GPRs except the stack pointer (for encoding reasons).
-    if (Subtarget.isTarget64BitLP64())
+    if (IsTarget64BitLP64)
       return &X86::GR64_NOSPRegClass;
     // NOSP does not contain RIP, so no special case here.
     return &X86::GR32_NOSPRegClass;
   case 2: // NOREX GPRs.
-    if (Subtarget.isTarget64BitLP64())
+    if (IsTarget64BitLP64)
       return &X86::GR64_NOREXRegClass;
     return &X86::GR32_NOREXRegClass;
   case 3: // NOREX GPRs except the stack pointer (for encoding reasons).
-    if (Subtarget.isTarget64BitLP64())
+    if (IsTarget64BitLP64)
       return &X86::GR64_NOREX_NOSPRegClass;
     // NOSP does not contain RIP, so no special case here.
     return &X86::GR32_NOREX_NOSPRegClass;

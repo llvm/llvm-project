@@ -37,27 +37,26 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "MipsGenRegisterInfo.inc"
 
-MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {
+MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
+    : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
   MIPS_MC::initLLVMToCVRegMapping(this);
 }
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
 const TargetRegisterClass *
-MipsRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                     unsigned Kind) const {
-  MipsABIInfo ABI = MF.getSubtarget<MipsSubtarget>().getABI();
+MipsRegisterInfo::getPointerRegClass(unsigned Kind) const {
   MipsPtrClass PtrClassKind = static_cast<MipsPtrClass>(Kind);
 
   switch (PtrClassKind) {
   case MipsPtrClass::Default:
-    return ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+    return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
   case MipsPtrClass::GPR16MM:
     return &Mips::GPRMM16RegClass;
   case MipsPtrClass::StackPointer:
-    return ABI.ArePtrs64bit() ? &Mips::SP64RegClass : &Mips::SP32RegClass;
+    return ArePtrs64bit ? &Mips::SP64RegClass : &Mips::SP32RegClass;
   case MipsPtrClass::GlobalPointer:
-    return ABI.ArePtrs64bit() ? &Mips::GP64RegClass : &Mips::GP32RegClass;
+    return ArePtrs64bit ? &Mips::GP64RegClass : &Mips::GP32RegClass;
   }
 
   llvm_unreachable("Unknown pointer kind");
