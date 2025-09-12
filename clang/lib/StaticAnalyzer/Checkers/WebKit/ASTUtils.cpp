@@ -91,6 +91,13 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *call = dyn_cast<CallExpr>(E)) {
+      if (auto *Callee = call->getCalleeDecl()) {
+        if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
+            Callee->hasAttr<NSReturnsRetainedAttr>()) {
+          return callback(E, true);
+        }
+      }
+
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
@@ -153,6 +160,24 @@ bool tryToFindPtrOrigin(
         if (Name == "__builtin___CFStringMakeConstantString" ||
             Name == "NSClassFromString")
           return callback(E, true);
+      }
+
+      // Sometimes, canonical type erroneously turns Ref<T> into T.
+      // Workaround this problem by checking again if the original type was
+      // a SubstTemplateTypeParmType of a safe smart pointer type (e.g. Ref).
+      if (auto *CalleeDecl = call->getCalleeDecl()) {
+        if (auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+          auto RetType = FD->getReturnType();
+          if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(RetType)) {
+            if (auto *SubstType = Subst->desugar().getTypePtr()) {
+              if (auto *RD = dyn_cast<RecordType>(SubstType)) {
+                if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getOriginalDecl()))
+                  if (isSafePtr(CXX))
+                    return callback(E, true);
+              }
+            }
+          }
+        }
       }
     }
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
