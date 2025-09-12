@@ -28,7 +28,7 @@ define void @banerjee0(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 ; NORMALIZE-LABEL: 'banerjee0'
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -42,7 +42,7 @@ define void @banerjee0(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; NORMALIZE-NEXT:    da analyze - none!
+; NORMALIZE-NEXT:    da analyze - confused!
 ;
 ; DELIN-LABEL: 'banerjee0'
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -56,7 +56,7 @@ define void @banerjee0(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -810,7 +810,7 @@ define void @banerjee9(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %1 = load i64, ptr %arrayidx7, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %1, ptr %B.addr.11, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 ; NORMALIZE-LABEL: 'banerjee9'
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -824,7 +824,7 @@ define void @banerjee9(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: %1 = load i64, ptr %arrayidx7, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: store i64 %1, ptr %B.addr.11, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
-; NORMALIZE-NEXT:    da analyze - none!
+; NORMALIZE-NEXT:    da analyze - confused!
 ;
 ; DELIN-LABEL: 'banerjee9'
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -838,7 +838,7 @@ define void @banerjee9(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: %1 = load i64, ptr %arrayidx7, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %1, ptr %B.addr.11, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -896,7 +896,7 @@ define void @banerjee10(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %1 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %1, ptr %B.addr.11, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 ; NORMALIZE-LABEL: 'banerjee10'
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -910,7 +910,7 @@ define void @banerjee10(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: %1 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: store i64 %1, ptr %B.addr.11, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
-; NORMALIZE-NEXT:    da analyze - none!
+; NORMALIZE-NEXT:    da analyze - confused!
 ;
 ; DELIN-LABEL: 'banerjee10'
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -924,7 +924,7 @@ define void @banerjee10(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: %1 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %1, ptr %B.addr.11, align 8 --> Dst: store i64 %1, ptr %B.addr.11, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -981,7 +981,7 @@ define void @banerjee11(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 ; NORMALIZE-LABEL: 'banerjee11'
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -995,7 +995,7 @@ define void @banerjee11(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; NORMALIZE-NEXT:    da analyze - none!
+; NORMALIZE-NEXT:    da analyze - confused!
 ;
 ; DELIN-LABEL: 'banerjee11'
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -1009,7 +1009,7 @@ define void @banerjee11(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -1066,7 +1066,7 @@ define void @banerjee12(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 ; NORMALIZE-LABEL: 'banerjee12'
 ; NORMALIZE-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -1080,7 +1080,7 @@ define void @banerjee12(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; NORMALIZE-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; NORMALIZE-NEXT:    da analyze - confused!
 ; NORMALIZE-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; NORMALIZE-NEXT:    da analyze - none!
+; NORMALIZE-NEXT:    da analyze - confused!
 ;
 ; DELIN-LABEL: 'banerjee12'
 ; DELIN-NEXT:  Src: store i64 0, ptr %arrayidx, align 8 --> Dst: store i64 0, ptr %arrayidx, align 8
@@ -1094,7 +1094,7 @@ define void @banerjee12(ptr %A, ptr %B, i64 %m, i64 %n) nounwind uwtable ssp {
 ; DELIN-NEXT:  Src: %0 = load i64, ptr %arrayidx6, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
 ; DELIN-NEXT:    da analyze - confused!
 ; DELIN-NEXT:  Src: store i64 %0, ptr %B.addr.11, align 8 --> Dst: store i64 %0, ptr %B.addr.11, align 8
-; DELIN-NEXT:    da analyze - none!
+; DELIN-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
