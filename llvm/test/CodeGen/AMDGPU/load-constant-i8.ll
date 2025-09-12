@@ -5285,16 +5285,15 @@ define amdgpu_kernel void @constant_zextload_i8_to_i64(ptr addrspace(1) %out, pt
 ; GFX8-NOHSA-LABEL: constant_zextload_i8_to_i64:
 ; GFX8-NOHSA:       ; %bb.0:
 ; GFX8-NOHSA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX8-NOHSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v1, s3
-; GFX8-NOHSA-NEXT:    flat_load_ubyte v2, v[0:1]
-; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NOHSA-NEXT:    flat_load_ubyte v0, v[0:1]
+; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v3, s1
+; GFX8-NOHSA-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX8-NOHSA-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NOHSA-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX8-NOHSA-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GFX8-NOHSA-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX8-NOHSA-NEXT:    s_endpgm
 ;
 ; EG-LABEL: constant_zextload_i8_to_i64:
@@ -5314,27 +5313,15 @@ define amdgpu_kernel void @constant_zextload_i8_to_i64(ptr addrspace(1) %out, pt
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
-; GFX12-TRUE16-LABEL: constant_zextload_i8_to_i64:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_d16_u8 v0, v1, s[2:3]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-TRUE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-FAKE16-LABEL: constant_zextload_i8_to_i64:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    global_load_u8 v0, v1, s[2:3]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
-; GFX12-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: constant_zextload_i8_to_i64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_load_u8 s2, s[2:3], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX12-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
+; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(4) %in
   %ext = zext i8 %a to i64
   store i64 %ext, ptr addrspace(1) %out
