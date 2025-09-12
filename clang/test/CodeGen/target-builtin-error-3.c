@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -S -verify -o - -target-feature +avx
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all %s -triple=x86_64-apple-darwin -S -verify -o - -target-feature +avx
 
-// RUN: not %clang_cc1 %s -triple=x86_64-apple-darwin -emit-obj -target-feature +avx 2> %t.err
+// RUN: not %clang_cc1 -Wno-deprecate-lax-vec-conv-all %s -triple=x86_64-apple-darwin -emit-obj -target-feature +avx 2> %t.err
 // RUN: FileCheck < %t.err %s
 // CHECK: 1 error generated
 
