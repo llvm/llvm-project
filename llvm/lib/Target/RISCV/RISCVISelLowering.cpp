@@ -23258,6 +23258,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (VA.isRegLoc()) {
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
+
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.EmitCallSiteInfo)
+        CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
       assert(!IsTailCall && "Tail call not allowed if stack is used "
@@ -23359,9 +23363,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
-    if (MF.getTarget().Options.EmitCallGraphSection && CB &&
-        CB->isIndirectCall())
-      DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
 
@@ -23370,10 +23372,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
-
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
