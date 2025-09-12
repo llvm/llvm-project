@@ -797,9 +797,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::Spill;
   }
 
-  static bool isSpill(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::Spill;
+  static bool isSpill(const MCInstrDesc &Desc) {
+    return Desc.TSFlags & SIInstrFlags::Spill;
   }
+
+  static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
