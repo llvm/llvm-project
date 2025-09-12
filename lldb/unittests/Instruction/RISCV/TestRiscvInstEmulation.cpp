@@ -27,9 +27,6 @@ public:
   static void SetUpTestCase();
   static void TearDownTestCase();
 
-  //  virtual void SetUp() override { }
-  //  virtual void TearDown() override { }
-
 protected:
 };
 
@@ -55,11 +52,6 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
       static_cast<UnwindAssemblyInstEmulation *>(
           UnwindAssemblyInstEmulation::CreateInstance(arch)));
   ASSERT_NE(nullptr, engine);
-
-  const UnwindPlan::Row *row;
-  AddressRange sample_range;
-  UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // RISC-V function with compressed and uncompressed instructions
   //   0x0000: 1141          addi    sp, sp, -0x10
@@ -113,8 +105,11 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   // (after saving s0/fp) row[4]:    8:  CFA=s0+0   => fp=[CFA-16] ra=[CFA-8]
   // (after setting frame pointer: s0=sp+16)
 
-  // Debug: Print all rows in the unwind plan
 
+  const UnwindPlan::Row *row;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
