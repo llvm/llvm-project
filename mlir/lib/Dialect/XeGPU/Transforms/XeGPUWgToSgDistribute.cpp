@@ -1000,14 +1000,12 @@ struct WgToSgVectorShapeCastOp
     if (!onlyUnitDims(srcType.getShape(), sgShape))
       return failure();
 
-    // Check to verify that if expanding dims, the input operand's layout
-    // is sliceAttr and if reducing dims, result's layout is
-    // sliceAttr.
     // For rank reducing or increasing shape_cast ops, the lower rank layout
     // must be a slice of higher rank layout.
-    int64_t sourceRank = srcType.getRank();;
+    int64_t sourceRank = srcType.getRank();
     int64_t resultRank = sgShape.size();
-    xegpu::DistributeLayoutAttr sourceLayout = xegpu::getDistributeLayoutAttr(op.getSource());
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(op.getSource());
     if (sourceRank < resultRank && !sourceLayout.isSliceOf(layout))
       return failure();
     if (sourceRank > resultRank && !layout.isSliceOf(sourceLayout))
