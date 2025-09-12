@@ -1,3 +1,4 @@
+# RUN: "%cmake_exe" --build . --target install
 # RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%mlir_cmake_dir \
