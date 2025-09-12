@@ -1,0 +1,11 @@
+# RUN: split-file %s %t
+# RUN: diff %t/split-both.expected %t/split-both.out
+
+# ignore the fact that it's called ".expected"
+# when comparing two files originating in split-file
+
+#--- split-both.expected
+FOO
+#--- split-both.out
+BAR
+

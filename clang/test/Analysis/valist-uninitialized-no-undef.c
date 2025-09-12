@@ -37,7 +37,7 @@ void call_vsprintf_bad(char *buffer, ...) {
   va_list va;
   va_start(va, buffer); // expected-note{{Initialized va_list}}
   va_end(va); // expected-note{{Ended va_list}}
-  vsprintf(buffer, "%s %d %d %lf %03d", va); // expected-warning{{Function 'vsprintf' is called with an uninitialized va_list argument}}
-  // expected-note@-1{{Function 'vsprintf' is called with an uninitialized va_list argument}}
+  vsprintf(buffer, "%s %d %d %lf %03d", va); // expected-warning{{Function 'vsprintf' is called with an already released va_list argument}}
+  // expected-note@-1{{Function 'vsprintf' is called with an already released va_list argument}}
 }
 

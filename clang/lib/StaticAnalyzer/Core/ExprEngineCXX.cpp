@@ -71,21 +71,30 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   Bldr.takeNodes(Pred);
 
   assert(ThisRD);
-  SVal V = Call.getArgSVal(0);
-  const Expr *VExpr = Call.getArgExpr(0);
 
-  // If the value being copied is not unknown, load from its location to get
-  // an aggregate rvalue.
-  if (std::optional<Loc> L = V.getAs<Loc>())
-    V = Pred->getState()->getSVal(*L);
-  else
-    assert(V.isUnknownOrUndef());
+  if (!ThisRD->isEmpty()) {
+    SVal V = Call.getArgSVal(0);
+    const Expr *VExpr = Call.getArgExpr(0);
 
-  ExplodedNodeSet Tmp;
-  evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
-               /*isLoad=*/true);
-  for (ExplodedNode *N : Tmp)
-    evalBind(Dst, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
+    // If the value being copied is not unknown, load from its location to get
+    // an aggregate rvalue.
+    if (std::optional<Loc> L = V.getAs<Loc>())
+      V = Pred->getState()->getSVal(*L);
+    else
+      assert(V.isUnknownOrUndef());
+
+    ExplodedNodeSet Tmp;
+    evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
+                 /*isLoad=*/true);
+    for (ExplodedNode *N : Tmp)
+      evalBind(Dst, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
+  } else {
+    // We can't copy empty classes because of empty base class optimization.
+    // In that case, copying the empty base class subobject would overwrite the
+    // object that it overlaps with - so let's not do that.
+    // See issue-157467.cpp for an example.
+    Dst.Add(Pred);
+  }
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {

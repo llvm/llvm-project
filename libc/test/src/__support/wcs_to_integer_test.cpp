@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
 #include "src/__support/wcs_to_integer.h"
 #include <stddef.h>
 

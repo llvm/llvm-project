@@ -92,7 +92,7 @@ function validateDAPEnv(debugConfigEnv: any): boolean {
     Array.isArray(debugConfigEnv) &&
     debugConfigEnv.findIndex(
       (entry) =>
-        typeof entry !== "string" || !/^((\\w+=.*)|^\\w+)$/.test(entry),
+        typeof entry !== "string" || !/^\w+(=.*)?$/.test(entry),
     ) !== -1
   ) {
     return false;

@@ -335,20 +335,30 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       for (const auto &Param : P.RootSignature->samplers()) {
-        dxbc::RTS0::v1::StaticSampler NewSampler;
-        NewSampler.Filter = Param.Filter;
-        NewSampler.AddressU = Param.AddressU;
-        NewSampler.AddressV = Param.AddressV;
-        NewSampler.AddressW = Param.AddressW;
+        assert(dxbc::isValidSamplerFilter(Param.Filter) &&
+               dxbc::isValidAddress(Param.AddressU) &&
+               dxbc::isValidAddress(Param.AddressV) &&
+               dxbc::isValidAddress(Param.AddressW) &&
+               dxbc::isValidComparisonFunc(Param.ComparisonFunc) &&
+               dxbc::isValidBorderColor(Param.BorderColor) &&
+               dxbc::isValidShaderVisibility(Param.ShaderVisibility) &&
+               "Invalid enum value in static sampler");
+
+        mcdxbc::StaticSampler NewSampler;
+        NewSampler.Filter = dxbc::SamplerFilter(Param.Filter);
+        NewSampler.AddressU = dxbc::TextureAddressMode(Param.AddressU);
+        NewSampler.AddressV = dxbc::TextureAddressMode(Param.AddressV);
+        NewSampler.AddressW = dxbc::TextureAddressMode(Param.AddressW);
         NewSampler.MipLODBias = Param.MipLODBias;
         NewSampler.MaxAnisotropy = Param.MaxAnisotropy;
-        NewSampler.ComparisonFunc = Param.ComparisonFunc;
-        NewSampler.BorderColor = Param.BorderColor;
+        NewSampler.ComparisonFunc = dxbc::ComparisonFunc(Param.ComparisonFunc);
+        NewSampler.BorderColor = dxbc::StaticBorderColor(Param.BorderColor);
         NewSampler.MinLOD = Param.MinLOD;
         NewSampler.MaxLOD = Param.MaxLOD;
         NewSampler.ShaderRegister = Param.ShaderRegister;
         NewSampler.RegisterSpace = Param.RegisterSpace;
-        NewSampler.ShaderVisibility = Param.ShaderVisibility;
+        NewSampler.ShaderVisibility =
+            dxbc::ShaderVisibility(Param.ShaderVisibility);
 
         RS.StaticSamplers.push_back(NewSampler);
       }

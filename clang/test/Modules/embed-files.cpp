@@ -13,7 +13,7 @@
 // FIXME: This test is flaky on Windows because attempting to delete a file
 // after writing it just doesn't seem to work well, at least not in the lit
 // shell.
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 // RUN: rm %t/x.h
 // RUN: %clang_cc1 -fmodules -I%t -fmodule-map-file=%t/modulemap -fmodule-file=%t/a.pcm -fmodule-file=%t/b.pcm %s -verify
 #include "a.h"

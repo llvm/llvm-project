@@ -10,6 +10,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -3300,4 +3301,12 @@ TEST(TripleTest, isCompatibleWith) {
     EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
   }
 }
+
+TEST(DataLayoutTest, UEFI) {
+  Triple TT = Triple("x86_64-unknown-uefi");
+
+  // Test UEFI X86_64 Mangling Component.
+  EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
 } // end anonymous namespace

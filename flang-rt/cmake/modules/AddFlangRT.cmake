@@ -283,8 +283,10 @@ function (add_flangrt_library name)
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
     target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
-      target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
-      target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_GLIBCXX_ASSERTIONS>")
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_LIBCPP_ENABLE_ASSERTIONS>")
     endif ()
 
     # Non-GTest unittests depend on LLVMSupport

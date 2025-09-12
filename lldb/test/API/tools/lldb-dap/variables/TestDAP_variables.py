@@ -298,7 +298,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
         variable_value = 100
-        response = self.dap_server.request_setVariable(varRef, "[0]", variable_value)
+        response = self.set_variable(varRef, "[0]", variable_value)
         # Verify dap sent the correct response
         verify_response = {
             "type": "int",
@@ -315,7 +315,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.dap_server.request_setVariable(varRef, "x", 111)
+        self.set_variable(varRef, "x", 111)
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
@@ -341,27 +341,15 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.dap_server.request_setVariable(1, "x2", 9)["success"])
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
-        )
+        self.assertFalse(self.set_local("x2", 9)["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
-        )
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
-        )
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", 23)["success"]
-        )
+        self.assertTrue(self.set_local("x @ main.cpp:19", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:21", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:23", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", "invalid")[
-                "success"
-            ]
-        )
+        self.assertFalse(self.set_local("x @ main.cpp:23", "invalid")["success"])
 
         verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
         verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
@@ -370,7 +358,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.dap_server.request_setVariable(1, "x", 22)["success"])
+        self.assertTrue(self.set_local("x", 22)["success"])
         verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
@@ -708,9 +696,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.verify_variables(verify_locals, local_variables, varref_dict)
                 break
 
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "(Return Value)", 20)["success"]
-        )
+        self.assertFalse(self.set_local("(Return Value)", 20)["success"])
 
     @skipIfWindows
     def test_indexedVariables(self):

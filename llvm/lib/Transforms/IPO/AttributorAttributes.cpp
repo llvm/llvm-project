@@ -8561,7 +8561,8 @@ protected:
   /// Mapping from *single* memory location kinds, e.g., LOCAL_MEM with the
   /// value of NO_LOCAL_MEM, to the accesses encountered for this memory kind.
   using AccessSet = SmallSet<AccessInfo, 2, AccessInfo>;
-  std::array<AccessSet *, llvm::CTLog2<VALID_STATE>()> AccessKind2Accesses;
+  std::array<AccessSet *, llvm::ConstantLog2<VALID_STATE>()>
+      AccessKind2Accesses;
 
   /// Categorize the pointer arguments of CB that might access memory in
   /// AccessedLoc and update the state and access map accordingly.

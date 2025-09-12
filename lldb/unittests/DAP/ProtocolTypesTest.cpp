@@ -1073,3 +1073,18 @@ TEST(ProtocolTypesTest, CompletionsResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }
+
+TEST(ProtocolTypesTest, InvalidatedEventBody) {
+  InvalidatedEventBody body;
+  body.areas = {InvalidatedEventBody::eAreaStacks,
+                InvalidatedEventBody::eAreaThreads};
+  body.frameId = 1;
+  StringRef json = R"({
+  "areas": [
+    "stacks",
+    "threads"
+  ],
+  "frameId": 1
+})";
+  EXPECT_EQ(json, pp(body));
+}

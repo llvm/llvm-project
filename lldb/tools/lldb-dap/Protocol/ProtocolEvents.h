@@ -21,7 +21,11 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_EVENTS_H
 
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
+#include <cstdint>
+#include <optional>
+#include <vector>
 
 namespace lldb_dap::protocol {
 
@@ -55,6 +59,34 @@ struct ModuleEventBody {
 };
 llvm::json::Value toJSON(const ModuleEventBody::Reason &);
 llvm::json::Value toJSON(const ModuleEventBody &);
+
+/// This event signals that some state in the debug adapter has changed and
+/// requires that the client needs to re-render the data snapshot previously
+/// requested.
+///
+/// Debug adapters do not have to emit this event for runtime changes like
+/// stopped or thread events because in that case the client refetches the new
+/// state anyway. But the event can be used for example to refresh the UI after
+/// rendering formatting has changed in the debug adapter.
+///
+/// This event should only be sent if the corresponding capability
+/// supportsInvalidatedEvent is true.
+struct InvalidatedEventBody {
+  enum Area : unsigned { eAreaAll, eAreaStacks, eAreaThreads, eAreaVariables };
+
+  /// Set of logical areas that got invalidated.
+  std::vector<Area> areas;
+
+  /// If specified, the client only needs to refetch data related to this
+  /// thread.
+  std::optional<lldb::tid_t> threadId;
+
+  /// If specified, the client only needs to refetch data related to this stack
+  /// frame (and the `threadId` is ignored).
+  std::optional<uint64_t> frameId;
+};
+llvm::json::Value toJSON(const InvalidatedEventBody::Area &);
+llvm::json::Value toJSON(const InvalidatedEventBody &);
 
 } // end namespace lldb_dap::protocol
 

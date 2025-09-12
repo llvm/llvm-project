@@ -433,7 +433,7 @@ private:
                        std::is_same_v<T, Value>,
                    ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
-    hasContextAwareTypeConversions = true;
+    contextAwareTypeConversionsIndex = conversions.size();
     return [callback = std::forward<FnT>(callback)](
                PointerUnion<Type, Value> typeOrValue,
                SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
@@ -555,6 +555,10 @@ private:
     cachedMultiConversions.clear();
   }
 
+  /// Internal implementation of the type conversion.
+  LogicalResult convertTypeImpl(PointerUnion<Type, Value> t,
+                                SmallVectorImpl<Type> &results) const;
+
   /// The set of registered conversion functions.
   SmallVector<ConversionCallbackFn, 4> conversions;
 
@@ -575,10 +579,13 @@ private:
   mutable llvm::sys::SmartRWMutex<true> cacheMutex;
   /// Whether the type converter has context-aware type conversions. I.e.,
   /// conversion rules that depend on the SSA value instead of just the type.
-  /// Type conversion caching is deactivated when there are context-aware
-  /// conversions because the type converter may return different results for
-  /// the same input type.
-  bool hasContextAwareTypeConversions = false;
+  /// We store here the index in the `conversions` vector of the last added
+  /// context-aware conversion, if any. This is useful because we can't cache
+  /// the result of type conversion happening after context-aware conversions,
+  /// because the type converter may return different results for the same input
+  /// type. This is why it is recommened to add context-aware conversions first,
+  /// any context-free conversions after will benefit from caching.
+  int contextAwareTypeConversionsIndex = -1;
 };
 
 //===----------------------------------------------------------------------===//

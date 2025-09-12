@@ -72,6 +72,8 @@ TEST(Bytecode, MultiModuleWithResource) {
   ASSERT_TRUE(module);
 
   // Write the module to bytecode.
+  // Ensure that reserveExtraSpace is called with the size needed to write the
+  // bytecode buffer.
   MockOstream ostream;
   EXPECT_CALL(ostream, reserveExtraSpace).WillOnce([&](uint64_t space) {
     ostream.buffer = std::make_unique<std::byte[]>(space);
@@ -128,31 +130,28 @@ TEST(Bytecode, AlignmentFailure) {
   ASSERT_TRUE(module);
 
   // Write the module to bytecode.
-  MockOstream ostream;
-  EXPECT_CALL(ostream, reserveExtraSpace).WillOnce([&](uint64_t space) {
-    ostream.buffer = std::make_unique<std::byte[]>(space);
-    ostream.size = space;
-  });
+  std::string serializedBytecode;
+  llvm::raw_string_ostream ostream(serializedBytecode);
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
 
   // Create copy of buffer which is not aligned to requested resource alignment.
-  std::string buffer((char *)ostream.buffer.get(),
-                     (char *)ostream.buffer.get() + ostream.size);
+  std::string buffer(serializedBytecode);
   size_t bufferSize = buffer.size();
 
-  // Increment into the buffer until we get to a power of 2 alignment that is
-  // not 32 bit aligned.
+  // Increment into the buffer until we get to an address that is 2 byte aligned
+  // but not 32 byte aligned.
   size_t pad = 0;
   while (true) {
-    if (llvm::isAddrAligned(Align(2), &buffer[pad]) &&
-        !llvm::isAddrAligned(Align(32), &buffer[pad]))
+    if (llvm::isAddrAligned(Align(2), buffer.data() + pad) &&
+        !llvm::isAddrAligned(Align(32), buffer.data() + pad))
       break;
 
     pad++;
-    buffer.reserve(bufferSize + pad);
+    // Pad the beginning of the buffer to push the start point to an unaligned
+    // value.
+    buffer.insert(0, 1, ' ');
   }
 
-  buffer.insert(0, pad, ' ');
   StringRef alignedBuffer(buffer.data() + pad, bufferSize);
 
   // Attach a diagnostic handler to get the error message.

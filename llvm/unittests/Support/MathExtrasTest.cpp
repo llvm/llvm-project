@@ -152,23 +152,23 @@ TEST(MathExtras, PowerOf2Ceil) {
   EXPECT_EQ(8U, PowerOf2Ceil(7U));
 }
 
-TEST(MathExtras, CTLog2) {
-  EXPECT_EQ(CTLog2<1ULL << 0>(), 0U);
-  EXPECT_EQ(CTLog2<1ULL << 1>(), 1U);
-  EXPECT_EQ(CTLog2<1ULL << 2>(), 2U);
-  EXPECT_EQ(CTLog2<1ULL << 3>(), 3U);
-  EXPECT_EQ(CTLog2<1ULL << 4>(), 4U);
-  EXPECT_EQ(CTLog2<1ULL << 5>(), 5U);
-  EXPECT_EQ(CTLog2<1ULL << 6>(), 6U);
-  EXPECT_EQ(CTLog2<1ULL << 7>(), 7U);
-  EXPECT_EQ(CTLog2<1ULL << 8>(), 8U);
-  EXPECT_EQ(CTLog2<1ULL << 9>(), 9U);
-  EXPECT_EQ(CTLog2<1ULL << 10>(), 10U);
-  EXPECT_EQ(CTLog2<1ULL << 11>(), 11U);
-  EXPECT_EQ(CTLog2<1ULL << 12>(), 12U);
-  EXPECT_EQ(CTLog2<1ULL << 13>(), 13U);
-  EXPECT_EQ(CTLog2<1ULL << 14>(), 14U);
-  EXPECT_EQ(CTLog2<1ULL << 15>(), 15U);
+TEST(MathExtras, ConstantLog2) {
+  EXPECT_EQ(ConstantLog2<1ULL << 0>(), 0U);
+  EXPECT_EQ(ConstantLog2<1ULL << 1>(), 1U);
+  EXPECT_EQ(ConstantLog2<1ULL << 2>(), 2U);
+  EXPECT_EQ(ConstantLog2<1ULL << 3>(), 3U);
+  EXPECT_EQ(ConstantLog2<1ULL << 4>(), 4U);
+  EXPECT_EQ(ConstantLog2<1ULL << 5>(), 5U);
+  EXPECT_EQ(ConstantLog2<1ULL << 6>(), 6U);
+  EXPECT_EQ(ConstantLog2<1ULL << 7>(), 7U);
+  EXPECT_EQ(ConstantLog2<1ULL << 8>(), 8U);
+  EXPECT_EQ(ConstantLog2<1ULL << 9>(), 9U);
+  EXPECT_EQ(ConstantLog2<1ULL << 10>(), 10U);
+  EXPECT_EQ(ConstantLog2<1ULL << 11>(), 11U);
+  EXPECT_EQ(ConstantLog2<1ULL << 12>(), 12U);
+  EXPECT_EQ(ConstantLog2<1ULL << 13>(), 13U);
+  EXPECT_EQ(ConstantLog2<1ULL << 14>(), 14U);
+  EXPECT_EQ(ConstantLog2<1ULL << 15>(), 15U);
 }
 
 TEST(MathExtras, MinAlign) {

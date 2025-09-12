@@ -449,7 +449,7 @@ void ICF::run() {
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      // Skip keepUnique inputs when using safe_thunks (already handeled above)
+      // Skip keepUnique inputs when using safe_thunks (already handled above)
       if (useSafeThunks && icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||

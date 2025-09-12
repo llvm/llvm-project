@@ -619,7 +619,7 @@ MCAsmBackend *llvm::createMipsAsmBackend(const Target &T,
     return new WindowsMipsAsmBackend(T, MRI, STI);
 
   MipsABIInfo ABI = MipsABIInfo::computeTargetABI(STI.getTargetTriple(),
-                                                  STI.getCPU(), Options);
+                                                  Options.getABIName());
   return new MipsAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
                             ABI.IsN32());
 }

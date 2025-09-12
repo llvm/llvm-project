@@ -1038,7 +1038,8 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   OMPBuilder.initialize();
-  OMPBuilder.loadOffloadInfoMetadata(CGM.getLangOpts().OpenMPIsTargetDevice
+  OMPBuilder.loadOffloadInfoMetadata(*CGM.getFileSystem(),
+                                     CGM.getLangOpts().OpenMPIsTargetDevice
                                          ? CGM.getLangOpts().OMPHostIRFile
                                          : StringRef{});
   OMPBuilder.setConfig(Config);

@@ -1327,7 +1327,7 @@ def VGPROp_16 : VGPROp<VGPR_16> {
 }
 def VGPROp_32 : VGPROp<VGPR_32>;
 
-foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "1024"] in {
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "320", "352", "384", "512", "1024"] in {
   def VGPROp_#size : VGPROp<!cast<RegisterClass>("VReg_"#size)>;
 }
 

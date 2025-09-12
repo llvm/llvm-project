@@ -26,10 +26,7 @@ class TestCortexMExceptionUnwind(TestBase):
     # the frame pointer, and we can walk the stack.
     # ABISysV_arm::CreateDefaultUnwindPlan will only get one frame and
     # not be able to continue.
-    #
-    # This may only be occuring on a 32-bit Ubuntu bot; need to test
-    # 64-bit Ubuntu and confirm.
-    @skipUnlessDarwin
+    @skipIfRemote
     def test_no_fpu(self):
         """Test that we can backtrace correctly through an ARM Cortex-M Exception return stack"""
 

@@ -1613,6 +1613,16 @@ bool AArch64InstrInfo::optimizePTestInstr(
     const MachineRegisterInfo *MRI) const {
   auto *Mask = MRI->getUniqueVRegDef(MaskReg);
   auto *Pred = MRI->getUniqueVRegDef(PredReg);
+
+  if (Pred->isCopy() && PTest->getOpcode() == AArch64::PTEST_PP_FIRST) {
+    // Instructions which return a multi-vector (e.g. WHILECC_x2) require copies
+    // before the branch to extract each subregister.
+    auto Op = Pred->getOperand(1);
+    if (Op.isReg() && Op.getReg().isVirtual() &&
+        Op.getSubReg() == AArch64::psub0)
+      Pred = MRI->getUniqueVRegDef(Op.getReg());
+  }
+
   unsigned PredOpcode = Pred->getOpcode();
   auto NewOp = canRemovePTestInstr(PTest, Mask, Pred, MRI);
   if (!NewOp)
@@ -11266,7 +11276,6 @@ AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
 /// verifyInstruction - Perform target specific instruction verification.
 bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
                                          StringRef &ErrInfo) const {
-
   // Verify that immediate offsets on load/store instructions are within range.
   // Stack objects with an FI operand are excluded as they can be fixed up
   // during PEI.
@@ -11280,6 +11289,30 @@ bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Unexpected immediate on load/store instruction";
         return false;
       }
+    }
+  }
+
+  const MCInstrDesc &MCID = MI.getDesc();
+  for (unsigned Op = 0; Op < MCID.getNumOperands(); Op++) {
+    const MachineOperand &MO = MI.getOperand(Op);
+    switch (MCID.operands()[Op].OperandType) {
+    case AArch64::OPERAND_IMPLICIT_IMM_0:
+      if (!MO.isImm() || MO.getImm() != 0) {
+        ErrInfo = "OPERAND_IMPLICIT_IMM_0 should be 0";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_SHIFT_MSL:
+      if (!MO.isImm() ||
+          AArch64_AM::getShiftType(MO.getImm()) != AArch64_AM::MSL ||
+          (AArch64_AM::getShiftValue(MO.getImm()) != 8 &&
+           AArch64_AM::getShiftValue(MO.getImm()) != 16)) {
+        ErrInfo = "OPERAND_SHIFT_MSL should be msl shift of 8 or 16";
+        return false;
+      }
+      break;
+    default:
+      break;
     }
   }
   return true;

@@ -217,7 +217,7 @@ public:
   /// `closedUB` is set to "true", upper bounds are also closed.
   static FailureOr<int64_t>
   computeConstantBound(presburger::BoundType type, const Variable &var,
-                       StopConditionFn stopCondition = nullptr,
+                       const StopConditionFn &stopCondition = nullptr,
                        bool closedUB = false);
 
   /// Compute a constant delta between the given two values. Return "failure"
@@ -282,18 +282,18 @@ public:
   ///
   /// Slice are non-overlapping if the above constraint is not satisfied for
   /// at least one dimension.
-  static FailureOr<bool> areOverlappingSlices(MLIRContext *ctx,
-                                              HyperrectangularSlice slice1,
-                                              HyperrectangularSlice slice2);
+  static FailureOr<bool>
+  areOverlappingSlices(MLIRContext *ctx, const HyperrectangularSlice &slice1,
+                       const HyperrectangularSlice &slice2);
 
   /// Return "true" if the given slices are guaranteed to be equivalent.
   /// Return "false" if the given slices are guaranteed to be non-equivalent.
   /// Return "failure" if unknown.
   ///
   /// Slices are equivalent if their offsets, sizes and strices are equal.
-  static FailureOr<bool> areEquivalentSlices(MLIRContext *ctx,
-                                             HyperrectangularSlice slice1,
-                                             HyperrectangularSlice slice2);
+  static FailureOr<bool>
+  areEquivalentSlices(MLIRContext *ctx, const HyperrectangularSlice &slice1,
+                      const HyperrectangularSlice &slice2);
 
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.
@@ -326,7 +326,8 @@ protected:
   /// An index-typed value or the dimension of a shaped-type value.
   using ValueDim = std::pair<Value, int64_t>;
 
-  ValueBoundsConstraintSet(MLIRContext *ctx, StopConditionFn stopCondition,
+  ValueBoundsConstraintSet(MLIRContext *ctx,
+                           const StopConditionFn &stopCondition,
                            bool addConservativeSemiAffineBounds = false);
 
   /// Return "true" if, based on the current state of the constraint system,
@@ -401,7 +402,8 @@ protected:
   /// Insert the given affine map and its bound operands as a new column in the
   /// constraint system. Return the position of the new column. Any operands
   /// that were not analyzed yet are put on the worklist.
-  int64_t insert(AffineMap map, ValueDimList operands, bool isSymbol = true);
+  int64_t insert(AffineMap map, const ValueDimList &operands,
+                 bool isSymbol = true);
   int64_t insert(const Variable &var, bool isSymbol = true);
 
   /// Project out the given column in the constraint set.
