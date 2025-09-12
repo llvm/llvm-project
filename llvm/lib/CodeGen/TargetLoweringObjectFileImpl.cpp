@@ -76,6 +76,8 @@
 using namespace llvm;
 using namespace dwarf;
 
+extern cl::opt<bool> PreserveHotDataSectionPrefix;
+
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
@@ -655,26 +657,43 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
   }
 
   bool HasPrefix = false;
+  SmallString<32> SectionPrefix;
   if (const auto *F = dyn_cast<Function>(GO)) {
     // Jump table hotness takes precedence over its enclosing function's hotness
     // if it's known. The function's section prefix is used if jump table entry
     // hotness is unknown.
     if (JTE && JTE->Hotness != MachineFunctionDataHotness::Unknown) {
-      if (JTE->Hotness == MachineFunctionDataHotness::Hot) {
-        raw_svector_ostream(Name) << ".hot";
-      } else {
-        assert(JTE->Hotness == MachineFunctionDataHotness::Cold &&
-               "Hotness must be cold");
-        raw_svector_ostream(Name) << ".unlikely";
+      switch (JTE->Hotness) {
+      case MachineFunctionDataHotness::Cold:
+        raw_svector_ostream(SectionPrefix) << ".unlikely";
+        break;
+      case MachineFunctionDataHotness::Hot: {
+        if (PreserveHotDataSectionPrefix)
+          raw_svector_ostream(SectionPrefix) << ".hot";
+        break;
       }
-      HasPrefix = true;
-    } else if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
-      HasPrefix = true;
-    }
+      default:
+        llvm_unreachable("Unknown jump table hotness");
+        break;
+      }
+    } else if (std::optional<StringRef> Prefix = F->getSectionPrefix())
+      raw_svector_ostream(SectionPrefix) << "." << *Prefix;
   } else if (const auto *GV = dyn_cast<GlobalVariable>(GO)) {
     if (std::optional<StringRef> Prefix = GV->getSectionPrefix()) {
-      raw_svector_ostream(Name) << '.' << *Prefix;
+      raw_svector_ostream(SectionPrefix) << "." << *Prefix;
+    }
+  }
+
+  if (!SectionPrefix.empty()) {
+    bool AddSectionPrefix = true;
+    if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
+        Kind.isBSS()) {
+      AddSectionPrefix =
+          !SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix;
+    }
+
+    if (AddSectionPrefix) {
+      Name += SectionPrefix;
       HasPrefix = true;
     }
   }
