@@ -186,6 +186,9 @@ cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBCXX_INSTALL_SHARED_LIBRARY
   "Install the shared libc++ library." ON
   "LIBCXX_ENABLE_SHARED;LIBCXX_INSTALL_LIBRARY" OFF)
+set(LIBCXX_BUILD_CLANG_TIDY_PLUGIN_WITH_STDLIB "" CACHE STRING
+  "Builds the clang-tidy plugin with the specified standard library implementation. Must either be blank (use compiler default), 'libc++', or 'libstdc++'.
+   This should only be set when the clang-tidy binary is built with a different standard library implementation to the compiler's default choice.")
 
 option(LIBCXX_ABI_UNSTABLE "Use the unstable ABI of libc++. This is equivalent to specifying LIBCXX_ABI_VERSION=n, where n is the not-yet-stable version." OFF)
 if (LIBCXX_ABI_UNSTABLE)
