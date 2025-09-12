@@ -393,6 +393,10 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> ConsiderRegPressure(
+    "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
+    cl::desc("Discard VFs if their register pressure is too high."));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -3693,6 +3697,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 bool LoopVectorizationCostModel::shouldConsiderRegPressureForVF(
     ElementCount VF) {
+  if (ConsiderRegPressure.getNumOccurrences())
+    return ConsiderRegPressure;
+
+  // TODO: We should eventually consider register pressure for all targets. The
+  // TTI hook is temporary whilst target-specific issues are being fixed.
+  if (TTI.shouldConsiderVectorizationRegPressure())
+    return true;
+
   if (!useMaxBandwidth(VF.isScalable()
                            ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector))
