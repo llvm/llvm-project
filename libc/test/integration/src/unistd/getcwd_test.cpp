@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/libc_errno.h"
 #include "src/stdlib/getenv.h"
 #include "src/unistd/getcwd.h"
 
 #include "test/IntegrationTest/test.h"
 
+#include <errno.h>
 #include <stdlib.h> // For malloc and free
 
 using LIBC_NAMESPACE::cpp::string_view;
@@ -31,13 +31,12 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   cwd = LIBC_NAMESPACE::getcwd(buffer, 0);
   ASSERT_TRUE(cwd == nullptr);
   ASSERT_ERRNO_EQ(EINVAL);
-  libc_errno = 0;
 
   // Insufficient size
+  errno = 0;
   cwd = LIBC_NAMESPACE::getcwd(buffer, 2);
   ASSERT_TRUE(cwd == nullptr);
-  int err = libc_errno;
-  ASSERT_EQ(err, ERANGE);
+  ASSERT_ERRNO_EQ(ERANGE);
 
   return 0;
 }
