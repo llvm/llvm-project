@@ -904,7 +904,7 @@ let SubtargetPredicate = isGFX1250Plus in {
 let WaveSizePredicate = isWave32, mayStore = 0 in {
 let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VGPROp_64>;
-defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96_Align1>;
 } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VGPROp_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
@@ -934,7 +934,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", AVLdSt_64>;
   defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", AVLdSt_64>;
   defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", AVLdSt_64>;
-  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96_Align1>;
 }
 
 //===----------------------------------------------------------------------===//
