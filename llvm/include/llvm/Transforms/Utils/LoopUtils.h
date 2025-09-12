@@ -185,8 +185,7 @@ LLVM_ABI bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *,
                           TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
                           ScalarEvolution *, ICFLoopSafetyInfo *,
                           SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                          bool, bool AllowSpeculation,
-                          bool HasCoroSuspendInst = false);
+                          bool, bool AllowSpeculation);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
