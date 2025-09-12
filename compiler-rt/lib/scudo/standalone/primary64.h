@@ -1561,6 +1561,13 @@ bool SizeClassAllocator64<Config>::hasChanceToReleasePages(
       if (DiffSinceLastReleaseNs < 2 * IntervalNs)
         return false;
     } else if (DiffSinceLastReleaseNs < IntervalNs) {
+      // `TryReleaseThreshold` is capped by (1UL << GroupSizeLog) / 2). If
+      // RegionPushedBytesDelta grows twice of the threshold, it implies some
+      // huge deallocations happening so we'd better still try to release some
+      // pages. Note that this is likely happened with large blocks.
+      if (RegionPushedBytesDelta > (1ULL << GroupSizeLog))
+        return true;
+
       // In this case, we are over the threshold but we just did some page
       // release in the same release interval. This is a hint that we may want
       // a higher threshold so that we can release more memory at once.
