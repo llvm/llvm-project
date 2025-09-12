@@ -4304,9 +4304,11 @@ Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
   // size in bytes.
   if (Ops.size() == 5) {
     Function *StreamingVectorLength =
-        CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
+        CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsd);
     llvm::Value *StreamingVectorLengthCall =
-        Builder.CreateCall(StreamingVectorLength);
+        Builder.CreateMul(Builder.CreateCall(StreamingVectorLength),
+                          llvm::ConstantInt::get(Int64Ty, 8), "svl",
+                          /* HasNUW */ true, /* HasNSW */ true);
     llvm::Value *Mulvl =
         Builder.CreateMul(StreamingVectorLengthCall, Ops[4], "mulvl");
     // The type of the ptr parameter is void *, so use Int8Ty here.
@@ -4917,6 +4919,26 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
                        Ops.pop_back_val());
   // Handle builtins which require their multi-vector operands to be swapped
   swapCommutativeSMEOperands(BuiltinID, Ops);
+
+  auto isCntsBuiltin = [&]() {
+    switch (BuiltinID) {
+    default:
+      return 0;
+    case SME::BI__builtin_sme_svcntsb:
+      return 8;
+    case SME::BI__builtin_sme_svcntsh:
+      return 4;
+    case SME::BI__builtin_sme_svcntsw:
+      return 2;
+    }
+  };
+
+  if (auto Mul = isCntsBuiltin()) {
+    llvm::Value *Cntd =
+        Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsd));
+    return Builder.CreateMul(Cntd, llvm::ConstantInt::get(Int64Ty, Mul),
+                             "mulsvl", /* HasNUW */ true, /* HasNSW */ true);
+  }
 
   // Should not happen!
   if (Builtin->LLVMIntrinsic == 0)
