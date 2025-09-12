@@ -2343,8 +2343,11 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
 // originally pointed-to type, e.g. 'const char *' and 'char * const *'
 // generalize to 'const void *' while 'char *' and 'const char **' generalize to
 // 'void *'.
-static QualType GeneralizeType(ASTContext &Ctx, QualType Ty) {
-  if (!Ty->isPointerType())
+static QualType GeneralizeType(ASTContext &Ctx, QualType Ty,
+                               bool GeneralizePointers) {
+  // TODO: Add other generalizations.
+
+  if (!GeneralizePointers || !Ty->isPointerType())
     return Ty;
 
   return Ctx.getPointerType(
@@ -2353,26 +2356,29 @@ static QualType GeneralizeType(ASTContext &Ctx, QualType Ty) {
 }
 
 // Apply type generalization to a FunctionType's return and argument types
-static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty) {
+static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty,
+                                       bool GeneralizePointers) {
   if (auto *FnType = Ty->getAs<FunctionProtoType>()) {
     SmallVector<QualType, 8> GeneralizedParams;
     for (auto &Param : FnType->param_types())
-      GeneralizedParams.push_back(GeneralizeType(Ctx, Param));
+      GeneralizedParams.push_back(
+          GeneralizeType(Ctx, Param, GeneralizePointers));
 
-    return Ctx.getFunctionType(GeneralizeType(Ctx, FnType->getReturnType()),
-                               GeneralizedParams, FnType->getExtProtoInfo());
+    return Ctx.getFunctionType(
+        GeneralizeType(Ctx, FnType->getReturnType(), GeneralizePointers),
+        GeneralizedParams, FnType->getExtProtoInfo());
   }
 
   if (auto *FnType = Ty->getAs<FunctionNoProtoType>())
     return Ctx.getFunctionNoProtoType(
-        GeneralizeType(Ctx, FnType->getReturnType()));
+        GeneralizeType(Ctx, FnType->getReturnType(), GeneralizePointers));
 
   llvm_unreachable("Encountered unknown FunctionType");
 }
 
 llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T, StringRef Salt) {
-  if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
-    T = GeneralizeFunctionType(getContext(), T);
+  T = GeneralizeFunctionType(
+      getContext(), T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
   if (auto *FnType = T->getAs<FunctionProtoType>())
     T = getContext().getFunctionType(
         FnType->getReturnType(), FnType->getParamTypes(),
@@ -3041,9 +3047,13 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic())
     return;
 
-  llvm::Metadata *MD = CreateMetadataIdentifierForType(FD->getType());
+  QualType FnType = GeneralizeFunctionType(getContext(), FD->getType(),
+                                           /*GeneralizePointers=*/false);
+  llvm::Metadata *MD = CreateMetadataIdentifierForType(FnType);
   F->addTypeMetadata(0, MD);
-  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+  FnType = GeneralizeFunctionType(getContext(), FD->getType(),
+                                  /*GeneralizePointers=*/true);
+  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FnType));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
@@ -7934,6 +7944,15 @@ CodeGenModule::CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
   return InternalId;
 }
 
+llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForFnType(QualType T) {
+  assert(isa<FunctionType>(T));
+  T = GeneralizeFunctionType(
+      getContext(), T, getCodeGenOpts().SanitizeCfiICallGeneralizePointers);
+  if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
+    return CreateMetadataIdentifierGeneralized(T);
+  return CreateMetadataIdentifierForType(T);
+}
+
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
   return CreateMetadataIdentifierImpl(T, MetadataIdMap, "");
 }
@@ -7944,8 +7963,8 @@ CodeGenModule::CreateMetadataIdentifierForVirtualMemPtrType(QualType T) {
 }
 
 llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
-  return CreateMetadataIdentifierImpl(GeneralizeFunctionType(getContext(), T),
-                                      GeneralizedMetadataIdMap, ".generalized");
+  return CreateMetadataIdentifierImpl(T, GeneralizedMetadataIdMap,
+                                      ".generalized");
 }
 
 /// Returns whether this module needs the "all-vtables" type identifier.
