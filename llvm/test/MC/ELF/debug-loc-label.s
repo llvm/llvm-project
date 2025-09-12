@@ -17,47 +17,43 @@
 # CHECK-LINE-TABLE-NEXT: 0x0000002a: 00 DW_LNE_set_address (0x0000000000000000)
 # CHECK-LINE-TABLE-NEXT: 0x00000035: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000000      1      1      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x00000036: 02 DW_LNS_advance_pc (addr += 8, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x00000038: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000008      1      1      1   0             0       0  is_stmt end_sequence
-# CHECK-LINE-TABLE-NEXT: 0x0000003b: 05 DW_LNS_set_column (2)
-# CHECK-LINE-TABLE-NEXT: 0x0000003d: 00 DW_LNE_set_address (0x0000000000000008)
-# CHECK-LINE-TABLE-NEXT: 0x00000048: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000036: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000000      1      1      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x00000039: 05 DW_LNS_set_column (2)
+# CHECK-LINE-TABLE-NEXT: 0x0000003b: 00 DW_LNE_set_address (0x0000000000000008)
+# CHECK-LINE-TABLE-NEXT: 0x00000046: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000008      1      2      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x00000049: 02 DW_LNS_advance_pc (addr += 8, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x0000004b: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000010      1      2      1   0             0       0  is_stmt end_sequence
-# CHECK-LINE-TABLE-NEXT: 0x0000004e: 05 DW_LNS_set_column (3)
-# CHECK-LINE-TABLE-NEXT: 0x00000050: 00 DW_LNE_set_address (0x0000000000000010)
-# CHECK-LINE-TABLE-NEXT: 0x0000005b: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000047: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000008      1      2      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000004a: 05 DW_LNS_set_column (3)
+# CHECK-LINE-TABLE-NEXT: 0x0000004c: 00 DW_LNE_set_address (0x0000000000000010)
+# CHECK-LINE-TABLE-NEXT: 0x00000057: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000010      1      3      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x0000005c: 02 DW_LNS_advance_pc (addr += 8, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x0000005e: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      3      1   0             0       0  is_stmt end_sequence
-# CHECK-LINE-TABLE-NEXT: 0x00000061: 05 DW_LNS_set_column (4)
-# CHECK-LINE-TABLE-NEXT: 0x00000063: 00 DW_LNE_set_address (0x0000000000000018)
-# CHECK-LINE-TABLE-NEXT: 0x0000006e: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000058: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000010      1      3      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000005b: 05 DW_LNS_set_column (4)
+# CHECK-LINE-TABLE-NEXT: 0x0000005d: 00 DW_LNE_set_address (0x0000000000000018)
+# CHECK-LINE-TABLE-NEXT: 0x00000068: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      4      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x0000006f: 05 DW_LNS_set_column (5)
-# CHECK-LINE-TABLE-NEXT: 0x00000071: 01 DW_LNS_copy
+# CHECK-LINE-TABLE-NEXT: 0x00000069: 05 DW_LNS_set_column (5)
+# CHECK-LINE-TABLE-NEXT: 0x0000006b: 01 DW_LNS_copy
 # CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      5      1   0             0       0  is_stmt
-# CHECK-LINE-TABLE-NEXT: 0x00000072: 02 DW_LNS_advance_pc (addr += 8, op-index += 0)
-# CHECK-LINE-TABLE-NEXT: 0x00000074: 00 DW_LNE_end_sequence
-# CHECK-LINE-TABLE-NEXT:             0x0000000000000020      1      5      1   0             0       0  is_stmt end_sequence
+# CHECK-LINE-TABLE-NEXT: 0x0000006c: 00 DW_LNE_end_sequence
+# CHECK-LINE-TABLE-NEXT:             0x0000000000000018      1      5      1   0             0       0  is_stmt end_sequence
 
 # CHECK-SYM:      Symbol table '.symtab' contains 9 entries:
 # CHECK-SYM-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 # CHECK-SYM-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
 # CHECK-SYM-NEXT:      1: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS test.c
 # CHECK-SYM-NEXT:      2: 0000000000000000     0 SECTION LOCAL  DEFAULT     2 .text
-# CHECK-SYM-NEXT:      3: 000000000000003b     0 NOTYPE  LOCAL  DEFAULT     3 my_label_02
-# CHECK-SYM-NEXT:      4: 000000000000004e     0 NOTYPE  LOCAL  DEFAULT     3 my_label_03
-# CHECK-SYM-NEXT:      5: 0000000000000061     0 NOTYPE  LOCAL  DEFAULT     3 my_label_04
-# CHECK-SYM-NEXT:      6: 000000000000004e     0 NOTYPE  LOCAL  DEFAULT     3 my_label_03.1
-# CHECK-SYM-NEXT:      7: 0000000000000077     0 NOTYPE  LOCAL  DEFAULT     3 my_label_05
+# CHECK-SYM-NEXT:      3: 0000000000000039     0 NOTYPE  LOCAL  DEFAULT     3 my_label_02
+# CHECK-SYM-NEXT:      4: 000000000000004a     0 NOTYPE  LOCAL  DEFAULT     3 my_label_03
+# CHECK-SYM-NEXT:      5: 000000000000005b     0 NOTYPE  LOCAL  DEFAULT     3 my_label_04
+# CHECK-SYM-NEXT:      6: 000000000000004a     0 NOTYPE  LOCAL  DEFAULT     3 my_label_03.1
+# CHECK-SYM-NEXT:      7: 000000000000006f     0 NOTYPE  LOCAL  DEFAULT     3 my_label_05
 # CHECK-SYM-NEXT:      8: 0000000000000000     0 FUNC    GLOBAL DEFAULT     2 foo
 
-# CHECK-OFFSETS: 0000 3b000000 4e000000 61000000
+# CHECK-OFFSETS: 0000 39000000 4a000000 5b000000
 
 	.text
 	.file	"test.c"
