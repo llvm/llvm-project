@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
 
 define hidden void @void_func_i32_inreg(i32 inreg) {
+; CHECK-LABEL: void_func_i32_inreg:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
@@ -349,24 +353,23 @@ define amdgpu_kernel void @call_user_2xft_inreg_ft_2xft_inreg(i32 %a, <2 x float
 ; CHECK-LABEL: call_user_2xft_inreg_ft_2xft_inreg:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
+; CHECK-NEXT:    s_mov_b32 s11, 8
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; CHECK-NEXT:    s_mov_b32 s33, s16
 ; CHECK-NEXT:    s_mov_b32 s50, s15
 ; CHECK-NEXT:    s_mov_b32 s51, s14
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[4:5]
-; CHECK-NEXT:    s_mov_b32 s10, 8
+; CHECK-NEXT:    s_load_dword s10, s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x8
-; CHECK-NEXT:    s_load_dword s11, s[8:9], s10 offset:0x10
-; CHECK-NEXT:    s_load_dword s16, s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx4 s[12:15], s[8:9], 0x20
 ; CHECK-NEXT:    s_load_dword s54, s[8:9], 0x30
+; CHECK-NEXT:    s_add_u32 s0, s0, s17
+; CHECK-NEXT:    s_load_dword s11, s[8:9], s11 offset:0x10
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s4
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s16, v0
-; CHECK-NEXT:    s_add_u32 s0, s0, s17
+; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s10, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v4, vcc
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s5
@@ -381,6 +384,7 @@ define amdgpu_kernel void @call_user_2xft_inreg_ft_2xft_inreg(i32 %a, <2 x float
 ; CHECK-NEXT:    s_add_u32 s48, s8, 56
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; CHECK-NEXT:    s_mov_b32 s33, s16
 ; CHECK-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; CHECK-NEXT:    s_addc_u32 s49, s9, 0
 ; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
