@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the OptionalWithSentinel class, which is a type akin to a
+/// This file defines the ValueOrSentinel class, which is a type akin to a
 /// std::optional, but uses a sentinel rather than an additional "valid" flag.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_OPTIONALWITHSENTINEL_H
-#define LLVM_ADT_OPTIONALWITHSENTINEL_H
+#ifndef LLVM_ADT_VALUEORSENTINEL_H
+#define LLVM_ADT_VALUEORSENTINEL_H
 
 #include <cassert>
 #include <limits>
@@ -21,25 +21,25 @@
 
 namespace llvm {
 
-template <typename T, T Sentinel> class OptionalWithSentinel {
+template <typename T, T Sentinel> class ValueOrSentinel {
 public:
-  OptionalWithSentinel() = default;
+  ValueOrSentinel() = default;
 
-  OptionalWithSentinel(T Value) : Value(std::move(Value)) {
+  ValueOrSentinel(T Value) : Value(std::move(Value)) {
     assert(Value != Sentinel && "Value is sentinel (use default constructor)");
   };
 
-  OptionalWithSentinel &operator=(const T &NewValue) {
+  ValueOrSentinel &operator=(const T &NewValue) {
     assert(NewValue != Sentinel && "NewValue is sentinel (use .clear())");
     Value = NewValue;
     return *this;
   }
 
-  bool operator==(const OptionalWithSentinel &Other) const {
+  bool operator==(const ValueOrSentinel &Other) const {
     return Value == Other.Value;
   }
 
-  bool operator!=(const OptionalWithSentinel &Other) const {
+  bool operator!=(const ValueOrSentinel &Other) const {
     return !(*this == Other);
   }
 
@@ -48,7 +48,7 @@ public:
     return Value;
   }
   const T &value() const {
-    return const_cast<OptionalWithSentinel &>(*this).value();
+    return const_cast<ValueOrSentinel &>(*this).value();
   }
 
   T &operator*() { return value(); }
@@ -66,8 +66,7 @@ private:
 };
 
 template <typename T>
-using OptionalWithSentinelIntMax =
-    OptionalWithSentinel<T, std::numeric_limits<T>::max()>;
+using ValueOrSentinelIntMax = ValueOrSentinel<T, std::numeric_limits<T>::max()>;
 
 } // namespace llvm
 

@@ -54,7 +54,7 @@ add_llvm_unittest(ADTTests
   LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
-  OptionalWithSentinelTest.cpp
+  ValueOrSentinelTest.cpp
   PackedVectorTest.cpp
   PagedVectorTest.cpp
   PointerEmbeddedIntTest.cpp

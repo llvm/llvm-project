@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/OptionalWithSentinel.h"
+#include "llvm/ADT/ValueOrSentinel.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
 
-TEST(OptionalWithSentinelTest, Basic) {
+TEST(ValueOrSentinelTest, Basic) {
   // Default constructor should equal sentinel.
-  OptionalWithSentinelIntMax<int> Value;
+  ValueOrSentinelIntMax<int> Value;
   EXPECT_FALSE(Value.has_value());
   EXPECT_FALSE(bool(Value));
 
@@ -35,7 +35,7 @@ TEST(OptionalWithSentinelTest, Basic) {
   EXPECT_FALSE(bool(Value));
 
   // construction from value, comparison operators
-  OptionalWithSentinelIntMax<int> OtherValue(99);
+  ValueOrSentinelIntMax<int> OtherValue(99);
   EXPECT_TRUE(OtherValue.has_value());
   EXPECT_TRUE(bool(OtherValue));
   EXPECT_EQ(OtherValue, 99);
@@ -45,8 +45,8 @@ TEST(OptionalWithSentinelTest, Basic) {
   EXPECT_EQ(Value, OtherValue);
 }
 
-TEST(OptionalWithSentinelTest, PointerType) {
-  OptionalWithSentinel<int *, nullptr> Value;
+TEST(ValueOrSentinelTest, PointerType) {
+  ValueOrSentinel<int *, nullptr> Value;
   EXPECT_FALSE(Value.has_value());
 
   int A = 10;

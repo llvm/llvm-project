@@ -3479,7 +3479,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   Register LastReg = 0;
-  OptionalWithSentinelIntMax<int> HazardSlotIndex;
+  ValueOrSentinelIntMax<int> HazardSlotIndex;
   for (auto &CS : CSI) {
     MCRegister Reg = CS.getReg();
     const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);

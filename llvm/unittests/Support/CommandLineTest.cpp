@@ -1412,7 +1412,7 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithoutSentinel) {
   // clang-format on
 }
 
-TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinel) {
+TEST_F(PrintOptionInfoTest, PrintOptionInfoValueValueOrSentinel) {
   std::string Output = runTest(
       cl::ValueOptional, cl::values(clEnumValN(OptionValue::Val, "v1", "desc1"),
                                     clEnumValN(OptionValue::Val, "", "")));
@@ -1426,7 +1426,7 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinel) {
   // clang-format on
 }
 
-TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinelWithHelp) {
+TEST_F(PrintOptionInfoTest, PrintOptionInfoValueValueOrSentinelWithHelp) {
   std::string Output = runTest(
       cl::ValueOptional, cl::values(clEnumValN(OptionValue::Val, "v1", "desc1"),
                                     clEnumValN(OptionValue::Val, "", "desc2")));
