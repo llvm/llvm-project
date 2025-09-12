@@ -63,6 +63,8 @@ Improvements and New Features
 - ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
   in chunks into a buffer.
 
+- The performance of ``std::find`` has been improved by up to 2x for integral types
+
 Deprecations and Removals
 -------------------------
 
