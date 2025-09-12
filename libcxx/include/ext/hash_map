@@ -467,8 +467,6 @@ private:
 
   __table __table_;
 
-  typedef typename __table::__node_pointer __node_pointer;
-  typedef typename __table::__node_const_pointer __node_const_pointer;
   typedef typename __table::__node_traits __node_traits;
   typedef typename __table::__node_allocator __node_allocator;
   typedef typename __table::__node __node;
@@ -693,7 +691,6 @@ private:
 
   __table __table_;
 
-  typedef typename __table::__node_traits __node_traits;
   typedef typename __table::__node_allocator __node_allocator;
   typedef typename __table::__node __node;
   typedef __hash_map_node_destructor<__node_allocator> _Dp;

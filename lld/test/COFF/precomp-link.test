@@ -3,6 +3,9 @@ RUN: llvm-pdbutil dump -types %t.pdb | FileCheck %s
 RUN: lld-link %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj %S/Inputs/precomp.obj /nodefaultlib /entry:main /debug:ghash /pdb:%t.pdb /out:%t.exe /opt:ref /opt:icf /summary | FileCheck %s -check-prefix SUMMARY
 RUN: llvm-pdbutil dump -types %t.pdb | FileCheck %s
 
+RUN: lld-link %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj %S/Inputs/precomp.obj /nodefaultlib /entry:main /out:%t.exe /opt:ref /opt:icf /summary | FileCheck %s -check-prefix SUMMARY-NODEBUG
+RUN: lld-link %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj %S/Inputs/precomp.obj /nodefaultlib /entry:main /out:%t.exe /opt:ref /opt:icf /summary | FileCheck %s -check-prefix SUMMARY-NODEBUG
+
 RUN: lld-link %S/Inputs/precomp.obj %S/Inputs/precomp-a.obj %S/Inputs/precomp-b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe /opt:ref /opt:icf
 RUN: llvm-pdbutil dump -types %t.pdb | FileCheck %s
 
@@ -63,14 +66,29 @@ SUMMARY-NEXT:                    3 Input OBJ files (expanded from all cmd-line i
 SUMMARY-NEXT: Size of all consumed OBJ files (non-lazy), in bytes
 SUMMARY-NEXT:                    0 PDB type server dependencies
 SUMMARY-NEXT:                    1 Precomp OBJ dependencies
-SUMMARY-NEXT:                1,066 Input type records
-SUMMARY-NEXT:               55,968 Size of all input type records, in bytes
+SUMMARY-NEXT:                1,066 Input debug type records
+SUMMARY-NEXT:               55,968 Size of all input debug type records, in bytes
 SUMMARY-NEXT:                  874 Merged TPI records
 SUMMARY-NEXT:                  170 Merged IPI records
 SUMMARY-NEXT:                    5 Output PDB strings
 SUMMARY-NEXT:                  167 Global symbol records
 SUMMARY-NEXT:                   20 Module symbol records
 SUMMARY-NEXT:                    3 Public symbol records
+
+SUMMARY-NODEBUG:                                     Summary
+SUMMARY-NODEBUG-NEXT: --------------------------------------------------------------------------------
+SUMMARY-NODEBUG-NEXT:                    3 Input OBJ files (expanded from all cmd-line inputs)
+SUMMARY-NODEBUG-NEXT: Size of all consumed OBJ files (non-lazy), in bytes
+SUMMARY-NODEBUG-NEXT:                    0 PDB type server dependencies
+SUMMARY-NODEBUG-NEXT:                    0 Precomp OBJ dependencies
+SUMMARY-NODEBUG-NEXT:                    0 Input debug type records
+SUMMARY-NODEBUG-NEXT:                    0 Size of all input debug type records, in bytes
+SUMMARY-NODEBUG-NEXT:                    0 Merged TPI records
+SUMMARY-NODEBUG-NEXT:                    0 Merged IPI records
+SUMMARY-NODEBUG-NEXT:                    0 Output PDB strings
+SUMMARY-NODEBUG-NEXT:                    0 Global symbol records
+SUMMARY-NODEBUG-NEXT:                    0 Module symbol records
+SUMMARY-NODEBUG-NEXT:                    0 Public symbol records
 
 // precomp.h
 #pragma once

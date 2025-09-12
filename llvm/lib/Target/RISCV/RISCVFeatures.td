@@ -1682,7 +1682,7 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
                                 "RV32I Base Instruction Set">;
 
 defvar RV32 = DefaultMode;
-def RV64           : HwMode<"+64bit", [IsRV64]>;
+def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

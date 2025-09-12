@@ -186,6 +186,23 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
+  bool hasCLZLike() const {
+    return HasStdExtZbb || HasVendorXTHeadBb ||
+           (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCTZLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+  bool hasCPOPLike() const {
+    return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
+  }
+
+  bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
+
+  bool hasCZEROLike() const {
+    return HasStdExtZicond || HasVendorXVentanaCondOps;
+  }
+
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
