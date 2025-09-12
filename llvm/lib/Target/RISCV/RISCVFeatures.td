@@ -78,6 +78,12 @@ def FeatureStdExtE
     : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">,
       RISCVExtensionBitmask<0, 4>;
 
+def FeatureStdExtZibi
+    : RISCVExperimentalExtension<0, 1, "Branch with Immediate">;
+def HasStdExtZibi : Predicate<"Subtarget->hasStdExtZibi()">,
+                    AssemblerPredicate<(all_of FeatureStdExtZibi),
+                                       "'Zibi' (Branch with Immediate)">;
+
 def FeatureStdExtZic64b
     : RISCVExtension<1, 0, "Cache Block Size Is 64 Bytes">;
 

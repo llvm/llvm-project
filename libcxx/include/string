@@ -2521,6 +2521,7 @@ _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #  endif
 #  undef _LIBCPP_DECLARE
 
+#  if _LIBCPP_STD_VER <= 17 || !__has_builtin(__builtin_lt_synthesises_from_spaceship)
 template <class _CharT, class _Traits, class _Alloc>
 struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, basic_string<_CharT, _Traits, _Alloc> > {
   using __string_t _LIBCPP_NODEBUG = basic_string<_CharT, _Traits, _Alloc>;
@@ -2533,6 +2534,7 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
     return __ret;
   }
 };
+#  endif
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

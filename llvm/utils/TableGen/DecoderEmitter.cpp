@@ -33,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/KnownBits.h"
@@ -168,8 +169,6 @@ struct OperandInfo {
   void addField(unsigned Base, unsigned Width, unsigned Offset) {
     Fields.emplace_back(Base, Width, Offset);
   }
-
-  unsigned numFields() const { return Fields.size(); }
 
   ArrayRef<EncodingField> fields() const { return Fields; }
 };
@@ -1104,31 +1103,29 @@ void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
     return;
   }
 
-  if (OpInfo.Fields.empty() && OpInfo.InitValue && IgnoreFullyDefinedOperands)
-    return;
-
-  // We need to construct the encoding of the operand from pieces if it is not
-  // encoded sequentially or has a non-zero constant part in the encoding.
-  bool UseInsertBits = OpInfo.numFields() > 1 || OpInfo.InitValue.value_or(0);
-
-  if (UseInsertBits) {
-    OS << Indent << "tmp = 0x";
-    OS.write_hex(OpInfo.InitValue.value_or(0));
-    OS << ";\n";
-  }
-
-  for (const auto &[Base, Width, Offset] : OpInfo.fields()) {
-    OS << Indent;
-    if (UseInsertBits)
-      OS << "insertBits(tmp, ";
-    else
-      OS << "tmp = ";
-    OS << "fieldFromInstruction(insn, " << Base << ", " << Width << ')';
-    if (UseInsertBits)
-      OS << ", " << Offset << ", " << Width << ')';
-    else if (Offset != 0)
+  if (OpInfo.fields().empty()) {
+    // Only a constant part. The old behavior is to not decode this operand.
+    if (IgnoreFullyDefinedOperands)
+      return;
+    // Initialize `tmp` with the constant part.
+    OS << Indent << "tmp = " << format_hex(*OpInfo.InitValue, 0) << ";\n";
+  } else if (OpInfo.fields().size() == 1 && !OpInfo.InitValue.value_or(0)) {
+    // One variable part and no/zero constant part. Initialize `tmp` with the
+    // variable part.
+    auto [Base, Width, Offset] = OpInfo.fields().front();
+    OS << Indent << "tmp = fieldFromInstruction(insn, " << Base << ", " << Width
+       << ')';
+    if (Offset)
       OS << " << " << Offset;
     OS << ";\n";
+  } else {
+    // General case. Initialize `tmp` with the constant part, if any, and
+    // insert the variable parts into it.
+    OS << Indent << "tmp = " << format_hex(OpInfo.InitValue.value_or(0), 0)
+       << ";\n";
+    for (auto [Base, Width, Offset] : OpInfo.fields())
+      OS << Indent << "insertBits(tmp, fieldFromInstruction(insn, " << Base
+         << ", " << Width << "), " << Offset << ", " << Width << ");\n";
   }
 
   StringRef Decoder = OpInfo.Decoder;

@@ -39,7 +39,7 @@ bit_cast(const From &from) {
 #if __has_builtin(__builtin_bit_cast)
   return __builtin_bit_cast(To, from);
 #else
-  To to;
+  To to{};
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
 #if __has_builtin(__builtin_memcpy_inline)

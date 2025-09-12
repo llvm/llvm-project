@@ -337,6 +337,12 @@ TEST(ScalarTest, Division) {
   Scalar r = lhs / rhs;
   EXPECT_TRUE(r.IsValid());
   EXPECT_EQ(r, Scalar(2.5));
+
+  Scalar inf = Scalar(1) / Scalar(0.0f);
+  Scalar int0 = Scalar(1) / Scalar(0);
+  Scalar ref_inf = llvm::APFloat::getInf(llvm::APFloat::IEEEsingle());
+  EXPECT_EQ(inf, ref_inf);
+  EXPECT_FALSE(int0.IsValid());
 }
 
 TEST(ScalarTest, Promotion) {

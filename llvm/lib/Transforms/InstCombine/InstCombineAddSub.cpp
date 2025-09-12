@@ -2002,6 +2002,16 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
 
+  // B = fadd A, 0.0
+  // Z = Op B
+  // can be transformed into
+  // Z = Op A
+  // Where Op is such that we can ignore sign of 0 in fadd
+  Value *A;
+  if (match(&I, m_OneUse(m_FAdd(m_Value(A), m_AnyZeroFP()))) &&
+      canIgnoreSignBitOfZero(*I.use_begin()))
+    return replaceInstUsesWith(I, A);
+
   // (-X) + Y --> Y - X
   Value *X, *Y;
   if (match(&I, m_c_FAdd(m_FNeg(m_Value(X)), m_Value(Y))))
@@ -2731,6 +2741,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateSub(X, Not);
   }
 
+  // min(X+1, Y) - min(X, Y) --> zext X < Y
+  // Replacing a sub and at least one min with an icmp
+  // and a zext is a potential improvement.
+  if (match(Op0, m_c_SMin(m_NSWAddLike(m_Value(X), m_One()), m_Value(Y))) &&
+      match(Op1, m_c_SMin(m_Specific(X), m_Specific(Y))) &&
+      I.getType()->getScalarSizeInBits() != 1 &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Cond = Builder.CreateICmpSLT(X, Y);
+    return new ZExtInst(Cond, I.getType());
+  }
+  if (match(Op0, m_c_UMin(m_NUWAddLike(m_Value(X), m_One()), m_Value(Y))) &&
+      match(Op1, m_c_UMin(m_Specific(X), m_Specific(Y))) &&
+      I.getType()->getScalarSizeInBits() != 1 &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Cond = Builder.CreateICmpULT(X, Y);
+    return new ZExtInst(Cond, I.getType());
+  }
+
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;
@@ -3126,6 +3154,16 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
 
   Value *X, *Y;
   Constant *C;
+
+  // B = fsub A, 0.0
+  // Z = Op B
+  // can be transformed into
+  // Z = Op A
+  // Where Op is such that we can ignore sign of 0 in fsub
+  Value *A;
+  if (match(&I, m_OneUse(m_FSub(m_Value(A), m_AnyZeroFP()))) &&
+      canIgnoreSignBitOfZero(*I.use_begin()))
+    return replaceInstUsesWith(I, A);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)

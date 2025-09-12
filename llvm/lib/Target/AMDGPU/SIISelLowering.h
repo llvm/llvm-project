@@ -58,6 +58,9 @@ private:
                                      Align Alignment,
                                      ImplicitParameter Param) const;
 
+  SDValue convertABITypeToValueType(SelectionDAG &DAG, SDValue Val,
+                                    CCValAssign &VA, const SDLoc &SL) const;
+
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
