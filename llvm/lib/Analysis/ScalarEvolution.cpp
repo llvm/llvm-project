@@ -15457,6 +15457,12 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     const BasicBlock *InBlock = Phi.getIncomingBlock(IncomingIdx);
     if (!VisitedBlocks.insert(InBlock).second)
       return {nullptr, scCouldNotCompute};
+
+    // Avoid analyzing unreachable blocks so that we don't get trapped
+    // traversing cycles with ill-formed dominance or infinite cycles
+    if (!SE.DT.isReachableFromEntry(InBlock))
+      return {nullptr, scCouldNotCompute};
+
     auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
     if (Inserted)
       collectFromBlock(SE, G->second, Phi.getParent(), InBlock, VisitedBlocks,
@@ -15511,6 +15517,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
     SmallPtrSetImpl<const BasicBlock *> &VisitedBlocks, unsigned Depth) {
+
+  assert(SE.DT.isReachableFromEntry(Block) && SE.DT.isReachableFromEntry(Pred));
+
   SmallVector<const SCEV *> ExprsToRewrite;
   auto CollectCondition = [&](ICmpInst::Predicate Predicate, const SCEV *LHS,
                               const SCEV *RHS,
