@@ -31,7 +31,7 @@ union Union {
   long *n;
 } __attribute__((transparent_union));
 
-// CHECK: define{{.*}} void @uni({{.*}} !kcfi_type [[TYPE2:![0-9]+]]
+// CHECK: define{{.*}} void @uni({{.*}} !kcfi_type [[TYPE4:![0-9]+]]
 void uni(void (*fn)(union Union), union Union arg1) {
   // UNGENERALIZED: call {{.*}} [ "kcfi"(i32 -587217045) ]
   // GENERALIZED: call {{.*}} [ "kcfi"(i32 2139530422) ]
@@ -44,6 +44,5 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // UNGENERALIZED: [[TYPE3]] = !{i32 874141567}
 // GENERALIZED: [[TYPE3]] = !{i32 954385378}
 
-// UNGENERALIZED: [[TYPE2]] = !{i32 -1954865805}
-// GENERALIZED: [[TYPE2]] = !{i32 -125078496}
-
+// UNGENERALIZED: [[TYPE4]] = !{i32 -1954865805}
+// GENERALIZED: [[TYPE4]] = !{i32 -125078496}
