@@ -232,8 +232,7 @@ public:
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   MachineInstr &
   duplicate(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,

@@ -2519,8 +2519,8 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I, Register DestReg,
-                                unsigned SubIdx, const MachineInstr &Orig,
-                                const TargetRegisterInfo &RI) const {
+                                unsigned SubIdx,
+                                const MachineInstr &Orig) const {
 
   // Try shrinking the instruction to remat only the part needed for current
   // context.
@@ -2600,7 +2600,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     break;
   }
 
-  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, RI);
+  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig);
 }
 
 std::pair<MachineInstr*, MachineInstr*>
