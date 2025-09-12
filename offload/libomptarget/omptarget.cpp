@@ -35,6 +35,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <vector>
 
 using llvm::SmallVector;
 #ifdef OMPT_SUPPORT
