@@ -3146,6 +3146,17 @@ public:
   /// Create a runtime call for kmpc_alloc_shared.
   ///
   /// \param Loc The insert and source location description.
+  /// \param Size Size of allocated memory space.
+  /// \param Name Name of call Instruction.
+  ///
+  /// \returns CallInst to the kmpc_alloc_shared call.
+  LLVM_ABI CallInst *createOMPAllocShared(const LocationDescription &Loc,
+                                          Value *Size,
+                                          const Twine &Name = Twine(""));
+
+  /// Create a runtime call for kmpc_alloc_shared.
+  ///
+  /// \param Loc The insert and source location description.
   /// \param VarType Type of variable to be allocated.
   /// \param Name Name of call Instruction.
   ///
@@ -3153,6 +3164,18 @@ public:
   LLVM_ABI CallInst *createOMPAllocShared(const LocationDescription &Loc,
                                           Type *VarType,
                                           const Twine &Name = Twine(""));
+
+  /// Create a runtime call for kmpc_free_shared.
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Addr Value obtained from the corresponding kmpc_alloc_shared call.
+  /// \param Size Size of allocated memory space.
+  /// \param Name Name of call Instruction.
+  ///
+  /// \returns CallInst to the kmpc_free_shared call.
+  LLVM_ABI CallInst *createOMPFreeShared(const LocationDescription &Loc,
+                                         Value *Addr, Value *Size,
+                                         const Twine &Name = Twine(""));
 
   /// Create a runtime call for kmpc_free_shared.
   ///

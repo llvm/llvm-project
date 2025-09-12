@@ -2209,6 +2209,67 @@ def TargetFreeMemOp : OpenMP_Op<"target_freemem",
 }
 
 //===----------------------------------------------------------------------===//
+// AllocSharedMemOp
+//===----------------------------------------------------------------------===//
+
+def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
+    AttrSizedOperandSegments
+  ], clauses = [
+    OpenMP_HeapAllocClause
+  ]> {
+  let summary = "allocate storage on shared memory for an object of a given type";
+
+  let description = [{
+    Allocates memory shared across threads of a team for an object of the given
+    type. Returns a pointer representing the allocated memory. The memory is
+    uninitialized after allocation. Operations must be paired with
+    `omp.free_shared` to avoid memory leaks.
+
+    ```mlir
+      // Allocate a static 3x3 integer vector.
+      %ptr_shared = omp.alloc_shared_mem vector<3x3xi32> : !llvm.ptr
+      // ...
+      omp.free_shared_mem %ptr_shared : !llvm.ptr
+    ```
+  }] # clausesDescription;
+
+  let results = (outs OpenMP_PointerLikeType);
+  let assemblyFormat = clausesAssemblyFormat # " attr-dict `:` type(results)";
+}
+
+//===----------------------------------------------------------------------===//
+// FreeSharedMemOp
+//===----------------------------------------------------------------------===//
+
+def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", [MemoryEffects<[MemFree]>]> {
+  let summary = "free shared memory";
+
+  let description = [{
+    Deallocates shared memory that was previously allocated by an
+    `omp.alloc_shared_mem` operation. After this operation, the deallocated
+    memory is in an undefined state and should not be accessed.
+    It is crucial to ensure that all accesses to the memory region are completed
+    before `omp.alloc_shared_mem` is called to avoid undefined behavior.
+
+    ```mlir
+      // Example of allocating and freeing shared memory.
+      %ptr_shared = omp.alloc_shared_mem vector<3x3xi32> : !llvm.ptr
+      // ...
+      omp.free_shared_mem %ptr_shared : !llvm.ptr
+    ```
+
+    The `heapref` operand represents the pointer to shared memory to be
+    deallocated, previously returned by `omp.alloc_shared_mem`.
+  }];
+
+  let arguments = (ins
+    Arg<OpenMP_PointerLikeType, "", [MemFree]>:$heapref
+  );
+  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // workdistribute Construct
 //===----------------------------------------------------------------------===//
 
