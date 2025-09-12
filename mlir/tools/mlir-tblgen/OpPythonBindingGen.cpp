@@ -21,6 +21,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <regex>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -1043,7 +1044,7 @@ static std::string makeDocStringForOp(const Operator &op) {
 
   auto desc = op.getDescription().rtrim(" \t").str();
   // Replace all """ with \"\"\" to avoid early termination of the literal.
-  desc = llvm::join(llvm::split(desc, R"(""")"), R"(\"\"\")");
+  desc = std::regex_replace(desc, std::regex(R"(""")"), R"(\"\"\")");
 
   std::string docString = "\n";
   llvm::raw_string_ostream os(docString);
