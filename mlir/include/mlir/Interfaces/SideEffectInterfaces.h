@@ -348,11 +348,11 @@ struct AlwaysSpeculatableImplTrait
 
 namespace MemoryEffects {
 /// Defines the priority of the different memory effects.
-/// 
+///
 /// Sorting/ordering memory effects of an operation is done based on
-/// their defined stage and priority, in that order. If stage values for two effect instances are
-/// equal, they are then sorted by priority. Lower priority values indicate higher
-/// precedence.
+/// their defined stage and priority, in that order. If stage values for two
+/// effect instances are equal, they are then sorted by priority. Lower priority
+/// values indicate higher precedence.
 enum Priority {
   DefaultPriority = 0,
   AllocPriority = 1,
@@ -389,7 +389,9 @@ getMemoryEffectsSorted(Operation *op);
 /// resource. An 'allocate' effect implies only allocation of the resource, and
 /// not any visible mutation or dereference.
 struct Allocate : public Effect::Base<Allocate> {
-  Allocate() : Effect::Base<Allocate>() { this->priority = Priority::AllocPriority; }
+  Allocate() : Effect::Base<Allocate>() {
+    this->priority = Priority::AllocPriority;
+  }
 };
 
 /// The following effect indicates that the operation frees some resource that

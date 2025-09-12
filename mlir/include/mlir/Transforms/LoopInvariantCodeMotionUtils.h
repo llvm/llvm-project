@@ -25,16 +25,17 @@ class Value;
 
 /// Gathers potential conflicts on all memory resources used within loop.
 ///
-/// Given a target loop and an op within it (or the loop op itself), 
-/// gathers op's memory effects and flags potential resource conflicts 
-/// in a map and then recurses into the op's regions to gather nested 
-/// resource conflicts. 
+/// Given a target loop and an op within it (or the loop op itself),
+/// gathers op's memory effects and flags potential resource conflicts
+/// in a map and then recurses into the op's regions to gather nested
+/// resource conflicts.
 ///
 /// Typical usage:
 /// \code
 ///   LoopLikeOpInterface myLoop = ...;
-///   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> myConflicts;
-///   gatherResourceConflicts(myLoop, myLoop.getOperation(), resourceConflicts);
+///   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
+///   myConflicts; gatherResourceConflicts(myLoop, myLoop.getOperation(),
+///   resourceConflicts);
 /// \endcode
 ///
 /// \param loop The loop to gather resource conflicts for.
@@ -44,15 +45,17 @@ class Value;
 /// Key is the resource ID that effects are applied to. Value is a pair of
 /// a boolean, indicating if the resource has a conflict, and the last effect
 /// that was applied to the resource (if no conflicts exist) or the effect
-/// that caused the conflict (if conflicts exist). This was done so we 
+/// that caused the conflict (if conflicts exist). This was done so we
 /// check the effect that causes the conflict for debugging purposes.
 /// First call should use loop = someLoop and op = someLoop.getOperation()
 ///
 /// resourceConflicts is modified by the function and will be non-empty
 /// as long as there are memory effects within the loop, even if there are
 /// no conflicts.
-void gatherResourceConflicts(LoopLikeOpInterface loop, Operation *op,
-    DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>> &resourceConflicts);
+void gatherResourceConflicts(
+    LoopLikeOpInterface loop, Operation *op,
+    DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
+        &resourceConflicts);
 
 /// Given a list of regions, perform loop-invariant code motion. An operation is
 /// loop-invariant if it depends only of values defined outside of the loop.
