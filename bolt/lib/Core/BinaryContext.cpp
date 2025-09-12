@@ -1632,6 +1632,13 @@ void BinaryContext::preprocessDWODebugInfo() {
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
           "");
+      if (DWOName.empty()) {
+        this->outs() << "BOLT-ERROR: Broken DWARF found in CU at offset 0x"
+                     << Twine::utohexstr(DwarfUnit->getOffset()) << " (DWOId=0x"
+                     << Twine::utohexstr(*DWOId)
+                     << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name).\n";
+        continue;
+      }
       SmallString<16> AbsolutePath;
       if (!opts::CompDirOverride.empty()) {
         sys::path::append(AbsolutePath, opts::CompDirOverride);
