@@ -205,6 +205,7 @@ void LinkerDriver::addFile(InputFile *file) {
     else
       cast<ObjFile>(file)->parseLazy();
   } else {
+    ctx.consumedInputsSize += file->mb.getBufferSize();
     file->parse();
     if (auto *f = dyn_cast<ObjFile>(file)) {
       ctx.objFileInstances.push_back(f);

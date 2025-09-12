@@ -5574,7 +5574,7 @@ private:
       if (auto *SD = dyn_cast<ScheduleData>(Data)) {
         SD->setScheduled(/*Scheduled=*/true);
         LLVM_DEBUG(dbgs() << "SLP:   schedule " << *SD << "\n");
-        SmallVector<ScheduleBundle> PseudoBundles;
+        SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
         SmallVector<ScheduleBundle *> Bundles;
         Instruction *In = SD->getInst();
         if (R.isVectorized(In)) {
@@ -5583,10 +5583,11 @@ private:
             if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
                 In->getNumOperands() != TE->getNumOperands())
               continue;
-            ScheduleBundle &Bundle = PseudoBundles.emplace_back();
-            Bundle.setTreeEntry(TE);
-            Bundle.add(SD);
-            Bundles.push_back(&Bundle);
+            auto &BundlePtr =
+                PseudoBundles.emplace_back(std::make_unique<ScheduleBundle>());
+            BundlePtr->setTreeEntry(TE);
+            BundlePtr->add(SD);
+            Bundles.push_back(BundlePtr.get());
           }
         }
         ProcessBundleMember(SD, Bundles);
@@ -11286,9 +11287,6 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
       return false;
 
-    SmallVector<Value *> NewVL(VL.size());
-    copy(Op1, NewVL.begin());
-    copy(Op2, std::next(NewVL.begin(), Op1.size()));
     auto Invalid = ScheduleBundle::invalid();
     auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
                             UserTreeIdx, {}, ReorderIndices);
@@ -20787,6 +20785,14 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           continue;
         }
         auto *SD = cast<ScheduleData>(SE);
+        if (SD->hasValidDependencies() &&
+            (!S.areInstructionsWithCopyableElements() ||
+             !S.isCopyableElement(SD->getInst())) &&
+            !getScheduleCopyableData(SD->getInst()).empty() && EI.UserTE &&
+            EI.UserTE->hasState() &&
+            (!EI.UserTE->hasCopyableElements() ||
+             !EI.UserTE->isCopyableElement(SD->getInst())))
+          SD->clearDirectDependencies();
         for (const Use &U : SD->getInst()->operands()) {
           unsigned &NumOps =
               UserOpToNumOps
@@ -21888,6 +21894,10 @@ bool BoUpSLP::collectValuesToDemote(
     return TryProcessInstruction(BitWidth);
   case Instruction::ZExt:
   case Instruction::SExt:
+    if (E.UserTreeIndex.UserTE && E.UserTreeIndex.UserTE->hasState() &&
+        E.UserTreeIndex.UserTE->getOpcode() == Instruction::BitCast &&
+        E.UserTreeIndex.UserTE->getMainOp()->getType()->isFPOrFPVectorTy())
+      return false;
     IsProfitableToDemote = true;
     return TryProcessInstruction(BitWidth);
 

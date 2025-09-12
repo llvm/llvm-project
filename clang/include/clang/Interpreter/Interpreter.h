@@ -137,11 +137,13 @@ public:
     uint32_t ExecutorPID = 0;
     /// Custom lambda to be executed inside child process/executor
     std::function<void()> CustomizeFork = nullptr;
+    /// An optional code model to provide to the JITTargetMachineBuilder
+    std::optional<llvm::CodeModel::Model> CM = std::nullopt;
 
     JITConfig()
         : IsOutOfProcess(false), OOPExecutor(""), OOPExecutorConnect(""),
           UseSharedMemory(false), SlabAllocateSize(0), OrcRuntimePath(""),
-          ExecutorPID(0), CustomizeFork(nullptr) {}
+          ExecutorPID(0), CustomizeFork(nullptr), CM(std::nullopt) {}
   };
 
 protected:

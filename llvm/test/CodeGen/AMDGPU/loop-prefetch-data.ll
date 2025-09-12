@@ -77,7 +77,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
 ; GFX1250-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v0, v[2:5], s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b128 v0, v[2:5], s[0:1]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB0_2
@@ -490,7 +490,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[4:7] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b128 v[0:1], v[4:7]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 16, v[0:1]
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB4_2

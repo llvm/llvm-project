@@ -638,6 +638,8 @@ public:
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
+    /// Allow unrolling to add parallel reduction phis.
+    bool AddAdditionalAccumulators;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
@@ -1533,7 +1535,9 @@ public:
       Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
       TTI::TargetCostKind CostKind) const;
 
-  /// \return The cost of Load and Store instructions.
+  /// \return The cost of Load and Store instructions. The operand info
+  /// \p OpdInfo should refer to the stored value for stores and the address
+  /// for loads.
   LLVM_ABI InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
@@ -1842,6 +1846,10 @@ public:
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.
   LLVM_ABI bool preferEpilogueVectorization() const;
+
+  /// \returns True if the loop vectorizer should discard any VFs where the
+  /// maximum register pressure exceeds getNumberOfRegisters.
+  LLVM_ABI bool shouldConsiderVectorizationRegPressure() const;
 
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.

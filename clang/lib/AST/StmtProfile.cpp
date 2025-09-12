@@ -999,30 +999,30 @@ void StmtProfiler::VisitOMPSimdDirective(const OMPSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
-void StmtProfiler::VisitOMPLoopTransformationDirective(
-    const OMPLoopTransformationDirective *S) {
+void StmtProfiler::VisitOMPCanonicalLoopNestTransformationDirective(
+    const OMPCanonicalLoopNestTransformationDirective *S) {
   VisitOMPLoopBasedDirective(S);
 }
 
 void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPStripeDirective(const OMPStripeDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
-  VisitOMPLoopTransformationDirective(S);
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
