@@ -6342,6 +6342,25 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
     bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
 
+  class OMPTargetCallCollector
+      : public RecursiveASTVisitor<OMPTargetCallCollector> {
+  public:
+    OMPTargetCallCollector(CodeGenFunction &CGF,
+                           llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls)
+        : CGF(CGF), TargetCalls(TargetCalls) {}
+
+    bool VisitCallExpr(CallExpr *CE) {
+      if (!CE->getDirectCallee()) {
+        TargetCalls.insert(CE);
+      }
+      return true;
+    }
+
+  private:
+    CodeGenFunction &CGF;
+    llvm::SmallPtrSetImpl<const CallExpr *> &TargetCalls;
+  };
+
   llvm::TargetRegionEntryInfo EntryInfo =
       getEntryInfoFromPresumedLoc(CGM, OMPBuilder, D.getBeginLoc(), ParentName);
 
@@ -6349,6 +6368,16 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   llvm::OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
       [&CGF, &D, &CodeGen](StringRef EntryFnName) {
         const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
+
+        // Search Clang AST within "omp target" region for CallExprs.
+        // Store them in the set OMPTargetCalls (kept by CodeGenModule).
+        // This is used for the translation of indirect function calls.
+        const auto &LangOpts = CGF.getLangOpts();
+        if (LangOpts.OpenMPIsTargetDevice) {
+          // Search AST for target "CallExpr"s of "OMPTargetAutoLookup".
+          OMPTargetCallCollector Visitor(CGF, CGF.CGM.OMPTargetCalls);
+          Visitor.TraverseStmt(const_cast<Stmt*>(CS.getCapturedStmt()));
+        }
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
