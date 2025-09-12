@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 {}
 #pragma omp target teams uses_allocators(traits(my_traits): my_alloc, traits(aligned_traits): aligned_alloc) // omp52-error {{',' not allowed as separator in 'uses_allocators' clause, use ';' instead}}
 {}
-#pragma omp target teams uses_allocators(my_alloc(my_traits), aligned_alloc(aligned_traits)) // omp52-warning {{old syntax 'allocator(expr)' on 'uses_allocators' clause was deprecated, use new syntax 'traits(expr): alloc'}} //omp52-warning {{old syntax 'allocator(expr)' on 'uses_allocators' clause was deprecated, use new syntax 'traits(expr): alloc'}}
+#pragma omp target teams uses_allocators(my_alloc(my_traits), aligned_alloc(aligned_traits)) // omp52-error {{old syntax 'allocator(expr)' on 'uses_allocators' clause was deprecated, use new syntax 'traits(expr): alloc'}} //omp52-error {{old syntax 'allocator(expr)' on 'uses_allocators' clause was deprecated, use new syntax 'traits(expr): alloc'}}
 {}
 #endif
   return 0;

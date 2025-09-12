@@ -3058,7 +3058,7 @@ OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
 
       // Deprecation diagnostic in >= 5.2
       if (getLangOpts().OpenMP >= 52) {
-        Diag(Loc, diag::warn_omp_deprecate_old_syntax)
+        Diag(Loc, diag::err_omp_deprecate_old_syntax)
             << "allocator(expr)"      // %0: old form
             << "uses_allocators"      // %1: clause name
             << "traits(expr): alloc"; // %2: suggested new form
