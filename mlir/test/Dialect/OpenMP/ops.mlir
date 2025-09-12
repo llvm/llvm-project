@@ -3445,3 +3445,27 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
     uniform(%p0 : memref<i32>, %p1 : memref<i32>)
   return
 }
+
+// CHECK-LABEL: func.func @omp_target_allocmem(
+// CHECK-SAME: %[[DEVICE:.*]]: i32, %[[X:.*]]: index, %[[Y:.*]]: index, %[[Z:.*]]: i32) {
+func.func @omp_target_allocmem(%device: i32, %x: index, %y: index, %z: i32) {
+  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, i64
+  %0 = omp.target_allocmem %device : i32, i64
+  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, vector<16x16xf32> {bindc_name = "bindc", uniq_name = "uniq"}
+  %1 = omp.target_allocmem %device : i32, vector<16x16xf32> {uniq_name="uniq", bindc_name="bindc"}
+  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, !llvm.ptr(%[[X]], %[[Y]], %[[Z]] : index, index, i32)
+  %2 = omp.target_allocmem %device : i32, !llvm.ptr(%x, %y, %z : index, index, i32)
+  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, !llvm.ptr, %[[X]], %[[Y]]
+  %3 = omp.target_allocmem %device : i32, !llvm.ptr, %x, %y
+  // CHECK: %{{.*}} = omp.target_allocmem %[[DEVICE]] : i32, !llvm.ptr(%[[X]], %[[Y]], %[[Z]] : index, index, i32), %[[X]], %[[Y]]
+  %4 = omp.target_allocmem %device : i32, !llvm.ptr(%x, %y, %z : index, index, i32), %x, %y
+  return
+}
+
+// CHECK-LABEL: func.func @omp_target_freemem(
+// CHECK-SAME: %[[DEVICE:.*]]: i32, %[[PTR:.*]]: i64) {
+func.func @omp_target_freemem(%device : i32, %ptr : i64) {
+  // CHECK: omp.target_freemem %[[DEVICE]], %[[PTR]] : i32, i64
+  omp.target_freemem %device, %ptr : i32, i64
+  return
+}
