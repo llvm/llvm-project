@@ -367,15 +367,6 @@ exit:
 
 define void @hang_due_to_unreachable_phi_inblock() personality ptr null {
 bb:
-  br label %bb1
-
-bb1:                                              ; preds = %bb1, %bb
-  %i = invoke ptr null()
-          to label %bb1 unwind label %bb2
-
-bb2:                                              ; preds = %bb1
-  %i3 = landingpad { ptr, i32 }
-          cleanup
   br label %bb6
 
 self-loop:                                        ; preds = %self-loop
@@ -387,16 +378,15 @@ bb4:                                              ; preds = %self-loop
           cleanup
   br label %bb6
 
-bb6:                                              ; preds = %bb4, %bb2
-  %i7 = phi ptr [ null, %bb4 ], [ null, %bb2 ]
-  br i1 false, label %bb12, label %bb8
+bb6:                                              ; preds = %bb4, %bb
+  %i7 = phi ptr [ null, %bb4 ], [ null, %bb ]
+  br label %bb8
 
 bb8:                                              ; preds = %bb8, %bb6
-  %i9 = phi ptr [ %i10, %bb8 ], [ null, %bb6 ]
-  %i10 = getelementptr i8, ptr %i9, i64 24
+  %i9 = phi ptr [ null, %bb8 ], [ null, %bb6 ]
   %i11 = icmp eq ptr %i9, null
   br i1 %i11, label %bb12, label %bb8
 
 bb12:                                             ; preds = %bb8, %bb6
-  resume { ptr, i32 } zeroinitializer
+  ret void
 }
