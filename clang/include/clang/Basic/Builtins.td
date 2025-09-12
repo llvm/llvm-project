@@ -1258,7 +1258,7 @@ def MaskedCompressStore : Builtin {
 
 def MaskedGather : Builtin {
   let Spellings = ["__builtin_masked_gather"];
-  let Attributes = [NoThrow, CustomTypeChecking];
+  let Attributes = [NoThrow, Pure, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
