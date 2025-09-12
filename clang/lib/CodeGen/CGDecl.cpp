@@ -1450,6 +1450,14 @@ static uint64_t maxFakeUseAggregateSize(const ASTContext &C) {
   return 4 * C.getTypeSize(C.UnsignedIntTy);
 }
 
+static bool checkIsReadOnlyMetadataAvailable(QualType Ty,
+                                             const LangOptions &LO) {
+  bool IsLangSupported =
+      LO.C99 || LO.C11 || LO.C17 || LO.C23 || LO.C2y || LO.CPlusPlus;
+  // Currently support only for scalar types
+  return IsLangSupported && Ty.isConstQualified() && Ty->isScalarType();
+}
+
 // Helper function to determine whether a variable's or parameter's lifetime
 // should be extended.
 static bool shouldExtendLifetime(const ASTContext &Context,
@@ -1601,9 +1609,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // Create the alloca.  Note that we set the name separately from
       // building the instruction so that it's there even in no-asserts
       // builds.
-      address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
-                                 allocaAlignment, D.getName(),
-                                 /*ArraySize=*/nullptr, &AllocaAddr);
+      address = CreateTempAlloca(
+          allocaTy, Ty.getAddressSpace(), allocaAlignment, D.getName(),
+          /*ArraySize=*/nullptr, &AllocaAddr,
+          checkIsReadOnlyMetadataAvailable(Ty, getLangOpts()));
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
       // the catch parameter starts in the catchpad instruction, and we can't
