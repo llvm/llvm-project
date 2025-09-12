@@ -9166,7 +9166,7 @@ bool LLParser::parseTypeIdSummary(TypeIdSummary &TIS) {
 }
 
 static ValueInfo EmptyVI =
-    ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
+    ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8, nullptr);
 
 /// TypeIdCompatibleVtableEntry
 ///   ::= 'typeidCompatibleVTable' ':' '(' 'name' ':' STRINGCONSTANT ','
@@ -10765,7 +10765,7 @@ bool LLParser::parseGVReference(ValueInfo &VI, unsigned &GVId) {
     VI = NumberedValueInfos[GVId];
   } else
     // We will create a forward reference to the stored location.
-    VI = ValueInfo(false, FwdVIRef);
+    VI = ValueInfo(false, FwdVIRef, nullptr);
 
   if (ReadOnly)
     VI.setReadOnly();
