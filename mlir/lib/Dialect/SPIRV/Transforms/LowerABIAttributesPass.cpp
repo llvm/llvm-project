@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
 namespace spirv {
@@ -85,10 +86,36 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
                                          abiInfo.getBinding());
 }
 
+/// Creates a global variable for an argument or result based on the ABI info.
+static spirv::GlobalVariableOp
+createGlobalVarForGraphEntryPoint(OpBuilder &builder, spirv::GraphARMOp graphOp,
+                                  unsigned index, bool isArg,
+                                  spirv::InterfaceVarABIAttr abiInfo) {
+  auto spirvModule = graphOp->getParentOfType<spirv::ModuleOp>();
+  if (!spirvModule)
+    return nullptr;
+
+  OpBuilder::InsertionGuard moduleInsertionGuard(builder);
+  builder.setInsertionPoint(graphOp.getOperation());
+  std::string varName = llvm::formatv("{}_{}_{}", graphOp.getName(),
+                                      isArg ? "arg" : "res", index);
+
+  Type varType = isArg ? graphOp.getFunctionType().getInput(index)
+                       : graphOp.getFunctionType().getResult(index);
+
+  auto pointerType = spirv::PointerType::get(
+      varType,
+      abiInfo.getStorageClass().value_or(spirv::StorageClass::UniformConstant));
+
+  return spirv::GlobalVariableOp::create(builder, graphOp.getLoc(), pointerType,
+                                         varName, abiInfo.getDescriptorSet(),
+                                         abiInfo.getBinding());
+}
+
 /// Gets the global variables that need to be specified as interface variable
 /// with an spirv.EntryPointOp. Traverses the body of a entry function to do so.
 static LogicalResult
-getInterfaceVariables(spirv::FuncOp funcOp,
+getInterfaceVariables(mlir::FunctionOpInterface funcOp,
                       SmallVectorImpl<Attribute> &interfaceVars) {
   auto module = funcOp->getParentOfType<spirv::ModuleOp>();
   if (!module) {
@@ -224,6 +251,21 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// A pattern to convert graph signature according to interface variable ABI
+/// attributes.
+///
+/// Specifically, this pattern creates global variables according to interface
+/// variable ABI attributes attached to graph arguments and results.
+class ProcessGraphInterfaceVarABI final
+    : public OpConversionPattern<spirv::GraphARMOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(spirv::GraphARMOp graphOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
     : public spirv::impl::SPIRVLowerABIAttributesPassBase<
@@ -297,6 +339,63 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   return success();
 }
 
+LogicalResult ProcessGraphInterfaceVarABI::matchAndRewrite(
+    spirv::GraphARMOp graphOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  // Non-entry point graphs are not handled.
+  if (!graphOp.getEntryPoint().value_or(false))
+    return failure();
+
+  TypeConverter::SignatureConversion signatureConverter(
+      graphOp.getFunctionType().getNumInputs());
+
+  StringRef attrName = spirv::getInterfaceVarABIAttrName();
+  SmallVector<Attribute, 4> interfaceVars;
+
+  // Convert arguments.
+  unsigned numInputs = graphOp.getFunctionType().getNumInputs();
+  unsigned numResults = graphOp.getFunctionType().getNumResults();
+  for (unsigned index = 0; index < numInputs; ++index) {
+    auto abiInfo =
+        graphOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(index, attrName);
+    if (!abiInfo)
+      return failure();
+    spirv::GlobalVariableOp var = createGlobalVarForGraphEntryPoint(
+        rewriter, graphOp, index, true, abiInfo);
+    if (!var)
+      return failure();
+    interfaceVars.push_back(
+        SymbolRefAttr::get(rewriter.getContext(), var.getSymName()));
+  }
+
+  for (unsigned index = 0; index < numResults; ++index) {
+    auto abiInfo = graphOp.getResultAttrOfType<spirv::InterfaceVarABIAttr>(
+        index, attrName);
+    if (!abiInfo)
+      return failure();
+    spirv::GlobalVariableOp var = createGlobalVarForGraphEntryPoint(
+        rewriter, graphOp, index, false, abiInfo);
+    if (!var)
+      return failure();
+    interfaceVars.push_back(
+        SymbolRefAttr::get(rewriter.getContext(), var.getSymName()));
+  }
+
+  // Update graph signature.
+  rewriter.modifyOpInPlace(graphOp, [&] {
+    for (unsigned index = 0; index < numInputs; ++index) {
+      graphOp.removeArgAttr(index, attrName);
+    }
+    for (unsigned index = 0; index < numResults; ++index) {
+      graphOp.removeResultAttr(index, rewriter.getStringAttr(attrName));
+    }
+  });
+
+  spirv::GraphEntryPointARMOp::create(rewriter, graphOp.getLoc(), graphOp,
+                                      interfaceVars);
+  return success();
+}
+
 void LowerABIAttributesPass::runOnOperation() {
   // Uses the signature conversion methodology of the dialect conversion
   // framework to implement the conversion.
@@ -322,7 +421,8 @@ void LowerABIAttributesPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(context);
-  patterns.add<ProcessInterfaceVarABI>(typeConverter, context);
+  patterns.add<ProcessInterfaceVarABI, ProcessGraphInterfaceVarABI>(
+      typeConverter, context);
 
   ConversionTarget target(*context);
   // "Legal" function ops should have no interface variable ABI attributes.
@@ -333,6 +433,17 @@ void LowerABIAttributesPass::runOnOperation() {
         return false;
     return true;
   });
+  target.addDynamicallyLegalOp<spirv::GraphARMOp>([&](spirv::GraphARMOp op) {
+    StringRef attrName = spirv::getInterfaceVarABIAttrName();
+    for (unsigned i = 0, e = op.getNumArguments(); i < e; ++i)
+      if (op.getArgAttr(i, attrName))
+        return false;
+    for (unsigned i = 0, e = op.getNumResults(); i < e; ++i)
+      if (op.getResultAttr(i, attrName))
+        return false;
+    return true;
+  });
+
   // All other SPIR-V ops are legal.
   target.markUnknownOpDynamicallyLegal([](Operation *op) {
     return op->getDialect()->getNamespace() ==
