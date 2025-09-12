@@ -3044,8 +3044,9 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   QualType FnType = FD->getType();
   llvm::Metadata *MD = CreateMetadataIdentifierForType(FnType);
   F->addTypeMetadata(0, MD);
-  FnType = GeneralizeFunctionType(getContext(), FnType);
-  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FnType));
+
+  QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType());
+  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
