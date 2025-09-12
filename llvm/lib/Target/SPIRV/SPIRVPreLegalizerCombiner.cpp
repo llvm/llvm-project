@@ -128,7 +128,7 @@ void applySPIRVDistance(MachineInstr &MI, MachineRegisterInfo &MRI,
 ///
 bool matchSelectToFaceForward(MachineInstr &MI, MachineRegisterInfo &MRI) {
   const SPIRVSubtarget &ST = MI.getMF()->getSubtarget<SPIRVSubtarget>();
-  if (!ST.isVulkanEnv())
+  if (!ST.isShader())
     return false;
 
   if (MI.getOpcode() != TargetOpcode::G_SELECT)
