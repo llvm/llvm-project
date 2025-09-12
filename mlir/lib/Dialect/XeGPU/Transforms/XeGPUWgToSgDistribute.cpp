@@ -757,8 +757,8 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     auto sgAttr = DenseElementsAttr::get(newType, singleVal);
     auto cstOp =
         arith::ConstantOp::create(rewriter, op.getLoc(), newType, sgAttr);
-    if (!layout.getLaneLayoutAsInt().empty() ||
-        !layout.getLaneDataAsInt().empty())
+    if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+        !layout.getEffectiveInstDataAsInt().empty())
       xegpu::setDistributeLayoutAttr(cstOp->getResult(0),
                                      layout.dropSgLayoutAndData());
     SmallVector<Value> newConsts(count, cstOp);
@@ -963,8 +963,8 @@ struct WgToSgMultiDimReductionOp
       auto newOp = rewriter.create<vector::MultiDimReductionOp>(
           op.getLoc(), newDstType, op.getKind(), sgSrc, sgAcc,
           op.getReductionDims());
-      if (!layout.getLaneLayoutAsInt().empty() ||
-          !layout.getLaneDataAsInt().empty())
+      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
+          !layout.getEffectiveInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newOp->getResult(0),
                                        layout.dropSgLayoutAndData());
       newReductions.push_back(newOp.getResult());
