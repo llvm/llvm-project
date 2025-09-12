@@ -409,7 +409,7 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `{ \"FOO\": \"1\" }`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
                     "patternProperties": {
                       ".*": {
                         "type": "string"
@@ -419,10 +419,10 @@
                   },
                   {
                     "type": "array",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. E.g. `[\"FOO=1\", \"BAR\"]`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
                     "items": {
                       "type": "string",
-                      "pattern": "^((\\w+=.*)|^\\w+)$"
+                      "pattern": "^\\w+(=.*)?$"
                     },
                     "default": []
                   }
@@ -671,6 +671,29 @@
                   "type": "string"
                 },
                 "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
+              },
+              "debugAdapterEnv": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
+                    "patternProperties": {
+                      ".*": {
+                        "type": "string"
+                      }
+                    },
+                    "default": {}
+                  },
+                  {
+                    "type": "array",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^\\w+(=.*)?$"
+                    },
+                    "default": []
+                  }
+                ]
               },
               "program": {
                 "type": "string",
