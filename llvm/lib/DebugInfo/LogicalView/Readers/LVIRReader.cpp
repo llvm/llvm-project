@@ -317,9 +317,10 @@ std::string LVIRReader::getRegisterName(LVSmall Opcode,
     // Leaving it here, just for any specific needs.
     // LLVM_DEBUG({
     //   dbgs() << "Printing Value: " << Operands[0] << " - "
-    //          << DbgValueRanges->getVariableName(Operands[0]) << "\n";
+    //          << ValueNameMap.getName(Operands[0]) << "\n";
     // });
-    return ValueNameMap.getName(Operands[0]);
+    // Add an extra space for a better layout when printing locations.
+    return " " + ValueNameMap.getName(Operands[0]);
   }
 
   llvm_unreachable("We shouldn't actually have any other reg types here!");
