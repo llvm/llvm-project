@@ -10847,7 +10847,7 @@ cc_library(
         ":LinalgTransformOpsIncGen",
         ":LinalgTransforms",
         ":LinalgUtils",
-        ":ParallelCombiningOpInterface", 
+        ":ParallelCombiningOpInterface",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",

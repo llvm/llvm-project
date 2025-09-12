@@ -3942,9 +3942,8 @@ MutableOperandRange ParallelInsertSliceOp::getUpdatedDestinations() {
 Operation *ParallelInsertSliceOp::getIteratingParent() {
   // Return the parent InParallelOpInterface's parent.
   if (auto combiningOp =
-          dyn_cast<InParallelOpInterface>(getOperation()->getParentOp())) {
+          dyn_cast<InParallelOpInterface>(getOperation()->getParentOp()))
     return combiningOp->getParentOp();
-  }
   return nullptr;
 }
 

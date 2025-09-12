@@ -1981,7 +1981,7 @@ LogicalResult InParallelOp::verify() {
     }
 
     // Verify that inserts are into out block arguments.
-    MutableOperandRange dests = inParallelOp.getUpdatedDestinations();
+    MutableOperandRange dests = parallelCombiningOp.getUpdatedDestinations();
     ArrayRef<BlockArgument> regionOutArgs = forallOp.getRegionOutArgs();
     for (OpOperand &dest : dests) {
       if (!llvm::is_contained(regionOutArgs, dest.get()))
@@ -2027,9 +2027,10 @@ SmallVector<BlockArgument> InParallelOp::getDests() {
   for (Operation &yieldingOp : getYieldingOps()) {
     auto parallelCombiningOp =
         dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
-    if (!parallelCombingingOp)
+    if (!parallelCombiningOp)
       continue;
-    for (OpOperand &updatedOperand : inParallelOp.getUpdatedDestinations())
+    for (OpOperand &updatedOperand :
+         parallelCombiningOp.getUpdatedDestinations())
       updatedDests.push_back(cast<BlockArgument>(updatedOperand.get()));
   }
   return updatedDests;
