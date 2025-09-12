@@ -495,12 +495,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     Pass.cpp
     Rewrite.cpp
 
-    # Headers must be included explicitly so they are installed.
-    Globals.h
-    IRModule.h
-    Pass.h
-    NanobindUtils.h
-    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -706,8 +700,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
   PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectSMT.cpp
-    # Headers must be included explicitly so they are installed.
-    NanobindUtils.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -855,3 +847,4 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
+add_dependencies(MLIRPythonModules.extension._mlirDialectsGPU.dso MLIRPythonModules.extension._mlir.dso)

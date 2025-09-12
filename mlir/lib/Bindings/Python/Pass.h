@@ -9,7 +9,7 @@
 #ifndef MLIR_BINDINGS_PYTHON_PASS_H
 #define MLIR_BINDINGS_PYTHON_PASS_H
 
-#include "NanobindUtils.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 
 namespace mlir {
 namespace python {
