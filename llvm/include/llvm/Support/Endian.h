@@ -96,9 +96,8 @@ inline void write(void *memory, value_type value, endianness endian) {
          &value, sizeof(value_type));
 }
 
-template<typename value_type,
-         endianness endian,
-         std::size_t alignment>
+template <typename value_type, endianness endian, std::size_t alignment>
+LLVM_DEPRECATED("Pass endian as a function argument instead", "write")
 inline void write(void *memory, value_type value) {
   write<value_type, alignment>(memory, value, endian);
 }
@@ -163,7 +162,7 @@ inline void writeAtBitAlignment(void *memory, value_type value,
                                 uint64_t startBit) {
   assert(startBit < 8);
   if (startBit == 0)
-    write<value_type, endian, alignment>(memory, value);
+    write<value_type, alignment>(memory, value, endian);
   else {
     // Read two values and shift the result into them.
     value_type val[2];
@@ -230,8 +229,8 @@ struct packed_endian_specific_integral {
   operator value_type() const { return value(); }
 
   void operator=(value_type newValue) {
-    endian::write<value_type, endian, alignment>(
-      (void*)Value.buffer, newValue);
+    endian::write<value_type, alignment>((void *)Value.buffer, newValue,
+                                         endian);
   }
 
   packed_endian_specific_integral &operator+=(value_type newValue) {
@@ -268,7 +267,7 @@ public:
     }
 
     void operator=(value_type NewValue) {
-      endian::write<value_type, endian, alignment>(Ptr, NewValue);
+      endian::write<value_type, alignment>(Ptr, NewValue, endian);
     }
 
   private:
