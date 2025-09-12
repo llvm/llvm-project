@@ -175,8 +175,7 @@ public:
     const DebugLoc &DL = MI->getDebugLoc();
 
     Register Reg = MRI->createVirtualRegister(
-        TII->getRegClass(TII->get(DstOpcode), 0, MRI->getTargetRegisterInfo(),
-                         *MBB->getParent()));
+        TII->getRegClass(TII->get(DstOpcode), 0, MRI->getTargetRegisterInfo()));
     MachineInstrBuilder Bld = BuildMI(*MBB, MI, DL, TII->get(DstOpcode), Reg);
     for (const MachineOperand &MO : llvm::drop_begin(MI->operands()))
       Bld.add(MO);
