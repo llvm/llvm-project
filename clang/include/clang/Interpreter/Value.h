@@ -95,171 +95,302 @@ class QualType;
   X(double, Double)                                                            \
   X(long double, LongDouble)
 
-class REPL_EXTERNAL_VISIBILITY Value {
-  union Storage {
-#define X(type, name) type m_##name;
-    REPL_BUILTIN_TYPES
-#undef X
-    void *m_Ptr;
-    unsigned char m_RawBits[sizeof(long double) * 8]; // widest type
-  };
-
+class REPL_EXTERNAL_VISIBILITY Value final {
 public:
-  enum Kind {
+  enum BuiltinKind {
 #define X(type, name) K_##name,
     REPL_BUILTIN_TYPES
 #undef X
-
-        K_Void,
-    K_PtrOrObj,
-    K_Unspecified
+        K_Unspecified
   };
 
-  Value() = default;
-  Value(const Interpreter *In, void *Ty);
-  Value(const Value &RHS);
-  Value(Value &&RHS) noexcept;
-  Value &operator=(const Value &RHS);
-  Value &operator=(Value &&RHS) noexcept;
-  ~Value();
-
-  void printType(llvm::raw_ostream &Out) const;
-  void printData(llvm::raw_ostream &Out) const;
-  void print(llvm::raw_ostream &Out) const;
-  void dump() const;
-  void clear();
-
-  const ASTContext &getASTContext() const;
-  const Interpreter &getInterpreter() const;
-  QualType getType() const;
-
-  bool isValid() const { return ValueKind != K_Unspecified; }
-  bool isVoid() const { return ValueKind == K_Void; }
-  bool hasValue() const { return isValid() && !isVoid(); }
-  bool isManuallyAlloc() const { return IsManuallyAlloc; }
-  Kind getKind() const { return ValueKind; }
-  void setKind(Kind K) { ValueKind = K; }
-  void setOpaqueType(void *Ty) { OpaqueType = Ty; }
-
-  void *getPtr() const;
-  void setPtr(void *Ptr) { Data.m_Ptr = Ptr; }
-  void setRawBits(void *Ptr, unsigned NBits = sizeof(Storage));
-
-#define X(type, name)                                                          \
-  void set##name(type Val) { Data.m_##name = Val; }                            \
-  type get##name() const { return Data.m_##name; }
-  REPL_BUILTIN_TYPES
-#undef X
-
-  /// \brief Get the value with cast.
-  //
-  /// Get the value cast to T. This is similar to reinterpret_cast<T>(value),
-  /// casting the value of builtins (except void), enums and pointers.
-  /// Values referencing an object are treated as pointers to the object.
-  template <typename T> T convertTo() const {
-    return convertFwd<T>::cast(*this);
-  }
-
-protected:
-  bool isPointerOrObjectType() const { return ValueKind == K_PtrOrObj; }
-
-  /// \brief Get to the value with type checking casting the underlying
-  /// stored value to T.
-  template <typename T> T as() const {
-    switch (ValueKind) {
-    default:
-      return T();
-#define X(type, name)                                                          \
-  case Value::K_##name:                                                        \
-    return (T)Data.m_##name;
+private:
+  struct Builtins {
+  private:
+    BuiltinKind BK = K_Unspecified;
+    union {
+#define X(type, name) type m_##name;
       REPL_BUILTIN_TYPES
 #undef X
+    };
+
+  public:
+    Builtins() = default;
+    explicit Builtins(BuiltinKind BK) : BK(BK) {}
+    ~Builtins() {}
+
+    void setKind(BuiltinKind K) {
+      assert(BK == K_Unspecified);
+      BK = K;
     }
+    BuiltinKind getKind() const { return BK; }
+#define X(type, name)                                                          \
+  void set##name(type Val) {                                                   \
+    assert(BK == K_Unspecified || BK == K_##name);                             \
+    m_##name = Val;                                                            \
+  }                                                                            \
+  type get##name() const {                                                     \
+    assert(BK == K_##name);                                                    \
+    return m_##name;                                                           \
+  }
+    REPL_BUILTIN_TYPES
+#undef X
+  };
+
+  struct ArrValue {
+    std::vector<Value> Elements;
+    uint64_t ArrSize;
+    ArrValue(uint64_t Size) : ArrSize(Size) {
+      Elements.reserve(ArrSize);
+      for (uint64_t I = 0; I < ArrSize; ++I)
+        Elements.emplace_back();
+    }
+  };
+
+  struct PtrValue {
+    uint64_t Addr = 0;
+    Value *Pointee; // optional for str
+    PtrValue(uint64_t Addr) : Addr(Addr), Pointee(new Value()) {}
+    ~PtrValue() {
+      if (Pointee != nullptr)
+        delete Pointee;
+    }
+  };
+
+  struct StrValue {
+    std::string StringBuf;
+    StrValue(std::string str) : StringBuf(std::move(str)) {}
+    ~StrValue() = default;
+  };
+
+public:
+  using DataType =
+      llvm::AlignedCharArrayUnion<ArrValue, PtrValue, Builtins, StrValue>;
+  enum ValKind { K_Builtin, K_Array, K_Pointer, K_Str, K_None };
+
+private:
+  QualType Ty;
+  ValKind VKind = K_None;
+  DataType Data;
+
+public:
+  Value() = default;
+  explicit Value(QualType Ty, ValKind K) : Ty(Ty), VKind(K) {}
+  Value(const Value &RHS);
+  Value(Value &&RHS) : Ty(RHS.Ty), VKind(RHS.VKind), Data(RHS.Data) {
+    RHS.VKind = K_None;
   }
 
-  // Allow convertTo to be partially specialized.
-  template <typename T> struct convertFwd {
-    static T cast(const Value &V) {
-      if (V.isPointerOrObjectType())
-        return (T)(uintptr_t)V.as<void *>();
-      if (!V.isValid() || V.isVoid()) {
-        return T();
-      }
-      return V.as<T>();
-    }
-  };
+  Value &operator=(const Value &RHS);
+  Value &operator=(Value &&RHS);
 
-  template <typename T> struct convertFwd<T *> {
-    static T *cast(const Value &V) {
-      if (V.isPointerOrObjectType())
-        return (T *)(uintptr_t)V.as<void *>();
-      return nullptr;
-    }
-  };
+  explicit Value(QualType QT, std::vector<uint8_t> Raw);
 
-  const Interpreter *Interp = nullptr;
-  void *OpaqueType = nullptr;
-  Storage Data;
-  Kind ValueKind = K_Unspecified;
-  bool IsManuallyAlloc = false;
-};
+  struct UninitArr {};
 
-template <> inline void *Value::as() const {
-  if (isPointerOrObjectType())
-    return Data.m_Ptr;
-  return (void *)as<uintptr_t>();
-}
+  explicit Value(UninitArr, QualType QT, uint64_t ArrSize)
+      : Ty(QT), VKind(K_None) {
+    MakeArray(ArrSize);
+  }
 
-class ValueBuffer {
-public:
-  enum Kind { K_Builtin, K_Array, K_Pointer, K_Unknown };
-  QualType Ty;
-  Kind K;
-  ValueBuffer(Kind K = K_Unknown) : K(K) {}
-  virtual ~ValueBuffer() = default;
-  bool isUnknown() const { return K == K_Unknown; }
-  bool isBuiltin() const { return K == K_Builtin; }
-  bool isArray() const { return K == K_Array; }
-  bool isPointer() const { return K == K_Pointer; }
-  static bool classof(const ValueBuffer *) { return true; }
-};
+  explicit Value(QualType QT, uint64_t Addr) : Ty(QT), VKind(K_None) {
+    MakePointer(Addr);
+  }
 
-class BuiltinValueBuffer;
-class ArrayValueBuffer;
-class PointerValueBuffer;
+  explicit Value(QualType QT, const char *buf) : Ty(QT), VKind(K_None) {
+    MakeStr(buf);
+  }
 
-class BuiltinValueBuffer : public ValueBuffer {
-public:
-  std::vector<uint8_t> raw;
-  BuiltinValueBuffer(QualType _Ty) : ValueBuffer(K_Builtin) { Ty = _Ty; }
-  template <typename T> T as() const {
+  ~Value() {
+    if (VKind != K_None)
+      destroy();
+  }
+
+  template <typename T> static T as(std::vector<uint8_t> &raw) {
     T v{};
     // assert(raw.size() >= sizeof(T) && "Buffer too small for type!");
     memcpy(&v, raw.data(), sizeof(T));
     return v;
   }
-  static bool classof(const ValueBuffer *B) { return B->isBuiltin(); }
-};
 
-class ArrayValueBuffer : public ValueBuffer {
-public:
-  std::vector<std::unique_ptr<ValueBuffer>> Elements;
-  ArrayValueBuffer(QualType EleTy) : ValueBuffer(K_Array) { Ty = EleTy; }
-
-  static bool classof(const ValueBuffer *B) { return B->isArray(); }
-};
-
-class PointerValueBuffer : public ValueBuffer {
-public:
-  uint64_t Address = 0;
-  std::unique_ptr<ValueBuffer> Pointee; // optional, used only for char*
-
-  PointerValueBuffer(QualType _Ty, uint64_t Addr = 0)
-      : ValueBuffer(K_Pointer), Address(Addr) {
-    Ty = _Ty;
+  // ---- Kind checks ----
+  bool isUnknown() const { return VKind == K_None; }
+  bool isBuiltin() const { return VKind == K_Builtin; }
+  bool isArray() const { return VKind == K_Array; }
+  bool isPointer() const { return VKind == K_Pointer; }
+  bool isStr() const { return VKind == K_Str; }
+  ValKind getKind() const { return VKind; }
+  QualType getType() const { return Ty; }
+  bool isAbsent() const { return VKind == K_None; }
+  bool hasValue() const { return VKind != K_None; }
+  BuiltinKind getBuiltinKind() const {
+    if (isBuiltin())
+      return asBuiltin().getKind();
+    return BuiltinKind::K_Unspecified;
   }
 
-  static bool classof(const ValueBuffer *B) { return B->isPointer(); }
+protected:
+  // ---- accessors ----
+  Builtins &asBuiltin() {
+    assert(isBuiltin() && "Not a builtin value");
+    return *((Builtins *)(char *)&Data);
+  }
+
+  const Builtins &asBuiltin() const {
+    return const_cast<Value *>(this)->asBuiltin();
+  }
+
+  ArrValue &asArray() {
+    assert(isArray() && "Not an array value");
+    return *((ArrValue *)(char *)&Data);
+  }
+
+  const ArrValue &asArray() const {
+    return const_cast<Value *>(this)->asArray();
+  }
+
+  PtrValue &asPointer() {
+    assert(isPointer() && "Not a pointer value");
+    return *((PtrValue *)(char *)&Data);
+  }
+
+  const PtrValue &asPointer() const {
+    return const_cast<Value *>(this)->asPointer();
+  }
+
+  StrValue &asStr() {
+    assert(isStr() && "Not a Str value");
+    return *((StrValue *)(char *)&Data);
+  }
+
+  const StrValue &asStr() const { return const_cast<Value *>(this)->asStr(); }
+
+public:
+  bool hasBuiltinThis(BuiltinKind K) const {
+    if (isBuiltin())
+      return asBuiltin().getKind() == K;
+    return false;
+  }
+
+  void setStrVal(const char *buf) {
+    assert(isStr() && "Not a Str");
+    asStr().StringBuf = buf;
+  }
+
+  StringRef getStrVal() {
+    assert(isStr() && "Not a Str");
+    return StringRef(asStr().StringBuf);
+  }
+
+  const StringRef getStrVal() const {
+    assert(isStr() && "Not a Str");
+    return StringRef(asStr().StringBuf);
+  }
+
+  uint64_t getArraySize() const { return asArray().ArrSize; }
+
+  uint64_t getArrayInitializedElts() const { return asArray().ArrSize; }
+
+  Value &getArrayInitializedElt(unsigned I) {
+    assert(isArray() && "Invalid accessor");
+    assert(I < getArrayInitializedElts() && "Index out of range");
+    return ((ArrValue *)(char *)&Data)->Elements[I];
+  }
+
+  const Value &getArrayInitializedElt(unsigned I) const {
+    return const_cast<Value *>(this)->getArrayInitializedElt(I);
+  }
+
+  bool HasPointee() const {
+    assert(isPointer() && "Invalid accessor");
+    return !(asPointer().Pointee->isAbsent());
+  }
+
+  Value &getPointerPointee() {
+    assert(isPointer() && "Invalid accessor");
+    return *asPointer().Pointee;
+  }
+
+  const Value &getPointerPointee() const {
+    return const_cast<Value *>(this)->getPointerPointee();
+  }
+
+  uint64_t getAddr() const { return asPointer().Addr; }
+
+#define X(type, name)                                                          \
+  void set##name(type Val) { asBuiltin().set##name(Val); }                     \
+  type get##name() const { return asBuiltin().get##name(); }
+  REPL_BUILTIN_TYPES
+#undef X
+
+  // ---- Printing ----
+  void printType(llvm::raw_ostream &Out, ASTContext &Ctx) const;
+  void printData(llvm::raw_ostream &Out, ASTContext &Ctx) const;
+  void print(llvm::raw_ostream &Out, ASTContext &Ctx) const;
+  void dump(ASTContext &Ctx) const;
+
+  // ---- clear ----
+  void clear() { destroy(); }
+
+private:
+  void MakeBuiltIns() {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) Builtins(BuiltinKind::K_Unspecified);
+    VKind = K_Builtin;
+  }
+
+  void MakeArray(uint64_t Size) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) ArrValue(Size);
+    VKind = K_Array;
+  }
+
+  void MakePointer(uint64_t Addr = 0) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) PtrValue(Addr);
+    VKind = K_Pointer;
+  }
+
+  void MakeStr(std::string Str = "") {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) StrValue(Str);
+    VKind = K_Str;
+  }
+
+  void setBuiltins(Builtins &LHS, const Builtins &RHS) {
+    switch (RHS.getKind()) {
+    default:
+      assert(false && "Type not supported");
+
+#define X(type, name)                                                          \
+  case BuiltinKind::K_##name: {                                                \
+    LHS.setKind(BuiltinKind::K_##name);                                        \
+    LHS.set##name(RHS.get##name());                                            \
+  } break;
+      REPL_BUILTIN_TYPES
+#undef X
+    }
+  }
+
+  void destroy() {
+    switch (VKind) {
+    case K_Builtin:
+      reinterpret_cast<Builtins *>(&Data)->~Builtins();
+      break;
+    case K_Array:
+      reinterpret_cast<ArrValue *>(&Data)->~ArrValue();
+      break;
+    case K_Pointer:
+      reinterpret_cast<PtrValue *>(&Data)->~PtrValue();
+      break;
+    case K_Str:
+      reinterpret_cast<StrValue *>(&Data)->~StrValue();
+      break;
+    default:
+      break;
+    }
+    VKind = K_None;
+  }
 };
 
 class ValueToString {
@@ -268,12 +399,13 @@ private:
 
 public:
   ValueToString(ASTContext &Ctx) : Ctx(Ctx) {}
-  std::string toString(const ValueBuffer *);
+  std::string toString(const Value *);
+  std::string toString(QualType);
 
 private:
-  std::string BuiltinToString(const BuiltinValueBuffer &B);
-  std::string PointerToString(const PointerValueBuffer &P);
-  std::string ArrayToString(const ArrayValueBuffer &A);
+  std::string BuiltinToString(const Value &B);
+  std::string PointerToString(const Value &P);
+  std::string ArrayToString(const Value &A);
 };
 
 class ValueResultManager {
@@ -296,17 +428,16 @@ public:
 
   void deliverResult(SendResultFn SendResult, ValueId ID,
                      llvm::orc::ExecutorAddr VAddr);
+  Value release() { return std::move(LastVal); }
 
 private:
   std::atomic<ValueId> NextID{1};
   void Initialize(llvm::orc::LLJIT &EE);
 
-  std::string ValueTypeToString(QualType QT) const;
-
   mutable std::mutex Mutex;
   ASTContext &Ctx;
   llvm::orc::MemoryAccess &MemAcc;
-  std::unique_ptr<ValueBuffer> ValBuf = nullptr;
+  Value LastVal;
   llvm::DenseMap<ValueId, clang::QualType> IdToType;
 };
 

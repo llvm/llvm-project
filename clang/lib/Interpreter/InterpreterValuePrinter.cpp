@@ -154,85 +154,36 @@ static std::string FunctionToString(ASTContext &Ctx, QualType QT,
   return Str;
 }
 
-static std::string escapeString(const std::vector<uint8_t> &Raw) {
-  std::string Out;
-  for (char c : Raw) {
-    // switch (c) {
-    // case '\n':
-    //   Out += "\\n";
-    //   break;
-    // case '\t':
-    //   Out += "\\t";
-    //   break;
-    // case '\r':
-    //   Out += "\\r";
-    //   break;
-    // case '\"':
-    //   Out += "\\\"";
-    //   break;
-    // case '\\':
-    //   Out += "\\\\";
-    //   break;
-    // default:
-    if (std::isprint(static_cast<unsigned char>(c)))
-      Out.push_back(c);
-    else {
-      char buf[5];
-      snprintf(buf, sizeof(buf), "\\x%02X", static_cast<unsigned char>(c));
-      Out += buf;
-    }
-    // break;
-    // }
-  }
-  return Out;
-}
-
 namespace clang {
 
 std::string Interpreter::ValueDataToString(const Value &V) const { return ""; }
 
-std::string ValueToString::toString(const ValueBuffer *Buf) {
-  if (const BuiltinValueBuffer *B = llvm::dyn_cast<BuiltinValueBuffer>(Buf))
-    return BuiltinToString(*B);
-  else if (const ArrayValueBuffer *A = llvm::dyn_cast<ArrayValueBuffer>(Buf))
-    return ArrayToString(*A);
-  else if (const PointerValueBuffer *P =
-               llvm::dyn_cast<PointerValueBuffer>(Buf))
-    return PointerToString(*P);
+std::string ValueToString::toString(const Value *Buf) {
+
+  switch (Buf->getKind()) {
+  case Value::K_Builtin:
+    return BuiltinToString(*Buf);
+  case Value::K_Pointer:
+    return PointerToString(*Buf);
+  case Value::K_Str:
+    break;
+  case Value::K_Array:
+    return ArrayToString(*Buf);
+
+  default:
+    break;
+  }
   return "";
 }
 
-std::string ValueToString::BuiltinToString(const BuiltinValueBuffer &B) {
-  if (B.raw.empty())
+std::string ValueToString::BuiltinToString(const Value &B) {
+  if (!B.hasValue())
     return ""; // No data in buffer
 
-  QualType QT = B.Ty;
+  QualType QT = B.getType();
   QualType DesugaredTy = QT.getDesugaredType(Ctx);
   QualType NonRefTy = DesugaredTy.getNonReferenceType();
 
-  if (NonRefTy->isCharType()) {
-    unsigned char c = B.as<unsigned char>();
-    switch (c) {
-    // case '\n':
-    //   return "'\\n'";
-    // case '\t':
-    //   return "'\\t'";
-    // case '\r':
-    //   return "'\\r'";
-    // case '\'':
-    //   return "'\\''";
-    // case '\\':
-    //   return "'\\'";
-    case '\0':
-      return "";
-    default:
-      if (std::isprint(c))
-        return std::string("'") + static_cast<char>(c) + "'";
-      else {
-        return llvm::formatv("'\\x{0:02X}'", c).str();
-      }
-    }
-  }
   if (auto *BT = DesugaredTy.getCanonicalType()->getAs<BuiltinType>()) {
 
     auto formatFloating = [](auto Val, char Suffix = '\0') -> std::string {
@@ -264,52 +215,64 @@ std::string ValueToString::BuiltinToString(const BuiltinValueBuffer &B) {
       return "{ error: unknown builtin type '" + std::to_string(BT->getKind()) +
              " '}";
     case clang::BuiltinType::Bool:
-      SS << ((B.as<bool>()) ? "true" : "false");
+      SS << ((B.getBool()) ? "true" : "false");
+      return Str;
+    case clang::BuiltinType::Char_S:
+      SS << '\'' << B.getChar_S() << '\'';
+      return Str;
+    case clang::BuiltinType::SChar:
+      SS << '\'' << B.getSChar() << '\'';
+      return Str;
+    case clang::BuiltinType::Char_U:
+      SS << '\'' << B.getChar_U() << '\'';
+      return Str;
+    case clang::BuiltinType::UChar:
+      SS << '\'' << B.getUChar() << '\'';
       return Str;
     case clang::BuiltinType::Short:
-      SS << B.as<short>();
+      SS << B.getShort();
       return Str;
     case clang::BuiltinType::UShort:
-      SS << B.as<unsigned short>();
+      SS << B.getUShort();
       return Str;
     case clang::BuiltinType::Int:
-      SS << B.as<int>();
+      SS << B.getInt();
       return Str;
     case clang::BuiltinType::UInt:
-      SS << B.as<unsigned int>();
+      SS << B.getUInt();
       return Str;
     case clang::BuiltinType::Long:
-      SS << B.as<long>();
+      SS << B.getLong();
       return Str;
     case clang::BuiltinType::ULong:
-      SS << B.as<unsigned long>();
+      SS << B.getULong();
       return Str;
     case clang::BuiltinType::LongLong:
-      SS << B.as<long long>();
+      SS << B.getLongLong();
       return Str;
     case clang::BuiltinType::ULongLong:
-      SS << B.as<unsigned long long>();
+      SS << B.getULongLong();
       return Str;
     case clang::BuiltinType::Float:
-      return formatFloating(B.as<float>(), /*suffix=*/'f');
+      return formatFloating(B.getFloat(), /*suffix=*/'f');
 
     case clang::BuiltinType::Double:
-      return formatFloating(B.as<double>());
+      return formatFloating(B.getDouble());
 
     case clang::BuiltinType::LongDouble:
-      return formatFloating(B.as<long double>(), /*suffix=*/'L');
+      return formatFloating(B.getLongDouble(), /*suffix=*/'L');
     }
   }
 
   if (NonRefTy->isEnumeralType())
-    return EnumToString(Ctx, QT, B.as<uint64_t>());
+    return EnumToString(Ctx, QT, B.getUInt());
 
   return "";
 }
 
-std::string ValueToString::PointerToString(const PointerValueBuffer &P) {
+std::string ValueToString::PointerToString(const Value &P) {
 
-  QualType QT = P.Ty;
+  QualType QT = P.getType();
   QualType DesugaredTy = QT.getDesugaredType(Ctx);
   QualType NonRefTy = DesugaredTy.getNonReferenceType();
 
@@ -320,49 +283,45 @@ std::string ValueToString::PointerToString(const PointerValueBuffer &P) {
     auto PointeeTy = PtrTy->getPointeeType();
 
     // char* -> print string literal
-    if (PointeeTy->isCharType() && P.Pointee) {
-      if (auto *BE = static_cast<BuiltinValueBuffer *>(P.Pointee.get()))
-        return "\"" + escapeString(BE->raw) + "\"";
+    if (PointeeTy->isCharType() && P.HasPointee()) {
+      if (P.getPointerPointee().isStr())
+        return "\"" + P.getPointerPointee().getStrVal().str() + "\"";
     }
-
-    return std::to_string(P.Address);
   }
-
-  if (P.Address == 0)
-    return "nullptr";
 
   if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
       NonRefTy->getPointeeType()->isFunctionProtoType())
-    return FunctionToString(Ctx, QT, (void *)P.Address);
+    return FunctionToString(Ctx, QT, (void *)P.getAddr());
 
   if (NonRefTy->isFunctionType())
-    return FunctionToString(Ctx, QT, (void *)P.Address);
+    return FunctionToString(Ctx, QT, (void *)P.getAddr());
 
   if (NonRefTy->isNullPtrType())
     return "nullptr\n";
 
   std::ostringstream OS;
-  OS << "@0x" << std::hex << P.Address;
+  OS << "@0x" << std::hex << P.getAddr();
   return OS.str();
 }
 
-std::string ValueToString::ArrayToString(const ArrayValueBuffer &A) {
-  if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(A.Ty)) {
+std::string ValueToString::ArrayToString(const Value &A) {
+  if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(A.getType())) {
     QualType ElemTy = CAT->getElementType();
     // Treat null terminated char arrays as strings basically.
-    if (ElemTy->isCharType() && !A.Elements.empty()) {
-      if (const auto *B =
-              llvm::dyn_cast<BuiltinValueBuffer>(A.Elements.back().get())) {
-        char last = (char)B->raw.front();
+    if (ElemTy->isCharType()) {
+      const Value &LastV =
+          A.getArrayInitializedElt(A.getArrayInitializedElts() - 1);
+      if (LastV.hasValue() && !LastV.isAbsent() && LastV.isBuiltin()) {
+        char last = LastV.getChar_S();
         if (last != '\0')
           goto not_a_string;
       }
       std::string Res;
       Res += "\"";
-      for (size_t i = 0; i < A.Elements.size(); ++i) {
-        if (const auto *B =
-                llvm::dyn_cast<BuiltinValueBuffer>(A.Elements[i].get())) {
-          char c = static_cast<char>(B->raw.back());
+      for (size_t I = 0, N = A.getArraySize(); I < N; ++I) {
+        const Value &EleVal = A.getArrayInitializedElt(I);
+        if (EleVal.hasValue() && EleVal.isBuiltin()) {
+          char c = EleVal.getChar_S();
           if (c != '\0')
             Res += c;
         }
@@ -375,9 +334,12 @@ not_a_string:
   std::ostringstream OS;
 
   OS << "{ ";
-  for (size_t i = 0; i < A.Elements.size(); ++i) {
-    OS << this->toString(A.Elements[i].get());
-    if (i + 1 < A.Elements.size())
+  for (size_t I = 0, N = A.getArraySize(); I < N; ++I) {
+    const Value &EleVal = A.getArrayInitializedElt(I);
+    if (EleVal.hasValue())
+      OS << this->toString(&EleVal);
+
+    if (I + 1 < N)
       OS << ", ";
   }
 
@@ -385,7 +347,7 @@ not_a_string:
   return OS.str();
 }
 
-std::string ValueResultManager::ValueTypeToString(QualType QT) const {
+std::string ValueToString::toString(QualType QT) {
   ASTContext &AstCtx = const_cast<ASTContext &>(Ctx);
 
   std::string QTStr = QualTypeToString(AstCtx, QT);
@@ -397,16 +359,15 @@ std::string ValueResultManager::ValueTypeToString(QualType QT) const {
 }
 
 void ValueResultManager::resetAndDump() {
-  if (!ValBuf)
+  if (!LastVal.hasValue() || LastVal.isAbsent())
     return;
 
-  QualType Ty = ValBuf->Ty;
+  QualType Ty = LastVal.getType();
 
-  std::unique_ptr<ValueBuffer> Val = nullptr;
-  ValBuf.swap(Val);
+  Value V = std::move(LastVal);
 
   // Don't even try to print a void or an invalid type, it doesn't make sense.
-  if (Ty->isVoidType() || (!Val || (Val && Val->isUnknown())))
+  if (Ty->isVoidType())
     return;
 
   // We need to get all the results together then print it, since `printType` is
@@ -415,11 +376,12 @@ void ValueResultManager::resetAndDump() {
   llvm::raw_string_ostream SS(Str);
   ValueToString ValToStr(Ctx);
   SS << "(";
-  SS << ValueTypeToString(Ty);
+  SS << ValToStr.toString(Ty);
   SS << ") ";
-  SS << ValToStr.toString(Val.get());
+  SS << ValToStr.toString(&V);
   SS << "\n";
   llvm::outs() << Str;
+  V.clear();
 }
 
 llvm::Expected<llvm::orc::ExecutorAddr>
@@ -451,29 +413,52 @@ class ExprConverter {
 public:
   ExprConverter(Sema &S, ASTContext &Ctx) : S(S), Ctx(Ctx) {}
 
-  /// Create (&E) as a void*
+private:
+  bool isAddressOfExpr(Expr *E) {
+    if (!E)
+      return false;
+    if (auto *UO = dyn_cast<UnaryOperator>(E))
+      return UO->getOpcode() == UO_AddrOf;
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+      return isAddressOfExpr(ICE->getSubExpr());
+    return false;
+  }
+
+  /// Build a single &E using Sema.
+  ExprResult buildAddrOfWithSema(Expr *E,
+                                 SourceLocation Loc = SourceLocation()) {
+    // Sema will materialize temporaries as necessary.
+    ExprResult Res = S.CreateBuiltinUnaryOp(Loc, UO_AddrOf, E);
+    if (Res.isInvalid())
+      return ExprError();
+    return Res;
+  }
+
+public:
+  /// Create (&E) as a void* (uses Sema for & creation)
   ExprResult CreateAddressOfVoidPtrExpr(QualType Ty, Expr *ForCast,
                                         bool takeAddr = false) {
-    QualType VoidPtrTy = Ctx.getPointerType(Ctx.VoidTy);
+    ExprResult AddrOfRes = ForCast;
 
-    // &E
-    Expr *AddrOf = ForCast;
     if (takeAddr) {
-      AddrOf = UnaryOperator::Create(
-          Ctx, ForCast, UO_AddrOf, Ctx.getPointerType(Ty), VK_PRValue,
-          OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+      // don't create & twice
+      if (!isAddressOfExpr(ForCast)) {
+        AddrOfRes = buildAddrOfWithSema(ForCast);
+        if (AddrOfRes.isInvalid())
+          return ExprError();
+      } else {
+        // already an &-expression; keep it as-is
+        AddrOfRes = ForCast;
+      }
     }
 
     TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.VoidPtrTy);
-    ExprResult CastedExpr =
-        S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), AddrOf);
-    assert(!CastedExpr.isInvalid() && "Can not create cstyle cast expression");
-    return CastedExpr.get();
-    // static_cast<void*>(&E)
-    // return CXXStaticCastExpr::Create(
-    //     Ctx, VoidPtrTy, VK_PRValue, CK_BitCast, AddrOf, nullptr,
-    //     Ctx.getTrivialTypeSourceInfo(VoidPtrTy), FPOptionsOverride(),
-    //     SourceLocation(), SourceLocation(), SourceRange());
+    ExprResult CastedExpr = S.BuildCStyleCastExpr(
+        SourceLocation(), TSI, SourceLocation(), AddrOfRes.get());
+    if (CastedExpr.isInvalid())
+      return ExprError();
+
+    return CastedExpr;
   }
 
   /// Wrap rvalues in a temporary (var) so they become addressable.
@@ -494,7 +479,13 @@ public:
   }
 
   ExprResult handleEnumTypeExpr(const EnumType *, QualType QTy, Expr *E) {
-    return makeScalarAddressable(QTy, E);
+    uint64_t PtrBits = Ctx.getTypeSize(Ctx.VoidPtrTy);
+    QualType UIntTy = Ctx.getBitIntType(/*Unsigned=*/true, PtrBits);
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(UIntTy);
+    ExprResult CastedExpr =
+        S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
+    assert(!CastedExpr.isInvalid() && "Cannot create cstyle cast expr");
+    return makeScalarAddressable(QTy, CastedExpr.get());
   }
 
   ExprResult handlePointerTypeExpr(const PointerType *, QualType QTy, Expr *E) {
@@ -524,11 +515,43 @@ public:
     return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
   }
 
-  ExprResult handleAnyObjectExpr(const Type *, QualType QTy, Expr *E) {
+  ExprResult handleMemberPointerTypeExpr(const Type *, QualType QTy, Expr *E) {
     if (E->isLValue() || E->isXValue())
       return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
     return CreateAddressOfVoidPtrExpr(QTy, CreateMaterializeTemporaryExpr(E),
                                       /*takeAddr=*/true);
+  }
+
+  ExprResult handleRecordTypeExpr(const Type *, QualType QTy, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(QTy, SourceLocation());
+    ExprResult CXXNewCall =
+        S.BuildCXXNew(E->getSourceRange(),
+                      /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(),
+                      MultiExprArg(),
+                      /*PlacementRParen=*/SourceLocation(),
+                      /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI,
+                      std::nullopt, E->getSourceRange(), E);
+
+    if (CXXNewCall.isInvalid())
+      return ExprError();
+
+    auto CallRes = S.ActOnFinishFullExpr(CXXNewCall.get(),
+                                         /*DiscardedValue=*/false);
+    if (CallRes.isInvalid())
+      return ExprError();
+    return CreateAddressOfVoidPtrExpr(QTy, CallRes.get(), /*takeAddr=*/false);
+  }
+
+  ExprResult handleAnyObjectExpr(const Type *, QualType QTy, Expr *E) {
+    if (E->isLValue() || E->isXValue())
+      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
+    auto Res = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    assert(!Res.isInvalid());
+    return CreateAddressOfVoidPtrExpr(QTy, Res.get(),
+                                      /*takeAddr=*/false);
   }
 };
 
@@ -567,6 +590,18 @@ public:
     return true;
   }
 
+  bool VisitMemberPointerType(const MemberPointerType *Ty) {
+    Args.push_back(
+        Converter.handleMemberPointerTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
+  }
+
+  bool VisitRecordType(const RecordType *Ty) {
+    // Args.push_back(
+    //     Converter.handleRecordTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return false;
+  }
+
   bool VisitConstantArrayType(const ConstantArrayType *Ty) {
     Args.push_back(Converter.handleArrayTypeExpr(Ty, QualType(Ty, 0), E).get());
     return true;
@@ -591,7 +626,7 @@ public:
   }
 };
 
-enum RunTimeFnTag { OrcSendResult, ClangSendResult };
+enum RunTimeFnTag { OrcSendResult, ClangSendResult, ClangDestroyObj };
 
 static constexpr llvm::StringRef RunTimeFnTagName[] = {
     "__orc_rt_SendResultValue", "__clang_Interpreter_SendResultValue"};

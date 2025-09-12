@@ -705,7 +705,7 @@ llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   return llvm::Error::success();
 }
 
-llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code) {
+llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
 
   auto PTU = Parse(Code);
   if (!PTU)
@@ -715,7 +715,10 @@ llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code) {
       return Err;
 
   if (ValMgr) {
-    ValMgr->resetAndDump();
+    if (V) {
+      *V = ValMgr->release();
+    } else
+      ValMgr->resetAndDump();
   }
   return llvm::Error::success();
 }

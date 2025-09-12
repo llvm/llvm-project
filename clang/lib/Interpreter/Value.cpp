@@ -112,173 +112,114 @@ private:
 
 namespace clang {
 
-static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
-  if (Ctx.hasSameType(QT, Ctx.VoidTy))
-    return Value::K_Void;
+// static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT)
+// {
+//   if (Ctx.hasSameType(QT, Ctx.VoidTy))
+//     return Value::K_Void;
 
+//   if (const auto *ED = QT->getAsEnumDecl())
+//     QT = ED->getIntegerType();
+
+//   const auto *BT = QT->getAs<BuiltinType>();
+//   if (!BT || BT->isNullPtrType())
+//     return Value::K_PtrOrObj;
+
+//   switch (QT->castAs<BuiltinType>()->getKind()) {
+//   default:
+//     assert(false && "Type not supported");
+//     return Value::K_Unspecified;
+// #define X(type, name) \
+//   case BuiltinType::name: \
+//     return Value::K_##name;
+//     REPL_BUILTIN_TYPES
+// #undef X
+//   }
+// }
+
+Value::Value(const Value &RHS) : Ty(RHS.getType()), VKind(K_None) {
+  switch (RHS.getKind()) {
+  case K_None:
+    VKind = RHS.VKind;
+    break;
+  case K_Builtin: {
+    MakeBuiltIns();
+    if (RHS.asBuiltin().getKind() != BuiltinKind::K_Unspecified) {
+      setBuiltins(asBuiltin(), RHS.asBuiltin());
+    }
+    break;
+  }
+  case K_Array: {
+    MakeArray(RHS.getArraySize());
+    for (uint64_t I = 0, N = RHS.getArraySize(); I < N; ++I)
+      getArrayInitializedElt(I) = RHS.getArrayInitializedElt(I);
+    break;
+  }
+  case K_Pointer: {
+    MakePointer(RHS.getAddr());
+    if (RHS.HasPointee())
+      getPointerPointee() = RHS.getPointerPointee();
+    break;
+  }
+  case K_Str:
+    MakeStr(RHS.getStrVal().str());
+    break;
+  }
+}
+
+Value &Value::operator=(const Value &RHS) {
+  if (this != &RHS)
+    *this = Value(RHS);
+
+  return *this;
+}
+
+Value &Value::operator=(Value &&RHS) {
+  if (this != &RHS) {
+    if (VKind != K_None)
+      destroy();
+
+    Ty = RHS.Ty;
+    VKind = RHS.VKind;
+    Data = RHS.Data;
+    RHS.VKind = K_None;
+  }
+
+  return *this;
+}
+
+Value::Value(QualType QT, std::vector<uint8_t> Raw) : Ty(QT), VKind(K_None) {
+  MakeBuiltIns();
+  Builtins &B = asBuiltin();
   if (const auto *ED = QT->getAsEnumDecl())
     QT = ED->getIntegerType();
-
-  const auto *BT = QT->getAs<BuiltinType>();
-  if (!BT || BT->isNullPtrType())
-    return Value::K_PtrOrObj;
-
   switch (QT->castAs<BuiltinType>()->getKind()) {
   default:
     assert(false && "Type not supported");
-    return Value::K_Unspecified;
+
 #define X(type, name)                                                          \
-  case BuiltinType::name:                                                      \
-    return Value::K_##name;
+  case BuiltinType::name: {                                                    \
+    B.setKind(BuiltinKind::K_##name);                                          \
+    B.set##name(as<type>(Raw));                                                \
+  } break;
     REPL_BUILTIN_TYPES
 #undef X
   }
 }
 
-Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
-  const ASTContext &C = getASTContext();
-  setKind(ConvertQualTypeToKind(C, getType()));
-  if (ValueKind == K_PtrOrObj) {
-    QualType Canon = getType().getCanonicalType();
-    if ((Canon->isPointerType() || Canon->isObjectType() ||
-         Canon->isReferenceType()) &&
-        (Canon->isRecordType() || Canon->isConstantArrayType() ||
-         Canon->isMemberPointerType())) {
-      IsManuallyAlloc = true;
-      // Compile dtor function.
-      const Interpreter &Interp = getInterpreter();
-      void *DtorF = nullptr;
-      size_t ElementsSize = 1;
-      QualType DtorTy = getType();
+void Value::dump(ASTContext &Ctx) const { print(llvm::outs(), Ctx); }
 
-      if (const auto *ArrTy =
-              llvm::dyn_cast<ConstantArrayType>(DtorTy.getTypePtr())) {
-        DtorTy = ArrTy->getElementType();
-        llvm::APInt ArrSize(sizeof(size_t) * 8, 1);
-        do {
-          ArrSize *= ArrTy->getSize();
-          ArrTy = llvm::dyn_cast<ConstantArrayType>(
-              ArrTy->getElementType().getTypePtr());
-        } while (ArrTy);
-        ElementsSize = static_cast<size_t>(ArrSize.getZExtValue());
-      }
-      if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
-        if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
-                Interp.CompileDtorCall(CXXRD))
-          DtorF = reinterpret_cast<void *>(Addr->getValue());
-        else
-          llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
-      }
-
-      size_t AllocSize =
-          getASTContext().getTypeSizeInChars(getType()).getQuantity();
-      unsigned char *Payload =
-          ValueStorage::CreatePayload(DtorF, AllocSize, ElementsSize);
-      setPtr((void *)Payload);
-    }
-  }
+void Value::printType(llvm::raw_ostream &Out, ASTContext &Ctx) const {
+  Out << ValueToString(Ctx).toString(getType());
 }
 
-Value::Value(const Value &RHS)
-    : Interp(RHS.Interp), OpaqueType(RHS.OpaqueType), Data(RHS.Data),
-      ValueKind(RHS.ValueKind), IsManuallyAlloc(RHS.IsManuallyAlloc) {
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Retain();
-}
-
-Value::Value(Value &&RHS) noexcept {
-  Interp = std::exchange(RHS.Interp, nullptr);
-  OpaqueType = std::exchange(RHS.OpaqueType, nullptr);
-  Data = RHS.Data;
-  ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
-  IsManuallyAlloc = std::exchange(RHS.IsManuallyAlloc, false);
-
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Release();
-}
-
-Value &Value::operator=(const Value &RHS) {
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Release();
-
-  Interp = RHS.Interp;
-  OpaqueType = RHS.OpaqueType;
-  Data = RHS.Data;
-  ValueKind = RHS.ValueKind;
-  IsManuallyAlloc = RHS.IsManuallyAlloc;
-
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Retain();
-
-  return *this;
-}
-
-Value &Value::operator=(Value &&RHS) noexcept {
-  if (this != &RHS) {
-    if (IsManuallyAlloc)
-      ValueStorage::getFromPayload(getPtr())->Release();
-
-    Interp = std::exchange(RHS.Interp, nullptr);
-    OpaqueType = std::exchange(RHS.OpaqueType, nullptr);
-    ValueKind = std::exchange(RHS.ValueKind, K_Unspecified);
-    IsManuallyAlloc = std::exchange(RHS.IsManuallyAlloc, false);
-
-    Data = RHS.Data;
-  }
-  return *this;
-}
-
-void Value::clear() {
-  if (IsManuallyAlloc)
-    ValueStorage::getFromPayload(getPtr())->Release();
-  ValueKind = K_Unspecified;
-  OpaqueType = nullptr;
-  Interp = nullptr;
-  IsManuallyAlloc = false;
-}
-
-Value::~Value() { clear(); }
-
-void *Value::getPtr() const {
-  assert(ValueKind == K_PtrOrObj);
-  return Data.m_Ptr;
-}
-
-void Value::setRawBits(void *Ptr, unsigned NBits /*= sizeof(Storage)*/) {
-  assert(NBits <= sizeof(Storage) && "Greater than the total size");
-  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
-}
-
-QualType Value::getType() const {
-  return QualType::getFromOpaquePtr(OpaqueType);
-}
-
-const Interpreter &Value::getInterpreter() const {
-  assert(Interp != nullptr &&
-         "Can't get interpreter from a default constructed value");
-  return *Interp;
-}
-
-const ASTContext &Value::getASTContext() const {
-  return getInterpreter().getASTContext();
-}
-
-void Value::dump() const { print(llvm::outs()); }
-
-void Value::printType(llvm::raw_ostream &Out) const {
-  // Out << Interp->ValueTypeToString(*this);
-}
-
-void Value::printData(llvm::raw_ostream &Out) const {
-  Out << Interp->ValueDataToString(*this);
+void Value::printData(llvm::raw_ostream &Out, ASTContext &Ctx) const {
+  Out << ValueToString(Ctx).toString(this);
 }
 // FIXME: We do not support the multiple inheritance case where one of the base
 // classes has a pretty-printer and the other does not.
-void Value::print(llvm::raw_ostream &Out) const {
-  assert(OpaqueType != nullptr && "Can't print default Value");
-
+void Value::print(llvm::raw_ostream &Out, ASTContext &Ctx) const {
   // Don't even try to print a void or an invalid type, it doesn't make sense.
-  if (getType()->isVoidType() || !isValid())
+  if (getType()->isVoidType() || isAbsent())
     return;
 
   // We need to get all the results together then print it, since `printType` is
@@ -287,145 +228,97 @@ void Value::print(llvm::raw_ostream &Out) const {
   llvm::raw_string_ostream SS(Str);
 
   SS << "(";
-  printType(SS);
+  printType(SS, Ctx);
   SS << ") ";
-  printData(SS);
+  printData(SS, Ctx);
   SS << "\n";
   Out << Str;
 }
 
-class ReaderDispatcher {
+class ValueReaderDispatcher {
 private:
   ASTContext &Ctx;
   llvm::orc::MemoryAccess &MA;
 
 public:
-  ReaderDispatcher(ASTContext &Ctx, llvm::orc::MemoryAccess &MA)
+  ValueReaderDispatcher(ASTContext &Ctx, llvm::orc::MemoryAccess &MA)
       : Ctx(Ctx), MA(MA) {}
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  read(QualType QT, llvm::orc::ExecutorAddr Addr);
+  llvm::Expected<Value> read(QualType QT, llvm::orc::ExecutorAddr Addr);
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr);
+  llvm::Expected<Value> readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr);
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr);
+  llvm::Expected<Value> readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr);
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  readArray(QualType Ty, llvm::orc::ExecutorAddr Addr);
+  llvm::Expected<Value> readArray(QualType Ty, llvm::orc::ExecutorAddr Addr);
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  readOtherObject(QualType Ty, llvm::orc::ExecutorAddr Addr);
-
+  llvm::Expected<Value> readOtherObject(QualType Ty,
+                                        llvm::orc::ExecutorAddr Addr);
   // TODO: record, function, etc.
 };
 
-class TypeReadVisitor
-    : public TypeVisitor<TypeReadVisitor,
-                         llvm::Expected<std::unique_ptr<ValueBuffer>>> {
-  ReaderDispatcher &Dispatcher;
+class ValueReadVisitor
+    : public TypeVisitor<ValueReadVisitor, llvm::Expected<Value>> {
+  ValueReaderDispatcher &Dispatcher;
   llvm::orc::ExecutorAddr Addr;
 
 public:
-  TypeReadVisitor(ReaderDispatcher &D, llvm::orc::ExecutorAddr A)
+  ValueReadVisitor(ValueReaderDispatcher &D, llvm::orc::ExecutorAddr A)
       : Dispatcher(D), Addr(A) {}
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>> VisitType(const Type *T) {
+  llvm::Expected<Value> VisitType(const Type *T) {
     return Dispatcher.readOtherObject(QualType(T, 0), Addr);
   }
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  VisitBuiltinType(const BuiltinType *BT) {
+  llvm::Expected<Value> VisitBuiltinType(const BuiltinType *BT) {
     return Dispatcher.readBuiltin(QualType(BT, 0), Addr);
   }
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  VisitPointerType(const PointerType *PT) {
+  llvm::Expected<Value> VisitPointerType(const PointerType *PT) {
     return Dispatcher.readPointer(QualType(PT, 0), Addr);
   }
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  VisitConstantArrayType(const ConstantArrayType *AT) {
+  llvm::Expected<Value> VisitConstantArrayType(const ConstantArrayType *AT) {
     return Dispatcher.readArray(QualType(AT, 0), Addr);
   }
 
-  llvm::Expected<std::unique_ptr<ValueBuffer>>
-  VisitEnumType(const EnumType *ET) {
+  llvm::Expected<Value> VisitEnumType(const EnumType *ET) {
     return Dispatcher.readBuiltin(QualType(ET, 0), Addr);
   }
 };
 
-llvm::Expected<std::unique_ptr<ValueBuffer>>
-ReaderDispatcher::read(QualType QT, llvm::orc::ExecutorAddr Addr) {
-  TypeReadVisitor V(*this, Addr);
+llvm::Expected<Value>
+ValueReaderDispatcher::read(QualType QT, llvm::orc::ExecutorAddr Addr) {
+  ValueReadVisitor V(*this, Addr);
   return V.Visit(QT.getTypePtr());
 }
 
-llvm::Expected<std::unique_ptr<ValueBuffer>>
-ReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+llvm::Expected<Value>
+ValueReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+  if (Ty->isVoidType())
+    return Value();
   auto Size = Ctx.getTypeSizeInChars(Ty).getQuantity();
   auto ResOrErr = MA.readBuffers({llvm::orc::ExecutorAddrRange(Addr, Size)});
   if (!ResOrErr)
     return ResOrErr.takeError();
 
-  auto Buf = std::make_unique<BuiltinValueBuffer>(Ty);
   const auto &Res = *ResOrErr;
-  std::vector<uint8_t> ElemBuf(Size);
-  std::memcpy(ElemBuf.data(), Res.back().data(), Size);
-  Buf->raw = std::move(ElemBuf);
-  return std::move(Buf);
+  return Value(Ty, Res.back());
 }
 
-llvm::Expected<std::unique_ptr<ValueBuffer>>
-ReaderDispatcher::readArray(QualType Ty, llvm::orc::ExecutorAddr Addr) {
-  const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty);
-  if (!CAT)
-    return llvm::make_error<llvm::StringError>("Not a ConstantArrayType",
-                                               llvm::inconvertibleErrorCode());
-
-  QualType ElemTy = CAT->getElementType();
-  size_t ElemSize = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
-
-  auto Buf = std::make_unique<ArrayValueBuffer>(Ty);
-
-  for (size_t i = 0; i < CAT->getZExtSize(); ++i) {
-    auto ElemAddr = Addr + i * ElemSize;
-    auto ElemBufOrErr = read(ElemTy, ElemAddr);
-    if (!ElemBufOrErr)
-      return ElemBufOrErr.takeError();
-    Buf->Elements.push_back(std::move(*ElemBufOrErr));
-  }
-
-  return std::move(Buf);
-}
-
-llvm::Expected<std::unique_ptr<ValueBuffer>>
-ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
-                                                llvm::orc::ExecutorAddr Addr) {
+llvm::Expected<Value>
+ValueReaderDispatcher::readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr) {
   auto PtrTy = dyn_cast<PointerType>(Ty.getTypePtr());
   if (!PtrTy)
     return llvm::make_error<llvm::StringError>("Not a PointerType",
                                                llvm::inconvertibleErrorCode());
-  // unsigned PtrWidth = Ctx.getTypeSizeInChars(Ty).getQuantity();
-  // uint64_t PtrValAddr = 0;
-  // if (PtrWidth == 32) {
-  //   auto AddrOrErr = MA.readUInt32s({Addr});
-  //   if (!AddrOrErr)
-  //     return AddrOrErr.takeError();
-  //   PtrValAddr = AddrOrErr->back();
-  // } else {
-  //   auto AddrOrErr = MA.readUInt64s({Addr});
-  //   if (!AddrOrErr)
-  //     return AddrOrErr.takeError();
-  //   PtrValAddr = AddrOrErr->back();
-  // }
+
   uint64_t PtrValAddr = Addr.getValue();
   if (PtrValAddr == 0)
-    return std::make_unique<PointerValueBuffer>(Ty); // null pointer
+    return Value(Ty, PtrValAddr); // null pointer
 
   llvm::orc::ExecutorAddr PointeeAddr(PtrValAddr);
-  auto PtrBuf = std::make_unique<PointerValueBuffer>(Ty, PtrValAddr);
+  Value Val(Ty, PtrValAddr);
 
   QualType PointeeTy = PtrTy->getPointeeType();
   if (PointeeTy->isCharType()) {
@@ -439,29 +332,57 @@ ReaderDispatcher::ReaderDispatcher::readPointer(QualType Ty,
         break;
       S.push_back(c);
     }
-    auto Buf = std::make_unique<BuiltinValueBuffer>(PointeeTy);
-    Buf->raw.assign(S.begin(), S.end());
-    if (S.empty())
-      Buf->raw.push_back('\0'); // represent ""
-    PtrBuf->Pointee = std::move(Buf);
+    Value Str(PointeeTy, S.c_str());
+    Val.getPointerPointee() = std::move(Str);
   }
-  // else {
-  //   auto BufOrErr = read(PointeeTy, PointeeAddr);
-  //   if (!BufOrErr)
-  //     return BufOrErr.takeError();
-  //   PtrBuf->Pointee = std::move(*BufOrErr);
-  // }
-  return std::move(PtrBuf);
+
+  return std::move(Val);
 }
 
-llvm::Expected<std::unique_ptr<ValueBuffer>>
-ReaderDispatcher::readOtherObject(QualType Ty, llvm::orc::ExecutorAddr Addr) {
-  unsigned PtrWidth = Ctx.getTypeSizeInChars(Ty).getQuantity();
-  uint64_t PtrValAddr = Addr.getValue();
-  if (PtrValAddr == 0)
-    return std::make_unique<PointerValueBuffer>(Ty); // null pointer
+llvm::Expected<Value>
+ValueReaderDispatcher::readArray(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+  const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty);
+  if (!CAT)
+    return llvm::make_error<llvm::StringError>("Not a ConstantArrayType",
+                                               llvm::inconvertibleErrorCode());
 
-  return std::make_unique<PointerValueBuffer>(Ty, PtrValAddr);
+  QualType ElemTy = CAT->getElementType();
+  size_t ElemSize = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+
+  Value Val(Value::UninitArr(), Ty, CAT->getZExtSize());
+  for (size_t i = 0; i < CAT->getZExtSize(); ++i) {
+    auto ElemAddr = Addr + i * ElemSize;
+    if (ElemTy->isPointerType()) {
+      auto BufOrErr = MA.readUInt64s({ElemAddr});
+      if (!BufOrErr)
+        return BufOrErr.takeError();
+      llvm::orc::ExecutorAddr Addr(BufOrErr->back());
+      ElemAddr = Addr;
+    }
+
+    auto ElemBufOrErr = read(ElemTy, ElemAddr);
+    if (!ElemBufOrErr)
+      return ElemBufOrErr.takeError();
+    Val.getArrayInitializedElt(i) = std::move(*ElemBufOrErr);
+  }
+
+  return std::move(Val);
+}
+
+llvm::Expected<Value>
+ValueReaderDispatcher::readOtherObject(QualType Ty,
+                                       llvm::orc::ExecutorAddr Addr) {
+  llvm::outs() << Addr.getValue();
+  if (Ty->isRecordType()) {
+    llvm::outs() << "Here in recordtype\n";
+    auto BufOrErr = MA.readUInt64s({Addr});
+    if (!BufOrErr)
+      return BufOrErr.takeError();
+    Addr = llvm::orc::ExecutorAddr(BufOrErr->back());
+  }
+  uint64_t PtrValAddr = Addr.getValue();
+  llvm::outs() << PtrValAddr;
+  return Value(Ty, PtrValAddr);
 }
 
 ValueResultManager::ValueResultManager(ASTContext &Ctx,
@@ -511,18 +432,16 @@ void ValueResultManager::deliverResult(SendResultFn SendResult, ValueId ID,
     IdToType.erase(It);
   }
 
-  ReaderDispatcher Runner(Ctx, MemAcc);
+  ValueReaderDispatcher Runner(Ctx, MemAcc);
   auto BufOrErr = Runner.read(Ty, Addr);
 
-  ValBuf.reset();
   if (!BufOrErr) {
     SendResult(BufOrErr.takeError());
     return;
   }
 
   // Store the successfully read value buffer
-  ValBuf.swap(*BufOrErr);
-
+  LastVal = std::move(*BufOrErr);
   SendResult(llvm::Error::success());
   return;
 }
