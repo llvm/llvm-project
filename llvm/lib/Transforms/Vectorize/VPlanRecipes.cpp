@@ -2761,9 +2761,8 @@ VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
-      ExpressionRecipes(SetVector<VPSingleDefRecipe *>(
-                            ExpressionRecipes.begin(), ExpressionRecipes.end())
-                            .takeVector()),
+      ExpressionRecipes(SmallVector<VPSingleDefRecipe *>(
+          ExpressionRecipes.begin(), ExpressionRecipes.end())),
       ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -2797,25 +2796,43 @@ VPExpressionRecipe::VPExpressionRecipe(
       R->removeFromParent();
   }
 
+  // Keep track of how many instances of each recipe occur in the recipe list
+  SmallMapVector<VPSingleDefRecipe *, unsigned, 4> ExpressionRecipeCounts;
+  for (auto *R : ExpressionRecipes) {
+    auto *F = ExpressionRecipeCounts.find(R);
+    if (F == ExpressionRecipeCounts.end())
+      ExpressionRecipeCounts.insert(std::make_pair(R, 1));
+    else
+      F->second++;
+  }
+
   // Internalize all external operands to the expression recipes. To do so,
   // create new temporary VPValues for all operands defined by a recipe outside
   // the expression. The original operands are added as operands of the
   // VPExpressionRecipe itself.
   for (auto *R : ExpressionRecipes) {
+    auto *F = ExpressionRecipeCounts.find(R);
+    F->second--;
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
       if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      LiveInPlaceholders.push_back(new VPValue());
-      R->setOperand(Idx, LiveInPlaceholders.back());
+      auto *Tmp = new VPValue();
+      Tmp->setUnderlyingValue(Op->getUnderlyingValue());
+      LiveInPlaceholders.push_back(Tmp);
+      // Only modify this recipe's operands if it's the last time it occurs in
+      // the recipe list
+      if (F->second == 0)
+        R->setOperand(Idx, Tmp);
     }
   }
 }
 
 void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
-    R->insertBefore(this);
+    if (!R->getParent())
+      R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
