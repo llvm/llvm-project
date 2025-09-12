@@ -629,21 +629,24 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
     UniqAttributes.try_emplace(&Int, ID);
   }
 
-  constexpr uint16_t NoFunctionAttrsID = 255;
-  if (UniqAttributes.size() > 256)
-    PrintFatalError("Too many unique argument attributes for table!");
-  // Note, ID 255 is used to indicate no function attributes.
-  if (UniqFnAttributes.size() > 255)
-    PrintFatalError("Too many unique function attributes for table!");
+  const uint8_t UniqAttributesBitSize = Log2_32_Ceil(UniqAttributes.size() + 1);
+  // Note, ID `-1` is used to indicate no function attributes.
+  const uint8_t UniqFnAttributesBitSize =
+      Log2_32_Ceil(UniqFnAttributes.size() + 2);
+  const uint16_t NoFunctionAttrsID =
+      maskTrailingOnes<uint16_t>(UniqFnAttributesBitSize);
+  if (UniqAttributesBitSize + UniqFnAttributesBitSize > 16)
+    PrintFatalError(
+        "More than 16 bits are used for IntrinsicsToAttributesMap's entry!");
 
-  // Assign a 16-bit packed ID for each intrinsic. The lower 8-bits will be its
-  // "argument attribute ID" (index in UniqAttributes) and upper 8 bits will be
+  // Assign a 16-bit packed ID for each intrinsic. The lower bits will be its
+  // "argument attribute ID" (index in UniqAttributes) and upper bits will be
   // its "function attribute ID" (index in UniqFnAttributes).
   for (const CodeGenIntrinsic &Int : Ints) {
     uint16_t FnAttrIndex =
         hasFnAttributes(Int) ? UniqFnAttributes[&Int] : NoFunctionAttrsID;
-    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
-                  UniqAttributes[&Int], Int.Name);
+    OS << formatv("\n    {} << {} | {}, // {}", FnAttrIndex,
+                  UniqAttributesBitSize, UniqAttributes[&Int], Int.Name);
   }
 
   OS << R"(
@@ -749,8 +752,8 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
     return AttributeList();
 
   uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
-  uint8_t FnAttrID = PackedID >> 8;
-  uint8_t ArgAttrID = PackedID & 0xFF;
+  uint16_t FnAttrID = PackedID >> ({});
+  uint16_t ArgAttrID = PackedID & ({});
   using PairTy = std::pair<unsigned, AttributeSet>;
   alignas(PairTy) char ASStorage[sizeof(PairTy) * {}];
   PairTy *AS = reinterpret_cast<PairTy *>(ASStorage);
@@ -772,10 +775,20 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
   }
   return AttributeList::get(C, ArrayRef(AS, NumAttrs));
 }
+
+AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
+  if (id == 0)
+    return AttributeSet();
+  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
+  uint16_t FnAttrID = PackedID >> ({});
+  return getIntrinsicFnAttributeSet(C, FnAttrID);
+}
 #endif // GET_INTRINSIC_ATTRIBUTES
 
 )",
-                MaxNumAttrs, NoFunctionAttrsID);
+                UniqAttributesBitSize,
+                maskTrailingOnes<uint16_t>(UniqAttributesBitSize), MaxNumAttrs,
+                NoFunctionAttrsID, UniqAttributesBitSize);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
