@@ -141,6 +141,8 @@ public:
     return false;
   }
 
+  bool shouldConsiderVectorizationRegPressure() const override { return true; }
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
