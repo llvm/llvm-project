@@ -30,7 +30,7 @@ void baz(void (*fn)(int, int, int), int arg1, int arg2, int arg3) {
 
 union Union {
   char *c;
-  long* n;
+  long *n;
 } __attribute__((transparent_union));
 
 void uni(void (*fn)(union Union), union Union arg1) {
