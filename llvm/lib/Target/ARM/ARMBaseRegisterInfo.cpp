@@ -707,7 +707,7 @@ ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
   Register BaseReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
-  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
+  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this));
 
   MachineInstrBuilder MIB = BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);
@@ -881,7 +881,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   const MCInstrDesc &MCID = MI.getDesc();
   const TargetRegisterClass *RegClass =
-      TII.getRegClass(MCID, FIOperandNum, this, *MI.getParent()->getParent());
+      TII.getRegClass(MCID, FIOperandNum, this);
 
   if (Offset == 0 && (FrameReg.isVirtual() || RegClass->contains(FrameReg)))
     // Must be addrmode4/6.
