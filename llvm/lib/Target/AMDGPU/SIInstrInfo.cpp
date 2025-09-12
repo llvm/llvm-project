@@ -5976,7 +5976,7 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
 static const TargetRegisterClass *
 adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
                           const MCInstrDesc &TID, unsigned RCID) {
-  if (!ST.hasGFX90AInsts() && (((TID.mayLoad() || TID.mayStore())))) {
+  if (!ST.hasGFX90AInsts() && (TID.mayLoad() || TID.mayStore())) {
     switch (RCID) {
     case AMDGPU::AV_32RegClassID:
       RCID = AMDGPU::VGPR_32RegClassID;
