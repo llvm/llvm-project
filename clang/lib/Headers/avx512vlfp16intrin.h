@@ -936,7 +936,7 @@ _mm256_cvtepu16_ph(__m256i __A) {
   return (__m256h) __builtin_convertvector((__v16hu)__A, __v16hf);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_cvtepu16_ph(__m256h __W, __mmask16 __U, __m256i __A) {
   return (__m256h)__builtin_ia32_selectph_256(
       (__mmask16)__U, (__v16hf)_mm256_cvtepu16_ph(__A), (__v16hf)__W);
