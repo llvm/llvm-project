@@ -5928,13 +5928,14 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
 
   if (ExcessBits < NVT.getSizeInBits()) {
     // Transfer high bits from the top of Lo to the bottom of Hi.
-    Hi = DAG.getNode(
-        ISD::SHL, dl, NVT, Hi,
-        DAG.getShiftAmountConstant(NVT.getSizeInBits() - ExcessBits, NVT, dl));
+    Hi = DAG.getNode(ISD::SHL, dl, NVT, Hi,
+                     DAG.getConstant(NVT.getSizeInBits() - ExcessBits, dl,
+                                     TLI.getPointerTy(DAG.getDataLayout())));
     Hi = DAG.getNode(
         ISD::OR, dl, NVT, Hi,
         DAG.getNode(ISD::SRL, dl, NVT, Lo,
-                    DAG.getShiftAmountConstant(ExcessBits, NVT, dl)));
+                    DAG.getConstant(ExcessBits, dl,
+                                    TLI.getPointerTy(DAG.getDataLayout()))));
   }
 
   // Store both the high bits and maybe some of the low bits.
