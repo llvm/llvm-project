@@ -255,7 +255,8 @@ private:
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
                   std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
                   std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
+                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value ||
+                  std::is_same<RecipeTy, VPVectorEndPointerRecipe>::value)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -565,6 +566,17 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::Select, Op0_t, specific_intval<1>, Op1_t>
 m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Select(Op0, m_True(), Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VPVectorEndPointer_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0, /*Commutative=*/false,
+                 VPVectorEndPointerRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+inline VPVectorEndPointer_match<Op0_t, Op1_t>
+m_VectorEndPointer(const Op0_t &Op0, const Op1_t &Op1) {
+  return VPVectorEndPointer_match<Op0_t, Op1_t>({Op0, Op1});
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
