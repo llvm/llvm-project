@@ -11631,9 +11631,9 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     }
 
     // Check for sign bit test patterns that can use TST optimization.
-    // (SELECT_CC setlt, singn_extend_inreg, 0, tval, fval)
+    // (SELECT_CC setlt, sign_extend_inreg, 0, tval, fval)
     //                          -> TST %operand, sign_bit; CSEL
-    // (SELECT_CC setlt, singn_extend, 0, tval, fval)
+    // (SELECT_CC setlt, sign_extend, 0, tval, fval)
     //                          -> TST %operand, sign_bit; CSEL
     if (CC == ISD::SETLT && RHSC && RHSC->isZero() && LHS.hasOneUse() &&
         (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG ||
@@ -11667,7 +11667,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
 
         SDValue Flags = TST.getValue(1);
         return DAG.getNode(AArch64ISD::CSEL, DL, TVal.getValueType(), TVal,
-                           FVal, DAG.getConstant(AArch64CC::MI, DL, MVT::i32),
+                           FVal, DAG.getConstant(AArch64CC::NE, DL, MVT::i32),
                            Flags);
       }
     }

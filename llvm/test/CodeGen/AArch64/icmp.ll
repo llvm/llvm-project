@@ -2105,7 +2105,7 @@ define i32 @i8_signbit_tst_constants(i8 %x, i8 %y) {
 ; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-SD-NEXT:    tst w9, #0x80
 ; CHECK-SD-NEXT:    mov w9, #20894 // =0x519e
-; CHECK-SD-NEXT:    csel w0, w9, w8, mi
+; CHECK-SD-NEXT:    csel w0, w9, w8, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: i8_signbit_tst_constants:
@@ -2129,7 +2129,7 @@ define i32 @i8_signbit_variables(i8 %x, i8 %y, i32 %a, i32 %b) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add w8, w0, w1
 ; CHECK-SD-NEXT:    tst w8, #0x80
-; CHECK-SD-NEXT:    csel w0, w2, w3, mi
+; CHECK-SD-NEXT:    csel w0, w2, w3, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: i8_signbit_variables:
