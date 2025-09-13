@@ -740,16 +740,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
     APInt Imm = FPimm.bitcastToAPInt();
     unsigned Size = MRI->getType(DstReg).getSizeInBits();
-
-    if (!Subtarget->hasStdExtF() &&
-        (Size == 32 || (Size == 64 && Subtarget->is64Bit()))) {
-      if (!materializeImm(DstReg, Imm.getSExtValue(), MIB))
-        return false;
-
-      MI.eraseFromParent();
-      return true;
-    }
-
     if (Size == 16 || Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
       Register GPRReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
       if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))

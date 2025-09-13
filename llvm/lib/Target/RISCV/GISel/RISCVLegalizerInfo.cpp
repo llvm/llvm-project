@@ -871,6 +871,12 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
 }
 
+bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APImm) const {
+  if (APImm.isZero() || APImm.isExactlyValue(1.0))
+    return false;
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
                                         MachineIRBuilder &MIB) const {
   const LLT XLenTy(STI.getXLenVT());
@@ -1361,12 +1367,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
   case TargetOpcode::G_FCONSTANT: {
-    const ConstantFP *ConstVal = MI.getOperand(1).getFPImm();
-    bool ShouldOptForSize = MF.getFunction().hasOptSize();
-    if (!shouldBeInConstantPool(ConstVal->getValue().bitcastToAPInt(),
-                                ShouldOptForSize))
-      return true;
-    return Helper.lowerFConstant(MI);
+    const APFloat FVal = MI.getOperand(1).getFPImm()->getValueAPF();
+    if (shouldBeInFConstantPool(FVal))
+      return Helper.lowerFConstant(MI);
+
+    // Convert G_FCONSTANT to G_CONSTANT.
+    Register DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
+
+    MI.eraseFromParent();
+    return true;
   }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();

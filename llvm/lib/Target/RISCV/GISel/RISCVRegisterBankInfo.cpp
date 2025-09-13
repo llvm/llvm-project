@@ -112,8 +112,7 @@ using namespace llvm;
 RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
     : RISCVGenRegisterBankInfo(HwMode) {}
 
-static const RegisterBankInfo::ValueMapping *
-getFPValueMapping(unsigned Size, bool HasFPExt = true) {
+static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   unsigned Idx;
   switch (Size) {
   default:
@@ -122,10 +121,10 @@ getFPValueMapping(unsigned Size, bool HasFPExt = true) {
     Idx = RISCV::FPRB16Idx;
     break;
   case 32:
-    Idx = HasFPExt ? RISCV::FPRB32Idx : RISCV::GPRB32Idx;
+    Idx = RISCV::FPRB32Idx;
     break;
   case 64:
-    Idx = HasFPExt ? RISCV::FPRB64Idx : RISCV::GPRB64Idx;
+    Idx = RISCV::FPRB64Idx;
     break;
   }
   return &RISCV::ValueMappings[Idx];
@@ -220,9 +219,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-  // D and Zfh extension implies F.
-  bool HasFPExt = STI.hasFeature(RISCV::FeatureStdExtF);
-
   unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
 
@@ -270,7 +266,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (Ty.isVector())
       Mapping = getVRBValueMapping(Size.getKnownMinValue());
     else if (isPreISelGenericFloatingPointOpcode(Opc))
-      Mapping = getFPValueMapping(Size.getFixedValue(), HasFPExt);
+      Mapping = getFPValueMapping(Size.getFixedValue());
     else
       Mapping = GPRValueMapping;
 
@@ -305,7 +301,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (DstTy.isVector())
       Mapping = getVRBValueMapping(DstMinSize);
     else if (anyUseOnlyUseFP(Dst, MRI, TRI))
-      Mapping = getFPValueMapping(DstMinSize, HasFPExt);
+      Mapping = getFPValueMapping(DstMinSize);
 
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, Mapping,
                                  NumOperands);
@@ -343,7 +339,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // assume this was a floating point load in the IR. If it was
       // not, we would have had a bitcast before reaching that
       // instruction.
-      OpdsMapping[0] = getFPValueMapping(Size, HasFPExt);
+      OpdsMapping[0] = getFPValueMapping(Size);
       break;
     }
 
@@ -371,7 +367,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(0).getReg());
     if (onlyDefinesFP(*DefMI, MRI, TRI))
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_SELECT: {
@@ -436,7 +432,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     const ValueMapping *Mapping = GPRValueMapping;
     if (NumFP >= 2)
-      Mapping = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+      Mapping = getFPValueMapping(Ty.getSizeInBits());
 
     OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = Mapping;
     break;
@@ -448,13 +444,13 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case RISCV::G_FCLASS: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     OpdsMapping[0] = GPRValueMapping;
-    OpdsMapping[1] = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+    OpdsMapping[1] = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+    OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
     OpdsMapping[1] = GPRValueMapping;
     break;
   }
@@ -472,7 +468,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       OpdsMapping[1] = GPRValueMapping;
       OpdsMapping[2] = GPRValueMapping;
     }
@@ -485,7 +481,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[0] = GPRValueMapping;
       OpdsMapping[1] = GPRValueMapping;
-      OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+      OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
     }
     break;
   }
@@ -499,7 +495,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if ((GPRSize == 32 && ScalarTy.getSizeInBits() == 64) ||
         onlyDefinesFP(*DefMI, MRI, TRI)) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits(), HasFPExt);
+      OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits());
     } else
       OpdsMapping[1] = GPRValueMapping;
     break;
@@ -518,7 +514,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
          OpdsMapping[Idx] =
              getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
        else if (isPreISelGenericFloatingPointOpcode(Opc))
-         OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits(), HasFPExt);
+         OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
        else
          OpdsMapping[Idx] = GPRValueMapping;
     }
