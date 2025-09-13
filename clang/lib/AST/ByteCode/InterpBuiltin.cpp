@@ -2739,9 +2739,9 @@ static bool interp__builtin_ia32_pmul(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp_builtin_ia32ph_add_sub(InterpState &S, CodePtr OpPC,
-                                        const InterpFrame *Frame,
-                                        const CallExpr *Call,
-                                        uint32_t BuiltinID) {
+                                          const InterpFrame *Frame,
+                                          const CallExpr *Call,
+                                          uint32_t BuiltinID) {
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
@@ -2752,7 +2752,8 @@ static bool interp_builtin_ia32ph_add_sub(InterpState &S, CodePtr OpPC,
   PrimType ElemT = *S.getContext().classify(VT->getElementType());
   unsigned SourceLen = VT->getNumElements();
   assert(SourceLen % 2 == 0 &&
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() == SourceLen);
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
+             SourceLen);
   PrimType DstElemT = *S.getContext().classify(
       Call->getType()->castAs<VectorType>()->getElementType());
   unsigned DstElem = 0;
@@ -2774,16 +2775,17 @@ static bool interp_builtin_ia32ph_add_sub(InterpState &S, CodePtr OpPC,
     APSInt Elem2;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = LHS.elem<T>(I+1).toAPSInt();
+      Elem2 = LHS.elem<T>(I + 1).toAPSInt();
     });
     APSInt Result;
     if (IsAdd) {
-        if (IsSaturating) {
-          Result = APSInt(Elem1.sadd_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
-        }else{
-          Result = APSInt(Elem1 + Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
-        }
-    }else{
+      if (IsSaturating) {
+        Result =
+            APSInt(Elem1.sadd_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
+      } else {
+        Result = APSInt(Elem1 + Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
+      }
+    } else {
       if (IsSaturating) {
         Result =
             APSInt(Elem1.ssub_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
@@ -2812,7 +2814,8 @@ static bool interp_builtin_ia32ph_add_sub(InterpState &S, CodePtr OpPC,
       }
     } else {
       if (IsSaturating) {
-        Result = APSInt(Elem1.ssub_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
+        Result =
+            APSInt(Elem1.ssub_sat(Elem2), /*IsUnsigned=*/Elem1.isUnsigned());
       } else {
         Result = APSInt(Elem1 - Elem2, /*IsUnsigned=*/Elem1.isUnsigned());
       }
@@ -2826,15 +2829,15 @@ static bool interp_builtin_ia32ph_add_sub(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp_builtin_floatph_add_sub(InterpState &S, CodePtr OpPC,
-                                          const InterpFrame *Frame,
-                                          const CallExpr *Call,
-                                          uint32_t BuiltinID) {
+                                           const InterpFrame *Frame,
+                                           const CallExpr *Call,
+                                           uint32_t BuiltinID) {
   assert(Call->getArg(0)->getType()->isVectorType() &&
          Call->getArg(1)->getType()->isVectorType());
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  
+
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
@@ -2851,7 +2854,6 @@ static bool interp_builtin_floatph_add_sub(InterpState &S, CodePtr OpPC,
   for (unsigned I = 0; I != SourceLen; I += 2) {
     APFloat Elem1 = LHS.elem<T>(I).getAPFloat();
     APFloat Elem2 = LHS.elem<T>(I + 1).getAPFloat();
-
     if (IsAdd) {
       Elem1.add(Elem2, RM);
     } else {
@@ -3495,71 +3497,71 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_phaddw128:
   case clang::X86::BI__builtin_ia32_phaddw256:
-   case clang::X86::BI__builtin_ia32_phaddd128: 
-   case clang::X86::BI__builtin_ia32_phaddd256: 
-   case clang::X86::BI__builtin_ia32_phaddsw128: 
-   case clang::X86::BI__builtin_ia32_phaddsw256:
-    case clang::X86::BI__builtin_ia32_phsubw128:
-    case clang::X86::BI__builtin_ia32_phsubw256:
-    case clang::X86::BI__builtin_ia32_phsubd128:
-    case clang::X86::BI__builtin_ia32_phsubd256:
-    case clang::X86::BI__builtin_ia32_phsubsw128:
-    case clang::X86::BI__builtin_ia32_phsubsw256:
-    
-      return interp_builtin_ia32ph_add_sub(S, OpPC, Frame, Call, BuiltinID);
-    case clang::X86::BI__builtin_ia32_haddpd:
-    case clang::X86::BI__builtin_ia32_haddpd256:
-    case clang::X86::BI__builtin_ia32_haddps:
-    case clang::X86::BI__builtin_ia32_haddps256:
-    case clang::X86::BI__builtin_ia32_hsubpd:
-    case clang::X86::BI__builtin_ia32_hsubpd256:
-    case clang::X86::BI__builtin_ia32_hsubps:
-    case clang::X86::BI__builtin_ia32_hsubps256:
-        return interp_builtin_floatph_add_sub(S, OpPC, Frame, Call, BuiltinID);
+  case clang::X86::BI__builtin_ia32_phaddd128:
+  case clang::X86::BI__builtin_ia32_phaddd256:
+  case clang::X86::BI__builtin_ia32_phaddsw128:
+  case clang::X86::BI__builtin_ia32_phaddsw256:
+  case clang::X86::BI__builtin_ia32_phsubw128:
+  case clang::X86::BI__builtin_ia32_phsubw256:
+  case clang::X86::BI__builtin_ia32_phsubd128:
+  case clang::X86::BI__builtin_ia32_phsubd256:
+  case clang::X86::BI__builtin_ia32_phsubsw128:
+  case clang::X86::BI__builtin_ia32_phsubsw256:
+    return interp_builtin_ia32ph_add_sub(S, OpPC, Frame, Call, BuiltinID);
 
-    case clang::X86::BI__builtin_ia32_pmuldq128:
-    case clang::X86::BI__builtin_ia32_pmuldq256:
-    case clang::X86::BI__builtin_ia32_pmuldq512:
-    case clang::X86::BI__builtin_ia32_pmuludq128:
-    case clang::X86::BI__builtin_ia32_pmuludq256:
-    case clang::X86::BI__builtin_ia32_pmuludq512:
-      return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
+  case clang::X86::BI__builtin_ia32_haddpd:
+  case clang::X86::BI__builtin_ia32_haddpd256:
+  case clang::X86::BI__builtin_ia32_haddps:
+  case clang::X86::BI__builtin_ia32_haddps256:
+  case clang::X86::BI__builtin_ia32_hsubpd:
+  case clang::X86::BI__builtin_ia32_hsubpd256:
+  case clang::X86::BI__builtin_ia32_hsubps:
+  case clang::X86::BI__builtin_ia32_hsubps256:
+    return interp_builtin_floatph_add_sub(S, OpPC, Frame, Call, BuiltinID);
 
-    case Builtin::BI__builtin_elementwise_fma:
-      return interp__builtin_elementwise_fma(S, OpPC, Call);
+  case clang::X86::BI__builtin_ia32_pmuldq128:
+  case clang::X86::BI__builtin_ia32_pmuldq256:
+  case clang::X86::BI__builtin_ia32_pmuldq512:
+  case clang::X86::BI__builtin_ia32_pmuludq128:
+  case clang::X86::BI__builtin_ia32_pmuludq256:
+  case clang::X86::BI__builtin_ia32_pmuludq512:
+    return interp__builtin_ia32_pmul(S, OpPC, Call, BuiltinID);
 
-    case X86::BI__builtin_ia32_selectb_128:
-    case X86::BI__builtin_ia32_selectb_256:
-    case X86::BI__builtin_ia32_selectb_512:
-    case X86::BI__builtin_ia32_selectw_128:
-    case X86::BI__builtin_ia32_selectw_256:
-    case X86::BI__builtin_ia32_selectw_512:
-    case X86::BI__builtin_ia32_selectd_128:
-    case X86::BI__builtin_ia32_selectd_256:
-    case X86::BI__builtin_ia32_selectd_512:
-    case X86::BI__builtin_ia32_selectq_128:
-    case X86::BI__builtin_ia32_selectq_256:
-    case X86::BI__builtin_ia32_selectq_512:
-    case X86::BI__builtin_ia32_selectph_128:
-    case X86::BI__builtin_ia32_selectph_256:
-    case X86::BI__builtin_ia32_selectph_512:
-    case X86::BI__builtin_ia32_selectpbf_128:
-    case X86::BI__builtin_ia32_selectpbf_256:
-    case X86::BI__builtin_ia32_selectpbf_512:
-    case X86::BI__builtin_ia32_selectps_128:
-    case X86::BI__builtin_ia32_selectps_256:
-    case X86::BI__builtin_ia32_selectps_512:
-    case X86::BI__builtin_ia32_selectpd_128:
-    case X86::BI__builtin_ia32_selectpd_256:
-    case X86::BI__builtin_ia32_selectpd_512:
-      return interp__builtin_select(S, OpPC, Call);
+  case Builtin::BI__builtin_elementwise_fma:
+    return interp__builtin_elementwise_fma(S, OpPC, Call);
 
-    default:
-      S.FFDiag(S.Current->getLocation(OpPC),
-               diag::note_invalid_subexpr_in_const_expr)
-          << S.Current->getRange(OpPC);
+  case X86::BI__builtin_ia32_selectb_128:
+  case X86::BI__builtin_ia32_selectb_256:
+  case X86::BI__builtin_ia32_selectb_512:
+  case X86::BI__builtin_ia32_selectw_128:
+  case X86::BI__builtin_ia32_selectw_256:
+  case X86::BI__builtin_ia32_selectw_512:
+  case X86::BI__builtin_ia32_selectd_128:
+  case X86::BI__builtin_ia32_selectd_256:
+  case X86::BI__builtin_ia32_selectd_512:
+  case X86::BI__builtin_ia32_selectq_128:
+  case X86::BI__builtin_ia32_selectq_256:
+  case X86::BI__builtin_ia32_selectq_512:
+  case X86::BI__builtin_ia32_selectph_128:
+  case X86::BI__builtin_ia32_selectph_256:
+  case X86::BI__builtin_ia32_selectph_512:
+  case X86::BI__builtin_ia32_selectpbf_128:
+  case X86::BI__builtin_ia32_selectpbf_256:
+  case X86::BI__builtin_ia32_selectpbf_512:
+  case X86::BI__builtin_ia32_selectps_128:
+  case X86::BI__builtin_ia32_selectps_256:
+  case X86::BI__builtin_ia32_selectps_512:
+  case X86::BI__builtin_ia32_selectpd_128:
+  case X86::BI__builtin_ia32_selectpd_256:
+  case X86::BI__builtin_ia32_selectpd_512:
+    return interp__builtin_select(S, OpPC, Call);
 
-      return false;
+  default:
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
+
+    return false;
   }
 
   llvm_unreachable("Unhandled builtin ID");
