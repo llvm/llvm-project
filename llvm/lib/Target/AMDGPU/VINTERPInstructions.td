@@ -239,8 +239,9 @@ defm : VInterpF16Pat<int_amdgcn_interp_p2_rtz_f16,
 
 multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" #
-                           !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
+  let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11",
+      // When decoding, attempt decoding IsRealTrue16 first, then the fake one.
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1) in {
     def _gfx11 :
       VINTERP_Real<ps, SIEncodingFamily.GFX11, asmName>,
       VINTERPe_gfx11<op, ps.Pfl>;
@@ -249,8 +250,9 @@ multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName> {
 
 multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
   defvar ps = !cast<VOP3_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" #
-                           !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
+  let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12",
+      // When decoding, attempt decoding IsRealTrue16 first, then the fake one.
+      DecodeOrder = !if(ps.Pfl.IsRealTrue16, 0, 1) in {
     def _gfx12 :
       VINTERP_Real<ps, SIEncodingFamily.GFX12, asmName>,
       VINTERPe_gfx12<op, ps.Pfl>;
