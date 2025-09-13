@@ -17755,7 +17755,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
   if (Info.EnableNewConstInterp) {
     auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
-    if (!InterpCtx.evaluateAsInitializer(Info, VD, Value))
+    if (!InterpCtx.evaluateAsInitializer(Info, VD, this, Value))
       return false;
 
     return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
