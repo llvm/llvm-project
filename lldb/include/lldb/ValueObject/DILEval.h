@@ -59,6 +59,8 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const FloatLiteralNode *node) override;
 
+  llvm::Expected<lldb::ValueObjectSP>
+  UnaryConversion(lldb::ValueObjectSP valobj);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
