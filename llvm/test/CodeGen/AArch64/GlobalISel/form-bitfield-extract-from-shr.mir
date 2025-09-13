@@ -10,10 +10,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_ashr_shl_to_sbfx
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; CHECK: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C1]](s32), [[C]]
-    ; CHECK: $w0 = COPY [[SBFX]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C1]](s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[SBFX]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(s32) = G_CONSTANT i32 16
@@ -29,9 +29,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_ashr_shl_to_sbfx_lower_bound
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C]](s32), [[C]]
-    ; CHECK: $w0 = COPY [[SBFX]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C]](s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[SBFX]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 30
     %2:_(s32) = G_CONSTANT i32 31
@@ -47,10 +47,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_ashr_shl_to_sbfx_upper_bound
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
-    ; CHECK: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C1]](s32), [[C]]
-    ; CHECK: $w0 = COPY [[SBFX]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: [[SBFX:%[0-9]+]]:_(s32) = G_SBFX [[COPY]], [[C1]](s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[SBFX]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_CONSTANT i32 31
@@ -66,10 +66,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_lshr_shl_to_ubfx
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; CHECK: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
-    ; CHECK: $w0 = COPY [[UBFX]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[UBFX]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(s32) = G_CONSTANT i32 16
@@ -85,9 +85,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_lshr_shl_to_ubfx_lower_bound
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C]](s32), [[C]]
-    ; CHECK: $w0 = COPY [[UBFX]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C]](s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[UBFX]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 30
     %2:_(s32) = G_CONSTANT i32 31
@@ -103,10 +103,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_lshr_shl_to_ubfx_upper_bound
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
-    ; CHECK: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
-    ; CHECK: $w0 = COPY [[UBFX]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: [[UBFX:%[0-9]+]]:_(s32) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; CHECK-NEXT: $w0 = COPY [[UBFX]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_CONSTANT i32 31
@@ -122,11 +122,11 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: dont_apply_pos_out_of_bounds
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
-    ; CHECK: $w0 = COPY [[ASHR]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[ASHR]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(s32) = G_CONSTANT i32 2
@@ -142,11 +142,11 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: dont_apply_no_constant
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK: $w0 = COPY [[ASHR]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]](s32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[ASHR]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_CONSTANT i32 2
@@ -162,12 +162,12 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: dont_apply_more_than_one_use
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
-    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SHL]], [[ASHR]]
-    ; CHECK: $w0 = COPY [[MUL]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C1]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SHL]], [[ASHR]]
+    ; CHECK-NEXT: $w0 = COPY [[MUL]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(s32) = G_CONSTANT i32 16

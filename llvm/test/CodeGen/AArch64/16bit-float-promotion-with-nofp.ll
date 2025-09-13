@@ -77,7 +77,7 @@ define double @selectcc_f64(double %a, double %b, i32 %d) {
 ; CHECK-LABEL: selectcc_f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w2, #0
-; CHECK-NEXT:    csel x0, x0, x1, lt
+; CHECK-NEXT:    csel x0, x0, x1, mi
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp slt i32 %d, 0
@@ -89,7 +89,7 @@ define float @selectcc_f32(float %a, float %b, i32 %d) {
 ; CHECK-LABEL: selectcc_f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w2, #0
-; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    csel w0, w0, w1, mi
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp slt i32 %d, 0
@@ -101,7 +101,7 @@ define half @selectcc_f16(half %a, half %b, i32 %d) {
 ; CHECK-LABEL: selectcc_f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w2, #0
-; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    csel w0, w0, w1, mi
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp slt i32 %d, 0
@@ -113,7 +113,7 @@ define bfloat @selectcc_bf16(bfloat %a, bfloat %b, i32 %d) {
 ; CHECK-LABEL: selectcc_bf16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w2, #0
-; CHECK-NEXT:    csel w0, w0, w1, lt
+; CHECK-NEXT:    csel w0, w0, w1, mi
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp slt i32 %d, 0

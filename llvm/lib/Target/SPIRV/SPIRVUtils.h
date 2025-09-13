@@ -125,6 +125,10 @@ void addStringImm(const StringRef &Str, IRBuilder<> &B,
 // the reverse of the logic in addStringImm.
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
 
+// Returns the string constant that the register refers to. It is assumed that
+// Reg is a global value that contains a string.
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
+
 // Add the given numerical immediate to MIB.
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
@@ -167,6 +171,19 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I);
 // terminators and debug instructions.
 MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB);
 
+// Returns true if a pointer to the storage class can be casted to/from a
+// pointer to the Generic storage class.
+constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::Workgroup:
+  case SPIRV::StorageClass::CrossWorkgroup:
+  case SPIRV::StorageClass::Function:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
@@ -197,6 +214,8 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 10;
   case SPIRV::StorageClass::StorageBuffer:
     return 11;
+  case SPIRV::StorageClass::Uniform:
+    return 12;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -487,6 +506,8 @@ MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

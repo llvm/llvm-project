@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -396,18 +397,6 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
-  size_t posNoEVEX512 = FS.rfind("-evex512");
-  // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F =
-      FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
-  size_t posEVEX512 = FS.rfind("+evex512");
-  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
-
-  if (posAVX512F != StringRef::npos &&
-      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-      ArchFS += ",+evex512";
-
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
@@ -444,15 +433,13 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // Force the use of an ELF container.
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
-             TheTriple.isWindowsCoreCLREnvironment()) {
+             TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm"))
       MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
     else
       MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
-  } else if (TheTriple.isUEFI()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
   } else {
     // The default is ELF.

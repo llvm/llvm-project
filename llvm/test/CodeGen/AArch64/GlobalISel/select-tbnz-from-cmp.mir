@@ -166,7 +166,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr64 = COPY $x0
   ; CHECK-NEXT:   [[ANDSXri:%[0-9]+]]:gpr64 = ANDSXri %copy, 8000, implicit-def $nzcv
-  ; CHECK-NEXT:   Bcc 11, %bb.1, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 4, %bb.1, implicit $nzcv
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

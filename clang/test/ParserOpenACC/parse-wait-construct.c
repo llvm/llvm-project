@@ -68,18 +68,15 @@ void func() {
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait (devnum: i + j:queues:) clause-list
 
-  // expected-error@+4{{use of undeclared identifier 'devnum'}}
-  // expected-error@+3{{expected ','}}
+  // expected-error@+3{{use of undeclared identifier 'devnum'}}
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
   #pragma acc wait (queues:devnum: i + j
 
-  // expected-error@+2{{use of undeclared identifier 'devnum'}}
-  // expected-error@+1{{expected ','}}
+  // expected-error@+1{{use of undeclared identifier 'devnum'}}
   #pragma acc wait (queues:devnum: i + j)
 
-  // expected-error@+3{{use of undeclared identifier 'devnum'}}
-  // expected-error@+2{{expected ','}}
+  // expected-error@+2{{use of undeclared identifier 'devnum'}}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}
   #pragma acc wait (queues:devnum: i + j) clause-list
 

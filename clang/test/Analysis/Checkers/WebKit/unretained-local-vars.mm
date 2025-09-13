@@ -387,6 +387,42 @@ unsigned ccf(CFTypeRef obj) {
 
 } // ptr_conversion
 
+namespace const_global {
+
+extern NSString * const SomeConstant;
+extern CFDictionaryRef const SomeDictionary;
+void doWork(NSString *, CFDictionaryRef);
+void use_const_global() {
+  doWork(SomeConstant, SomeDictionary);
+}
+
+NSString *provide_str();
+CFDictionaryRef provide_dict();
+void use_const_local() {
+  NSString * const str = provide_str();
+  // expected-warning@-1{{Local variable 'str' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  CFDictionaryRef dict = provide_dict();
+  // expected-warning@-1{{Local variable 'dict' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  doWork(str, dict);
+}
+
+} // namespace const_global
+
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+
+unsigned foo() {
+  auto *string = provideNS();
+  auto *dictionary = provideCF();
+  return string.length + CFDictionaryGetCount(dictionary);
+}
+
+} // namespace ns_retained_return_value
+
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
 

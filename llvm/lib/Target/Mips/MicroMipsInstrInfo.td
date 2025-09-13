@@ -1190,9 +1190,9 @@ def : WrapperPat<tblockaddress, ADDiu_MM, GPR32>, ISA_MICROMIPS;
 def : WrapperPat<tjumptable, ADDiu_MM, GPR32>, ISA_MICROMIPS;
 def : WrapperPat<tglobaltlsaddr, ADDiu_MM, GPR32>, ISA_MICROMIPS;
 
-def : MipsPat<(atomic_load_8 addr:$a), (LB_MM addr:$a)>, ISA_MICROMIPS;
-def : MipsPat<(atomic_load_16 addr:$a), (LH_MM addr:$a)>, ISA_MICROMIPS;
-def : MipsPat<(atomic_load_32 addr:$a), (LW_MM addr:$a)>, ISA_MICROMIPS;
+def : MipsPat<(atomic_load_asext_8 addr:$a), (LB_MM addr:$a)>, ISA_MICROMIPS;
+def : MipsPat<(atomic_load_asext_16 addr:$a), (LH_MM addr:$a)>, ISA_MICROMIPS;
+def : MipsPat<(atomic_load_nonext_32 addr:$a), (LW_MM addr:$a)>, ISA_MICROMIPS;
 
 def : MipsPat<(i32 immLi16:$imm),
               (LI16_MM immLi16:$imm)>, ISA_MICROMIPS;

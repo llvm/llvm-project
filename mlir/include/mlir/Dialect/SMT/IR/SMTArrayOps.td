@@ -75,7 +75,7 @@ def ArrayBroadcastOp : SMTArrayOp<"broadcast", [
     This operation represents a broadcast of the 'value' operand to all indices
     of the array. It is equivalent to
     ```
-    %0 = smt.declare "array" : !smt.array<[!smt.int -> !smt.bool]>
+    %0 = smt.declare_fun "array" : !smt.array<[!smt.int -> !smt.bool]>
     %1 = smt.forall ["idx"] {
     ^bb0(%idx: !smt.int):
       %2 = smt.array.select %0[%idx] : !smt.array<[!smt.int -> !smt.bool]>

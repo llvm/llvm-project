@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
 using namespace mlir;
@@ -70,9 +69,9 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
 
   resultShape.clear();
   if (shape1.size() > shape2.size()) {
-    std::copy(shape1.begin(), shape1.end(), std::back_inserter(resultShape));
+    llvm::append_range(resultShape, shape1);
   } else {
-    std::copy(shape2.begin(), shape2.end(), std::back_inserter(resultShape));
+    llvm::append_range(resultShape, shape2);
   }
 
   auto i1 = shape1.rbegin(), e1 = shape1.rend();

@@ -39,6 +39,8 @@
   "dependencies": {
     "base64-js": "^1.5.1",
     "chokidar": "3.5.2",
+    "minimatch": "^3.0.5",
+    "semver": "^7.5.2",
     "vscode-languageclient": "^8.0.2-next.5"
   },
   "devDependencies": {

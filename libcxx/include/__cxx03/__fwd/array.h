@@ -22,18 +22,10 @@ template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array;
 
 template <size_t _Ip, class _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp& get(array<_Tp, _Size>&) _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI _Tp& get(array<_Tp, _Size>&) _NOEXCEPT;
 
 template <size_t _Ip, class _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp& get(const array<_Tp, _Size>&) _NOEXCEPT;
-
-#ifndef _LIBCPP_CXX03_LANG
-template <size_t _Ip, class _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp&& get(array<_Tp, _Size>&&) _NOEXCEPT;
-
-template <size_t _Ip, class _Tp, size_t _Size>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&& get(const array<_Tp, _Size>&&) _NOEXCEPT;
-#endif
+_LIBCPP_HIDE_FROM_ABI const _Tp& get(const array<_Tp, _Size>&) _NOEXCEPT;
 
 template <class>
 struct __is_std_array : false_type {};

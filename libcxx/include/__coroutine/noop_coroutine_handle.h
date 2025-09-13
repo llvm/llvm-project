@@ -94,6 +94,6 @@ inline _LIBCPP_HIDE_FROM_ABI noop_coroutine_handle noop_coroutine() noexcept { r
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // __LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H

@@ -6,13 +6,10 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_X86_64")
-
-# TODO: Remove this helper function once all donwstream users are migrated.
-def libc_internal_target(name):
-    return name
 
 def libc_common_copts():
     root_label = Label(":libc")
@@ -56,7 +53,7 @@ def _libc_library(name, **kwargs):
     for attr in ["copts", "local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
-    native.cc_library(
+    cc_library(
         name = name,
         copts = libc_common_copts(),
         local_defines = LIBC_CONFIGURE_OPTIONS,
@@ -84,10 +81,7 @@ def libc_function(name, **kwargs):
     # Builds "internal" library with a function, exposed as a C++ function in
     # the "LIBC_NAMESPACE" namespace. This allows us to test the function in the
     # presence of another libc.
-    _libc_library(
-        name = libc_internal_target(name),
-        **kwargs
-    )
+    _libc_library(name = name, **kwargs)
 
 LibcLibraryInfo = provider(
     "All source files and textual headers for building a particular library.",
@@ -130,12 +124,15 @@ _get_libc_info_aspect = aspect(
 )
 
 def _libc_srcs_filegroup_impl(ctx):
-    return DefaultInfo(
-        files = depset(transitive = [
-            fn[LibcLibraryInfo].srcs
-            for fn in ctx.attr.libs
-        ]),
-    )
+    srcs = depset(transitive = [
+        fn[LibcLibraryInfo].srcs
+        for fn in ctx.attr.libs
+    ])
+    if ctx.attr.enforce_headers_only:
+        paths = [f.short_path for f in srcs.to_list() if f.extension != "h"]
+        if paths:
+            fail("Unexpected non-header files: {}".format(paths))
+    return DefaultInfo(files = srcs)
 
 _libc_srcs_filegroup = rule(
     doc = "Returns all sources for building the specified libraries.",
@@ -145,6 +142,7 @@ _libc_srcs_filegroup = rule(
             mandatory = True,
             aspects = [_get_libc_info_aspect],
         ),
+        "enforce_headers_only": attr.bool(default = False),
     },
 )
 
@@ -191,7 +189,7 @@ def libc_release_library(
         name = name + "_textual_hdrs",
         libs = libc_functions,
     )
-    native.cc_library(
+    cc_library(
         name = name + "_textual_hdr_library",
         textual_hdrs = [":" + name + "_textual_hdrs"],
     )
@@ -200,8 +198,7 @@ def libc_release_library(
         "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'"
         for name in weak_symbols
     ]
-
-    native.cc_library(
+    cc_library(
         name = name,
         srcs = [":" + name + "_srcs"],
         copts = libc_common_copts() + libc_release_copts(),
@@ -225,32 +222,59 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
     _libc_srcs_filegroup(
         name = name + "_hdr_deps",
         libs = deps,
+        enforce_headers_only = True,
     )
 
     _libc_textual_hdrs_filegroup(
         name = name + "_textual_hdrs",
         libs = deps,
     )
-    native.cc_library(
+    cc_library(
         name = name + "_textual_hdr_library",
         textual_hdrs = [":" + name + "_textual_hdrs"],
     )
-
-    native.cc_library(
+    cc_library(
         name = name,
-        # Technically speaking, we should put _hdr_deps in srcs, as they are
-        # not a part of this cc_library interface. However, we keep it here to
-        # workaround the presence of .cpp files in _hdr_deps - we need to
-        # fix that and enforce their absence, since libc_header_library
-        # should be header-only and not produce any object files.
-        # See PR #133126 which tracks it.
-        hdrs = hdrs + [":" + name + "_hdr_deps"],
+        hdrs = hdrs,
+        # We put _hdr_deps in srcs, as they are not a part of this cc_library
+        # interface, but instead are used to implement shared headers.
+        srcs = [":" + name + "_hdr_deps"],
         deps = [":" + name + "_textual_hdr_library"],
         # copts don't really matter, since it's a header-only library, but we
         # need proper -I flags for header validation, which are specified in
         # libc_common_copts().
         copts = libc_common_copts(),
         **kwargs
+    )
+
+def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
+    """Generates a libc header file from YAML template.
+
+    Args:
+      name: Name of the genrule target.
+      hdr: Path of the header file to generate.
+      yaml_template: Path of the YAML template file.
+      other_srcs: Other files required to generate the header, if any.
+    """
+    hdrgen = "//libc:hdrgen"
+    cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
+        hdrgen = hdrgen,
+        yaml = yaml_template,
+    )
+
+    if not hdr.startswith("staging/"):
+        fail(
+            "Generated headers should be placed in a 'staging/' directory " +
+            "so that they can be treated differently from constant source files " +
+            "when bootstrapping builds.",
+        )
+
+    native.genrule(
+        name = name,
+        outs = [hdr],
+        srcs = [yaml_template] + other_srcs,
+        cmd = cmd,
+        tools = [hdrgen],
     )
 
 def libc_math_function(

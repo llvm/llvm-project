@@ -191,7 +191,7 @@ struct SequenceOp : public SetTheory::Operator {
 
     std::string Format;
     if (const auto *SI = dyn_cast<StringInit>(Expr->arg_begin()[0]))
-      Format = std::string(SI->getValue());
+      Format = SI->getValue().str();
     else
       PrintFatalError(Loc,  "Format must be a string: " + Expr->getAsString());
 
@@ -312,7 +312,7 @@ const RecVec *SetTheory::expand(const Record *Set) {
     return &I->second;
 
   // This is the first time we see Set. Find a suitable expander.
-  for (const auto &[SuperClass, Loc] : Set->getSuperClasses()) {
+  for (const Record *SuperClass : Set->getSuperClasses()) {
     // Skip unnamed superclasses.
     if (!isa<StringInit>(SuperClass->getNameInit()))
       continue;

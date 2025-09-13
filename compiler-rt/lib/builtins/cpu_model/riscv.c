@@ -24,16 +24,24 @@ struct {
 // TODO: Maybe generate a header from tablegen then include it.
 #define A_GROUPID 0
 #define A_BITMASK (1ULL << 0)
+#define B_GROUPID 0
+#define B_BITMASK (1ULL << 1)
 #define C_GROUPID 0
 #define C_BITMASK (1ULL << 2)
 #define D_GROUPID 0
 #define D_BITMASK (1ULL << 3)
+#define E_GROUPID 0
+#define E_BITMASK (1ULL << 4)
 #define F_GROUPID 0
 #define F_BITMASK (1ULL << 5)
+#define H_GROUPID 0
+#define H_BITMASK (1ULL << 7)
 #define I_GROUPID 0
 #define I_BITMASK (1ULL << 8)
 #define M_GROUPID 0
 #define M_BITMASK (1ULL << 12)
+#define Q_GROUPID 0
+#define Q_BITMASK (1ULL << 16)
 #define V_GROUPID 0
 #define V_BITMASK (1ULL << 21)
 #define ZACAS_GROUPID 0
@@ -128,6 +136,12 @@ struct {
 #define ZCMOP_BITMASK (1ULL << 6)
 #define ZAWRS_GROUPID 1
 #define ZAWRS_BITMASK (1ULL << 7)
+#define ZILSD_GROUPID 1
+#define ZILSD_BITMASK (1ULL << 8)
+#define ZCLSD_GROUPID 1
+#define ZCLSD_BITMASK (1ULL << 9)
+#define ZCMP_GROUPID 1
+#define ZCMP_BITMASK (1ULL << 10)
 
 #if defined(__linux__)
 

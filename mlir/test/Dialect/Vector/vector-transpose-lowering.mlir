@@ -65,13 +65,15 @@ func.func @transpose102_8x1x8xf32(%arg0: vector<8x1x8xf32>) -> vector<1x8x8xf32>
   return %0 : vector<1x8x8xf32>
 }
 
-// CHECK-LABEL:   func @transpose1023_1x1x8x8xf32(
-func.func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8x8xf32> {
-  // Note the single 2-D extract/insert pair since 2 and 3 are not transposed!
-  //      CHECK: vector.extract {{.*}}[0, 0] : vector<8x8xf32> from vector<1x1x8x8xf32>
-  // CHECK-NEXT: vector.insert {{.*}} [0, 0] : vector<8x8xf32> into vector<1x1x8x8xf32>
-  %0 = vector.transpose %arg0, [1, 0, 2, 3] : vector<1x1x8x8xf32> to vector<1x1x8x8xf32>
-  return %0 : vector<1x1x8x8xf32>
+// CHECK-LABEL:   func @transpose1023_2x1x8x4xf32(
+func.func @transpose1023_2x1x8x4xf32(%arg0: vector<2x1x8x4xf32>) -> vector<1x2x8x4xf32> {
+  // Note the 2-D extract/insert pair since dimensions 2 and 3 are not transposed!
+  //      CHECK: vector.extract {{.*}}[0, 0] : vector<8x4xf32> from vector<2x1x8x4xf32>
+  // CHECK-NEXT: vector.insert {{.*}} [0, 0] : vector<8x4xf32> into vector<1x2x8x4xf32>
+  // CHECK-NEXT: vector.extract {{.*}}[1, 0] : vector<8x4xf32> from vector<2x1x8x4xf32>
+  // CHECK-NEXT: vector.insert {{.*}} [0, 1] : vector<8x4xf32> into vector<1x2x8x4xf32>
+  %0 = vector.transpose %arg0, [1, 0, 2, 3] : vector<2x1x8x4xf32> to vector<1x2x8x4xf32>
+  return %0 : vector<1x2x8x4xf32>
 }
 
 /// Scalable dim should not be unrolled.
@@ -127,38 +129,6 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
-}
-
-// -----
-
-// CHECK-LABEL: func @transpose(
-func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
-  // CHECK:       vector.shape_cast {{.*}} : vector<2x4xf32> to vector<8xf32>
-  // CHECK:       vector.flat_transpose %{{.*}} {columns = 2 : i32, rows = 4 : i32} : vector<8xf32> -> vector<8xf32>
-  // CHECK:       vector.shape_cast {{.*}} : vector<8xf32> to vector<4x2xf32>
-  %0 = vector.transpose %arg0, [1, 0] : vector<2x4xf32> to vector<4x2xf32>
-  return %0 : vector<4x2xf32>
-}
-
-/// Scalable vectors are not supported
-
-// CHECK-LABEL: func @transpose_scalable(
-func.func @transpose_scalable(%arg0: vector<2x[4]xf32>) -> vector<[4]x2xf32> {
-  // CHECK-NOT:       vector.shape_cast
-  // CHECK-NOT:       vector.flat_transpose
-  // CHECK:           vector.transpose
-  %0 = vector.transpose %arg0, [1, 0] : vector<2x[4]xf32> to vector<[4]x2xf32>
-  return %0 : vector<[4]x2xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
-    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose lowering_strategy = "flat_transpose"
     } : !transform.op<"func.func">
     transform.yield
   }

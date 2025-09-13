@@ -9,8 +9,8 @@
 #include "mlir-c/Dialect/GPU.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
@@ -34,11 +34,11 @@ NB_MODULE(_mlirDialectsGPU, m) {
 
   mlirGPUAsyncTokenType.def_classmethod(
       "get",
-      [](nb::object cls, MlirContext ctx) {
+      [](const nb::object &cls, MlirContext ctx) {
         return cls(mlirGPUAsyncTokenTypeGet(ctx));
       },
       "Gets an instance of AsyncTokenType in the same context", nb::arg("cls"),
-      nb::arg("ctx").none() = nb::none());
+      nb::arg("ctx") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // ObjectAttr
@@ -47,8 +47,9 @@ NB_MODULE(_mlirDialectsGPU, m) {
   mlir_attribute_subclass(m, "ObjectAttr", mlirAttributeIsAGPUObjectAttr)
       .def_classmethod(
           "get",
-          [](nb::object cls, MlirAttribute target, uint32_t format,
-             nb::bytes object, std::optional<MlirAttribute> mlirObjectProps,
+          [](const nb::object &cls, MlirAttribute target, uint32_t format,
+             const nb::bytes &object,
+             std::optional<MlirAttribute> mlirObjectProps,
              std::optional<MlirAttribute> mlirKernelsAttr) {
             MlirStringRef objectStrRef = mlirStringRefCreate(
                 static_cast<char *>(const_cast<void *>(object.data())),
@@ -61,7 +62,7 @@ NB_MODULE(_mlirDialectsGPU, m) {
                                             : MlirAttribute{nullptr}));
           },
           "cls"_a, "target"_a, "format"_a, "object"_a,
-          "properties"_a.none() = nb::none(), "kernels"_a.none() = nb::none(),
+          "properties"_a = nb::none(), "kernels"_a = nb::none(),
           "Gets a gpu.object from parameters.")
       .def_property_readonly(
           "target",

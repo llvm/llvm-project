@@ -15,7 +15,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsInstPrinter.h"
-#include "MCTargetDesc/MipsMCNaCl.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
 #include "Mips.h"
@@ -51,9 +51,9 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -84,10 +84,6 @@ bool MipsAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     for (const auto &I : MipsFI->StubsNeeded)
       StubsNeeded.insert(I);
   MCP = MF.getConstantPool();
-
-  // In NaCl, all indirect jump targets must be aligned to bundle size.
-  if (Subtarget->isTargetNaCl())
-    NaClAlignIndirectJumpTargets(MF);
 
   AsmPrinter::runOnMachineFunction(MF);
 
@@ -169,7 +165,7 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
         OutStreamer.emitRelocDirective(
             *OffsetExpr,
             Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
-            CaleeExpr, SMLoc(), *TM.getMCSubtargetInfo());
+            CaleeExpr);
         OutStreamer.emitLabel(OffsetLabel);
         return;
       }
@@ -398,11 +394,6 @@ const char *MipsAsmPrinter::getCurrentABIString() const {
 
 void MipsAsmPrinter::emitFunctionEntryLabel() {
   MipsTargetStreamer &TS = getTargetStreamer();
-
-  // NaCl sandboxing requires that indirect call instructions are masked.
-  // This means that function entry points should be bundle-aligned.
-  if (Subtarget->isTargetNaCl())
-    emitAlignment(std::max(MF->getAlignment(), MIPS_NACL_BUNDLE_ALIGN));
 
   if (Subtarget->inMicroMipsMode()) {
     TS.emitDirectiveSetMicroMips();
@@ -745,14 +736,18 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
       FS = F->getFnAttribute("target-features").getValueAsString();
 
+    std::string strFS = FS.str();
+    if (M.size() && F->getFnAttribute("use-soft-float").getValueAsBool())
+      strFS += strFS.empty() ? "+soft-float" : ",+soft-float";
+
     // Compute MIPS architecture attributes based on the default subtarget
     // that we'd have constructed.
     // FIXME: For ifunc related functions we could iterate over and look
     // for a feature string that doesn't match the default one.
     StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
     const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-    const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM,
-                            std::nullopt);
+    const MipsSubtarget STI(TT, CPU, StringRef(strFS), MTM.isLittleEndian(),
+                            MTM, std::nullopt);
 
     bool IsABICalls = STI.isABICalls();
     const MipsABIInfo &ABI = MTM.getABI();
@@ -972,8 +967,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   // freed) and since we're at the global level we can use the default
   // constructed subtarget.
   std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
-      TM.getTargetTriple().str(), TM.getTargetCPU(),
-      TM.getTargetFeatureString()));
+      TM.getTargetTriple(), TM.getTargetCPU(), TM.getTargetFeatureString()));
 
   //
   // .global xxxx
@@ -1056,8 +1050,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   //  __call_stub_fp_xxxx:
   //
   std::string x = "__call_stub_fp_" + std::string(Symbol);
-  MCSymbolELF *Stub =
-      cast<MCSymbolELF>(OutContext.getOrCreateSymbol(StringRef(x)));
+  MCSymbol *Stub = OutContext.getOrCreateSymbol(StringRef(x));
   TS.emitDirectiveEnt(*Stub);
   MCSymbol *MType =
       OutContext.getOrCreateSymbol("__call_stub_fp_" + Twine(Symbol));
@@ -1243,8 +1236,8 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // Emit .dtprelword or .dtpreldword directive
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
-  if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
-    if (MipsExpr && MipsExpr->getSpecifier() == MipsMCExpr::MEK_DTPREL) {
+  if (auto *MipsExpr = dyn_cast<MCSpecifierExpr>(Value)) {
+    if (MipsExpr && MipsExpr->getSpecifier() == Mips::S_DTPREL) {
       switch (Size) {
       case 4:
         getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());
@@ -1261,27 +1254,6 @@ void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   AsmPrinter::emitDebugValue(Value, Size);
 }
 
-// Align all targets of indirect branches on bundle size.  Used only if target
-// is NaCl.
-void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
-  // Align all blocks that are jumped to through jump table.
-  if (MachineJumpTableInfo *JtInfo = MF.getJumpTableInfo()) {
-    const std::vector<MachineJumpTableEntry> &JT = JtInfo->getJumpTables();
-    for (const auto &I : JT) {
-      const std::vector<MachineBasicBlock *> &MBBs = I.MBBs;
-
-      for (MachineBasicBlock *MBB : MBBs)
-        MBB->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
-    }
-  }
-
-  // If basic block address is taken, block can be target of indirect branch.
-  for (auto &MBB : MF) {
-    if (MBB.hasAddressTaken())
-      MBB.setAlignment(MIPS_NACL_BUNDLE_ALIGN);
-  }
-}
-
 bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
   return (Opcode == Mips::LONG_BRANCH_LUi
           || Opcode == Mips::LONG_BRANCH_LUi2Op
@@ -1292,8 +1264,14 @@ bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
           || Opcode == Mips::LONG_BRANCH_DADDiu2Op);
 }
 
+char MipsAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
+                false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMipsAsmPrinter() {
   RegisterAsmPrinter<MipsAsmPrinter> X(getTheMipsTarget());
   RegisterAsmPrinter<MipsAsmPrinter> Y(getTheMipselTarget());
   RegisterAsmPrinter<MipsAsmPrinter> A(getTheMips64Target());

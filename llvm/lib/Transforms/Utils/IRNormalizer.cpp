@@ -23,13 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils.h"
-#include <algorithm>
 #include <stack>
 
 #define DEBUG_TYPE "normalize"
@@ -367,7 +361,7 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   }
 
   // Don't fold if it is an output instruction or has no op prefix.
-  if (isOutput(I) || I->getName().substr(0, 2) != "op")
+  if (isOutput(I) || !I->getName().starts_with("op"))
     return;
 
   // Instruction operands.
@@ -375,8 +369,8 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
 
   for (auto &Op : I->operands()) {
     if (const auto *I = dyn_cast<Instruction>(Op)) {
-      bool HasNormalName = I->getName().substr(0, 2) == "op" ||
-                           I->getName().substr(0, 2) == "vl";
+      bool HasNormalName =
+          I->getName().starts_with("op") || I->getName().starts_with("vl");
 
       Operands.push_back(HasNormalName ? I->getName().substr(0, 7)
                                        : I->getName());
@@ -433,7 +427,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       // Process the remaining instructions.
       //
       // TODO: Do more a intelligent sorting of these instructions. For example,
-      // seperate between dead instructinos and instructions used in another
+      // separate between dead instructinos and instructions used in another
       // block. Use properties of the CFG the order instructions that are used
       // in another block.
       if (Visited.contains(&I))

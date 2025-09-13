@@ -13,6 +13,8 @@ qc.e.j  -2147483649
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilb' (Qualcomm uC Long Branch Extension)
 qc.e.j  -2147483648
 
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilb' (Qualcomm uC Long Branch Extension)
+qc.e.j  foo
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.jal
@@ -23,5 +25,5 @@ qc.e.jal 2147483649
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilb' (Qualcomm uC Long Branch Extension)
 qc.e.jal 2147483640
 
-# CHECK: :[[@LINE+1]]:12: error: '@plt' is the only valid operand for this instruction
-qc.e.j foo@rlt
+# CHECK: :[[@LINE+1]]:11: error: unexpected token
+qc.e.j foo@plt

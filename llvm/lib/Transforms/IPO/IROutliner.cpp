@@ -267,8 +267,7 @@ void OutlinableRegion::splitCandidate() {
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (!BackInst->isTerminator() &&
-      EndInst != BackInst->getNextNonDebugInstruction())
+  if (!BackInst->isTerminator() && EndInst != BackInst->getNextNode())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;
@@ -687,9 +686,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
         /* Outlined code is optimized code by definition. */
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
 
-    // Don't add any new variables to the subprogram.
-    DB.finalizeSubprogram(OutlinedSP);
-
     // Attach subprogram to the function.
     F->setSubprogram(OutlinedSP);
     // We're done with the DIBuilder.
@@ -717,8 +713,6 @@ static void moveFunctionData(Function &Old, Function &New,
     if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
       NewEnds.insert(std::make_pair(RI->getReturnValue(), &CurrBB));
 
-    std::vector<Instruction *> DebugInsts;
-
     for (Instruction &Val : CurrBB) {
       // Since debug-info originates from many different locations in the
       // program, it will cause incorrect reporting from a debugger if we keep
@@ -730,7 +724,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
         // Remove the debug information for outlined functions.
-        Val.setDebugLoc(DebugLoc());
+        Val.setDebugLoc(DebugLoc::getDropped());
 
         // Loop info metadata may contain line locations. Update them to have no
         // value in the new subprogram since the outlined code could be from
@@ -746,24 +740,12 @@ static void moveFunctionData(Function &Old, Function &New,
         continue;
       }
 
-      // From this point we are only handling call instructions.
-      CallInst *CI = cast<CallInst>(&Val);
-
-      // Collect debug intrinsics for later removal.
-      if (isa<DbgInfoIntrinsic>(CI)) {
-        DebugInsts.push_back(&Val);
-        continue;
-      }
-
       // Edit the scope of called functions inside of outlined functions.
       if (DISubprogram *SP = New.getSubprogram()) {
         DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
         Val.setDebugLoc(DI);
       }
     }
-
-    for (Instruction *I : DebugInsts)
-      I->eraseFromParent();
   }
 }
 
@@ -1154,9 +1136,9 @@ using PHINodeData = std::pair<ArgLocWithBBCanon, CanonList>;
 /// \param PND - The data to hash.
 /// \returns The hash code of \p PND.
 static hash_code encodePHINodeData(PHINodeData &PND) {
-  return llvm::hash_combine(
-      llvm::hash_value(PND.first.first), llvm::hash_value(PND.first.second),
-      llvm::hash_combine_range(PND.second.begin(), PND.second.end()));
+  return llvm::hash_combine(llvm::hash_value(PND.first.first),
+                            llvm::hash_value(PND.first.second),
+                            llvm::hash_combine_range(PND.second));
 }
 
 /// Create a special GVN for PHINodes that will be used outside of
@@ -1864,7 +1846,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       Value *ValueOperand = SI->getValueOperand();
 
       StoreInst *NewI = cast<StoreInst>(I->clone());
-      NewI->setDebugLoc(DebugLoc());
+      NewI->setDebugLoc(DebugLoc::getDropped());
       BasicBlock *OutputBB = VBBIt->second;
       NewI->insertInto(OutputBB, OutputBB->end());
       LLVM_DEBUG(dbgs() << "Move store for instruction " << *I << " to "
@@ -2296,7 +2278,6 @@ void IROutliner::deduplicateExtractedSections(
   fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
                       OutputMappings);
 
-  std::vector<Value *> SortedKeys;
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
     AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,
@@ -2341,7 +2322,7 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   Instruction *NextIDLInst = NextIDIt->Inst;
   Instruction *NextModuleInst = nullptr;
   if (!ID.Inst->isTerminator())
-    NextModuleInst = ID.Inst->getNextNonDebugInstruction();
+    NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
     NextModuleInst =
         &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
@@ -2368,7 +2349,7 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
   // if it does not, we fix it in the InstructionDataList.
   if (!Region.Candidate->backInstruction()->isTerminator()) {
     Instruction *NewEndInst =
-        Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+        Region.Candidate->backInstruction()->getNextNode();
     assert(NewEndInst && "Next instruction is a nullptr?");
     if (Region.Candidate->end()->Inst != NewEndInst) {
       IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
@@ -2702,7 +2683,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 }
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  SetVector<Value *> ArgInputs, Outputs;
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
   BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();

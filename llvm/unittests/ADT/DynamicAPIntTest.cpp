@@ -31,6 +31,16 @@ public:
 };
 TYPED_TEST_SUITE(IntTest, TypeList, TypeNames);
 
+TYPED_TEST(IntTest, ValueInit) {
+  APInt Large(65, 0, true);
+  Large.setBit(64);
+  TypeParam DynLarge(1ll << 63);
+  EXPECT_EQ(TypeParam(Large), DynLarge + DynLarge);
+  APInt Small(64, -1, true);
+  TypeParam DynSmall(Small.getSExtValue());
+  EXPECT_EQ(TypeParam(Small), DynSmall);
+}
+
 TYPED_TEST(IntTest, ops) {
   TypeParam Two(2), Five(5), Seven(7), Ten(10);
   EXPECT_EQ(Five + Five, Ten);

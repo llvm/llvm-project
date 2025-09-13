@@ -132,6 +132,8 @@ void SetSignalHandler(const FuzzingOptions& Options) {
     SetSigaction(SIGILL, CrashHandler);
   if (Options.HandleFpe)
     SetSigaction(SIGFPE, CrashHandler);
+  if (Options.HandleTrap)
+    SetSigaction(SIGTRAP, CrashHandler);
   if (Options.HandleXfsz)
     SetSigaction(SIGXFSZ, FileSizeExceedHandler);
   if (Options.HandleUsr1)

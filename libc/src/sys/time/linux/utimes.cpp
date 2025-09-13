@@ -9,12 +9,13 @@
 #include "src/sys/time/utimes.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_timespec.h"
 #include "hdr/types/struct_timeval.h"
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #include <sys/syscall.h>
 
@@ -27,7 +28,14 @@ LLVM_LIBC_FUNCTION(int, utimes,
 #ifdef SYS_utimes
   // No need to define a timespec struct, use the syscall directly.
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
-#elif defined(SYS_utimensat)
+#elif defined(SYS_utimensat) || defined(SYS_utimensat_time64)
+
+#if defined(SYS_utimensat)
+  constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat;
+#elif defined(SYS_utimensat_time64)
+  constexpr auto UTIMES_SYSCALL_ID = SYS_utimensat_time64;
+#endif
+
   // the utimensat syscall requires a timespec struct, not timeval.
   struct timespec ts[2];
   struct timespec *ts_ptr = nullptr; // default value if times is nullptr
@@ -48,8 +56,10 @@ LLVM_LIBC_FUNCTION(int, utimes,
     ts[1].tv_sec = times[1].tv_sec;
 
     // convert u-seconds to nanoseconds
-    ts[0].tv_nsec = times[0].tv_usec * 1000;
-    ts[1].tv_nsec = times[1].tv_usec * 1000;
+    ts[0].tv_nsec =
+        static_cast<decltype(ts[0].tv_nsec)>(times[0].tv_usec * 1000);
+    ts[1].tv_nsec =
+        static_cast<decltype(ts[1].tv_nsec)>(times[1].tv_usec * 1000);
 
     ts_ptr = ts;
   }
@@ -59,11 +69,11 @@ LLVM_LIBC_FUNCTION(int, utimes,
 
   // utimensat syscall.
   // flags=0 means don't follow symlinks (like utimes)
-  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimensat, AT_FDCWD, path, ts_ptr,
-                                          0);
+  ret = LIBC_NAMESPACE::syscall_impl<int>(UTIMES_SYSCALL_ID, AT_FDCWD, path,
+                                          ts_ptr, 0);
 
 #else
-#error "utimensat and utimes syscalls not available."
+#error "utimes, utimensat, utimensat_time64,  syscalls not available."
 #endif // SYS_utimensat
 
   if (ret < 0) {

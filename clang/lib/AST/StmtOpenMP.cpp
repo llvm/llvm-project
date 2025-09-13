@@ -31,7 +31,7 @@ void OMPChildren::setClauses(ArrayRef<OMPClause *> Clauses) {
 }
 
 MutableArrayRef<Stmt *> OMPChildren::getChildren() {
-  return llvm::MutableArrayRef(getTrailingObjects<Stmt *>(), NumChildren);
+  return getTrailingObjects<Stmt *>(NumChildren);
 }
 
 OMPChildren *OMPChildren::Create(void *Mem, ArrayRef<OMPClause *> Clauses) {
@@ -125,12 +125,13 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
     llvm::function_ref<bool(unsigned, Stmt *)> Callback,
-    llvm::function_ref<void(OMPLoopTransformationDirective *)>
+    llvm::function_ref<void(OMPCanonicalLoopNestTransformationDirective *)>
         OnTransformationCallback) {
   CurStmt = CurStmt->IgnoreContainers();
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     while (true) {
-      auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
+      auto *Dir =
+          dyn_cast<OMPCanonicalLoopNestTransformationDirective>(CurStmt);
       if (!Dir)
         break;
 
@@ -369,11 +370,11 @@ OMPForDirective *OMPForDirective::Create(
   return Dir;
 }
 
-Stmt *OMPLoopTransformationDirective::getTransformedStmt() const {
+Stmt *OMPCanonicalLoopNestTransformationDirective::getTransformedStmt() const {
   switch (getStmtClass()) {
 #define STMT(CLASS, PARENT)
 #define ABSTRACT_STMT(CLASS)
-#define OMPLOOPTRANSFORMATIONDIRECTIVE(CLASS, PARENT)                          \
+#define OMPCANONICALLOOPNESTTRANSFORMATIONDIRECTIVE(CLASS, PARENT)             \
   case Stmt::CLASS##Class:                                                     \
     return static_cast<const CLASS *>(this)->getTransformedStmt();
 #include "clang/AST/StmtNodes.inc"
@@ -382,11 +383,11 @@ Stmt *OMPLoopTransformationDirective::getTransformedStmt() const {
   }
 }
 
-Stmt *OMPLoopTransformationDirective::getPreInits() const {
+Stmt *OMPCanonicalLoopNestTransformationDirective::getPreInits() const {
   switch (getStmtClass()) {
 #define STMT(CLASS, PARENT)
 #define ABSTRACT_STMT(CLASS)
-#define OMPLOOPTRANSFORMATIONDIRECTIVE(CLASS, PARENT)                          \
+#define OMPCANONICALLOOPNESTTRANSFORMATIONDIRECTIVE(CLASS, PARENT)             \
   case Stmt::CLASS##Class:                                                     \
     return static_cast<const CLASS *>(this)->getPreInits();
 #include "clang/AST/StmtNodes.inc"
@@ -471,18 +472,21 @@ OMPUnrollDirective *OMPUnrollDirective::CreateEmpty(const ASTContext &C,
 OMPReverseDirective *
 OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
-                            Stmt *TransformedStmt, Stmt *PreInits) {
+                            unsigned NumLoops, Stmt *TransformedStmt,
+                            Stmt *PreInits) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
 }
 
-OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C) {
+OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C,
+                                                      unsigned NumLoops) {
   return createEmptyDirective<OMPReverseDirective>(
       C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
-      TransformedStmtOffset + 1, SourceLocation(), SourceLocation());
+      TransformedStmtOffset + 1, SourceLocation(), SourceLocation(), NumLoops);
 }
 
 OMPInterchangeDirective *OMPInterchangeDirective::Create(

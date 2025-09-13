@@ -6,7 +6,11 @@ add_lldb_unittest(SymbolFileDWARFTests
   DWARFUnitTest.cpp
   SymbolFileDWARFTests.cpp
   XcodeSDKModuleTests.cpp
+  DWARF64UnitTest.cpp
 
+  LINK_COMPONENTS
+    Support
+    DebugInfoPDB
   LINK_LIBS
     lldbCore
     lldbHost
@@ -19,9 +23,6 @@ add_lldb_unittest(SymbolFileDWARFTests
     lldbUtilityHelpers
     lldbSymbolHelpers
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
-    DebugInfoPDB
   )
 
 set(test_inputs

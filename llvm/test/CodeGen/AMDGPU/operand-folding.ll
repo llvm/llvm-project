@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -early-live-intervals < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -early-live-intervals < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s
@@ -146,6 +146,23 @@ if.then:
 
 if.else:
   unreachable
+}
+
+; The compared constant is equal to {42, 42}. It cannot be reduced to
+; a compare with 42.
+
+define i32 @issue139908(i64 %in) {
+; CHECK-LABEL: issue139908:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s4, 42
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 2, 1, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %eq = icmp eq i64 %in, 180388626474
+  %result = select i1 %eq, i32 1, i32 2
+  ret i32 %result
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0

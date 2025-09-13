@@ -71,8 +71,8 @@ struct AssemblerInvocation {
   /// @name Target Options
   /// @{
 
-  /// The name of the target triple to assemble for.
-  std::string Triple;
+  /// The target triple to assemble for.
+  llvm::Triple Triple;
 
   /// If given, the name of the target CPU to determine which instructions
   /// are legal.
@@ -192,9 +192,12 @@ struct AssemblerInvocation {
   std::string AsSecureLogFile;
   /// @}
 
+  void setTriple(llvm::StringRef Str) {
+    Triple = llvm::Triple(llvm::Triple::normalize(Str));
+  }
+
 public:
   AssemblerInvocation() {
-    Triple = "";
     NoInitialTextSection = 0;
     InputFile = "-";
     OutputPath = "-";
@@ -261,7 +264,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Construct the invocation.
 
   // Target Options
-  Opts.Triple = llvm::Triple::normalize(Args.getLastArgValue(OPT_triple));
+  Opts.setTriple(Args.getLastArgValue(OPT_triple));
   if (Arg *A = Args.getLastArg(options::OPT_darwin_target_variant_triple))
     Opts.DarwinTargetVariantTriple = llvm::Triple(A->getValue());
   if (Arg *A = Args.getLastArg(OPT_darwin_target_variant_sdk_version_EQ)) {
@@ -278,7 +281,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   // Use the default target triple if unspecified.
   if (Opts.Triple.empty())
-    Opts.Triple = llvm::sys::getDefaultTargetTriple();
+    Opts.setTriple(llvm::sys::getDefaultTargetTriple());
 
   // Language Options
   Opts.IncludePaths = Args.getAllArgValues(OPT_I);
@@ -419,7 +422,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
   if (!TheTarget)
-    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+    return Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
       MemoryBuffer::getFileOrSTDIN(Opts.InputFile, /*IsText=*/true);
@@ -577,7 +580,6 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
         T, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI));
-    Str.get()->initSections(Opts.NoExecStack, *STI);
     if (T.isOSBinFormatMachO() && T.isOSDarwin()) {
       Triple *TVT = Opts.DarwinTargetVariantTriple
                         ? &*Opts.DarwinTargetVariantTriple
@@ -592,20 +594,20 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   if (Opts.EmbedBitcode && Ctx.getObjectFileType() == MCContext::IsMachO) {
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
-    Str.get()->switchSection(AsmLabel);
-    Str.get()->emitZeros(1);
+    Str->switchSection(AsmLabel);
+    Str->emitZeros(1);
   }
 
   bool Failed = false;
 
   std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(SrcMgr, Ctx, *Str.get(), *MAI));
+      createMCAsmParser(SrcMgr, Ctx, *Str, *MAI));
 
   // FIXME: init MCTargetOptions from sanitizer flags here.
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
-    Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple;
+    Failed = Diags.Report(diag::err_target_unknown_triple) << Opts.Triple.str();
 
   // Set values for symbols, if any.
   for (auto &S : Opts.SymbolDefs) {
@@ -619,7 +621,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   }
 
   if (!Failed) {
-    Parser->setTargetParser(*TAP.get());
+    Parser->setTargetParser(*TAP);
     Failed = Parser->Run(Opts.NoInitialTextSection);
   }
 
@@ -658,12 +660,11 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   InitializeAllAsmParsers();
 
   // Construct our diagnostic client.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(errs(), &*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(errs(), DiagOpts);
   DiagClient->setPrefix("clang -cc1as");
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagClient);
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.

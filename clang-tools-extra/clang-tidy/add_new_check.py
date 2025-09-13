@@ -89,13 +89,9 @@ def write_header(
             + check_name_camel.upper()
             + "_H"
         )
-        f.write("//===--- ")
-        f.write(os.path.basename(filename))
-        f.write(" - clang-tidy ")
-        f.write("-" * max(0, 42 - len(os.path.basename(filename))))
-        f.write("*- C++ -*-===//")
         f.write(
             """
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -145,13 +141,9 @@ def write_implementation(
     filename = os.path.join(module_path, check_name_camel) + ".cpp"
     print("Creating %s..." % filename)
     with io.open(filename, "w", encoding="utf8", newline="\n") as f:
-        f.write("//===--- ")
-        f.write(os.path.basename(filename))
-        f.write(" - clang-tidy ")
-        f.write("-" * max(0, 51 - len(os.path.basename(filename))))
-        f.write("-===//")
         f.write(
             """
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

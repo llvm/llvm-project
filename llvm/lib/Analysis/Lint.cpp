@@ -344,19 +344,13 @@ void Lint::visitCallBase(CallBase &I) {
                            MMI->getSourceAlign(), nullptr, MemRef::Read);
       break;
     }
-    case Intrinsic::memset: {
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
       visitMemoryReference(I, MemoryLocation::getForDest(MSI),
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
-    case Intrinsic::memset_inline: {
-      MemSetInlineInst *MSII = cast<MemSetInlineInst>(&I);
-      visitMemoryReference(I, MemoryLocation::getForDest(MSII),
-                           MSII->getDestAlign(), nullptr, MemRef::Write);
-      break;
-    }
-
     case Intrinsic::vastart:
       // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
@@ -379,13 +373,6 @@ void Lint::visitCallBase(CallBase &I) {
       // at any time, so check it for both readability and writeability.
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
-      break;
-    case Intrinsic::get_active_lane_mask:
-      if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
-        Check(!TripCount->isZero(),
-              "get_active_lane_mask: operand #2 "
-              "must be greater than 0",
-              &I);
       break;
     }
 }
@@ -557,8 +544,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   VectorType *VecTy = dyn_cast<VectorType>(V->getType());
   if (!VecTy) {
-    KnownBits Known =
-        computeKnownBits(V, DL, 0, AC, dyn_cast<Instruction>(V), DT);
+    KnownBits Known = computeKnownBits(V, DL, AC, dyn_cast<Instruction>(V), DT);
     return Known.isZero();
   }
 

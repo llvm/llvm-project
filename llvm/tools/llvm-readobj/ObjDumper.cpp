@@ -102,9 +102,9 @@ void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
   this->printLoadName();
 }
 
-static std::vector<object::SectionRef>
-getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
-                            ArrayRef<std::string> Sections) {
+std::vector<object::SectionRef>
+ObjDumper::getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
+                                       ArrayRef<std::string> Sections) {
   std::vector<object::SectionRef> Ret;
   std::map<std::string, bool, std::less<>> SecNames;
   std::map<unsigned, bool> SecIndices;
@@ -203,7 +203,7 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
       W.getOStream() << ' ';
       for (i = 0; TmpSecPtr < SecEnd && i < 4; ++i) {
         for (k = 0; TmpSecPtr < SecEnd && k < 4; k++, TmpSecPtr++) {
-          uint8_t Val = *(reinterpret_cast<const uint8_t *>(TmpSecPtr));
+          uint8_t Val = *TmpSecPtr;
           W.getOStream() << format_hex_no_prefix(Val, 2);
         }
         W.getOStream() << ' ';

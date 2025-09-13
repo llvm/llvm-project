@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.string_view
     libc.hdr.types.struct_tm
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(

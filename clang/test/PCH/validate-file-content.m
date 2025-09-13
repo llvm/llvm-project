@@ -1,5 +1,3 @@
-// REQUIRES: shell
-//
 // Check driver works
 // RUN: %clang -x objective-c-header -fsyntax-only -fpch-validate-input-files-content %s -### 2>&1 | FileCheck --check-prefix=CHECK-CC1 %s
 // CHECK-CC1: -fvalidate-ast-input-files-content
@@ -25,5 +23,5 @@
 // RUN: FileCheck %s < %t/stderr
 //
 // CHECK: file '[[M_H:.*[/\\]m\.h]]' has been modified since the precompiled header '[[A_PCH:.*/a\.pch]]' was built: content changed
-// CHECK: please rebuild precompiled header '[[A_PCH]]'
+// CHECK: please rebuild precompiled file '[[A_PCH]]'
 // expected-no-diagnostics

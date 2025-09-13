@@ -201,7 +201,7 @@ std::string getMingwTriple() {
   Triple T(sys::getDefaultTargetTriple());
   if (!isUsableArch(T.getArch()))
     T.setArch(getDefaultFallbackArch());
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return T.str();
   // Write out the literal form of the vendor/env here, instead of
   // constructing them with enum values (which end up with them in
@@ -371,7 +371,7 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> FileArgs = InputArgs.getAllArgValues(WINDRES_INPUT);
-  FileArgs.insert(FileArgs.end(), InputArgsArray.begin(), InputArgsArray.end());
+  llvm::append_range(FileArgs, InputArgsArray);
 
   if (InputArgs.hasArg(WINDRES_input)) {
     Opts.InputFile = InputArgs.getLastArgValue(WINDRES_input).str();
@@ -519,8 +519,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> InArgsInfo = InputArgs.getAllArgValues(OPT_INPUT);
-  InArgsInfo.insert(InArgsInfo.end(), InputArgsArray.begin(),
-                    InputArgsArray.end());
+  llvm::append_range(InArgsInfo, InputArgsArray);
   if (InArgsInfo.size() != 1) {
     fatalError("Exactly one input file should be provided.");
   }

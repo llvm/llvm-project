@@ -58,10 +58,10 @@ int bar2() __attribute__((noinline));
 [[clang::optnone]] // expected-note {{conflicting}}
 int baz2() __attribute__((always_inline)); // expected-warning{{'always_inline' attribute ignored}}
 
-[[clang::optnone]] int globalVar2; //expected-warning{{'optnone' attribute only applies to functions}}
+[[clang::optnone]] int globalVar2; //expected-warning{{'clang::optnone' attribute only applies to functions}}
 
 struct A2 {
-  [[clang::optnone]] int aField; // expected-warning{{'optnone' attribute only applies to functions}}
+  [[clang::optnone]] int aField; // expected-warning{{'clang::optnone' attribute only applies to functions}}
 };
 
 struct B2 {
@@ -78,4 +78,4 @@ struct B2 {
 [[clang::__optnone__]] int foo5();
 [[_Clang::__optnone__]] int foo6();
 
-[[_Clang::optnone]] int foo7; // expected-warning {{'optnone' attribute only applies to functions}}
+[[_Clang::optnone]] int foo7; // expected-warning {{'clang::optnone' attribute only applies to functions}}

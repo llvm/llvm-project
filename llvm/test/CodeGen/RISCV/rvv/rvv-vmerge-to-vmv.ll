@@ -71,10 +71,31 @@ define <vscale x 8 x i64> @vpmerge_m8(<vscale x 8 x i64> %x, <vscale x 8 x i64> 
   ret <vscale x 8 x i64> %1
 }
 
-declare <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1>, <vscale x 1 x i8>, <vscale x 1 x i8>, i32)
-declare <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x i8>, <vscale x 2 x i8>, i32)
-declare <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1>, <vscale x 4 x i8>, <vscale x 4 x i8>, i32)
-declare <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1>, <vscale x 8 x i8>, <vscale x 8 x i8>, i32)
-declare <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
-declare <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1>, <vscale x 8 x i32>, <vscale x 8 x i32>, i32)
-declare <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1>, <vscale x 8 x i64>, <vscale x 8 x i64>, i32)
+; Shouldn't be converted because vmerge adds back in elements from false past avl that would be lost if we converted to vmv.v.v
+define <vscale x 2 x i32> @preserve_false(ptr %p, <vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i1> %mask, i64 %avl1, i64 %avl2) {
+; CHECK-LABEL: preserve_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vle32.v v10, (a0), v0.t
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
+; CHECK-NEXT:    ret
+  %true = call <vscale x 2 x i32> @llvm.riscv.vle.mask(<vscale x 2 x i32> %false, ptr %p, <vscale x 2 x i1> %mask, i64 %avl1, i64 3)
+  %res = call <vscale x 2 x i32> @llvm.riscv.vmerge(<vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i32> %true, <vscale x 2 x i1> %mask, i64 %avl2)
+  ret <vscale x 2 x i32> %res
+}
+
+; Can fold this because its avl is known to be <= than true, so no elements from false need to be introduced past avl.
+define <vscale x 2 x i32> @preserve_false_avl_known_le(ptr %p, <vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: preserve_false_avl_known_le:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0), v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %true = call <vscale x 2 x i32> @llvm.riscv.vle.mask(<vscale x 2 x i32> %false, ptr %p, <vscale x 2 x i1> %mask, i64 2, i64 3)
+  %res = call <vscale x 2 x i32> @llvm.riscv.vmerge(<vscale x 2 x i32> %pt, <vscale x 2 x i32> %false, <vscale x 2 x i32> %true, <vscale x 2 x i1> %mask, i64 1)
+  ret <vscale x 2 x i32> %res
+}

@@ -109,8 +109,8 @@ public:
 
     // Create the new op in canonical form.
     auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
-                                mixedOffsets, mixedSizes, mixedStrides);
+        OpType::create(rewriter, op.getLoc(), resultType, op.getSource(),
+                       mixedOffsets, mixedSizes, mixedStrides);
     CastOpFunc()(rewriter, op, newOp);
 
     return success();

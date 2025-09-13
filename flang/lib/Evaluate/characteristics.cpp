@@ -274,6 +274,9 @@ llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
     }
     o << ')';
   }
+  if (isPossibleSequenceAssociation_) {
+    o << " isPossibleSequenceAssociation";
+  }
   return o;
 }
 
@@ -282,17 +285,26 @@ bool DummyDataObject::operator==(const DummyDataObject &that) const {
       coshape == that.coshape && cudaDataAttr == that.cudaDataAttr;
 }
 
+static bool IsOkWithSequenceAssociation(
+    const TypeAndShape &t1, const TypeAndShape &t2) {
+  return t1.isPossibleSequenceAssociation() &&
+      (t2.isPossibleSequenceAssociation() || t2.CanBeSequenceAssociated());
+}
+
 bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
     std::string *whyNot, std::optional<std::string> *warning) const {
-  bool possibleWarning{false};
-  if (!ShapesAreCompatible(
-          type.shape(), actual.type.shape(), &possibleWarning)) {
-    if (whyNot) {
-      *whyNot = "incompatible dummy data object shapes";
+  if (!IsOkWithSequenceAssociation(type, actual.type) &&
+      !IsOkWithSequenceAssociation(actual.type, type)) {
+    bool possibleWarning{false};
+    if (!ShapesAreCompatible(
+            type.shape(), actual.type.shape(), &possibleWarning)) {
+      if (whyNot) {
+        *whyNot = "incompatible dummy data object shapes";
+      }
+      return false;
+    } else if (warning && possibleWarning) {
+      *warning = "distinct dummy data object shapes";
     }
-    return false;
-  } else if (warning && possibleWarning) {
-    *warning = "distinct dummy data object shapes";
   }
   // Treat deduced dummy character type as if it were assumed-length character
   // to avoid useless "implicit interfaces have distinct type" warnings from
@@ -343,10 +355,29 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
       }
     }
   }
-  if (!IdenticalSignificantAttrs(attrs, actual.attrs) ||
+  if (!attrs.test(Attr::DeducedFromActual) &&
+      !actual.attrs.test(Attr::DeducedFromActual) &&
       type.attrs() != actual.type.attrs()) {
     if (whyNot) {
+      *whyNot = "incompatible dummy data object shape attributes";
+      auto differences{type.attrs() ^ actual.type.attrs()};
+      auto sep{": "s};
+      differences.IterateOverMembers([&](TypeAndShape::Attr x) {
+        *whyNot += sep + std::string{TypeAndShape::EnumToString(x)};
+        sep = ", ";
+      });
+    }
+    return false;
+  }
+  if (!IdenticalSignificantAttrs(attrs, actual.attrs)) {
+    if (whyNot) {
       *whyNot = "incompatible dummy data object attributes";
+      auto differences{attrs ^ actual.attrs};
+      auto sep{": "s};
+      differences.IterateOverMembers([&](DummyDataObject::Attr x) {
+        *whyNot += sep + std::string{EnumToString(x)};
+        sep = ", ";
+      });
     }
     return false;
   }
@@ -369,7 +400,7 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   }
   if (!attrs.test(Attr::Value) &&
       !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
-          ignoreTKR, warning,
+          ignoreTKR,
           /*allowUnifiedMatchingRule=*/false,
           /*=isHostDeviceProcedure*/ false)) {
     if (whyNot) {
@@ -899,6 +930,15 @@ std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
                 // Pass the monomorphic declared type to an implicit interface
                 type->set_type(DynamicType{
                     type->type().GetDerivedTypeSpec(), /*poly=*/false});
+              }
+              if (type->type().category() == TypeCategory::Character &&
+                  type->type().kind() == 1) {
+                type->set_isPossibleSequenceAssociation(true);
+              } else if (const Symbol * array{IsArrayElement(expr)}) {
+                type->set_isPossibleSequenceAssociation(
+                    IsContiguous(*array, context).value_or(false));
+              } else {
+                type->set_isPossibleSequenceAssociation(expr.Rank() > 0);
               }
               DummyDataObject obj{std::move(*type)};
               obj.attrs.set(DummyDataObject::Attr::DeducedFromActual);
@@ -1776,7 +1816,7 @@ bool DistinguishUtils::Distinguishable(
       x.intent != common::Intent::In) {
     return true;
   } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
-                 x.ignoreTKR | y.ignoreTKR, nullptr,
+                 x.ignoreTKR | y.ignoreTKR,
                  /*allowUnifiedMatchingRule=*/false,
                  /*=isHostDeviceProcedure*/ false)) {
     return true;

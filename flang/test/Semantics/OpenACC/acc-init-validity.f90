@@ -44,7 +44,7 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end parallel
 
@@ -53,7 +53,7 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end serial
 
@@ -62,7 +62,7 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels
 
@@ -70,21 +70,21 @@ program openacc_init_validity
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc serial loop
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
     !ERROR: Directive INIT may not be called within a compute region
     !$acc init
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At most one IF clause can appear on the INIT directive

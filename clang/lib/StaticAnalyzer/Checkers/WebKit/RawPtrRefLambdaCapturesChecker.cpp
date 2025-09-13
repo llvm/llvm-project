@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -127,13 +126,22 @@ public:
         return true;
       }
 
-      // WTF::switchOn(T, F... f) is a variadic template function and couldn't
-      // be annotated with NOESCAPE. We hard code it here to workaround that.
       bool shouldTreatAllArgAsNoEscape(FunctionDecl *Decl) {
         auto *NsDecl = Decl->getParent();
         if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
           return false;
-        return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
+        // WTF::switchOn(T, F... f) is a variadic template function and couldn't
+        // be annotated with NOESCAPE. We hard code it here to workaround that.
+        if (safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn")
+          return true;
+        // Treat every argument of functions in std::ranges as noescape.
+        if (safeGetName(NsDecl) == "ranges") {
+          if (auto *OuterDecl = NsDecl->getParent();
+              OuterDecl && isa<NamespaceDecl>(OuterDecl) &&
+              safeGetName(OuterDecl) == "std")
+            return true;
+        }
+        return false;
       }
 
       bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
@@ -224,14 +232,11 @@ public:
         if (!Init)
           return nullptr;
         if (auto *Lambda = dyn_cast<LambdaExpr>(Init)) {
+          DeclRefExprsToIgnore.insert(DRE);
           updateIgnoreList();
           return Lambda;
         }
-        TempExpr = dyn_cast<CXXBindTemporaryExpr>(Init->IgnoreParenCasts());
-        if (!TempExpr)
-          return nullptr;
-        updateIgnoreList();
-        return dyn_cast_or_null<LambdaExpr>(TempExpr->getSubExpr());
+        return nullptr;
       }
 
       void checkCalleeLambda(CallExpr *CE) {
@@ -263,8 +268,6 @@ public:
           return;
         DeclRefExprsToIgnore.insert(ArgRef);
         LambdasToIgnore.insert(L);
-        Checker->visitLambdaExpr(L, shouldCheckThis() && !hasProtectedThis(L),
-                                 ClsType, /* ignoreParamVarDecl */ true);
       }
 
       bool hasProtectedThis(LambdaExpr *L) {
@@ -383,6 +386,9 @@ public:
         }
         QualType CapturedVarQualType = CapturedVar->getType();
         auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        if (C.getCaptureKind() == LCK_ByCopy &&
+            CapturedVarQualType->isReferenceType())
+          continue;
         if (IsUncountedPtr && *IsUncountedPtr)
           reportBug(C, CapturedVar, CapturedVarQualType, L);
       } else if (C.capturesThis() && shouldCheckThis) {

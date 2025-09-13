@@ -5,11 +5,11 @@
 
 ; CHECK-LABEL: __ZThn16_N1C3addEPKcz:
 ; CHECK:       b __ZN1C3addEPKcz
+
 ; CHECK-LABEL: _tailTest:
 ; CHECK:       b __ZN1C3addEPKcz
+
 ; CHECK-LABEL: __ZThn8_N1C1fEiiiiiiiiiz:
-; CHECK:       ldr     w8, [sp, #4]
-; CHECK:       str     w8, [sp, #4]
 ; CHECK:       b __ZN1C1fEiiiiiiiiiz
 
 %class.C = type { %class.A.base, [4 x i8], %class.B.base, [4 x i8] }

@@ -152,10 +152,10 @@ void SymbolFile::AssertModuleLock() {
 
 SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;
 
-Symtab *SymbolFileCommon::GetSymtab() {
+Symtab *SymbolFileCommon::GetSymtab(bool can_create) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Fetch the symtab from the main object file.
-  auto *symtab = GetMainObjectFile()->GetSymtab();
+  auto *symtab = GetMainObjectFile()->GetSymtab(can_create);
   if (m_symtab != symtab) {
     m_symtab = symtab;
 

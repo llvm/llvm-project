@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -23,7 +28,8 @@ using namespace mlir::scf;
 class SCFLoopLikeTest : public ::testing::Test {
 protected:
   SCFLoopLikeTest() : b(&context), loc(UnknownLoc::get(&context)) {
-    context.loadDialect<arith::ArithDialect, scf::SCFDialect>();
+    context.loadDialect<affine::AffineDialect, arith::ArithDialect,
+                        scf::SCFDialect>();
   }
 
   void checkUnidimensional(LoopLikeOpInterface loopLikeOp) {
@@ -88,6 +94,24 @@ protected:
     EXPECT_EQ((*maybeInductionVars).size(), 2u);
   }
 
+  void checkNormalized(LoopLikeOpInterface loopLikeOp) {
+    std::optional<SmallVector<OpFoldResult>> maybeLb =
+        loopLikeOp.getLoopLowerBounds();
+    ASSERT_TRUE(maybeLb.has_value());
+    std::optional<SmallVector<OpFoldResult>> maybeStep =
+        loopLikeOp.getLoopSteps();
+    ASSERT_TRUE(maybeStep.has_value());
+
+    auto allEqual = [](ArrayRef<OpFoldResult> results, int64_t val) {
+      return llvm::all_of(results, [&](OpFoldResult ofr) {
+        auto intValue = getConstantIntValue(ofr);
+        return intValue.has_value() && intValue == val;
+      });
+    };
+    EXPECT_TRUE(allEqual(*maybeLb, 0));
+    EXPECT_TRUE(allEqual(*maybeStep, 1));
+  }
+
   MLIRContext context;
   OpBuilder b;
   Location loc;
@@ -95,46 +119,79 @@ protected:
 
 TEST_F(SCFLoopLikeTest, queryUnidimensionalLooplikes) {
   OwningOpRef<arith::ConstantIndexOp> lb =
-      b.create<arith::ConstantIndexOp>(loc, 0);
+      arith::ConstantIndexOp::create(b, loc, 0);
   OwningOpRef<arith::ConstantIndexOp> ub =
-      b.create<arith::ConstantIndexOp>(loc, 10);
+      arith::ConstantIndexOp::create(b, loc, 10);
   OwningOpRef<arith::ConstantIndexOp> step =
-      b.create<arith::ConstantIndexOp>(loc, 2);
+      arith::ConstantIndexOp::create(b, loc, 2);
 
   OwningOpRef<scf::ForOp> forOp =
-      b.create<scf::ForOp>(loc, lb.get(), ub.get(), step.get());
+      scf::ForOp::create(b, loc, lb.get(), ub.get(), step.get());
   checkUnidimensional(forOp.get());
 
-  OwningOpRef<scf::ForallOp> forallOp = b.create<scf::ForallOp>(
-      loc, ArrayRef<OpFoldResult>(lb->getResult()),
+  OwningOpRef<scf::ForallOp> forallOp = scf::ForallOp::create(
+      b, loc, ArrayRef<OpFoldResult>(lb->getResult()),
       ArrayRef<OpFoldResult>(ub->getResult()),
       ArrayRef<OpFoldResult>(step->getResult()), ValueRange(), std::nullopt);
   checkUnidimensional(forallOp.get());
 
-  OwningOpRef<scf::ParallelOp> parallelOp = b.create<scf::ParallelOp>(
-      loc, ValueRange(lb->getResult()), ValueRange(ub->getResult()),
+  OwningOpRef<scf::ParallelOp> parallelOp = scf::ParallelOp::create(
+      b, loc, ValueRange(lb->getResult()), ValueRange(ub->getResult()),
       ValueRange(step->getResult()), ValueRange());
   checkUnidimensional(parallelOp.get());
 }
 
 TEST_F(SCFLoopLikeTest, queryMultidimensionalLooplikes) {
   OwningOpRef<arith::ConstantIndexOp> lb =
-      b.create<arith::ConstantIndexOp>(loc, 0);
+      arith::ConstantIndexOp::create(b, loc, 0);
   OwningOpRef<arith::ConstantIndexOp> ub =
-      b.create<arith::ConstantIndexOp>(loc, 10);
+      arith::ConstantIndexOp::create(b, loc, 10);
   OwningOpRef<arith::ConstantIndexOp> step =
-      b.create<arith::ConstantIndexOp>(loc, 2);
+      arith::ConstantIndexOp::create(b, loc, 2);
 
-  OwningOpRef<scf::ForallOp> forallOp = b.create<scf::ForallOp>(
-      loc, ArrayRef<OpFoldResult>({lb->getResult(), lb->getResult()}),
+  OwningOpRef<scf::ForallOp> forallOp = scf::ForallOp::create(
+      b, loc, ArrayRef<OpFoldResult>({lb->getResult(), lb->getResult()}),
       ArrayRef<OpFoldResult>({ub->getResult(), ub->getResult()}),
       ArrayRef<OpFoldResult>({step->getResult(), step->getResult()}),
       ValueRange(), std::nullopt);
   checkMultidimensional(forallOp.get());
 
-  OwningOpRef<scf::ParallelOp> parallelOp = b.create<scf::ParallelOp>(
-      loc, ValueRange({lb->getResult(), lb->getResult()}),
+  OwningOpRef<scf::ParallelOp> parallelOp = scf::ParallelOp::create(
+      b, loc, ValueRange({lb->getResult(), lb->getResult()}),
       ValueRange({ub->getResult(), ub->getResult()}),
       ValueRange({step->getResult(), step->getResult()}), ValueRange());
   checkMultidimensional(parallelOp.get());
+}
+
+TEST_F(SCFLoopLikeTest, testForallNormalize) {
+  OwningOpRef<arith::ConstantIndexOp> lb =
+      arith::ConstantIndexOp::create(b, loc, 1);
+  OwningOpRef<arith::ConstantIndexOp> ub =
+      arith::ConstantIndexOp::create(b, loc, 10);
+  OwningOpRef<arith::ConstantIndexOp> step =
+      arith::ConstantIndexOp::create(b, loc, 3);
+
+  scf::ForallOp forallOp = scf::ForallOp::create(
+      b, loc, ArrayRef<OpFoldResult>({lb->getResult(), lb->getResult()}),
+      ArrayRef<OpFoldResult>({ub->getResult(), ub->getResult()}),
+      ArrayRef<OpFoldResult>({step->getResult(), step->getResult()}),
+      ValueRange(), std::nullopt);
+  // Create a user of the induction variable. Bitcast is chosen for simplicity
+  // since it is unary.
+  b.setInsertionPointToStart(forallOp.getBody());
+  arith::BitcastOp::create(b, UnknownLoc::get(&context), b.getF64Type(),
+                           forallOp.getInductionVar(0));
+  IRRewriter rewriter(b);
+  FailureOr<scf::ForallOp> maybeNormalizedForallOp =
+      normalizeForallOp(rewriter, forallOp);
+  EXPECT_TRUE(succeeded(maybeNormalizedForallOp));
+  OwningOpRef<scf::ForallOp> normalizedForallOp(*maybeNormalizedForallOp);
+  checkNormalized(normalizedForallOp.get());
+
+  // Check that the IV user has been updated to use the denormalized variable.
+  Block *body = normalizedForallOp->getBody();
+  auto bitcastOps = body->getOps<arith::BitcastOp>();
+  ASSERT_EQ(std::distance(bitcastOps.begin(), bitcastOps.end()), 1);
+  arith::BitcastOp ivUser = *bitcastOps.begin();
+  ASSERT_NE(ivUser.getIn(), normalizedForallOp->getInductionVar(0));
 }
