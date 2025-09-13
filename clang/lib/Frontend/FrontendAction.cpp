@@ -837,6 +837,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (const auto &r = N2978::makeIPCManagerCompiler(OutputPath); r) {
       N2978::managerCompiler = new N2978::IPCManagerCompiler(r.value());
     }
+    else {
+      // making manager failed
+    }
   }
 
   bool HasBegunSourceFile = false;

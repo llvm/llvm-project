@@ -195,6 +195,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     if (const auto &r =
             N2978::managerCompiler->sendCTBLastMessage(std::move(Last));
         r) {
+      N2978::managerCompiler->closeConnection();
     }
   }
 

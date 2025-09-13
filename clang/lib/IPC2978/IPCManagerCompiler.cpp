@@ -5,6 +5,7 @@
 #include "clang/IPC2978/rapidhash.h"
 
 #include <string>
+#include <utility>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -18,12 +19,10 @@
 #include <unistd.h>
 #endif
 
-using std::string;
-
 namespace N2978
 {
 
-tl::expected<IPCManagerCompiler, string> makeIPCManagerCompiler(string BMIIfHeaderUnitObjOtherwisePath)
+tl::expected<IPCManagerCompiler, std::string> makeIPCManagerCompiler(std::string BMIIfHeaderUnitObjOtherwisePath)
 {
 #ifdef _WIN32
     BMIIfHeaderUnitObjOtherwisePath = R"(\\.\pipe\)" + BMIIfHeaderUnitObjOtherwisePath;
@@ -86,7 +85,12 @@ IPCManagerCompiler::IPCManagerCompiler(const int fdSocket_)
 }
 #endif
 
-tl::expected<void, string> IPCManagerCompiler::receiveBTCLastMessage() const
+Response::Response(BMIFile file_, const ResponseType type_, const bool user_)
+    : file(std::move(file_)), type(type_), user(user_)
+{
+}
+
+tl::expected<void, std::string> IPCManagerCompiler::receiveBTCLastMessage() const
 {
     char buffer[BUFFERSIZE];
     uint32_t bytesRead;
@@ -112,35 +116,94 @@ tl::expected<void, string> IPCManagerCompiler::receiveBTCLastMessage() const
     return {};
 }
 
-tl::expected<BTCModule, string> IPCManagerCompiler::receiveBTCModule(const CTBModule &moduleName) const
+tl::expected<BTCModule, std::string> IPCManagerCompiler::receiveBTCModule(const CTBModule &moduleName)
 {
 
-    // raise(SIGTRAP); // At the location of the BP.
-    vector<char> buffer = getBufferWithType(CTB::MODULE);
+    std::vector<char> buffer = getBufferWithType(CTB::MODULE);
     writeString(buffer, moduleName.moduleName);
     if (const auto &r = writeInternal(buffer); !r)
     {
         return tl::unexpected(r.error());
     }
 
-    return receiveMessage<BTCModule>();
+    const auto &received = receiveMessage<BTCModule>();
+
+    if (received)
+    {
+        auto &[f, user, deps] = received.value();
+        responses.emplace(moduleName.moduleName, Response(f, ResponseType::MODULE, user));
+        for (const auto &[isHeaderUnit, file, logicalNames, user] : deps)
+        {
+            if (isHeaderUnit)
+            {
+                for (const std::string &s : logicalNames)
+                {
+                    responses.emplace(s, Response(file, ResponseType::HEADER_UNIT, user));
+                }
+            }
+            else
+            {
+                responses.emplace(logicalNames[0], Response(file, ResponseType::MODULE, user));
+            }
+        }
+    }
+    return received;
 }
 
-tl::expected<BTCNonModule, string> IPCManagerCompiler::receiveBTCNonModule(const CTBNonModule &nonModule) const
+tl::expected<BTCNonModule, std::string> IPCManagerCompiler::receiveBTCNonModule(const CTBNonModule &nonModule)
 {
-    vector<char> buffer = getBufferWithType(CTB::NON_MODULE);
+    std::vector<char> buffer = getBufferWithType(CTB::NON_MODULE);
     buffer.emplace_back(nonModule.isHeaderUnit);
     writeString(buffer, nonModule.logicalName);
     if (const auto &r = writeInternal(buffer); !r)
     {
         return tl::unexpected(r.error());
     }
-    return receiveMessage<BTCNonModule>();
+
+    const auto &received = receiveMessage<BTCNonModule>();
+
+    if (received)
+    {
+        const auto &[isHeaderUnit, user, filePath, fileSize, logicalNames, headerFiles, huDeps] = received.value();
+
+        BMIFile f;
+        f.filePath = filePath;
+        f.fileSize = fileSize;
+
+        if (!isHeaderUnit)
+        {
+            responses.emplace(nonModule.logicalName, Response(f, ResponseType::HEADER_FILE, user));
+            return received;
+        }
+
+        responses.emplace(nonModule.logicalName, Response(f, ResponseType::HEADER_UNIT, user));
+
+        for (const std::string &h : logicalNames)
+        {
+            responses.emplace(h, Response(f, ResponseType::HEADER_UNIT, user));
+        }
+
+        for (const auto &[logicalName, filePath, user] : headerFiles)
+        {
+            BMIFile headerBMI;
+            headerBMI.filePath = filePath;
+            responses.emplace(logicalName, Response(headerBMI, ResponseType::HEADER_FILE, user));
+        }
+
+        for (const auto &[file, logicalNames, user] : huDeps)
+        {
+            for (const std::string &l : logicalNames)
+            {
+                responses.emplace(l, Response(file, ResponseType::HEADER_UNIT, user));
+            }
+        }
+    }
+    return received;
 }
 
-tl::expected<void, string> IPCManagerCompiler::sendCTBLastMessage(const CTBLastMessage &lastMessage) const
+tl::expected<void, std::string> IPCManagerCompiler::sendCTBLastMessage(const CTBLastMessage &lastMessage) const
 {
-    vector<char> buffer = getBufferWithType(CTB::LAST_MESSAGE);
+    std::vector<char> buffer = getBufferWithType(CTB::LAST_MESSAGE);
     buffer.emplace_back(lastMessage.errorOccurred);
     writeString(buffer, lastMessage.output);
     writeString(buffer, lastMessage.errorOutput);
@@ -153,8 +216,9 @@ tl::expected<void, string> IPCManagerCompiler::sendCTBLastMessage(const CTBLastM
     return {};
 }
 
-tl::expected<void, string> IPCManagerCompiler::sendCTBLastMessage(const CTBLastMessage &lastMessage,
-                                                                  const string &bmiFile, const string &filePath) const
+tl::expected<void, std::string> IPCManagerCompiler::sendCTBLastMessage(const CTBLastMessage &lastMessage,
+                                                                       const std::string &bmiFile,
+                                                                       const std::string &filePath) const
 {
 #ifdef _WIN32
     const HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ | GENERIC_WRITE,
@@ -262,7 +326,7 @@ tl::expected<void, string> IPCManagerCompiler::sendCTBLastMessage(const CTBLastM
     return {};
 }
 
-tl::expected<ProcessMappingOfBMIFile, string> IPCManagerCompiler::readSharedMemoryBMIFile(const BMIFile &file)
+tl::expected<ProcessMappingOfBMIFile, std::string> IPCManagerCompiler::readSharedMemoryBMIFile(const BMIFile &file)
 {
     ProcessMappingOfBMIFile f{};
 #ifdef _WIN32
@@ -319,7 +383,7 @@ tl::expected<ProcessMappingOfBMIFile, string> IPCManagerCompiler::readSharedMemo
     return f;
 }
 
-tl::expected<void, string> IPCManagerCompiler::closeBMIFileMapping(
+tl::expected<void, std::string> IPCManagerCompiler::closeBMIFileMapping(
     const ProcessMappingOfBMIFile &processMappingOfBMIFile)
 {
 #ifdef _WIN32
@@ -347,13 +411,4 @@ bool operator==(const CTBNonModule &lhs, const CTBNonModule &rhs)
 {
     return lhs.isHeaderUnit == rhs.isHeaderUnit && lhs.logicalName == rhs.logicalName;
 }
-
-uint64_t CTBNonModuleHash::operator()(const CTBNonModule &ctb) const
-{
-    const_cast<char &>(ctb.logicalName[ctb.logicalName.size()]) = ctb.isHeaderUnit;
-    const uint64_t hash = rapidhash(ctb.logicalName.data(), ctb.logicalName.size() + 1);
-    const_cast<char &>(ctb.logicalName[ctb.logicalName.size()]) = '\0';
-    return hash;
-}
-
 } // namespace N2978

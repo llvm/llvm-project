@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 
-using std::string, std::vector, std::string_view;
-
 #define BUFFERSIZE 4096
 
 #ifdef _WIN32
@@ -35,18 +33,18 @@ enum class ErrorCategory : uint8_t
     UNKNOWN_CTB_TYPE,
 };
 
-string getErrorString();
-string getErrorString(uint32_t bytesRead_, uint32_t bytesProcessed_);
-string getErrorString(ErrorCategory errorCategory_);
+std::string getErrorString();
+std::string getErrorString(uint32_t bytesRead_, uint32_t bytesProcessed_);
+std::string getErrorString(ErrorCategory errorCategory_);
 // to facilitate error propagation.
-inline string getErrorString(string err)
+inline std::string getErrorString(std::string err)
 {
     return err;
 }
 
 struct ProcessMappingOfBMIFile
 {
-    string_view file;
+    std::string_view file;
 #ifdef _WIN32
     void *mapping;
     void *view;
@@ -65,41 +63,51 @@ class Manager
     int fdSocket = 0;
 #endif
 
-    tl::expected<uint32_t, string> readInternal(char (&buffer)[BUFFERSIZE]) const;
-    tl::expected<void, string> writeInternal(const vector<char> &buffer) const;
+    tl::expected<uint32_t, std::string> readInternal(char (&buffer)[BUFFERSIZE]) const;
+    tl::expected<void, std::string> writeInternal(const std::vector<char> &buffer) const;
 
-    static vector<char> getBufferWithType(CTB type);
-    static void writeUInt32(vector<char> &buffer, uint32_t value);
-    static void writeString(vector<char> &buffer, const string &str);
-    static void writeProcessMappingOfBMIFile(vector<char> &buffer, const BMIFile &file);
-    static void writeModuleDep(vector<char> &buffer, const ModuleDep &dep);
-    static void writeHuDep(vector<char> &buffer, const HuDep &dep);
-    static void writeVectorOfStrings(vector<char> &buffer, const vector<string> &strs);
-    static void writeVectorOfProcessMappingOfBMIFiles(vector<char> &buffer, const vector<BMIFile> &files);
-    static void writeVectorOfModuleDep(vector<char> &buffer, const vector<ModuleDep> &deps);
-    static void writeVectorOfHuDep(vector<char> &buffer, const vector<HuDep> &deps);
+    static std::vector<char> getBufferWithType(CTB type);
+    static void writeUInt32(std::vector<char> &buffer, uint32_t value);
+    static void writeString(std::vector<char> &buffer, const std::string &str);
+    static void writeProcessMappingOfBMIFile(std::vector<char> &buffer, const BMIFile &file);
+    static void writeModuleDep(std::vector<char> &buffer, const ModuleDep &dep);
+    static void writeHuDep(std::vector<char> &buffer, const HuDep &dep);
+    static void writeHeaderFile(std::vector<char> &buffer, const HeaderFile &dep);
+    static void writeVectorOfStrings(std::vector<char> &buffer, const std::vector<std::string> &strs);
+    static void writeVectorOfProcessMappingOfBMIFiles(std::vector<char> &buffer, const std::vector<BMIFile> &files);
+    static void writeVectorOfModuleDep(std::vector<char> &buffer, const std::vector<ModuleDep> &deps);
+    static void writeVectorOfHuDeps(std::vector<char> &buffer, const std::vector<HuDep> &deps);
+    static void writeVectorOfHeaderFiles(std::vector<char> &buffer, const std::vector<HeaderFile> &headerFiles);
 
-    tl::expected<bool, string> readBoolFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                uint32_t &bytesProcessed) const;
-    tl::expected<uint32_t, string> readUInt32FromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                      uint32_t &bytesProcessed) const;
-    tl::expected<string, string> readStringFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                    uint32_t &bytesProcessed) const;
-    tl::expected<BMIFile, string> readProcessMappingOfBMIFileFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                                      uint32_t &bytesProcessed) const;
-    tl::expected<vector<string>, string> readVectorOfStringFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                                    uint32_t &bytesProcessed) const;
-    tl::expected<ModuleDep, string> readModuleDepFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                          uint32_t &bytesProcessed) const;
-    tl::expected<vector<ModuleDep>, string> readVectorOfModuleDepFromPipe(char (&buffer)[BUFFERSIZE],
-                                                                          uint32_t &bytesRead,
-                                                                          uint32_t &bytesProcessed) const;
-    tl::expected<HuDep, string> readHuDepFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                  uint32_t &bytesProcessed) const;
-    tl::expected<vector<HuDep>, string> readVectorOfHuDepFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
-                                                                  uint32_t &bytesProcessed) const;
-    tl::expected<void, string> readNumberOfBytes(char *output, uint32_t size, char (&buffer)[BUFFERSIZE],
-                                                 uint32_t &bytesRead, uint32_t &bytesProcessed) const;
+    tl::expected<bool, std::string> readBoolFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
+                                                     uint32_t &bytesProcessed) const;
+    tl::expected<uint32_t, std::string> readUInt32FromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
+                                                           uint32_t &bytesProcessed) const;
+    tl::expected<std::string, std::string> readStringFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
+                                                              uint32_t &bytesProcessed) const;
+    tl::expected<BMIFile, std::string> readProcessMappingOfBMIFileFromPipe(char (&buffer)[BUFFERSIZE],
+                                                                           uint32_t &bytesRead,
+                                                                           uint32_t &bytesProcessed) const;
+    tl::expected<std::vector<std::string>, std::string> readVectorOfStringFromPipe(char (&buffer)[BUFFERSIZE],
+                                                                                   uint32_t &bytesRead,
+                                                                                   uint32_t &bytesProcessed) const;
+    tl::expected<ModuleDep, std::string> readModuleDepFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
+                                                               uint32_t &bytesProcessed) const;
+    tl::expected<std::vector<ModuleDep>, std::string> readVectorOfModuleDepFromPipe(char (&buffer)[BUFFERSIZE],
+                                                                                    uint32_t &bytesRead,
+                                                                                    uint32_t &bytesProcessed) const;
+    tl::expected<HuDep, std::string> readHuDepFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
+                                                       uint32_t &bytesProcessed) const;
+    tl::expected<std::vector<HuDep>, std::string> readVectorOfHuDepFromPipe(char (&buffer)[BUFFERSIZE],
+                                                                            uint32_t &bytesRead,
+                                                                            uint32_t &bytesProcessed) const;
+    tl::expected<HeaderFile, std::string> readHeaderFileFromPipe(char (&buffer)[BUFFERSIZE], uint32_t &bytesRead,
+                                                                 uint32_t &bytesProcessed) const;
+    tl::expected<std::vector<HeaderFile>, std::string> readVectorOfHeaderFileFromPipe(char (&buffer)[BUFFERSIZE],
+                                                                                      uint32_t &bytesRead,
+                                                                                      uint32_t &bytesProcessed) const;
+    tl::expected<void, std::string> readNumberOfBytes(char *output, uint32_t size, char (&buffer)[BUFFERSIZE],
+                                                      uint32_t &bytesRead, uint32_t &bytesProcessed) const;
 };
 
 template <typename T, typename... Args> constexpr T *construct_at(T *p, Args &&...args)

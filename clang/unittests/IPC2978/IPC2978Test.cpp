@@ -429,9 +429,9 @@ tl::expected<int, string> runTest()
         btcMod.requested.filePath = aBPcm;
         ModuleDep modDep;
         modDep.file.filePath = aCPcm;
-        modDep.logicalName = "A:C";
+        modDep.logicalNames.emplace_back("A:C");
         modDep.isHeaderUnit = false;
-        btcMod.deps.emplace_back(std::move(modDep));
+        btcMod.modDeps.emplace_back(std::move(modDep));
 
         if (const auto &r2 = manager.sendMessage(std::move(btcMod)); !r2)
         {
@@ -880,11 +880,11 @@ tl::expected<int, string> runTest()
         ModuleDep d;
         d.isHeaderUnit = false;
         d.file.filePath = aBPcm;
-        d.logicalName = "A:B";
-        amod.deps.emplace_back(d);
+        d.logicalNames.emplace_back("A:B");
+        amod.modDeps.emplace_back(d);
         d.file.filePath = aCPcm;
-        d.logicalName = "A:C";
-        amod.deps.emplace_back(d);
+        d.logicalNames.emplace_back("A:C");
+        amod.modDeps.emplace_back(d);
 
         if (const auto &r2 = manager.sendMessage(amod); !r2)
         {
@@ -953,19 +953,19 @@ tl::expected<int, string> runTest()
         btcMod.requested.filePath = fooPcm;
         ModuleDep modDep;
         modDep.file.filePath = bigPcm;
-        modDep.logicalName = "Big.hpp";
+        modDep.logicalNames = "Big.hpp";
         modDep.isHeaderUnit = true;
-        btcMod.deps.emplace_back(std::move(modDep));
+        btcMod.modDeps.emplace_back(std::move(modDep));
         modDep.isHeaderUnit = false;
         modDep.file.filePath = aPcm;
-        modDep.logicalName = "A";
-        btcMod.deps.emplace_back(std::move(modDep));
+        modDep.logicalNames = "A";
+        btcMod.modDeps.emplace_back(std::move(modDep));
         modDep.file.filePath = aBPcm;
-        modDep.logicalName = "A:B";
-        btcMod.deps.emplace_back(std::move(modDep));
+        modDep.logicalNames = "A:B";
+        btcMod.modDeps.emplace_back(std::move(modDep));
         modDep.file.filePath = aCPcm;
-        modDep.logicalName = "A:C";
-        btcMod.deps.emplace_back(std::move(modDep));
+        modDep.logicalNames = "A:C";
+        btcMod.modDeps.emplace_back(std::move(modDep));
 
         if (const auto &r2 = manager.sendMessage(std::move(btcMod)); !r2)
         {

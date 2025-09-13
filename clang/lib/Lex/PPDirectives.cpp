@@ -2328,32 +2328,35 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   ModuleMap::KnownHeader SuggestedModule;
   OptionalFileEntryRef File;
 
-  N2978::BTCNonModule BTCNonMod;
+  std::string filePath;
+  bool isHeaderUnit = false;
   if (N2978::managerCompiler) {
-    N2978::CTBNonModule CTBNonMod;
-    CTBNonMod.isHeaderUnit = IsImportDecl;
-    CTBNonMod.logicalName = Filename.str();
-
-    if (auto it = N2978::respnses.find(CTBNonMod);
-        it != N2978::respnses.end()) {
-      BTCNonMod = it->second;
-    } else {
-      // todo
-      //  check if an already received header-unit possess this header-file.
-      //  do not send in that case.
+    auto &Responses = N2978::managerCompiler->responses;
+    if (auto it = Responses.find(std::string(Filename));
+        it == Responses.end() || it->second.type == N2978::ResponseType::MODULE) {
+      N2978::CTBNonModule CTBNonMod;
+      CTBNonMod.isHeaderUnit = IsImportDecl;
+      CTBNonMod.logicalName = Filename.str();
       if (const auto &Result =
               N2978::managerCompiler->receiveBTCNonModule(std::move(CTBNonMod));
-          Result)
-        BTCNonMod = *Result;
-      N2978::respnses.emplace(CTBNonMod, BTCNonMod);
+          Result) {
+           filePath = Result->filePath;
+        isHeaderUnit = Result->isHeaderUnit;
+      }
+      else {
+        // receive failed
+      }
+    } else {
+      filePath = it->second.file.filePath;
+      isHeaderUnit = it->second.type == N2978::ResponseType::HEADER_UNIT;
     }
 
-    File = getFileManager().getOptionalFileRef(BTCNonMod.filePath);
+    File = getFileManager().getOptionalFileRef(filePath);
 
-    if (BTCNonMod.isHeaderUnit) {
+    if (isHeaderUnit) {
       IsImportDecl = true;
       SuggestedModule = {
-          getModuleLoader().loadIPCReceivedHeaderUnit(BTCNonMod.filePath),
+          getModuleLoader().loadIPCReceivedHeaderUnit(filePath),
           ModuleMap::NormalHeader};
     }
   } else {
@@ -2403,7 +2406,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   bool MaybeTranslateInclude =
       Action == Enter && File && ModuleToImport &&
-      (!ModuleToImport->isForBuilding(getLangOpts()) || BTCNonMod.isHeaderUnit);
+      (!ModuleToImport->isForBuilding(getLangOpts()) || isHeaderUnit);
 
   // Maybe a usable Header Unit
   bool UsableHeaderUnit = false;
@@ -2566,7 +2569,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // than the one we're about to open. Not checked if it is an IPC received
   // module.
   const bool CheckIncludePathPortability =
-      !BTCNonMod.isHeaderUnit && !IsMapped &&
+      !isHeaderUnit && !IsMapped &&
       !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {

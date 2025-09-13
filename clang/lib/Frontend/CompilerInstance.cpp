@@ -1905,30 +1905,26 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     // in case of noScanIPC, PrebuiltModuleFiles is empty, so we initialize it
     // from the build-system here, so the selectModuleSource() call
     // later-on will return ModuleSource::MS_PrebuiltModulePath.
-    auto &PrebuiltModuleFiles =
-        const_cast<std::map<std::string, std::string, std::less<>> &>(
-            HS.getHeaderSearchOpts().PrebuiltModuleFiles);
-    if (auto it = PrebuiltModuleFiles.find(ModuleName);
-        it == PrebuiltModuleFiles.end()) {
+    auto &Responses = N2978::managerCompiler->responses;
+    if (const auto it = Responses.find(std::string(ModuleName));
+        it == Responses.end() || it->second.type != N2978::ResponseType::MODULE) {
       N2978::CTBModule mod;
       mod.moduleName = ModuleName;
       if (const auto &r =
               N2978::managerCompiler->receiveBTCModule(std::move(mod));
           r) {
-        auto &[requested, deps] = r.value();
-        PrebuiltModuleFiles.emplace(std::move(ModuleName),
+        auto &[requested, user, deps] = r.value();
+        const_cast<std::map<std::string, std::string, std::less<>> &>(
+            HS.getHeaderSearchOpts().PrebuiltModuleFiles).emplace(ModuleName,
                                     std::move(requested.filePath));
-        for (const auto &[file, logicalName, isHeaderUnit] : deps) {
-          if (isHeaderUnit) {
-            loadIPCReceivedHeaderUnit(file.filePath);
-          } else {
-            PrebuiltModuleFiles.emplace(std::move(logicalName),
-                                        std::move(file.filePath));
-          }
-        }
       } else {
-        string errorMessage = r.error();
+        // receive failed
       }
+    }
+    else {
+      const_cast<std::map<std::string, std::string, std::less<>> &>(
+          HS.getHeaderSearchOpts().PrebuiltModuleFiles).emplace(ModuleName,
+                                  std::move(it->second.file.filePath));
     }
   }
 
