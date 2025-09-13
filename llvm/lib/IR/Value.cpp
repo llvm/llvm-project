@@ -374,6 +374,15 @@ void Value::setNameImpl(const Twine &NewName) {
   // NOTE: Could optimize for the case the name is shrinking to not deallocate
   // then reallocated.
   if (hasName()) {
+    if (!NameRef.empty()) {
+      StringRef OldNameRef = getName();
+      if ((OldNameRef.bytes_begin() < NameRef.bytes_end()) &&
+          (NameRef.bytes_begin() < OldNameRef.bytes_end())) {
+        NewName.toVector(NameData);
+        NameRef = StringRef(NameData.data(), NameData.size());
+      }
+    }
+
     // Remove old name.
     ST->removeValueName(getValueName());
     destroyValueName();
