@@ -51,16 +51,15 @@ public:
     EXPECT_EQ(func(0, -10), 0.r);
     EXPECT_EQ(func(-(1 << FRACT_FBIT), 1 << FRACT_FBIT), FRACT_MIN);
     EXPECT_EQ(func((1 << FRACT_FBIT) - 1, 1 << FRACT_FBIT), FRACT_MAX);
-    /* From Section 7.18a.6.1, functions returning a fixed-point value, the
-     * return value is saturated on overflow. */
+    // From Section 7.18a.6.1, functions returning a fixed-point value, the
+    // return value is saturated on overflow.
     EXPECT_EQ(func(INT_MAX, INT_MAX), FRACT_MAX);
     EXPECT_LT(func(INT_MAX - 1, INT_MAX) - 0.99999999r, epsilon);
     EXPECT_EQ(func(INT_MIN, INT_MAX), FRACT_MIN);
-    /* Expecting 0 here as fract is not precise enough to
-     * handle 1/INT_MAX
-     */
+    // Expecting 0 here as fract is not precise enough to
+    // handle 1/INT_MAX
     EXPECT_LT(func(1, INT_MAX) - 0.r, epsilon);
-    /* This results in 1.1739, which should be saturated to FRACT_MAX */
+    // This results in 1.1739, which should be saturated to FRACT_MAX
     EXPECT_EQ(func(27, 23), FRACT_MAX);
   }
 };

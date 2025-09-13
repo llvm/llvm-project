@@ -18,6 +18,7 @@
 #include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
+#include "src/__support/libc_assert.h"
 
 #include "fx_rep.h"
 
@@ -229,12 +230,12 @@ LIBC_INLINE long accum nrstep(long accum d, long accum x0) {
   return v;
 }
 
-/* Divide the two integers and return a fixed_point value
- *
- * For reference, see:
- * https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division
- * https://stackoverflow.com/a/9231996
- */
+// Divide the two integers and return a fixed_point value
+//
+// For reference, see:
+// https://en.wikipedia.org/wiki/Division_algorithm#Newton%E2%80%93Raphson_division
+// https://stackoverflow.com/a/9231996
+
 template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   // If the value of the second operand of the / operator is zero, the
   // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
@@ -243,39 +244,36 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   if (LIBC_UNLIKELY(n == 0)) {
     return FXRep<XType>::ZERO();
   }
-  bool result_is_negative = (n < 0) ^ (d < 0);
+  bool result_is_negative = ((n < 0) != (d < 0));
 
   unsigned int nv = static_cast<unsigned int>(n < 0 ? -n : n);
   unsigned int dv = static_cast<unsigned int>(d < 0 ? -d : d);
   unsigned int clz = cpp::countl_zero<unsigned int>(dv) - 1;
   unsigned long int scaled_val = dv << clz;
-  /* Scale denominator to be in the range of [0.5,1] */
+  // Scale denominator to be in the range of [0.5,1]
   FXBits<long accum> d_scaled{scaled_val};
   unsigned long int scaled_val_n = nv << clz;
-  /* Scale the numerator as much as the denominator to maintain correctness of
-   * the original equation
-   */
+  // Scale the numerator as much as the denominator to maintain correctness of
+  // the original equation
   FXBits<long accum> n_scaled{scaled_val_n};
   long accum n_scaled_val = n_scaled.get_val();
   long accum d_scaled_val = d_scaled.get_val();
-  /* x0 = (48/17) - (32/17) * d_n */
-  long accum a = 2.8235lk; /* 48/17 */
-  long accum b = 1.8823lk; /* 32/17 */
-  /* Error of the initial approximation, as derived
-   * from the wikipedia article is
-   *  E0 = 1/17 = 0.059 (5.9%)
-   */
+  // x0 = (48/17) - (32/17) * d_n
+  long accum a = 0x2.d89d89d8p0lk; // 48/17 = 2.8235294...
+  long accum b = 0x1.e1e1e1e1p0lk; // 32/17 = 1.8823529...
+  // Error of the initial approximation, as derived
+  // from the wikipedia article is
+  //  E0 = 1/17 = 0.059 (5.9%)
   long accum initial_approx = a - (b * d_scaled_val);
-  /* Each newton-raphson iteration will square the error, due
-   * to quadratic convergence. So,
-   *  E1 = (0.059)^2 = 0.0034
-   */
+  // Since, 0.5 <= d_scaled_val <= 1.0, 0.9412 <= initial_approx <= 1.88235
+  LIBC_ASSERT((initial_approx >= 0x0.78793dd9p0lk) && (initial_approx <= 0x1.f0f0d845p0lk));
+  // Each newton-raphson iteration will square the error, due
+  // to quadratic convergence. So,
+  // E1 = (0.059)^2 = 0.0034
   long accum val = nrstep(d_scaled_val, initial_approx);
-  /* E2 = 0.0000121 */
+  // E2 = 0.0000121
   val = nrstep(d_scaled_val, val);
-  /* E3 = 1.468e−10 */
-  val = nrstep(d_scaled_val, val);
-  /* E4 = 2.155e−20 */
+  // E3 = 1.468e−10
   val = nrstep(d_scaled_val, val);
 
   long accum res = n_scaled_val * val;
@@ -288,7 +286,7 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   long accum max_val = static_cast<long accum>(FXRep<XType>::MAX());
   long accum min_val = static_cast<long accum>(FXRep<XType>::MIN());
 
-  /* Per clause 7.18a.6.1, saturate values on overflow */
+  // Per clause 7.18a.6.1, saturate values on overflow
   if (res > max_val) {
     return FXRep<XType>::MAX();
   } else if (res < min_val) {
