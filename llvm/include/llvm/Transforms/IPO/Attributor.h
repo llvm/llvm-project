@@ -5339,6 +5339,15 @@ struct AAPotentialConstantValues
     return nullptr;
   }
 
+  /// Return the minimum trailing zeros of potential constants
+  unsigned getAssumedMinTrailingZeros() const {
+    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth();
+    for (const APInt &It : getAssumedSet()) {
+      if (It.countTrailingZeros() < TrailingZeros)
+        TrailingZeros = It.countTrailingZeros();
+    }
+    return TrailingZeros;
+  }
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPotentialConstantValues"; }
 
