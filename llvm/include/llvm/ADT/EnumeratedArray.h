@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_ENUMERATEDARRAY_H
 #define LLVM_ADT_ENUMERATEDARRAY_H
 
+#include "llvm/ADT/STLExtras.h"
 #include <array>
 #include <cassert>
 
@@ -24,6 +25,7 @@ template <typename ValueType, typename Enumeration,
           Enumeration LargestEnum = Enumeration::Last, typename IndexType = int,
           IndexType Size = 1 + static_cast<IndexType>(LargestEnum)>
 class EnumeratedArray {
+  static_assert(Size > 0);
   using ArrayTy = std::array<ValueType, Size>;
   ArrayTy Underlying;
 
@@ -43,9 +45,7 @@ public:
   EnumeratedArray(ValueType V) { Underlying.fill(V); }
   EnumeratedArray(std::initializer_list<ValueType> Init) {
     assert(Init.size() == Size && "Incorrect initializer size");
-    for (IndexType IX = 0; IX < Size; ++IX) {
-      Underlying[IX] = *(Init.begin() + IX);
-    }
+    llvm::copy(Init, Underlying.begin());
   }
 
   const ValueType &operator[](Enumeration Index) const {
