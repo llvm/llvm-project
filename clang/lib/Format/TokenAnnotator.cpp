@@ -3627,8 +3627,7 @@ void TokenAnnotator::setCommentLineLevels(
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      Line->Level = (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash ||
-                     Style.IndentPPDirectives == FormatStyle::PPDIS_None) &&
+      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
                             PPDirectiveOrImportStmt
                         ? 0
                         : NextNonCommentLine->Level;

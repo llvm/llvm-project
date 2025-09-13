@@ -162,8 +162,8 @@ UnwrappedLineParser::UnwrappedLineParser(
       LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords),
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
       Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
-      IncludeGuard((Style.IndentPPDirectives == FormatStyle::PPDIS_None ||
-                    Style.IndentPPDirectives == FormatStyle::PPDIS_Leave)
+      IncludeGuard(Style.IndentPPDirectives == FormatStyle::PPDIS_None ||
+                           Style.IndentPPDirectives == FormatStyle::PPDIS_Leave
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),

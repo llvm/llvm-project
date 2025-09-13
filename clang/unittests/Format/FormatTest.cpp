@@ -5547,6 +5547,23 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "#endif",
                style);
 
+  style.IndentWidth = 1;
+  style.PPIndentWidth = 4;
+  verifyFormat("#if 1\n"
+               "#define X \\\n"
+               " {        \\\n"
+               "  x;      \\\n"
+               "  x;      \\\n"
+               " }\n"
+               "#endif",
+               style);
+  verifyFormat("#define X \\\n"
+               " {        \\\n"
+               "  x;      \\\n"
+               "  x;      \\\n"
+               " }",
+               style);
+
   style.IndentPPDirectives = FormatStyle::PPDIS_Leave;
   style.IndentWidth = 4;
   verifyNoChange("#ifndef foo\n"
