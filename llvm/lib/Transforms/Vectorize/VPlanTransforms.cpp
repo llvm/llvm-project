@@ -2443,15 +2443,23 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo,
                                        VPValue &AllOneMask, VPValue &EVL) {
-  // FIXME: Don't transform recipes to EVL recipes if they're not masked by the
-  // header mask.
+  // Derive a new mask by removing the header mask. Return nullptr if a new mask
+  // cannot be derived because the original mask does not contain the header
+  // mask.
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
     // HeaderMask will be handled using EVL.
+    if (HeaderMask == OrigMask)
+      return &AllOneMask;
     VPValue *Mask;
     if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
       return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
+    return nullptr;
+  };
+
+  // TODO: Can be simplified by SimplifyRecipes.
+  auto OptimizeAllTrueMask = [](VPValue *Mask) -> VPValue * {
+    return match(Mask, m_True()) ? nullptr : Mask;
   };
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
@@ -2474,37 +2482,51 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   };
 
   return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
-      .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
+      .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) -> VPRecipeBase * {
         VPValue *NewMask = GetNewMask(L->getMask());
+        if (!NewMask)
+          return nullptr;
         VPValue *NewAddr = GetNewAddr(L->getAddr());
-        return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
+        return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL,
+                                        OptimizeAllTrueMask(NewMask));
       })
-      .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
+      .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) -> VPRecipeBase * {
         VPValue *NewMask = GetNewMask(S->getMask());
+        if (!NewMask)
+          return nullptr;
         VPValue *NewAddr = GetNewAddr(S->getAddr());
-        return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL, NewMask);
+        return new VPWidenStoreEVLRecipe(*S, NewAddr, EVL,
+                                         OptimizeAllTrueMask(NewMask));
       })
-      .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) {
+      .Case<VPInterleaveRecipe>([&](VPInterleaveRecipe *IR) -> VPRecipeBase * {
         VPValue *NewMask = GetNewMask(IR->getMask());
-        return new VPInterleaveEVLRecipe(*IR, EVL, NewMask);
+        if (!NewMask)
+          return nullptr;
+        return new VPInterleaveEVLRecipe(*IR, EVL,
+                                         OptimizeAllTrueMask(NewMask));
       })
-      .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
+      .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) -> VPRecipeBase * {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
-        return new VPReductionEVLRecipe(*Red, EVL, NewMask);
+        if (!NewMask)
+          return nullptr;
+        return new VPReductionEVLRecipe(*Red, EVL,
+                                        OptimizeAllTrueMask(NewMask));
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        VPValue *LHS, *RHS;
+        VPValue *Cond, *LHS, *RHS;
         // Transform select with a header mask condition
-        //   select(header_mask, LHS, RHS)
+        //   select(mask_w/_header_mask, LHS, RHS)
         // into vector predication merge.
-        //   vp.merge(all-true, LHS, RHS, EVL)
-        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+        //   vp.merge(mask_w/o_header_mask, LHS, RHS, EVL)
+        if (!match(VPI,
+                   m_Select(m_VPValue(Cond), m_VPValue(LHS), m_VPValue(RHS))))
           return nullptr;
-        // Use all true as the condition because this transformation is
-        // limited to selects whose condition is a header mask.
+
+        VPValue *NewMask = GetNewMask(Cond);
+        if (!NewMask)
+          return nullptr;
         return new VPWidenIntrinsicRecipe(
-            Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
+            Intrinsic::vp_merge, {NewMask, LHS, RHS, &EVL},
             TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
       })
       .Default([&](VPRecipeBase *R) { return nullptr; });
