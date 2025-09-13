@@ -2336,7 +2336,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     auto &Responses = N2978::managerCompiler->responses;
     if (auto it = Responses.find(std::string(Filename));
         it == Responses.end() ||
-        it->second.type == N2978::ResponseType::MODULE || (it->second.type == N2978::ResponseType::HEADER_FILE &&  IsImportDecl)) {
+        it->second.type == N2978::ResponseType::MODULE ||
+        (it->second.type == N2978::ResponseType::HEADER_FILE && IsImportDecl)) {
       N2978::CTBNonModule CTBNonMod;
       CTBNonMod.isHeaderUnit = IsImportDecl;
       CTBNonMod.logicalName = Filename.str();
