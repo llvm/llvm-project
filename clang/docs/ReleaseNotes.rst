@@ -135,6 +135,10 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now supports the
+  :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
+  The semantics match those of GCC's builtin with the same name.
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now supports `N3355 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3355.htm>`_ Named Loops.
