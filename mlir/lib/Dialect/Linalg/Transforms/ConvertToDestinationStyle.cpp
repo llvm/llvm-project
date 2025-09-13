@@ -653,7 +653,7 @@ rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
   auto genericOp = linalg::GenericOp::create(
       rewriter, loc, tensorType,
       op->getOperands(), // inputs
-      ValueRange{outs}, // outputs
+      ValueRange{outs},  // outputs
       indexingMaps, iteratorTypes,
       [&](OpBuilder &builder, Location loc, ValueRange args) {
         Value res;
