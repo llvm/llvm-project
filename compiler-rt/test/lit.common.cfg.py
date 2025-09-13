@@ -708,27 +708,22 @@ else:
     config.substitutions.append(("%push_to_device", "echo "))
     config.substitutions.append(("%adb_shell", "echo "))
 
-if config.target_os == "Linux":
-    def add_glibc_versions(ver_string):
-        if config.android:
-            return
-
-        from distutils.version import LooseVersion
-
-        ver = LooseVersion(ver_string)
+if config.target_os == "Linux" and not config.android:
+    def add_glibc_versions(major, minor):
         any_glibc = False
         for required in [
-            "2.19",
-            "2.27",
-            "2.30",
-            "2.33",
-            "2.34",
-            "2.37",
-            "2.38",
-            "2.40",
+            (2, 19),
+            (2, 27),
+            (2, 30),
+            (2, 33),
+            (2, 34),
+            (2, 37),
+            (2, 38),
+            (2, 40),
         ]:
-            if ver >= LooseVersion(required):
-                config.available_features.add("glibc-" + required)
+            if (major, minor) >= required:
+                (required_major, required_minor) = required
+                config.available_features.add(f"glibc-{required_major}.{required_minor}")
                 any_glibc = True
             if any_glibc:
                 config.available_features.add("glibc")
@@ -754,7 +749,7 @@ if config.target_os == "Linux":
     try:
         sout, _ = cmd.communicate(b"#include <features.h>")
         m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
-        add_glibc_versions(f"{m['__GLIBC__']}.{m['__GLIBC_MINOR__']}")
+        add_glibc_versions(int(m['__GLIBC__']), int(m['__GLIBC_MINOR__']))
     except:
         pass
 
