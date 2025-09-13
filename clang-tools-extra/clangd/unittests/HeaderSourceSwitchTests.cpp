@@ -223,6 +223,162 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
   }
 }
 
+TEST(HeaderSourceSwitchTest, FromHeaderToImplHeader) {
+  // build a proper index, which contains symbols:
+  //   A_Sym1, declared in TestTU.h, defined in a_ext.h
+  //   B_Sym[1-2], declared in TestTU.h, defined in b_ext.h
+  SymbolSlab::Builder AllSymbols;
+  auto addHeader = [&](auto implName, auto declarationContent,
+                       auto implContent) {
+    TestTU Testing;
+    Testing.ExtraArgs.push_back(
+        "-xc++-header"); // inform clang this is a header.
+
+    Testing.Filename = implName;
+    Testing.Code = implContent;
+    Testing.HeaderFilename = "TestTU.h";
+    Testing.HeaderCode = declarationContent;
+
+    for (auto &Sym : Testing.headerSymbols())
+      AllSymbols.insert(Sym);
+  };
+
+  addHeader("a_ext.h", "template<typename T> void A_Sym1();",
+            "template<typename T> void A_Sym1() {};");
+  addHeader("b_ext.h", R"cpp(
+  template<typename T> void B_Sym1();
+  template<typename T> void B_Sym2();
+  template<typename T> void B_Sym3_NoDef();
+  )cpp",
+            R"cpp(
+  template<typename T> void B_Sym1() {}
+  template<typename T> void B_Sym2() {}
+  )cpp");
+  auto Index = MemIndex::build(std::move(AllSymbols).build(), {}, {});
+
+  // Test for switch from .h header to .cc source
+  struct {
+    llvm::StringRef HeaderCode;
+    std::optional<std::string> ExpectedSource;
+  } TestCases[] = {
+      {"// empty, no header found", std::nullopt},
+      {R"cpp(
+         // no definition found in the index.
+         template<typename T> void NonDefinition();
+       )cpp",
+       std::nullopt},
+      {R"cpp(
+         template<typename T> void A_Sym1();
+       )cpp",
+       testPath("a_ext.h")},
+      {R"cpp(
+         // b_ext.h wins.
+         template<typename T> void A_Sym1();
+         template<typename T> void B_Sym1();
+         template<typename T> void B_Sym2();
+       )cpp",
+       testPath("b_ext.h")},
+      {R"cpp(
+         // a_ext.h and b_ext.h have same scope, but a_ext.h because "a_ext.h" < "b_ext.h".
+         template<typename T> void A_Sym1();
+         template<typename T> void B_Sym1();
+       )cpp",
+       testPath("a_ext.h")},
+
+      {R"cpp(
+          // We don't have definition in the index, so stay in the header.
+          template<typename T> void B_Sym3_NoDef();
+       )cpp",
+       std::nullopt},
+  };
+  for (const auto &Case : TestCases) {
+    TestTU TU = TestTU::withCode(Case.HeaderCode);
+    TU.Filename = "TestTU.h";
+    TU.ExtraArgs.push_back("-xc++-header"); // inform clang this is a header.
+    auto HeaderAST = TU.build();
+    EXPECT_EQ(Case.ExpectedSource,
+              getCorrespondingHeaderOrSource(testPath(TU.Filename), HeaderAST,
+                                             Index.get()));
+  }
+}
+
+TEST(HeaderSourceSwitchTest, FromImplHeaderToHeader) {
+  // build a proper index, which contains symbols:
+  //   A_Sym1, declared in TestTU.h, defined in a_ext.h
+  //   B_Sym[1-2], declared in TestTU.h, defined in b_ext.h
+  SymbolSlab::Builder AllSymbols;
+  auto addHeader = [&](auto declName, auto declContent, auto implContent) {
+    TestTU Testing;
+    Testing.ExtraArgs.push_back(
+        "-xc++-header"); // inform clang this is a header.
+
+    Testing.Filename = "TestTU.h";
+    Testing.Code = implContent;
+    Testing.HeaderFilename = declName;
+    Testing.HeaderCode = declContent;
+
+    for (auto &Sym : Testing.headerSymbols())
+      AllSymbols.insert(Sym);
+  };
+
+  addHeader("a.h", "template<typename T> void A_Sym1();",
+            "template<typename T> void A_Sym1() {};");
+  addHeader("b.h", R"cpp(
+  template<typename T> void B_Sym1();
+  template<typename T> void B_Sym2();
+  template<typename T> void B_Sym3_NoDef();
+  )cpp",
+            R"cpp(
+  template<typename T> void B_Sym1() {}
+  template<typename T> void B_Sym2() {}
+  )cpp");
+  auto Index = MemIndex::build(std::move(AllSymbols).build(), {}, {});
+
+  // Test for switch from .h header to .cc source
+  struct {
+    llvm::StringRef HeaderCode;
+    std::optional<std::string> ExpectedSource;
+  } TestCases[] = {
+      {"// empty, no header found", std::nullopt},
+      {R"cpp(
+         // no definition found in the index.
+         template<typename T> void NonDefinition(){}
+       )cpp",
+       std::nullopt},
+      {R"cpp(
+         template<typename T> void A_Sym1(){}
+       )cpp",
+       testPath("a.h")},
+      {R"cpp(
+         // b.h wins.
+         template<typename T> void A_Sym1(){}
+         template<typename T> void B_Sym1(){}
+         template<typename T> void B_Sym2(){}
+       )cpp",
+       testPath("b.h")},
+      {R"cpp(
+         // a.h and b.h have same scope, but a.h because "a.h" < "b.h".
+         template<typename T> void A_Sym1(){}
+         template<typename T> void B_Sym1(){}
+       )cpp",
+       testPath("a.h")},
+
+      {R"cpp(
+          // We don't have definition in the index, so stay in the header.
+          template<typename T> void B_Sym3_NoDef();
+       )cpp",
+       std::nullopt},
+  };
+  for (const auto &Case : TestCases) {
+    TestTU TU = TestTU::withCode(Case.HeaderCode);
+    TU.Filename = "TestTU.h";
+    TU.ExtraArgs.push_back("-xc++-header"); // inform clang this is a header.
+    auto HeaderAST = TU.build();
+    EXPECT_EQ(Case.ExpectedSource,
+              getCorrespondingHeaderOrSource(testPath(TU.Filename), HeaderAST,
+                                             Index.get()));
+  }
+}
 TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
   // build a proper index, which contains symbols:
   //   A_Sym1, declared in a.h, defined in TestTU.cpp
@@ -281,7 +437,7 @@ TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
   };
   for (const auto &Case : TestCases) {
     TestTU TU = TestTU::withCode(Case.SourceCode);
-    TU.Filename = "Test.cpp";
+    TU.Filename = "TestTU.cpp";
     auto AST = TU.build();
     EXPECT_EQ(Case.ExpectedResult,
               getCorrespondingHeaderOrSource(testPath(TU.Filename), AST,
