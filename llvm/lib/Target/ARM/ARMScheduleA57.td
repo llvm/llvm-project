@@ -137,7 +137,7 @@ def : InstRW<[WriteNoop, WriteNoop], (instregex
 def : InstRW<[WriteNoop], (instregex "FLDM", "FSTM")>;
 
 // Pseudos
-def : InstRW<[WriteNoop], (instregex "(t2)?ABS$",
+def : InstRW<[WriteNoop], (instregex
   "(t)?ADJCALLSTACKDOWN$", "(t)?ADJCALLSTACKUP$", "(t2|t)?Int_eh_sjlj",
   "tLDRpci_pic", "(t2)?SUBS_PC_LR",
   "JUMPTABLE", "tInt_WIN_eh_sjlj_longjmp",
