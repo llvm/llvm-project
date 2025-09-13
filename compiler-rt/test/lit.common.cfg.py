@@ -730,8 +730,8 @@ if config.target_os == "Linux" and not config.android:
     try:
         sout, _ = cmd.communicate(b"#include <features.h>")
         m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
-        major = int(m['__GLIBC__'])
-        minor = int(m['__GLIBC_MINOR__'])
+        major = int(m["__GLIBC__"])
+        minor = int(m["__GLIBC_MINOR__"])
         any_glibc = False
         for required in [
             (2, 19),
@@ -745,7 +745,9 @@ if config.target_os == "Linux" and not config.android:
         ]:
             if (major, minor) >= required:
                 (required_major, required_minor) = required
-                config.available_features.add(f"glibc-{required_major}.{required_minor}")
+                config.available_features.add(
+                    f"glibc-{required_major}.{required_minor}"
+                )
                 any_glibc = True
             if any_glibc:
                 config.available_features.add("glibc")
