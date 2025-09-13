@@ -10,5 +10,5 @@
 #include <clc/math/clc_native_sqrt.h>
 
 #define __CLC_BODY <clc_native_rsqrt.inc>
-#define __FLOAT_ONLY
+#define __CLC_FLOAT_ONLY
 #include <clc/math/gentype.inc>

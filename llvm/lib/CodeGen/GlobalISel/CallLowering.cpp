@@ -1256,7 +1256,7 @@ LLT CallLowering::ValueHandler::getStackValueStoreType(
     if (Flags.isPointer()) {
       LLT PtrTy = LLT::pointer(Flags.getPointerAddrSpace(),
                                ValTy.getScalarSizeInBits());
-      if (ValVT.isVector())
+      if (ValVT.isVector() && ValVT.getVectorNumElements() != 1)
         return LLT::vector(ValTy.getElementCount(), PtrTy);
       return PtrTy;
     }

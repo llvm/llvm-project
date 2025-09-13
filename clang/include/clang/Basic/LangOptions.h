@@ -552,6 +552,10 @@ public:
   llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
       llvm::dxbc::RootSignatureVersion::V1_1;
 
+  /// The HLSL root signature that will be used to overide the root signature
+  /// used for the shader entry point.
+  std::string HLSLRootSigOverride;
+
   // Indicates if the wasm-opt binary must be ignored in the case of a
   // WebAssembly target.
   bool NoWasmOpt = false;

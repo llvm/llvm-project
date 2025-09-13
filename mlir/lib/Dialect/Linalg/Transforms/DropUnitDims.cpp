@@ -691,9 +691,9 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
 
     auto newResultType = RankedTensorType::get(
         newResultShape, padOp.getResultType().getElementType());
-    auto newPadOp = rewriter.create<tensor::PadOp>(
-        padOp.getLoc(), /*result=*/newResultType, collapsedSource, newLowPad,
-        newHighPad, paddingVal, padOp.getNofold());
+    auto newPadOp = tensor::PadOp::create(
+        rewriter, padOp.getLoc(), /*result=*/newResultType, collapsedSource,
+        newLowPad, newHighPad, paddingVal, padOp.getNofold());
 
     Value dest = padOp.getResult();
     if (options.rankReductionStrategy ==

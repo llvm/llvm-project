@@ -16,8 +16,8 @@ def  Myi32  : Operand<i32> {
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>;
-def ModeB : HwMode<"+b", [HasB]>;
+def ModeA : HwMode<[HasA]>;
+def ModeB : HwMode<[HasB]>;
 
 
 def fooTypeEncA : InstructionEncoding {
@@ -70,10 +70,10 @@ def baz : Instruction {
 }
 }
 
-// DECODER-LABEL: DecoderTable_ModeA32[] =
+// DECODER-LABEL: DecoderTable_ModeA32
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeB32[] =
+// DECODER-LABEL: DecoderTable_ModeB32
 // DECODER-DAG: Opcode: fooTypeEncB:foo
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar

@@ -545,15 +545,8 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   };
 
   // Insert an unlinked dbg.assign intrinsic for the dead fragment after each
-  // overlapping dbg.assign intrinsic. The loop invalidates the iterators
-  // returned by getAssignmentMarkers so save a copy of the markers to iterate
-  // over.
-  auto LinkedRange = at::getAssignmentMarkers(Inst);
-  SmallVector<DbgVariableRecord *> LinkedDVRAssigns =
-      at::getDVRAssignmentMarkers(Inst);
-  SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
-                                           LinkedRange.end());
-  auto InsertAssignForOverlap = [&](auto *Assign) {
+  // overlapping dbg.assign intrinsic.
+  for (DbgVariableRecord *Assign : at::getDVRAssignmentMarkers(Inst)) {
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
                                         DeadSliceSizeInBits, Assign,
@@ -563,11 +556,11 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
       // cautious and unlink the whole assignment from the store.
       Assign->setKillAddress();
       Assign->setAssignId(GetDeadLink());
-      return;
+      continue;
     }
     // No intersect.
     if (NewFragment->SizeInBits == 0)
-      return;
+      continue;
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
     auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
@@ -576,9 +569,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
     NewAssign->setKillAddress();
-  };
-  for_each(Linked, InsertAssignForOverlap);
-  for_each(LinkedDVRAssigns, InsertAssignForOverlap);
+  }
 }
 
 /// Update the attributes given that a memory access is updated (the
@@ -685,15 +676,13 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                     << "\n  KILLER [" << ToRemoveStart << ", "
                     << int64_t(ToRemoveStart + ToRemoveSize) << ")\n");
 
-  Value *DeadWriteLength = DeadIntrinsic->getLength();
-  Value *TrimmedLength = ConstantInt::get(DeadWriteLength->getType(), NewSize);
-  DeadIntrinsic->setLength(TrimmedLength);
+  DeadIntrinsic->setLength(NewSize);
   DeadIntrinsic->setDestAlignment(PrefAlign);
 
   Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
     Value *Indices[1] = {
-        ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
+        ConstantInt::get(DeadIntrinsic->getLength()->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
         Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
         DeadI->getIterator());

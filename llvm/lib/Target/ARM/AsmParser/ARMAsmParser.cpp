@@ -3373,12 +3373,12 @@ public:
 
   void addMSRMaskOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getMSRMask())));
+    Inst.addOperand(MCOperand::createImm(getMSRMask()));
   }
 
   void addBankedRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getBankedReg())));
+    Inst.addOperand(MCOperand::createImm(getBankedReg()));
   }
 
   void addProcIFlagsOperands(MCInst &Inst, unsigned N) const {

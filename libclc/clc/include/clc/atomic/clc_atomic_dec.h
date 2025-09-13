@@ -11,13 +11,13 @@
 
 #include <clc/internal/clc.h>
 
-#define FUNCTION __clc_atomic_dec
+#define __CLC_FUNCTION __clc_atomic_dec
 #define __CLC_NO_VALUE_ARG
 
 #define __CLC_BODY <clc/atomic/atomic_decl.inc>
 #include <clc/integer/gentype.inc>
 
 #undef __CLC_NO_VALUE_ARG
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_ATOMIC_CLC_ATOMIC_DEC_H__

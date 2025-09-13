@@ -3962,8 +3962,6 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     return 0;
   case clang::Type::DependentSizedExtVector:
     return eTypeHasChildren | eTypeIsVector;
-  case clang::Type::DependentTemplateSpecialization:
-    return eTypeIsTemplate;
 
   case clang::Type::Enum:
     if (pointee_or_element_clang_type)
@@ -4237,8 +4235,6 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::DependentName:
     break;
-  case clang::Type::DependentTemplateSpecialization:
-    break;
   case clang::Type::PackExpansion:
     break;
 
@@ -4274,6 +4270,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::HLSLAttributedResource:
     break;
   case clang::Type::HLSLInlineSpirv:
+    break;
+  case clang::Type::SubstBuiltinTemplatePack:
     break;
   }
   // We don't know hot to display this type...
@@ -5106,7 +5104,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::SubstTemplateTypeParmPack:
   case clang::Type::InjectedClassName:
   case clang::Type::DependentName:
-  case clang::Type::DependentTemplateSpecialization:
   case clang::Type::PackExpansion:
   case clang::Type::ObjCObject:
 
@@ -5138,6 +5135,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::HLSLAttributedResource:
     break;
   case clang::Type::HLSLInlineSpirv:
+    break;
+  case clang::Type::SubstBuiltinTemplatePack:
     break;
   }
   count = 0;
@@ -5273,7 +5272,6 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::SubstTemplateTypeParmPack:
   case clang::Type::InjectedClassName:
   case clang::Type::DependentName:
-  case clang::Type::DependentTemplateSpecialization:
   case clang::Type::PackExpansion:
   case clang::Type::ObjCObject:
 
@@ -5306,6 +5304,8 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::HLSLAttributedResource:
     break;
   case clang::Type::HLSLInlineSpirv:
+    break;
+  case clang::Type::SubstBuiltinTemplatePack:
     break;
   }
   // We don't know hot to display this type...
@@ -6164,8 +6164,6 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
   case clang::Type::InjectedClassName:
     return 0;
   case clang::Type::DependentName:
-    return 1;
-  case clang::Type::DependentTemplateSpecialization:
     return 1;
   case clang::Type::ObjCObject:
     return 0;

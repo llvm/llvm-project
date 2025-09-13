@@ -27,6 +27,7 @@ enum class SymbolKind : uint8_t {
   Namespace,
   NamespaceAlias,
   Macro,
+  IncludeDirective,
 
   Enum,
   Struct,

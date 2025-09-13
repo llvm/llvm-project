@@ -175,6 +175,11 @@ public:
 
   bool prefersVectorizedAddressing() const override;
 
+  /// Check whether Opcode1 has less throughput according to the scheduling
+  /// model than Opcode2.
+  bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
+                                                  unsigned Opcode2) const;
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -222,6 +227,11 @@ public:
                                      unsigned Index) const override;
 
   InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
+
+  InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
 
@@ -239,8 +249,9 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                            const SCEV *Ptr) const override;
+  InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
@@ -419,7 +430,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const override;
+  bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
 
   unsigned getEpilogueVectorizationMinVF() const override;
 
@@ -455,7 +466,7 @@ public:
                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
 
   InstructionCost

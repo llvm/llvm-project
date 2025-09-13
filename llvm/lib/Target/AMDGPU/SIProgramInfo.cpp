@@ -73,6 +73,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
 
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
+  NamedBarCnt = ZeroExpr;
   Occupancy = ZeroExpr;
   DynamicCallStack = ZeroExpr;
   VCCUsed = ZeroExpr;

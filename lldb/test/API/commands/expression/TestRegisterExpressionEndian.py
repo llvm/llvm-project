@@ -40,9 +40,15 @@ class Responder(MockGDBServerResponder):
 
 class TestXMLRegisterFlags(GDBRemoteTestBase):
     def do_endian_test(self, endian):
-        architecture, pc_reg_name = {
-            Endian.BIG: ("s390x", "pswa"),
-            Endian.LITTLE: ("aarch64", "pc"),
+        architecture, pc_reg_name, yaml_file, data, machine = {
+            Endian.BIG: ("s390x", "pswa", "s390x.yaml", "ELFDATA2MSB", "EM_S390"),
+            Endian.LITTLE: (
+                "aarch64",
+                "pc",
+                "aarch64.yaml",
+                "ELFDATA2LSB",
+                "EM_AARCH64",
+            ),
         }[endian]
 
         self.server.responder = Responder(
@@ -58,14 +64,35 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             ),
             endian,
         )
-        target = self.dbg.CreateTarget("")
+
+        # We need to have a program file, so that we have a full type system,
+        # so that we can do the casts later.
+        obj_path = self.getBuildArtifact("main.o")
+        yaml_path = self.getBuildArtifact(yaml_file)
+        with open(yaml_path, "w") as f:
+            f.write(
+                dedent(
+                    f"""\
+                --- !ELF
+                FileHeader:
+                  Class:    ELFCLASS64
+                  Data:     {data}
+                  Type:     ET_REL
+                  Machine:  {machine}
+                ...
+                """
+                )
+            )
+        self.yaml2obj(yaml_path, obj_path)
+        target = self.dbg.CreateTarget(obj_path)
+
         process = self.connect(target)
         lldbutil.expect_state_changes(
             self, self.dbg.GetListener(), process, [lldb.eStateStopped]
         )
 
         # If expressions convert register values into target endian, the
-        # result of register read and expr should be the same.
+        # result of register read, expr and casts should be the same.
         pc_value = "0x0000000000001234"
         self.expect(
             "register read pc",
@@ -73,14 +100,29 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         )
         self.expect("expr --format hex -- $pc", substrs=[pc_value])
 
+        pc = (
+            process.thread[0]
+            .frame[0]
+            .GetRegisters()
+            .GetValueAtIndex(0)
+            .GetChildMemberWithName("pc")
+        )
+        ull = target.FindTypes("unsigned long long").GetTypeAtIndex(0)
+        pc_ull = pc.Cast(ull)
+
+        self.assertEqual(pc.GetValue(), pc_ull.GetValue())
+        self.assertEqual(pc.GetValueAsAddress(), pc_ull.GetValueAsAddress())
+        self.assertEqual(pc.GetValueAsSigned(), pc_ull.GetValueAsSigned())
+        self.assertEqual(pc.GetValueAsUnsigned(), pc_ull.GetValueAsUnsigned())
+
     @skipIfXmlSupportMissing
     @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
     def test_little_endian_target(self):
         self.do_endian_test(Endian.LITTLE)
 
     @skipIfXmlSupportMissing
     @skipIfRemote
-    # Unlike AArch64, we do need the backend present for this test to work.
     @skipIfLLVMTargetMissing("SystemZ")
     def test_big_endian_target(self):
         self.do_endian_test(Endian.BIG)

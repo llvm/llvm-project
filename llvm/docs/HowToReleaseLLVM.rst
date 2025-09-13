@@ -101,8 +101,8 @@ release process to begin.  Specifically, it involves:
 
 * Tagging release candidates for the release team to begin testing.
 
-Create Release Branch
-^^^^^^^^^^^^^^^^^^^^^
+Create Release Branch and Update LLVM Version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Branch the Git trunk using the following procedure:
 
@@ -114,14 +114,16 @@ Branch the Git trunk using the following procedure:
 #. Verify that the current git trunk is in decent shape by
    examining nightly tester and buildbot results.
 
-#. Bump the version in trunk to N.0.0git and tag the commit with llvmorg-N-init.
+#. Bump the version in trunk to N.0.0git with the script in
+   ``llvm/utils/release/bump-version.py``, and tag the commit with llvmorg-N-init.
    If ``X`` is the version to be released, then ``N`` is ``X + 1``.
 
 ::
 
   $ git tag -sa llvmorg-N-init
 
-#. Clear the release notes in trunk.
+4. Clear the release notes in trunk with the script in
+   ``llvm/utils/release/clear-release-notes.py``.
 
 #. Create the release branch from the last known good revision from before the
    version bump.  The branch's name is release/X.x where ``X`` is the major version
@@ -132,12 +134,6 @@ Branch the Git trunk using the following procedure:
 
 #. All tags and branches need to be created in both the llvm/llvm-project and
    llvm/llvm-test-suite repos.
-
-Update LLVM Version
-^^^^^^^^^^^^^^^^^^^
-
-After creating the LLVM release branch, update the release branches'
-version with the script in ``llvm/utils/release/bump-version.py``.
 
 Tagging the LLVM Release Candidates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
