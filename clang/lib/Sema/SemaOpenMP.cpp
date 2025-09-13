@@ -3321,9 +3321,9 @@ SemaOpenMP::CheckOMPThreadPrivateDecl(SourceLocation Loc,
   }
   return D;
 }
-
 static OMPAllocateDeclAttr::AllocatorTypeTy
 getAllocatorKind(Sema &S, DSAStackTy *Stack, Expr *Allocator) {
+  // No allocator expression → Null mem alloc.
   if (!Allocator)
     return OMPAllocateDeclAttr::OMPNullMemAlloc;
   if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
@@ -3337,6 +3337,8 @@ getAllocatorKind(Sema &S, DSAStackTy *Stack, Expr *Allocator) {
   for (int I = 0; I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
     auto AllocatorKind = static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(I);
     const Expr *DefAllocator = Stack->getAllocator(AllocatorKind);
+    if (!DefAllocator)
+      continue; // null-guard: predefined not populated
     llvm::FoldingSetNodeID DAEId;
     DefAllocator->IgnoreImpCasts()->Profile(DAEId, S.getASTContext(),
                                             /*Canonical=*/true);
