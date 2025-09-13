@@ -46,46 +46,46 @@ namespace {
 ///   BTMatrices, BMatrices, ATMatrices, or AMatrices map.
 /// 3. Add a enum value F_m_r to WinogradConv2DFmr enum.
 ///
-constexpr float G_2x2_3x3[] = {
+constexpr double G_2x2_3x3[] = {
    -1,     0,   0,
  1./2, -1./2, 1./2,
  1./2,  1./2, 1./2,
     0,     0,    1
 };
 
-constexpr float GT_2x2_3x3[] = {
+constexpr double GT_2x2_3x3[] = {
    -1,  1./2, 1./2, 0,
     0, -1./2, 1./2, 0,
     0,  1./2, 1./2, 1
 };
 
-constexpr float BT_2x2_3x3[] = {
+constexpr double BT_2x2_3x3[] = {
    -1,    0,   1,   0,
     0,   -1,   1,   0,
     0,    1,   1,   0,
     0,   -1,   0,   1
 };
 
-constexpr float B_2x2_3x3[] = {
+constexpr double B_2x2_3x3[] = {
    -1,    0,   0,   0,
     0,   -1,   1,  -1,
     1,    1,   1,   0,
     0,    0,   0,   1
 };
 
-constexpr float AT_2x2_3x3[] = {
+constexpr double AT_2x2_3x3[] = {
     1,    1,   1,   0,
     0,   -1,   1,   1
 };
 
-constexpr float A_2x2_3x3[] = {
+constexpr double A_2x2_3x3[] = {
     1,    0,
     1,   -1,
     1,    1,
     0,    1
 };
 
-constexpr float G_4x4_3x3[] = {
+constexpr double G_4x4_3x3[] = {
      1,     0,     0,
  -1./3,  1./3, -1./3,
  -1./3, -1./3, -1./3,
@@ -94,13 +94,13 @@ constexpr float G_4x4_3x3[] = {
      0,     0,     1
 };
 
-constexpr float GT_4x4_3x3[] = {
+constexpr double GT_4x4_3x3[] = {
  1,  -1./3, -1./3, 1./12, 1./12, 0,
  0,   1./3, -1./3, -1./6,  1./6, 0,
  0,  -1./3, -1./3,  1./3,  1./3, 1
 };
 
-constexpr float BT_4x4_3x3[] = {
+constexpr double BT_4x4_3x3[] = {
  1./4,     0, -5./16,      0, 1./16,     0,
     0,  1./4,  -1./4, -1./16, 1./16,     0,
     0, -1./4,  -1./4,  1./16, 1./16,     0,
@@ -109,7 +109,7 @@ constexpr float BT_4x4_3x3[] = {
     0,  1./4,      0, -5./16,     0, 1./16
 };
 
-constexpr float B_4x4_3x3[] = {
+constexpr double B_4x4_3x3[] = {
    1./4,      0,     0,     0,     0,      0,
       0,   1./4, -1./4,  1./4, -1./4,   1./4,
  -5./16,  -1./4, -1./4, -1./8, -1./8,      0,
@@ -118,14 +118,14 @@ constexpr float B_4x4_3x3[] = {
       0,      0,     0,     0,     0,  1./16
 };
 
-constexpr float AT_4x4_3x3[] = {
+constexpr double AT_4x4_3x3[] = {
  1./8,  1./4, 1./4,  1./8, 1./8,    0,
     0, -1./4, 1./4, -1./4, 1./4,    0,
     0,  1./4, 1./4,  1./2, 1./2,    0,
     0, -1./4, 1./4,    -1,    1, 1./2
 };
 
-constexpr float A_4x4_3x3[] = {
+constexpr double A_4x4_3x3[] = {
   1./8,     0,    0,     0,
   1./4, -1./4, 1./4, -1./4,
   1./4,  1./4, 1./4,  1./4,
@@ -134,7 +134,7 @@ constexpr float A_4x4_3x3[] = {
      0,     0,    0,  1./2
 };
 
-constexpr float G_2x2_5x5[] = {
+constexpr double G_2x2_5x5[] = {
      1,     0,      0,      0,      0,
   1./6, -1./6,   1./6,  -1./6,   1./6,
  -1./6, -1./6,  -1./6,  -1./6,  -1./6,
@@ -143,7 +143,7 @@ constexpr float G_2x2_5x5[] = {
      0,     0,      0,      0,      1
 };
 
-constexpr float GT_2x2_5x5[] = {
+constexpr double GT_2x2_5x5[] = {
    1,  1./6, -1./6, -4./15, 1./60, 0,
    0, -1./6, -1./6,  2./15, 1./30, 0,
    0,  1./6, -1./6, -1./15, 1./15, 0,
@@ -151,7 +151,7 @@ constexpr float GT_2x2_5x5[] = {
    0,  1./6, -1./6, -1./60, 4./15, 1
 };
 
-constexpr float BT_2x2_5x5[] = {
+constexpr double BT_2x2_5x5[] = {
  1./8,  3./16,  -1./4,  -3./16,   1./8,    0,
     0,   1./8,  1./16,  -5./16,   1./8,    0,
     0,  -1./8, -5./16,  -1./16,   1./8,    0,
@@ -160,7 +160,7 @@ constexpr float BT_2x2_5x5[] = {
     0,   1./8,  3./16,   -1./4, -3./16, 1./8
 };
 
-constexpr float B_2x2_5x5[] = {
+constexpr double B_2x2_5x5[] = {
    1./8,      0,      0,     0,     0,      0,
   3./16,   1./8,  -1./8,  1./4, -1./8,   1./8,
   -1./4,  1./16, -5./16, -1./8, -1./4,  3./16,
@@ -169,12 +169,12 @@ constexpr float B_2x2_5x5[] = {
       0,      0,      0,     0,     0,   1./8
 };
 
-constexpr float AT_2x2_5x5[] = {
+constexpr double AT_2x2_5x5[] = {
   1./2,  1, 1,  2, 1,    0,
      0, -1, 1, -1, 2, 1./2
 };
 
-constexpr float A_2x2_5x5[] = {
+constexpr double A_2x2_5x5[] = {
  1./2,    0,
     1,   -1,
     1,    1,
@@ -186,11 +186,12 @@ constexpr float A_2x2_5x5[] = {
 
 /// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
-  TransformMatrix(const float *table, int64_t rows, int64_t cols,
+  TransformMatrix(ArrayRef<double> table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
-      : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {}
+      : table(llvm::map_to_vector(table, [](double val) { return APFloat(val); })), rows(rows), cols(cols), scalarFactor(scalarFactor) {
+  }
 
-  const float *table;
+  SmallVector<APFloat> table;
   int64_t rows;
   int64_t cols;
   int64_t scalarFactor;
@@ -199,7 +200,9 @@ struct TransformMatrix {
 /// Utility function to convert constant array to arith.constant Value.
 Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                               TransformMatrix transform, Type type) {
-  ArrayRef<float> constVec(transform.table, transform.rows * transform.cols);
+  assert(type.isFloat());
+  assert(transform.table.size() == (transform.rows * transform.cols));
+  ArrayRef<APFloat> constVec(transform.table.data(), transform.rows * transform.cols);
 
   return arith::ConstantOp::create(
       builder, loc,
