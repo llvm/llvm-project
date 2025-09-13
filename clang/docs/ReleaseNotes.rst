@@ -531,6 +531,9 @@ Improvements to Clang's diagnostics
 
 - Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
 
+- Fixed a bug where the source location was missing when diagnosing ill-formed
+  placeholder constraints.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
