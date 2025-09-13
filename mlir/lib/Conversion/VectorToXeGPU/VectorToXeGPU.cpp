@@ -97,6 +97,24 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
+// Common preconditions for the lowering of vector.gather and vector.scatter:
+//  1. Source is a memref.
+//  2. The innermost dimension of the memref is contiguous (stride == 1)
+static LogicalResult gatherScatterPreconditions(PatternRewriter &rewriter,
+                                                Operation *op, Type baseType) {
+  auto srcTy = dyn_cast<MemRefType>(baseType);
+  if (!srcTy)
+    return rewriter.notifyMatchFailure(op, "Expects memref source");
+
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
+    return rewriter.notifyMatchFailure(
+        op, "Buffer must be contiguous in the innermost dimension");
+
+  return success();
+}
+
 static xegpu::CreateNdDescOp
 createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
@@ -183,11 +201,15 @@ static void adjustStridesForPermutation(AffineMap permMap,
 // Computes memory strides and a memref offset for vector transfer operations,
 // handling both static and dynamic memrefs while applying permutation
 // transformations for XeGPU lowering.
+template <
+    typename OpType,
+    typename = std::enable_if_t<llvm::is_one_of<
+        std::decay_t<OpType>, vector::TransferReadOp, vector::TransferWriteOp,
+        vector::GatherOp, vector::ScatterOp>::value>>
 static std::pair<SmallVector<Value>, Value>
-computeMemrefMeta(VectorTransferOpInterface xferOp, PatternRewriter &rewriter) {
+computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
   SmallVector<Value> strides;
   Value baseMemref = xferOp.getBase();
-  AffineMap permMap = xferOp.getPermutationMap();
   MemRefType memrefType = dyn_cast<MemRefType>(baseMemref.getType());
 
   Location loc = xferOp.getLoc();
@@ -232,8 +254,14 @@ computeMemrefMeta(VectorTransferOpInterface xferOp, PatternRewriter &rewriter) {
     if (!offsetVal)
       offsetVal = meta.getOffset();
   }
-  // Adjust strides according to the permutation map (e.g., for transpose)
-  adjustStridesForPermutation(permMap, strides);
+
+  if constexpr (llvm::is_one_of<std::decay_t<OpType>, vector::TransferReadOp,
+                                vector::TransferWriteOp>::value) {
+    AffineMap permMap = xferOp.getPermutationMap();
+    // Adjust strides according to the permutation map (e.g., for transpose)
+    adjustStridesForPermutation(permMap, strides);
+  }
+
   return {strides, offsetVal};
 }
 
@@ -339,9 +367,44 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   return localOffsets;
 }
 
+// Compute the element-wise offsets for vector.gather or vector.scatter ops.
+//
+// This function linearizes the base offsets of the gather/scatter operation
+// and combines them with the per-element indices to produce a final vector of
+// memory offsets.
+template <
+    typename OpType,
+    typename = std::enable_if_t<llvm::is_one_of<
+        std::decay_t<OpType>, vector::GatherOp, vector::ScatterOp>::value>>
+static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
+                            ArrayRef<Value> strides, Value baseOffset) {
+  Location loc = gatScatOp.getLoc();
+  SmallVector<Value> offsets = gatScatOp.getOffsets();
+  for (size_t i = 0; i < offsets.size(); ++i) {
+    Value offsetContrib =
+        arith::MulIOp::create(rewriter, loc, offsets[i], strides[i]);
+    baseOffset =
+        arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
+  }
+  Value indices = gatScatOp.getIndices();
+  VectorType vecType = cast<VectorType>(indices.getType());
+
+  Value baseVector =
+      vector::BroadcastOp::create(
+          rewriter, loc,
+          VectorType::get(vecType.getShape(), rewriter.getIndexType()),
+          baseOffset)
+          .getResult();
+  return arith::AddIOp::create(rewriter, loc, baseVector, indices).getResult();
+}
+
+template <
+    typename OpType,
+    typename = std::enable_if_t<llvm::is_one_of<
+        std::decay_t<OpType>, vector::TransferReadOp, vector::TransferWriteOp,
+        vector::GatherOp, vector::ScatterOp>::value>>
 // Convert memref to i64 base pointer
-static Value memrefToIndexPtr(VectorTransferOpInterface xferOp,
-                              PatternRewriter &rewriter) {
+static Value memrefToIndexPtr(OpType xferOp, PatternRewriter &rewriter) {
   Location loc = xferOp.getLoc();
   auto indexPtr = memref::ExtractAlignedPointerAsIndexOp::create(
                       rewriter, loc, xferOp.getBase())
@@ -539,6 +602,71 @@ struct TransferWriteLowering
   }
 };
 
+struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
+  using OpRewritePattern<vector::GatherOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::GatherOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(gatherScatterPreconditions(rewriter, gatherOp,
+                                          gatherOp.getBase().getType())))
+      return failure();
+
+    Location loc = gatherOp.getLoc();
+    VectorType vectorType = gatherOp.getVectorType();
+
+    auto meta = computeMemrefMeta(gatherOp, rewriter);
+    if (meta.first.empty())
+      return rewriter.notifyMatchFailure(gatherOp, "Failed to compute strides");
+
+    Value localOffsets =
+        computeOffsets(rewriter, gatherOp, meta.first, meta.second);
+    Value flatMemref = memrefToIndexPtr(gatherOp, rewriter);
+
+    auto xeGatherOp = xegpu::LoadGatherOp::create(
+        rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
+        /*chunk_size=*/IntegerAttr{},
+        /*l1_hint=*/xegpu::CachePolicyAttr{},
+        /*l2_hint=*/xegpu::CachePolicyAttr{},
+        /*l3_hint=*/xegpu::CachePolicyAttr{});
+
+    auto selectOp =
+        arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
+                                xeGatherOp.getResult(), gatherOp.getPassThru());
+    rewriter.replaceOp(gatherOp, selectOp.getResult());
+    return success();
+  }
+};
+
+struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
+  using OpRewritePattern<vector::ScatterOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ScatterOp scatterOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(gatherScatterPreconditions(rewriter, scatterOp,
+                                          scatterOp.getBase().getType())))
+      return failure();
+
+    Location loc = scatterOp.getLoc();
+    auto meta = computeMemrefMeta(scatterOp, rewriter);
+    if (meta.first.empty())
+      return rewriter.notifyMatchFailure(scatterOp,
+                                         "Failed to compute strides");
+
+    Value localOffsets =
+        computeOffsets(rewriter, scatterOp, meta.first, meta.second);
+    Value flatMemref = memrefToIndexPtr(scatterOp, rewriter);
+
+    xegpu::StoreScatterOp::create(rewriter, loc, scatterOp.getValueToStore(),
+                                  flatMemref, localOffsets, scatterOp.getMask(),
+                                  /*chunk_size=*/IntegerAttr{},
+                                  /*l1_hint=*/xegpu::CachePolicyAttr{},
+                                  /*l2_hint=*/xegpu::CachePolicyAttr{},
+                                  /*l3_hint=*/xegpu::CachePolicyAttr{});
+    rewriter.eraseOp(scatterOp);
+    return success();
+  }
+};
+
 struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
   using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
 
@@ -654,6 +782,8 @@ struct ConvertVectorToXeGPUPass
 
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
-               StoreLowering, ContractionLowering>(patterns.getContext());
+  patterns
+      .add<TransferReadLowering, TransferWriteLowering, LoadLowering,
+           ScatterLowering, GatherLowering, StoreLowering, ContractionLowering>(
+          patterns.getContext());
 }
