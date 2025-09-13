@@ -421,7 +421,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
+  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Monotonic))
     return ModRefInfo::ModRef;
 
   // If the load address doesn't alias the given address, it doesn't read
@@ -431,6 +431,14 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
+
+  // At this point, the load's ordering is at most `Monotonic` (i.e., Monotonic,
+  // Unordered, or non-atomic), and it aliases with `Loc`. The condition
+  // `isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered)` is true only
+  // for `Monotonic` loads.
+  if (isStrongerThan(L->getOrdering(), AtomicOrdering::Unordered))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a load just reads.
   return ModRefInfo::Ref;
 }
@@ -439,7 +447,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
-  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Monotonic))
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
@@ -457,8 +465,15 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
       return ModRefInfo::NoModRef;
   }
 
+  // At this point, the store's ordering is at most `Monotonic` (i.e.,
+  // Monotonic, Unordered, or non-atomic), and it aliases with `Loc`. The
+  // condition `isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered)` is
+  // true only for `Monotonic` stores.
+  if (isStrongerThan(S->getOrdering(), AtomicOrdering::Unordered))
+    return ModRefInfo::ModRef;
+
   // Otherwise, a store just writes.
-  return ModRefInfo::Mod;
+  return ModRefInfo::ModRef;
 }
 
 ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
