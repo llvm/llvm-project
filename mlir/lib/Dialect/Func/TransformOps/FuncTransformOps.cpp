@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
 
@@ -296,9 +297,16 @@ transform::ReplaceFuncSignatureOp::apply(transform::TransformRewriter &rewriter,
     }
   }
 
-  FailureOr<func::FuncOp> newFuncOpOrFailure = func::replaceFuncWithNewOrder(
-      rewriter, funcOp, argsInterchange.getArrayRef(),
-      resultsInterchange.getArrayRef());
+  llvm::SmallVector<int> oldArgToNewArg(argsInterchange.size());
+  for (auto [newArgIdx, oldArgIdx] : llvm::enumerate(argsInterchange))
+    oldArgToNewArg[oldArgIdx] = newArgIdx;
+
+  llvm::SmallVector<int> oldResToNewRes(resultsInterchange.size());
+  for (auto [newResIdx, oldResIdx] : llvm::enumerate(resultsInterchange))
+    oldResToNewRes[oldResIdx] = newResIdx;
+
+  FailureOr<func::FuncOp> newFuncOpOrFailure = func::replaceFuncWithNewMapping(
+      rewriter, funcOp, oldArgToNewArg, oldResToNewRes);
   if (failed(newFuncOpOrFailure))
     return emitSilenceableFailure(getLoc())
            << "failed to replace function signature '" << getFunctionName()
@@ -312,9 +320,8 @@ transform::ReplaceFuncSignatureOp::apply(transform::TransformRewriter &rewriter,
     });
 
     for (func::CallOp callOp : callOps)
-      func::replaceCallOpWithNewOrder(rewriter, callOp,
-                                      argsInterchange.getArrayRef(),
-                                      resultsInterchange.getArrayRef());
+      func::replaceCallOpWithNewMapping(rewriter, callOp, oldArgToNewArg,
+                                        oldResToNewRes);
   }
 
   results.set(cast<OpResult>(getTransformedModule()), {targetModuleOp});
@@ -324,6 +331,86 @@ transform::ReplaceFuncSignatureOp::apply(transform::TransformRewriter &rewriter,
 }
 
 void transform::ReplaceFuncSignatureOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getModuleMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
+  transform::modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// DeduplicateFuncArgsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::DeduplicateFuncArgsOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  auto payloadOps = state.getPayloadOps(getModule());
+  if (!llvm::hasSingleElement(payloadOps))
+    return emitDefiniteFailure() << "requires a single module to operate on";
+
+  auto targetModuleOp = dyn_cast<ModuleOp>(*payloadOps.begin());
+  if (!targetModuleOp)
+    return emitSilenceableFailure(getLoc())
+           << "target is expected to be module operation";
+
+  func::FuncOp funcOp =
+      targetModuleOp.lookupSymbol<func::FuncOp>(getFunctionName());
+  if (!funcOp)
+    return emitSilenceableFailure(getLoc())
+           << "function with name '" << getFunctionName() << "' is not found";
+
+  SmallVector<func::CallOp> callOps;
+  targetModuleOp.walk([&](func::CallOp callOp) {
+    if (callOp.getCallee() == getFunctionName().getRootReference().getValue())
+      callOps.push_back(callOp);
+  });
+
+  // TODO: Support more than one callOp.
+  if (!llvm::hasSingleElement(callOps))
+    return emitSilenceableFailure(getLoc())
+           << "function with name '" << getFunctionName()
+           << "' does not have a single callOp";
+
+  func::CallOp callOp = callOps.front();
+
+  llvm::SmallVector<int> oldArgIdxToNewArgIdx(callOp.getNumOperands());
+  llvm::DenseMap<Value, unsigned> valueToNewArgIdx;
+  for (auto [operandIdx, operand] : llvm::enumerate(callOp.getOperands())) {
+    auto [iterator, inserted] =
+        valueToNewArgIdx.insert({operand, valueToNewArgIdx.size()});
+    // Reduce the duplicate operands and maintain the original order.
+    oldArgIdxToNewArgIdx[operandIdx] = iterator->second;
+  }
+
+  bool hasDuplicatesOperands =
+      valueToNewArgIdx.size() != callOp.getNumOperands();
+  if (!hasDuplicatesOperands)
+    return emitSilenceableFailure(getLoc())
+           << "function with name '" << getFunctionName()
+           << "' does not have duplicate operands";
+
+  llvm::SmallVector<int> oldResIdxToNewResIdx(callOp.getNumResults());
+  for (unsigned resultIdx = 0; resultIdx < callOp.getNumResults(); ++resultIdx)
+    oldResIdxToNewResIdx[resultIdx] = resultIdx;
+
+  FailureOr<func::FuncOp> newFuncOpOrFailure = func::replaceFuncWithNewMapping(
+      rewriter, funcOp, oldArgIdxToNewArgIdx, oldResIdxToNewResIdx);
+  if (failed(newFuncOpOrFailure))
+    return emitSilenceableFailure(getLoc())
+           << "failed to deduplicate function arguments '" << getFunctionName()
+           << "'";
+
+  func::replaceCallOpWithNewMapping(rewriter, callOp, oldArgIdxToNewArgIdx,
+                                    oldResIdxToNewResIdx);
+
+  results.set(cast<OpResult>(getTransformedModule()), {targetModuleOp});
+  results.set(cast<OpResult>(getTransformedFunction()), {*newFuncOpOrFailure});
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::DeduplicateFuncArgsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::consumesHandle(getModuleMutable(), effects);
   transform::producesHandle(getOperation()->getOpResults(), effects);
