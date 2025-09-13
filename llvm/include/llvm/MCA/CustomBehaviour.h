@@ -130,8 +130,39 @@ public:
 
   virtual ~Instrument() = default;
 
+  virtual bool canCustomize() const { return false; }
+  virtual void customize(InstrDesc &) const {}
+
   StringRef getDesc() const { return Desc; }
   StringRef getData() const { return Data; }
+};
+
+class LatencyInstrument : public Instrument {
+  std::optional<unsigned> Latency;
+
+public:
+  static const llvm::StringRef DESC_NAME;
+  LatencyInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {
+    // Skip spaces and tabs.
+    unsigned Position = Data.find_first_not_of(" \t");
+    if (Position >= Data.size())
+      // We reached the end of the comment. Bail out.
+      return;
+    Data = Data.drop_front(Position);
+    unsigned L = 0;
+    if (!Data.getAsInteger(10, L))
+      Latency = L;
+  }
+
+  bool canCustomize() const override { return bool(Latency); }
+  void customize(InstrDesc &ID) const override {
+    if (Latency) {
+      // TODO Allow to customize a subset of ID.Writes
+      for (auto &W : ID.Writes)
+        W.Latency = *Latency;
+      ID.MaxLatency = *Latency;
+    }
+  }
 };
 
 using UniqueInstrument = std::unique_ptr<Instrument>;
@@ -143,19 +174,21 @@ class LLVM_ABI InstrumentManager {
 protected:
   const MCSubtargetInfo &STI;
   const MCInstrInfo &MCII;
+  bool EnableInstruments;
 
 public:
-  InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII)
-      : STI(STI), MCII(MCII) {}
+  InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+                    bool EnableInstruments = false)
+      : STI(STI), MCII(MCII), EnableInstruments(EnableInstruments) {};
 
   virtual ~InstrumentManager() = default;
 
   /// Returns true if llvm-mca should ignore instruments.
-  virtual bool shouldIgnoreInstruments() const { return true; }
+  virtual bool shouldIgnoreInstruments() const { return !EnableInstruments; }
 
   // Returns true if this supports processing Instrument with
   // Instrument.Desc equal to Type
-  virtual bool supportsInstrumentType(StringRef Type) const { return false; }
+  virtual bool supportsInstrumentType(StringRef Type) const;
 
   /// Allocate an Instrument, and return a unique pointer to it. This function
   /// may be useful to create instruments coming from comments in the assembly.
@@ -175,6 +208,13 @@ public:
   /// it returns the SchedClassID that belongs to MCI.
   virtual unsigned getSchedClassID(const MCInstrInfo &MCII, const MCInst &MCI,
                                    const SmallVector<Instrument *> &IVec) const;
+
+  // Return true if instruments can modify instruction description
+  virtual bool canCustomize(const SmallVector<Instrument *> &IVec) const;
+
+  // Customize instruction description
+  virtual void customize(const SmallVector<Instrument *> &IVec,
+                         llvm::mca::InstrDesc &Desc) const;
 };
 
 } // namespace mca
