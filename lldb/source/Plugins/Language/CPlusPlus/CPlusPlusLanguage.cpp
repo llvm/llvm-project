@@ -190,14 +190,16 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   if (basename.size() <= idx)
     return false; // Empty string or "~"
 
-  if (!std::isalpha(basename[idx]) && basename[idx] != '_')
+  if (!std::isalpha(static_cast<unsigned char>(basename[idx])) &&
+      basename[idx] != '_')
     return false; // First character (after removing the possible '~'') isn't in
                   // [A-Za-z_]
 
   // Read all characters matching [A-Za-z_0-9]
   ++idx;
   while (idx < basename.size()) {
-    if (!std::isalnum(basename[idx]) && basename[idx] != '_')
+    if (!std::isalnum(static_cast<unsigned char>(basename[idx])) &&
+        basename[idx] != '_')
       break;
     ++idx;
   }

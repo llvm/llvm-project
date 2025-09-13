@@ -533,11 +533,6 @@ public:
     for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
       dumpTemplateArgumentLoc(TL.getArgLoc(I));
   }
-  void VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc TL) {
-    for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
-      dumpTemplateArgumentLoc(TL.getArgLoc(I));
-  }
 
   void VisitTypedefDecl(const TypedefDecl *D) { Visit(D->getUnderlyingType()); }
 

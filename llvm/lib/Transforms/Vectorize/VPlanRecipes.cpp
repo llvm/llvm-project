@@ -564,16 +564,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
-Value *VPInstruction::generatePerLane(VPTransformState &State,
-                                      const VPLane &Lane) {
-  IRBuilderBase &Builder = State.Builder;
-
-  assert(getOpcode() == VPInstruction::PtrAdd &&
-         "only PtrAdd opcodes are supported for now");
-  return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
-                              State.get(getOperand(1), Lane), Name);
-}
-
 /// Create a conditional branch using \p Cond branching to the successors of \p
 /// VPBB. Note that the first successor is always forward (i.e. not created yet)
 /// while the second successor may already have been created (if it is a header
@@ -1197,24 +1187,13 @@ void VPInstruction::execute(VPTransformState &State) {
          "Set flags not supported for the provided opcode");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
-  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
-                                   (vputils::onlyFirstLaneUsed(this) ||
-                                    isVectorToScalar() || isSingleScalar());
-  bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
-  if (GeneratesPerAllLanes) {
-    for (unsigned Lane = 0, NumLanes = State.VF.getFixedValue();
-         Lane != NumLanes; ++Lane) {
-      Value *GeneratedValue = generatePerLane(State, VPLane(Lane));
-      assert(GeneratedValue && "generatePerLane must produce a value");
-      State.set(this, GeneratedValue, VPLane(Lane));
-    }
-    return;
-  }
-
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
+  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
+                                   (vputils::onlyFirstLaneUsed(this) ||
+                                    isVectorToScalar() || isSingleScalar());
   assert((((GeneratedValue->getType()->isVectorTy() ||
             GeneratedValue->getType()->isStructTy()) ==
            !GeneratesPerFirstLaneOnly) ||
@@ -1287,6 +1266,12 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::Broadcast:
   case VPInstruction::ReductionStartVector:
     return true;
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
+    // Before replicating by VF, Build(Struct)Vector uses all lanes of the
+    // operand, after replicating its operands only the first lane is used.
+    // Before replicating, it will have only a single operand.
+    return getNumOperands() > 1;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:

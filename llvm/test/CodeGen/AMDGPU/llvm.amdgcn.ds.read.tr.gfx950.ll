@@ -158,3 +158,69 @@ entry:
   store <4 x bfloat> %val, ptr addrspace(1) %use
   ret void
 }
+
+; This is a special case that does not require aligned VGPRs. Make
+; sure no copies are required for the unaligned ABI return value.
+define { i32, <3 x i32> } @ds_read_b96_tr_b6_no_align2_requirement(ptr addrspace(3) %ptr) {
+; GFX950-SDAG-LABEL: ds_read_b96_tr_b6_no_align2_requirement:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    ds_read_b96_tr_b6 v[2:4], v0 offset:32
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, v2
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v2, v3
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v3, v4
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: ds_read_b96_tr_b6_no_align2_requirement:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    ds_read_b96_tr_b6 v[2:4], v0 offset:32
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v2
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, v3
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, v4
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
+  %val = call <3 x i32> @llvm.amdgcn.ds.read.tr6.b96.v3i32.p3(ptr addrspace(3) %gep)
+  %insert0 = insertvalue { i32, <3 x i32> } poison, i32 0, 0
+  %insert1 = insertvalue { i32, <3 x i32> } %insert0, <3 x i32> %val, 1
+  ret { i32, <3 x i32> } %insert1
+}
+
+define void @ds_read_b96_tr_b6_no_align2_requirement_agpr(ptr addrspace(3) %ptr) {
+; GFX950-SDAG-LABEL: ds_read_b96_tr_b6_no_align2_requirement_agpr:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    ds_read_b96_tr_b6 v[0:2], v0 offset:32
+; GFX950-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_accvgpr_write_b32 a1, v0
+; GFX950-SDAG-NEXT:    v_accvgpr_write_b32 a2, v1
+; GFX950-SDAG-NEXT:    v_accvgpr_write_b32 a3, v2
+; GFX950-SDAG-NEXT:    ;;#ASMSTART
+; GFX950-SDAG-NEXT:    ; use a1 a2 a3
+; GFX950-SDAG-NEXT:    ;;#ASMEND
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: ds_read_b96_tr_b6_no_align2_requirement_agpr:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    ds_read_b96_tr_b6 v[0:2], v0 offset:32
+; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_accvgpr_write_b32 a1, v0
+; GFX950-GISEL-NEXT:    v_accvgpr_write_b32 a2, v1
+; GFX950-GISEL-NEXT:    v_accvgpr_write_b32 a3, v2
+; GFX950-GISEL-NEXT:    ;;#ASMSTART
+; GFX950-GISEL-NEXT:    ; use a1 a2 a3
+; GFX950-GISEL-NEXT:    ;;#ASMEND
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
+  %val = call <3 x i32> @llvm.amdgcn.ds.read.tr6.b96.v3i32.p3(ptr addrspace(3) %gep)
+  %val0 = extractelement <3 x i32> %val, i32 0
+  %val1 = extractelement <3 x i32> %val, i32 1
+  %val2 = extractelement <3 x i32> %val, i32 2
+  call void asm sideeffect "; use $0 $1 $2", "{a1},{a2},{a3}"(i32 %val0, i32 %val1, i32 %val2)
+  ret void
+}

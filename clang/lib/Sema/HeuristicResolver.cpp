@@ -13,7 +13,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/identity.h"
 
 namespace clang {
 
@@ -42,8 +41,8 @@ public:
   resolveUsingValueDecl(const UnresolvedUsingValueDecl *UUVD);
   std::vector<const NamedDecl *>
   resolveDependentNameType(const DependentNameType *DNT);
-  std::vector<const NamedDecl *> resolveTemplateSpecializationType(
-      const DependentTemplateSpecializationType *DTST);
+  std::vector<const NamedDecl *>
+  resolveTemplateSpecializationType(const TemplateSpecializationType *TST);
   QualType resolveNestedNameSpecifierToType(NestedNameSpecifier NNS);
   QualType getPointeeType(QualType T);
   std::vector<const NamedDecl *>
@@ -374,8 +373,9 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) {
-  const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
+    const TemplateSpecializationType *TST) {
+  const DependentTemplateStorage &DTN =
+      *TST->getTemplateName().getAsDependentTemplateName();
   return resolveDependentMember(
       resolveNestedNameSpecifierToType(DTN.getQualifier()),
       DTN.getName().getIdentifier(), TemplateFilter);
@@ -562,7 +562,7 @@ HeuristicResolverImpl::getFunctionProtoTypeLoc(const Expr *Fn) {
     // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
     // which has null parameters. Avoid these as they don't contain useful
     // information.
-    if (llvm::all_of(F.getParams(), llvm::identity<ParmVarDecl *>()))
+    if (!llvm::is_contained(F.getParams(), nullptr))
       return F;
   }
 
@@ -597,8 +597,8 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentNameType(
 }
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) const {
-  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(DTST);
+    const TemplateSpecializationType *TST) const {
+  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(TST);
 }
 QualType HeuristicResolver::resolveNestedNameSpecifierToType(
     NestedNameSpecifier NNS) const {

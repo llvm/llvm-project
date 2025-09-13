@@ -573,15 +573,6 @@ struct IntrinsicLibrary {
 
   void setResultMustBeFreed() { resultMustBeFreed = true; }
 
-  // Check support of coarray features
-  void checkCoarrayEnabled() {
-    if (converter &&
-        !converter->getFoldingContext().languageFeatures().IsEnabled(
-            Fortran::common::LanguageFeature::Coarray))
-      fir::emitFatalError(loc, "Coarrays disabled, use '-fcoarray' to enable.",
-                          false);
-  }
-
   fir::FirOpBuilder &builder;
   mlir::Location loc;
   bool resultMustBeFreed = false;

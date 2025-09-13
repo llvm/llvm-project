@@ -364,3 +364,29 @@ body:
 exit:
   ret void
 }
+
+define void @hang_due_to_unreachable_phi_inblock() personality ptr null {
+bb:
+  br label %bb6
+
+self-loop:                                        ; preds = %self-loop
+  %dead = invoke ptr null()
+          to label %self-loop unwind label %bb4
+
+bb4:                                              ; preds = %self-loop
+  %i5 = landingpad { ptr, i32 }
+          cleanup
+  br label %bb6
+
+bb6:                                              ; preds = %bb4, %bb
+  %i7 = phi ptr [ null, %bb4 ], [ null, %bb ]
+  br label %bb8
+
+bb8:                                              ; preds = %bb8, %bb6
+  %i9 = phi ptr [ null, %bb8 ], [ null, %bb6 ]
+  %i11 = icmp eq ptr %i9, null
+  br i1 %i11, label %bb12, label %bb8
+
+bb12:                                             ; preds = %bb8, %bb6
+  ret void
+}

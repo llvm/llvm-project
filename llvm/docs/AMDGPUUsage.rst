@@ -1812,6 +1812,13 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       offset by one less than the number of dynamic VGPR blocks required
                                                       by the function encoded in bits 5..3.
 
+     "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
+                                                      cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
+                                                      but the dimensions cannot be determined at compile time. Any other value explicitly
+                                                      specifies the cluster dimensions.
+
+                                                      This is only relevant on targets with cluster support.
+
      ================================================ ==========================================================
 
 Calling Conventions

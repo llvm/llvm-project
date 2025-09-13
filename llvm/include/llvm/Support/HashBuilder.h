@@ -366,18 +366,16 @@ private:
   HashBuilder &addRangeElementsImpl(ForwardIteratorT First,
                                     ForwardIteratorT Last,
                                     std::forward_iterator_tag) {
-    for (auto It = First; It != Last; ++It)
-      add(*It);
-    return *this;
-  }
-
-  template <typename T>
-  std::enable_if_t<hashbuilder_detail::IsHashableData<T>::value &&
-                       Endianness == llvm::endianness::native,
-                   HashBuilder &>
-  addRangeElementsImpl(T *First, T *Last, std::forward_iterator_tag) {
-    this->update(ArrayRef(reinterpret_cast<const uint8_t *>(First),
-                          (Last - First) * sizeof(T)));
+    using T = typename std::iterator_traits<ForwardIteratorT>::value_type;
+    if constexpr (std::is_pointer_v<ForwardIteratorT> &&
+                  hashbuilder_detail::IsHashableData<T>::value &&
+                  Endianness == llvm::endianness::native) {
+      this->update(ArrayRef(reinterpret_cast<const uint8_t *>(First),
+                            (Last - First) * sizeof(T)));
+    } else {
+      for (auto It = First; It != Last; ++It)
+        add(*It);
+    }
     return *this;
   }
 };

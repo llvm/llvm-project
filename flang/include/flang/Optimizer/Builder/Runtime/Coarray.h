@@ -71,5 +71,15 @@ void genCoMin(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value A,
 void genCoSum(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value A,
               mlir::Value resultImage, mlir::Value stat, mlir::Value errmsg);
 
+/// Generate call to runtime subroutine prif_sync_all
+void genSyncAllStatement(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value stat, mlir::Value errmsg);
+/// Generate call to runtime subroutine prif_sync_memory
+void genSyncMemoryStatement(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value stat, mlir::Value errmsg);
+/// Generate call to runtime subroutine prif_sync_images
+void genSyncImagesStatement(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value imageSet, mlir::Value stat,
+                            mlir::Value errmsg);
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COARRAY_H

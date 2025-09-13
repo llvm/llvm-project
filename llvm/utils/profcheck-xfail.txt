@@ -830,7 +830,6 @@ Transforms/IndVarSimplify/invalidate-modified-lcssa-phi.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/Inline/optimization-remarks-hotness-threshold.ll
-Transforms/InstCombine/2004-09-20-BadLoadCombine2.ll
 Transforms/InstCombine/2004-09-20-BadLoadCombine.ll
 Transforms/InstCombine/2005-04-07-UDivSelectCrash.ll
 Transforms/InstCombine/2011-02-14-InfLoop.ll

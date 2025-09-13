@@ -1046,6 +1046,12 @@ struct ReleaseT {
   using EmptyTrait = std::true_type;
 };
 
+// [6.0:440-441] `replayable` clause
+template <typename T, typename I, typename E> //
+struct ReplayableT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [8.2.1] `requirement` clauses
 template <typename T, typename I, typename E> //
 struct ReverseOffloadT {
@@ -1151,6 +1157,12 @@ struct ToT {
 
   using TupleTrait = std::true_type;
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
+};
+
+// [6.0:440-441] `transparent` clause
+template <typename T, typename I, typename E> //
+struct TransparentT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [8.2.1] `requirement` clauses
@@ -1279,7 +1291,8 @@ using EmptyClausesT = std::variant<
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
     std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, MatchT<T, I, E>,
-                 OtherwiseT<T, I, E>, WhenT<T, I, E>>;
+                 OtherwiseT<T, I, E>, ReplayableT<T, I, E>,
+                 TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =

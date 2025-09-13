@@ -553,16 +553,17 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
 }
 
 void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
-  // !annotation metadata does not impact semantics.
+  // !annotation and !prof metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
       LLVMContext::MD_annotation, LLVMContext::MD_range,
-      LLVMContext::MD_nonnull, LLVMContext::MD_align};
+      LLVMContext::MD_nonnull, LLVMContext::MD_align, LLVMContext::MD_prof};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
-  append_range(KeepIDs, KnownIDs);
+  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
+                                                        : drop_end(KnownIDs)));
   append_range(KeepIDs, Keep);
   dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }

@@ -319,7 +319,7 @@ struct BubbleUpExpandThroughParallelCollapse
 /// Note - this pattern could be extended to be a swap pattern between
 /// `tensor.expand_shape` and `tensor.extract_slice`, but is currently
 /// implemented only as a bubble up pattern for `tensor.extract_slice`.
-struct BubbleUpExpandShapeThroughExtractSlice
+struct BubbleUpExtractSliceThroughExpandShape
     : public OpRewritePattern<tensor::ExtractSliceOp> {
   using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
 
@@ -427,7 +427,7 @@ struct BubbleUpExpandShapeThroughExtractSlice
 ///                                                       to tensor<15xf32>
 /// ```
 /// But this is not the intended purpose of the transformation.
-struct BubbleUpCollapseShapeThroughExtractSlice
+struct BubbleUpExtractSliceThroughCollapseShape
     : public OpRewritePattern<tensor::ExtractSliceOp> {
   using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
 
@@ -735,6 +735,6 @@ void mlir::tensor::populateBubbleUpExpandShapePatterns(
 
 void mlir::tensor::populateBubbleUpExtractSliceOpPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<BubbleUpExpandShapeThroughExtractSlice,
-               BubbleUpCollapseShapeThroughExtractSlice>(patterns.getContext());
+  patterns.add<BubbleUpExtractSliceThroughExpandShape,
+               BubbleUpExtractSliceThroughCollapseShape>(patterns.getContext());
 }

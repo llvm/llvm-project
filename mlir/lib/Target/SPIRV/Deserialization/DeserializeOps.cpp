@@ -86,6 +86,13 @@ Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto undef = getUndefType(id)) {
     return spirv::UndefOp::create(opBuilder, unknownLoc, undef);
   }
+  if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+          graphConstantARMInfo = getGraphConstantARM(id)) {
+    IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
+    Type resultType = graphConstantARMInfo->resultType;
+    return spirv::GraphConstantARMOp::create(opBuilder, unknownLoc, resultType,
+                                             graphConstantID);
+  }
   return valueMap.lookup(id);
 }
 
@@ -180,6 +187,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
   case spirv::Opcode::OpTypeTensorARM:
+  case spirv::Opcode::OpTypeGraphARM:
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
     return processType(opcode, operands);
   case spirv::Opcode::OpTypeForwardPointer:
@@ -208,12 +216,26 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstantBool(/*isTrue=*/false, operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantNull:
     return processConstantNull(operands);
+  case spirv::Opcode::OpGraphConstantARM:
+    return processGraphConstantARM(operands);
   case spirv::Opcode::OpDecorate:
     return processDecoration(operands);
   case spirv::Opcode::OpMemberDecorate:
     return processMemberDecoration(operands);
   case spirv::Opcode::OpFunction:
     return processFunction(operands);
+  case spirv::Opcode::OpGraphEntryPointARM:
+    if (deferInstructions) {
+      deferredInstructions.emplace_back(opcode, operands);
+      return success();
+    }
+    return processGraphEntryPointARM(operands);
+  case spirv::Opcode::OpGraphARM:
+    return processGraphARM(operands);
+  case spirv::Opcode::OpGraphSetOutputARM:
+    return processOpGraphSetOutputARM(operands);
+  case spirv::Opcode::OpGraphEndARM:
+    return processGraphEndARM(operands);
   case spirv::Opcode::OpLabel:
     return processLabel(operands);
   case spirv::Opcode::OpBranch:

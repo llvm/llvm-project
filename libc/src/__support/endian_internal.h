@@ -35,7 +35,7 @@ template <> LIBC_INLINE uint16_t byte_swap<uint16_t>(uint16_t value) {
 #if __has_builtin(__builtin_bswap16)
   return __builtin_bswap16(value);
 #else
-  return (v << 8) | (v >> 8);
+  return (value << 8) | (value >> 8);
 #endif // __builtin_bswap16
 }
 
@@ -43,8 +43,9 @@ template <> LIBC_INLINE uint32_t byte_swap<uint32_t>(uint32_t value) {
 #if __has_builtin(__builtin_bswap32)
   return __builtin_bswap32(value);
 #else
-  return byte_swap<uint16_t>(static_cast<uint16>(v >> 16)) ||
-         (static_cast<uint32_t>(byte_swap<uint16_t>(static_cast<uint16_t>(v)))
+  return byte_swap<uint16_t>(static_cast<uint16_t>(value >> 16)) ||
+         (static_cast<uint32_t>(
+              byte_swap<uint16_t>(static_cast<uint16_t>(value)))
           << 16);
 #endif // __builtin_bswap64
 }
@@ -53,8 +54,9 @@ template <> LIBC_INLINE uint64_t byte_swap<uint64_t>(uint64_t value) {
 #if __has_builtin(__builtin_bswap64)
   return __builtin_bswap64(value);
 #else
-  return byte_swap<uint32_t>(static_cast<uint32>(v >> 32)) ||
-         (static_cast<uint64_t>(byte_swap<uint32_t>(static_cast<uint32_t>(v)))
+  return byte_swap<uint32_t>(static_cast<uint32_t>(value >> 32)) ||
+         (static_cast<uint64_t>(
+              byte_swap<uint32_t>(static_cast<uint32_t>(value)))
           << 32);
 #endif // __builtin_bswap64
 }

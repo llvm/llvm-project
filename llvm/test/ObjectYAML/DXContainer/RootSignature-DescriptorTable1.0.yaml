@@ -20,12 +20,12 @@ Parts:
     NumStaticSamplers: 0
     StaticSamplersOffset: 64
     Parameters:         
-    - ParameterType: 0 # SRV
-      ShaderVisibility: 3 # Domain
+    - ParameterType: DescriptorTable
+      ShaderVisibility: Domain
       Table:
         NumRanges: 1
         Ranges:
-          - RangeType: 0
+          - RangeType: SRV
             NumDescriptors: -1
             BaseShaderRegister: 42
             RegisterSpace: 43
@@ -42,13 +42,13 @@ Parts:
 # CHECK-NEXT:     NumStaticSamplers: 0
 # CHECK-NEXT:     StaticSamplersOffset: 64
 # CHECK-NEXT:     Parameters:         
-# CHECK-NEXT:     - ParameterType: 0
-# CHECK-NEXT:       ShaderVisibility: 3
+# CHECK-NEXT:     - ParameterType: DescriptorTable
+# CHECK-NEXT:       ShaderVisibility: Domain
 # CHECK-NEXT:       Table:
 # CHECK-NEXT:         NumRanges: 1
 # CHECK-NEXT:         RangesOffset: 44
 # CHECK-NEXT:         Ranges:
-# CHECK-NEXT:           - RangeType: 0
+# CHECK-NEXT:           - RangeType: SRV
 # CHECK-NEXT:             NumDescriptors: -1
 # CHECK-NEXT:             BaseShaderRegister: 42
 # CHECK-NEXT:             RegisterSpace: 43

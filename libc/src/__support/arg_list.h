@@ -12,6 +12,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -126,7 +127,7 @@ public:
 
     // Memcpy because pointer alignment may be illegal given a packed struct.
     T val;
-    __builtin_memcpy(&val, ptr, sizeof(T));
+    inline_memcpy(&val, ptr, sizeof(T));
 
     ptr =
         reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) + sizeof(T));

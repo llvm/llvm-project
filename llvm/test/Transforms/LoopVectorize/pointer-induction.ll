@@ -33,6 +33,10 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr null, i64 [[TMP11]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP14]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr null, i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[NEXT_GEP]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[NEXT_GEP2]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[NEXT_GEP3]], i32 2
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[NEXT_GEP4]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i64 -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -3
@@ -649,9 +653,6 @@ define i64 @ivopt_widen_ptr_indvar_3(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], [[TMP8]]
 ; STRIDED-NEXT:    [[TMP10:%.*]] = mul i64 3, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], [[TMP10]]
-; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP5]]
-; STRIDED-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr null, i64 [[TMP7]]
-; STRIDED-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr null, i64 [[TMP9]]
 ; STRIDED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP11]]
 ; STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP12]], align 8
