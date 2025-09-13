@@ -31,8 +31,6 @@ namespace mlir {
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
-#define DEBUG_TYPE "linalg-convert-to-dps"
-
 using namespace mlir;
 using namespace mlir::tensor;
 
@@ -612,10 +610,23 @@ Value linalg::bufferizeToAllocation(
 }
 
 namespace {
+/// Rewrites an arith op operating on tensors, e.g.
+///  `%z = arith.addf %x, %y : tensor<5xf32>`
+/// into an equivalent linalg.generic in destination-passing-style.
+/// ```mlir
+/// %0 = tensor.empty() : tensor<5xf32>
+/// %1 = linalg.generic ...
+///        ins(%x, %y : tensor<5xf32>, tensor<5xf32>)
+///        outs(%0 : tensor<5xf32>) {
+///      ^bb0(%in: f32, %in_0: f32, %out: f32):
+///         %2 = arith.addf %in, %in_0 : f32
+///         linalg.yield %2 : f32
+///     } -> tensor<5xf32>
 template <typename OpTy>
 FailureOr<Operation *>
 rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
-  // reject ops such as `arith.constant` and `arith.select`.
+  // Reject ops such as `arith.constant` and `arith.select`.
+  // constants don't need dps conversion and select is a a `todo`.
   auto numOperands = op->getNumOperands();
   if (numOperands == 0 || numOperands > 2)
     return failure();
@@ -630,8 +641,8 @@ rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
   OpBuilder::InsertionGuard g(rewriter);
   auto dynSizes = reifyOrComputeDynamicSizes(rewriter, op->getOperand(0));
 
-  // Create tensor.empty.
-  Value empty = tensor::EmptyOp::create(rewriter, loc, resultType, dynSizes);
+  // Create tensor.empty for `outs` of destination-passing-style.
+  Value outs = tensor::EmptyOp::create(rewriter, loc, resultType, dynSizes);
 
   // Create linalg.generic
   auto rank = tensorType.getRank();
@@ -642,7 +653,7 @@ rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
   auto genericOp = linalg::GenericOp::create(
       rewriter, loc, tensorType,
       op->getOperands(), // inputs
-      ValueRange{empty}, // outputs
+      ValueRange{outs}, // outputs
       indexingMaps, iteratorTypes,
       [&](OpBuilder &builder, Location loc, ValueRange args) {
         Value res;

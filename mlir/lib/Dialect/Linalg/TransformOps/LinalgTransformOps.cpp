@@ -58,10 +58,10 @@ using namespace mlir::transform;
 /// pattern failed to apply. Extra arguments are forwarded to the pattern
 /// constructor.
 template <typename PatternTy, typename... Args>
-static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&... args) {
+static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
   // Check if the given operation has the type expected by the pattern.
-  using OpTy = typename llvm::function_traits<decltype(
-      &PatternTy::returningMatchAndRewrite)>::template arg_t<0>;
+  using OpTy = typename llvm::function_traits<
+      decltype(&PatternTy::returningMatchAndRewrite)>::template arg_t<0>;
   auto op = dyn_cast<OpTy>(operation);
   if (!op)
     return failure();
