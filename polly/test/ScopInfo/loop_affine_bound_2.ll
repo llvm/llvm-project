@@ -1,16 +1,16 @@
 ; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
-
-; void f(long a[][128], long N, long M) {
+; long a[100][128];
+; void f(long N, long M) {
 ;   long i, j;
 ;   for (j = 0; j < (4*N + 7*M +3); ++j)
 ;     for (i = (7*j + 6*M -9); i < (3*j + 5*N + 2) ; ++i)
 ;         a[i][j] = 0;
 ; }
 
-target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
+@a = local_unnamed_addr global [100 x [128 x i64]] zeroinitializer
 
-define void @f(ptr nocapture %a, i64 %N, i64 %M) nounwind {
+define void @f(i64 %N, i64 %M) nounwind {
 entry:
   %0 = shl i64 %N, 2
   %1 = mul i64 %M, 7
@@ -46,7 +46,7 @@ bb:                                               ; preds = %bb3, %bb.nph8
 bb1:                                              ; preds = %bb1, %bb
   %indvar = phi i64 [ 0, %bb ], [ %indvar.next, %bb1 ]
   %tmp16 = add i64 %indvar, %tmp15
-  %scevgep = getelementptr [128 x i64], ptr %a, i64 %tmp16, i64 %tmp17
+  %scevgep = getelementptr [128 x i64], ptr @a, i64 %tmp16, i64 %tmp17
   store i64 0, ptr %scevgep
   %indvar.next = add i64 %indvar, 1
   %exitcond = icmp eq i64 %indvar.next, %tmp13
@@ -72,5 +72,5 @@ return:                                           ; preds = %bb3, %entry
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] -> MemRef_a[-9 + 6M + i1, 897i0] };
+; CHECK-NEXT:             [N, M] -> { Stmt_bb1[i0, i1] -> MemRef_a[-9 + 6M + 7i0 + i1, i0] };
 ; CHECK-NEXT: }
