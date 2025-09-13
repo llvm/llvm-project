@@ -951,7 +951,8 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
+  ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
+  ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
 
   // An identified function-local object that does not escape can only be
   // accessed via call arguments. Reduce OtherMR (which includes accesses to
@@ -997,6 +998,18 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   }
 
   ModRefInfo Result = ArgMR | OtherMR;
+
+  // Refine writes to errno memory. We can safely exclude the errno location if
+  // the given memory location is an alloca, the size of the memory access is
+  // larger than the integer size, or if TBAA proves it does not alias errno.
+  if ((ErrnoMR | Result) != Result) {
+    if (ErrnoMR == ModRefInfo::Mod && !isa<AllocaInst>(Object) &&
+        AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+      // Preconditions above are not met, this memory location may alias errno.
+      Result |= ErrnoMR;
+    }
+  }
+
   if (!isModAndRefSet(Result))
     return Result;
 
@@ -1849,6 +1862,13 @@ AliasResult BasicAAResult::aliasCheckRecursive(
   }
 
   return AliasResult::MayAlias;
+}
+
+AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
+                                      const Module *M) {
+  bool DoesNotAlias =
+      Loc.Size.hasValue() && Loc.Size.getValue() * 8 > TLI.getIntSize();
+  return DoesNotAlias ? AliasResult::NoAlias : AliasResult::MayAlias;
 }
 
 /// Check whether two Values can be considered equivalent.
