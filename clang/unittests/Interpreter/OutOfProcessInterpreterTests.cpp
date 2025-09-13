@@ -174,7 +174,7 @@ TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
 
   std::string OrcRuntimePath = getOrcRuntimePath();
   std::string ExecutorPath = getExecutorPath();
-  
+
   if (!llvm::sys::fs::exists(OrcRuntimePath) ||
       !llvm::sys::fs::exists(ExecutorPath))
     GTEST_SKIP();
