@@ -544,6 +544,12 @@ static void skipWhitespace(const char *&First, const char *const End) {
 
 bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                                      const char *const End) {
+  assert(Kind == DirectiveKind::cxx_export_import_decl ||
+         Kind == DirectiveKind::cxx_export_module_decl ||
+         Kind == DirectiveKind::cxx_import_decl ||
+         Kind == DirectiveKind::cxx_module_decl ||
+         Kind == DirectiveKind::decl_at_import);
+
   const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
     // Keep a copy of the First char incase it needs to be reset.
@@ -555,12 +561,22 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
       First = Previous;
       return false;
     }
-    if (Tok.is(tok::eof))
+    if (Tok.isOneOf(tok::eof, tok::eod))
       return reportError(
           DirectiveLoc,
           diag::err_dep_source_scanner_missing_semi_after_at_import);
     if (Tok.is(tok::semi))
       break;
+  }
+
+  bool IsCXXModules = Kind == DirectiveKind::cxx_export_import_decl ||
+                      Kind == DirectiveKind::cxx_export_module_decl ||
+                      Kind == DirectiveKind::cxx_import_decl ||
+                      Kind == DirectiveKind::cxx_module_decl;
+  if (IsCXXModules) {
+    lexPPDirectiveBody(First, End);
+    pushDirective(Kind);
+    return false;
   }
 
   const auto &Tok = lexToken(First, End);
@@ -924,7 +940,7 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
 
-  // Handle "@import".
+  // FIXME: Shoule we handle @import as a preprocessing directive?
   if (*First == '@')
     return lexAt(First, End);
 

@@ -56,4 +56,4 @@ int use2() {
 }
 
 // CHECK: OpenMP{{.*}}differs in precompiled file '{{.*}}Hello.pcm' vs. current file
-// CHECK: use of undeclared identifier 'pragma'
+// CHECK: use of undeclared identifier 'hello'

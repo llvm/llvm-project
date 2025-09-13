@@ -817,7 +817,7 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
 
   LexUnexpandedToken(Tok);
   if (Tok.isNot(tok::eod)) {
-    Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+    Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
     DiscardUntilEndOfDirective();
   }
 
@@ -898,7 +898,7 @@ void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
   }
   if (Tok.isNot(tok::eod))
     Diag(Tok.getLocation(), diag::ext_pp_extra_tokens_at_eol)
-        << "pragma hdrstop";
+        << "#pragma hdrstop";
 
   if (creatingPCHWithPragmaHdrStop() &&
       SourceMgr.isInMainFile(Tok.getLocation())) {
@@ -1236,7 +1236,7 @@ struct PragmaDebugHandler : public PragmaHandler {
 
     if (Tok.isNot(tok::eod)) {
       PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
-        << "pragma clang __debug captured";
+          << "#pragma clang __debug captured";
       return;
     }
 
@@ -1538,7 +1538,7 @@ struct PragmaWarningHandler : public PragmaHandler {
 
     PP.Lex(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma warning";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma warning";
   }
 };
 
@@ -1602,7 +1602,8 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
 
     PP.Lex(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma execution_character_set";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
+          << "#pragma execution_character_set";
   }
 };
 
@@ -1719,7 +1720,7 @@ struct PragmaModuleImportHandler : public PragmaHandler {
       return;
 
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
 
     // If we have a non-empty module path, load the named module.
     Module *Imported =
@@ -1755,7 +1756,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
       return;
 
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
 
     // We can only enter submodules of the current module.
     StringRef Current = PP.getLangOpts().CurrentModule;
@@ -1814,7 +1815,7 @@ struct PragmaModuleEndHandler : public PragmaHandler {
 
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
 
     Module *M = PP.LeaveSubmodule(/*ForPragma*/true);
     if (M)
@@ -1848,7 +1849,7 @@ struct PragmaModuleLoadHandler : public PragmaHandler {
       return;
 
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
 
     // Load the module, don't make it visible.
     PP.getModuleLoader().loadModule(Loc, ModuleName, Module::Hidden,
@@ -1905,7 +1906,7 @@ struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
     // Verify that this is followed by EOD.
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
 
     // The start location of the active audit.
     SourceLocation BeginLoc = PP.getPragmaARCCFCodeAuditedInfo().getLoc();
@@ -1960,7 +1961,7 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
     // Verify that this is followed by EOD.
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "#pragma";
 
     // The start location of the active audit.
     SourceLocation BeginLoc = PP.getPragmaAssumeNonNullLoc();

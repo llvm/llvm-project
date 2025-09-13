@@ -46,7 +46,7 @@ export module z;
 export module x;
 
 //--- invalid_module_name.cppm
-export module z elderberry; // expected-error {{expected ';'}} \
+export module z elderberry; // expected-error {{'module' directive must end with a ';' on the same line}} \
                             // expected-error {{a type specifier is required}}
 
 //--- empty_attribute.cppm
