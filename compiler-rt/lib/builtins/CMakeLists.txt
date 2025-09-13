@@ -160,7 +160,6 @@ set(GENERIC_SOURCES
   negvdi2.c
   negvsi2.c
   negvti2.c
-  os_version_check.c
   paritydi2.c
   paritysi2.c
   parityti2.c
@@ -242,6 +241,7 @@ if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD
     emutls.c
     enable_execute_stack.c
     eprintf.c
+    os_version_check.c
   )
 endif()
 
