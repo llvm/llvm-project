@@ -455,6 +455,13 @@ public:
       QualType OperandTy;
       llvm::SMTExprRef OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
+
+      if (const BinarySymExpr *BSE =
+              dyn_cast<BinarySymExpr>(USE->getOperand())) {
+        if (BinaryOperator::isComparisonOp(BSE->getOpcode()))
+          return getSymBinExpr(Solver, Ctx, BSE, hasComparison, RetTy);
+      }
+
       llvm::SMTExprRef UnaryExp =
           OperandTy->isRealFloatingType()
               ? fromFloatUnOp(Solver, USE->getOpcode(), OperandExp)
