@@ -132,8 +132,9 @@ public:
           if (!isa<NamespaceDecl>(Decl) && !isa<CXXRecordDecl>(Decl))
             return false;
           auto Name = safeGetName(Decl);
-          // WTF::switchOn(T, F... f) is a variadic template function and couldn't
-          // be annotated with NOESCAPE. We hard code it here to workaround that.
+          // WTF::switchOn(T, F... f) is a variadic template function and
+          // couldn't be annotated with NOESCAPE. We hard code it here to
+          // workaround that.
           if (Name == "WTF" && PreviousName == "switchOn")
             return true;
           // Treat every argument of functions in std::ranges as noescape.
@@ -178,7 +179,7 @@ public:
         return true;
       }
 
-      void checkParameters(CallExpr* CE, FunctionDecl *Callee) {
+      void checkParameters(CallExpr *CE, FunctionDecl *Callee) {
         unsigned ArgIndex = isa<CXXOperatorCallExpr>(CE);
         bool TreatAllArgsAsNoEscape = shouldTreatAllArgAsNoEscape(Callee);
         for (auto *Param : Callee->parameters()) {
