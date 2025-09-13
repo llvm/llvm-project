@@ -1,5 +1,5 @@
 // RUN: rm -rf %t.idx
-// RUN: %clang_cc1 %s -index-store-path %t.idx -index-store-compress
+// RUN: %clang -Werror=unused-command-line-argument -fsyntax-only %s -index-store-path %t.idx -index-store-compress
 // RUN: c-index-test core -print-unit %t.idx | FileCheck --check-prefix=UNIT %s
 // RUN: c-index-test core -print-record %t.idx | FileCheck --check-prefix=RECORD %s
 

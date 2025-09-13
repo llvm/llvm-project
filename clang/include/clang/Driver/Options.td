@@ -737,7 +737,7 @@ def index_ignore_pcms : Flag<["-"], "index-ignore-pcms">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Ignore symbols from imported pcm modules">,
   MarshallingInfoFlag<FrontendOpts<"IndexIgnorePcms">>;
-def index_store_record_compression
+def index_store_compress
     : Flag<["-"], "index-store-compress">,
       Visibility<[ClangOption, CC1Option]>,
       HelpText<"Whether to compress unit and record files in the index store">,
