@@ -2339,13 +2339,26 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
   return llvm::ConstantInt::get(Int64Ty, llvm::MD5Hash(MDS->getString()));
 }
 
+static QualType GeneralizeTransparentUnion(QualType Ty) {
+  const RecordType *UT = Ty->getAsUnionType();
+  if (!UT)
+    return Ty;
+  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  if (!UD->hasAttr<TransparentUnionAttr>())
+    return Ty;
+  for (const auto *it : UD->fields()) {
+    return it->getType();
+  }
+  return Ty;
+}
+
 // If `GeneralizePointers` is true, generalizes types to a void pointer with the
 // qualifiers of the originally pointed-to type, e.g. 'const char *' and 'char *
 // const *' generalize to 'const void *' while 'char *' and 'const char **'
 // generalize to 'void *'.
 static QualType GeneralizeType(ASTContext &Ctx, QualType Ty,
                                bool GeneralizePointers) {
-  // TODO: Add other generalizations.
+  Ty = GeneralizeTransparentUnion(Ty);
 
   if (!GeneralizePointers || !Ty->isPointerType())
     return Ty;

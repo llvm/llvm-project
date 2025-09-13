@@ -33,8 +33,8 @@ union Union {
 
 // CHECK: define{{.*}} void @uni({{.*}} !kcfi_type [[TYPE4:![0-9]+]]
 void uni(void (*fn)(union Union), union Union arg1) {
-  // UNGENERALIZED: call {{.*}} [ "kcfi"(i32 -1037059548) ]
-  // GENERALIZED: call {{.*}} [ "kcfi"(i32 422130955) ]
+  // UNGENERALIZED: call {{.*}} [ "kcfi"(i32 -587217045) ]
+  // GENERALIZED: call {{.*}} [ "kcfi"(i32 2139530422) ]
     fn(arg1);
 }
 
@@ -44,6 +44,5 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // UNGENERALIZED: [[TYPE3]] = !{i32 874141567}
 // GENERALIZED: [[TYPE3]] = !{i32 954385378}
 
-// UNGENERALIZED: [[TYPE4]] = !{i32 981319178}
-// GENERALIZED: [[TYPE4]] = !{i32 -1599950473}
-
+// UNGENERALIZED: [[TYPE4]] = !{i32 -1619636625}
+// GENERALIZED: [[TYPE4]] = !{i32 -125078496}
