@@ -54,7 +54,7 @@ public:
   /// either end for the report about the parameters to be silenced.
   /// E.g. the names "LHS" and "RHS" are 1-dissimilar suffixes of each other,
   /// while "Text1" and "Text2" are 1-dissimilar prefixes of each other.
-  const std::size_t NamePrefixSuffixSilenceDissimilarityTreshold;
+  const std::size_t NamePrefixSuffixSilenceDissimilarityThreshold;
 };
 
 } // namespace clang::tidy::bugprone
