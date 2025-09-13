@@ -320,3 +320,57 @@ entry:
   store <8 x bfloat> %val, ptr addrspace(1) %use
   ret void
 }
+
+; This is a special case that does not require aligned VGPRs. Make
+; sure no copies are required for the unaligned ABI return value.
+define { i32, <3 x i32> } @global_load_tr6_b96_vaddr_no_align2_requirement(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
+; GFX1250-LABEL: global_load_tr6_b96_vaddr_no_align2_requirement:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_tr6_b96 v[2:4], v[0:1], off offset:32
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, v2
+; GFX1250-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <3 x i32> @llvm.amdgcn.global.load.tr6.b96.v3i32.p1(ptr addrspace(1) %gep)
+  %insert0 = insertvalue { i32, <3 x i32> } poison, i32 0, 0
+  %insert1 = insertvalue { i32, <3 x i32> } %insert0, <3 x i32> %val, 1
+  ret { i32, <3 x i32> } %insert1
+}
+
+define { i32, <3 x i32> } @global_load_tr6_b96_saddr_no_align2_requirement(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
+; GFX1250-LABEL: global_load_tr6_b96_saddr_no_align2_requirement:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    global_load_tr6_b96 v[2:4], v0, s[0:1] offset:32
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, v2
+; GFX1250-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
+  %val = call <3 x i32> @llvm.amdgcn.global.load.tr6.b96.v3i32.p1(ptr addrspace(1) %gep)
+  %insert0 = insertvalue { i32, <3 x i32> } poison, i32 0, 0
+  %insert1 = insertvalue { i32, <3 x i32> } %insert0, <3 x i32> %val, 1
+  ret { i32, <3 x i32> } %insert1
+}
+
+define { i32, <3 x i32> } @ds_load_tr6_b96_no_align2_requirement(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
+; GFX1250-LABEL: ds_load_tr6_b96_no_align2_requirement:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    ds_load_tr6_b96 v[2:4], v0 offset:32
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, v2
+; GFX1250-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %gep = getelementptr i64, ptr addrspace(3) %addr, i32 4
+  %val = call <3 x i32> @llvm.amdgcn.ds.load.tr6.b96.v3i32.p3(ptr addrspace(3) %gep)
+  %insert0 = insertvalue { i32, <3 x i32> } poison, i32 0, 0
+  %insert1 = insertvalue { i32, <3 x i32> } %insert0, <3 x i32> %val, 1
+  ret { i32, <3 x i32> } %insert1
+}
