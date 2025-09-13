@@ -33,14 +33,16 @@ define float @f32_negative_zero() nounwind {
 define float @f32_constant_pi() nounwind {
 ; LA32-LABEL: f32_constant_pi:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA32-NEXT:    lu12i.w $a0, 263312
+; LA32-NEXT:    ori $a0, $a0, 4059
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f32_constant_pi:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64-NEXT:    fld.s $fa0, $a0, %pc_lo12(.LCPI2_0)
+; LA64-NEXT:    lu12i.w $a0, 263312
+; LA64-NEXT:    ori $a0, $a0, 4059
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    ret
   ret float 3.14159274101257324218750
 }
@@ -48,17 +50,15 @@ define float @f32_constant_pi() nounwind {
 define float @f32_add_fimm1(float %a) nounwind {
 ; LA32-LABEL: f32_add_fimm1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a0, $zero, 1
+; LA32-NEXT:    lu12i.w $a0, 260096
 ; LA32-NEXT:    movgr2fr.w $fa1, $a0
-; LA32-NEXT:    ffint.s.w $fa1, $fa1
 ; LA32-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f32_add_fimm1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $zero, 1
+; LA64-NEXT:    lu12i.w $a0, 260096
 ; LA64-NEXT:    movgr2fr.w $fa1, $a0
-; LA64-NEXT:    ffint.s.w $fa1, $fa1
 ; LA64-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; LA64-NEXT:    ret
   %1 = fadd float %a, 1.0
@@ -68,16 +68,14 @@ define float @f32_add_fimm1(float %a) nounwind {
 define float @f32_positive_fimm1() nounwind {
 ; LA32-LABEL: f32_positive_fimm1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $a0, $zero, 1
+; LA32-NEXT:    lu12i.w $a0, 260096
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
-; LA32-NEXT:    ffint.s.w $fa0, $fa0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f32_positive_fimm1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $zero, 1
+; LA64-NEXT:    lu12i.w $a0, 260096
 ; LA64-NEXT:    movgr2fr.w $fa0, $a0
-; LA64-NEXT:    ffint.s.w $fa0, $fa0
 ; LA64-NEXT:    ret
   ret float 1.0
 }

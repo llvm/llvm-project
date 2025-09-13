@@ -57,7 +57,10 @@ enum NodeType : unsigned {
   MOD_WU,
 
   // FPR<->GPR transfer operations
+  MOVGR2FR_W,
   MOVGR2FR_W_LA64,
+  MOVGR2FR_D,
+  MOVGR2FR_D_LO_HI,
   MOVFR2GR_S_LA64,
   MOVFCSR2GR,
   MOVGR2FCSR,
@@ -397,6 +400,7 @@ private:
   SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
