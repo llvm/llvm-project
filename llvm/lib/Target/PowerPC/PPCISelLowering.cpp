@@ -138,6 +138,11 @@ static cl::opt<unsigned> PPCMinimumJumpTableEntries(
     "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on PPC"));
 
+static cl::opt<unsigned> PPCMinimumBitTestCmps(
+    "ppc-min-bit-test-cmps", cl::init(3), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons to use bit test for "
+             "switch on PPC."));
+
 static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
     "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
     cl::desc("max depth when checking alias info in GatherAllAliases()"));
@@ -1437,6 +1442,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // branch instruction mtctr to the jump table may lead to bad branch predict.
   // Re-evaluate this value on future HWs that can do better with mtctr.
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
+
+  // The default minimum of largest number in a BitTest cluster is 3.
+  setMinimumBitTestCmps(PPCMinimumBitTestCmps);
 
   setMinFunctionAlignment(Align(4));
   setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
