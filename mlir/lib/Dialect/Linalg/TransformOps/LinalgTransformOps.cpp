@@ -2612,7 +2612,9 @@ transform::RewriteInDestinationPassingStyleOp::applyToOne(
   rewriter.setInsertionPoint(target);
   FailureOr<Operation *> maybeResult =
       TypeSwitch<Operation *, FailureOr<Operation *>>(target)
-          .Case<tensor::FromElementsOp, tensor::GenerateOp, tensor::PadOp>(
+          .Case<tensor::FromElementsOp, tensor::GenerateOp, tensor::PadOp,
+                arith::UIToFPOp, arith::SIToFPOp, arith::FPToUIOp,
+                arith::FPToSIOp, arith::AddIOp, arith::AddFOp, arith::DivFOp>(
               [&rewriter](auto op) {
                 return rewriteInDestinationPassingStyle(rewriter, op);
               });

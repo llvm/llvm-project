@@ -17,12 +17,19 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGCONVERTTODPSPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -96,7 +103,7 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   OpBuilder::InsertionGuard g(rewriter);
   RankedTensorType resultType = padOp.getResultType();
 
-  // Examine the yielded value to decide if a linalg.generic is neede or a
+  // Examine the yielded value to decide if a linalg.generic is needed or a
   // linalg.fill is sufficient.
   Value yieldedValue =
       cast<tensor::YieldOp>(padOp.getBody()->getTerminator()).getValue();
@@ -603,6 +610,69 @@ Value linalg::bufferizeToAllocation(
 }
 
 namespace {
+/// Rewrites an arith op operating on tensors, e.g.
+///  `%z = arith.addf %x, %y : tensor<5xf32>`
+/// into an equivalent linalg.generic in destination-passing-style.
+/// ```mlir
+/// %0 = tensor.empty() : tensor<5xf32>
+/// %1 = linalg.generic ...
+///        ins(%x, %y : tensor<5xf32>, tensor<5xf32>)
+///        outs(%0 : tensor<5xf32>) {
+///      ^bb0(%in: f32, %in_0: f32, %out: f32):
+///         %2 = arith.addf %in, %in_0 : f32
+///         linalg.yield %2 : f32
+///     } -> tensor<5xf32>
+template <typename OpTy>
+FailureOr<Operation *>
+rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
+  // Reject ops such as `arith.constant` and `arith.select`.
+  // constants don't need dps conversion and select is a a `todo`.
+  auto numOperands = op->getNumOperands();
+  if (numOperands == 0 || numOperands > 2)
+    return failure();
+
+  // destination passing style rewrite is only for ops on tensor types.
+  Type resultType = op->getResult(0).getType();
+  auto tensorType = dyn_cast<RankedTensorType>(resultType);
+  if (!tensorType)
+    return failure();
+
+  auto loc = op.getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+  auto dynSizes = reifyOrComputeDynamicSizes(rewriter, op->getOperand(0));
+
+  // Create tensor.empty for `outs` of destination-passing-style.
+  Value outs = tensor::EmptyOp::create(rewriter, loc, resultType, dynSizes);
+
+  // Create linalg.generic
+  auto rank = tensorType.getRank();
+  SmallVector<AffineMap> indexingMaps(numOperands + 1,
+                                      rewriter.getMultiDimIdentityMap(rank));
+  SmallVector<utils::IteratorType> iteratorTypes(rank,
+                                                 utils::IteratorType::parallel);
+  auto genericOp = linalg::GenericOp::create(
+      rewriter, loc, tensorType,
+      op->getOperands(), // inputs
+      ValueRange{outs},  // outputs
+      indexingMaps, iteratorTypes,
+      [&](OpBuilder &builder, Location loc, ValueRange args) {
+        Value res;
+        if (args.size() == 2) {
+          res =
+              builder.create<OpTy>(loc, args[1].getType(), ValueRange{args[0]})
+                  .getResult();
+        } else if (args.size() == 3) {
+          res = builder.create<OpTy>(loc, args[2].getType(),
+                                     ValueRange{args[0], args[1]});
+        } else
+          llvm_unreachable("did not expect ops other than nary and binary");
+        linalg::YieldOp::create(builder, loc, res);
+      });
+
+  rewriter.replaceAllUsesWith(op, genericOp.getResult(0));
+  rewriter.eraseOp(op);
+  return genericOp.getOperation();
+}
 
 template <typename OpTy>
 LogicalResult rewriteOpInDestinationPassingStyle(OpTy op,
@@ -612,9 +682,53 @@ LogicalResult rewriteOpInDestinationPassingStyle(OpTy op,
 
 } // namespace
 
+#define STAMP_OUT_ARITH_DPS_FUNCS(OPTY)                                        \
+  FailureOr<Operation *> linalg::rewriteInDestinationPassingStyle(             \
+      RewriterBase &rewriter, OPTY op) {                                       \
+    return rewriteArithInDestinationPassingStyle<OPTY>(rewriter, op);          \
+  }
+
+STAMP_OUT_ARITH_DPS_FUNCS(arith::UIToFPOp)
+STAMP_OUT_ARITH_DPS_FUNCS(arith::SIToFPOp)
+STAMP_OUT_ARITH_DPS_FUNCS(arith::FPToUIOp)
+STAMP_OUT_ARITH_DPS_FUNCS(arith::FPToSIOp)
+
+STAMP_OUT_ARITH_DPS_FUNCS(arith::AddIOp)
+
+STAMP_OUT_ARITH_DPS_FUNCS(arith::AddFOp)
+STAMP_OUT_ARITH_DPS_FUNCS(arith::DivFOp)
+
 void linalg::populateConvertToDestinationStylePatterns(
     RewritePatternSet &patterns) {
   patterns.add(rewriteOpInDestinationPassingStyle<tensor::FromElementsOp>);
   patterns.add(rewriteOpInDestinationPassingStyle<tensor::GenerateOp>);
   patterns.add(rewriteOpInDestinationPassingStyle<tensor::PadOp>);
+
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::UIToFPOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::SIToFPOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::FPToUIOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::FPToSIOp>);
+
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::AddIOp>);
+
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::AddFOp>);
+  patterns.add(rewriteOpInDestinationPassingStyle<arith::DivFOp>);
 }
+
+namespace {
+struct LinalgConvertToDPSPass
+    : public impl::LinalgConvertToDPSPassBase<LinalgConvertToDPSPass> {
+  using impl::LinalgConvertToDPSPassBase<
+      LinalgConvertToDPSPass>::LinalgConvertToDPSPassBase;
+
+  void runOnOperation() override;
+};
+
+void LinalgConvertToDPSPass::runOnOperation() {
+
+  RewritePatternSet patterns(&getContext());
+  linalg::populateConvertToDestinationStylePatterns(patterns);
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+    signalPassFailure();
+}
+} // namespace
