@@ -37,6 +37,8 @@
 
 using namespace clang;
 
+#define DEBUG_TYPE "value"
+
 namespace {
 
 // This is internal buffer maintained by Value, used to hold temporaries.
@@ -136,7 +138,8 @@ namespace clang {
 //   }
 // }
 
-Value::Value(const Value &RHS) : Ty(RHS.getType()), VKind(K_None) {
+Value::Value(const Value &RHS)
+    : Ty(RHS.getType()), VKind(K_None), Cleanup(RHS.Cleanup) {
   switch (RHS.getKind()) {
   case K_None:
     VKind = RHS.VKind;
@@ -150,7 +153,7 @@ Value::Value(const Value &RHS) : Ty(RHS.getType()), VKind(K_None) {
   }
   case K_Array: {
     MakeArray(RHS.getArraySize());
-    for (uint64_t I = 0, N = RHS.getArraySize(); I < N; ++I)
+    for (uint64_t I = 0, N = RHS.getArrayInitializedElts(); I < N; ++I)
       getArrayInitializedElt(I) = RHS.getArrayInitializedElt(I);
     break;
   }
@@ -181,6 +184,7 @@ Value &Value::operator=(Value &&RHS) {
     Ty = RHS.Ty;
     VKind = RHS.VKind;
     Data = RHS.Data;
+    Cleanup = std::move(RHS.Cleanup);
     RHS.VKind = K_None;
   }
 
@@ -233,6 +237,41 @@ void Value::print(llvm::raw_ostream &Out, ASTContext &Ctx) const {
   printData(SS, Ctx);
   SS << "\n";
   Out << Str;
+}
+
+void ValueCleanup::operator()(Value &V) {
+  using namespace llvm;
+  LLVM_DEBUG(dbgs() << "ValueCleanup: destroying value at Addr=" << V.getAddr()
+                    << ", Type=" << V.getType().getAsString() << "\n");
+  if (ObjDtor) {
+    if (auto ObjDtorAddrOrErr = ObjDtor(V.getType())) {
+      Error E = Error::success();
+      orc::ExecutorAddr ObjDtorFn = *ObjDtorAddrOrErr;
+      orc::ExecutorAddr Addr(V.getAddr());
+      LLVM_DEBUG(dbgs() << "ValueCleanup: calling object-specific destructor, "
+                           "Addr="
+                        << Addr.getValue() << "\n");
+      cantFail(ES->callSPSWrapper<orc::shared::SPSError(
+                   orc::shared::SPSExecutorAddr, orc::shared::SPSExecutorAddr)>(
+          DtorWrapperFn, E, ObjDtorFn, Addr));
+      cantFail(std::move(E));
+    } else {
+      LLVM_DEBUG(dbgs() << "ValueCleanup: failed to get ObjDtor address\n");
+
+      cantFail(ObjDtorAddrOrErr.takeError());
+    }
+  }
+
+  Error E = Error::success();
+  orc::ExecutorAddr Addr(V.getAddr());
+  LLVM_DEBUG(dbgs() << "ValueCleanup: calling raw destructor, Addr="
+                    << Addr.getValue() << "\n");
+  cantFail(ES->callSPSWrapper<orc::shared::SPSError(
+               orc::shared::SPSExecutorAddr, orc::shared::SPSExecutorAddr)>(
+      DtorWrapperFn, E, DtorFn, Addr));
+  cantFail(std::move(E));
+  LLVM_DEBUG(dbgs() << "ValueCleanup: finished destruction for Addr="
+                    << V.getAddr() << "\n");
 }
 
 class ValueReaderDispatcher {
@@ -295,33 +334,60 @@ ValueReaderDispatcher::read(QualType QT, llvm::orc::ExecutorAddr Addr) {
 
 llvm::Expected<Value>
 ValueReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
-  if (Ty->isVoidType())
-    return Value();
+  LLVM_DEBUG(llvm::dbgs() << "readBuiltin: start, Addr=" << Addr.getValue()
+                          << ", Type=" << Ty.getAsString() << "\n");
+  if (Ty->isVoidType()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "readBuiltin: void type, returning empty Value\n");
+    return Value(Ty, Value::K_None);
+  }
+
   auto Size = Ctx.getTypeSizeInChars(Ty).getQuantity();
   auto ResOrErr = MA.readBuffers({llvm::orc::ExecutorAddrRange(Addr, Size)});
-  if (!ResOrErr)
+  if (!ResOrErr) {
+    LLVM_DEBUG(llvm::dbgs() << "readBuiltin: failed to read memory\n");
+
     return ResOrErr.takeError();
+  }
 
   const auto &Res = *ResOrErr;
+  LLVM_DEBUG(llvm::dbgs() << "readBuiltin: read succeeded, last byte addr="
+                          << Res.back().data() << "\n");
   return Value(Ty, Res.back());
 }
 
 llvm::Expected<Value>
 ValueReaderDispatcher::readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+
+  LLVM_DEBUG(llvm::dbgs() << "readPointer: start, Addr=" << Addr.getValue()
+                          << "\n");
+
   auto PtrTy = dyn_cast<PointerType>(Ty.getTypePtr());
-  if (!PtrTy)
+  if (!PtrTy) {
+    LLVM_DEBUG(llvm::dbgs() << "readPointer: Not a PointerType!\n");
+
     return llvm::make_error<llvm::StringError>("Not a PointerType",
                                                llvm::inconvertibleErrorCode());
+  }
 
   uint64_t PtrValAddr = Addr.getValue();
-  if (PtrValAddr == 0)
+  LLVM_DEBUG(llvm::dbgs() << "readPointer: raw pointer value=0x"
+                          << llvm::format_hex(PtrValAddr, 10) << "\n");
+
+  if (PtrValAddr == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "readPointer: null pointer detected\n");
     return Value(Ty, PtrValAddr); // null pointer
+  }
 
   llvm::orc::ExecutorAddr PointeeAddr(PtrValAddr);
   Value Val(Ty, PtrValAddr);
 
   QualType PointeeTy = PtrTy->getPointeeType();
+  LLVM_DEBUG(llvm::dbgs() << "readPointer: pointee type="
+                          << PointeeTy.getAsString() << "\n");
   if (PointeeTy->isCharType()) {
+    LLVM_DEBUG(llvm::dbgs() << "readPointer: reading C-string at pointee addr="
+                            << PointeeAddr.getValue() << "\n");
     std::string S;
     for (size_t i = 0; i < 1024; ++i) {
       auto CRes = MA.readUInt8s({PointeeAddr + i});
@@ -332,56 +398,70 @@ ValueReaderDispatcher::readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr) {
         break;
       S.push_back(c);
     }
+
+    LLVM_DEBUG(llvm::dbgs() << "readPointer: read string=\"" << S << "\"\n");
+
     Value Str(PointeeTy, S.c_str());
     Val.getPointerPointee() = std::move(Str);
   }
 
+  LLVM_DEBUG(llvm::dbgs() << "readPointer: finished\n");
   return std::move(Val);
 }
 
 llvm::Expected<Value>
 ValueReaderDispatcher::readArray(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+  LLVM_DEBUG(llvm::dbgs() << "readArray: start, Addr=" << Addr.getValue()
+                          << "\n");
   const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty);
-  if (!CAT)
+  if (!CAT) {
+    LLVM_DEBUG(llvm::dbgs() << "readArray: Not a ConstantArrayType!\n");
+
     return llvm::make_error<llvm::StringError>("Not a ConstantArrayType",
                                                llvm::inconvertibleErrorCode());
-
+  }
   QualType ElemTy = CAT->getElementType();
   size_t ElemSize = Ctx.getTypeSizeInChars(ElemTy).getQuantity();
+  uint64_t NumElts = CAT->getZExtSize();
 
-  Value Val(Value::UninitArr(), Ty, CAT->getZExtSize());
-  for (size_t i = 0; i < CAT->getZExtSize(); ++i) {
+  LLVM_DEBUG(llvm::dbgs() << "readArray: element type size=" << ElemSize
+                          << ", element count=" << NumElts << "\n");
+
+  Value Val(Value::UninitArr(), Ty, NumElts);
+  for (size_t i = 0; i < NumElts; ++i) {
     auto ElemAddr = Addr + i * ElemSize;
+    LLVM_DEBUG(llvm::dbgs() << "readArray: reading element[" << i
+                            << "] at Addr=" << ElemAddr.getValue() << "\n");
+
     if (ElemTy->isPointerType()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "readArray: element[" << i << "] is pointer type\n");
       auto BufOrErr = MA.readUInt64s({ElemAddr});
       if (!BufOrErr)
         return BufOrErr.takeError();
-      llvm::orc::ExecutorAddr Addr(BufOrErr->back());
-      ElemAddr = Addr;
+      llvm::orc::ExecutorAddr PointeeAddr(BufOrErr->back());
+      LLVM_DEBUG(llvm::dbgs()
+                 << "readArray: pointer element[" << i
+                 << "] points to Addr=" << PointeeAddr.getValue() << "\n");
+      ElemAddr = PointeeAddr;
     }
 
     auto ElemBufOrErr = read(ElemTy, ElemAddr);
     if (!ElemBufOrErr)
       return ElemBufOrErr.takeError();
     Val.getArrayInitializedElt(i) = std::move(*ElemBufOrErr);
+    LLVM_DEBUG(llvm::dbgs()
+               << "readArray: element[" << i << "] successfully read\n");
   }
 
+  LLVM_DEBUG(llvm::dbgs() << "readArray: finished reading array\n");
   return std::move(Val);
 }
 
 llvm::Expected<Value>
 ValueReaderDispatcher::readOtherObject(QualType Ty,
                                        llvm::orc::ExecutorAddr Addr) {
-  llvm::outs() << Addr.getValue();
-  if (Ty->isRecordType()) {
-    llvm::outs() << "Here in recordtype\n";
-    auto BufOrErr = MA.readUInt64s({Addr});
-    if (!BufOrErr)
-      return BufOrErr.takeError();
-    Addr = llvm::orc::ExecutorAddr(BufOrErr->back());
-  }
   uint64_t PtrValAddr = Addr.getValue();
-  llvm::outs() << PtrValAddr;
   return Value(Ty, PtrValAddr);
 }
 
@@ -419,29 +499,53 @@ void ValueResultManager::Initialize(llvm::orc::LLJIT &EE) {
 
 void ValueResultManager::deliverResult(SendResultFn SendResult, ValueId ID,
                                        llvm::orc::ExecutorAddr Addr) {
+  LLVM_DEBUG(llvm::dbgs() << "deliverResult called with ID=" << ID
+                          << ", Addr=" << Addr.getValue() << "\n");
   QualType Ty;
-
+  std::optional<ValueCleanup> VCOpt = std::nullopt;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     auto It = IdToType.find(ID);
     if (It == IdToType.end()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Unknown ValueId=" << ID << " in deliverResult\n");
       SendResult(llvm::make_error<llvm::StringError>(
           "Unknown ValueId in deliverResult", llvm::inconvertibleErrorCode()));
     }
     Ty = It->second.getCanonicalType();
+    LLVM_DEBUG(llvm::dbgs() << "Resolved Type for ID=" << ID << "\n");
+
     IdToType.erase(It);
+
+    auto valIt = IdToValCleanup.find(ID);
+    if (valIt != IdToValCleanup.end()) {
+      LLVM_DEBUG(llvm::dbgs() << "Found ValueCleanup for ID=" << ID << "\n");
+
+      VCOpt.emplace(std::move(valIt->second));
+      IdToValCleanup.erase(valIt);
+    } else {
+      LLVM_DEBUG(llvm::dbgs() << "No ValueCleanup for ID=" << ID << "\n");
+    }
   }
 
   ValueReaderDispatcher Runner(Ctx, MemAcc);
   auto BufOrErr = Runner.read(Ty, Addr);
 
   if (!BufOrErr) {
+    LLVM_DEBUG(llvm::dbgs() << "Failed to read value for ID=" << ID << "\n");
+
     SendResult(BufOrErr.takeError());
     return;
   }
 
   // Store the successfully read value buffer
   LastVal = std::move(*BufOrErr);
+  LLVM_DEBUG(llvm::dbgs() << "Successfully read value for ID=" << ID << "\n");
+
+  if (VCOpt) {
+    LLVM_DEBUG(llvm::dbgs() << "Attaching ValueCleanup for ID=" << ID << "\n");
+    LastVal.setValueCleanup(std::move(*VCOpt));
+  }
   SendResult(llvm::Error::success());
   return;
 }

@@ -95,6 +95,50 @@ class QualType;
   X(double, Double)                                                            \
   X(long double, LongDouble)
 
+class Value;
+
+/// \struct ValueCleanup
+/// \brief Encapsulates destructor invocation for REPL values.
+///
+/// `ValueCleanup` provides the logic to run object destructors in the JIT
+/// process. It captures the runtime addresses of the destructor wrapper
+/// functions and the object destructor itself.
+///
+/// Typical usage:
+///  - Constructed when a JIT'd type requires cleanup.
+///  - Attached to a `Value` via `setValueCleanup`.
+///  - Invoked through `operator()(Value&)` to run the destructor on demand.
+struct ValueCleanup {
+  using DtorLookupFn =
+      std::function<llvm::Expected<llvm::orc::ExecutorAddr>(QualType Ty)>;
+  llvm::orc::ExecutionSession *ES;
+  llvm::orc::ExecutorAddr DtorWrapperFn;
+  llvm::orc::ExecutorAddr DtorFn;
+  DtorLookupFn ObjDtor;
+  ValueCleanup() = default;
+  ValueCleanup(llvm::orc::ExecutionSession *ES,
+               llvm::orc::ExecutorAddr WrapperFn,
+               llvm::orc::ExecutorAddr DtorFn, DtorLookupFn Dtor)
+      : ES(ES), DtorWrapperFn(WrapperFn), DtorFn(DtorFn),
+        ObjDtor(std::move(Dtor)) {}
+  ~ValueCleanup() = default;
+  void operator()(Value &V);
+};
+
+/// \class Value
+/// \brief Represents a dynamically typed value in the REPL.
+///
+/// `Value` provides a type-erased container for runtime values that can be
+/// produced or consumed by the REPL. It supports multiple storage kinds:
+///
+///  - Builtin scalars (int, float, etc.)
+///  - Arrays of `Value`
+///  - Pointers (with optional pointee tracking)
+///  - Strings
+///  - An empty state (`K_None`)
+///
+/// `Value` also integrates with `ValueCleanup`, which holds runtime
+/// destructor logic for objects that require cleanup.
 class REPL_EXTERNAL_VISIBILITY Value final {
 public:
   enum BuiltinKind {
@@ -105,6 +149,7 @@ public:
   };
 
 private:
+  /// Storage for builtin scalar values.
   struct Builtins {
   private:
     BuiltinKind BK = K_Unspecified;
@@ -137,6 +182,7 @@ private:
 #undef X
   };
 
+  /// Represents an array of `Value` elements.
   struct ArrValue {
     std::vector<Value> Elements;
     uint64_t ArrSize;
@@ -147,6 +193,7 @@ private:
     }
   };
 
+  /// Represents a pointer. Holds the address and optionally a pointee `Value`.
   struct PtrValue {
     uint64_t Addr = 0;
     Value *Pointee; // optional for str
@@ -157,6 +204,7 @@ private:
     }
   };
 
+  /// Represents a string value (wrapper over std::string).
   struct StrValue {
     std::string StringBuf;
     StrValue(std::string str) : StringBuf(std::move(str)) {}
@@ -173,11 +221,16 @@ private:
   ValKind VKind = K_None;
   DataType Data;
 
+  /// Optional cleanup action (e.g. call dtor in JIT runtime).
+  std::optional<ValueCleanup> Cleanup = std::nullopt;
+
 public:
   Value() = default;
   explicit Value(QualType Ty, ValKind K) : Ty(Ty), VKind(K) {}
   Value(const Value &RHS);
-  Value(Value &&RHS) : Ty(RHS.Ty), VKind(RHS.VKind), Data(RHS.Data) {
+  Value(Value &&RHS)
+      : Ty(RHS.Ty), VKind(RHS.VKind), Data(RHS.Data),
+        Cleanup(std::move(RHS.Cleanup)) {
     RHS.VKind = K_None;
   }
 
@@ -206,6 +259,7 @@ public:
       destroy();
   }
 
+  // ---- Raw buffer conversion ----
   template <typename T> static T as(std::vector<uint8_t> &raw) {
     T v{};
     // assert(raw.size() >= sizeof(T) && "Buffer too small for type!");
@@ -266,12 +320,14 @@ protected:
   const StrValue &asStr() const { return const_cast<Value *>(this)->asStr(); }
 
 public:
+  // ---- Query helpers ----
   bool hasBuiltinThis(BuiltinKind K) const {
     if (isBuiltin())
       return asBuiltin().getKind() == K;
     return false;
   }
 
+  // ---- String accessors ----
   void setStrVal(const char *buf) {
     assert(isStr() && "Not a Str");
     asStr().StringBuf = buf;
@@ -287,9 +343,10 @@ public:
     return StringRef(asStr().StringBuf);
   }
 
+  // ---- Array accessors ----
   uint64_t getArraySize() const { return asArray().ArrSize; }
 
-  uint64_t getArrayInitializedElts() const { return asArray().ArrSize; }
+  uint64_t getArrayInitializedElts() const { return asArray().Elements.size(); }
 
   Value &getArrayInitializedElt(unsigned I) {
     assert(isArray() && "Invalid accessor");
@@ -301,6 +358,7 @@ public:
     return const_cast<Value *>(this)->getArrayInitializedElt(I);
   }
 
+  // ---- Pointer accessors ----
   bool HasPointee() const {
     assert(isPointer() && "Invalid accessor");
     return !(asPointer().Pointee->isAbsent());
@@ -317,6 +375,7 @@ public:
 
   uint64_t getAddr() const { return asPointer().Addr; }
 
+  // ---- Builtin setters/getters ----
 #define X(type, name)                                                          \
   void set##name(type Val) { asBuiltin().set##name(Val); }                     \
   type get##name() const { return asBuiltin().get##name(); }
@@ -329,10 +388,19 @@ public:
   void print(llvm::raw_ostream &Out, ASTContext &Ctx) const;
   void dump(ASTContext &Ctx) const;
 
-  // ---- clear ----
-  void clear() { destroy(); }
+  // ---- Cleanup & destruction ----
+  void setValueCleanup(ValueCleanup VC) {
+    assert(!Cleanup.has_value());
+    Cleanup.emplace(std::move(VC));
+  }
+  void clear() {
+    if (Cleanup.has_value())
+      (*Cleanup)(*this);
+    destroy();
+  }
 
 private:
+  // ---- Constructors for each kind ----
   void MakeBuiltIns() {
     assert(isAbsent() && "Bad state change");
     new ((void *)(char *)&Data) Builtins(BuiltinKind::K_Unspecified);
@@ -408,6 +476,13 @@ private:
   std::string ArrayToString(const Value &A);
 };
 
+/// \class ValueResultManager
+/// \brief Manages values returned from JIT code.
+///
+/// Each result is registered with a unique ID and its `QualType`.
+/// The JIT code later calls back into the runtime with that ID, and
+/// `deliverResult` uses it to look up the type, read the value from memory,
+/// and attach any destructor cleanup before making it available to the host.
 class ValueResultManager {
 public:
   using ValueId = uint64_t;
@@ -418,9 +493,12 @@ public:
   static std::unique_ptr<ValueResultManager>
   Create(llvm::orc::LLJIT &EE, ASTContext &Ctx, bool IsOutOfProcess = false);
 
-  ValueId registerPendingResult(QualType QT) {
+  ValueId registerPendingResult(QualType QT,
+                                std::optional<ValueCleanup> VC = std::nullopt) {
     ValueId NewID = NextID.fetch_add(1, std::memory_order_relaxed);
     IdToType.insert({NewID, QT});
+    if (VC)
+      IdToValCleanup.insert({NewID, std::move(*VC)});
     return NewID;
   }
 
@@ -439,6 +517,7 @@ private:
   llvm::orc::MemoryAccess &MemAcc;
   Value LastVal;
   llvm::DenseMap<ValueId, clang::QualType> IdToType;
+  llvm::DenseMap<ValueId, ValueCleanup> IdToValCleanup;
 };
 
 } // namespace clang

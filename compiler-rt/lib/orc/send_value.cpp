@@ -7,13 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "common.h"
+#include "debug.h"
 #include "jit_dispatch.h"
 #include "wrapper_function_utils.h"
-#include "debug.h"
 
 using namespace orc_rt;
 
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_SendResultValue_tag)
+
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult __orc_rt_runDtor(char *ArgData,
+                                                               size_t ArgSize) {
+  return WrapperFunction<SPSError(SPSExecutorAddr, SPSExecutorAddr)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr DtorFn, ExecutorAddr This) {
+               DtorFn.toPtr<void (*)(unsigned char *)>()(
+                   This.toPtr<unsigned char *>());
+               return Error::success();
+             })
+      .release();
+}
 
 ORC_RT_INTERFACE void __orc_rt_SendResultValue(uint64_t ResultId, void *V) {
   Error OptErr = Error::success();

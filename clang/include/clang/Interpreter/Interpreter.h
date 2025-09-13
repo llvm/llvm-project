@@ -218,12 +218,6 @@ private:
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
 
-  /// @}
-  /// @name Value and pretty printing support
-  /// @{
-
-  std::string ValueDataToString(const Value &V) const;
-
   llvm::Expected<Expr *> convertExprToValue(Expr *E, bool IsOOP = false);
 
   // When we deallocate clang::Value we need to run the destructor of the type.

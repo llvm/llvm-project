@@ -341,6 +341,9 @@ const char *const Runtimes = R"(
     void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size) {
       __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
     }
+    EXTERN_C void __clang_Interpreter_destroyObj(unsigned char *ptr) {
+      delete[] ptr;
+    }
 #else
     #define EXTERN_C extern
     EXTERN_C void *memcpy(void *restrict dst, const void *restrict src, __SIZE_TYPE__ n);
