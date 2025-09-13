@@ -1192,6 +1192,8 @@ public:
   bool isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                          const MachineOperand &MO) const;
 
+  bool isNeverCoissue(MachineInstr &MI) const;
+
   bool isLiteralOperandLegal(const MCInstrDesc &InstDesc,
                              const MCOperandInfo &OpInfo) const;
 
@@ -1205,7 +1207,6 @@ public:
 
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;
-
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
