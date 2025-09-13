@@ -566,6 +566,9 @@ public:
   bool AtomicFineGrainedMemory = false;
   bool AtomicIgnoreDenormalMode = false;
 
+  /// Name of the execution encoding to convert the internal encoding to.
+  std::string ExecEncoding;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
