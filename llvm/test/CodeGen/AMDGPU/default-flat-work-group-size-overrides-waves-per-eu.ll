@@ -57,5 +57,5 @@ entry:
   ret void
 }
 
-attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
-attributes #1 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1024" }
+attributes #0 = { "amdgpu-waves-per-eu"="1" }
+attributes #1 = { "amdgpu-waves-per-eu"="1" "amdgpu-flat-work-group-size"="1,1024" }
