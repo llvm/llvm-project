@@ -74,6 +74,7 @@ struct Scanner {
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
     LangOpts.RawStringLiterals = true;
+    LangOpts.ScanDeps = true;
     // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }

@@ -2087,7 +2087,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   }
 
   // If we have a digit separator, continue.
-  if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
+  if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23 || LangOpts.ScanDeps)) {
     auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
