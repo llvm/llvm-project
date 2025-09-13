@@ -355,7 +355,8 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   if (!Config.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = IncrementalExecutor::launchExecutor(
-        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize);
+        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize,
+        Config.CustomizeFork);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
