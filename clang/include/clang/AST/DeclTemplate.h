@@ -1874,6 +1874,13 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
   LLVM_PREFERRED_TYPE(bool)
   unsigned StrictPackMatch : 1;
 
+  /// Indicate whether this template was instantiated, and instantiated locally.
+  /// Specifically, this is false if the template has not been instantiated,
+  /// or was intantiated externally and loaded via an AST file. This only tracks
+  /// class template specializations for proper handling of anonymous members.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned InstantiatedLocally : 1;
+
 protected:
   ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
                                   DeclContext *DC, SourceLocation StartLoc,
@@ -1967,6 +1974,10 @@ public:
   bool hasStrictPackMatch() const { return StrictPackMatch; }
 
   void setStrictPackMatch(bool Val) { StrictPackMatch = Val; }
+
+  bool isInstantiatedLocally() { return InstantiatedLocally; }
+
+  void setInstantiatedLocally() { InstantiatedLocally = true; }
 
   /// Get the point of instantiation (if any), or null if none.
   SourceLocation getPointOfInstantiation() const {

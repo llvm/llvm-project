@@ -3699,6 +3699,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
         = dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
     Spec->setTemplateSpecializationKind(TSK);
     Spec->setPointOfInstantiation(PointOfInstantiation);
+    Spec->setInstantiatedLocally();
   }
 
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
