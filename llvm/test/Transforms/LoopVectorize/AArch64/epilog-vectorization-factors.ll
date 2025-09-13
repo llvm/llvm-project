@@ -423,25 +423,29 @@ exit:
 }
 
 ; TODO: Should not try to create dead main vector loop.
-define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
-; CHECK-LABEL: @trip_count_based_on_ptrtoint(
+define void @trip_count_based_on_ptrtoaddr(i64 %x) "target-cpu"="apple-m1" {
+; CHECK-LABEL: @trip_count_based_on_ptrtoaddr(
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[PTR_START:%.*]] = inttoptr i64 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[PTR_START2:%.*]] = ptrtoaddr ptr [[PTR_START]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X]], 40
 ; CHECK-NEXT:    [[PTR_END:%.*]] = inttoptr i64 [[ADD]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[ADD]], [[X]]
+; CHECK-NEXT:    [[PTR_END1:%.*]] = ptrtoaddr ptr [[PTR_END]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[PTR_END1]], [[PTR_START2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[ADD]] to i2
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[X]] to i2
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[PTR_END1]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[PTR_START2]] to i2
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i2 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i2 [[TMP5]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    br i1 true, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp ult i64 [[TMP2]], 16
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]

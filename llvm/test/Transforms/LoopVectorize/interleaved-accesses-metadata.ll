@@ -94,10 +94,10 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @ir_tbaa_different(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[BASE3:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[BASE3:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BASE2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
@@ -188,8 +188,8 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-LABEL: define void @noalias_metadata_from_versioning(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[END:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoint ptr [[BASE]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[BASE2:%.*]] = ptrtoaddr ptr [[BASE]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[BASE2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3

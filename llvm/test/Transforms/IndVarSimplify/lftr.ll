@@ -637,7 +637,7 @@ define void @ptr_non_cmp_exit_test() {
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY29]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr [[IV]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds i8, ptr [[IV]], i64 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[IV]], inttoptr (i64 10 to ptr)
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[IV]], getelementptr (i8, ptr null, i64 add (i64 ptrtoaddr (ptr inttoptr (i64 11 to ptr) to i64), i64 -1))
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY29]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
