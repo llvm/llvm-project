@@ -871,8 +871,13 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
 }
 
-bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APImm) const {
-  if (APImm.isZero() || APImm.isExactlyValue(1.0))
+bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APF) const {
+  [[maybe_unused]] unsigned Size = APF.getSizeInBits(APF.getSemantics());
+  assert((Size == 32 || Size == 64) && "Only support f32 and f64");
+
+  int64_t Imm = APF.bitcastToAPInt().getSExtValue();
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
+  if (Seq.size() <= STI.getMaxBuildIntsCost())
     return false;
   return true;
 }
