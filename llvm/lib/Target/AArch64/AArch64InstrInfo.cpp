@@ -10951,9 +10951,8 @@ static Register cloneInstr(const MachineInstr *MI, unsigned ReplaceOprNum,
           MRI.getRegClass(NewMI->getOperand(0).getReg()));
       NewMI->getOperand(I).setReg(Result);
     } else if (I == ReplaceOprNum) {
-      MRI.constrainRegClass(
-          ReplaceReg,
-          TII->getRegClass(NewMI->getDesc(), I, TRI, *MBB.getParent()));
+      MRI.constrainRegClass(ReplaceReg,
+                            TII->getRegClass(NewMI->getDesc(), I, TRI));
       NewMI->getOperand(I).setReg(ReplaceReg);
     }
   }
