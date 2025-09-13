@@ -131,6 +131,8 @@ public:
 
   void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override;
+
   /// List separate oso files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
