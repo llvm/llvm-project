@@ -2551,6 +2551,15 @@ LogicalResult gpu::SubgroupBroadcastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GPU_SubgroupUniformOp
+//===----------------------------------------------------------------------===//
+
+void gpu::SubgroupUniformOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), argRanges.front());
+}
+
+//===----------------------------------------------------------------------===//
 // GPU KernelMetadataAttr
 //===----------------------------------------------------------------------===//
 
