@@ -195,6 +195,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  if (F.hasFnAttribute("amdgpu-relaxed-tbuffer-oob-mod"))
+    setRelaxedTBufferOOBMode(true);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
@@ -742,6 +745,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
+      RelaxedTBufferOOBMode(MFI.isRelaxedTBufferOOBMode()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
@@ -791,6 +795,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  RelaxedTBufferOOBMode = YamlMFI.RelaxedTBufferOOBMode;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

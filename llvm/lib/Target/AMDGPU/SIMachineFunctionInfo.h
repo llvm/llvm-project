@@ -301,6 +301,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
+  bool RelaxedTBufferOOBMode = false;
 
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
@@ -362,6 +363,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
+    YamlIO.mapOptional("RelaxedTBufferOOBMode", MFI.RelaxedTBufferOOBMode,
+                       false);
   }
 };
 
@@ -524,6 +527,9 @@ private:
   // Maximum number of dwords that can be clusterred during instruction
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
+
+  // Enable relaxed TBUFFER out-of-bounds mode. Default is false.
+  bool RelaxedTBufferOOBMode = false;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -1207,6 +1213,11 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  bool isRelaxedTBufferOOBMode() const { return RelaxedTBufferOOBMode; }
+  void setRelaxedTBufferOOBMode(bool Enabled) {
+    RelaxedTBufferOOBMode = Enabled;
+  }
 };
 
 } // end namespace llvm
