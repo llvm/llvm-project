@@ -743,15 +743,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
     if (!Subtarget->hasStdExtF() &&
         (Size == 32 || (Size == 64 && Subtarget->is64Bit()))) {
-      // No fp extension, so we need to go through GPRs.
-      Register GPRReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-      if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
-        return false;
-
-      unsigned Opcode =
-          (Subtarget->is64Bit() && Size == 32) ? RISCV::ADDW : RISCV::ADD;
-      auto MV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg, Register(RISCV::X0)});
-      if (!MV.constrainAllUses(TII, TRI, RBI))
+      if (!materializeImm(DstReg, Imm.getSExtValue(), MIB))
         return false;
 
       MI.eraseFromParent();
