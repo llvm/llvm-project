@@ -3885,7 +3885,7 @@ def Floor : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Fma : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["fma"];
-  let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "T(T, T, T)";
   let AddBuiltinPrefixedAlias = 1;
 }
