@@ -1170,15 +1170,23 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
 }
 
 bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
-  const CXXRecordDecl *RD = FI.getReturnType()->getAsCXXRecordDecl();
-  if (!RD)
-    return false;
+  bool isIndirectReturn = false;
+  if (const CXXRecordDecl *RD = FI.getReturnType()->getAsCXXRecordDecl()) {
+    bool isTrivialForABI = RD->canPassInRegisters() &&
+                           isTrivialForMSVC(RD, FI.getReturnType(), CGM);
 
-  bool isTrivialForABI = RD->canPassInRegisters() &&
-                         isTrivialForMSVC(RD, FI.getReturnType(), CGM);
-
-  // MSVC always returns structs indirectly from C++ instance methods.
-  bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
+    // MSVC always returns structs indirectly from C++ instance methods.
+    isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
+  } else if (isa<VectorType>(FI.getReturnType())) {
+    // On x86, MSVC seems to only return vector types indirectly from non-
+    // vectorcall C++ instance methods.
+    isIndirectReturn =
+        CGM.getTarget().getTriple().isX86() && FI.isInstanceMethod() &&
+        FI.getCallingConvention() != llvm::CallingConv::X86_VectorCall &&
+        // Clang <= 21.0 did not do this.
+        getContext().getLangOpts().getClangABICompat() >
+            LangOptions::ClangABI::Ver21;
+  }
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());

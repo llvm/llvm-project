@@ -90,6 +90,12 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed Microsoft calling convention to return vector types from C++ member
+  functions indirectly. This change resolves incompatibilities with code
+  compiled by MSVC but will introduce incompatibilities with code compiled by
+  Clang 21 and earlier versions, unless the ``-fclang-abi-compat=21`` option is
+  used. (#GH104)
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 - How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
