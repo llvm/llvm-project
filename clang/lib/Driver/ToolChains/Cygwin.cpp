@@ -207,6 +207,13 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-Bdynamic");
 
   CmdArgs.push_back("--dll-search-prefix=cyg");
+  if (Args.hasArg(options::OPT_rdynamic))
+    CmdArgs.push_back("--export-all-symbols");
+  if (!Args.hasArg(options::OPT_shared) && !Args.hasArg(options::OPT_mdll)) {
+    if (ToolChain.getTriple().isArch32Bit())
+      CmdArgs.push_back("--large-address-aware");
+    CmdArgs.push_back("--tsaware");
+  }
 
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
@@ -283,7 +290,7 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         StringRef(Arg) == "--disable-nxcompat")
       saw_nxcompat = true;
   }
-  if (!saw_high_entropy_va)
+  if (!saw_high_entropy_va && ToolChain.getTriple().isArch64Bit())
     CmdArgs.push_back("--disable-high-entropy-va");
   if (!saw_nxcompat)
     CmdArgs.push_back("--disable-nxcompat");
