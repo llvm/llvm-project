@@ -233,3 +233,25 @@ llvm.func @ptr_add_vector_base_scalar_offset(%ptrs: vector<4x!ptr.ptr<#llvm.addr
   %res = ptr.ptr_add %ptrs, %offset : vector<4x!ptr.ptr<#llvm.address_space<0>>>, i32
   llvm.return %res : vector<4x!ptr.ptr<#llvm.address_space<0>>>
 }
+
+// CHECK-LABEL: declare ptr @nvvm_ptr_address_space(ptr addrspace(1), ptr addrspace(3), ptr addrspace(4), ptr addrspace(5), ptr addrspace(6), ptr addrspace(7))
+llvm.func @nvvm_ptr_address_space(
+    !ptr.ptr<#nvvm.memory_space<global>>,
+    !ptr.ptr<#nvvm.memory_space<shared>>,
+    !ptr.ptr<#nvvm.memory_space<constant>>,
+    !ptr.ptr<#nvvm.memory_space<local>>,
+    !ptr.ptr<#nvvm.memory_space<tensor>>,
+    !ptr.ptr<#nvvm.memory_space<shared_cluster>>
+  ) -> !ptr.ptr<#nvvm.memory_space<generic>>
+
+// CHECK-LABEL: define void @llvm_ops_with_ptr_nvvm_values
+// CHECK-SAME:   (ptr %[[ARG:.*]]) {
+// CHECK-NEXT:   %[[V0:.*]] = load ptr addrspace(1), ptr %[[ARG]], align 8
+// CHECK-NEXT:   store ptr addrspace(1) %[[V0]], ptr %[[ARG]], align 8
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+llvm.func @llvm_ops_with_ptr_nvvm_values(%arg0: !llvm.ptr) {
+  %1 = llvm.load %arg0 : !llvm.ptr -> !ptr.ptr<#nvvm.memory_space<global>>
+  llvm.store %1, %arg0 : !ptr.ptr<#nvvm.memory_space<global>>, !llvm.ptr
+  llvm.return
+}
