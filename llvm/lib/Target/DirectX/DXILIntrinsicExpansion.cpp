@@ -213,6 +213,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_nclamp:
   case Intrinsic::dx_degrees:
   case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_fdot:
@@ -1022,6 +1023,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandDegreesIntrinsic(Orig);
     break;
   case Intrinsic::dx_isinf:
+    Result = expand16BitIsInf(Orig);
+    break;
+  case Intrinsic::dx_isnan:
     Result = expand16BitIsInf(Orig);
     break;
   case Intrinsic::dx_lerp:
