@@ -16,11 +16,14 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::KernArgPreload;
 
 #define DEBUG_TYPE "amdgpu-argument-reg-usage-info"
 
 INITIALIZE_PASS(AMDGPUArgumentUsageInfo, DEBUG_TYPE,
                 "Argument Register Usage Information Storage", false, true)
+
+constexpr HiddenArgInfo HiddenArgUtils::HiddenArgs[END_HIDDEN_ARGS];
 
 void ArgDescriptor::print(raw_ostream &OS,
                           const TargetRegisterInfo *TRI) const {
@@ -182,6 +185,31 @@ AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
   AI.WorkItemIDY = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask << 10);
   AI.WorkItemIDZ = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask << 20);
   return AI;
+}
+
+SmallVector<const KernArgPreloadDescriptor *, 4>
+AMDGPUFunctionArgInfo::getPreloadDescriptorsForArgIdx(unsigned ArgIdx) const {
+  SmallVector<const KernArgPreloadDescriptor *, 4> Results;
+  for (unsigned PartIdx = 0; PartIdx < PreloadKernArgs.size(); ++PartIdx) {
+    const auto &Desc = PreloadKernArgs[PartIdx];
+    if (Desc.OrigArgIdx == ArgIdx)
+      Results.push_back(&Desc);
+  }
+
+  return Results;
+}
+
+const KernArgPreloadDescriptor *
+AMDGPUFunctionArgInfo::getHiddenArgPreloadDescriptor(HiddenArg HA) const {
+  assert(HA < END_HIDDEN_ARGS);
+
+  auto HiddenArgIt = PreloadHiddenArgsIndexMap.find(HA);
+  if (HiddenArgIt == PreloadHiddenArgsIndexMap.end())
+    return nullptr;
+
+  const KernArgPreloadDescriptor &Desc = PreloadKernArgs[HiddenArgIt->second];
+  assert(Desc.IsValid && "Hidden argument preload descriptor not valid.");
+  return &Desc;
 }
 
 const AMDGPUFunctionArgInfo &
