@@ -86,3 +86,15 @@
 // COMPILE_STDCXX: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
 // COMPILE_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi"
 // COMPILE_STDCXX: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
+
+// RUN: %clangxx -### --target=wasm32-wasi --stdlib=stl %s 2>&1 \
+// RUN:     --sysroot=%S \
+// RUN:   | FileCheck -check-prefix=COMPILE_STL %s
+// COMPILE_STL: "-cc1"
+// COMPILE_STL: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
+// COMPILE_STL: "-isysroot" "[[SYSROOT:[^"]+]]"
+// COMPILE_STL: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi/c++/stl"
+// COMPILE_STL: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/stl"
+// COMPILE_STL: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
+// COMPILE_STL: "-internal-isystem" "[[SYSROOT:[^"]+]]/include/wasm32-wasi"
+// COMPILE_STL: "-internal-isystem" "[[SYSROOT:[^"]+]]/include"
