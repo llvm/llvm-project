@@ -103,6 +103,7 @@ getPlatformBackend(ol_platform_handle_t PlatformHandle) noexcept {
 
 struct Device {
   ol_device_handle_t Handle;
+  ol_platform_handle_t PlatformHandle;
   std::string Name;
   std::string Platform;
   ol_platform_backend_t Backend;
@@ -124,7 +125,7 @@ const std::vector<Device> &getDevices() {
             auto Platform = getPlatformName(PlatformHandle);
 
             static_cast<std::vector<Device> *>(Data)->push_back(
-                {DeviceHandle, Name, Platform, Backend});
+                {DeviceHandle, PlatformHandle, Name, Platform, Backend});
           }
 
           return true;
@@ -175,6 +176,7 @@ DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
                 llvm::Twine(Devices.size()));
 
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  PlatformHandle = Devices[GlobalDeviceId].PlatformHandle;
 }
 
 DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
@@ -210,6 +212,7 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
 
   GlobalDeviceId = *FoundGlobalDeviceId;
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  PlatformHandle = Devices[GlobalDeviceId].PlatformHandle;
 }
 
 [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>

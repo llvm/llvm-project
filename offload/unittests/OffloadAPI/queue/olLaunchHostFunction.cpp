@@ -93,7 +93,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   }
 
   ASSERT_SUCCESS(olDestroyQueue(Queue));
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Platform, Mem));
 }
 
 TEST_P(olLaunchHostFunctionTest, InvalidNullCallback) {

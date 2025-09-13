@@ -137,13 +137,12 @@ struct OffloadDeviceTest
     Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
+
+    ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
+                                   sizeof(ol_platform_handle_t), &Platform));
   }
 
   ol_platform_backend_t getPlatformBackend() const {
-    ol_platform_handle_t Platform = nullptr;
-    if (olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
-                        sizeof(ol_platform_handle_t), &Platform))
-      return OL_PLATFORM_BACKEND_UNKNOWN;
     ol_platform_backend_t Backend;
     if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                           sizeof(ol_platform_backend_t), &Backend))
@@ -151,6 +150,7 @@ struct OffloadDeviceTest
     return Backend;
   }
 
+  ol_platform_handle_t Platform = nullptr;
   ol_device_handle_t Device = nullptr;
 };
 

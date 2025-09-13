@@ -63,7 +63,7 @@ public:
     detail::allocManagedMemory(DeviceHandle, Size * sizeof(T), &UntypedAddress);
     T *TypedAddress = static_cast<T *>(UntypedAddress);
 
-    return ManagedBuffer<T>(TypedAddress, Size);
+    return ManagedBuffer<T>(PlatformHandle, TypedAddress, Size);
   }
 
   [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
@@ -131,6 +131,7 @@ private:
 
   std::size_t GlobalDeviceId;
   ol_device_handle_t DeviceHandle;
+  ol_platform_handle_t PlatformHandle;
 };
 } // namespace mathtest
 

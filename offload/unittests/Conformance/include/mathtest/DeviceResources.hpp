@@ -29,7 +29,7 @@ class DeviceContext;
 
 namespace detail {
 
-void freeDeviceMemory(void *Address) noexcept;
+void freeDeviceMemory(ol_platform_handle_t Platform, void *Address) noexcept;
 } // namespace detail
 
 //===----------------------------------------------------------------------===//
@@ -40,14 +40,15 @@ template <typename T> class [[nodiscard]] ManagedBuffer {
 public:
   ~ManagedBuffer() noexcept {
     if (Address)
-      detail::freeDeviceMemory(Address);
+      detail::freeDeviceMemory(Platform, Address);
   }
 
   ManagedBuffer(const ManagedBuffer &) = delete;
   ManagedBuffer &operator=(const ManagedBuffer &) = delete;
 
   ManagedBuffer(ManagedBuffer &&Other) noexcept
-      : Address(Other.Address), Size(Other.Size) {
+      : Platform(Other.Platform), Address(Other.Address), Size(Other.Size) {
+    Other.Platform = nullptr;
     Other.Address = nullptr;
     Other.Size = 0;
   }
@@ -57,11 +58,13 @@ public:
       return *this;
 
     if (Address)
-      detail::freeDeviceMemory(Address);
+      detail::freeDeviceMemory(Platform, Address);
 
+    Platform = Other.Platform;
     Address = Other.Address;
     Size = Other.Size;
 
+    Other.Platform = nullptr;
     Other.Address = nullptr;
     Other.Size = 0;
 
@@ -85,9 +88,11 @@ public:
 private:
   friend class DeviceContext;
 
-  explicit ManagedBuffer(T *Address, std::size_t Size) noexcept
-      : Address(Address), Size(Size) {}
+  explicit ManagedBuffer(ol_platform_handle_t Platform, T *Address,
+                         std::size_t Size) noexcept
+      : Platform(Platform), Address(Address), Size(Size) {}
 
+  ol_platform_handle_t Platform = nullptr;
   T *Address = nullptr;
   std::size_t Size = 0;
 };
