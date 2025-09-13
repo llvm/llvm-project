@@ -1213,16 +1213,6 @@ public:
     VisitTypeWithKeyword(T);
   }
 
-  void VisitDependentTemplateSpecializationType(
-      const DependentTemplateSpecializationType *T) {
-    Hash.AddDependentTemplateName(T->getDependentTemplateName());
-    ID.AddInteger(T->template_arguments().size());
-    for (const auto &TA : T->template_arguments()) {
-      Hash.AddTemplateArgument(TA);
-    }
-    VisitTypeWithKeyword(T);
-  }
-
   void VisitUnaryTransformType(const UnaryTransformType *T) {
     AddQualType(T->getUnderlyingType());
     AddQualType(T->getBaseType());

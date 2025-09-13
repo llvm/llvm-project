@@ -26,7 +26,6 @@ define amdgpu_kernel void @test_waitcnt(ptr addrspace(1) %global_buffer, ptr add
 ; CHECK-NEXT:    ds_write_b32 v1, v3
 ; CHECK-NEXT:    ds_write_b32 v2, v3
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ds_read_b32 v1, v1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_dword v0, v1, s[0:1] offset:16

@@ -170,7 +170,8 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
     if (!sliceAttr || sliceAttr.getRank() != 1)
       return failure();
 
-    std::optional<SmallVector<int64_t>> sgShape = sliceAttr.getSgDataAsInt();
+    std::optional<SmallVector<int64_t>> sgShape =
+        sliceAttr.getEffectiveSgDataAsInt();
     if (!sgShape)
       return failure();
 

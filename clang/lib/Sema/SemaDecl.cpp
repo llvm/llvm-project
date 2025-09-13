@@ -6392,12 +6392,6 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       NextTL =
           TL.castAs<DependentNameTypeLoc>().getQualifierLoc().getAsTypeLoc();
       break;
-    case TypeLoc::DependentTemplateSpecialization: {
-      auto TST = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-      TemplateKeywordLoc = TST.getTemplateKeywordLoc();
-      NextTL = TST.getQualifierLoc().getAsTypeLoc();
-      break;
-    }
     default:
       break;
     }

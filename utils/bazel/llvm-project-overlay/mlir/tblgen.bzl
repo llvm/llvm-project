@@ -506,6 +506,7 @@ def gentbl_sharded_ops(
       includes: See gentbl_rule.includes
       deps: See gentbl_rule.deps
       strip_include_prefix: Attribute to pass through to cc_library.
+      **kwargs: Passed through to all generated rules.
     """
     cc_lib_name = name + "__gentbl_cc_lib"
     gentbl_cc_library(

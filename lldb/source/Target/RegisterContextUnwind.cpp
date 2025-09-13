@@ -2039,8 +2039,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
             reg_info, cfa_reg_contents, reg_info->byte_size, reg_value);
         if (error.Success()) {
           address = reg_value.GetAsUInt64();
-          if (abi_sp)
-            address = abi_sp->FixCodeAddress(address);
           UnwindLogMsg(
               "CFA value via dereferencing reg %s (%d): reg has val 0x%" PRIx64
               ", CFA value is 0x%" PRIx64,
@@ -2062,8 +2060,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
     RegisterNumber cfa_reg(m_thread, row_register_kind,
                            fa.GetRegisterNumber());
     if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
-      if (abi_sp)
-        cfa_reg_contents = abi_sp->FixDataAddress(cfa_reg_contents);
       if (cfa_reg_contents == LLDB_INVALID_ADDRESS || cfa_reg_contents == 0 ||
           cfa_reg_contents == 1) {
         UnwindLogMsg(
@@ -2100,9 +2096,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
         dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr);
     if (result) {
       address = result->GetScalar().ULongLong();
-      if (ABISP abi_sp = m_thread.GetProcess()->GetABI())
-        address = abi_sp->FixCodeAddress(address);
-
       UnwindLogMsg("CFA value set by DWARF expression is 0x%" PRIx64,
                    address);
       return true;
@@ -2143,7 +2136,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
   }
   case UnwindPlan::Row::FAValue::isConstant: {
     address = fa.GetConstant();
-    address = m_thread.GetProcess()->FixDataAddress(address);
     UnwindLogMsg("CFA value set by constant is 0x%" PRIx64, address);
     return true;
   }

@@ -350,6 +350,8 @@ public:
     const TemplateDecl *Decl =
         Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
             /*IgnoreDeduced=*/true);
+    if (!Decl)
+      return true;
 
     if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
       if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())

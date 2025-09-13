@@ -27,6 +27,10 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
+  let options = [Option<
+    "enableSGReductions", "enable-sg-reductions", "bool",
+    /*default=*/"true",
+    "Enable subgroup reductions using subgroup shuffles.">];
 }
 
 def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {

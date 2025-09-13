@@ -1834,19 +1834,6 @@ bool CursorVisitor::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   return VisitNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
 
-bool CursorVisitor::VisitDependentTemplateSpecializationTypeLoc(
-    DependentTemplateSpecializationTypeLoc TL) {
-  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
-    return true;
-
-  // Visit the template arguments.
-  for (unsigned I = 0, N = TL.getNumArgs(); I != N; ++I)
-    if (VisitTemplateArgumentLoc(TL.getArgLoc(I)))
-      return true;
-
-  return false;
-}
-
 bool CursorVisitor::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   return Visit(TL.getPatternLoc());
 }
