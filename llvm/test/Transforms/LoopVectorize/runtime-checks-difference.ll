@@ -388,28 +388,24 @@ define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, pt
 ; CHECK-LABEL: define void @use_diff_checks_when_retrying_with_rt_checks(
 ; CHECK-SAME: i64 [[OFF:%.*]], ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
 ; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[OFF]], -8
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[DST1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP3]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[SRC2]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], [[DST1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], [[TMP1]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP6]], 32
-; CHECK-NEXT:    [[CONFLICT_RDX5:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP7]], 32
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 8000
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 8000
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 8008
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[CONFLICT_RDX5:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX5]], [[DIFF_CHECK6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[DST1]], -8
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP9]], 32
+; CHECK-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;
