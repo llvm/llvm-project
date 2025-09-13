@@ -71,7 +71,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 define void @test2(ptr nocapture readonly %d) {
 ; CHECK-LABEL: define void @test2(
 ; CHECK-SAME: ptr readonly captures(none) [[D:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_DATA:%.*]], ptr [[D]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B]], align 8
 ; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[TMP0]] to i64
@@ -108,10 +108,9 @@ define void @test2(ptr nocapture readonly %d) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX]], align 4
