@@ -1132,9 +1132,18 @@ void SIFrameLowering::emitCSRSpillRestores(
     RestoreWWMRegisters(WWMCalleeSavedRegs);
 
     // The original EXEC is the first operand of the return instruction.
-    const MachineInstr &Return = MBB.instr_back();
-    assert(Return.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN &&
-           "Unexpected return inst");
+    MachineInstr &Return = MBB.instr_back();
+    unsigned Opcode = Return.getOpcode();
+    switch (Opcode) {
+    case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
+      Opcode = AMDGPU::SI_RETURN;
+      break;
+    case AMDGPU::SI_TCRETURN_GFX_WholeWave:
+      Opcode = AMDGPU::SI_TCRETURN_GFX;
+      break;
+    default:
+      llvm_unreachable("Unexpected return inst");
+    }
     Register OrigExec = Return.getOperand(0).getReg();
 
     if (!WWMScratchRegs.empty()) {
@@ -1148,6 +1157,11 @@ void SIFrameLowering::emitCSRSpillRestores(
     // Restore original EXEC.
     unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addReg(OrigExec);
+
+    // Drop the first operand and update the opcode.
+    Return.removeOperand(0);
+    Return.setDesc(TII->get(Opcode));
+
     return;
   }
 

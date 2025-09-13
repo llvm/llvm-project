@@ -845,9 +845,16 @@ enum AttrName { Target, TargetClones, TargetVersion };
 
 void inferNoReturnAttr(Sema &S, const Decl *D);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
@@ -11392,10 +11399,6 @@ public:
                                        SourceLocation NameLoc,
                                        IdentifierInfo *&II);
 
-  bool resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
-                                        SourceLocation NameLoc,
-                                        bool Diagnose = true);
-
   /// Determine whether a particular identifier might be the name in a C++1z
   /// deduction-guide declaration.
   bool isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
@@ -11636,7 +11639,8 @@ public:
   QualType CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
                                TemplateName Template,
                                SourceLocation TemplateLoc,
-                               TemplateArgumentListInfo &TemplateArgs);
+                               TemplateArgumentListInfo &TemplateArgs,
+                               Scope *Scope, bool ForNestedNameSpecifier);
 
   TypeResult
   ActOnTemplateIdType(Scope *S, ElaboratedTypeKeyword ElaboratedKeyword,
@@ -11668,7 +11672,8 @@ public:
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
-                                const TemplateArgumentListInfo &TemplateArgs);
+                                const TemplateArgumentListInfo &TemplateArgs,
+                                bool SetWrittenArgs);
 
   /// Form a reference to the specialization of the given variable template
   /// corresponding to the specified argument list, or a null-but-valid result
@@ -14028,7 +14033,6 @@ public:
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList *PartialSpecArgs,
-      const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
       LateInstantiatedAttrVec *LateAttrs = nullptr,

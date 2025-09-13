@@ -80,8 +80,9 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   // KIMM64
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   uint64_t Imm = MI->getOperand(OpNo).getImm();
-  printLiteral64(Imm, STI, O, /*IsFP=*/true);
+  printLiteral64(Desc, Imm, STI, O, /*IsFP=*/true);
 }
 
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
@@ -323,6 +324,54 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
+// \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
+// \p Reg itself otherwise.
+static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (Idx < 0x100)
+    return Reg;
+
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  return RC->getRegister(Idx % 0x100);
+}
+
+// Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
+static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
+                               const MCInstrDesc &Desc,
+                               const MCRegisterInfo &MRI,
+                               const AMDGPUMCInstrAnalysis &MIA) {
+  unsigned VgprMSBs = MIA.getVgprMSBs();
+  if (!VgprMSBs)
+    return Reg;
+
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  if (!(Enc & AMDGPU::HWEncoding::IS_VGPR))
+    return Reg;
+
+  auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);
+  if (!Ops.first)
+    return Reg;
+  unsigned Opc = Desc.getOpcode();
+  unsigned I;
+  for (I = 0; I < 4; ++I) {
+    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
+      break;
+    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
+      break;
+  }
+  if (I == 4)
+    return Reg;
+  unsigned OpMSBs = (VgprMSBs >> (I * 2)) & 3;
+  if (!OpMSBs)
+    return Reg;
+  if (MCRegister NewReg = AMDGPU::getVGPRWithMSBs(Reg, OpMSBs, MRI))
+    return NewReg;
+  return Reg;
+}
+
 void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
@@ -336,7 +385,20 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
   }
 #endif
 
-  O << getRegisterName(Reg);
+  unsigned PrintReg = getRegForPrinting(Reg, MRI);
+  O << getRegisterName(PrintReg);
+
+  if (PrintReg != Reg.id())
+    O << " /*" << getRegisterName(Reg) << "*/";
+}
+
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
+                                        unsigned OpNo, raw_ostream &O,
+                                        const MCRegisterInfo &MRI) {
+  if (MIA)
+    Reg = getRegFromMIA(Reg, OpNo, MII.get(Opc), MRI,
+                        *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
+  printRegOperand(Reg, O, MRI);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
@@ -590,7 +652,7 @@ void AMDGPUInstPrinter::printImmediate32(uint32_t Imm,
   O << formatHex(static_cast<uint64_t>(Imm));
 }
 
-void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
+void AMDGPUInstPrinter::printImmediate64(const MCInstrDesc &Desc, uint64_t Imm,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O, bool IsFP) {
   int64_t SImm = static_cast<int64_t>(Imm);
@@ -621,20 +683,23 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
   else
-    printLiteral64(Imm, STI, O, IsFP);
+    printLiteral64(Desc, Imm, STI, O, IsFP);
 }
 
-void AMDGPUInstPrinter::printLiteral64(uint64_t Imm, const MCSubtargetInfo &STI,
+void AMDGPUInstPrinter::printLiteral64(const MCInstrDesc &Desc, uint64_t Imm,
+                                       const MCSubtargetInfo &STI,
                                        raw_ostream &O, bool IsFP) {
   // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
+  bool CanUse64BitLiterals =
+      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
   if (IsFP) {
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
+    if (CanUse64BitLiterals && Lo_32(Imm))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
   } else {
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-        (!isInt<32>(Imm) || !isUInt<32>(Imm)))
+    if (CanUse64BitLiterals && (!isInt<32>(Imm) || !isUInt<32>(Imm)))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Imm));
@@ -718,7 +783,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
 
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    printRegOperand(Op.getReg(), O, MRI);
+    printRegOperand(Op.getReg(), MI->getOpcode(), OpNo, O, MRI);
 
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
@@ -749,12 +814,12 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-      printImmediate64(Op.getImm(), STI, O, false);
+      printImmediate64(Desc, Op.getImm(), STI, O, false);
       break;
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-      printImmediate64(Op.getImm(), STI, O, true);
+      printImmediate64(Desc, Op.getImm(), STI, O, true);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -1129,7 +1194,7 @@ void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
     OpNo = OpNo - N + N / 2;
 
   if (En & (1 << N))
-    printRegOperand(MI->getOperand(OpNo).getReg(), O, MRI);
+    printRegOperand(MI->getOperand(OpNo).getReg(), Opc, OpNo, O, MRI);
   else
     O << "off";
 }

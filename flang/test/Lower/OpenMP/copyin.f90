@@ -224,26 +224,23 @@ end
 
 ! CHECK-LABEL:   func.func @_QPcommon_1() {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<4xi8>>
-! CHECK:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] storage(%[[VAL_0]][0]) {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = omp.threadprivate %[[VAL_0]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
-! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_8]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:           %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_6]], %[[VAL_8]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] storage(%[[VAL_6]][0]) {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_12:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFcommon_1Ey"}
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFcommon_1Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_14:.*]] = omp.threadprivate %[[VAL_0]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
-! CHECK:             %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_17:.*]] = fir.coordinate_of %[[VAL_15]], %[[VAL_16]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_17:.*]] = fir.coordinate_of %[[VAL_14]], %[[VAL_16]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] storage(%[[VAL_14]][0]) {uniq_name = "_QFcommon_1Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_20]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
@@ -286,35 +283,30 @@ end subroutine
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcommon_2Ei"}
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@d_) : !fir.ref<!fir.array<8xi8>>
-! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_4]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] storage(%[[VAL_2]][0]) {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_8:.*]] = omp.threadprivate %[[VAL_2]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
-! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_9]], %[[VAL_10]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:           %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_8]], %[[VAL_10]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] storage(%[[VAL_8]][0]) {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 4 : index
-! CHECK:           %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_14]], %[[VAL_15]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:           %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_8]], %[[VAL_15]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] storage(%[[VAL_8]][4]) {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
 
 ! CHECK:             %[[VAL_21:.*]] = omp.threadprivate %[[VAL_2]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
-! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_23]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_21]], %[[VAL_23]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] storage(%[[VAL_21]][0]) {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_28:.*]] = arith.constant 4 : index
-! CHECK:             %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_28]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_21]], %[[VAL_28]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_30]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_30]] storage(%[[VAL_21]][4]) {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_32]] to %[[VAL_26]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
@@ -484,21 +476,18 @@ end subroutine
 ! [...]
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_22:.*]] = omp.threadprivate %[[VAL_0:.*]] : !fir.ref<!fir.array<32xi8>> -> !fir.ref<!fir.array<32xi8>>
-! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22:.*]] : (!fir.ref<!fir.array<32xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:             %[[VAL_24:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_25:.*]] = fir.coordinate_of %[[VAL_23:.*]], %[[VAL_24:.*]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_25:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_24:.*]] : (!fir.ref<!fir.array<32xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_25:.*]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_26:.*]] {uniq_name = "_QFcommon_3Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_28:.*]] = fir.convert %[[VAL_22:.*]] : (!fir.ref<!fir.array<32xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_26:.*]] storage(%[[VAL_22]][0]) {uniq_name = "_QFcommon_3Ex"} : (!fir.ref<i32>, !fir.ref<!fir.array<32xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_29:.*]] = arith.constant 4 : index
-! CHECK:             %[[VAL_30:.*]] = fir.coordinate_of %[[VAL_28:.*]], %[[VAL_29:.*]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_30:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_29:.*]] : (!fir.ref<!fir.array<32xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30:.*]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_32:.*]]:2 = hlfir.declare %[[VAL_31:.*]] {uniq_name = "_QFcommon_3Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_22:.*]] : (!fir.ref<!fir.array<32xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_32:.*]]:2 = hlfir.declare %[[VAL_31:.*]] storage(%[[VAL_22]][4]) {uniq_name = "_QFcommon_3Ey"} : (!fir.ref<i32>, !fir.ref<!fir.array<32xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_34:.*]] = arith.constant 8 : index
-! CHECK:             %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_33:.*]], %[[VAL_34:.*]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_34:.*]] : (!fir.ref<!fir.array<32xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_36:.*]] = fir.convert %[[VAL_35:.*]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:             %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36:.*]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFcommon_3Earr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:             %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36:.*]] storage(%[[VAL_22]][8]) {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFcommon_3Earr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.array<32xi8>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:             %[[VAL_38:.*]] = fir.load %[[VAL_16:.*]]#0 : !fir.ref<i32>
 ! CHECK:             hlfir.assign %[[VAL_38:.*]] to %[[VAL_27:.*]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[VAL_39:.*]] = fir.load %[[VAL_21:.*]]#0 : !fir.ref<i32>
