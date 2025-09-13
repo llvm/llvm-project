@@ -197,9 +197,10 @@ constexpr ::llvm::StringRef strip_quotes(const char *Str) {
 }
 
 /// Fail compilation if DEBUG_TYPE is not defined.
-/// This is a workaround for GCC <=12 which does not support static_assert in
-/// templated constexpr functions.
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 12
+/// This is a workaround for GCC <=12 and clang <=16 which do not support
+/// static_assert in templated constexpr functions.
+#if (defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 12) ||            \
+    (defined(__clang__) && __clang_major__ <= 16)
 #define MISSING_DEBUG_TYPE()                                                   \
   extern void missing_DEBUG_TYPE(void);                                        \
   missing_DEBUG_TYPE();
