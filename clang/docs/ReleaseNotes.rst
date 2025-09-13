@@ -288,6 +288,8 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
