@@ -27572,6 +27572,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ false))
       return R;
     return performFlagSettingCombine(N, DCI, AArch64ISD::SBC);
+  case AArch64ISD::ADDS:
+    return performFlagSettingCombine(N, DCI, ISD::ADD);
+  case AArch64ISD::SUBS:
+    return performFlagSettingCombine(N, DCI, ISD::SUB);
   case AArch64ISD::BICi: {
     APInt DemandedBits =
         APInt::getAllOnes(N->getValueType(0).getScalarSizeInBits());
