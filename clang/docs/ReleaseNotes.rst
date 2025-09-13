@@ -288,6 +288,19 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
