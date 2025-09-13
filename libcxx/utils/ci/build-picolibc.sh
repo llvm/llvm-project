@@ -78,7 +78,7 @@ rm -rf "${picolibc_source_dir}/picolibc-${picolibc_commit}"
 
 cat <<EOF > "${picolibc_build_dir}/meson-cross-build.txt"
 [binaries]
-c = ['${CC:-cc}', '--target=${target}', '-mfloat-abi=soft', '-nostdlib']
+c = ['${CC:-cc}', '--target=${target}', '-mfloat-abi=soft', '-nostdlib', '-gdwarf-4']
 ar = 'llvm-ar'
 as = 'llvm-as'
 ld = 'lld'
