@@ -35,3 +35,4 @@ RUN: printf '\000\000\000\000' >> %t_header.cgdata
 RUN: printf '\040\000\000\000\000\000\000\000' >> %t_header.cgdata
 RUN: printf '\040\000\000\000\000\000\000\000' >> %t_header.cgdata
 RUN: diff %t_header.cgdata %t_emptyheader.cgdata
+RUN: echo %{readfile:/tmp/test} > /tmp/test
