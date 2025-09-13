@@ -139,6 +139,8 @@ Improvements to clang-tidy
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
+- Removed `clang-analyzer-*` check from default checks in :program:`clang-tidy`.
+
 New checks
 ^^^^^^^^^^
 
