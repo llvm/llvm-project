@@ -1024,11 +1024,6 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
   }
-
-  TargetInfo::CallingConvKind
-  getCallingConvKind(bool ClangABICompat4) const override {
-    return CCK_MicrosoftWin64;
-  }
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinX86_64TargetInfo
