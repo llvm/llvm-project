@@ -8551,7 +8551,7 @@ struct ScopedASTColor {
   ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
 
   clang::ASTContext &ast;
-  bool old_show_colors;
+  const bool old_show_colors;
 };
 } // namespace
 
