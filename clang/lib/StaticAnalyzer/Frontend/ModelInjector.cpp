@@ -84,8 +84,8 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   // behavior for models
   CompilerInstance Instance(std::move(Invocation),
                             CI.getPCHContainerOperations());
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   Instance.createDiagnostics(
-      CI.getVirtualFileSystem(),
       new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
       /*ShouldOwnClient=*/true);
 
