@@ -195,6 +195,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
