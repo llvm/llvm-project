@@ -311,6 +311,10 @@ bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
   bool FromLegal = FromWidth == 1 || DL.isLegalInteger(FromWidth);
   bool ToLegal = ToWidth == 1 || DL.isLegalInteger(ToWidth);
 
+  // For 8/16 bit CPUs prefer 8 bit.
+  if (!DL.isLegalInteger(32) && ToWidth == 16)
+    ToLegal = false;
+
   // Convert to desirable widths even if they are not legal types.
   // Only shrink types, to prevent infinite loops.
   if (ToWidth < FromWidth && isDesirableIntType(ToWidth))
