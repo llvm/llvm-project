@@ -223,7 +223,7 @@ public:
   }
 
   /// Register a conversion function for attributes within types. Type
-  /// converters may call this function in order to allow hoking into the
+  /// converters may call this function in order to allow hooking into the
   /// translation of attributes that exist within types. For example, a type
   /// converter for the `memref` type could use these conversions to convert
   /// memory spaces or layouts in an extensible way.
