@@ -83,14 +83,10 @@ mergeResource(DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
 
   bool conflict = srcHasConflict || srcIsAllocOrFree;
 
-  auto dstIt = resourceConflicts.find(srcResourceID);
-
-  // if it doesn't already exist, create entry for resource in map
-  if (dstIt == resourceConflicts.end()) {
-    resourceConflicts.insert(
+  auto [dstIt, inserted] = resourceConflicts.insert(
         std::make_pair(srcResourceID, std::make_pair(conflict, srcEffect)));
+  if (inserted)
     return;
-  }
 
   // resource already in use
   bool dstHasConflict = dstIt->second.first;
@@ -108,13 +104,11 @@ mergeResource(DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
   dstIt->second = std::make_pair(conflict, srcEffect);
 }
 
-/// Returns true if any of op's OpOperands are defined outside of loopLike
+/// Returns true if any of op's operands is defined inside the loop.
 static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
-  for (OpOperand &input : op->getOpOperands())
-    if (!loopLike.isDefinedOutsideOfLoop(input.get()))
-      return true;
-
-  return false;
+  return llvm::any_of(op->getOperands(), [] (Value v) {
+    return !loopLike.isDefinedOutsideOfLoop(v);
+  });
 }
 
 /// Returns true if:
