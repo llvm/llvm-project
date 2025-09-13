@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fsanitize-cfi-icall-experimental-normalize-integers -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fsanitize-cfi-icall-experimental-normalize-integers -x c++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fsanitize-cfi-icall-experimental-normalize-integers -o - %s | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fsanitize-cfi-icall-experimental-normalize-integers -x c++ -o - %s | FileCheck %s --check-prefixes=CHECK,CPP
 #if !__has_feature(kcfi)
 #error Missing kcfi?
 #endif
@@ -36,7 +36,8 @@ union Union {
 void uni(void (*fn)(union Union), union Union arg1) {
     // CHECK-LABEL: define{{.*}}uni
     // CHECK-SAME: {{.*}}!kcfi_type ![[TYPE4:[0-9]+]]
-    // CHECK: call void %0(ptr %1) [ "kcfi"(i32 -1430221633) ]
+    // C: call void %0(ptr %1) [ "kcfi"(i32 1819770848) ]
+    // CPP: call void %0(ptr %1) [ "kcfi"(i32 -1430221633) ]
     fn(arg1);
 }
 
@@ -44,5 +45,5 @@ void uni(void (*fn)(union Union), union Union arg1) {
 // CHECK: ![[TYPE1]] = !{i32 -1143117868}
 // CHECK: ![[TYPE2]] = !{i32 -460921415}
 // CHECK: ![[TYPE3]] = !{i32 -333839615}
-// CHECK: ![[TYPE4]] = !{i32 1766237188}
-
+// C: ![[TYPE4]] = !{i32 -650530463}
+// CPP: ![[TYPE4]] = !{i32 1766237188}
