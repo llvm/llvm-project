@@ -462,6 +462,7 @@ class OptionsReader:
                 "std::string",
                 "std::vector<std::string>",
                 "std::vector<IncludeCategory>",
+                "std::vector<KeywordedFunctionLikeMacro>",
                 "std::vector<RawStringFormat>",
                 "std::optional<unsigned>",
                 "deprecated",

@@ -115,6 +115,13 @@ static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   return AttrTok && AttrTok->startsSequence(tok::r_square, tok::r_square);
 }
 
+static bool isParametersKeyword(
+    const FormatToken &Tok,
+    const FormatStyle::KeywordedFunctionLikeMacro &declaration) {
+  return std::find(declaration.Keywords.begin(), declaration.Keywords.end(),
+                   Tok.TokenText) != declaration.Keywords.end();
+}
+
 /// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
@@ -144,6 +151,25 @@ private:
     default:
       return ST_Other;
     }
+  }
+
+  const FormatStyle::KeywordedFunctionLikeMacro *
+  findKeywordedFunctionLikeMacro(const FormatToken &LParen) {
+    const FormatToken *TokBeforeFirstLParent = LParen.getPreviousNonComment();
+    // Unknown if line ends with ';', FunctionLikeOrFreestandingMacro otherwise.
+    if (!TokBeforeFirstLParent ||
+        !TokBeforeFirstLParent->isOneOf(TT_FunctionLikeOrFreestandingMacro,
+                                        TT_Unknown)) {
+      return nullptr;
+    }
+    auto I = std::find_if(
+        Style.KeywordedFunctionLikeMacros.begin(),
+        Style.KeywordedFunctionLikeMacros.end(),
+        [TokBeforeFirstLParent](
+            const FormatStyle::KeywordedFunctionLikeMacro &Declaration) {
+          return TokBeforeFirstLParent->TokenText == Declaration.Name;
+        });
+    return I != Style.KeywordedFunctionLikeMacros.end() ? &*I : nullptr;
   }
 
   bool parseAngle() {
@@ -406,6 +432,10 @@ private:
           OpeningParen.Previous &&
           OpeningParen.Previous->isOneOf(tok::kw_for, tok::kw_catch);
       Contexts.back().IsExpression = !IsForOrCatch;
+    } else if (const FormatStyle::KeywordedFunctionLikeMacro *macroStyle =
+                   findKeywordedFunctionLikeMacro(OpeningParen)) {
+      Contexts.back().ContextType = Context::KeywordedFunctionLikeMacro;
+      Contexts.back().KeywordedFunctionLikeMacroStyle = macroStyle;
     }
 
     if (Style.isTableGen()) {
@@ -2141,6 +2171,8 @@ private:
     bool ColonIsObjCMethodExpr = false;
     FormatToken *FirstObjCSelectorName = nullptr;
     FormatToken *FirstStartOfName = nullptr;
+    const FormatStyle::KeywordedFunctionLikeMacro
+        *KeywordedFunctionLikeMacroStyle = nullptr;
     bool CanBeExpression = true;
     bool CaretFound = false;
     bool InCpp11AttributeSpecifier = false;
@@ -2171,6 +2203,8 @@ private:
       C11GenericSelection,
       // Like in the outer parentheses in `ffnand ff1(.q());`.
       VerilogInstancePortList,
+      // Like in Q_PROPERTY(...)
+      KeywordedFunctionLikeMacro,
     } ContextType = Unknown;
   };
 
@@ -2409,8 +2443,14 @@ private:
       Current.setType(TT_BinaryOperator);
     } else if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
-      Contexts.back().FirstStartOfName = &Current;
-      Current.setType(TT_StartOfName);
+      if (Contexts.back().ContextType == Context::KeywordedFunctionLikeMacro &&
+          isParametersKeyword(
+              Current, *Contexts.back().KeywordedFunctionLikeMacroStyle)) {
+        Current.setType(TT_FunctionParameterKeyword);
+      } else {
+        Contexts.back().FirstStartOfName = &Current;
+        Current.setType(TT_StartOfName);
+      }
     } else if (Current.is(tok::semi)) {
       // Reset FirstStartOfName after finding a semicolon so that a for loop
       // with multiple increment statements is not confused with a for loop
@@ -6254,7 +6294,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
-                    TT_ClassHeadName, tok::kw_operator)) {
+                    TT_FunctionParameterKeyword, TT_ClassHeadName,
+                    tok::kw_operator)) {
     return true;
   }
   if (Left.is(TT_PointerOrReference))
