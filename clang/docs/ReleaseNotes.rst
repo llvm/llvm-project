@@ -231,6 +231,14 @@ Removed Compiler Flags
 Attribute Changes in Clang
 --------------------------
 
+- Introduced a new attribute ``[[clang::coro_await_suspend_destroy]]``.  When
+  applied to an ``await_suspend(std::coroutine_handle<Promise>)`` member of a
+  coroutine awaiter, it causes suspensions into this awaiter to use a new
+  ``await_suspend_destroy(Promise&)`` method.  The coroutine is then immediately
+  destroyed.  This flow bypasses the original ``await_suspend()`` (though it
+  must contain a compatibility stub), and omits suspend intrinsics.  The net
+  effect is improved code speed & size for "short-circuiting" coroutines.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
