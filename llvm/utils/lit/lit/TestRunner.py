@@ -719,19 +719,21 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
 
     return std_fds
 
+
 def _expandLateSubstitutions(arguments, cwd):
     for i, arg in enumerate(arguments):
         if not isinstance(arg, str):
             continue
+
         def _replaceReadFile(match):
             filePath = match.group(1)
             if not os.path.isabs(filePath):
                 filePath = os.path.join(cwd, filePath)
             with open(filePath) as fileHandle:
                 return fileHandle.read()
-        
+
         arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
-    
+
     return arguments
 
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
