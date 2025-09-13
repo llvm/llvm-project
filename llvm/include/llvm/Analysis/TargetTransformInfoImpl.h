@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -151,6 +152,54 @@ public:
   }
 
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
+
+  // Given an address space cast of the given pointer value, calculate the known
+  // bits of the source pointer in the source addrspace and the destination
+  // pointer in the destination addrspace.
+  virtual std::pair<KnownBits, KnownBits>
+  computeKnownBitsAddrSpaceCast(unsigned FromAS, unsigned ToAS,
+                                const Value &PtrOp) const {
+    if (DL.isNonIntegralAddressSpace(FromAS))
+      return std::pair(KnownBits(DL.getPointerSizeInBits(FromAS)),
+                       KnownBits(DL.getPointerSizeInBits(ToAS)));
+
+    KnownBits FromPtrBits;
+    if (const AddrSpaceCastInst *CastI = dyn_cast<AddrSpaceCastInst>(&PtrOp)) {
+      std::pair<KnownBits, KnownBits> KB = computeKnownBitsAddrSpaceCast(
+          CastI->getSrcAddressSpace(), CastI->getDestAddressSpace(),
+          *CastI->getPointerOperand());
+      FromPtrBits = KB.second;
+    } else if (isa<ConstantPointerNull>(PtrOp) && FromAS == 0) {
+      // For addrspace 0, we know that a null pointer has the value 0.
+      FromPtrBits = KnownBits::makeConstant(
+          APInt::getZero(DL.getPointerSizeInBits(FromAS)));
+    } else {
+      FromPtrBits = computeKnownBits(&PtrOp, DL, nullptr);
+    }
+
+    KnownBits ToPtrBits =
+        computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
+
+    return std::pair(FromPtrBits, ToPtrBits);
+  }
+
+  // Given an address space cast, calculate the known bits of the resulting ptr
+  // in the destination addrspace using the known bits of the source pointer in
+  // the source addrspace.
+  virtual KnownBits
+  computeKnownBitsAddrSpaceCast(unsigned FromAS, unsigned ToAS,
+                                const KnownBits &FromPtrBits) const {
+    unsigned ToASBitSize = DL.getPointerSizeInBits(ToAS);
+
+    if (DL.isNonIntegralAddressSpace(FromAS))
+      return KnownBits(ToASBitSize);
+
+    // By default, we assume that all valid "larger" (e.g. 64-bit) to "smaller"
+    // (e.g. 32-bit) casts work by chopping off the high bits.
+    // By default, we do not assume that null results in null again.
+    return FromPtrBits.anyextOrTrunc(ToASBitSize);
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
