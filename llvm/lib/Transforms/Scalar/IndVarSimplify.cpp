@@ -53,6 +53,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -116,6 +117,10 @@ DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
 static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
+
+static cl::opt<bool> LoopPredicationTraps(
+    "indvars-predicate-loop-traps", cl::Hidden, cl::init(true),
+    cl::desc("Predicate conditions that trap in loops with only local writes"));
 
 static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
@@ -1816,11 +1821,31 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // suggestions on how to improve this?  I can obviously bail out for outer
   // loops, but that seems less than ideal.  MemorySSA can find memory writes,
   // is that enough for *all* side effects?
+  bool HasLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
     for (auto &I : *BB)
       // TODO:isGuaranteedToTransfer
-      if (I.mayHaveSideEffects())
-        return false;
+      if (I.mayHaveSideEffects()) {
+        if (!LoopPredicationTraps)
+          return false;
+        HasLocalSideEffects = true;
+        if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+          // The local could have leaked out of the function, so we need to
+          // consider atomic operations as effects.
+          // Because we need to preserve the relative order of volatile
+          // accesses, turn off this optimization if we see any of them.
+          // TODO:
+          // We could be smarter about volatile, and check whether the
+          // reordering is valid.
+          // We also could be smarter about atomic, and check whether the
+          // local has leaked.
+          if (!SI->isSimple() ||
+              findAllocaForValue(SI->getPointerOperand(), false) == nullptr)
+            return false;
+        } else {
+          return false;
+        }
+      }
 
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
@@ -1840,6 +1865,34 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
     auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    if (HasLocalSideEffects) {
+      BasicBlock *Unreachable = nullptr;
+      BasicBlock *InLoop = nullptr;
+      for (BasicBlock *Succ : BI->successors()) {
+        if (isa<UnreachableInst>(Succ->getTerminator()))
+          Unreachable = Succ;
+        else if (L->contains(Succ))
+          InLoop = Succ;
+      }
+      // Exit BB which have one branch back into the loop and another one to
+      // a trap can still be optimized, because local side effects cannot
+      // be observed in the exit case (the trap). We could be smarter about
+      // this, but for now lets pattern match common cases that directly trap.
+      if (Unreachable == nullptr || InLoop == nullptr)
+        return Changed;
+      if (llvm::any_of(*Unreachable, [](Instruction &I) {
+            if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+              if (II->getIntrinsicID() != Intrinsic::trap &&
+                  II->getIntrinsicID() != Intrinsic::ubsantrap)
+                return true;
+            } else if (!isa<UnreachableInst>(I)) {
+              return true;
+            }
+            return false;
+          })) {
+        return Changed;
+      }
+    }
     Value *NewCond;
     if (ExitCount == ExactBTC) {
       NewCond = L->contains(BI->getSuccessor(0)) ?
