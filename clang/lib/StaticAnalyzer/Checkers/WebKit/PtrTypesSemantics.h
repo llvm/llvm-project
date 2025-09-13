@@ -21,6 +21,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class NamedDecl;
 class QualType;
 class RecordType;
 class Stmt;
@@ -156,7 +157,7 @@ bool isPtrConversion(const FunctionDecl *F);
 bool isTrivialBuiltinFunction(const FunctionDecl *F);
 
 /// \returns true if \p F is a static singleton function.
-bool isSingleton(const FunctionDecl *F);
+bool isSingleton(const NamedDecl *F);
 
 /// An inter-procedural analysis facility that detects functions with "trivial"
 /// behavior with respect to reference counting, such as simple field getters.
