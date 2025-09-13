@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 static constexpr float16 rsqrtf16(float16 x) {
-using FPBits = fputil::FPBits<float16>;
+  using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 
   uint16_t x_u = xbits.uintval();
@@ -76,8 +76,8 @@ using FPBits = fputil::FPBits<float16>;
   int exp_floored = -(exponent >> 1);
 
   if (mantissa == 0.5f) {
-    // When mantissa is 0.5f, x was a power of 2 (or subnormal that normalizes this way).
-    // 1/sqrt(0.5f) = sqrt(2.0f).
+    // When mantissa is 0.5f, x was a power of 2 (or subnormal that normalizes
+    // this way). 1/sqrt(0.5f) = sqrt(2.0f).
     // If exponent is odd (exponent = 2k + 1):
     //   rsqrt(x) = (1/sqrt(0.5)) * 2^(-(2k+1)/2) = sqrt(2) * 2^(-k-0.5)
     //            = sqrt(2) * 2^(-k) * (1/sqrt(2)) = 2^(-k)
@@ -96,15 +96,15 @@ using FPBits = fputil::FPBits<float16>;
   } else {
     // Degree-5 polynomial (float coefficients) generated with Sollya:
     // P = fpminimax(1/sqrt(x) + 2^-28, 5, [|single...|], [0.5,1])
-    float y = fputil::polyeval(
-        mantissa, 0x1.9c81fap1f, -0x1.e2c63ap2f, 0x1.91e9b8p3f,
-        -0x1.899abep3f, 0x1.9eddeap2f, -0x1.6bdb48p0f);
+    float y =
+        fputil::polyeval(mantissa, 0x1.9c81fap1f, -0x1.e2c63ap2f, 0x1.91e9b8p3f,
+                         -0x1.899abep3f, 0x1.9eddeap2f, -0x1.6bdb48p0f);
 
-    // Newton-Raphson iteration in float (use multiply_add to leverage FMA when available):
+    // Newton-Raphson iteration in float (use multiply_add to leverage FMA when
+    // available):
     float y2 = y * y;
     float factor = fputil::multiply_add(-0.5f * mantissa, y2, 1.5f);
     y = y * factor;
-
 
     result = fputil::ldexp(y, exp_floored);
     if (exponent & 1) {
@@ -112,16 +112,19 @@ using FPBits = fputil::FPBits<float16>;
       result *= ONE_OVER_SQRT2;
     }
 
-    // Targeted post-correction: for the specific half-precision mantissa pattern
-    // M == 0x011F we observe a consistent -1 ULP bias across exponents.
+    // Targeted post-correction: for the specific half-precision mantissa
+    // pattern M == 0x011F we observe a consistent -1 ULP bias across exponents.
     // Apply a tiny upward nudge to cross the rounding boundary in all modes.
     const uint16_t half_mantissa = static_cast<uint16_t>(x_abs & 0x3ff);
     if (half_mantissa == 0x011F) {
       // Nudge up to fix consistent -1 ULP at that mantissa boundary
-      result = fputil::multiply_add(result, 0x1.0p-21f, result); // result *= (1 + 2^-21)
+      result = fputil::multiply_add(result, 0x1.0p-21f,
+                                    result); // result *= (1 + 2^-21)
     } else if (half_mantissa == 0x0313) {
-      // Nudge down to fix +1 ULP under upward rounding at this mantissa boundary
-      result = fputil::multiply_add(result, -0x1.0p-21f, result); // result *= (1 - 2^-21)
+      // Nudge down to fix +1 ULP under upward rounding at this mantissa
+      // boundary
+      result = fputil::multiply_add(result, -0x1.0p-21f,
+                                    result); // result *= (1 - 2^-21)
     }
   }
 
@@ -134,4 +137,3 @@ using FPBits = fputil::FPBits<float16>;
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_RSQRTF16_H
-
