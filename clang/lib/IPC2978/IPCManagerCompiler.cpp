@@ -138,12 +138,12 @@ tl::expected<BTCModule, std::string> IPCManagerCompiler::receiveBTCModule(const 
             {
                 for (const std::string &s : logicalNames)
                 {
-                    responses.emplace(s, Response(file, ResponseType::HEADER_UNIT, user));
+                    responses.emplace(s, Response(std::move(file), ResponseType::HEADER_UNIT, user));
                 }
             }
             else
             {
-                responses.emplace(logicalNames[0], Response(file, ResponseType::MODULE, user));
+                responses.emplace(logicalNames[0], Response(std::move(file), ResponseType::MODULE, user));
             }
         }
     }
@@ -170,32 +170,30 @@ tl::expected<BTCNonModule, std::string> IPCManagerCompiler::receiveBTCNonModule(
         f.filePath = filePath;
         f.fileSize = fileSize;
 
-        if (!isHeaderUnit)
+        if (isHeaderUnit)
         {
-            responses.emplace(nonModule.logicalName, Response(f, ResponseType::HEADER_FILE, user));
-            return received;
-        }
-
-        responses.emplace(nonModule.logicalName, Response(f, ResponseType::HEADER_UNIT, user));
-
-        for (const std::string &h : logicalNames)
-        {
-            responses.emplace(h, Response(f, ResponseType::HEADER_UNIT, user));
-        }
-
-        for (const auto &[logicalName, filePath, user] : headerFiles)
-        {
-            BMIFile headerBMI;
-            headerBMI.filePath = filePath;
-            responses.emplace(logicalName, Response(headerBMI, ResponseType::HEADER_FILE, user));
-        }
-
-        for (const auto &[file, logicalNames, user] : huDeps)
-        {
-            for (const std::string &l : logicalNames)
+            for (const std::string &h : logicalNames)
             {
-                responses.emplace(l, Response(file, ResponseType::HEADER_UNIT, user));
+                responses.emplace(h, Response(f, ResponseType::HEADER_UNIT, user));
             }
+            for (const auto &[file, logicalNames, user] : huDeps)
+            {
+                for (const std::string &l : logicalNames)
+                {
+                    responses.emplace(l, Response(std::move(file), ResponseType::HEADER_UNIT, user));
+                }
+            }
+            responses.emplace(nonModule.logicalName, Response(std::move(f), ResponseType::HEADER_UNIT, user));
+        }
+        else
+        {
+            for (const auto &[logicalName, filePath, user] : headerFiles)
+            {
+                BMIFile headerBMI;
+                headerBMI.filePath = filePath;
+                responses.emplace(logicalName, Response(std::move(headerBMI), ResponseType::HEADER_FILE, user));
+            }
+            responses.emplace(nonModule.logicalName, Response(std::move(f), ResponseType::HEADER_FILE, user));
         }
     }
     return received;
