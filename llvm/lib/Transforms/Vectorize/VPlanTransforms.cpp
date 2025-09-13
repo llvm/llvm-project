@@ -1307,13 +1307,13 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
-      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
-      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+      // Handle replicate-stores to single-scalar address.
+      if (RepR && RepR->getOpcode() == Instruction::Store &&
           vputils::isSingleScalar(RepR->getOperand(1))) {
         auto *Clone = new VPReplicateRecipe(
-            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            RepR->getUnderlyingInstr(), RepR->operands(),
             true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
-        Clone->insertBefore(RepOrWidenR);
+        Clone->insertBefore(RepR);
         auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
                                       {Clone->getOperand(0)});
         Ext->insertBefore(Clone);
@@ -1325,6 +1325,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
+      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
       if (!vputils::isSingleScalar(RepOrWidenR) ||
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
             return U->usesScalars(RepOrWidenR) ||
