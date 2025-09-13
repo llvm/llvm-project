@@ -723,8 +723,27 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
-  if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID))
+  if (auto *II = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+    if (II->hasScalarOperand() && !II->IsFPIntrinsic) {
+      MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+      MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+      auto OldScalar = MI.getOperand(II->ScalarOperand + 2).getReg();
+      // Legalize integer vx form intrinsic.
+      if (MRI.getType(OldScalar).isScalar()) {
+        if (MRI.getType(OldScalar).getSizeInBits() < sXLen.getSizeInBits()) {
+          Helper.Observer.changingInstr(MI);
+          Helper.widenScalarSrc(MI, sXLen, II->ScalarOperand + 2,
+                                TargetOpcode::G_ANYEXT);
+          Helper.Observer.changedInstr(MI);
+        } else if (MRI.getType(OldScalar).getSizeInBits() >
+                   sXLen.getSizeInBits()) {
+          // TODO: i64 in riscv32.
+        }
+      }
+    }
     return true;
+  }
 
   switch (IntrinsicID) {
   default:
