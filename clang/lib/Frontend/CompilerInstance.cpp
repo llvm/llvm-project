@@ -1909,10 +1909,10 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     if (const auto it = Responses.find(std::string(ModuleName));
         it == Responses.end() ||
         it->second.type != N2978::ResponseType::MODULE) {
-      N2978::CTBModule mod;
-      mod.moduleName = ModuleName;
+      N2978::CTBModule Mod;
+      Mod.moduleName = ModuleName;
       if (const auto &r =
-              N2978::managerCompiler->receiveBTCModule(std::move(mod));
+              N2978::managerCompiler->receiveBTCModule(std::move(Mod));
           r) {
         auto &[requested, user, deps] = r.value();
         const_cast<std::map<std::string, std::string, std::less<>> &>(

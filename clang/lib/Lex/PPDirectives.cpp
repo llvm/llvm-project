@@ -2328,9 +2328,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   ModuleMap::KnownHeader SuggestedModule;
   OptionalFileEntryRef File;
 
-  std::string filePath;
-  bool isHeaderUnit = false;
+  bool IsHeaderUnit = false;
   if (N2978::managerCompiler) {
+
+    std::string FilePath;
+
     auto &Responses = N2978::managerCompiler->responses;
     if (auto it = Responses.find(std::string(Filename));
         it == Responses.end() ||
@@ -2341,21 +2343,21 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       if (const auto &Result =
               N2978::managerCompiler->receiveBTCNonModule(std::move(CTBNonMod));
           Result) {
-        filePath = Result->filePath;
-        isHeaderUnit = Result->isHeaderUnit;
+        FilePath = Result->filePath;
+        IsHeaderUnit = Result->isHeaderUnit;
       } else {
         // receive failed
       }
     } else {
-      filePath = it->second.file.filePath;
-      isHeaderUnit = it->second.type == N2978::ResponseType::HEADER_UNIT;
+      FilePath = it->second.file.filePath;
+      IsHeaderUnit = it->second.type == N2978::ResponseType::HEADER_UNIT;
     }
 
-    File = getFileManager().getOptionalFileRef(filePath);
+    File = getFileManager().getOptionalFileRef(FilePath);
 
-    if (isHeaderUnit) {
+    if (IsHeaderUnit) {
       IsImportDecl = true;
-      SuggestedModule = {getModuleLoader().loadIPCReceivedHeaderUnit(filePath),
+      SuggestedModule = {getModuleLoader().loadIPCReceivedHeaderUnit(FilePath),
                          ModuleMap::NormalHeader};
     }
   } else {
@@ -2405,7 +2407,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   bool MaybeTranslateInclude =
       Action == Enter && File && ModuleToImport &&
-      (!ModuleToImport->isForBuilding(getLangOpts()) || isHeaderUnit);
+      (!ModuleToImport->isForBuilding(getLangOpts()) || IsHeaderUnit);
 
   // Maybe a usable Header Unit
   bool UsableHeaderUnit = false;
@@ -2568,7 +2570,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // than the one we're about to open. Not checked if it is an IPC received
   // module.
   const bool CheckIncludePathPortability =
-      !isHeaderUnit && !IsMapped &&
+      !IsHeaderUnit && !IsMapped &&
       !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
