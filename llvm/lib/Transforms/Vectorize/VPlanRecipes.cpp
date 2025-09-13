@@ -3151,23 +3151,9 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
-  case Instruction::Select:
     return *getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                        Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
-  case Instruction::SDiv:
-  case Instruction::UDiv:
-  case Instruction::SRem:
-  case Instruction::URem: {
-    InstructionCost ScalarCost = *getCostForRecipeWithOpcode(
-        getOpcode(), ElementCount::getFixed(1), Ctx);
-    if (isSingleScalar())
-      return ScalarCost;
-
-    return ScalarCost * VF.getFixedValue() +
-           Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
-                                        to_vector(operands()), VF);
-  }
   case Instruction::Load:
   case Instruction::Store: {
     if (isSingleScalar()) {
