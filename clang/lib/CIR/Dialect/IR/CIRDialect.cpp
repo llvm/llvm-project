@@ -2731,6 +2731,16 @@ mlir::LogicalResult cir::ThrowOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicXchg
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicXchg::verify() {
+  if (getPtr().getType().getPointee() != getVal().getType())
+    return emitOpError("ptr type and val type must match");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AtomicCmpXchg
 //===----------------------------------------------------------------------===//
 
