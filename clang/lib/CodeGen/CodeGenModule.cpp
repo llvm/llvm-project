@@ -2352,10 +2352,10 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   return Ty;
 }
 
-// Generalize pointer types to a void pointer with the qualifiers of the
-// originally pointed-to type, e.g. 'const char *' and 'char * const *'
-// generalize to 'const void *' while 'char *' and 'const char **' generalize to
-// 'void *'.
+// If `GeneralizePointers` is true, generalizes types to a void pointer with the
+// qualifiers of the originally pointed-to type, e.g. 'const char *' and 'char *
+// const *' generalize to 'const void *' while 'char *' and 'const char **'
+// generalize to 'void *'.
 static QualType GeneralizeType(ASTContext &Ctx, QualType Ty,
                                bool GeneralizePointers) {
   Ty = GeneralizeTransparentUnion(Ty);

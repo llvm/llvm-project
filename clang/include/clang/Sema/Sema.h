@@ -11399,10 +11399,6 @@ public:
                                        SourceLocation NameLoc,
                                        IdentifierInfo *&II);
 
-  bool resolveAssumedTemplateNameAsType(Scope *S, TemplateName &Name,
-                                        SourceLocation NameLoc,
-                                        bool Diagnose = true);
-
   /// Determine whether a particular identifier might be the name in a C++1z
   /// deduction-guide declaration.
   bool isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
@@ -11643,7 +11639,8 @@ public:
   QualType CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
                                TemplateName Template,
                                SourceLocation TemplateLoc,
-                               TemplateArgumentListInfo &TemplateArgs);
+                               TemplateArgumentListInfo &TemplateArgs,
+                               Scope *Scope, bool ForNestedNameSpecifier);
 
   TypeResult
   ActOnTemplateIdType(Scope *S, ElaboratedTypeKeyword ElaboratedKeyword,
