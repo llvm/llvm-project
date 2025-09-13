@@ -1878,6 +1878,9 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   case MCCFIInstruction::OpGnuArgsSize:
     OS << "OpGnuArgsSize";
     break;
+  case MCCFIInstruction::OpNegateRAState:
+    OS << "OpNegateRAState";
+    break;
   default:
     OS << "Op#" << Operation;
     break;
