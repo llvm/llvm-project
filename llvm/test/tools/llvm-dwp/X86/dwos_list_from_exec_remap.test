@@ -1,0 +1,129 @@
+// Test remapping old DWO paths in the executables and libraries to new paths.
+
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: cd %t
+
+RUN: cp %p/../Inputs/dwos_list_from_exec/main main
+RUN: cp %p/../Inputs/dwos_list_from_exec/libd.so libd.so
+
+// Test remapping full DWO paths (<DW_AT_comp_dir>/<DW_AT_dwo_name>) to absolute paths
+RUN: touch remapping_path_to_absolute.txt
+RUN: echo "./a.dwo %p/../Inputs/dwos_list_from_exec/a.dwo" >> remapping_path_to_absolute.txt
+RUN: echo "./b.dwo %p/../Inputs/dwos_list_from_exec/b.dwo" >> remapping_path_to_absolute.txt
+RUN: echo "./d.dwo %p/../Inputs/dwos_list_from_exec/d.dwo" >> remapping_path_to_absolute.txt
+RUN: llvm-dwp %p/../Inputs/dwos_list_from_exec/c.dwo %p/../Inputs/dwos_list_from_exec/e.dwo \
+RUN:   -e main -e libd.so --exec-dwo-path-remapping-file=remapping_path_to_absolute.txt -o - | llvm-dwarfdump -v - | FileCheck %s
+
+// Test remapping full DWO paths (<DW_AT_comp_dir>/<DW_AT_dwo_name>) to relative paths
+RUN: mkdir foo && cp %p/../Inputs/dwos_list_from_exec/a.dwo foo/a.dwo
+RUN: mkdir bar && cp %p/../Inputs/dwos_list_from_exec/b.dwo bar/b.dwo
+RUN: mkdir qux && cp %p/../Inputs/dwos_list_from_exec/d.dwo qux/d.dwo
+RUN: touch remapping_path_to_relative.txt
+RUN: echo "./a.dwo foo/a.dwo" >> remapping_path_to_relative.txt
+RUN: echo "./b.dwo bar/b.dwo" >> remapping_path_to_relative.txt
+RUN: echo "./d.dwo qux/d.dwo" >> remapping_path_to_relative.txt
+RUN: llvm-dwp %p/../Inputs/dwos_list_from_exec/c.dwo %p/../Inputs/dwos_list_from_exec/e.dwo \
+RUN:   -e main -e libd.so --exec-dwo-path-remapping-file=remapping_path_to_relative.txt -o - | llvm-dwarfdump -v - | FileCheck %s
+
+// Test remapping DWO name (<DW_AT_dwo_name>) to relative paths
+RUN: touch remapping_name_to_relative.txt
+RUN: echo "a.dwo foo/a.dwo" >> remapping_name_to_relative.txt
+RUN: echo "b.dwo bar/b.dwo" >> remapping_name_to_relative.txt
+RUN: echo "d.dwo qux/d.dwo" >> remapping_name_to_relative.txt
+RUN: llvm-dwp %p/../Inputs/dwos_list_from_exec/c.dwo %p/../Inputs/dwos_list_from_exec/e.dwo \
+RUN:   -e main -e libd.so --exec-dwo-path-remapping-file=remapping_name_to_relative.txt -o - | llvm-dwarfdump -v - | FileCheck %s
+
+// Test remapping with multiple files
+RUN: touch remapping_main.txt
+RUN: echo "./a.dwo %p/../Inputs/dwos_list_from_exec/a.dwo" >> remapping_main.txt
+RUN: echo "./b.dwo %p/../Inputs/dwos_list_from_exec/b.dwo" >> remapping_main.txt
+RUN: echo "./d.dwo %p/../Inputs/dwos_list_from_exec/d.dwo" > remapping_libd.txt
+RUN: llvm-dwp %p/../Inputs/dwos_list_from_exec/c.dwo %p/../Inputs/dwos_list_from_exec/e.dwo \
+RUN:   -e main -e libd.so \
+RUN:   --exec-dwo-path-remapping-file=remapping_main.txt \
+RUN:   --exec-dwo-path-remapping-file=remapping_libd.txt \
+RUN:   -o - | llvm-dwarfdump -v - | FileCheck %s
+
+Build commands for the test binaries:
+
+clang++ -Xclang -fdebug-compilation-dir -Xclang "./" -g -O0 -gsplit-dwarf a.cpp b.cpp -o main
+clang++ -g -O0 -gsplit-dwarf -c c.cpp -o c.o
+clang++ -Xclang -fdebug-compilation-dir -Xclang "./" -g -O0 -gsplit-dwarf -fPIC -shared d.cpp -o libd.so
+clang++ -g -O0 -gsplit-dwarf -c e.cpp -o e.o
+
+sources:
+a.cpp:
+  void a() {}
+
+b.cpp:
+  void b() {}
+  int main() {
+     return 0;
+  }
+
+c.cpp:
+  void c() {}
+
+d.cpp:
+  void d() {}
+
+e.cpp:
+  void e() {}
+
+CHECK-LABEL: .debug_abbrev.dwo contents:
+
+CHECK-LABEL: Abbrev table for offset:
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_subprogram
+
+CHECK-LABEL: Abbrev table for offset:
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_subprogram
+
+CHECK-LABEL: Abbrev table for offset:
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_subprogram
+
+CHECK-LABEL: Abbrev table for offset:
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_subprogram
+
+CHECK-LABEL: Abbrev table for offset:
+CHECK: DW_TAG_compile_unit
+CHECK: DW_TAG_subprogram
+
+CHECK: .debug_info.dwo contents:
+CHECK: [[AOFF:0x[0-9a-f]*]]:
+
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_name {{.*}} "c.cpp"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "c"
+
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_name {{.*}} "e.cpp"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "e"
+
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_name {{.*}} "a.cpp"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "a"
+
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_name {{.*}} "b.cpp"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "b"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "main"
+
+CHECK-LABEL: Compile Unit: length = {{.*}}, version = 0x0004
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_AT_name {{.*}} "d.cpp"
+CHECK:   DW_TAG_subprogram
+CHECK:     DW_AT_name {{.*}} "d"

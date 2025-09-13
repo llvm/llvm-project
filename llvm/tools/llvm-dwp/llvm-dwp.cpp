@@ -10,6 +10,7 @@
 // package files).
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DWP/DWP.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/DWP/DWPStringPool.h"
@@ -75,7 +76,8 @@ static std::string OutputFilename;
 static std::string ContinueOption;
 
 static Expected<SmallVector<std::string, 16>>
-getDWOFilenames(StringRef ExecFilename) {
+getDWOFilenames(StringRef ExecFilename,
+                const StringMap<StringRef> &DWOPathMap) {
   auto ErrOrObj = object::ObjectFile::createObjectFile(ExecFilename);
   if (!ErrOrObj)
     return ErrOrObj.takeError();
@@ -95,11 +97,17 @@ getDWOFilenames(StringRef ExecFilename) {
     if (!DWOCompDir.empty()) {
       SmallString<16> DWOPath(DWOName);
       sys::fs::make_absolute(DWOCompDir, DWOPath);
+      if (auto I = DWOPathMap.find(DWOPath); I != DWOPathMap.end())
+        DWOPath = I->getValue();
+      if (auto I = DWOPathMap.find(DWOName); I != DWOPathMap.end())
+        DWOName = I->getValue();
       if (!sys::fs::exists(DWOPath) && sys::fs::exists(DWOName))
         DWOPaths.push_back(std::move(DWOName));
       else
         DWOPaths.emplace_back(DWOPath.data(), DWOPath.size());
     } else {
+      if (auto I = DWOPathMap.find(DWOName); I != DWOPathMap.end())
+        DWOName = I->getValue();
       DWOPaths.push_back(std::move(DWOName));
     }
   }
@@ -118,6 +126,33 @@ static Expected<Triple> readTargetTriple(StringRef FileName) {
     return ErrOrObj.takeError();
 
   return ErrOrObj->getBinary()->makeTriple();
+}
+
+static Error addPathsToRemapFromFile(StringMap<StringRef> &DWOPathMap,
+                                     BumpPtrAllocator &Alloc,
+                                     StringRef Filename) {
+  StringSaver Saver(Alloc);
+  SmallVector<StringRef, 16> Lines;
+  auto BufOrErr = MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    return createFileError(Filename, BufOrErr.getError());
+
+  BufOrErr.get()->getBuffer().split(Lines, '\n');
+  for (size_t LineNo = 0, NumLines = Lines.size(); LineNo < NumLines;
+       ++LineNo) {
+    StringRef TrimmedLine = Lines[LineNo].split('#').first.trim();
+    if (TrimmedLine.empty())
+      continue;
+
+    std::pair<StringRef, StringRef> Pair = Saver.save(TrimmedLine).split(' ');
+    StringRef NewName = Pair.second.trim();
+    if (NewName.empty())
+      return createStringError(errc::invalid_argument,
+                               "%s:%zu: missing new DWO path",
+                               Filename.str().c_str(), LineNo + 1);
+    DWOPathMap.insert({Pair.first, NewName});
+  }
+  return Error::success();
 }
 
 int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
@@ -173,8 +208,16 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllAsmPrinters();
 
+  llvm::StringMap<StringRef> DWOPathMap;
+  for (auto *Arg : Args.filtered(OPT_execDwoPathRemappingFile)) {
+    if (Error E = addPathsToRemapFromFile(DWOPathMap, A, Arg->getValue())) {
+      logAllUnhandledErrors(std::move(E), WithColor::error());
+      return 1;
+    }
+  }
+
   for (const auto &ExecFilename : ExecFilenames) {
-    auto DWOs = getDWOFilenames(ExecFilename);
+    auto DWOs = getDWOFilenames(ExecFilename, DWOPathMap);
     if (!DWOs) {
       logAllUnhandledErrors(
           handleErrors(DWOs.takeError(),
