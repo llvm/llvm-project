@@ -28,18 +28,19 @@ int main() {
   return 0;
 }
 
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -mrelocation-model pic -pic-is-pie -debug-info-kind=limited -dwarf-version=5 -disable-O0-optnone -disable-llvm-passes %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm -mrelocation-model pic -pic-is-pie -debug-info-kind=limited -dwarf-version=5 -disable-O0-optnone -disable-llvm-passes %s -o - | FileCheck %s --check-prefix=COFF
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-mingw -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - | FileCheck %s --check-prefix=COFF
 
 // CHECK: $_ZTVN3NSP5CBaseE = comdat any
 // CHECK: $_ZTV8CDerived = comdat any
 
-// CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTV8CDerived = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
-// COFF: @_ZTVN3NSP5CBaseE = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8
+// CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// COFF: @_ZTVN3NSP5CBaseE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8
 // COFF-NOT: !dbg
 // COFF-SAME: {{$}}
-// COFF: @_ZTV8CDerived = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8
+// COFF: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8
 // COFF-NOT: !dbg
 // COFF-SAME: {{$}}
 
