@@ -1813,6 +1813,50 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 /// must be defined in terms of bytes.
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
 
+class ClusterDimsAttr {
+public:
+  enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
+
+  ClusterDimsAttr() = default;
+
+  Kind getKind() const { return AttrKind; }
+
+  bool isUnknown() const { return getKind() == Kind::Unknown; }
+
+  bool isNoCluster() const { return getKind() == Kind::NoCluster; }
+
+  bool isFixedDims() const { return getKind() == Kind::FixedDims; }
+
+  bool isVariableedDims() const { return getKind() == Kind::VariableDims; }
+
+  void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
+
+  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
+
+  void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
+
+  /// \returns the dims stored. Note that this function can only be called if
+  /// the kind is \p Fixed.
+  const std::array<unsigned, 3> &getDims() const;
+
+  bool operator==(const ClusterDimsAttr &RHS) const {
+    return AttrKind == RHS.AttrKind && Dims == RHS.Dims;
+  }
+
+  std::string to_string() const;
+
+  static ClusterDimsAttr get(const Function &F);
+
+private:
+  enum Encoding { EncoNoCluster = 0, EncoVariableDims = 1024 };
+
+  ClusterDimsAttr(Kind AttrKind) : AttrKind(AttrKind) {}
+
+  std::array<unsigned, 3> Dims = {0, 0, 0};
+
+  Kind AttrKind = Kind::Unknown;
+};
+
 } // end namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
