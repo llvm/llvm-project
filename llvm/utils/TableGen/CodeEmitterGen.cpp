@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -77,6 +78,8 @@ private:
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
 };
+
+} // end anonymous namespace
 
 // If the VarBitInit at position 'bit' matches the specified variable then
 // return the variable bit position.  Otherwise return -1.
@@ -311,12 +314,12 @@ CodeEmitterGen::getInstructionCases(const Record *R,
     if (UseAPInt) {
       int NumWords = APInt::getNumWords(BitWidth);
       Case += "      Inst = APInt(" + itostr(BitWidth);
-      Case += ", ArrayRef(InstBitsByHw + opcode * " + itostr(NumWords) + ", " +
-              itostr(NumWords);
+      Case += ", ArrayRef(InstBitsByHw + TableIndex * " + itostr(NumWords) +
+              ", " + itostr(NumWords);
       Case += "));\n";
       Case += "      Value = Inst;\n";
     } else {
-      Case += "      Value = InstBitsByHw[opcode];\n";
+      Case += "      Value = InstBitsByHw[TableIndex];\n";
     }
 
     Append("      switch (HwMode) {\n");
@@ -396,15 +399,6 @@ void CodeEmitterGen::emitInstructionBaseValues(
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     const Record *R = CGI->TheDef;
-
-    if (R->getValueAsString("Namespace") == "TargetOpcode" ||
-        R->getValueAsBit("isPseudo")) {
-      O << "    ";
-      emitInstBits(O, APInt(BitWidth, 0));
-      O << ",\n";
-      continue;
-    }
-
     const Record *EncodingDef = R;
     if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
       EncodingInfoByHwMode EBM(RV, HWM);
@@ -461,138 +455,142 @@ void CodeEmitterGen::run(raw_ostream &O) {
   // For little-endian instruction bit encodings, reverse the bit order
   Target.reverseBitsForLittleEndianEncoding();
 
-  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructions();
+  ArrayRef<const CodeGenInstruction *> EncodedInstructions =
+      Target.getTargetNonPseudoInstructions();
 
   if (Target.hasVariableLengthEncodings()) {
     emitVarLenCodeEmitter(Records, O);
-  } else {
-    const CodeGenHwModes &HWM = Target.getHwModes();
-    // The set of HwModes used by instruction encodings.
-    std::set<unsigned> HwModes;
-    BitWidth = 0;
-    for (const CodeGenInstruction *CGI : NumberedInstructions) {
-      const Record *R = CGI->TheDef;
-      if (R->getValueAsString("Namespace") == "TargetOpcode" ||
-          R->getValueAsBit("isPseudo"))
-        continue;
-
-      if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
-        EncodingInfoByHwMode EBM(RV, HWM);
-        for (const auto &[Key, Value] : EBM) {
-          const BitsInit *BI = Value->getValueAsBitsInit("Inst");
-          BitWidth = std::max(BitWidth, BI->getNumBits());
-          HwModes.insert(Key);
-        }
-        continue;
-      }
-      const BitsInit *BI = R->getValueAsBitsInit("Inst");
-      BitWidth = std::max(BitWidth, BI->getNumBits());
-    }
-    UseAPInt = BitWidth > 64;
-
-    // Emit function declaration
-    if (UseAPInt) {
-      O << "void " << Target.getName()
-        << "MCCodeEmitter::getBinaryCodeForInstr(const MCInst &MI,\n"
-        << "    SmallVectorImpl<MCFixup> &Fixups,\n"
-        << "    APInt &Inst,\n"
-        << "    APInt &Scratch,\n"
-        << "    const MCSubtargetInfo &STI) const {\n";
-    } else {
-      O << "uint64_t " << Target.getName();
-      O << "MCCodeEmitter::getBinaryCodeForInstr(const MCInst &MI,\n"
-        << "    SmallVectorImpl<MCFixup> &Fixups,\n"
-        << "    const MCSubtargetInfo &STI) const {\n";
-    }
-
-    // Emit instruction base values
-    emitInstructionBaseValues(O, NumberedInstructions, Target, DefaultMode);
-    if (!HwModes.empty()) {
-      // Emit table for instrs whose encodings are controlled by HwModes.
-      for (unsigned HwMode : HwModes) {
-        if (HwMode == DefaultMode)
-          continue;
-        emitInstructionBaseValues(O, NumberedInstructions, Target, HwMode);
-      }
-
-      // This pointer will be assigned to the HwMode table later.
-      O << "  const uint64_t *InstBitsByHw;\n";
-    }
-
-    // Map to accumulate all the cases.
-    std::map<std::string, std::vector<std::string>> CaseMap;
-    std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
-
-    // Construct all cases statement for each opcode
-    for (const Record *R : Records.getAllDerivedDefinitions("Instruction")) {
-      if (R->getValueAsString("Namespace") == "TargetOpcode" ||
-          R->getValueAsBit("isPseudo"))
-        continue;
-      std::string InstName =
-          (R->getValueAsString("Namespace") + "::" + R->getName()).str();
-      std::string Case, BitOffsetCase;
-      std::tie(Case, BitOffsetCase) = getInstructionCases(R, Target);
-
-      CaseMap[Case].push_back(InstName);
-      BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
-    }
-
-    // Emit initial function code
-    if (UseAPInt) {
-      int NumWords = APInt::getNumWords(BitWidth);
-      O << "  const unsigned opcode = MI.getOpcode();\n"
-        << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
-        << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-        << "  Inst = APInt(" << BitWidth << ", ArrayRef(InstBits + opcode * "
-        << NumWords << ", " << NumWords << "));\n"
-        << "  APInt &Value = Inst;\n"
-        << "  APInt &op = Scratch;\n"
-        << "  switch (opcode) {\n";
-    } else {
-      O << "  const unsigned opcode = MI.getOpcode();\n"
-        << "  uint64_t Value = InstBits[opcode];\n"
-        << "  uint64_t op = 0;\n"
-        << "  (void)op;  // suppress warning\n"
-        << "  switch (opcode) {\n";
-    }
-
-    // Emit each case statement
-    emitCaseMap(O, CaseMap);
-
-    // Default case: unhandled opcode
-    O << "  default:\n"
-      << "    std::string msg;\n"
-      << "    raw_string_ostream Msg(msg);\n"
-      << "    Msg << \"Not supported instr: \" << MI;\n"
-      << "    report_fatal_error(Msg.str().c_str());\n"
-      << "  }\n";
-    if (UseAPInt)
-      O << "  Inst = Value;\n";
-    else
-      O << "  return Value;\n";
-    O << "}\n\n";
-
-    O << "#ifdef GET_OPERAND_BIT_OFFSET\n"
-      << "#undef GET_OPERAND_BIT_OFFSET\n\n"
-      << "uint32_t " << Target.getName()
-      << "MCCodeEmitter::getOperandBitOffset(const MCInst &MI,\n"
-      << "    unsigned OpNum,\n"
-      << "    const MCSubtargetInfo &STI) const {\n"
-      << "  switch (MI.getOpcode()) {\n";
-    emitCaseMap(O, BitOffsetCaseMap);
-    O << "  }\n"
-      << "  std::string msg;\n"
-      << "  raw_string_ostream Msg(msg);\n"
-      << "  Msg << \"Not supported instr[opcode]: \" << MI << \"[\" << OpNum "
-         "<< \"]\";\n"
-      << "  report_fatal_error(Msg.str().c_str());\n"
-      << "}\n\n"
-      << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
+    return;
   }
-}
+  const CodeGenHwModes &HWM = Target.getHwModes();
+  // The set of HwModes used by instruction encodings.
+  std::set<unsigned> HwModes;
+  BitWidth = 0;
+  for (const CodeGenInstruction *CGI : EncodedInstructions) {
+    const Record *R = CGI->TheDef;
+    if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
+      EncodingInfoByHwMode EBM(RV, HWM);
+      for (const auto &[Key, Value] : EBM) {
+        const BitsInit *BI = Value->getValueAsBitsInit("Inst");
+        BitWidth = std::max(BitWidth, BI->getNumBits());
+        HwModes.insert(Key);
+      }
+      continue;
+    }
+    const BitsInit *BI = R->getValueAsBitsInit("Inst");
+    BitWidth = std::max(BitWidth, BI->getNumBits());
+  }
+  UseAPInt = BitWidth > 64;
 
-} // end anonymous namespace
+  // Emit function declaration
+  if (UseAPInt) {
+    O << "void " << Target.getName()
+      << "MCCodeEmitter::getBinaryCodeForInstr(const MCInst &MI,\n"
+      << "    SmallVectorImpl<MCFixup> &Fixups,\n"
+      << "    APInt &Inst,\n"
+      << "    APInt &Scratch,\n"
+      << "    const MCSubtargetInfo &STI) const {\n";
+  } else {
+    O << "uint64_t " << Target.getName();
+    O << "MCCodeEmitter::getBinaryCodeForInstr(const MCInst &MI,\n"
+      << "    SmallVectorImpl<MCFixup> &Fixups,\n"
+      << "    const MCSubtargetInfo &STI) const {\n";
+  }
+
+  // Emit instruction base values
+  emitInstructionBaseValues(O, EncodedInstructions, Target, DefaultMode);
+  if (!HwModes.empty()) {
+    // Emit table for instrs whose encodings are controlled by HwModes.
+    for (unsigned HwMode : HwModes) {
+      if (HwMode == DefaultMode)
+        continue;
+      emitInstructionBaseValues(O, EncodedInstructions, Target, HwMode);
+    }
+
+    // This pointer will be assigned to the HwMode table later.
+    O << "  const uint64_t *InstBitsByHw;\n";
+  }
+
+  // Map to accumulate all the cases.
+  std::map<std::string, std::vector<std::string>> CaseMap;
+  std::map<std::string, std::vector<std::string>> BitOffsetCaseMap;
+
+  // Construct all cases statement for each opcode
+  for (const CodeGenInstruction *CGI : EncodedInstructions) {
+    const Record *R = CGI->TheDef;
+    std::string InstName =
+        (R->getValueAsString("Namespace") + "::" + R->getName()).str();
+    std::string Case, BitOffsetCase;
+    std::tie(Case, BitOffsetCase) = getInstructionCases(R, Target);
+
+    CaseMap[Case].push_back(InstName);
+    BitOffsetCaseMap[BitOffsetCase].push_back(std::move(InstName));
+  }
+
+  unsigned FirstSupportedOpcode = EncodedInstructions.front()->EnumVal;
+  O << "  constexpr unsigned FirstSupportedOpcode = " << FirstSupportedOpcode
+    << ";\n";
+  O << R"(
+  const unsigned opcode = MI.getOpcode();
+  if (opcode < FirstSupportedOpcode) {
+    std::string msg;
+    raw_string_ostream Msg(msg);
+    Msg << "Unsupported instruction: " << MI;
+    report_fatal_error(Msg.str().c_str());
+  }
+  unsigned TableIndex = opcode - FirstSupportedOpcode;
+)";
+
+  // Emit initial function code
+  if (UseAPInt) {
+    int NumWords = APInt::getNumWords(BitWidth);
+    O << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
+      << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
+      << "  Inst = APInt(" << BitWidth << ", ArrayRef(InstBits + TableIndex * "
+      << NumWords << ", " << NumWords << "));\n"
+      << "  APInt &Value = Inst;\n"
+      << "  APInt &op = Scratch;\n"
+      << "  switch (opcode) {\n";
+  } else {
+    O << "  uint64_t Value = InstBits[TableIndex];\n"
+      << "  uint64_t op = 0;\n"
+      << "  (void)op;  // suppress warning\n"
+      << "  switch (opcode) {\n";
+  }
+
+  // Emit each case statement
+  emitCaseMap(O, CaseMap);
+
+  // Default case: unhandled opcode.
+  O << "  default:\n"
+    << "    std::string msg;\n"
+    << "    raw_string_ostream Msg(msg);\n"
+    << "    Msg << \"Not supported instr: \" << MI;\n"
+    << "    report_fatal_error(Msg.str().c_str());\n"
+    << "  }\n";
+  if (UseAPInt)
+    O << "  Inst = Value;\n";
+  else
+    O << "  return Value;\n";
+  O << "}\n\n";
+
+  O << "#ifdef GET_OPERAND_BIT_OFFSET\n"
+    << "#undef GET_OPERAND_BIT_OFFSET\n\n"
+    << "uint32_t " << Target.getName()
+    << "MCCodeEmitter::getOperandBitOffset(const MCInst &MI,\n"
+    << "    unsigned OpNum,\n"
+    << "    const MCSubtargetInfo &STI) const {\n"
+    << "  switch (MI.getOpcode()) {\n";
+  emitCaseMap(O, BitOffsetCaseMap);
+  O << "  }\n"
+    << "  std::string msg;\n"
+    << "  raw_string_ostream Msg(msg);\n"
+    << "  Msg << \"Not supported instr[opcode]: \" << MI << \"[\" << OpNum "
+       "<< \"]\";\n"
+    << "  report_fatal_error(Msg.str().c_str());\n"
+    << "}\n\n"
+    << "#endif // GET_OPERAND_BIT_OFFSET\n\n";
+}
 
 static TableGen::Emitter::OptClass<CodeEmitterGen>
     X("gen-emitter", "Generate machine code emitter");

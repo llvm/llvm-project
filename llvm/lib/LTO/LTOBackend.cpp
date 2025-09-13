@@ -366,6 +366,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
               const std::vector<uint8_t> &CmdArgs) {
+  llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
     // is replicating the compilation environment from bitcode, without needing
@@ -399,6 +400,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
 static void codegen(const Config &Conf, TargetMachine *TM,
                     AddStreamFn AddStream, unsigned Task, Module &Mod,
                     const ModuleSummaryIndex &CombinedIndex) {
+  llvm::TimeTraceScope timeScope("codegen");
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
@@ -552,6 +554,7 @@ Error lto::finalizeOptimizationRemarks(
 Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                    ModuleSummaryIndex &CombinedIndex) {
+  llvm::TimeTraceScope timeScope("LTO backend");
   Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -577,6 +580,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
+  llvm::TimeTraceScope timeScope("Drop dead symbols");
   std::vector<GlobalValue*> DeadGVs;
   for (auto &GV : Mod.global_values())
     if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
@@ -603,6 +607,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
                        bool CodeGenOnly, AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
+  llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -679,6 +684,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   auto ModuleLoader = [&](StringRef Identifier) {
+    llvm::TimeTraceScope moduleLoaderScope("Module loader", Identifier);
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
     if (ModuleMap) {
@@ -712,10 +718,13 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return MOrErr;
   };
 
-  FunctionImporter Importer(CombinedIndex, ModuleLoader,
-                            ClearDSOLocalOnDeclarations);
-  if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
-    return Err;
+  {
+    llvm::TimeTraceScope importScope("Import functions");
+    FunctionImporter Importer(CombinedIndex, ModuleLoader,
+                              ClearDSOLocalOnDeclarations);
+    if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
+      return Err;
+  }
 
   // Do this after any importing so that imported code is updated.
   updateMemProfAttributes(Mod, CombinedIndex);

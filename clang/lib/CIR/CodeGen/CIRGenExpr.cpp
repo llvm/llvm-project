@@ -325,6 +325,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
     const auto vecTy = cast<cir::VectorType>(elementType);
 
     // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
+    assert(!cir::MissingFeatures::cirgenABIInfo());
     if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
@@ -345,7 +346,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr /*, isVolatile*/);
+  builder.createStore(*currSrcLoc, value, addr, isVolatile);
 
   if (isNontemporal) {
     cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
@@ -543,21 +544,50 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                     lvalue.getType(), isInit, /*isNontemporal=*/false);
 }
 
-mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
-                                             SourceLocation loc) {
+mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
+                                             QualType ty, SourceLocation loc,
+                                             LValueBaseInfo baseInfo) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
-  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
-  assert(!cir::MissingFeatures::opLoadBooleanRepresentation());
-
-  Address addr = lvalue.getAddress();
   mlir::Type eltTy = addr.getElementType();
+
+  if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
+    if (clangVecTy->isExtVectorBoolType()) {
+      cgm.errorNYI(loc, "emitLoadOfScalar: ExtVectorBoolType");
+      return nullptr;
+    }
+
+    const auto vecTy = cast<cir::VectorType>(eltTy);
+
+    // Handle vectors of size 3 like size 4 for better performance.
+    assert(!cir::MissingFeatures::cirgenABIInfo());
+    if (vecTy.getSize() == 3 && !getLangOpts().PreserveVec3Type)
+      cgm.errorNYI(addr.getPointer().getLoc(),
+                   "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
+  }
+
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  if (ty->isAtomicType() || isLValueSuitableForInlineAtomic(atomicLValue))
+    cgm.errorNYI("emitLoadOfScalar: load atomic");
 
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
 
-  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr);
+  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
+
+  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
+  if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
+    cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
 
   return loadOp;
+}
+
+mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
+                                             SourceLocation loc) {
+  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
+                          lvalue.getType(), loc, lvalue.getBaseInfo());
 }
 
 /// Given an expression that represents a value lvalue, this
@@ -1346,6 +1376,30 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
   return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);
 }
 
+LValue
+CIRGenFunction::getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e) {
+  assert(OpaqueValueMapping::shouldBindAsLValue(e));
+
+  auto it = opaqueLValues.find(e);
+  if (it != opaqueLValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "LValue for a nonunique OVE hasn't been emitted");
+  return emitLValue(e->getSourceExpr());
+}
+
+RValue
+CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
+  assert(!OpaqueValueMapping::shouldBindAsLValue(e));
+
+  auto it = opaqueRValues.find(e);
+  if (it != opaqueRValues.end())
+    return it->second;
+
+  assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
+  return emitAnyExpr(e->getSourceExpr());
+}
+
 LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
   if (e->isFileScope()) {
     cgm.errorNYI(e->getSourceRange(), "emitCompoundLiteralLValue: FileScope");
@@ -1936,20 +1990,36 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
   // constructor, emit the zero initialization now, unless destination is
   // already zeroed.
   if (e->requiresZeroInitialization() && !dest.isZeroed()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: requires initialization");
-    return;
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
+      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
+                             e->getType());
+      break;
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXConstructExpr: base requires initialization");
+      break;
+    }
   }
 
-  // If this is a call to a trivial default constructor:
-  // In LLVM: do nothing.
-  // In CIR: emit as a regular call, other later passes should lower the
-  // ctor call into trivial initialization.
+  // If this is a call to a trivial default constructor, do nothing.
+  if (cd->isTrivial() && cd->isDefaultConstructor())
+    return;
 
   // Elide the constructor if we're constructing from a temporary
   if (getLangOpts().ElideConstructors && e->isElidable()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: elidable constructor");
+    // FIXME: This only handles the simplest case, where the source object is
+    //        passed directly as the first argument to the constructor. This
+    //        should also handle stepping through implicit casts and conversion
+    //        sequences which involve two steps, with a conversion operator
+    //        follwed by a converting constructor.
+    const Expr *srcObj = e->getArg(0);
+    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
+    emitAggExpr(srcObj, dest);
     return;
   }
 

@@ -116,8 +116,8 @@ define i64 @test_or_flags(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:gpr = OR [[COPY3]], [[COPY2]]
-  ; CHECK-NEXT:   [[OR1:%[0-9]+]]:gpr = disjoint OR [[COPY1]], [[COPY]]
-  ; CHECK-NEXT:   [[OR2:%[0-9]+]]:gpr = disjoint OR killed [[OR]], killed [[OR1]]
+  ; CHECK-NEXT:   [[OR1:%[0-9]+]]:gpr = OR [[COPY1]], [[COPY]]
+  ; CHECK-NEXT:   [[OR2:%[0-9]+]]:gpr = OR killed [[OR]], killed [[OR1]]
   ; CHECK-NEXT:   $x10 = COPY [[OR2]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
   %t0 = or i64 %a0, %a1

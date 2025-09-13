@@ -33,14 +33,14 @@ class TrivialModuleBuilder {
 protected:
   LLVMContext Context;
   IRBuilder<> Builder;
-  std::string BuilderTriple;
+  const Triple &BuilderTriple;
 
-  TrivialModuleBuilder(const std::string &Triple)
-    : Builder(Context), BuilderTriple(Triple) {}
+  TrivialModuleBuilder(const Triple &TT)
+      : Builder(Context), BuilderTriple(TT) {}
 
   Module *createEmptyModule(StringRef Name = StringRef()) {
     Module * M = new Module(Name, Context);
-    M->setTargetTriple(Triple(Triple::normalize(BuilderTriple)));
+    M->setTargetTriple(BuilderTriple);
     return M;
   }
 

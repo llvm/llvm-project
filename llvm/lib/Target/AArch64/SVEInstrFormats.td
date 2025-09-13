@@ -315,10 +315,16 @@ def addsub_imm8_opt_lsl_i16 : imm8_opt_lsl<16, "uint16_t", SVEAddSubImmOperand16
 def addsub_imm8_opt_lsl_i32 : imm8_opt_lsl<32, "uint32_t", SVEAddSubImmOperand32>;
 def addsub_imm8_opt_lsl_i64 : imm8_opt_lsl<64, "uint64_t", SVEAddSubImmOperand64>;
 
-def SVEAddSubImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i8>", []>;
-def SVEAddSubImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i16>", []>;
-def SVEAddSubImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i32>", []>;
-def SVEAddSubImm64Pat : ComplexPattern<i64, 2, "SelectSVEAddSubImm<MVT::i64>", []>;
+let Complexity = 1 in {
+def SVEAddSubImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i8, false>", []>;
+def SVEAddSubImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i16, false>", []>;
+def SVEAddSubImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i32, false>", []>;
+def SVEAddSubImm64Pat : ComplexPattern<i64, 2, "SelectSVEAddSubImm<MVT::i64, false>", []>;
+
+def SVEAddSubNegImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i8, true>", []>;
+def SVEAddSubNegImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i16, true>", []>;
+def SVEAddSubNegImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i32, true>", []>;
+def SVEAddSubNegImm64Pat : ComplexPattern<i64, 2, "SelectSVEAddSubImm<MVT::i64, true>", []>;
 
 def SVEAddSubSSatNegImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i8, true>", []>;
 def SVEAddSubSSatNegImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i16, true>", []>;
@@ -329,6 +335,7 @@ def SVEAddSubSSatPosImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MV
 def SVEAddSubSSatPosImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i16, false>", []>;
 def SVEAddSubSSatPosImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i32, false>", []>;
 def SVEAddSubSSatPosImm64Pat : ComplexPattern<i64, 2, "SelectSVEAddSubSSatImm<MVT::i64, false>", []>;
+} // Complexity = 1
 
 def SVECpyDupImm8Pat  : ComplexPattern<i32, 2, "SelectSVECpyDupImm<MVT::i8>", []>;
 def SVECpyDupImm16Pat : ComplexPattern<i32, 2, "SelectSVECpyDupImm<MVT::i16>", []>;
@@ -886,12 +893,16 @@ class sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op>
 }
 
 multiclass sve_int_ptest<bits<6> opc, string asm, SDPatternOperator op,
-                         SDPatternOperator op_any> {
+                         SDPatternOperator op_any, SDPatternOperator op_first> {
   def NAME : sve_int_ptest<opc, asm, op>;
 
   let hasNoSchedulingInfo = 1, isCompare = 1, Defs = [NZCV] in {
   def _ANY : Pseudo<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
                     [(set NZCV, (op_any (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>,
+             PseudoInstExpansion<(!cast<Instruction>(NAME) PPRAny:$Pg, PPR8:$Pn)>;
+
+  def _FIRST : Pseudo<(outs), (ins PPRAny:$Pg, PPR8:$Pn),
+                    [(set NZCV, (op_first (nxv16i1 PPRAny:$Pg), (nxv16i1 PPR8:$Pn)))]>,
              PseudoInstExpansion<(!cast<Instruction>(NAME) PPRAny:$Pg, PPR8:$Pn)>;
   }
 }
@@ -5221,7 +5232,8 @@ class sve_int_arith_imm0<bits<2> sz8_64, bits<3> opc, string asm,
   let hasSideEffects = 0;
 }
 
-multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op> {
+multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op,
+                              SDPatternOperator inv_op = null_frag> {
   def _B : sve_int_arith_imm0<0b00, opc, asm, ZPR8,  addsub_imm8_opt_lsl_i8>;
   def _H : sve_int_arith_imm0<0b01, opc, asm, ZPR16, addsub_imm8_opt_lsl_i16>;
   def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
@@ -5231,6 +5243,12 @@ multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, op, ZPR16, i32, SVEAddSubImm16Pat, !cast<Instruction>(NAME # _H)>;
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, op, ZPR32, i32, SVEAddSubImm32Pat, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, op, ZPR64, i64, SVEAddSubImm64Pat, !cast<Instruction>(NAME # _D)>;
+
+  // Extra patterns for add(x, splat(-ve)) -> sub(x, +ve). There is no i8
+  // pattern as all i8 constants can be handled by an add.
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, inv_op, ZPR16, i32, SVEAddSubNegImm16Pat, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, inv_op, ZPR32, i32, SVEAddSubNegImm32Pat, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, inv_op, ZPR64, i64, SVEAddSubNegImm64Pat, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_arith_imm0_ssat<bits<3> opc, string asm, SDPatternOperator op,
@@ -5952,16 +5970,20 @@ class sve2_int_while_rr<bits<2> sz8_64, bits<1> rw, string asm,
   let isWhile = 1;
 }
 
-multiclass sve2_int_while_rr<bits<1> rw, string asm, string op> {
+multiclass sve2_int_while_rr<bits<1> rw, string asm, SDPatternOperator op> {
   def _B : sve2_int_while_rr<0b00, rw, asm, PPR8>;
   def _H : sve2_int_while_rr<0b01, rw, asm, PPR16>;
   def _S : sve2_int_while_rr<0b10, rw, asm, PPR32>;
   def _D : sve2_int_while_rr<0b11, rw, asm, PPR64>;
 
-  def : SVE_2_Op_Pat<nxv16i1, !cast<SDPatternOperator>(op # _b), i64, i64, !cast<Instruction>(NAME # _B)>;
-  def : SVE_2_Op_Pat<nxv8i1,  !cast<SDPatternOperator>(op # _h), i64, i64, !cast<Instruction>(NAME # _H)>;
-  def : SVE_2_Op_Pat<nxv4i1,  !cast<SDPatternOperator>(op # _s), i64, i64, !cast<Instruction>(NAME # _S)>;
-  def : SVE_2_Op_Pat<nxv2i1,  !cast<SDPatternOperator>(op # _d), i64, i64, !cast<Instruction>(NAME # _D)>;
+  def : Pat<(nxv16i1 (op i64:$Op1, i64:$Op2, (i64 1))),
+            (!cast<Instruction>(NAME # _B) $Op1, $Op2)>;
+  def : Pat<(nxv8i1 (op i64:$Op1, i64:$Op2, (i64 2))),
+            (!cast<Instruction>(NAME # _H) $Op1, $Op2)>;
+  def : Pat<(nxv4i1 (op i64:$Op1, i64:$Op2, (i64 4))),
+            (!cast<Instruction>(NAME # _S) $Op1, $Op2)>;
+  def : Pat<(nxv2i1 (op i64:$Op1, i64:$Op2, (i64 8))),
+            (!cast<Instruction>(NAME # _D) $Op1, $Op2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -10383,7 +10405,7 @@ multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc> {
 
 // SVE integer compare scalar count and limit (predicate pair)
 class sve2p1_int_while_rr_pair<string mnemonic, bits<2> sz, bits<3> opc,
-                             RegisterOperand ppr_ty>
+                               PPR2MulRegOp ppr_ty>
     : I<(outs ppr_ty:$Pd), (ins GPR64:$Rn, GPR64:$Rm),
         mnemonic, "\t$Pd, $Rn, $Rm",
         "", []>, Sched<[]> {
@@ -10403,6 +10425,8 @@ class sve2p1_int_while_rr_pair<string mnemonic, bits<2> sz, bits<3> opc,
 
   let Defs = [NZCV];
   let hasSideEffects = 0;
+  let ElementSize = ppr_ty.ElementSize;
+  let isWhile = 1;
 }
 
 
