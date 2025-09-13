@@ -736,6 +736,7 @@ def _expandLateSubstitutions(arguments, cwd):
 
     return arguments
 
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
