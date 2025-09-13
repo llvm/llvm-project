@@ -31,6 +31,8 @@ public:
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
 
+  bool checkAMDGCNAtomicFaddV2F16Type(CallExpr *TheCall);
+
   /// Create an AMDGPUWavesPerEUAttr attribute.
   AMDGPUFlatWorkGroupSizeAttr *
   CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI, Expr *Min,

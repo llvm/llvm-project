@@ -109,6 +109,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
+    return checkAMDGCNAtomicFaddV2F16Type(TheCall);
   default:
     return false;
   }
@@ -436,4 +440,32 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
+
+bool SemaAMDGPU::checkAMDGCNAtomicFaddV2F16Type(CallExpr *TheCall) {
+  // Check that the pointer argument is a pointer to v2f16
+
+  Expr *Arg = TheCall->getArg(1);
+  QualType ArgType = Arg->getType();
+
+  // Check if it's a vector type
+  if (!ArgType->isVectorType()) {
+    Diag(Arg->getBeginLoc(), diag::err_typecheck_call_different_arg_types)
+        << "expected _Float16 vector of length 2" << ArgType
+        << Arg->getSourceRange();
+    return true;
+  }
+
+  const VectorType *VT = ArgType->getAs<VectorType>();
+
+  // Check element type (should be _Float16) and vector length (should be 2)
+  QualType ElementType = VT->getElementType();
+  if (!ElementType->isFloat16Type() || VT->getNumElements() != 2) {
+    Diag(Arg->getBeginLoc(), diag::err_typecheck_call_different_arg_types)
+        << "expected _Float16 vector of length 2" << ArgType
+        << Arg->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
 } // namespace clang
