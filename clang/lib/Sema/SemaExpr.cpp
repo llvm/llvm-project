@@ -21515,8 +21515,9 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     QualType TST;
     {
       SFINAETrap Trap(*this);
-      TST = CheckTemplateIdType(ElaboratedTypeKeyword::None, TN,
-                                NameInfo.getBeginLoc(), TAL);
+      TST = CheckTemplateIdType(
+          ElaboratedTypeKeyword::None, TN, NameInfo.getBeginLoc(), TAL,
+          /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
     }
     if (TST.isNull())
       TST = Context.getTemplateSpecializationType(
