@@ -167,3 +167,48 @@ bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
   // If we got this far, the instruction is cycle invariant!
   return true;
 }
+
+bool llvm::mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
+  assert(MI.mayLoad() && "Expected MI that loads!");
+
+  // If we lost memory operands, conservatively assume that the instruction
+  // reads from everything..
+  if (MI.memoperands_empty())
+    return true;
+
+  for (MachineMemOperand *MemOp : MI.memoperands())
+    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue())
+      if (PSV->isGOT() || PSV->isConstantPool())
+        return true;
+
+  return false;
+}
+
+bool llvm::isSinkIntoCycleCandidate(MachineInstr &MI, MachineCycle *Cycle,
+                                    MachineRegisterInfo *MRI,
+                                    const TargetInstrInfo *TII) {
+  // Not sinking meta instruction.
+  if (MI.isMetaInstruction())
+    return false;
+  // Instruction not a candidate for this target.
+  if (!TII->shouldSink(MI))
+    return false;
+  // Instruction is not cycle invariant.
+  if (!isCycleInvariant(Cycle, MI))
+    return false;
+  // Instruction not safe to move.
+  bool DontMoveAcrossStore = true;
+  if (!MI.isSafeToMove(DontMoveAcrossStore))
+    return false;
+  // Dont sink GOT or constant pool loads.
+  if (MI.mayLoad() && !mayLoadFromGOTOrConstantPool(MI))
+    return false;
+  if (MI.isConvergent())
+    return false;
+  const MachineOperand &MO = MI.getOperand(0);
+  if (!MO.isReg() || !MO.getReg() || !MO.isDef())
+    return false;
+  if (!MRI->hasOneDef(MO.getReg()))
+    return false;
+  return true;
+}

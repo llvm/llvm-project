@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -257,9 +258,6 @@ private:
   MachineBasicBlock *FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
                                       bool &BreakPHIEdge,
                                       AllSuccsCache &AllSuccessors);
-
-  void FindCycleSinkCandidates(MachineCycle *Cycle, MachineBasicBlock *BB,
-                               SmallVectorImpl<MachineInstr *> &Candidates);
 
   bool
   aggressivelySinkIntoCycle(MachineCycle *Cycle, MachineInstr &I,
@@ -694,65 +692,6 @@ bool MachineSinking::AllUsesDominatedByBlock(Register Reg,
   return true;
 }
 
-/// Return true if this machine instruction loads from global offset table or
-/// constant pool.
-static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
-  assert(MI.mayLoad() && "Expected MI that loads!");
-
-  // If we lost memory operands, conservatively assume that the instruction
-  // reads from everything..
-  if (MI.memoperands_empty())
-    return true;
-
-  for (MachineMemOperand *MemOp : MI.memoperands())
-    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue())
-      if (PSV->isGOT() || PSV->isConstantPool())
-        return true;
-
-  return false;
-}
-
-void MachineSinking::FindCycleSinkCandidates(
-    MachineCycle *Cycle, MachineBasicBlock *BB,
-    SmallVectorImpl<MachineInstr *> &Candidates) {
-  for (auto &MI : *BB) {
-    LLVM_DEBUG(dbgs() << "CycleSink: Analysing candidate: " << MI);
-    if (MI.isMetaInstruction()) {
-      LLVM_DEBUG(dbgs() << "CycleSink: not sinking meta instruction\n");
-      continue;
-    }
-    if (!TII->shouldSink(MI)) {
-      LLVM_DEBUG(dbgs() << "CycleSink: Instruction not a candidate for this "
-                           "target\n");
-      continue;
-    }
-    if (!isCycleInvariant(Cycle, MI)) {
-      LLVM_DEBUG(dbgs() << "CycleSink: Instruction is not cycle invariant\n");
-      continue;
-    }
-    bool DontMoveAcrossStore = true;
-    if (!MI.isSafeToMove(DontMoveAcrossStore)) {
-      LLVM_DEBUG(dbgs() << "CycleSink: Instruction not safe to move.\n");
-      continue;
-    }
-    if (MI.mayLoad() && !mayLoadFromGOTOrConstantPool(MI)) {
-      LLVM_DEBUG(dbgs() << "CycleSink: Dont sink GOT or constant pool loads\n");
-      continue;
-    }
-    if (MI.isConvergent())
-      continue;
-
-    const MachineOperand &MO = MI.getOperand(0);
-    if (!MO.isReg() || !MO.getReg() || !MO.isDef())
-      continue;
-    if (!MRI->hasOneDef(MO.getReg()))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "CycleSink: Instruction added as candidate.\n");
-    Candidates.push_back(&MI);
-  }
-}
-
 PreservedAnalyses
 MachineSinkingPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
@@ -892,7 +831,9 @@ bool MachineSinking::run(MachineFunction &MF) {
           continue;
         }
         SmallVector<MachineInstr *, 8> Candidates;
-        FindCycleSinkCandidates(Cycle, Preheader, Candidates);
+        for (auto &MI : *Preheader)
+          if (isSinkIntoCycleCandidate(MI, Cycle, MRI, TII))
+            Candidates.push_back(&MI);
 
         unsigned i = 0;
 

@@ -98,6 +98,12 @@ DisableHoistingToHotterBlocks("disable-hoisting-to-hotter-blocks",
                               clEnumValN(UseBFI::All, "all",
                               "enable the feature with/wo profile data")));
 
+static cl::opt<bool> SinkInstsIntoCycleBeforeLICM(
+    "sink-insts-before-licm",
+    cl::desc("Sink instructions into cycles to avoid "
+             "register spills"),
+    cl::init(true), cl::Hidden);
+
 STATISTIC(NumHoisted,
           "Number of machine instructions hoisted out of loops");
 STATISTIC(NumLowRP,
@@ -287,6 +293,8 @@ namespace {
     bool isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
                             MachineBasicBlock *TgtBlock);
     MachineBasicBlock *getOrCreatePreheader(MachineLoop *CurLoop);
+
+    bool rematerializeIntoCycle(MachineCycle *Cycle, MachineInstr &I);
   };
 
   class MachineLICMBase : public MachineFunctionPass {
@@ -304,7 +312,11 @@ namespace {
         AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
+      if (PreRegAlloc)
+        AU.addRequired<MachineCycleInfoWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      if (PreRegAlloc)
+        AU.addPreserved<MachineCycleInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -348,6 +360,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
 
@@ -396,6 +409,26 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << MF.getName() << " ********\n");
 
   if (PreRegAlloc) {
+    if (SinkInstsIntoCycleBeforeLICM) {
+      auto *CI = GET_RESULT(MachineCycle, getCycleInfo, Info);
+      SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
+      for (auto *Cycle : Cycles) {
+        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+        if (!Preheader) {
+          LLVM_DEBUG(dbgs() << "Rematerialization: Can't find preheader\n");
+          continue;
+        }
+        SmallVector<MachineInstr *, 8> Candidates;
+        for (auto &MI : *Preheader)
+          if (isSinkIntoCycleCandidate(MI, Cycle, MRI, TII))
+            Candidates.push_back(&MI);
+        // Walk the candidates in reverse order so that we start with the use
+        // of a def-use chain, if there is any.
+        for (MachineInstr *I : llvm::reverse(Candidates))
+          if (rematerializeIntoCycle(Cycle, *I))
+            Changed = true;
+      }
+    }
     // Estimate register pressure during pre-regalloc pass.
     unsigned NumRPS = TRI->getNumRegPressureSets();
     RegPressure.resize(NumRPS);
@@ -1003,24 +1036,6 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
       Cost[*PS] += RCCost;
   }
   return Cost;
-}
-
-/// Return true if this machine instruction loads from global offset table or
-/// constant pool.
-static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
-  assert(MI.mayLoad() && "Expected MI that loads!");
-
-  // If we lost memory operands, conservatively assume that the instruction
-  // reads from everything..
-  if (MI.memoperands_empty())
-    return true;
-
-  for (MachineMemOperand *MemOp : MI.memoperands())
-    if (const PseudoSourceValue *PSV = MemOp->getPseudoValue())
-      if (PSV->isGOT() || PSV->isConstantPool())
-        return true;
-
-  return false;
 }
 
 // This function iterates through all the operands of the input store MI and
@@ -1744,6 +1759,88 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
   return Ratio > BlockFrequencyRatioThreshold;
 }
 
+/// Rematerialize instructions into cycles before Machine LICM,
+/// since LICM in the middle-end hoisted every instructions without considering
+/// register pressure.
+bool MachineLICMImpl::rematerializeIntoCycle(MachineCycle *Cycle,
+                                             MachineInstr &I) {
+  LLVM_DEBUG(dbgs() << "Rematerialization: Finding sink block for: " << I);
+  MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+  assert(Preheader && "Cycle sink needs a preheader block");
+  MachineBasicBlock *SinkBlock = nullptr;
+  const MachineOperand &MO = I.getOperand(0);
+  for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
+    LLVM_DEBUG(dbgs() << "Rematerialization:   Analysing use: " << MI);
+    if (!Cycle->contains(MI.getParent())) {
+      LLVM_DEBUG(
+          dbgs() << "Rematerialization:   Use not in cycle, can't sink.\n");
+      return false;
+    }
+    if (!SinkBlock) {
+      SinkBlock = MI.getParent();
+      LLVM_DEBUG(dbgs() << "Rematerialization:   Setting sink block to: "
+                        << printMBBReference(*SinkBlock) << "\n");
+      continue;
+    }
+    if (MI.isPHI()) {
+      for (unsigned I = 1; I != MI.getNumOperands(); I += 2) {
+        Register SrcReg = MI.getOperand(I).getReg();
+        if (TRI->regsOverlap(SrcReg, MO.getReg())) {
+          MachineBasicBlock *SrcBB = MI.getOperand(I + 1).getMBB();
+          if (SrcBB != SinkBlock) {
+            SinkBlock =
+                MDTU->getDomTree().findNearestCommonDominator(SinkBlock, SrcBB);
+            if (!SinkBlock)
+              break;
+          }
+        }
+      }
+    } else {
+      SinkBlock = MDTU->getDomTree().findNearestCommonDominator(SinkBlock,
+                                                                MI.getParent());
+    }
+    if (!SinkBlock) {
+      LLVM_DEBUG(
+          dbgs() << "Rematerialization:   Can't find nearest dominator\n");
+      return false;
+    }
+    LLVM_DEBUG(
+        dbgs() << "Rematerialization:   Setting nearest common dom block: "
+               << printMBBReference(*SinkBlock) << "\n");
+  }
+  if (!SinkBlock) {
+    LLVM_DEBUG(
+        dbgs() << "Rematerialization: Not sinking, can't find sink block.\n");
+    return false;
+  }
+  if (SinkBlock == Preheader) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Rematerialization: Not sinking, sink block is the preheader\n");
+    return false;
+  }
+  for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
+    if (MI.isPHI() && MI.getParent() == SinkBlock) {
+      LLVM_DEBUG(dbgs() << "Rematerialization: Not sinking, sink block is "
+                           "using it on PHI.\n");
+      return false;
+    }
+  }
+  LLVM_DEBUG(dbgs() << "Rematerialization: Sinking instruction!\n");
+  SinkBlock->splice(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()), Preheader,
+                    I);
+  // Conservatively clear any kill flags on uses of sunk instruction
+  for (MachineOperand &MO : I.operands()) {
+    if (MO.isReg() && MO.readsReg())
+      MRI->clearKillFlags(MO.getReg());
+  }
+  // The instruction is moved from its basic block, so do not retain the
+  // debug information.
+  assert(!I.isDebugInstr() && "Should not sink debug inst");
+  I.setDebugLoc(DebugLoc());
+  return true;
+}
+
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
@@ -1751,6 +1848,8 @@ PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
+  if (PreRegAlloc)
+    PA.preserve<MachineCycleAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
