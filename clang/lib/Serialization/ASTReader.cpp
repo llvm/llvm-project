@@ -3382,10 +3382,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (ImportedKind == MK_PrebuiltModule ||
           ImportedKind == MK_ExplicitModule) {
         if (N2978::managerCompiler) {
-          if (auto it = N2978::managerCompiler->responses.find(
-                  std::string(ImportedName));
+          std::string f{ImportedName};
+          if (f[0] == '.' && f[1] == '\\')
+            f = f.substr(2, f.size() - 2);
+
+          if (auto it = N2978::managerCompiler->responses.find(f);
               it != N2978::managerCompiler->responses.end() &&
-              it->second.type == N2978::ResponseType::MODULE) {
+              it->second.type != N2978::ResponseType::HEADER_FILE) {
             ImportedFile = it->second.file.filePath;
           }
         } else {

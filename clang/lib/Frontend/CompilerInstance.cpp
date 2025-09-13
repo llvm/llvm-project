@@ -1905,10 +1905,13 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     // in case of noScanIPC, PrebuiltModuleFiles is empty, so we initialize it
     // from the build-system here, so the selectModuleSource() call
     // later-on will return ModuleSource::MS_PrebuiltModulePath.
+    std::string f{ModuleName};
+    if (IsInclusionDirective)
+      f = f.substr(2, f.size() - 2);
+
     auto &Responses = N2978::managerCompiler->responses;
-    if (const auto it = Responses.find(std::string(ModuleName));
-        it == Responses.end() ||
-        it->second.type != N2978::ResponseType::MODULE) {
+    if (const auto it = Responses.find(f);
+        it == Responses.end() || it->second.type != (IsInclusionDirective ? N2978::ResponseType::HEADER_UNIT : N2978::ResponseType::MODULE)) {
       N2978::CTBModule Mod;
       Mod.moduleName = ModuleName;
       if (const auto &r =
