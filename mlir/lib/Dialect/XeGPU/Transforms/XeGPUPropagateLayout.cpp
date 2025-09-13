@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -108,6 +109,12 @@ public:
     if (!isAssigned())
       return false;
     return isa<xegpu::SliceAttr>(storage);
+  }
+
+  int64_t getRank() const {
+    if (!isAssigned())
+      return -1;
+    return storage.getRank();
   }
 
   Attribute get() { return storage; }
@@ -493,15 +500,14 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
     return;
   }
 
-  // Only consider 2D -> 2D broadcast.
-  if (sourceTy.getRank() != 2 || resultTy.getRank() != 2) {
-    broadcast.emitWarning("Expecting source type to be 2D vector and "
-                          "result type to be 2D vector.");
+  // Only consider nD -> nD broadcast.
+  if (sourceTy.getRank() != resultTy.getRank()) {
+    broadcast.emitWarning("Expecting source and result to have same rank.");
     return;
   }
   SetVector<int64_t> broadcastUnitDims = broadcast.computeBroadcastedUnitDims();
   if (broadcastUnitDims.size() != 1) {
-    broadcast.emitWarning("Expecting source type to be 2D vector only with "
+    broadcast.emitWarning("Expecting source type to be nD vector only with "
                           "one broadcasted dimension.");
     return;
   }
@@ -516,79 +522,46 @@ void LayoutInfoPropagation::visitShapeCastOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
-  int64_t sourceRank = shapeCast.getSourceVectorType().getRank();
-  int64_t resultRank = shapeCast.getResultVectorType().getRank();
-  // Expecting source rank to be 1D or 2D.
-  if (sourceRank != 1 && sourceRank != 2) {
-    shapeCast.emitWarning("Expecting source type to be 1D or 2D vector.");
+  VectorType sourceTy = shapeCast.getSourceVectorType();
+  VectorType resultTy = shapeCast.getResultVectorType();
+  // Shape cast layout propagation has following restrictions:
+  // 1) nD -> nD shape cast is not supported.
+  // 2) Shape cast must always expand the rank (e.g. 1D -> 2D).
+  // 3) Newly expanded dimensions must be 1.
+  // 4) Result layout can not be a slice layout.
+  if (sourceTy.getRank() == resultTy.getRank()) {
+    shapeCast.emitWarning("nD -> nD shape cast is not supported.");
     return;
   }
-  // Expecting result rank to be 1D or 2D.
-  if (resultRank != 1 && resultRank != 2) {
-    shapeCast.emitWarning("Expecting result type to be 1D or 2D vector.");
+  if (sourceTy.getRank() > resultTy.getRank()) {
+    shapeCast.emitWarning("Expecting shape cast to expand the rank.");
     return;
   }
-  // For 2D -> 2D shape cast, propagate the result layout to the source.
-  if (sourceRank == 2 && resultRank == 2) {
-    propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
-    return;
-  }
-  auto resultLaneLayout = resultLayout.getLaneLayout();
-  if (resultRank == 2 && resultLaneLayout[0] != 1 && resultLaneLayout[1] != 1) {
-    shapeCast.emitWarning(
-        "Expecting 2D result layout to be of form [1, subgroupSize] "
-        "or [subgroupSize, 1].");
+  if (resultLayout.getRank() != resultTy.getRank() ||
+      resultLayout.isSliceLayout()) {
+    shapeCast.emitWarning("Expecting result layout to have same rank as the "
+                          "result type and not be a slice layout.");
     return;
   }
   ArrayRef<int64_t> resultShape = shapeCast.getResultVectorType().getShape();
   ArrayRef<int64_t> sourceShape = shapeCast.getSourceVectorType().getShape();
-  // For 2D -> 1D case.
-  if (sourceRank == 2 && resultRank == 1) {
-    // If the result had slice layout, simply assign the parent layout of the
-    // slice.
-    if (resultLayout.isSliceLayout()) {
-      auto sliceAttr = cast<xegpu::SliceAttr>(resultLayout.get());
-      propagateIfChanged(operands[0],
-                         operands[0]->meet(LayoutInfo(sliceAttr.getParent())));
-      return;
-    }
-    // If the result has a regular 1D layout, then we find the first dimension
-    // that can be fully evenly distributed to lanes. This dimension becomes
-    // the distributed dimension for deciding the lane layout.
-    int sourceDistributedDim =
-        sourceShape[0] % xegpu::targetinfo::subgroupSize == 0
-            ? 0
-            : (sourceShape[1] % xegpu::targetinfo::subgroupSize == 0 ? 1 : -1);
-    if (sourceDistributedDim == -1) {
-      shapeCast.emitWarning(
-          "Source vector can not be evenly distributed across lanes.");
-      return;
-    }
-    SmallVector<int> sourceLaneLayout = {1, 1},
-                     laneData = {1, resultLayout.getLaneData()[0]};
-    sourceLaneLayout[sourceDistributedDim] = xegpu::targetinfo::subgroupSize;
-    propagateIfChanged(
-        operands[0],
-        operands[0]->meet(LayoutInfo(xegpu::LayoutAttr::get(
-            shapeCast->getContext(), sourceLaneLayout, laneData))));
-  }
-
-  // For 1D -> 2D case, If the result shape can be evenly distributed in the
-  // distributed dimension, then the source layout should be
-  // [subgroupSize][1]. Otherwise, data is shared accross lanes (broadcasted).
-  // We use slice attribute for the broadcast case.
-  int64_t distributedDim = resultLaneLayout[0] == 1 ? 1 : 0;
-  if (resultShape[distributedDim] % xegpu::targetinfo::subgroupSize != 0) {
-    xegpu::LayoutAttr parentLayout = xegpu::LayoutAttr::get(
-        shapeCast->getContext(), resultLaneLayout, resultLayout.getLaneData());
-    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-        shapeCast->getContext(), parentLayout,
-        DenseI64ArrayAttr::get(shapeCast->getContext(), {distributedDim}));
-    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
-    return;
-  }
-  propagateIfChanged(operands[0], operands[0]->meet(getDefaultSIMTLayoutInfo(
-                                      shapeCast.getSourceVectorType())));
+  auto findUnitDims = [](ArrayRef<int64_t> shape) {
+    SmallVector<int64_t> unitDims;
+    for (int i = 0, e = shape.size(); i < e; ++i)
+      if (shape[i] == 1)
+        unitDims.push_back(i);
+    return unitDims;
+  };
+  SmallVector<int64_t> resultUnitDims = findUnitDims(resultShape);
+  SmallVector<int64_t> sourceUnitDims = findUnitDims(sourceShape);
+  // Remove first `sourceUnitDims.size()` unit dims from resultUnitDims.
+  auto sliceDims =
+      ArrayRef<int64_t>(resultUnitDims).drop_front(sourceUnitDims.size());
+  // Source layout is obtained by removing the slice dims from result layout.
+  xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
+      shapeCast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
+      DenseI64ArrayAttr::get(shapeCast->getContext(), sliceDims));
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
 }
 
 /// Propagate the layout of the result tensor to the source tensor descriptor
@@ -685,6 +658,17 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   // If the element bit widths are the same, then the layout does not change.
   if (inElemTyBitWidth == outElemTyBitWidth) {
     propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
+    return;
+  }
+  // Check if the result layout is valid. i.e. result vector can be distributed.
+  auto resultLaneLayout = resultLayout.getLaneLayout();
+  auto resultLaneData = resultLayout.getLaneData();
+  if (failed(xegpu::getDistributedVectorType(
+          bitcast.getResultVectorType(),
+          xegpu::LayoutAttr::get(bitcast->getContext(), resultLaneLayout,
+                                 resultLaneData)))) {
+    bitcast.emitWarning(
+        "Result vector type can not be evenly distributed across lanes.");
     return;
   }
   int64_t rank = bitcast.getSourceVectorType().getRank();
