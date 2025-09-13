@@ -1975,9 +1975,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   }
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
-      llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
+      llvm::Triple::x86,     llvm::Triple::x86_64, llvm::Triple::aarch64,
+      llvm::Triple::arm,     llvm::Triple::armeb,  llvm::Triple::mips,
+      llvm::Triple::mipsel,  llvm::Triple::mips64, llvm::Triple::mips64el,
+      llvm::Triple::riscv32, llvm::Triple::riscv64};
 
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))

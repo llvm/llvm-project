@@ -2339,10 +2339,10 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
   return llvm::ConstantInt::get(Int64Ty, llvm::MD5Hash(MDS->getString()));
 }
 
-// Generalize pointer types to a void pointer with the qualifiers of the
-// originally pointed-to type, e.g. 'const char *' and 'char * const *'
-// generalize to 'const void *' while 'char *' and 'const char **' generalize to
-// 'void *'.
+// If `GeneralizePointers` is true, generalizes types to a void pointer with the
+// qualifiers of the originally pointed-to type, e.g. 'const char *' and 'char *
+// const *' generalize to 'const void *' while 'char *' and 'const char **'
+// generalize to 'void *'.
 static QualType GeneralizeType(ASTContext &Ctx, QualType Ty,
                                bool GeneralizePointers) {
   // TODO: Add other generalizations.
