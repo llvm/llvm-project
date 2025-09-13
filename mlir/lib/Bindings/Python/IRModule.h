@@ -946,17 +946,23 @@ public:
         },
         nanobind::arg("other"));
     cls.def_prop_ro_static(
-        "static_typeid", [](nanobind::object & /*class*/) -> MlirTypeID {
+        "static_typeid",
+        [](nanobind::object & /*class*/) -> MlirTypeID {
           if (DerivedTy::getTypeIdFunction)
             return DerivedTy::getTypeIdFunction();
           throw nanobind::attribute_error(
               (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
                   .str()
                   .c_str());
-        });
-    cls.def_prop_ro("typeid", [](PyType &self) {
-      return nanobind::cast<MlirTypeID>(nanobind::cast(self).attr("typeid"));
-    });
+        },
+        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro(
+        "typeid",
+        [](PyType &self) {
+          return nanobind::cast<MlirTypeID>(
+              nanobind::cast(self).attr("typeid"));
+        },
+        nanobind::sig("def typeid(self) -> TypeID"));
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
       printAccum.parts.append(DerivedTy::pyClassName);
@@ -1077,19 +1083,26 @@ public:
         },
         nanobind::arg("other"));
     cls.def_prop_ro(
-        "type", [](PyAttribute &attr) { return mlirAttributeGetType(attr); });
+        "type", [](PyAttribute &attr) { return mlirAttributeGetType(attr); },
+        nanobind::sig("def type(self) -> Type"));
     cls.def_prop_ro_static(
-        "static_typeid", [](nanobind::object & /*class*/) -> MlirTypeID {
+        "static_typeid",
+        [](nanobind::object & /*class*/) -> MlirTypeID {
           if (DerivedTy::getTypeIdFunction)
             return DerivedTy::getTypeIdFunction();
           throw nanobind::attribute_error(
               (DerivedTy::pyClassName + llvm::Twine(" has no typeid."))
                   .str()
                   .c_str());
-        });
-    cls.def_prop_ro("typeid", [](PyAttribute &self) {
-      return nanobind::cast<MlirTypeID>(nanobind::cast(self).attr("typeid"));
-    });
+        },
+        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro(
+        "typeid",
+        [](PyAttribute &self) {
+          return nanobind::cast<MlirTypeID>(
+              nanobind::cast(self).attr("typeid"));
+        },
+        nanobind::sig("def typeid(self) -> TypeID"));
     cls.def("__repr__", [](DerivedTy &self) {
       PyPrintAccumulator printAccum;
       printAccum.parts.append(DerivedTy::pyClassName);

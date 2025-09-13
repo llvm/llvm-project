@@ -253,6 +253,7 @@ public:
         },
         nb::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
     c.def_prop_ro("value", mlirAffineMapAttrGetValue,
+                  nb::sig("def value(self) -> AffineMap"),
                   "Returns the value of the AffineMap attribute");
   }
 };
@@ -490,7 +491,8 @@ public:
     static void bind(nb::module_ &m) {
       nb::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
           .def("__iter__", &PyArrayAttributeIterator::dunderIter)
-          .def("__next__", &PyArrayAttributeIterator::dunderNext);
+          .def("__next__", &PyArrayAttributeIterator::dunderNext,
+               nb::sig("def __next__(self) -> Attribute"));
     }
 
   private:
@@ -517,12 +519,14 @@ public:
         },
         nb::arg("attributes"), nb::arg("context") = nb::none(),
         "Gets a uniqued Array attribute");
-    c.def("__getitem__",
-          [](PyArrayAttribute &arr, intptr_t i) {
-            if (i >= mlirArrayAttrGetNumElements(arr))
-              throw nb::index_error("ArrayAttribute index out of range");
-            return arr.getItem(i);
-          })
+    c.def(
+         "__getitem__",
+         [](PyArrayAttribute &arr, intptr_t i) {
+           if (i >= mlirArrayAttrGetNumElements(arr))
+             throw nb::index_error("ArrayAttribute index out of range");
+           return arr.getItem(i);
+         },
+         nb::sig("def __getitem__(self, arg: int, /) -> Attribute"))
         .def("__len__",
              [](const PyArrayAttribute &arr) {
                return mlirArrayAttrGetNumElements(arr);
@@ -611,10 +615,12 @@ public:
                   "Returns the value of the integer attribute");
     c.def("__int__", toPyInt,
           "Converts the value of the integer attribute to a Python int");
-    c.def_prop_ro_static("static_typeid",
-                         [](nb::object & /*class*/) -> MlirTypeID {
-                           return mlirIntegerAttrGetTypeID();
-                         });
+    c.def_prop_ro_static(
+        "static_typeid",
+        [](nb::object & /*class*/) -> MlirTypeID {
+          return mlirIntegerAttrGetTypeID();
+        },
+        nb::sig("def static_typeid(/) -> TypeID"));
   }
 
 private:
@@ -680,6 +686,8 @@ public:
           return PySymbolRefAttribute::fromList(symbols, context.resolve());
         },
         nb::arg("symbols"), nb::arg("context") = nb::none(),
+        nb::sig("def get(symbols: Sequence[str], context: mlir.ir.Context | "
+                "None = None) -> Attribute"),
         "Gets a uniqued SymbolRef attribute from a list of symbol names");
     c.def_prop_ro(
         "value",
@@ -1044,12 +1052,15 @@ public:
                      [](PyDenseElementsAttribute &self) -> bool {
                        return mlirDenseElementsAttrIsSplat(self);
                      })
-        .def("get_splat_value", [](PyDenseElementsAttribute &self) {
-          if (!mlirDenseElementsAttrIsSplat(self))
-            throw nb::value_error(
-                "get_splat_value called on a non-splat attribute");
-          return mlirDenseElementsAttrGetSplatValue(self);
-        });
+        .def(
+            "get_splat_value",
+            [](PyDenseElementsAttribute &self) {
+              if (!mlirDenseElementsAttrIsSplat(self))
+                throw nb::value_error(
+                    "get_splat_value called on a non-splat attribute");
+              return mlirDenseElementsAttrGetSplatValue(self);
+            },
+            nb::sig("def get_splat_value(self) -> Attribute"));
   }
 
   static PyType_Slot slots[];
@@ -1551,13 +1562,16 @@ public:
         },
         nb::arg("value") = nb::dict(), nb::arg("context") = nb::none(),
         "Gets an uniqued dict attribute");
-    c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
-      MlirAttribute attr =
-          mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
-      if (mlirAttributeIsNull(attr))
-        throw nb::key_error("attempt to access a non-existent attribute");
-      return attr;
-    });
+    c.def(
+        "__getitem__",
+        [](PyDictAttribute &self, const std::string &name) {
+          MlirAttribute attr =
+              mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
+          if (mlirAttributeIsNull(attr))
+            throw nb::key_error("attempt to access a non-existent attribute");
+          return attr;
+        },
+        nb::sig("def __getitem__(self, arg: str, /) -> Attribute"));
     c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
       if (index < 0 || index >= self.dunderLen()) {
         throw nb::index_error("attempt to access out of bounds attribute");
@@ -1623,9 +1637,10 @@ public:
         },
         nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued Type attribute");
-    c.def_prop_ro("value", [](PyTypeAttribute &self) {
-      return mlirTypeAttrGetValue(self.get());
-    });
+    c.def_prop_ro(
+        "value",
+        [](PyTypeAttribute &self) { return mlirTypeAttrGetValue(self.get()); },
+        nb::sig("def value(self) -> Type"));
   }
 };
 

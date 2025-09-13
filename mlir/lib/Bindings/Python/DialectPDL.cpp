@@ -68,7 +68,7 @@ static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   rangeType.def_property_readonly(
       "element_type",
       [](MlirType type) { return mlirPDLRangeTypeGetElementType(type); },
-      "Get the element type.");
+      nb::sig("def element_type(self) -> Type"), "Get the element type.");
 
   //===-------------------------------------------------------------------===//
   // TypeType

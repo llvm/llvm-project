@@ -9,9 +9,9 @@
 #include "Rewrite.h"
 
 #include "IRModule.h"
+#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir-c/Rewrite.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 #include "mlir/Config/mlir-config.h"
 
 namespace nb = nanobind;
@@ -106,6 +106,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
            throw std::runtime_error("pattern application failed to converge");
        },
        "module"_a, "set"_a,
+       nb::sig("def apply_patterns_and_fold_greedily(module: "
+               "mlir.ir.Module, set: FrozenRewritePatternSet) -> None"),
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
@@ -118,6 +120,8 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
                   "pattern application failed to converge");
           },
           "op"_a, "set"_a,
+          nb::sig("def apply_patterns_and_fold_greedily(op: _OperationBase, "
+                  "set: FrozenRewritePatternSet) -> None"),
           "Applys the given patterns to the given op greedily while folding "
           "results.");
 }
