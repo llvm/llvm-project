@@ -288,6 +288,8 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- The `-Wnrvo` compiler flag is now ignored in C mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
