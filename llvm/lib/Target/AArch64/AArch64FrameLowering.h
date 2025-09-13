@@ -123,6 +123,7 @@ public:
       return false;
     case TargetStackID::Default:
     case TargetStackID::ScalableVector:
+    case TargetStackID::ScalablePredicateVector:
     case TargetStackID::NoAlloc:
       return true;
     }
@@ -131,7 +132,8 @@ public:
   bool isStackIdSafeForLocalArea(unsigned StackId) const override {
     // We don't support putting SVE objects into the pre-allocated local
     // frame block at the moment.
-    return StackId != TargetStackID::ScalableVector;
+    return (StackId != TargetStackID::ScalableVector &&
+            StackId != TargetStackID::ScalablePredicateVector);
   }
 
   friend class AArch64PrologueEmitter;
