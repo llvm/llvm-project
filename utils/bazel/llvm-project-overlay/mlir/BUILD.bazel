@@ -9082,7 +9082,9 @@ cc_library(
         ":Parser",
         ":Pass",
         ":PluginsLib",
+        ":RemarkStreamer",
         ":Support",
+        "//llvm:Remarks",
         "//llvm:Support",
     ],
 )
@@ -10817,6 +10819,7 @@ cc_library(
         ":LinalgTransformOpsIncGen",
         ":LinalgTransforms",
         ":LinalgUtils",
+        ":ParallelCombiningOpInterface",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",

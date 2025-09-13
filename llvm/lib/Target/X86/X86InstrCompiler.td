@@ -1364,15 +1364,19 @@ def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
 // There wouldn't be enough scratch registers for base+index.
 def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
-          Requires<[In64BitMode, NotUseIndirectThunkCalls]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
+
+def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+          (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
+          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, UseIndirectThunkCalls]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, UseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN32 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[Not64BitMode, UseIndirectThunkCalls]>;
+          Requires<[Not64BitMode, IsNotWin64CCFunc, UseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret (i64 tglobaladdr:$dst), timm:$off),
           (TCRETURNdi64 tglobaladdr:$dst, timm:$off)>,
@@ -2215,7 +2219,7 @@ let Predicates = [HasZU] in {
   def : Pat<(i64 (zext (i16 (mul (loadi16 addr:$src1), imm:$src2)))),
             (SUBREG_TO_REG (i64 0), (IMULZU16rmi addr:$src1, imm:$src2), sub_16bit)>;
 }
-  
+
 // mul reg, imm
 def : Pat<(mul GR16:$src1, imm:$src2),
           (IMUL16rri GR16:$src1, imm:$src2)>;

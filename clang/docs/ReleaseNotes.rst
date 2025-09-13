@@ -279,6 +279,14 @@ Improvements to Clang's diagnostics
 - The :doc:`ThreadSafetyAnalysis` attributes ``ACQUIRED_BEFORE(...)`` and
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
+- The :doc:`ThreadSafetyAnalysis` gains basic alias-analysis of capability
+  pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
+  both false positives but also false negatives through more precise analysis.
+
+- Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
+
+- Fixed a bug where the source location was missing when diagnosing ill-formed
+  placeholder constraints.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -308,6 +316,8 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fixed a failed assertion with a negative limit parameter value inside of
+  ``__has_embed``. (#GH157842)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -451,7 +461,9 @@ AST Matchers
   following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
-
+- Remove the ``dependentTemplateSpecializationType`` matcher, as the
+  corresponding AST node was removed. This matcher was never very useful, since
+  there was no way to match on its template name.
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
 
@@ -461,6 +473,8 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
+- Add ``NumericLiteralCase`` option for enforcing character case in numeric
+  literals.
 
 libclang
 --------
