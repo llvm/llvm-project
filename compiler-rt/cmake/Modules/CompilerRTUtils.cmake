@@ -1,5 +1,6 @@
 include(CMakePushCheckState)
 include(CheckSymbolExists)
+include(CheckCXXSourceCompiles)
 
 # Because compiler-rt spends a lot of time setting up custom compile flags,
 # define a handy helper function for it. The compile flags setting in CMake
@@ -124,15 +125,9 @@ macro(test_target_arch arch def)
                        SOURCE "#include <limits.h>\nint foo(int x, int y) { return x + y; }\n"
                        FLAGS ${TARGET_${arch}_CFLAGS})
     else()
-      set(FLAG_NO_EXCEPTIONS "")
-      if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG)
-        set(FLAG_NO_EXCEPTIONS " -fno-exceptions ")
-      endif()
       set(SAVED_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
-      try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
-                  COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS} ${FLAG_NO_EXCEPTIONS}"
-                  OUTPUT_VARIABLE TARGET_${arch}_OUTPUT)
+      check_cxx_source_compiles("${SIMPLE_SOURCE}" CAN_TARGET_${arch})
       set(CMAKE_EXE_LINKER_FLAGS ${SAVED_CMAKE_EXE_LINKER_FLAGS})
     endif()
   endif()
