@@ -1987,6 +1987,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
 
   SmallVector<Register, 4> OrigRegs;
   VNInfo *DefVN = nullptr;
+  bool DefEmitted = false;
   if (LIS) {
     OrigRegs.push_back(MI.getOperand(0).getReg());
     for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)
@@ -1997,9 +1998,17 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
                   .valueOut();
     }
   }
-
+  for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)
+    if (MI.getOperand(i).isReg() && MI.getOperand(i).isUndef()) {
+      // Insert the IMPLICIT_DEF on dst register.
+      MachineInstr *DefMI =
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                  TII->get(TargetOpcode::IMPLICIT_DEF), DstReg);
+      MBBI = DefMI;
+      DefEmitted = true;
+      break;
+    }
   LaneBitmask UndefLanes = LaneBitmask::getNone();
-  bool DefEmitted = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
     MachineOperand &UseMO = MI.getOperand(i);
     Register SrcReg = UseMO.getReg();
