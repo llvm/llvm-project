@@ -1483,6 +1483,24 @@ func.func @execute_region_no_inline() {
 
 // -----
 
+// CHECK-LABEL: func @execute_region_under_func_no_inline
+func.func @execute_region_under_func_no_inline() {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 no_inline {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  return
+}
+
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+
+// -----
+
 // CHECK-LABEL: func @func_execute_region_inline
 func.func @func_execute_region_inline() {
     "test.foo"() : () -> ()
