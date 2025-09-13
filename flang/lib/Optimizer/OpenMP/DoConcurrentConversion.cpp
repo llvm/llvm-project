@@ -141,6 +141,9 @@ void collectLoopLiveIns(fir::DoConcurrentLoopOp loop,
 
   for (mlir::Value local : loop.getLocalVars())
     liveIns.push_back(local);
+
+  for (mlir::Value reduce : loop.getReduceVars())
+    liveIns.push_back(reduce);
 }
 
 /// Collects values that are local to a loop: "loop-local values". A loop-local
@@ -319,7 +322,7 @@ public:
       targetOp =
           genTargetOp(doLoop.getLoc(), rewriter, mapper, loopNestLiveIns,
                       targetClauseOps, loopNestClauseOps, liveInShapeInfoMap);
-      genTeamsOp(doLoop.getLoc(), rewriter);
+      genTeamsOp(rewriter, loop, mapper);
     }
 
     mlir::omp::ParallelOp parallelOp =
@@ -492,46 +495,7 @@ private:
     if (!mapToDevice)
       genPrivatizers(rewriter, mapper, loop, wsloopClauseOps);
 
-    if (!loop.getReduceVars().empty()) {
-      for (auto [op, byRef, sym, arg] : llvm::zip_equal(
-               loop.getReduceVars(), loop.getReduceByrefAttr().asArrayRef(),
-               loop.getReduceSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
-               loop.getRegionReduceArgs())) {
-        auto firReducer = moduleSymbolTable.lookup<fir::DeclareReductionOp>(
-            sym.getLeafReference());
-
-        mlir::OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.setInsertionPointAfter(firReducer);
-        std::string ompReducerName = sym.getLeafReference().str() + ".omp";
-
-        auto ompReducer =
-            moduleSymbolTable.lookup<mlir::omp::DeclareReductionOp>(
-                rewriter.getStringAttr(ompReducerName));
-
-        if (!ompReducer) {
-          ompReducer = mlir::omp::DeclareReductionOp::create(
-              rewriter, firReducer.getLoc(), ompReducerName,
-              firReducer.getTypeAttr().getValue());
-
-          cloneFIRRegionToOMP(rewriter, firReducer.getAllocRegion(),
-                              ompReducer.getAllocRegion());
-          cloneFIRRegionToOMP(rewriter, firReducer.getInitializerRegion(),
-                              ompReducer.getInitializerRegion());
-          cloneFIRRegionToOMP(rewriter, firReducer.getReductionRegion(),
-                              ompReducer.getReductionRegion());
-          cloneFIRRegionToOMP(rewriter, firReducer.getAtomicReductionRegion(),
-                              ompReducer.getAtomicReductionRegion());
-          cloneFIRRegionToOMP(rewriter, firReducer.getCleanupRegion(),
-                              ompReducer.getCleanupRegion());
-          moduleSymbolTable.insert(ompReducer);
-        }
-
-        wsloopClauseOps.reductionVars.push_back(op);
-        wsloopClauseOps.reductionByref.push_back(byRef);
-        wsloopClauseOps.reductionSyms.push_back(
-            mlir::SymbolRefAttr::get(ompReducer));
-      }
-    }
+    genReductions(rewriter, mapper, loop, wsloopClauseOps);
 
     auto wsloopOp =
         mlir::omp::WsloopOp::create(rewriter, loop.getLoc(), wsloopClauseOps);
@@ -553,8 +517,6 @@ private:
 
     rewriter.setInsertionPointToEnd(&loopNestOp.getRegion().back());
     mlir::omp::YieldOp::create(rewriter, loop->getLoc());
-    loop->getParentOfType<mlir::ModuleOp>().print(
-        llvm::errs(), mlir::OpPrintingFlags().assumeVerified());
 
     return {loopNestOp, wsloopOp};
   }
@@ -778,14 +740,25 @@ private:
                                             liveInName, shape);
   }
 
-  mlir::omp::TeamsOp
-  genTeamsOp(mlir::Location loc,
-             mlir::ConversionPatternRewriter &rewriter) const {
-    auto teamsOp = rewriter.create<mlir::omp::TeamsOp>(
-        loc, /*clauses=*/mlir::omp::TeamsOperands{});
+  mlir::omp::TeamsOp genTeamsOp(mlir::ConversionPatternRewriter &rewriter,
+                                fir::DoConcurrentLoopOp loop,
+                                mlir::IRMapping &mapper) const {
+    mlir::omp::TeamsOperands teamsOps;
+    genReductions(rewriter, mapper, loop, teamsOps);
 
-    rewriter.createBlock(&teamsOp.getRegion());
+    mlir::Location loc = loop.getLoc();
+    auto teamsOp = rewriter.create<mlir::omp::TeamsOp>(loc, teamsOps);
+    Fortran::common::openmp::EntryBlockArgs teamsArgs;
+    teamsArgs.reduction.vars = teamsOps.reductionVars;
+    Fortran::common::openmp::genEntryBlock(rewriter, teamsArgs,
+                                           teamsOp.getRegion());
+
     rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+
+    for (auto [loopVar, teamsArg] : llvm::zip_equal(
+             loop.getReduceVars(), teamsOp.getRegion().getArguments())) {
+      mapper.map(loopVar, teamsArg);
+    }
 
     return teamsOp;
   }
@@ -851,6 +824,52 @@ private:
         privateClauseOps.privateSyms.push_back(
             mlir::SymbolRefAttr::get(privatizer));
       }
+  }
+
+  void genReductions(mlir::ConversionPatternRewriter &rewriter,
+                     mlir::IRMapping &mapper, fir::DoConcurrentLoopOp loop,
+                     mlir::omp::ReductionClauseOps &reductionClauseOps) const {
+    if (!loop.getReduceVars().empty()) {
+      for (auto [var, byRef, sym, arg] : llvm::zip_equal(
+               loop.getReduceVars(), loop.getReduceByrefAttr().asArrayRef(),
+               loop.getReduceSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
+               loop.getRegionReduceArgs())) {
+        auto firReducer = moduleSymbolTable.lookup<fir::DeclareReductionOp>(
+            sym.getLeafReference());
+
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointAfter(firReducer);
+        std::string ompReducerName = sym.getLeafReference().str() + ".omp";
+
+        auto ompReducer =
+            moduleSymbolTable.lookup<mlir::omp::DeclareReductionOp>(
+                rewriter.getStringAttr(ompReducerName));
+
+        if (!ompReducer) {
+          ompReducer = mlir::omp::DeclareReductionOp::create(
+              rewriter, firReducer.getLoc(), ompReducerName,
+              firReducer.getTypeAttr().getValue());
+
+          cloneFIRRegionToOMP(rewriter, firReducer.getAllocRegion(),
+                              ompReducer.getAllocRegion());
+          cloneFIRRegionToOMP(rewriter, firReducer.getInitializerRegion(),
+                              ompReducer.getInitializerRegion());
+          cloneFIRRegionToOMP(rewriter, firReducer.getReductionRegion(),
+                              ompReducer.getReductionRegion());
+          cloneFIRRegionToOMP(rewriter, firReducer.getAtomicReductionRegion(),
+                              ompReducer.getAtomicReductionRegion());
+          cloneFIRRegionToOMP(rewriter, firReducer.getCleanupRegion(),
+                              ompReducer.getCleanupRegion());
+          moduleSymbolTable.insert(ompReducer);
+        }
+
+        reductionClauseOps.reductionVars.push_back(
+            mapToDevice ? mapper.lookup(var) : var);
+        reductionClauseOps.reductionByref.push_back(byRef);
+        reductionClauseOps.reductionSyms.push_back(
+            mlir::SymbolRefAttr::get(ompReducer));
+      }
+    }
   }
 
   bool mapToDevice;
