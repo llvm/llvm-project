@@ -799,7 +799,7 @@ public:
 
   unsigned count() const {
     unsigned BitCount = 0;
-    for (const auto &Elem : Elements)
+    for (const SparseBitVectorElement<ElementSize> &Elem : Elements)
       BitCount += Elem.count();
     return BitCount;
   }
