@@ -1,0 +1,28 @@
+// REQUIRES: gnu_lto, gcc
+// Test if we can link a simple LTO'ed program.
+// Ensure that LLD was used by checking for the output from LLD_VERSION.
+
+// RUN: gcc -c -flto -x c %s -o %t.dynamic.o
+// RUN: gcc -fuse-ld=lld -flto %t.dynamic.o -o %t.dynamic
+// RUN: %t.dynamic | FileCheck %s
+// RUN: llvm-objdump -t -j .comment -s %t.dynamic | \
+// RUN:   FileCheck --check-prefix=OBJDUMP %s
+
+// RUN: gcc -c -flto -x c -fPIE %s -o %t.pie.o
+// RUN: gcc -fuse-ld=lld -flto -pie %t.pie.o -o %t.pie
+// RUN: %t.pie | FileCheck %s
+// RUN: llvm-objdump -t -j .comment -s %t.pie \
+// RUN:   | FileCheck --check-prefix=OBJDUMP %s
+
+#include <stdio.h>
+
+int main() {
+  printf("It works!\n");
+  return 0;
+}
+
+// CHECK: It works!
+
+// OBJDUMP: __gnu_lto
+// OBJDUMP: .LLD 1.0
+// OBJDUMP: GCC

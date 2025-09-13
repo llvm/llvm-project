@@ -26,6 +26,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include <cstddef>
+#include <cstring>
+#include <dlfcn.h>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -165,7 +167,7 @@ static lto::Config createConfig(Ctx &ctx) {
   return c;
 }
 
-BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
+BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : IRCompiler(ctx) {
   // Initialize indexFile.
   if (!ctx.arg.thinLTOIndexOnlyArg.empty())
     indexFile = openFile(ctx.arg.thinLTOIndexOnlyArg);
@@ -215,9 +217,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   }
 }
 
-BitcodeCompiler::~BitcodeCompiler() = default;
-
-void BitcodeCompiler::add(BitcodeFile &f) {
+void IRCompiler::add(IRFile &f) {
   lto::InputFile &obj = *f.obj;
   bool isExec = !ctx.arg.shared && !ctx.arg.relocatable;
 
@@ -278,7 +278,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
   }
-  checkError(ctx.e, ltoObj->add(std::move(f.obj), resols));
+  addObject(f, resols);
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
@@ -421,3 +421,240 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   }
   return ret;
 }
+
+void BitcodeCompiler::addObject(IRFile &f,
+                                std::vector<llvm::lto::SymbolResolution> &r) {
+  checkError(ctx.e, ltoObj->add(std::move(f.obj), r));
+}
+
+#if LLD_ENABLE_GNU_LTO
+GccIRCompiler *GccIRCompiler::singleton = nullptr;
+
+GccIRCompiler *GccIRCompiler::getInstance() {
+  assert(singleton != nullptr);
+  return singleton;
+}
+
+GccIRCompiler *GccIRCompiler::getInstance(Ctx &ctx) {
+  if (singleton == nullptr) {
+    singleton = new GccIRCompiler(ctx);
+    singleton->loadPlugin();
+  }
+
+  return singleton;
+}
+
+GccIRCompiler::GccIRCompiler(Ctx &ctx) : IRCompiler(ctx) {
+  singleton = nullptr;
+
+  // TODO: Properly find the right size.
+  int tvsz = 100;
+  tv = new ld_plugin_tv[tvsz];
+  initializeTv();
+}
+
+GccIRCompiler::~GccIRCompiler() {
+  singleton = nullptr;
+  delete[] tv;
+}
+
+void GccIRCompiler::loadPlugin() {
+  plugin = dlopen(ctx.arg.plugin.data(), RTLD_NOW);
+  if (plugin == NULL) {
+    error(dlerror());
+    return;
+  }
+  void *tmp = dlsym(plugin, "onload");
+  if (tmp == NULL) {
+    error("Plugin does not provide onload()");
+    return;
+  }
+
+  ld_plugin_onload onload;
+  // Ensure source and destination types have the same size.
+  assert(sizeof(ld_plugin_onload) == sizeof(void *));
+  std::memcpy(&onload, &tmp, sizeof(ld_plugin_onload));
+
+  (*onload)(tv);
+}
+
+enum ld_plugin_status regClaimFile(ld_plugin_claim_file_handler handler) {
+  GccIRCompiler *c = GccIRCompiler::getInstance();
+  return c->registerClaimFile(handler);
+}
+
+enum ld_plugin_status
+GccIRCompiler::registerClaimFile(ld_plugin_claim_file_handler handler) {
+  claimFileHandler = handler;
+  return LDPS_OK;
+}
+
+#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
+enum ld_plugin_status regClaimFileV2(ld_plugin_claim_file_handler handler) {
+  GccIRCompiler *c = GccIRCompiler::getInstance();
+  return c->registerClaimFileV2(handler);
+}
+
+enum ld_plugin_status
+GccIRCompiler::registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler) {
+  claimFileHandlerV2 = handler;
+  return LDPS_OK;
+}
+#endif
+
+enum ld_plugin_status
+regAllSymbolsRead(ld_plugin_all_symbols_read_handler handler) {
+  GccIRCompiler *c = GccIRCompiler::getInstance();
+  return c->registerAllSymbolsRead(handler);
+}
+
+enum ld_plugin_status GccIRCompiler::registerAllSymbolsRead(
+    ld_plugin_all_symbols_read_handler handler) {
+  allSymbolsReadHandler = handler;
+  return LDPS_OK;
+}
+
+static enum ld_plugin_status addSymbols(void *handle, int nsyms,
+                                        const struct ld_plugin_symbol *syms) {
+  ELFFileBase *f = (ELFFileBase *)handle;
+  if (f == NULL)
+    return LDPS_ERR;
+
+  for (int i = 0; i < nsyms; i++) {
+    // TODO: Add symbols.
+    // TODO: Convert these symbosl into ArrayRef<lto::InputFile::Symbol> and
+    // ArrayRef<Symbol *> ?
+  }
+
+  return LDPS_OK;
+}
+
+static enum ld_plugin_status getSymbols(const void *handle, int nsyms,
+                                        struct ld_plugin_symbol *syms) {
+  for (int i = 0; i < nsyms; i++) {
+    syms[i].resolution = LDPR_UNDEF;
+    // TODO: Implement other scenarios.
+  }
+  return LDPS_OK;
+}
+
+ld_plugin_status addInputFile(const char *pathname) {
+  GccIRCompiler *c = GccIRCompiler::getInstance();
+
+  if (c->addCompiledFile(StringRef(pathname)))
+    return LDPS_OK;
+  else
+    return LDPS_ERR;
+}
+
+void GccIRCompiler::initializeTv() {
+  int i = 0;
+
+#define TVU_SETTAG(t, f, v)                                                    \
+  {                                                                            \
+    tv[i].tv_tag = t;                                                          \
+    tv[i].tv_u.tv_##f = v;                                                     \
+    i++;                                                                       \
+  }
+
+  TVU_SETTAG(LDPT_MESSAGE, message, message);
+  TVU_SETTAG(LDPT_API_VERSION, val, LD_PLUGIN_API_VERSION);
+  for (std::string &s : ctx.arg.pluginOpt) {
+    TVU_SETTAG(LDPT_OPTION, string, s.c_str());
+  }
+  ld_plugin_output_file_type o;
+  if (ctx.arg.pie)
+    o = LDPO_PIE;
+  else if (ctx.arg.relocatable)
+    o = LDPO_REL;
+  else if (ctx.arg.shared)
+    o = LDPO_DYN;
+  else
+    o = LDPO_EXEC;
+  TVU_SETTAG(LDPT_LINKER_OUTPUT, val, o);
+  TVU_SETTAG(LDPT_OUTPUT_NAME, string, ctx.arg.outputFile.data());
+  // Share the address of a C wrapper that is API-compatible with
+  // plugin-api.h.
+  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK, register_claim_file, regClaimFile);
+#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
+  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK_V2, register_claim_file_v2,
+             regClaimFileV2);
+#endif
+
+  TVU_SETTAG(LDPT_ADD_SYMBOLS, add_symbols, addSymbols);
+  TVU_SETTAG(LDPT_REGISTER_ALL_SYMBOLS_READ_HOOK, register_all_symbols_read,
+             regAllSymbolsRead);
+  TVU_SETTAG(LDPT_GET_SYMBOLS, get_symbols, getSymbols);
+  TVU_SETTAG(LDPT_ADD_INPUT_FILE, add_input_file, addInputFile);
+}
+
+void GccIRCompiler::add(ELFFileBase &f) {
+  struct ld_plugin_input_file file;
+
+  std::string name = f.getName().str();
+  file.name = f.getName().data();
+  file.handle = const_cast<void *>(reinterpret_cast<const void *>(&f));
+
+  std::error_code ec = sys::fs::openFileForRead(name, file.fd);
+  if (ec) {
+    error("Cannot open file " + name + ": " + ec.message());
+    return;
+  }
+  file.offset = 0;
+  uint64_t size;
+  ec = sys::fs::file_size(name, size);
+  if (ec) {
+    error("Cannot get the size of file " + name + ": " + ec.message());
+    sys::fs::closeFile(file.fd);
+    return;
+  }
+  if (size > 0 && size <= INT_MAX)
+    file.filesize = size;
+
+  int claimed;
+#if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
+  ld_plugin_status status = claimFileHandler(&file, &claimed, 1);
+#else
+  ld_plugin_status status = claimFileHandler(&file, &claimed);
+#endif
+
+  if (status != LDPS_OK)
+    error("liblto returned " + std::to_string(status));
+
+  ec = sys::fs::closeFile(file.fd);
+  if (ec) {
+    error(ec.message());
+  }
+}
+
+SmallVector<std::unique_ptr<InputFile>, 0> GccIRCompiler::compile() {
+  SmallVector<std::unique_ptr<InputFile>, 0> ret;
+  ld_plugin_status status = allSymbolsReadHandler();
+  if (status != LDPS_OK)
+    error("The plugin returned an error after all symbols were read.");
+
+  for (auto &m : files) {
+    ret.push_back(createObjFile(ctx, m->getMemBufferRef()));
+  }
+  return ret;
+}
+
+void GccIRCompiler::addObject(IRFile &f,
+                              std::vector<llvm::lto::SymbolResolution> &r) {
+  // TODO: Implement this.
+}
+
+enum ld_plugin_status GccIRCompiler::message(int level, const char *format,
+                                             ...) {
+  // TODO: Implement this function.
+  return LDPS_OK;
+}
+
+bool GccIRCompiler::addCompiledFile(StringRef path) {
+  std::optional<MemoryBufferRef> mbref = readFile(ctx, path);
+  if (!mbref)
+    return false;
+  files.push_back(std::move(MemoryBuffer::getMemBuffer(*mbref)));
+  return true;
+}
+#endif
