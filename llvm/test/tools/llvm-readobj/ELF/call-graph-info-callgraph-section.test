@@ -1,0 +1,147 @@
+## Tests --call-graph-info prints information from call graph section.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --match-full-lines --check-prefix=GNU
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
+
+# GNU: {{.*}}llvm-readelf: warning: '[[FILE]]': callgraph section has unknown type id for 1 indirect targets.
+# GNU-EMPTY:
+# GNU-NEXT: INDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])
+# GNU-NEXT: UNKNOWN 6
+# GNU-NEXT: 20 a
+# GNU-EMPTY:
+# GNU-NEXT: INDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])
+# GNU-NEXT: 10 9
+# GNU-EMPTY:
+# GNU-NEXT: INDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])
+# GNU-NEXT: 6 9
+# GNU-EMPTY:
+# GNU-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
+# GNU-NEXT: 0 5 5
+
+# LLVM: {{.*}}llvm-readelf: warning: '[[FILE]]': callgraph section has unknown type id for 1 indirect targets.
+# LLVM: callgraph_info {
+# LLVM-NEXT:  unknown_target_types: [0x6]
+# LLVM-NEXT:  indirect_target_types [
+# LLVM-NEXT:    {
+# LLVM-NEXT:     function_address: 0xA
+# LLVM-NEXT:      type_id: 0x20
+# LLVM-NEXT:    }
+# LLVM-NEXT:  ]
+# LLVM-NEXT:  direct_call_sites [
+# LLVM-NEXT:    {
+# LLVM-NEXT:      caller: 0x0
+# LLVM-NEXT:      call_sites [
+# LLVM-NEXT:        {
+# LLVM-NEXT:          call_site: 0x5
+# LLVM-NEXT:          callee: 0x5
+# LLVM-NEXT:        }
+# LLVM-NEXT:      ]
+# LLVM-NEXT:    }
+# LLVM-NEXT:  ]
+# LLVM-NEXT:  indirect_call_sites [
+# LLVM-NEXT:    {
+# LLVM-NEXT:      caller: 0x6
+# LLVM-NEXT:      call_sites: [0x9]
+# LLVM-NEXT:    }
+# LLVM-NEXT:  ]
+# LLVM-NEXT:  indirect_call_types [
+# LLVM-NEXT:    {
+# LLVM-NEXT:      call_site: 0x9
+# LLVM-NEXT:      type_id: 0x10
+# LLVM-NEXT:    }
+# LLVM-NEXT:  ]
+# LLVM-NEXT: }
+
+# JSON: {{.*}}llvm-readelf: warning: '[[FILE]]': callgraph section has unknown type id for 1 indirect targets.
+# JSON: "callgraph_info": {
+# JSON-NEXT:      "unknown_target_types": [
+# JSON-NEXT:        6
+# JSON-NEXT:      ],
+# JSON-NEXT:      "indirect_target_types": [
+# JSON-NEXT:        {
+# JSON-NEXT:          "function_address": 10,
+# JSON-NEXT:          "type_id": 32
+# JSON-NEXT:        }
+# JSON-NEXT:      ],
+# JSON-NEXT:      "direct_call_sites": [
+# JSON-NEXT:        {
+# JSON-NEXT:          "caller": 0,
+# JSON-NEXT:          "call_sites": [
+# JSON-NEXT:            {
+# JSON-NEXT:              "call_site": 5,
+# JSON-NEXT:              "callee": 5
+# JSON-NEXT:            }
+# JSON-NEXT:          ]
+# JSON-NEXT:        }
+# JSON-NEXT:      ],
+# JSON-NEXT:      "indirect_call_sites": [
+# JSON-NEXT:        {
+# JSON-NEXT:          "caller": 6,
+# JSON-NEXT:          "call_sites": [
+# JSON-NEXT:            9
+# JSON-NEXT:          ]
+# JSON-NEXT:        }
+# JSON-NEXT:      ],
+# JSON-NEXT:      "indirect_call_types": [
+# JSON-NEXT:        {
+# JSON-NEXT:          "call_site": 9,
+# JSON-NEXT:          "type_id": 16
+# JSON-NEXT:        }
+# JSON-NEXT:      ]
+# JSON-NEXT:    }
+
+.text
+
+.globl foo
+.type foo,@function
+foo:                  #< foo is at 0.
+.Lfoo_begin:
+ callq foo            #< direct call is at 5. target is foo (5).
+ retq
+
+.globl bar
+.type bar,@function
+bar:                  #< bar is at 6.
+ callq	*-40(%rbp)    #< indirect call is at 9.
+ retq
+
+.globl baz
+.type baz,@function
+baz:                  #< baz is at 10 (a).
+ retq
+
+.globl qux
+.type qux,@function
+qux:                  #< qux is at 11 (b).
+ retq
+
+.section	.callgraph,"o",@progbits,.text
+.quad	0       #< Format version number.
+.quad	0       #< foo()'s entry address.
+.quad	0       #< Function kind: not an indirect target.
+.quad	0       #< Count of indirect call sites that follow: 0.
+.quad   1       #< Count of direct call sites that follow: 1>
+.quad   5       #< Direct callsite call to foo>
+.quad   5       #< Direct callee foo's address>
+
+.quad	0       #< Format version number.
+.quad	6       #< bar()'s entry address.
+.quad	1       #< Function kind: indirect target with unknown type id.
+.quad	1       #< Count of indirect call sites that follow: 1.
+.quad 16      #< Indirect call type id.
+.quad 9       #< Indirect call site.
+.quad   0       #< Count of direct call sites that follow: 0>
+
+.quad	0       #< Format version number.
+.quad	10      #< baz()'s entry address.
+.quad	2       #< Function kind: indirect target with known type id.
+.quad 32      #< Indirect target type id.
+.quad	0       #< Count of indirect call sites that follow: 0>.
+.quad   0       #< Count of direct call sites that follow: 0>
+
+# No call graph section entry for qux. 
+# Technically its "UNKNOWN" type id but will not be printed as such by llvm-readelf.  
+
+.text
