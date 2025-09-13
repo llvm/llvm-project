@@ -1298,6 +1298,48 @@ llvm.func @rocdl_last_use(%ptr: !llvm.ptr<1>) -> i32 {
   llvm.return %ret : i32
 }
 
+llvm.func @test_med3_f16(%arg0: f16, %arg1: f16, %arg2: f16) -> f16 {
+  // CHECK-LABEL: define half @test_med3_f16(half %0, half %1, half %2)
+  %0 = rocdl.med3.f16 %arg0, %arg1, %arg2 : (f16, f16, f16) -> f16
+  llvm.return %0 : f16
+  // CHECK: call half @llvm.amdgcn.fmed3.f16(half %0, half %1, half %2)
+}
+
+llvm.func @test_med3_f32(%arg0: f32, %arg1: f32, %arg2: f32) -> f32 {
+  // CHECK-LABEL: define float @test_med3_f32(float %0, float %1, float %2)
+  %0 = rocdl.med3.f32 %arg0, %arg1, %arg2 : (f32, f32, f32) -> f32
+  llvm.return %0 : f32
+  // CHECK: call float @llvm.amdgcn.fmed3.f32(float %0, float %1, float %2)
+}
+
+llvm.func @test_med3_i16(%arg0: i16, %arg1: i16, %arg2: i16) -> i16 {
+  // CHECK-LABEL: define i16 @test_med3_i16(i16 %0, i16 %1, i16 %2)
+  %0 = rocdl.med3.i16 %arg0, %arg1, %arg2 : (i16, i16, i16) -> i16
+  llvm.return %0 : i16
+  // CHECK: call i16 @llvm.amdgcn.smed3.i16(i16 %0, i16 %1, i16 %2)
+}
+
+llvm.func @test_med3_i32(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+  // CHECK-LABEL: define i32 @test_med3_i32(i32 %0, i32 %1, i32 %2)
+  %0 = rocdl.med3.i32 %arg0, %arg1, %arg2 : (i32, i32, i32) -> i32
+  llvm.return %0 : i32
+  // CHECK: call i32 @llvm.amdgcn.smed3.i32(i32 %0, i32 %1, i32 %2)
+}
+
+llvm.func @test_med3_u16(%arg0: i16, %arg1: i16, %arg2: i16) -> i16 {
+  // CHECK-LABEL: define i16 @test_med3_u16(i16 %0, i16 %1, i16 %2)
+  %0 = rocdl.med3.u16 %arg0, %arg1, %arg2 : (i16, i16, i16) -> i16
+  llvm.return %0 : i16
+  // CHECK: call i16 @llvm.amdgcn.umed3.i16(i16 %0, i16 %1, i16 %2)
+}
+
+llvm.func @test_med3_u32(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
+  // CHECK-LABEL: define i32 @test_med3_u32(i32 %0, i32 %1, i32 %2)
+  %0 = rocdl.med3.u32 %arg0, %arg1, %arg2 : (i32, i32, i32) -> i32
+  llvm.return %0 : i32
+  // CHECK: call i32 @llvm.amdgcn.umed3.i32(i32 %0, i32 %1, i32 %2)
+}
+
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"

@@ -334,15 +334,12 @@ def AMDGPUmad_i24 : SDNode<"AMDGPUISD::MAD_I24", AMDGPUDTIntTernaryOp,
   []
 >;
 
-def AMDGPUsmed3 : SDNode<"AMDGPUISD::SMED3", AMDGPUDTIntTernaryOp,
-  []
->;
-
-def AMDGPUumed3 : SDNode<"AMDGPUISD::UMED3", AMDGPUDTIntTernaryOp,
-  []
->;
 
 def AMDGPUfmed3_impl : SDNode<"AMDGPUISD::FMED3", SDTFPTernaryOp, []>;
+
+def AMDGPUsmed3_impl : SDNode<"AMDGPUISD::SMED3", AMDGPUDTIntTernaryOp, []>;
+
+def AMDGPUumed3_impl : SDNode<"AMDGPUISD::UMED3", AMDGPUDTIntTernaryOp, []>;
 
 def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
                   SDTypeProfile<1, 4, [SDTCisSameAs<0, 3>, SDTCisSameAs<1, 2>,
@@ -447,6 +444,14 @@ def AMDGPUfp_class : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUfmed3 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_fmed3 node:$src0, node:$src1, node:$src2),
    (AMDGPUfmed3_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUsmed3 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_smed3 node:$src0, node:$src1, node:$src2),
+   (AMDGPUsmed3_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUumed3 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_umed3 node:$src0, node:$src1, node:$src2),
+   (AMDGPUumed3_impl node:$src0, node:$src1, node:$src2)]>;
 
 def AMDGPUdiv_fixup : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_div_fixup node:$src0, node:$src1, node:$src2),
