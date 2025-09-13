@@ -3847,6 +3847,16 @@ def CIR_ATanOp : CIR_UnaryFPToFPBuiltinOp<"atan", "ATanOp"> {
   }];
 }
 
+def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
+  let summary = "Computes the floating-point cosine value";
+  let description = [{
+    `cir.cos` computes the cosine of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
