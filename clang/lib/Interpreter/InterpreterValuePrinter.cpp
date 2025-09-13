@@ -156,8 +156,6 @@ static std::string FunctionToString(ASTContext &Ctx, QualType QT,
 
 namespace clang {
 
-std::string Interpreter::ValueDataToString(const Value &V) const { return ""; }
-
 std::string ValueToString::toString(const Value *Buf) {
 
   switch (Buf->getKind()) {
@@ -597,9 +595,9 @@ public:
   }
 
   bool VisitRecordType(const RecordType *Ty) {
-    // Args.push_back(
-    //     Converter.handleRecordTypeExpr(Ty, QualType(Ty, 0), E).get());
-    return false;
+    Args.push_back(
+        Converter.handleRecordTypeExpr(Ty, QualType(Ty, 0), E).get());
+    return true;
   }
 
   bool VisitConstantArrayType(const ConstantArrayType *Ty) {
@@ -626,10 +624,18 @@ public:
   }
 };
 
-enum RunTimeFnTag { OrcSendResult, ClangSendResult, ClangDestroyObj };
+enum RunTimeFnTag {
+  OrcSendResult,
+  ClangSendResult,
+  ClangDestroyObj,
+  OrcRunDtorWrapper,
+  ClangRunDtorWrapper
+};
 
 static constexpr llvm::StringRef RunTimeFnTagName[] = {
-    "__orc_rt_SendResultValue", "__clang_Interpreter_SendResultValue"};
+    "__orc_rt_SendResultValue", "__clang_Interpreter_SendResultValue",
+    "__clang_Interpreter_destroyObj", "__orc_rt_runDtor",
+    "__clang_Interpreter_runDtor"};
 
 // This synthesizes a call expression to a speciall
 // function that is responsible for generating the Value.
@@ -674,6 +680,10 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E, bool isOOP) {
     if (llvm::Error Err = LookupInterface(ValuePrintingInfo[ClangSendResult],
                                           RunTimeFnTagName[ClangSendResult]))
       return std::move(Err);
+
+    if (llvm::Error Err = LookupInterface(ValuePrintingInfo[ClangDestroyObj],
+                                          RunTimeFnTagName[ClangDestroyObj]))
+      return std::move(Err);
   }
 
   llvm::SmallVector<Expr *, 4> AdjustedArgs;
@@ -696,7 +706,49 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E, bool isOOP) {
     Ty = Ctx.getLValueReferenceType(Ty);
   }
 
-  auto ID = ValMgr->registerPendingResult(Ty);
+  std::optional<ValueCleanup> CleanUp = std::nullopt;
+  if (DesugaredTy->isRecordType() && E->isPRValue())
+    if (auto *CXXRD = DesugaredTy->getAsCXXRecordDecl()) {
+      auto *Dtor = S.LookupDestructor(CXXRD);
+      Dtor->addAttr(UsedAttr::CreateImplicit(Ctx));
+      getCompilerInstance()->getASTConsumer().HandleTopLevelDecl(
+          DeclGroupRef(Dtor));
+
+      auto ObjDtor =
+          [this](QualType Ty) -> llvm::Expected<llvm::orc::ExecutorAddr> {
+        if (auto *CXXRD = Ty->getAsCXXRecordDecl())
+          return this->CompileDtorCall(CXXRD);
+        return llvm::make_error<llvm::StringError>(
+            "destructor not found!", llvm::inconvertibleErrorCode());
+      };
+
+      std::string DestroyObjFnName = RunTimeFnTagName[ClangDestroyObj].str();
+      std::string RunDtorWrapperFnName =
+          RunTimeFnTagName[isOOP ? OrcRunDtorWrapper : ClangRunDtorWrapper]
+              .str();
+
+      // #if defined(__APPLE__)
+      //       // On macOS, runtime symbols may require a leading underscore
+      //       DestroyObjFnName.insert(0, "_");
+      //       RunDtorWrapperFnName.insert(0, "_");
+      // #endif
+
+      auto RunDtorWrapperAddr = getSymbolAddress(RunDtorWrapperFnName);
+      if (!RunDtorWrapperAddr)
+        return RunDtorWrapperAddr.takeError();
+
+      auto DestroyObjAddr = getSymbolAddress(DestroyObjFnName);
+      if (!DestroyObjAddr)
+        return DestroyObjAddr.takeError();
+
+      if (auto E = getExecutionEngine()) {
+        CleanUp = std::make_optional<ValueCleanup>(
+            &E->getExecutionSession(), *RunDtorWrapperAddr, *DestroyObjAddr,
+            std::move(ObjDtor));
+      }
+    }
+
+  auto ID = ValMgr->registerPendingResult(Ty, std::move(CleanUp));
 
   AdjustedArgs.push_back(IntegerLiteralExpr(Ctx, ID));
 
@@ -730,6 +782,20 @@ __clang_Interpreter_SendResultValue(void *Ctx, uint64_t Id, void *Addr) {
   static_cast<ValueResultManager *>(Ctx)->deliverResult(
       [](llvm::Error Err) { llvm::cantFail(std::move(Err)); }, Id,
       llvm::orc::ExecutorAddr::fromPtr(Addr));
+}
+
+REPL_EXTERNAL_VISIBILITY llvm::orc::shared::CWrapperFunctionResult
+__clang_Interpreter_runDtor(char *ArgData, size_t ArgSize) {
+  return llvm::orc::shared::WrapperFunction<llvm::orc::shared::SPSError(
+      llvm::orc::shared::SPSExecutorAddr, llvm::orc::shared::SPSExecutorAddr)>::
+      handle(ArgData, ArgSize,
+             [](llvm::orc::ExecutorAddr DtorFn,
+                llvm::orc::ExecutorAddr This) -> llvm::Error {
+               DtorFn.toPtr<void (*)(unsigned char *)>()(
+                   This.toPtr<unsigned char *>());
+               return llvm::Error::success();
+             })
+          .release();
 }
 }
 

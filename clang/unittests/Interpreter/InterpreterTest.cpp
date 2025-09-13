@@ -241,66 +241,66 @@ TEST_F(InterpreterTest, FindMangledNameSymbol) {
 #endif // _WIN32
 }
 
-// static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
-//   std::string Name = TD->getQualifiedNameAsString();
-//   Value Addr;
-//   // FIXME: Consider providing an option in clang::Value to take ownership of
-//   // the memory created from the interpreter.
-//   // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
+static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
+  std::string Name = TD->getQualifiedNameAsString();
+  Value Addr;
+  // FIXME: Consider providing an option in clang::Value to take ownership of
+  // the memory created from the interpreter.
+  // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
 
-//   // The lifetime of the temporary is extended by the clang::Value.
-//   cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
-//   return Addr;
-// }
+  // The lifetime of the temporary is extended by the clang::Value.
+  cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
+  return Addr;
+}
 
-// static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
-//   Sema &SemaRef = Interp.getCompilerInstance()->getSema();
-//   ASTContext &C = SemaRef.getASTContext();
-//   DeclarationName DeclName = &C.Idents.get(Name);
-//   LookupResult R(SemaRef, DeclName, SourceLocation(), Sema::LookupOrdinaryName);
-//   SemaRef.LookupName(R, SemaRef.TUScope);
-//   assert(!R.empty());
-//   return R.getFoundDecl();
-// }
+static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
+  Sema &SemaRef = Interp.getCompilerInstance()->getSema();
+  ASTContext &C = SemaRef.getASTContext();
+  DeclarationName DeclName = &C.Idents.get(Name);
+  LookupResult R(SemaRef, DeclName, SourceLocation(), Sema::LookupOrdinaryName);
+  SemaRef.LookupName(R, SemaRef.TUScope);
+  assert(!R.empty());
+  return R.getFoundDecl();
+}
 
-// TEST_F(InterpreterTest, InstantiateTemplate) {
-//   // FIXME: We cannot yet handle delayed template parsing. If we run with
-//   // -fdelayed-template-parsing we try adding the newly created decl to the
-//   // active PTU which causes an assert.
-//   std::vector<const char *> Args = {"-fno-delayed-template-parsing"};
-//   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+TEST_F(InterpreterTest, InstantiateTemplate) {
+  // FIXME: We cannot yet handle delayed template parsing. If we run with
+  // -fdelayed-template-parsing we try adding the newly created decl to the
+  // active PTU which causes an assert.
+  std::vector<const char *> Args = {"-fno-delayed-template-parsing"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
-//   llvm::cantFail(Interp->Parse("extern \"C\" int printf(const char*,...);"
-//                                "class A {};"
-//                                "struct B {"
-//                                "  template<typename T>"
-//                                "  static int callme(T) { return 42; }"
-//                                "};"));
-//   auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
-//   auto PTUDeclRange = PTU.TUPart->decls();
-//   EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
+  llvm::cantFail(Interp->Parse("extern \"C\" int printf(const char*,...);"
+                               "class A {};"
+                               "struct B {"
+                               "  template<typename T>"
+                               "  static int callme(T) { return 42; }"
+                               "};"));
+  auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
+  auto PTUDeclRange = PTU.TUPart->decls();
+  EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
 
-//   // Lower the PTU
-//   if (llvm::Error Err = Interp->Execute(PTU)) {
-//     // We cannot execute on the platform.
-//     consumeError(std::move(Err));
-//     return;
-//   }
+  // Lower the PTU
+  if (llvm::Error Err = Interp->Execute(PTU)) {
+    // We cannot execute on the platform.
+    consumeError(std::move(Err));
+    return;
+  }
 
-//   TypeDecl *TD = cast<TypeDecl>(LookupSingleName(*Interp, "A"));
-//   Value NewA = AllocateObject(TD, *Interp);
+  TypeDecl *TD = cast<TypeDecl>(LookupSingleName(*Interp, "A"));
+  Value NewA = AllocateObject(TD, *Interp);
 
-//   // Find back the template specialization
-//   VarDecl *VD = static_cast<VarDecl *>(*PTUDeclRange.begin());
-//   UnaryOperator *UO = llvm::cast<UnaryOperator>(VD->getInit());
-//   NamedDecl *TmpltSpec = llvm::cast<DeclRefExpr>(UO->getSubExpr())->getDecl();
+  // Find back the template specialization
+  VarDecl *VD = static_cast<VarDecl *>(*PTUDeclRange.begin());
+  UnaryOperator *UO = llvm::cast<UnaryOperator>(VD->getInit());
+  NamedDecl *TmpltSpec = llvm::cast<DeclRefExpr>(UO->getSubExpr())->getDecl();
 
-//   std::string MangledName = MangleName(TmpltSpec);
-//   typedef int (*TemplateSpecFn)(void *);
-//   auto fn =
-//       cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
-//   EXPECT_EQ(42, fn((void *)NewA.getAddr()));
-// }
+  std::string MangledName = MangleName(TmpltSpec);
+  typedef int (*TemplateSpecFn)(void *);
+  auto fn =
+      cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
+  EXPECT_EQ(42, fn((void *)NewA.getAddr()));
+}
 
 TEST_F(InterpreterTest, Value) {
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
@@ -348,14 +348,14 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_TRUE(V2.getType()->isFloatingType());
   EXPECT_EQ(V2.getBuiltinKind(), Value::K_Double);
 
-  // Value V3;
-  // llvm::cantFail(Interp->ParseAndExecute(
-  //     "struct S { int* p; S() { p = new int(42); } ~S() { delete p; }};"));
-  // llvm::cantFail(Interp->ParseAndExecute("S{}", &V3));
-  // EXPECT_FALSE(V3.isAbsent());
-  // EXPECT_TRUE(V3.hasValue());
-  // EXPECT_TRUE(V3.getType()->isRecordType());
-  // EXPECT_TRUE(V3.isPointer());
+  Value V3;
+  llvm::cantFail(Interp->ParseAndExecute(
+      "struct S { int* p; S() { p = new int(42); } ~S() { delete p; }};"));
+  llvm::cantFail(Interp->ParseAndExecute("S{}", &V3));
+  EXPECT_FALSE(V3.isAbsent());
+  EXPECT_TRUE(V3.hasValue());
+  EXPECT_TRUE(V3.getType()->isRecordType());
+  EXPECT_TRUE(V3.isPointer());
 
   Value V4;
   llvm::cantFail(Interp->ParseAndExecute("int getGlobal();"));
