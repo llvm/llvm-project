@@ -84,7 +84,7 @@ struct ShadowPtrInfoTy {
                 reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize,
                 PtrSize - VoidPtrSize);
     std::memcpy(TgtPtrContent.data() + VoidPtrSize,
-                reinterpret_cast<char *>(TgtPtrAddr) + VoidPtrSize,
+                reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize,
                 PtrSize - VoidPtrSize);
   }
 
