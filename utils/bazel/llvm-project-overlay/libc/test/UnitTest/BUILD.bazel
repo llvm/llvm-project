@@ -62,6 +62,7 @@ libc_test_library(
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_architectures",
+        "//libc:__support_macros_properties_compiler",
         "//libc:__support_macros_properties_types",
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
