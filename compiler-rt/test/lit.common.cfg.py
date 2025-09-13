@@ -709,25 +709,6 @@ else:
     config.substitutions.append(("%adb_shell", "echo "))
 
 if config.target_os == "Linux" and not config.android:
-    def add_glibc_versions(major, minor):
-        any_glibc = False
-        for required in [
-            (2, 19),
-            (2, 27),
-            (2, 30),
-            (2, 33),
-            (2, 34),
-            (2, 37),
-            (2, 38),
-            (2, 40),
-        ]:
-            if (major, minor) >= required:
-                (required_major, required_minor) = required
-                config.available_features.add(f"glibc-{required_major}.{required_minor}")
-                any_glibc = True
-            if any_glibc:
-                config.available_features.add("glibc")
-
     # detect whether we are using glibc, and which version
     cmd_args = [
         config.clang.strip(),
@@ -749,7 +730,25 @@ if config.target_os == "Linux" and not config.android:
     try:
         sout, _ = cmd.communicate(b"#include <features.h>")
         m = dict(re.findall(r"#define (__GLIBC__|__GLIBC_MINOR__) (\d+)", str(sout)))
-        add_glibc_versions(int(m['__GLIBC__']), int(m['__GLIBC_MINOR__']))
+        major = int(m['__GLIBC__'])
+        minor = int(m['__GLIBC_MINOR__'])
+        any_glibc = False
+        for required in [
+            (2, 19),
+            (2, 27),
+            (2, 30),
+            (2, 33),
+            (2, 34),
+            (2, 37),
+            (2, 38),
+            (2, 40),
+        ]:
+            if (major, minor) >= required:
+                (required_major, required_minor) = required
+                config.available_features.add(f"glibc-{required_major}.{required_minor}")
+                any_glibc = True
+            if any_glibc:
+                config.available_features.add("glibc")
     except:
         pass
 
