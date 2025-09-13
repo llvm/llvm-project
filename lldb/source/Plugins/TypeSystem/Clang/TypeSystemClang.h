@@ -320,6 +320,11 @@ public:
                                  const clang::CXXBaseSpecifier *base_spec,
                                  bool omit_empty_base_classes);
 
+  bool FindInAnonRecordFields(const clang::RecordDecl *rd,
+                              std::vector<uint32_t> &path,
+                              llvm::StringRef name,
+                              bool omit_empty_base_classes);
+
   /// Synthesize a clang::Module and return its ID or a default-constructed ID.
   OptionalClangModuleID GetOrCreateClangModule(llvm::StringRef name,
                                                OptionalClangModuleID parent,
