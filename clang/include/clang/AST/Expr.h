@@ -1998,7 +1998,9 @@ enum class PredefinedIdentKind {
   PrettyFunction,
   /// The same as PrettyFunction, except that the
   /// 'virtual' keyword is omitted for virtual member functions.
-  PrettyFunctionNoVirtual
+  PrettyFunctionNoVirtual,
+  FQFunction,
+  MangledFunction
 };
 
 /// [C99 6.4.2.2] - A predefined identifier such as __func__.
