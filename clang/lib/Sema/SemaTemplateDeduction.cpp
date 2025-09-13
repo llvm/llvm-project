@@ -5180,7 +5180,7 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     TemplateArgs.addArgument(TypeLoc.getArgLoc(I));
 
   Sema::CheckTemplateArgumentInfo CTAI;
-  if (S.CheckTemplateArgumentList(Concept, SourceLocation(), TemplateArgs,
+  if (S.CheckTemplateArgumentList(Concept, TypeLoc.getNameLoc(), TemplateArgs,
                                   /*DefaultArgs=*/{},
                                   /*PartialTemplateArgs=*/false, CTAI))
     return true;
