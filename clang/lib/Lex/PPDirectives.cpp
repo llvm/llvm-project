@@ -2333,17 +2333,17 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   if (N2978::managerCompiler) {
     auto &Responses = N2978::managerCompiler->responses;
     if (auto it = Responses.find(std::string(Filename));
-        it == Responses.end() || it->second.type == N2978::ResponseType::MODULE) {
+        it == Responses.end() ||
+        it->second.type == N2978::ResponseType::MODULE) {
       N2978::CTBNonModule CTBNonMod;
       CTBNonMod.isHeaderUnit = IsImportDecl;
       CTBNonMod.logicalName = Filename.str();
       if (const auto &Result =
               N2978::managerCompiler->receiveBTCNonModule(std::move(CTBNonMod));
           Result) {
-           filePath = Result->filePath;
+        filePath = Result->filePath;
         isHeaderUnit = Result->isHeaderUnit;
-      }
-      else {
+      } else {
         // receive failed
       }
     } else {
@@ -2355,9 +2355,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
     if (isHeaderUnit) {
       IsImportDecl = true;
-      SuggestedModule = {
-          getModuleLoader().loadIPCReceivedHeaderUnit(filePath),
-          ModuleMap::NormalHeader};
+      SuggestedModule = {getModuleLoader().loadIPCReceivedHeaderUnit(filePath),
+                         ModuleMap::NormalHeader};
     }
   } else {
     File = LookupHeaderIncludeOrImport(

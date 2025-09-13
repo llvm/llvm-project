@@ -836,8 +836,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                                  : Options.OutputFile;
     if (const auto &r = N2978::makeIPCManagerCompiler(OutputPath); r) {
       N2978::managerCompiler = new N2978::IPCManagerCompiler(r.value());
-    }
-    else {
+    } else {
       // making manager failed
     }
   }

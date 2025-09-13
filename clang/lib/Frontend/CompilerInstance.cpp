@@ -1907,7 +1907,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     // later-on will return ModuleSource::MS_PrebuiltModulePath.
     auto &Responses = N2978::managerCompiler->responses;
     if (const auto it = Responses.find(std::string(ModuleName));
-        it == Responses.end() || it->second.type != N2978::ResponseType::MODULE) {
+        it == Responses.end() ||
+        it->second.type != N2978::ResponseType::MODULE) {
       N2978::CTBModule mod;
       mod.moduleName = ModuleName;
       if (const auto &r =
@@ -1915,16 +1916,15 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
           r) {
         auto &[requested, user, deps] = r.value();
         const_cast<std::map<std::string, std::string, std::less<>> &>(
-            HS.getHeaderSearchOpts().PrebuiltModuleFiles).emplace(ModuleName,
-                                    std::move(requested.filePath));
+            HS.getHeaderSearchOpts().PrebuiltModuleFiles)
+            .emplace(ModuleName, std::move(requested.filePath));
       } else {
         // receive failed
       }
-    }
-    else {
+    } else {
       const_cast<std::map<std::string, std::string, std::less<>> &>(
-          HS.getHeaderSearchOpts().PrebuiltModuleFiles).emplace(ModuleName,
-                                  std::move(it->second.file.filePath));
+          HS.getHeaderSearchOpts().PrebuiltModuleFiles)
+          .emplace(ModuleName, std::move(it->second.file.filePath));
     }
   }
 
