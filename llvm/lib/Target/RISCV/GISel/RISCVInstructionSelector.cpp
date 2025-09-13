@@ -740,24 +740,33 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
     APInt Imm = FPimm.bitcastToAPInt();
     unsigned Size = MRI->getType(DstReg).getSizeInBits();
+
+    if (!Subtarget->hasStdExtF() &&
+        (Size == 32 || (Size == 64 && Subtarget->is64Bit()))) {
+      // No fp extension, so we need to go through GPRs.
+      Register GPRReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
+        return false;
+
+      unsigned Opcode =
+          (Subtarget->is64Bit() && Size == 32) ? RISCV::ADDW : RISCV::ADD;
+      auto MV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg, Register(RISCV::X0)});
+      if (!MV.constrainAllUses(TII, TRI, RBI))
+        return false;
+
+      MI.eraseFromParent();
+      return true;
+    }
+
     if (Size == 16 || Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
       Register GPRReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
       if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
         return false;
 
-      unsigned Opcode = RISCV::INIT_UNDEF;
-      MachineInstrBuilder FMV;
-      if (Subtarget->hasStdExtF() || Subtarget->hasStdExtD() ||
-          Subtarget->hasStdExtZfh()) {
-        Opcode = Size == 64   ? RISCV::FMV_D_X
-                 : Size == 32 ? RISCV::FMV_W_X
-                              : RISCV::FMV_H_X;
-        FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
-      } else {
-        Opcode =
-            (Subtarget->is64Bit() && Size == 32) ? RISCV::ADDW : RISCV::ADD;
-        FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg, Register(RISCV::X0)});
-      }
+      unsigned Opcode = Size == 64   ? RISCV::FMV_D_X
+                        : Size == 32 ? RISCV::FMV_W_X
+                                     : RISCV::FMV_H_X;
+      auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
       if (!FMV.constrainAllUses(TII, TRI, RBI))
         return false;
     } else {

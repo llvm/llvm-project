@@ -220,9 +220,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-  bool HasFPExt = STI.hasFeature(RISCV::FeatureStdExtF) ||
-                  STI.hasFeature(RISCV::FeatureStdExtD) ||
-                  STI.hasFeature(RISCV::FeatureStdExtZfh);
+  // D and Zfh extension implies F.
+  bool HasFPExt = STI.hasFeature(RISCV::FeatureStdExtF);
 
   unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
