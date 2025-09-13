@@ -435,6 +435,7 @@ static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;
 static constexpr unsigned MaxTypeIDs = Vocabulary::MaxTypeIDs;
 static constexpr unsigned MaxCanonicalTypeIDs = Vocabulary::MaxCanonicalTypeIDs;
 static constexpr unsigned MaxOperands = Vocabulary::MaxOperandKinds;
+static constexpr unsigned MaxPredicateKinds = Vocabulary::MaxPredicateKinds;
 
 // Mapping between LLVM Type::TypeID tokens and Vocabulary::CanonicalTypeID
 // names and their canonical string keys.
@@ -460,7 +461,8 @@ TEST(IR2VecVocabularyTest, DummyVocabTest) {
       EXPECT_EQ(Emb.size(), Dim);
 
     // Should have the correct total number of embeddings
-    EXPECT_EQ(VocabVecSize, MaxOpcodes + MaxCanonicalTypeIDs + MaxOperands);
+    EXPECT_EQ(VocabVecSize, MaxOpcodes + MaxCanonicalTypeIDs + MaxOperands +
+                                MaxPredicateKinds);
 
     auto ExpectedVocab = VocabVec;
 
@@ -527,6 +529,26 @@ TEST(IR2VecVocabularyTest, SlotIdxMapping) {
   EXPECT_EQ(Vocabulary::getSlotIndex(*Arg),
             EXPECTED_VOCAB_OPERAND_SLOT(Vocabulary::OperandKind::VariableID));
 #undef EXPECTED_VOCAB_OPERAND_SLOT
+
+  // Test getSlotIndex for predicates
+#define EXPECTED_VOCAB_PREDICATE_SLOT(X)                                       \
+  MaxOpcodes + MaxCanonicalTypeIDs + MaxOperands + static_cast<unsigned>(X)
+  for (unsigned P = CmpInst::FIRST_FCMP_PREDICATE;
+       P <= CmpInst::LAST_FCMP_PREDICATE; ++P) {
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(P);
+    unsigned ExpectedIdx =
+        EXPECTED_VOCAB_PREDICATE_SLOT((P - CmpInst::FIRST_FCMP_PREDICATE));
+    EXPECT_EQ(Vocabulary::getSlotIndex(Pred), ExpectedIdx);
+  }
+  auto ICMP_Start = CmpInst::LAST_FCMP_PREDICATE + 1;
+  for (unsigned P = CmpInst::FIRST_ICMP_PREDICATE;
+       P <= CmpInst::LAST_ICMP_PREDICATE; ++P) {
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(P);
+    unsigned ExpectedIdx = EXPECTED_VOCAB_PREDICATE_SLOT(
+        ICMP_Start + P - CmpInst::FIRST_ICMP_PREDICATE);
+    EXPECT_EQ(Vocabulary::getSlotIndex(Pred), ExpectedIdx);
+  }
+#undef EXPECTED_VOCAB_PREDICATE_SLOT
 }
 
 #if GTEST_HAS_DEATH_TEST
@@ -569,6 +591,7 @@ TEST(IR2VecVocabularyTest, StringKeyGeneration) {
 
 #undef EXPECT_CANONICAL_TYPE_NAME
 
+  // Verify OperandKind -> string mapping
 #define HANDLE_OPERAND_KINDS(X)                                                \
   X(FunctionID, "Function")                                                    \
   X(PointerID, "Pointer")                                                      \
@@ -592,6 +615,28 @@ TEST(IR2VecVocabularyTest, StringKeyGeneration) {
       Vocabulary::getStringKey(MaxOpcodes + MaxCanonicalTypeIDs + 1);
   EXPECT_EQ(FuncArgKey, "Function");
   EXPECT_EQ(PtrArgKey, "Pointer");
+
+// Verify PredicateKind -> string mapping
+#define EXPECT_PREDICATE_KIND(PredNum, PredPos, PredKind)                      \
+  do {                                                                         \
+    std::string PredStr =                                                      \
+        std::string(PredKind) + "_" +                                          \
+        CmpInst::getPredicateName(static_cast<CmpInst::Predicate>(PredNum))    \
+            .str();                                                            \
+    unsigned Pos = MaxOpcodes + MaxCanonicalTypeIDs + MaxOperands + PredPos;   \
+    EXPECT_EQ(Vocabulary::getStringKey(Pos), PredStr);                         \
+  } while (0)
+
+  for (unsigned P = CmpInst::FIRST_FCMP_PREDICATE;
+       P <= CmpInst::LAST_FCMP_PREDICATE; ++P)
+    EXPECT_PREDICATE_KIND(P, P - CmpInst::FIRST_FCMP_PREDICATE, "FCMP");
+
+  auto ICMP_Pos = CmpInst::LAST_FCMP_PREDICATE + 1;
+  for (unsigned P = CmpInst::FIRST_ICMP_PREDICATE;
+       P <= CmpInst::LAST_ICMP_PREDICATE; ++P)
+    EXPECT_PREDICATE_KIND(P, ICMP_Pos++, "ICMP");
+
+#undef EXPECT_PREDICATE_KIND
 }
 
 TEST(IR2VecVocabularyTest, VocabularyDimensions) {
