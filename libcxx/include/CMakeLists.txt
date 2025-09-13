@@ -862,6 +862,7 @@ set(files
   __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
+  __type_traits/is_transparently_comparable.h
   __type_traits/is_trivial.h
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
@@ -880,6 +881,7 @@ set(files
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
+  __type_traits/make_transparent.h
   __type_traits/make_unsigned.h
   __type_traits/maybe_const.h
   __type_traits/nat.h

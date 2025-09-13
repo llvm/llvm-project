@@ -633,6 +633,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
+#  include <__type_traits/is_transparently_comparable.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
@@ -2535,6 +2536,16 @@ struct __default_three_way_comparator<basic_string<_CharT, _Traits, _Alloc>, bas
   }
 };
 #  endif
+
+template <class _CharT, class _Traits, class _Alloc>
+inline const bool
+    __is_transparently_comparable_v<basic_string<_CharT, _Traits, _Alloc>, basic_string_view<_CharT, _Traits>> = true;
+
+template <class _CharT, class _Traits, class _Alloc>
+inline const bool __is_transparently_comparable_v<basic_string<_CharT, _Traits, _Alloc>, const _CharT*> = true;
+
+template <class _CharT, class _Traits, class _Alloc, size_t _Np>
+inline const bool __is_transparently_comparable_v<basic_string<_CharT, _Traits, _Alloc>, _CharT[_Np]> = true;
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

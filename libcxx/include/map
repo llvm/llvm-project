@@ -600,6 +600,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__tree>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_transparently_comparable.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
@@ -701,6 +702,11 @@ public:
     return __comp_(__x.first, __y);
   }
 #  endif
+};
+
+template <class _Key, class _MapValueT, class _Compare, bool __b>
+struct __make_transparent<__map_value_compare<_Key, _MapValueT, _Compare, __b> > {
+  using type _LIBCPP_NODEBUG = __map_value_compare<_Key, _MapValueT, __make_transparent_t<_Compare> >;
 };
 
 #  if _LIBCPP_STD_VER >= 14
@@ -1084,6 +1090,28 @@ public:
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](key_type&& __k);
 #  endif
+
+  template <class _Arg,
+            __enable_if_t<__desugars_to_v<__less_tag, key_compare, key_type, key_type> &&
+                              __is_transparently_comparable_v<key_type, __remove_cvref_t<_Arg> >,
+                          int> = 0>
+  _LIBCPP_HIDE_FROM_ABI inline mapped_type& at(_Arg&& __arg) {
+    auto [_, __child] = __tree_.__find_equal(__arg);
+    if (__child == nullptr)
+      std::__throw_out_of_range("map::at:  key not found");
+    return static_cast<__node_pointer>(__child)->__get_value().second;
+  }
+
+  template <class _Arg,
+            __enable_if_t<__desugars_to_v<__less_tag, key_compare, key_type, key_type> &&
+                              __is_transparently_comparable_v<key_type, __remove_cvref_t<_Arg> >,
+                          int> = 0>
+  _LIBCPP_HIDE_FROM_ABI inline const mapped_type& at(_Arg&& __arg) const {
+    auto [_, __child] = __tree_.__find_equal(__arg);
+    if (__child == nullptr)
+      std::__throw_out_of_range("map::at:  key not found");
+    return static_cast<__node_pointer>(__child)->__get_value().second;
+  }
 
   _LIBCPP_HIDE_FROM_ABI mapped_type& at(const key_type& __k);
   _LIBCPP_HIDE_FROM_ABI const mapped_type& at(const key_type& __k) const;
