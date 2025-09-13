@@ -50,6 +50,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -2287,6 +2288,46 @@ bool GVNPass::processLoad(LoadInst *L) {
   return true;
 }
 
+// Attempt to process masked loads which have loaded from
+// masked stores with the same mask
+bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
+  Value *Mask = I->getOperand(2);
+  Value *Passthrough = I->getOperand(3);
+
+  MemDepResult Dep = MD->getDependency(I);
+  Instruction *DepInst = Dep.getInst();
+  if (!DepInst || !Dep.isLocal())
+    return false;
+
+  Value *StoreVal;
+  if (!match(DepInst,
+             m_Intrinsic<Intrinsic::masked_store>(m_Value(StoreVal), m_Value(),
+                                                  m_Value(), m_Specific(Mask))))
+    return false;
+
+  Value *OpToForward = nullptr;
+  if (match(StoreVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(Mask),
+                                   m_Specific(Passthrough))))
+    // For MaskedLoad->MaskedStore->MaskedLoad, the mask must be the same for
+    // all three instructions. The Passthrough on the two loads must also be the
+    // same.
+    OpToForward = AvailableValue::get(StoreVal).getSimpleValue();
+  else if (match(StoreVal, m_Intrinsic<Intrinsic::masked_load>()))
+    return false;
+  else {
+    // MaskedStore(Op, ptr, mask)->MaskedLoad(ptr, mask, passthrough) can be
+    // replaced with MaskedStore(Op, ptr, mask)->select(mask, Op, passthrough)
+    IRBuilder<> Builder(I);
+    OpToForward = Builder.CreateSelect(Mask, StoreVal, Passthrough);
+  }
+
+  I->replaceAllUsesWith(OpToForward);
+  ICF->removeUsersOf(I);
+  salvageAndRemoveInstruction(I);
+  ++NumGVNLoad;
+  return true;
+}
+
 /// Return a pair the first field showing the value number of \p Exp and the
 /// second field showing whether it is a value number newly created.
 std::pair<uint32_t, bool>
@@ -2733,6 +2774,11 @@ bool GVNPass::processInstruction(Instruction *I) {
     LeaderTable.insert(Num, Load, Load->getParent());
     return false;
   }
+
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    if (II && II->getIntrinsicID() == Intrinsic::masked_load)
+      if (processMaskedLoad(II))
+        return true;
 
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
