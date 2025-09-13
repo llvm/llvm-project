@@ -20,6 +20,26 @@
 using namespace clang;
 using namespace llvm::omp;
 
+OpenMPDefaultClauseVariableCategory
+clang::getOpenMPDefaultVariableCategory(StringRef Str,
+                                        const LangOptions &LangOpts) {
+  return llvm::StringSwitch<OpenMPDefaultClauseVariableCategory>(Str)
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name)                                 \
+  .Case(#Name, OMPC_DEFAULT_VC_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+      .Default(OMPC_DEFAULT_VC_unknown);
+}
+
+const char *clang::getOpenMPDefaultVariableCategoryName(unsigned VC) {
+  switch (VC) {
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name)                                 \
+  case OMPC_DEFAULT_VC_##Name:                                                 \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+  }
+  llvm_unreachable("Invalid Variable Category in the default clause");
+}
+
 unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
                                           const LangOptions &LangOpts) {
   switch (Kind) {
@@ -902,4 +922,3 @@ bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
          FailClauseParameter == llvm::omp::OMPC_relaxed ||
          FailClauseParameter == llvm::omp::OMPC_seq_cst;
 }
-
