@@ -5949,12 +5949,16 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
 
-    // Don't attempt to interpret struct return types as structs.
+    // Don't attempt to interpret record return types as records.
+    // FIXME: Not covered by tests.
     if (Right.isNot(TT_FunctionLBrace)) {
-      return (Line.startsWith(tok::kw_class) &&
-              Style.BraceWrapping.AfterClass) ||
-             (Line.startsWith(tok::kw_struct) &&
-              Style.BraceWrapping.AfterStruct);
+      return ((Line.startsWith(tok::kw_class) &&
+               Style.BraceWrapping.AfterClass) ||
+              (Line.startsWith(tok::kw_struct) &&
+               Style.BraceWrapping.AfterStruct) ||
+              (Line.startsWith(tok::kw_union) &&
+               Style.BraceWrapping.AfterUnion)) &&
+             Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Never;
     }
   }
 
