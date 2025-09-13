@@ -649,6 +649,7 @@ public:
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
     DoubleAlign = LongLongAlign = 64;
     resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
                     "i128:128-f80:32-n8:16:32-a:0:32-S32",
@@ -986,6 +987,7 @@ public:
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
