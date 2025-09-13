@@ -188,6 +188,7 @@ struct MissingFeatures {
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
   static bool builtinCheckKind() { return false; }
+  static bool cgCapturedStmtInfo() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
@@ -234,7 +235,6 @@ struct MissingFeatures {
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool lambdaCaptures() { return false; }
-  static bool lambdaFieldToName() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
