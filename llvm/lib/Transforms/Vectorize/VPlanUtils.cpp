@@ -37,16 +37,15 @@ bool vputils::chainUsesScalarValues(const VPValue *Root) {
     auto [Op, U] = Worklist.pop_back_val();
     if (isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenCallRecipe,
             VPWidenGEPRecipe, VPWidenSelectRecipe, VPWidenIntrinsicRecipe>(U)) {
-      const VPValue *Def = cast<VPRecipeBase>(U)->getVPSingleValue();
+      const VPValue *Def = cast<VPSingleDefRecipe>(U);
       for (const VPUser *V : Def->users())
         Worklist.emplace_back(Def, V);
       continue;
     }
-    if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U))
-      if (vputils::isSingleScalar(Store->getStoredValue()))
-        continue;
+    if (isa<VPWidenMemoryRecipe>(U) && vputils::isSingleScalar(Op))
+      continue;
     if (auto *VPI = dyn_cast<VPInstruction>(U))
-      if (VPI->isVectorToScalar())
+      if (VPI->isVectorToScalar() || VPI->isSingleScalar())
         continue;
     if (!U->usesScalars(Op))
       return false;
