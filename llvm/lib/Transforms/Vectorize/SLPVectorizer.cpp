@@ -1916,6 +1916,19 @@ class BoUpSLP {
   class ShuffleCostEstimator;
   class ShuffleInstructionBuilder;
 
+  /// If we decide to generate strided load / store, this struct contains all
+  /// the necessary info. It's fields are calculated by analyzeRtStrideCandidate
+  /// and analyzeConstantStrideCandidate. Note that Stride can be given either
+  /// as a SCEV or as a Value if it already exists. To get the stride in bytes,
+  /// StrideVal (or value obtained from StrideSCEV) has to by multiplied by the
+  /// size of element of FixedVectorType.
+  struct StridedPtrInfo {
+    Value *StrideVal = nullptr;
+    const SCEV *StrideSCEV = nullptr;
+    FixedVectorType *Ty = nullptr;
+  };
+  SmallDenseMap<TreeEntry *, StridedPtrInfo> TreeEntryToStridedPtrInfoMap;
+
 public:
   /// Tracks the state we can represent the loads in the given sequence.
   enum class LoadsState {
@@ -2212,6 +2225,25 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
 
+  /// Suppose we are given pointers of the form: %b + x * %c.
+  /// where %c is constant. Check if the pointers can be rearranged as follows:
+  ///  %b + 0 * %c
+  ///  %b + 1 * %c
+  ///  %b + 2 * %c
+  ///  ...
+  ///  %b + n * %c
+  bool analyzeConstantStrideCandidate(ArrayRef<Value *> PointerOps,
+                                      Type *ElemTy, Align CommonAlignment,
+                                      SmallVectorImpl<unsigned> &SortedIndices,
+                                      StridedPtrInfo &SPtrInfo, int64_t Diff,
+                                      Value *Ptr0, Value *PtrN) const;
+
+  /// Same as analyzeConstantStrideCandidate but for run-time stride.
+  bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ElemTy,
+                                Align CommonAlignment,
+                                SmallVectorImpl<unsigned> &SortedIndices,
+                                StridedPtrInfo &SPtrInfo) const;
+
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
   /// \param VL list of loads.
@@ -2225,6 +2257,7 @@ public:
   LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                                SmallVectorImpl<unsigned> &Order,
                                SmallVectorImpl<Value *> &PointerOps,
+                               StridedPtrInfo &SPtrInfo,
                                unsigned *BestVF = nullptr,
                                bool TryRecursiveCheck = true) const;
 
@@ -4469,11 +4502,10 @@ private:
 
   /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
-  TreeEntry::EntryState
-  getScalarsVectorizationState(const InstructionsState &S, ArrayRef<Value *> VL,
-                               bool IsScatterVectorizeUserTE,
-                               OrdersType &CurrentOrder,
-                               SmallVectorImpl<Value *> &PointerOps);
+  TreeEntry::EntryState getScalarsVectorizationState(
+      const InstructionsState &S, ArrayRef<Value *> VL,
+      bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
+      SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo);
 
   /// Maps a specific scalar to its tree entry(ies).
   SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarToTreeEntries;
@@ -6446,6 +6478,7 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       ++Cnt;
     }
   }
+
   return Stride;
 }
 
@@ -6776,52 +6809,50 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                               CompressMask, LoadVecTy);
 }
 
-/// Checks if strided loads can be generated out of \p VL loads with pointers \p
-/// PointerOps:
-/// 1. Target with strided load support is detected.
-/// 2. The number of loads is greater than MinProfitableStridedLoads, or the
-/// potential stride <= MaxProfitableLoadStride and the potential stride is
-/// power-of-2 (to avoid perf regressions for the very small number of loads)
-/// and max distance > number of loads, or potential stride is -1.
-/// 3. The loads are ordered, or number of unordered loads <=
-/// MaxProfitableUnorderedLoads, or loads are in reversed order. (this check is
-/// to avoid extra costs for very expensive shuffles).
-/// 4. Any pointer operand is an instruction with the users outside of the
-/// current graph (for masked gathers extra extractelement instructions
-/// might be required).
-static bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                          ArrayRef<unsigned> Order,
-                          const TargetTransformInfo &TTI, const DataLayout &DL,
-                          ScalarEvolution &SE,
-                          const bool IsAnyPointerUsedOutGraph,
-                          const int64_t Diff) {
-  const size_t Sz = VL.size();
-  const uint64_t AbsoluteDiff = std::abs(Diff);
-  Type *ScalarTy = VL.front()->getType();
-  auto *VecTy = getWidenedType(ScalarTy, Sz);
+bool BoUpSLP::analyzeConstantStrideCandidate(
+    ArrayRef<Value *> PointerOps, Type *ElemTy, Align CommonAlignment,
+    SmallVectorImpl<unsigned> &SortedIndices, StridedPtrInfo &SPtrInfo,
+    int64_t Diff, Value *Ptr0, Value *PtrN) const {
+  const unsigned Sz = PointerOps.size();
+  FixedVectorType *StridedLoadTy = getWidenedType(ElemTy, Sz);
+
+  // Try to generate strided load node if:
+  // 1. Target with strided load support is detected.
+  // 2. The number of loads is greater than MinProfitableStridedLoads,
+  // or the potential stride <= MaxProfitableLoadStride and the
+  // potential stride is power-of-2 (to avoid perf regressions for the very
+  // small number of loads) and max distance > number of loads, or potential
+  // stride is -1.
+  // 3. The loads are ordered, or number of unordered loads <=
+  // MaxProfitableUnorderedLoads, or loads are in reversed order.
+  // (this check is to avoid extra costs for very expensive shuffles).
+  // 4. Any pointer operand is an instruction with the users outside of the
+  // current graph (for masked gathers extra extractelement instructions
+  // might be required).
+
+  if (!TTI->isTypeLegal(StridedLoadTy) ||
+      !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
+    return false;
+
+  // Simple check if not a strided access - clear order.
+  bool IsPossibleStrided = Diff % (Sz - 1) == 0;
+  auto IsAnyPointerUsedOutGraph =
+      IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
+        return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
+                 return !isVectorized(U) && !MustGather.contains(U);
+               });
+      });
+  const unsigned AbsoluteDiff = std::abs(Diff);
   if (IsAnyPointerUsedOutGraph ||
-      (AbsoluteDiff > Sz &&
-       (Sz > MinProfitableStridedLoads ||
+      ((Sz > MinProfitableStridedLoads ||
         (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
-      Diff == -(static_cast<int64_t>(Sz) - 1)) {
+         has_single_bit(AbsoluteDiff))) &&
+       AbsoluteDiff > Sz) ||
+      Diff == -(static_cast<int>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
       return false;
-    Align Alignment =
-        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
-            ->getAlign();
-    if (!TTI.isLegalStridedLoadStore(VecTy, Alignment))
-      return false;
-    Value *Ptr0;
-    Value *PtrN;
-    if (Order.empty()) {
-      Ptr0 = PointerOps.front();
-      PtrN = PointerOps.back();
-    } else {
-      Ptr0 = PointerOps[Order.front()];
-      PtrN = PointerOps[Order.back()];
-    }
+
     // Iterate through all pointers and check if all distances are
     // unique multiple of Dist.
     SmallSet<int64_t, 4> Dists;
@@ -6830,23 +6861,44 @@ static bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
       if (Ptr == PtrN)
         Dist = Diff;
       else if (Ptr != Ptr0)
-        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Dist = *getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, *DL, *SE);
       // If the strides are not the same or repeated, we can't
       // vectorize.
       if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
         break;
     }
-    if (Dists.size() == Sz)
+    if (Dists.size() == Sz) {
+      Type *StrideTy = DL->getIndexType(Ptr0->getType());
+      SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
+      SPtrInfo.Ty = StridedLoadTy;
       return true;
+    }
   }
   return false;
 }
 
-BoUpSLP::LoadsState
-BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
-                           SmallVectorImpl<unsigned> &Order,
-                           SmallVectorImpl<Value *> &PointerOps,
-                           unsigned *BestVF, bool TryRecursiveCheck) const {
+bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
+                                       Type *ElemTy, Align CommonAlignment,
+                                       SmallVectorImpl<unsigned> &SortedIndices,
+                                       StridedPtrInfo &SPtrInfo) const {
+  const size_t Sz = PointerOps.size();
+  FixedVectorType *VecTy = getWidenedType(ElemTy, Sz);
+  if (!TTI->isLegalStridedLoadStore(VecTy, CommonAlignment))
+    return false;
+  const SCEV *Stride =
+      calculateRtStride(PointerOps, ElemTy, *DL, *SE, SortedIndices);
+  if (!Stride)
+    return false;
+
+  SPtrInfo.Ty = getWidenedType(ElemTy, PointerOps.size());
+  SPtrInfo.StrideSCEV = Stride;
+  return true;
+}
+
+BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
+    ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
+    SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo,
+    unsigned *BestVF, bool TryRecursiveCheck) const {
   // Check that a vectorized load would load the same memory as a scalar
   // load. For example, we don't want to vectorize loads that are smaller
   // than 8-bit. Even though we have a packed struct {<i2, i2, i2, i2>} LLVM
@@ -6883,11 +6935,10 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted) {
-    if (Sz > MinProfitableStridedLoads && TTI->isTypeLegal(VecTy)) {
-      if (TTI->isLegalStridedLoadStore(VecTy, CommonAlignment) &&
-          calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order))
-        return LoadsState::StridedVectorize;
-    }
+    if (Sz > MinProfitableStridedLoads &&
+        analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
+                                 SPtrInfo))
+      return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
         TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment))
@@ -6919,18 +6970,9 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                                    cast<Instruction>(V), UserIgnoreList);
                              }))
       return LoadsState::CompressVectorize;
-    // Simple check if not a strided access - clear order.
-    bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
-    // Try to generate strided load node.
-    auto IsAnyPointerUsedOutGraph =
-        IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
-          return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
-                   return !isVectorized(U) && !MustGather.contains(U);
-                 });
-        });
-    if (IsPossibleStrided &&
-        isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
-                      IsAnyPointerUsedOutGraph, *Diff))
+
+    if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                       Order, SPtrInfo, *Diff, Ptr0, PtrN))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -7014,9 +7056,9 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
         ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
         SmallVector<unsigned> Order;
         SmallVector<Value *> PointerOps;
-        LoadsState LS =
-            canVectorizeLoads(Slice, Slice.front(), Order, PointerOps, BestVF,
-                              /*TryRecursiveCheck=*/false);
+        LoadsState LS = canVectorizeLoads(Slice, Slice.front(), Order,
+                                          PointerOps, SPtrInfo, BestVF,
+                                          /*TryRecursiveCheck=*/false);
         // Check that the sorted loads are consecutive.
         if (LS == LoadsState::Gather) {
           if (BestVF) {
@@ -7688,9 +7730,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     // extra analysis later, so include such nodes into a special list.
     if (TE.hasState() && TE.getOpcode() == Instruction::Load) {
       SmallVector<Value *> PointerOps;
+      StridedPtrInfo SPtrInfo;
       OrdersType CurrentOrder;
       LoadsState Res = canVectorizeLoads(TE.Scalars, TE.Scalars.front(),
-                                         CurrentOrder, PointerOps);
+                                         CurrentOrder, PointerOps, SPtrInfo);
       if (Res == LoadsState::Vectorize || Res == LoadsState::StridedVectorize ||
           Res == LoadsState::CompressVectorize)
         return std::move(CurrentOrder);
@@ -9193,8 +9236,9 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
           // Try to build vector load.
           ArrayRef<Value *> Values(
               reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
+          StridedPtrInfo SPtrInfo;
           LoadsState LS = canVectorizeLoads(Values, Slice.front(), CurrentOrder,
-                                            PointerOps, &BestVF);
+                                            PointerOps, SPtrInfo, &BestVF);
           if (LS != LoadsState::Gather ||
               (BestVF > 1 && static_cast<unsigned>(NumElts) == 2 * BestVF)) {
             if (LS == LoadsState::ScatterVectorize) {
@@ -9388,6 +9432,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 unsigned VF = *CommonVF;
                 OrdersType Order;
                 SmallVector<Value *> PointerOps;
+                StridedPtrInfo SPtrInfo;
                 // Segmented load detected - vectorize at maximum vector factor.
                 if (InterleaveFactor <= Slice.size() &&
                     TTI.isLegalInterleavedAccessType(
@@ -9396,8 +9441,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                         cast<LoadInst>(Slice.front())->getAlign(),
                         cast<LoadInst>(Slice.front())
                             ->getPointerAddressSpace()) &&
-                    canVectorizeLoads(Slice, Slice.front(), Order,
-                                      PointerOps) == LoadsState::Vectorize) {
+                    canVectorizeLoads(Slice, Slice.front(), Order, PointerOps,
+                                      SPtrInfo) == LoadsState::Vectorize) {
                   UserMaxVF = InterleaveFactor * VF;
                 } else {
                   InterleaveFactor = 0;
@@ -9419,8 +9464,9 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                            ArrayRef<Value *> VL = TE.Scalars;
                            OrdersType Order;
                            SmallVector<Value *> PointerOps;
+                           StridedPtrInfo SPtrInfo;
                            LoadsState State = canVectorizeLoads(
-                               VL, VL.front(), Order, PointerOps);
+                               VL, VL.front(), Order, PointerOps, SPtrInfo);
                            if (State == LoadsState::ScatterVectorize ||
                                State == LoadsState::CompressVectorize)
                              return false;
@@ -9438,11 +9484,11 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                          [&, Slice = Slice](unsigned Idx) {
                            OrdersType Order;
                            SmallVector<Value *> PointerOps;
+                           StridedPtrInfo SPtrInfo;
                            return canVectorizeLoads(
                                       Slice.slice(Idx * UserMaxVF, UserMaxVF),
-                                      Slice[Idx * UserMaxVF], Order,
-                                      PointerOps) ==
-                                  LoadsState::ScatterVectorize;
+                                      Slice[Idx * UserMaxVF], Order, PointerOps,
+                                      SPtrInfo) == LoadsState::ScatterVectorize;
                          }))
                 UserMaxVF = MaxVF;
               if (Slice.size() != ConsecutiveNodesSize)
@@ -9799,7 +9845,7 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
-    SmallVectorImpl<Value *> &PointerOps) {
+    SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo) {
   assert(S.getMainOp() &&
          "Expected instructions with same/alternate opcodes only.");
 
@@ -9901,7 +9947,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         });
       });
     };
-    switch (canVectorizeLoads(VL, VL0, CurrentOrder, PointerOps)) {
+    switch (canVectorizeLoads(VL, VL0, CurrentOrder, PointerOps, SPtrInfo)) {
     case LoadsState::Vectorize:
       return TreeEntry::Vectorize;
     case LoadsState::CompressVectorize:
@@ -11371,8 +11417,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
   OrdersType CurrentOrder;
   SmallVector<Value *> PointerOps;
+  StridedPtrInfo SPtrInfo;
   TreeEntry::EntryState State = getScalarsVectorizationState(
-      S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps);
+      S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo);
   if (State == TreeEntry::NeedToGather) {
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
@@ -11532,6 +11579,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         // Vectorizing non-consecutive loads with `llvm.masked.gather`.
         TE = newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
                           UserTreeIdx, ReuseShuffleIndices, CurrentOrder);
+        TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
         LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (strided LoadInst).\n";
                    TE->dump());
         break;
@@ -12920,8 +12968,9 @@ void BoUpSLP::transformNodes() {
               if (S.getOpcode() == Instruction::Load) {
                 OrdersType Order;
                 SmallVector<Value *> PointerOps;
-                LoadsState Res =
-                    canVectorizeLoads(Slice, Slice.front(), Order, PointerOps);
+                StridedPtrInfo SPtrInfo;
+                LoadsState Res = canVectorizeLoads(Slice, Slice.front(), Order,
+                                                   PointerOps, SPtrInfo);
                 AllStrided &= Res == LoadsState::StridedVectorize ||
                               Res == LoadsState::ScatterVectorize ||
                               Res == LoadsState::Gather;
@@ -13027,10 +13076,18 @@ void BoUpSLP::transformNodes() {
         InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
             Instruction::Load, VecTy, BaseLI->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind, BaseLI);
-        if (StridedCost < OriginalVecCost)
+        if (StridedCost < OriginalVecCost) {
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
+          Type *StrideTy = DL->getIndexType(cast<LoadInst>(E.Scalars.front())
+                                                ->getPointerOperand()
+                                                ->getType());
+          StridedPtrInfo SPtrInfo;
+          SPtrInfo.StrideVal = ConstantInt::get(StrideTy, 1);
+          SPtrInfo.Ty = VecTy;
+          TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
           E.State = TreeEntry::StridedVectorize;
+        }
       }
       break;
     }
@@ -19471,6 +19528,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       LoadInst *LI = cast<LoadInst>(VL0);
       Instruction *NewLI;
+      FixedVectorType *StridedLoadTy = nullptr;
       Value *PO = LI->getPointerOperand();
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
@@ -19508,43 +19566,36 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *Ptr0 = cast<LoadInst>(E->Scalars.front())->getPointerOperand();
         Value *PtrN = cast<LoadInst>(E->Scalars.back())->getPointerOperand();
         PO = IsReverseOrder ? PtrN : Ptr0;
-        std::optional<int64_t> Diff = getPointersDiff(
-            VL0->getType(), Ptr0, VL0->getType(), PtrN, *DL, *SE);
         Type *StrideTy = DL->getIndexType(PO->getType());
         Value *StrideVal;
-        if (Diff) {
-          int64_t Stride =
-              *Diff / (static_cast<int64_t>(E->Scalars.size()) - 1);
-          StrideVal =
-              ConstantInt::get(StrideTy, (IsReverseOrder ? -1 : 1) * Stride *
-                                             DL->getTypeAllocSize(ScalarTy));
-        } else {
-          SmallVector<Value *> PointerOps(E->Scalars.size(), nullptr);
-          transform(E->Scalars, PointerOps.begin(), [](Value *V) {
-            return cast<LoadInst>(V)->getPointerOperand();
-          });
-          OrdersType Order;
-          const SCEV *StrideSCEV =
-              calculateRtStride(PointerOps, ScalarTy, *DL, *SE, Order);
-          assert(StrideSCEV && "At this point stride should be known");
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        StridedLoadTy = SPtrInfo.Ty;
+        assert(StridedLoadTy && "Missing StridedPoinerInfo for tree entry.");
+        unsigned StridedLoadEC =
+            StridedLoadTy->getElementCount().getKnownMinValue();
+
+        Value *Stride = SPtrInfo.StrideVal;
+        if (!Stride) {
+          const SCEV *StrideSCEV = SPtrInfo.StrideSCEV;
+          assert(StrideSCEV && "Neither StrideVal nor StrideSCEV were set.");
           SCEVExpander Expander(*SE, *DL, "strided-load-vec");
-          Value *Stride = Expander.expandCodeFor(
-              StrideSCEV, StrideSCEV->getType(), &*Builder.GetInsertPoint());
-          Value *NewStride =
-              Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
-          StrideVal = Builder.CreateMul(
-              NewStride,
-              ConstantInt::get(
-                  StrideTy,
-                  (IsReverseOrder ? -1 : 1) *
-                      static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
+          Stride = Expander.expandCodeFor(StrideSCEV, StrideSCEV->getType(),
+                                          &*Builder.GetInsertPoint());
         }
+        Value *NewStride =
+            Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
+        StrideVal = Builder.CreateMul(
+            NewStride, ConstantInt::get(
+                           StrideTy, (IsReverseOrder ? -1 : 1) *
+                                         static_cast<int>(
+                                             DL->getTypeAllocSize(ScalarTy))));
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_load,
-            {VecTy, PO->getType(), StrideTy},
-            {PO, StrideVal, Builder.getAllOnesMask(VecTy->getElementCount()),
-             Builder.getInt32(E->Scalars.size())});
+            {StridedLoadTy, PO->getType(), StrideTy},
+            {PO, StrideVal,
+             Builder.getAllOnesMask(ElementCount::getFixed(StridedLoadEC)),
+             Builder.getInt32(StridedLoadEC)});
         Inst->addParamAttr(
             /*ArgNo=*/0,
             Attribute::getWithAlignment(Inst->getContext(), CommonAlignment));
