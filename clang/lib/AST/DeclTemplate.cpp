@@ -974,7 +974,8 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(
                     SpecializedTemplate->getIdentifier(), PrevDecl),
       SpecializedTemplate(SpecializedTemplate),
       TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
-      SpecializationKind(TSK_Undeclared), StrictPackMatch(StrictPackMatch) {
+      SpecializationKind(TSK_Undeclared), StrictPackMatch(StrictPackMatch),
+      InstantiatedLocally(false) {
   assert(DK == Kind::ClassTemplateSpecialization || StrictPackMatch == false);
 }
 
@@ -982,7 +983,7 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
                                                                  Kind DK)
     : CXXRecordDecl(DK, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                     SourceLocation(), nullptr, nullptr),
-      SpecializationKind(TSK_Undeclared) {}
+      SpecializationKind(TSK_Undeclared), InstantiatedLocally(false) {}
 
 ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
     ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
