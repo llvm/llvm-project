@@ -168,6 +168,7 @@ add_clang_library(clangCodeGen
   clangAST
   clangAnalysis
   clangBasic
+  clangCodeGenShared
   clangFrontend
   clangLex
   clangSerialization
