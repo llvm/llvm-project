@@ -134,6 +134,14 @@ public:
 
   const CodeGenRegisterClass &getRegisterClass(const Record *R) const;
 
+  /// Convenience wrapper to avoid hardcoding the name of RegClassByHwMode
+  /// everywhere. This is here instead of CodeGenRegBank to avoid the fatal
+  /// error that occurs when no RegisterClasses are defined when constructing
+  /// the bank.
+  ArrayRef<const Record *> getAllRegClassByHwMode() const {
+    return Records.getAllDerivedDefinitions("RegClassByHwMode");
+  }
+
   /// getRegisterVTs - Find the union of all possible SimpleValueTypes for the
   /// specified physical register.
   std::vector<ValueTypeByHwMode> getRegisterVTs(const Record *R) const;

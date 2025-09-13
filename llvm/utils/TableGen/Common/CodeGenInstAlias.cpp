@@ -65,11 +65,15 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
 
       // Match 'RegClass:$name' or 'RegOp:$name'.
       if (const Record *ArgRC = getInitValueAsRegClass(Arg)) {
-        if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
-          return createStringError(
-              "argument register class" + ArgRC->getName() +
-              " is not a subclass of operand register class " +
-              OpRC->getName());
+        if (OpRC->isSubClassOf("RegisterClass")) {
+          if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+            return createStringError(
+                "argument register class" + ArgRC->getName() +
+                " is not a subclass of operand register class " +
+                OpRC->getName());
+        }
+        // FIXME: Do some validation on RegClassByHwMode
+
         if (!ArgName)
           return createStringError("register class argument must have a name");
         return ResultOperand::createRecord(ArgName->getAsUnquotedString(),

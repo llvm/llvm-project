@@ -259,6 +259,7 @@ public:
     HwMode_ValueType, // Return the HwMode ID that controls the ValueType.
     HwMode_RegInfo,   // Return the HwMode ID that controls the RegSizeInfo and
                       // SubRegRange.
+    HwMode_RegClass,  // Return the HwMode ID that controls the RegisterClass.
     HwMode_EncodingInfo // Return the HwMode ID that controls the EncodingInfo.
   };
 

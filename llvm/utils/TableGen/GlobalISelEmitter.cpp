@@ -267,13 +267,28 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
   return failedImport(Explanation);
 }
 
-static const Record *getInitValueAsRegClass(const Init *V) {
+static const Record *getInitValueAsRegClass(const CodeGenTarget &Target,
+                                            const Init *V) {
   if (const DefInit *VDefInit = dyn_cast<DefInit>(V)) {
-    if (VDefInit->getDef()->isSubClassOf("RegisterOperand"))
-      return VDefInit->getDef()->getValueAsDef("RegClass");
-    if (VDefInit->getDef()->isSubClassOf("RegisterClass"))
-      return VDefInit->getDef();
+    const Record *RegClass = VDefInit->getDef();
+    if (RegClass->isSubClassOf("RegisterOperand"))
+      RegClass = RegClass->getValueAsDef("RegClass");
+
+    if (RegClass->isSubClassOf("RegisterClass"))
+      return RegClass;
+
+    // FIXME: We should figure out the hwmode and dispatch. But this interface
+    // is broken, we should be returning a register class. The expected uses
+    // will use the same RegBanks in all modes.
+    if (RegClass->isSubClassOf("RegClassByHwMode")) {
+      const HwModeSelect &ModeSelect =
+          Target.getHwModes().getHwModeSelect(RegClass);
+      if (ModeSelect.Items.empty())
+        return nullptr;
+      return ModeSelect.Items.front().second;
+    }
   }
+
   return nullptr;
 }
 
@@ -474,6 +489,9 @@ private:
   /// nullptr otherwise.
   const CodeGenRegisterClass *
   inferRegClassFromPattern(const TreePatternNode &N) const;
+
+  const CodeGenRegisterClass *
+  inferRegClassFromRegisterClassLike(const Record *RecClassLike) const;
 
   const CodeGenRegisterClass *
   inferRegClassFromInstructionPattern(const TreePatternNode &N,
@@ -1141,9 +1159,10 @@ Error GlobalISelEmitter::importChildMatcher(
 
     // Check for register classes.
     if (ChildRec->isSubClassOf("RegisterClass") ||
-        ChildRec->isSubClassOf("RegisterOperand")) {
-      OM.addPredicate<RegisterBankOperandMatcher>(
-          Target.getRegisterClass(getInitValueAsRegClass(ChildDefInit)));
+        ChildRec->isSubClassOf("RegisterOperand") ||
+        ChildRec->isSubClassOf("RegClassByHwMode")) {
+      OM.addPredicate<RegisterBankOperandMatcher>(Target.getRegisterClass(
+          getInitValueAsRegClass(Target, ChildDefInit)));
       return Error::success();
     }
 
@@ -1285,7 +1304,7 @@ Error GlobalISelEmitter::importNamedNodeRenderer(
 
     // TODO: All special cases are handled above. Remove this check and add
     //   CopyRenderer unconditionally.
-    if (R->isSubClassOf("RegisterClass") ||
+    if (R->isSubClassOf("RegisterClassLike") ||
         R->isSubClassOf("RegisterOperand") || R->isSubClassOf("ValueType")) {
       MIBuilder.addRenderer<CopyRenderer>(NodeName);
       return Error::success();
@@ -1640,7 +1659,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     }
 
     // If this is a source operand, this is just a subregister copy.
-    const Record *RCDef = getInitValueAsRegClass(ValChild.getLeafValue());
+    const Record *RCDef =
+        getInitValueAsRegClass(Target, ValChild.getLeafValue());
     if (!RCDef)
       return failedImport("EXTRACT_SUBREG child #0 could not "
                           "be coerced to a register class");
@@ -1672,7 +1692,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       return failedImport("REG_SEQUENCE child #0 is not a leaf");
 
     const Record *RCDef =
-        getInitValueAsRegClass(Dst.getChild(0).getLeafValue());
+        getInitValueAsRegClass(Target, Dst.getChild(0).getLeafValue());
     if (!RCDef)
       return failedImport("REG_SEQUENCE child #0 could not "
                           "be coerced to a register class");
@@ -1791,7 +1811,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     // COPY_TO_REGCLASS does not provide operand constraints itself but the
     // result is constrained to the class given by the second child.
     const Record *DstIOpRec =
-        getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
+        getInitValueAsRegClass(Target, Dst.getChild(1).getLeafValue());
 
     if (DstIOpRec == nullptr)
       return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
@@ -1897,7 +1917,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
 const CodeGenRegisterClass *
 GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) const {
   assert(Leaf.isLeaf() && "Expected leaf?");
-  const Record *RCRec = getInitValueAsRegClass(Leaf.getLeafValue());
+  const Record *RCRec = getInitValueAsRegClass(Target, Leaf.getLeafValue());
   if (!RCRec)
     return nullptr;
   return CGRegs.getRegClass(RCRec);
@@ -1924,6 +1944,26 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) const {
   // Don't want to try and infer things when there could potentially be more
   // than one candidate register class.
   return inferRegClassFromInstructionPattern(N, /*ResIdx=*/0);
+}
+
+const CodeGenRegisterClass *
+GlobalISelEmitter::inferRegClassFromRegisterClassLike(
+    const Record *RegClassDef) const {
+  if (RegClassDef->isSubClassOf("RegClassByHwMode")) {
+    // TODO: We only are trying to match the regbank, which we assume is the
+    // same across modes, but we are just picking one class and assuming they
+    // all have the same bank.
+    //
+    // We should verify there is a common regbank among the possible classes,
+    // and return that instead of a concrete class.
+    const HwModeSelect &ModeSelect =
+        Target.getHwModes().getHwModeSelect(RegClassDef);
+    if (ModeSelect.Items.empty())
+      return nullptr;
+    return Target.getRegBank().getRegClass(ModeSelect.Items.front().second);
+  }
+
+  return &Target.getRegisterClass(RegClassDef);
 }
 
 const CodeGenRegisterClass *
@@ -1997,8 +2037,14 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
   // from.
   const auto &DstIOperand = Inst.Operands[ResIdx];
   const Record *DstIOpRec = DstIOperand.Rec;
-  if (DstIOpRec->isSubClassOf("RegisterOperand"))
-    return &Target.getRegisterClass(DstIOpRec->getValueAsDef("RegClass"));
+
+  if (DstIOpRec->isSubClassOf("RegisterOperand")) {
+    const Record *RegClassDef = DstIOpRec->getValueAsDef("RegClass");
+    return inferRegClassFromRegisterClassLike(RegClassDef);
+  }
+
+  if (DstIOpRec->isSubClassOf("RegClassByHwMode"))
+    return inferRegClassFromRegisterClassLike(DstIOpRec);
 
   if (DstIOpRec->isSubClassOf("RegisterClass"))
     return &Target.getRegisterClass(DstIOpRec);
@@ -2111,7 +2157,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
 
   if (Dst.isLeaf()) {
-    if (const Record *RCDef = getInitValueAsRegClass(Dst.getLeafValue())) {
+    if (const Record *RCDef =
+            getInitValueAsRegClass(Target, Dst.getLeafValue())) {
       const CodeGenRegisterClass &RC = Target.getRegisterClass(RCDef);
 
       // We need to replace the def and all its uses with the specified

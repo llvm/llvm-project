@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InfoByHwMode.h"
+#include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -184,6 +185,19 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   for (const PairType *P : Pairs)
     OS << LS << '(' << getModeName(P->first) << ':' << P->second << ')';
   OS << '}';
+}
+
+RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
+                                   const CodeGenTarget &Target) {
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+
+  for (const HwModeSelect::PairType &P : MS.Items) {
+    assert(P.second && P.second->isSubClassOf("RegisterClass") &&
+           "Register class must subclass RegisterClass");
+    const CodeGenRegisterClass &RegClass = Target.getRegisterClass(P.second);
+    if (!Map.try_emplace(P.first, &RegClass).second)
+      llvm_unreachable("duplicate entry");
+  }
 }
 
 SubRegRange::SubRegRange(const Record *R) {
