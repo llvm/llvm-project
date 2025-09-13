@@ -2044,7 +2044,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   if (MCSymbol *Label = MIB->getInstLabel(Instruction))
     OS << " # Label: " << *Label;
 
-  MIB->printAnnotations(Instruction, OS);
+  MIB->printAnnotations(Instruction, OS, PrintMemData || opts::PrintMemData);
 
   if (opts::PrintDebugInfo)
     printDebugInfo(OS, Instruction, Function, DwCtx.get());
