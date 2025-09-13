@@ -502,7 +502,7 @@ public:
     c.def_prop_ro(
         "element_type",
         [](PyComplexType &self) { return mlirComplexTypeGetElementType(self); },
-        "Returns element type.");
+        nb::sig("def element_type(self) -> Type"), "Returns element type.");
   }
 };
 
@@ -513,6 +513,7 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
       [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
+      nb::sig("def element_type(self) -> Type"),
       "Returns the element type of the shaped type.");
   c.def_prop_ro(
       "has_rank",
@@ -718,14 +719,15 @@ public:
         nb::arg("shape"), nb::arg("element_type"),
         nb::arg("encoding") = nb::none(), nb::arg("loc") = nb::none(),
         "Create a ranked tensor type");
-    c.def_prop_ro("encoding",
-                  [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
-                    MlirAttribute encoding =
-                        mlirRankedTensorTypeGetEncoding(self.get());
-                    if (mlirAttributeIsNull(encoding))
-                      return std::nullopt;
-                    return encoding;
-                  });
+    c.def_prop_ro(
+        "encoding",
+        [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
+          MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
+          if (mlirAttributeIsNull(encoding))
+            return std::nullopt;
+          return encoding;
+        },
+        nb::sig("def encoding(self) -> Attribute | None"));
   }
 };
 
@@ -788,6 +790,7 @@ public:
             [](PyMemRefType &self) -> MlirAttribute {
               return mlirMemRefTypeGetLayout(self);
             },
+            nb::sig("def layout(self) -> Attribute"),
             "The layout of the MemRef type.")
         .def(
             "get_strides_and_offset",
@@ -816,6 +819,7 @@ public:
                 return std::nullopt;
               return a;
             },
+            nb::sig("def memory_space(self) -> Attribute | None"),
             "Returns the memory space of the given MemRef type.");
   }
 };
@@ -856,6 +860,7 @@ public:
                 return std::nullopt;
               return a;
             },
+            nb::sig("def memory_space(self) -> Attribute | None"),
             "Returns the memory space of the given Unranked MemRef type.");
   }
 };
@@ -878,13 +883,16 @@ public:
           return PyTupleType(context->getRef(), t);
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
+        nb::sig("def get_tuple(elements: Sequence[Type], context: "
+                "mlir.ir.Context | None = None) -> TupleType"),
         "Create a tuple type");
     c.def(
         "get_type",
         [](PyTupleType &self, intptr_t pos) {
           return mlirTupleTypeGetType(self, pos);
         },
-        nb::arg("pos"), "Returns the pos-th type in the tuple type.");
+        nb::arg("pos"), nb::sig("def get_type(self, pos: int) -> Type"),
+        "Returns the pos-th type in the tuple type.");
     c.def_prop_ro(
         "num_types",
         [](PyTupleType &self) -> intptr_t {
@@ -914,6 +922,8 @@ public:
           return PyFunctionType(context->getRef(), t);
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], "
+                "context: mlir.ir.Context | None = None) -> FunctionType"),
         "Gets a FunctionType from a list of input and result types");
     c.def_prop_ro(
         "inputs",

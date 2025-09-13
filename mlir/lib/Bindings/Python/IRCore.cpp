@@ -1666,12 +1666,16 @@ public:
         operation(std::move(operation)) {}
 
   static void bindDerived(ClassTy &c) {
-    c.def_prop_ro("types", [](PyOpResultList &self) {
-      return getValueTypes(self, self.operation->getContext());
-    });
-    c.def_prop_ro("owner", [](PyOpResultList &self) {
-      return self.operation->createOpView();
-    });
+    c.def_prop_ro(
+        "types",
+        [](PyOpResultList &self) {
+          return getValueTypes(self, self.operation->getContext());
+        },
+        nb::sig("def types(self) -> list[Type]"));
+    c.def_prop_ro(
+        "owner",
+        [](PyOpResultList &self) { return self.operation->createOpView(); },
+        nb::sig("def owner(self) -> OpView"));
   }
 
   PyOperationRef &getOperation() { return operation; }
@@ -2422,9 +2426,12 @@ public:
         operation(std::move(operation)), block(block) {}
 
   static void bindDerived(ClassTy &c) {
-    c.def_prop_ro("types", [](PyBlockArgumentList &self) {
-      return getValueTypes(self, self.operation->getContext());
-    });
+    c.def_prop_ro(
+        "types",
+        [](PyBlockArgumentList &self) {
+          return getValueTypes(self, self.operation->getContext());
+        },
+        nb::sig("def types(self) -> list[Type]"));
   }
 
 private:
@@ -2693,8 +2700,10 @@ public:
     nb::class_<PyOpAttributeMap>(m, "OpAttributeMap")
         .def("__contains__", &PyOpAttributeMap::dunderContains)
         .def("__len__", &PyOpAttributeMap::dunderLen)
-        .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed)
-        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed)
+        .def("__getitem__", &PyOpAttributeMap::dunderGetItemNamed,
+             nb::sig("def __getitem__(self, arg: str, /) -> Attribute"))
+        .def("__getitem__", &PyOpAttributeMap::dunderGetItemIndexed,
+             nb::sig("def __getitem__(self, arg: int, /) -> Attribute"))
         .def("__setitem__", &PyOpAttributeMap::dunderSetItem)
         .def("__delitem__", &PyOpAttributeMap::dunderDelItem);
   }
@@ -3140,8 +3149,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("callee"), nb::arg("frames"), nb::arg("context") = nb::none(),
           kContextGetCallSiteLocationDocstring)
       .def("is_a_callsite", mlirLocationIsACallSite)
-      .def_prop_ro("callee", mlirLocationCallSiteGetCallee)
-      .def_prop_ro("caller", mlirLocationCallSiteGetCaller)
+      .def_prop_ro("callee", mlirLocationCallSiteGetCallee,
+                   nb::sig("def callee(self) -> Location"))
+      .def_prop_ro("caller", mlirLocationCallSiteGetCaller,
+                   nb::sig("def caller(self) -> Location"))
       .def_static(
           "file",
           [](std::string filename, int line, int col,
@@ -3166,11 +3177,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("end_line"), nb::arg("end_col"),
           nb::arg("context") = nb::none(), kContextGetFileRangeDocstring)
       .def("is_a_file", mlirLocationIsAFileLineColRange)
-      .def_prop_ro("filename",
-                   [](MlirLocation loc) {
-                     return mlirIdentifierStr(
-                         mlirLocationFileLineColRangeGetFilename(loc));
-                   })
+      .def_prop_ro(
+          "filename",
+          [](MlirLocation loc) {
+            return mlirIdentifierStr(
+                mlirLocationFileLineColRangeGetFilename(loc));
+          },
+          nb::sig("def filename(self) -> str"))
       .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine)
       .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn)
       .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine)
@@ -3192,15 +3205,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("locations"), nb::arg("metadata") = nb::none(),
           nb::arg("context") = nb::none(), kContextGetFusedLocationDocstring)
       .def("is_a_fused", mlirLocationIsAFused)
-      .def_prop_ro("locations",
-                   [](MlirLocation loc) {
-                     unsigned numLocations =
-                         mlirLocationFusedGetNumLocations(loc);
-                     std::vector<MlirLocation> locations(numLocations);
-                     if (numLocations)
-                       mlirLocationFusedGetLocations(loc, locations.data());
-                     return locations;
-                   })
+      .def_prop_ro(
+          "locations",
+          [](MlirLocation loc) {
+            unsigned numLocations = mlirLocationFusedGetNumLocations(loc);
+            std::vector<MlirLocation> locations(numLocations);
+            if (numLocations)
+              mlirLocationFusedGetLocations(loc, locations.data());
+            return locations;
+          },
+          nb::sig("def locations(self) -> list[Location]"))
       .def_static(
           "name",
           [](std::string name, std::optional<PyLocation> childLoc,
@@ -3215,11 +3229,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("name"), nb::arg("childLoc") = nb::none(),
           nb::arg("context") = nb::none(), kContextGetNameLocationDocString)
       .def("is_a_name", mlirLocationIsAName)
-      .def_prop_ro("name_str",
-                   [](MlirLocation loc) {
-                     return mlirIdentifierStr(mlirLocationNameGetName(loc));
-                   })
-      .def_prop_ro("child_loc", mlirLocationNameGetChildLoc)
+      .def_prop_ro(
+          "name_str",
+          [](MlirLocation loc) {
+            return mlirIdentifierStr(mlirLocationNameGetName(loc));
+          },
+          nb::sig("def name_str(self) -> str"))
+      .def_prop_ro("child_loc", mlirLocationNameGetChildLoc,
+                   nb::sig("def child_loc(self) -> Location"))
       .def_static(
           "from_attr",
           [](PyAttribute &attribute, DefaultingPyMlirContext context) {
@@ -3235,6 +3252,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "attr",
           [](PyLocation &self) { return mlirLocationGetAttribute(self); },
+          nb::sig("def attr(self) -> Attribute"),
           "Get the underlying LocationAttr")
       .def(
           "emit_error",
@@ -3376,14 +3394,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             concreteOperation.checkValid();
             return concreteOperation.getContext().getObject();
           },
+          nb::sig(
+              "def context(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Context")),
           "Context that owns the Operation")
-      .def_prop_ro("name",
-                   [](PyOperationBase &self) {
-                     auto &concreteOperation = self.getOperation();
-                     concreteOperation.checkValid();
-                     MlirOperation operation = concreteOperation.get();
-                     return mlirIdentifierStr(mlirOperationGetName(operation));
-                   })
+      .def_prop_ro(
+          "name",
+          [](PyOperationBase &self) {
+            auto &concreteOperation = self.getOperation();
+            concreteOperation.checkValid();
+            MlirOperation operation = concreteOperation.get();
+            return mlirIdentifierStr(mlirOperationGetName(operation));
+          },
+          nb::sig("def name(self) -> str"))
       .def_prop_ro("operands",
                    [](PyOperationBase &self) {
                      return PyOpOperandList(self.getOperation().getRef());
@@ -3405,6 +3427,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return PyOpResult(operation.getRef(), getUniqueResult(operation))
                 .maybeDownCast();
           },
+          nb::sig("def result(self) -> Value"),
           "Shortcut to get an op result if it has only one (throws an error "
           "otherwise).")
       .def_prop_ro(
@@ -3516,8 +3539,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           "Reports if the operation is attached to its parent block.")
       .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); })
-      .def("walk", &PyOperationBase::walk, nb::arg("callback"),
-           nb::arg("walk_order") = MlirWalkPostOrder);
+      .def(
+          "walk", &PyOperationBase::walk, nb::arg("callback"),
+          nb::arg("walk_order") = MlirWalkPostOrder,
+          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], "
+                  "walk_order: WalkOrder = WalkOrder.POST_ORDER) -> None"));
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -3732,8 +3758,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyBlock &self, const PyType &type, const PyLocation &loc) {
             return mlirBlockAddArgument(self.get(), type, loc);
           },
+          "type"_a, "loc"_a,
           "Append an argument of the specified type to the block and returns "
-          "the newly added argument.")
+          "the newly added argument.",
+          nb::sig("def add_argument(self, type: Type, loc: Location) -> "
+                  "Value"))
       .def(
           "erase_argument",
           [](PyBlock &self, unsigned index) {
@@ -3921,14 +3950,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return attr;
           },
           nb::arg("asm"), nb::arg("context") = nb::none(),
+          nb::sig("def parse(asm: str, context: mlir.ir.Context | None = None) "
+                  "-> Attribute"),
           "Parses an attribute from an assembly form. Raises an MLIRError on "
           "failure.")
       .def_prop_ro(
           "context",
           [](PyAttribute &self) { return self.getContext().getObject(); },
+          nb::sig("def context(self) -> mlir.ir.Context"),
           "Context that owns the Attribute")
-      .def_prop_ro("type",
-                   [](PyAttribute &self) { return mlirAttributeGetType(self); })
+      .def_prop_ro(
+          "type", [](PyAttribute &self) { return mlirAttributeGetType(self); },
+          nb::sig("def type(self) -> Type"))
       .def(
           "get_named",
           [](PyAttribute &self, std::string name) {
@@ -3968,24 +4001,29 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
-      .def_prop_ro("typeid",
-                   [](PyAttribute &self) -> MlirTypeID {
-                     MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
-                     assert(!mlirTypeIDIsNull(mlirTypeID) &&
-                            "mlirTypeID was expected to be non-null.");
-                     return mlirTypeID;
-                   })
-      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR, [](PyAttribute &self) {
-        MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
-        assert(!mlirTypeIDIsNull(mlirTypeID) &&
-               "mlirTypeID was expected to be non-null.");
-        std::optional<nb::callable> typeCaster =
-            PyGlobals::get().lookupTypeCaster(mlirTypeID,
-                                              mlirAttributeGetDialect(self));
-        if (!typeCaster)
-          return nb::cast(self);
-        return typeCaster.value()(self);
-      });
+      .def_prop_ro(
+          "typeid",
+          [](PyAttribute &self) -> MlirTypeID {
+            MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
+            assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                   "mlirTypeID was expected to be non-null.");
+            return mlirTypeID;
+          },
+          nb::sig("def typeid(self) -> TypeID"))
+      .def(
+          MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+          [](PyAttribute &self) {
+            MlirTypeID mlirTypeID = mlirAttributeGetTypeID(self);
+            assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                   "mlirTypeID was expected to be non-null.");
+            std::optional<nb::callable> typeCaster =
+                PyGlobals::get().lookupTypeCaster(
+                    mlirTypeID, mlirAttributeGetDialect(self));
+            if (!typeCaster)
+              return nb::cast(self);
+            return typeCaster.value()(self);
+          },
+          nb::sig("def maybe_downcast(self) -> Attribute"));
 
   //----------------------------------------------------------------------------
   // Mapping of PyNamedAttribute
@@ -4010,11 +4048,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyNamedAttribute &self) {
             return mlirIdentifierStr(self.namedAttr.name);
           },
+          nb::sig("def name(self) -> str"),
           "The name of the NamedAttribute binding")
       .def_prop_ro(
           "attr",
           [](PyNamedAttribute &self) { return self.namedAttr.attribute; },
-          nb::keep_alive<0, 1>(),
+          nb::keep_alive<0, 1>(), nb::sig("def attr(self) -> Attribute"),
           "The underlying generic attribute of the NamedAttribute binding");
 
   //----------------------------------------------------------------------------
@@ -4038,9 +4077,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return type;
           },
           nb::arg("asm"), nb::arg("context") = nb::none(),
+          nb::sig("def parse(asm: str, context: mlir.ir.Context | None = None) "
+                  "-> Type"),
           kContextParseTypeDocstring)
       .def_prop_ro(
           "context", [](PyType &self) { return self.getContext().getObject(); },
+          nb::sig("def context(self) -> mlir.ir.Context"),
           "Context that owns the Type")
       .def("__eq__", [](PyType &self, PyType &other) { return self == other; })
       .def(
@@ -4074,26 +4116,31 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
-      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-           [](PyType &self) {
-             MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
-             assert(!mlirTypeIDIsNull(mlirTypeID) &&
-                    "mlirTypeID was expected to be non-null.");
-             std::optional<nb::callable> typeCaster =
-                 PyGlobals::get().lookupTypeCaster(mlirTypeID,
-                                                   mlirTypeGetDialect(self));
-             if (!typeCaster)
-               return nb::cast(self);
-             return typeCaster.value()(self);
-           })
-      .def_prop_ro("typeid", [](PyType &self) -> MlirTypeID {
-        MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
-        if (!mlirTypeIDIsNull(mlirTypeID))
-          return mlirTypeID;
-        auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(self)));
-        throw nb::value_error(
-            (origRepr + llvm::Twine(" has no typeid.")).str().c_str());
-      });
+      .def(
+          MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+          [](PyType &self) {
+            MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
+            assert(!mlirTypeIDIsNull(mlirTypeID) &&
+                   "mlirTypeID was expected to be non-null.");
+            std::optional<nb::callable> typeCaster =
+                PyGlobals::get().lookupTypeCaster(mlirTypeID,
+                                                  mlirTypeGetDialect(self));
+            if (!typeCaster)
+              return nb::cast(self);
+            return typeCaster.value()(self);
+          },
+          nb::sig("def maybe_downcast(self) -> Type"))
+      .def_prop_ro(
+          "typeid",
+          [](PyType &self) -> MlirTypeID {
+            MlirTypeID mlirTypeID = mlirTypeGetTypeID(self);
+            if (!mlirTypeIDIsNull(mlirTypeID))
+              return mlirTypeID;
+            auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(self)));
+            throw nb::value_error(
+                (origRepr + llvm::Twine(" has no typeid.")).str().c_str());
+          },
+          nb::sig("def typeid(self) -> TypeID"));
 
   //----------------------------------------------------------------------------
   // Mapping of PyTypeID.
@@ -4125,6 +4172,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "context",
           [](PyValue &self) { return self.getParentOperation()->getContext(); },
+          nb::sig("def context(self) -> mlir.ir.Context"),
           "Context in which the value lives.")
       .def(
           "dump", [](PyValue &self) { mlirValueDump(self.get()); },
@@ -4149,7 +4197,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
 
             assert(false && "Value must be a block argument or an op result");
             return nb::none();
-          })
+          },
+          nb::sig("def owner(self) -> Operation | None"))
       .def_prop_ro("uses",
                    [](PyValue &self) {
                      return PyOpOperandIterator(
@@ -4206,8 +4255,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return printAccum.join();
           },
           nb::arg("state"), kGetNameAsOperand)
-      .def_prop_ro("type",
-                   [](PyValue &self) { return mlirValueGetType(self.get()); })
+      .def_prop_ro(
+          "type", [](PyValue &self) { return mlirValueGetType(self.get()); },
+          nb::sig("def type(self) -> Type"))
       .def(
           "set_type",
           [](PyValue &self, const PyType &type) {
@@ -4226,6 +4276,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             MlirOperation exceptedUser = exception.get();
             mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
           },
+          nb::sig("def replace_all_uses_except(self, with: Value, exceptions: "
+                  "Operation) -> None"),
           nb::arg("with"), nb::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
       .def(
@@ -4241,10 +4293,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 self, with, static_cast<intptr_t>(exceptionOps.size()),
                 exceptionOps.data());
           },
+          nb::sig("def replace_all_uses_except(self, with: Value, exceptions: "
+                  "list) -> None"),
           nb::arg("with"), nb::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
-      .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-           [](PyValue &self) { return self.maybeDownCast(); })
+      .def(
+          MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
+          [](PyValue &self) { return self.maybeDownCast(); },
+          nb::sig("def maybe_downcast(self) -> Value"))
       .def_prop_ro(
           "location",
           [](MlirValue self) {
@@ -4270,7 +4326,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   nb::class_<PySymbolTable>(m, "SymbolTable")
       .def(nb::init<PyOperationBase &>())
       .def("__getitem__", &PySymbolTable::dunderGetItem)
-      .def("insert", &PySymbolTable::insert, nb::arg("operation"))
+      .def("insert", &PySymbolTable::insert, nb::arg("operation"),
+           nb::sig("def insert(self, operation: _OperationBase) -> Attribute"))
       .def("erase", &PySymbolTable::erase, nb::arg("operation"))
       .def("__delitem__", &PySymbolTable::dunderDel)
       .def("__contains__",
@@ -4281,10 +4338,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       // Static helpers.
       .def_static("set_symbol_name", &PySymbolTable::setSymbolName,
                   nb::arg("symbol"), nb::arg("name"))
-      .def_static("get_symbol_name", &PySymbolTable::getSymbolName,
-                  nb::arg("symbol"))
-      .def_static("get_visibility", &PySymbolTable::getVisibility,
-                  nb::arg("symbol"))
+      .def_static(
+          "get_symbol_name", &PySymbolTable::getSymbolName,
+          nb::sig("def get_symbol_name(symbol: _OperationBase) -> Attribute"),
+          nb::arg("symbol"))
+      .def_static(
+          "get_visibility", &PySymbolTable::getVisibility,
+          nb::sig("def get_visibility(symbol: _OperationBase) -> Attribute"),
+          nb::arg("symbol"))
       .def_static("set_visibility", &PySymbolTable::setVisibility,
                   nb::arg("symbol"), nb::arg("visibility"))
       .def_static("replace_all_symbol_uses",
