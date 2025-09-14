@@ -82,7 +82,7 @@ static constexpr bool DefaultModelImplicitConversions = true;
 /// used together.
 static constexpr bool DefaultSuppressParametersUsedTogether = true;
 
-/// The default value for the NamePrefixSuffixSilenceDissimilarityTreshold
+/// The default value for the NamePrefixSuffixSilenceDissimilarityThreshold
 /// check option.
 static constexpr std::size_t
     DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
@@ -1435,7 +1435,7 @@ static MixableParameterRange modelMixingRange(
     StringRef PrevParamName = FD->getParamDecl(I - 1)->getName();
     if (!ParamName.empty() && !PrevParamName.empty() &&
         filter::prefixSuffixCoverUnderThreshold(
-            Check.NamePrefixSuffixSilenceDissimilarityTreshold, PrevParamName,
+            Check.NamePrefixSuffixSilenceDissimilarityThreshold, PrevParamName,
             ParamName)) {
       LLVM_DEBUG(llvm::dbgs() << "Parameter '" << ParamName
                               << "' follows a pattern with previous parameter '"
@@ -2108,8 +2108,8 @@ EasilySwappableParametersCheck::EasilySwappableParametersCheck(
       SuppressParametersUsedTogether(
           Options.get("SuppressParametersUsedTogether",
                       DefaultSuppressParametersUsedTogether)),
-      NamePrefixSuffixSilenceDissimilarityTreshold(
-          Options.get("NamePrefixSuffixSilenceDissimilarityTreshold",
+      NamePrefixSuffixSilenceDissimilarityThreshold(
+          Options.get("NamePrefixSuffixSilenceDissimilarityThreshold",
                       DefaultNamePrefixSuffixSilenceDissimilarityTreshold)) {}
 
 void EasilySwappableParametersCheck::storeOptions(
@@ -2123,8 +2123,8 @@ void EasilySwappableParametersCheck::storeOptions(
   Options.store(Opts, "ModelImplicitConversions", ModelImplicitConversions);
   Options.store(Opts, "SuppressParametersUsedTogether",
                 SuppressParametersUsedTogether);
-  Options.store(Opts, "NamePrefixSuffixSilenceDissimilarityTreshold",
-                NamePrefixSuffixSilenceDissimilarityTreshold);
+  Options.store(Opts, "NamePrefixSuffixSilenceDissimilarityThreshold",
+                NamePrefixSuffixSilenceDissimilarityThreshold);
 }
 
 void EasilySwappableParametersCheck::registerMatchers(MatchFinder *Finder) {

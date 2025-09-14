@@ -128,9 +128,12 @@ public:
     return emitLoadOfLValue(me);
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitOpaqueValueExpr");
-    return {};
+    if (e->isGLValue())
+      return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
+                              e->getExprLoc());
+
+    // Otherwise, assume the mapping is the scalar directly.
+    return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
   }
 
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
@@ -960,21 +963,32 @@ mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
 
 mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *e) {
-  mlir::Value condValue = Visit(e->getCond());
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+  // Bind the common expression if necessary.
+  CIRGenFunction::OpaqueValueMapping binding(cgf, e);
+
+  CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+  Expr *cond = e->getCond()->IgnoreParens();
+  mlir::Value condValue = cgf.evaluateExprAsBool(cond);
 
   return builder
       .create<cir::TernaryOp>(
           loc, condValue,
           /*thenBuilder=*/
           [&](mlir::OpBuilder &b, mlir::Location loc) {
+            eval.beginEvaluation();
             mlir::Value trueValue = Visit(e->getTrueExpr());
             b.create<cir::YieldOp>(loc, trueValue);
+            eval.endEvaluation();
           },
           /*elseBuilder=*/
           [&](mlir::OpBuilder &b, mlir::Location loc) {
+            eval.beginEvaluation();
             mlir::Value falseValue = Visit(e->getFalseExpr());
             b.create<cir::YieldOp>(loc, falseValue);
+            eval.endEvaluation();
           })
       .getResult();
 }

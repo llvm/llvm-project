@@ -88,7 +88,7 @@ class FRI16_ins<bits<5> op, string asmstr,
 
 class FRI16_TCP_ins<bits<5> _op, string asmstr,
                     InstrItinClass itin>:
-  FRI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm8, i32imm:$size),
+  FRI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm8),
             !strconcat(asmstr, "\t$rx, $imm8\t# 16 bit inst"), [], itin>;
 
 class FRI16R_ins_base<bits<5> op, string asmstr, string asmstr2,
@@ -216,7 +216,7 @@ class FEXT_RI16_B_ins<bits<5> _op, string asmstr,
 
 class FEXT_RI16_TCP_ins<bits<5> _op, string asmstr,
                         InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm16, i32imm:$size),
+  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm16),
             !strconcat(asmstr, "\t$rx, $imm16"), [], itin>;
 
 class FEXT_2RI16_ins<bits<5> _op, string asmstr,
@@ -856,6 +856,7 @@ def LwRxSpImmX16: FEXT_RRI16_mem_ins<0b10010, "lw", mem16sp, II_LW>, MayLoad;
 def LwRxPcTcp16: FRI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
 
 def LwRxPcTcpX16: FEXT_RI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
+
 //
 // Format: MOVE r32, rz MIPS16e
 // Purpose: Move

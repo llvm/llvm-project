@@ -1747,3 +1747,33 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 
   return TTI::getOperandInfo(V->getLiveInIRValue());
 }
+
+InstructionCost VPCostContext::getScalarizationOverhead(
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF) {
+  if (VF.isScalar())
+    return 0;
+
+  InstructionCost ScalarizationCost = 0;
+  // Compute the cost of scalarizing the result if needed.
+  if (!ResultTy->isVoidTy()) {
+    for (Type *VectorTy :
+         to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
+      ScalarizationCost += TTI.getScalarizationOverhead(
+          cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
+          /*Insert=*/true,
+          /*Extract=*/false, CostKind);
+    }
+  }
+  // Compute the cost of scalarizing the operands, skipping ones that do not
+  // require extraction/scalarization and do not incur any overhead.
+  SmallPtrSet<const VPValue *, 4> UniqueOperands;
+  SmallVector<Type *> Tys;
+  for (auto *Op : Operands) {
+    if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
+        !UniqueOperands.insert(Op).second)
+      continue;
+    Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
+  }
+  return ScalarizationCost +
+         TTI.getOperandsScalarizationOverhead(Tys, CostKind);
+}

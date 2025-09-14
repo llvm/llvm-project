@@ -251,6 +251,24 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   EXPECT_EQ((a[{2, 1}]), 42.);
 }
 
+TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(OwningMemrefZeroInit)) {
+  constexpr int k = 3;
+  constexpr int m = 7;
+  int64_t shape[] = {k, m};
+  // Use a large alignment to stress the case where the memref data/basePtr are
+  // disjoint.
+  int alignment = 8192;
+  OwningMemRef<float, 2> a(shape, {}, {}, alignment);
+  ASSERT_EQ(
+      (void *)(((uintptr_t)a->basePtr + alignment - 1) & ~(alignment - 1)),
+      a->data);
+  for (int i = 0; i < k; ++i) {
+    for (int j = 0; j < m; ++j) {
+      EXPECT_EQ((a[{i, j}]), 0.);
+    }
+  }
+}
+
 // A helper function that will be called from the JIT
 static void memrefMultiply(::StridedMemRefType<float, 2> *memref,
                            int32_t coefficient) {
