@@ -455,6 +455,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
     {"dprod", &I::genDprod},
+    {"dsecnds",
+     &I::genDsecnds,
+     {{{"refTime", asAddr}}},
+     /*isElemental=*/false},
     {"dshiftl", &I::genDshiftl},
     {"dshiftr", &I::genDshiftr},
     {"eoshift",
@@ -4046,6 +4050,23 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   mlir::Value a = builder.createConvert(loc, resultType, args[0]);
   mlir::Value b = builder.createConvert(loc, resultType, args[1]);
   return mlir::arith::MulFOp::create(builder, loc, a, b);
+}
+
+// DSECNDS
+// Double precision variant of SECNDS (PGI extension)
+fir::ExtendedValue
+IntrinsicLibrary::genDsecnds(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "DSECNDS expects one argument");
+
+  mlir::Value refTime = fir::getBase(args[0]);
+
+  if (!refTime)
+    fir::emitFatalError(loc, "expected REFERENCE TIME parameter");
+
+  mlir::Value result = fir::runtime::genDsecnds(builder, loc, refTime);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 // DSHIFTL
