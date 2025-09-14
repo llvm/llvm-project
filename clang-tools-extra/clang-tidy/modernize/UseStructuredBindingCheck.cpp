@@ -365,7 +365,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
                                   SecondVar->getNameAsString() + "]";
     if (CFRS)
       ReplacementText += " :";
-    diag(DiagLoc, "Should use structured binding to decompose pair")
+    diag(DiagLoc, "use structured binding to decompose a pair")
         << FixItHint::CreateReplacement(ReplaceRange, ReplacementText) << Hints;
   };
 

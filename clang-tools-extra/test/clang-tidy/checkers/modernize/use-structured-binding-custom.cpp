@@ -16,7 +16,7 @@ struct otherPair {
 void OptionTest() {
   {
     auto P = custom::pair();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: Should use structured binding to decompose pair [modernize-use-structured-binding]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES: {{^}} auto [x, y] = custom::pair();
     int x = P.first;
     int y = P.second;
@@ -24,7 +24,7 @@ void OptionTest() {
 
   {
     auto P = otherPair();
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: Should use structured binding to decompose pair [modernize-use-structured-binding]
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
     // CHECK-FIXES: {{^}} auto [x, y] = otherPair();
     int x = P.first;
     int y = P.second;
