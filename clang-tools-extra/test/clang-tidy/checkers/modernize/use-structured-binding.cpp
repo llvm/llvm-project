@@ -16,7 +16,7 @@ void DecomposeByAssignWarnCases() {
   {
     auto P = getPair<int, int>();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} auto [x, y] = getPair<int, int>();
+    // CHECK-FIXES: auto [x, y] = getPair<int, int>();
     int x = P.first;
     int y = P.second;
   }
@@ -24,7 +24,7 @@ void DecomposeByAssignWarnCases() {
   {
     auto P = getPair<int, int>();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} auto [x, y] = getPair<int, int>();
+    // CHECK-FIXES: auto [x, y] = getPair<int, int>();
     int x = P.first;
     auto y = P.second;
   }
@@ -32,7 +32,7 @@ void DecomposeByAssignWarnCases() {
   {
     const auto P = getPair<int, int>();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} const auto [x, y] = getPair<int, int>();
+    // CHECK-FIXES: const auto [x, y] = getPair<int, int>();
     const int x = P.first;
     const auto y = P.second;
   }
@@ -41,7 +41,7 @@ void DecomposeByAssignWarnCases() {
     std::pair<int, int> otherP;
     auto& P = otherP;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} auto& [x, y] = otherP;
+    // CHECK-FIXES: auto& [x, y] = otherP;
     int& x = P.first;
     auto& y = P.second;
   }
@@ -50,7 +50,7 @@ void DecomposeByAssignWarnCases() {
     std::pair<int, int> otherP;
     const auto& P = otherP;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} const auto& [x, y] = otherP;
+    // CHECK-FIXES: const auto& [x, y] = otherP;
     const int& x = P.first;
     const auto& y = P.second;
   }
@@ -60,28 +60,28 @@ void forRangeWarnCases() {
   std::pair<int, int> Pairs[10];
   for (auto P : Pairs) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} for (auto [x, y] : Pairs) {
+    // CHECK-FIXES: for (auto [x, y] : Pairs) {
     int x = P.first;
     int y = P.second;
   }
 
   for (const auto P : Pairs) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} for (const auto [x, y] : Pairs) {
+    // CHECK-FIXES: for (const auto [x, y] : Pairs) {
     const int x = P.first;
     const int y = P.second;
   }
 
   for (auto& P : Pairs) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} for (auto& [x, y] : Pairs) {
+    // CHECK-FIXES: for (auto& [x, y] : Pairs) {
     int& x = P.first;
     int& y = P.second;
   }
 
   for (const auto& P : Pairs) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} for (const auto& [x, y] : Pairs) {
+    // CHECK-FIXES: for (const auto& [x, y] : Pairs) {
     const int& x = P.first;
     const int& y = P.second;
   }
@@ -89,14 +89,14 @@ void forRangeWarnCases() {
   std::pair<TestClass, TestClass> ClassPairs[10];
   for (auto P : ClassPairs) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} for (auto [c1, c2] : ClassPairs) {
+    // CHECK-FIXES: for (auto [c1, c2] : ClassPairs) {
     TestClass c1 = P.first;
     TestClass c2 = P.second;
   }
 
   for (const auto P : ClassPairs) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: {{^}} for (const auto [c1, c2] : ClassPairs) {
+    // CHECK-FIXES: for (const auto [c1, c2] : ClassPairs) {
     const TestClass c1 = P.first;
     const TestClass c2 = P.second;
   }
@@ -136,19 +136,19 @@ void stdTieWarnCases() {
   int b = 0;
   std::tie(a, b) = getPair<int, int>();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-  // CHECK-FIXES: {{^}} auto [a, b] = getPair<int, int>();
+  // CHECK-FIXES: auto [a, b] = getPair<int, int>();
 
   int* pa = nullptr;
   int* pb = nullptr;
   std::tie(pa, pb) = getPair<int*, int*>();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-  // CHECK-FIXES: {{^}} auto [pa, pb] = getPair<int*, int*>();
+  // CHECK-FIXES: auto [pa, pb] = getPair<int*, int*>();
 
   TestClass c1 (1, 2);
   TestClass c2 = TestClass {3, 4};
   std::tie(c1, c2) = getPair<TestClass, TestClass>();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use structured binding to decompose a pair [modernize-use-structured-binding]
-  // CHECK-FIXES: {{^}} auto [c1, c2] = getPair<TestClass, TestClass>();
+  // CHECK-FIXES: auto [c1, c2] = getPair<TestClass, TestClass>();
 }
 
 void stdTieNotWarnCases() {
