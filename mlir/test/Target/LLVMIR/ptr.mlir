@@ -41,10 +41,10 @@ llvm.func @type_offset(%arg0: !ptr.ptr<#llvm.address_space<0>>) -> !llvm.struct<
   %2 = ptr.type_offset i16 : i32
   %3 = ptr.type_offset i32 : i32
   %4 = llvm.mlir.poison : !llvm.struct<(i32, i32, i32, i32)>
-  %5 = llvm.insertvalue %0, %4[0] : !llvm.struct<(i32, i32, i32, i32)> 
-  %6 = llvm.insertvalue %1, %5[1] : !llvm.struct<(i32, i32, i32, i32)> 
-  %7 = llvm.insertvalue %2, %6[2] : !llvm.struct<(i32, i32, i32, i32)> 
-  %8 = llvm.insertvalue %3, %7[3] : !llvm.struct<(i32, i32, i32, i32)> 
+  %5 = llvm.insertvalue %0, %4[0] : !llvm.struct<(i32, i32, i32, i32)>
+  %6 = llvm.insertvalue %1, %5[1] : !llvm.struct<(i32, i32, i32, i32)>
+  %7 = llvm.insertvalue %2, %6[2] : !llvm.struct<(i32, i32, i32, i32)>
+  %8 = llvm.insertvalue %3, %7[3] : !llvm.struct<(i32, i32, i32, i32)>
   llvm.return %8 : !llvm.struct<(i32, i32, i32, i32)>
 }
 
@@ -194,7 +194,7 @@ llvm.func @scatter_ops_i64(%value: vector<8xi64>, %ptrs: vector<8x!ptr.ptr<#llvm
 // CHECK-NEXT:   call void @llvm.masked.store.v4f64.p3(<4 x double> %[[VALUE_F64]], ptr addrspace(3) %[[PTR_SHARED]], i32 8, <4 x i1> %[[MASK]])
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-llvm.func @mixed_masked_ops_address_spaces(%ptr: !ptr.ptr<#llvm.address_space<3>>, %ptrs: vector<4x!ptr.ptr<#llvm.address_space<3>>>, 
+llvm.func @mixed_masked_ops_address_spaces(%ptr: !ptr.ptr<#llvm.address_space<3>>, %ptrs: vector<4x!ptr.ptr<#llvm.address_space<3>>>,
                                           %mask: vector<4xi1>, %value: vector<4xf64>, %passthrough: vector<4xf64>) {
   // Test with shared memory address space (3) and f64 elements
   %0 = ptr.gather %ptrs, %mask, %passthrough alignment = 8 : vector<4x!ptr.ptr<#llvm.address_space<3>>> -> vector<4xf64>
@@ -254,4 +254,30 @@ llvm.func @llvm_ops_with_ptr_nvvm_values(%arg0: !llvm.ptr) {
   %1 = llvm.load %arg0 : !llvm.ptr -> !ptr.ptr<#nvvm.memory_space<global>>
   llvm.store %1, %arg0 : !ptr.ptr<#nvvm.memory_space<global>>, !llvm.ptr
   llvm.return
+}
+
+// CHECK-LABEL: define { ptr, ptr addrspace(1), ptr addrspace(2) } @constant_address_op() {
+// CHECK-NEXT: ret { ptr, ptr addrspace(1), ptr addrspace(2) } { ptr null, ptr addrspace(1) inttoptr (i64 4096 to ptr addrspace(1)), ptr addrspace(2) inttoptr (i64 3735928559 to ptr addrspace(2)) }
+llvm.func @constant_address_op() ->
+    !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>,
+                  !ptr.ptr<#llvm.address_space<1>>,
+                  !ptr.ptr<#llvm.address_space<2>>)> {
+  %0 = ptr.constant #ptr.null : !ptr.ptr<#llvm.address_space<0>>
+  %1 = ptr.constant #ptr.address<0x1000> : !ptr.ptr<#llvm.address_space<1>>
+  %2 = ptr.constant #ptr.address<3735928559> : !ptr.ptr<#llvm.address_space<2>>
+  %3 = llvm.mlir.poison : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  %4 = llvm.insertvalue %0, %3[0] : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  %6 = llvm.insertvalue %2, %5[2] : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+  llvm.return %6 : !llvm.struct<(!ptr.ptr<#llvm.address_space<0>>, !ptr.ptr<#llvm.address_space<1>>, !ptr.ptr<#llvm.address_space<2>>)>
+}
+
+// Test gep folders.
+// CHECK-LABEL: define ptr @ptr_add_cst() {
+// CHECK-NEXT:   ret ptr inttoptr (i64 42 to ptr)
+llvm.func @ptr_add_cst() -> !ptr.ptr<#llvm.address_space<0>> {
+  %off = llvm.mlir.constant(42 : i32) : i32
+  %ptr = ptr.constant #ptr.null : !ptr.ptr<#llvm.address_space<0>>
+  %res = ptr.ptr_add %ptr, %off : !ptr.ptr<#llvm.address_space<0>>, i32
+  llvm.return %res : !ptr.ptr<#llvm.address_space<0>>
 }
