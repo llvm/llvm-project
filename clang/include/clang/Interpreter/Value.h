@@ -32,10 +32,9 @@
 
 #ifndef LLVM_CLANG_INTERPRETER_VALUE_H
 #define LLVM_CLANG_INTERPRETER_VALUE_H
+
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_BUILD_LLVM_DYLIB, LLVM_BUILD_SHARED_LIBS
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -48,7 +47,11 @@
 
 namespace llvm {
 class raw_ostream;
-
+namespace orc {
+class ExecutionSession;
+class LLJIT;
+class MemoryAccess;
+} // namespace orc
 } // namespace llvm
 
 namespace clang {
@@ -393,6 +396,9 @@ public:
     assert(!Cleanup.has_value());
     Cleanup.emplace(std::move(VC));
   }
+
+  bool hasAttachedCleanup() const { return Cleanup.has_value(); }
+
   void clear() {
     if (Cleanup.has_value())
       (*Cleanup)(*this);

@@ -22,6 +22,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -679,10 +680,6 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E, bool isOOP) {
 
     if (llvm::Error Err = LookupInterface(ValuePrintingInfo[ClangSendResult],
                                           RunTimeFnTagName[ClangSendResult]))
-      return std::move(Err);
-
-    if (llvm::Error Err = LookupInterface(ValuePrintingInfo[ClangDestroyObj],
-                                          RunTimeFnTagName[ClangDestroyObj]))
       return std::move(Err);
   }
 
