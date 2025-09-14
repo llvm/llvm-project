@@ -391,7 +391,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   const std::optional<TransferType> FirstVarCaptureType =
       getTransferType(*Result.Context, FirstVar->getType(),
                       *Result.Nodes.getNodeAs<QualType>(FirstTypeName));
-  std::optional<TransferType> SecondVarCaptureType =
+  const std::optional<TransferType> SecondVarCaptureType =
       getTransferType(*Result.Context, SecondVar->getType(),
                       *Result.Nodes.getNodeAs<QualType>(SecondTypeName));
   if (!PairCaptureType || !FirstVarCaptureType || !SecondVarCaptureType ||
