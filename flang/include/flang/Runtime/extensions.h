@@ -28,6 +28,10 @@ typedef std::uint32_t gid_t;
 
 extern "C" {
 
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime);
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line);
+
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
 
