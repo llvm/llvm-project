@@ -4157,6 +4157,8 @@ __m512i test_mm512_maskz_cvtepu16_epi64(__mmask8 __U, __m128i __A) {
   return _mm512_maskz_cvtepu16_epi64(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_v8di(_mm512_maskz_cvtepu16_epi64(/*0000 0101=*/0x05, (__m128i)(__v8hu){1, 2, 3, 4, 5, 6, 7, 8}), 1, 0, 3, 0, 0, 0, 0, 0));
+
 __m512i test_mm512_rol_epi32(__m512i __A) {
   // CHECK-LABEL: test_mm512_rol_epi32
   // CHECK: @llvm.fshl.v16i32
