@@ -189,6 +189,15 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMCosOpLowering : public mlir::OpConversionPattern<cir::CosOp> {
+public:
+  using mlir::OpConversionPattern<cir::CosOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CosOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMExpectOpLowering
     : public mlir::OpConversionPattern<cir::ExpectOp> {
 public:

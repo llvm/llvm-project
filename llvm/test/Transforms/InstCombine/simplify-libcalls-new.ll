@@ -6,14 +6,18 @@
 ; OFF-LABEL: @new_hot_cold()
 
 ;; First check with the default hint values (254 = -2, 128 = -128, 222 = -34).
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -S | FileCheck %s --check-prefix=HOTCOLD -DCOLD=1 -DHOT=-2 -DNOTCOLD=-128 -DAMBIG=-34 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF -DCOLD=1 -DHOT=-2 -DNOTCOLD=-128 -DAMBIG=-34 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
 
 ;; Next check with the non-default cold and hot hint values (200 =-56).
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefix=HOTCOLD -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
+
+;; Next check with the same non-default cold and hot hint values (200 =-56),
+;; but with transformation of nobuiltin calls enabled.
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -optimize-nobuiltin-hot-cold-new-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-ON -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
 
 ;; Try again with the non-default cold and hot hint values (200 =-56), and this
 ;; time specify that existing hints should be updated.
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new -S | FileCheck %s --check-prefix=HOTCOLD -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=100 -DPREVHINTHOT=-56 -DPREVHINTAMBIG=44
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=100 -DPREVHINTHOT=-56 -DPREVHINTAMBIG=44
 
 ;; Make sure that values not in 0..255 are flagged with an error
 ; RUN: not opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=256 -S 2>&1 | FileCheck %s --check-prefix=ERROR
@@ -40,8 +44,9 @@ define void @new() {
   ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[AMBIG]])
   %call4 = call ptr @_Znwm(i64 10) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_Znwm(i64 10)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_Znwm(i64 10)
+  ; NOBUILTIN-ON: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]])
   %call3 = call ptr @_Znwm(i64 10) #6
   call void @dummy(ptr %call3)
   ret void
@@ -68,8 +73,9 @@ define void @new_align() {
   ; HOTCOLD: @_ZnwmSt11align_val_t12__hot_cold_t(i64 10, i64 8, i8 [[AMBIG]])
   %call4 = call ptr @_ZnwmSt11align_val_t(i64 10, i64 8) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_ZnwmSt11align_val_t(i64 10, i64 8)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_ZnwmSt11align_val_t(i64 10, i64 8)
+  ; NOBUILTIN-ON: @_ZnwmSt11align_val_t12__hot_cold_t(i64 10, i64 8, i8 [[COLD]])
   %call3 = call ptr @_ZnwmSt11align_val_t(i64 10, i64 8) #6
   call void @dummy(ptr %call3)
   ret void
@@ -97,8 +103,9 @@ define void @new_nothrow() {
   ; HOTCOLD: @_ZnwmRKSt9nothrow_t12__hot_cold_t(i64 10, ptr nonnull %nt, i8 [[AMBIG]])
   %call4 = call ptr @_ZnwmRKSt9nothrow_t(i64 10, ptr %nt) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_ZnwmRKSt9nothrow_t(i64 10, ptr nonnull %nt)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_ZnwmRKSt9nothrow_t(i64 10, ptr nonnull %nt)
+  ; NOBUILTIN-ON: @_ZnwmRKSt9nothrow_t12__hot_cold_t(i64 10, ptr nonnull %nt, i8 [[COLD]])
   %call3 = call ptr @_ZnwmRKSt9nothrow_t(i64 10, ptr %nt) #6
   call void @dummy(ptr %call3)
   ret void
@@ -127,8 +134,9 @@ define void @new_align_nothrow() {
   ; HOTCOLD: @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 10, i64 8, ptr nonnull %nt, i8 [[AMBIG]])
   %call4 = call ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr %nt) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr nonnull %nt)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr nonnull %nt)
+  ; NOBUILTIN-ON: @_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 10, i64 8, ptr nonnull %nt, i8 [[COLD]])
   %call3 = call ptr @_ZnwmSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr %nt) #6
   call void @dummy(ptr %call3)
   ret void
@@ -154,8 +162,9 @@ define void @array_new() {
   ; HOTCOLD: @_Znam12__hot_cold_t(i64 10, i8 [[AMBIG]])
   %call4 = call ptr @_Znam(i64 10) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_Znam(i64 10)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_Znam(i64 10)
+  ; NOBUILTIN-ON: @_Znam12__hot_cold_t(i64 10, i8 [[COLD]])
   %call3 = call ptr @_Znam(i64 10) #6
   call void @dummy(ptr %call3)
   ret void
@@ -182,8 +191,9 @@ define void @array_new_align() {
   ; HOTCOLD: @_ZnamSt11align_val_t12__hot_cold_t(i64 10, i64 8, i8 [[AMBIG]])
   %call4 = call ptr @_ZnamSt11align_val_t(i64 10, i64 8) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_ZnamSt11align_val_t(i64 10, i64 8)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_ZnamSt11align_val_t(i64 10, i64 8)
+  ; NOBUILTIN-ON: @_ZnamSt11align_val_t12__hot_cold_t(i64 10, i64 8, i8 [[COLD]])
   %call3 = call ptr @_ZnamSt11align_val_t(i64 10, i64 8) #6
   call void @dummy(ptr %call3)
   ret void
@@ -211,8 +221,9 @@ define void @array_new_nothrow() {
   ; HOTCOLD: @_ZnamRKSt9nothrow_t12__hot_cold_t(i64 10, ptr nonnull %nt, i8 [[AMBIG]])
   %call4 = call ptr @_ZnamRKSt9nothrow_t(i64 10, ptr %nt) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_ZnamRKSt9nothrow_t(i64 10, ptr nonnull %nt)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_ZnamRKSt9nothrow_t(i64 10, ptr nonnull %nt)
+  ; NOBUILTIN-ON: @_ZnamRKSt9nothrow_t12__hot_cold_t(i64 10, ptr nonnull %nt, i8 [[COLD]])
   %call3 = call ptr @_ZnamRKSt9nothrow_t(i64 10, ptr %nt) #6
   call void @dummy(ptr %call3)
   ret void
@@ -241,8 +252,9 @@ define void @array_new_align_nothrow() {
   ; HOTCOLD: @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 10, i64 8, ptr nonnull %nt, i8 [[AMBIG]])
   %call4 = call ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr %nt) #7
   call void @dummy(ptr %call4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @_ZnamSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr nonnull %nt)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @_ZnamSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr nonnull %nt)
+  ; NOBUILTIN-ON: @_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t(i64 10, i64 8, ptr nonnull %nt, i8 [[COLD]])
   %call3 = call ptr @_ZnamSt11align_val_tRKSt9nothrow_t(i64 10, i64 8, ptr %nt) #6
   call void @dummy(ptr %call3)
   ret void
@@ -492,8 +504,9 @@ define void @size_returning_test() {
   %call4 = call {ptr, i64} @__size_returning_new(i64 10) #8
   %p4  = extractvalue {ptr, i64} %call4, 0
   call void @dummy(ptr %p4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @__size_returning_new(i64 10)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @__size_returning_new(i64 10)
+  ; NOBUILTIN-ON: @__size_returning_new_hot_cold(i64 10, i8 [[COLD]])
   %call3 = call {ptr, i64} @__size_returning_new(i64 10) #6
   %p3 = extractvalue {ptr, i64} %call3, 0
   call void @dummy(ptr %p3)
@@ -524,8 +537,9 @@ define void @size_returning_aligned_test() {
   %call4 = call {ptr, i64} @__size_returning_new_aligned(i64 10, i64 8) #8
   %p4  = extractvalue {ptr, i64} %call4, 0
   call void @dummy(ptr %p4)
-  ;; Attribute cold on a nobuiltin call has no effect.
-  ; HOTCOLD: @__size_returning_new_aligned(i64 10, i64 8)
+  ;; Attribute cold on a nobuiltin call has no effect, unless optionally enabled.
+  ; NOBUILTIN-OFF: @__size_returning_new_aligned(i64 10, i64 8)
+  ; NOBUILTIN-ON: @__size_returning_new_aligned_hot_cold(i64 10, i64 8, i8 [[COLD]])
   %call3 = call {ptr, i64} @__size_returning_new_aligned(i64 10, i64 8) #6
   %p3 = extractvalue {ptr, i64} %call3, 0
   call void @dummy(ptr %p3)
