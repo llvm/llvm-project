@@ -366,10 +366,13 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLVMContext, LLVMContextRef)
 
 /* Specialized opaque context conversions.
  */
+//Converts an array of LLVMContextRef (C API opaque pointers) to 
+//an array of LLVMContext** (C++ object pointers).
 inline LLVMContext **unwrap(LLVMContextRef* Tys) {
   return reinterpret_cast<LLVMContext**>(Tys);
 }
-
+//Converts an array of const LLVMContext** (C++ object pointers) to 
+//an array of LLVMContextRef (C API opaque pointers).
 inline LLVMContextRef *wrap(const LLVMContext **Tys) {
   return reinterpret_cast<LLVMContextRef*>(const_cast<LLVMContext**>(Tys));
 }
