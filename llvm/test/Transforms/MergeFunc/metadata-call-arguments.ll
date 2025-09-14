@@ -55,39 +55,39 @@ declare i64 @llvm.read_volatile_register.i64(metadata)
 
 !5 = !{!"foo", i64 10}
 !6 = !{!"foo", i64 10}
+; CHECK-LABEL: define i64 @call_mdtuple_arg_not_equal_1() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+;
+; CHECK-LABEL: define i64 @call_mdtuple_arg_not_equal_2() {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META1:![0-9]+]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+;
 ; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_equal_1() {
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    ret i64 [[R]]
-;
-;
-; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_equal_2() {
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META1:![0-9]+]])
-; CHECK-NEXT:    ret i64 [[R]]
-;
-;
-; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_not_equal_1() {
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META1]])
-; CHECK-NEXT:    ret i64 [[R]]
-;
-;
-; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_not_equal_2() {
 ; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META2:![0-9]+]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 ;
-; CHECK-LABEL: define i64 @call_mdtuple_arg_equal_1() {
+; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_equal_2() {
 ; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 ;
-; CHECK-LABEL: define i64 @call_mdtuple_arg_not_equal_2() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @call_mdtuple_arg_equal_1()
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_not_equal_1() {
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META3]])
+; CHECK-NEXT:    ret i64 [[R]]
 ;
 ;
-; CHECK-LABEL: define i64 @call_mdtuple_arg_not_equal_1() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @call_mdtuple_arg_equal_1()
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-LABEL: define i64 @call_mdtuple_arg_with_cycle_not_equal_2() {
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META4:![0-9]+]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+;
+; CHECK-LABEL: define i64 @call_mdtuple_arg_equal_1() {
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[META5:![0-9]+]])
+; CHECK-NEXT:    ret i64 [[R]]
 ;
 ;
 ; CHECK-LABEL: define i64 @call_mdtuple_arg_equal_2() {
@@ -95,8 +95,10 @@ declare i64 @llvm.read_volatile_register.i64(metadata)
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
 ;.
-; CHECK: [[META0]] = distinct !{[[META0]], !"foo"}
-; CHECK: [[META1]] = distinct !{[[META1]], !"foo"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"bar"}
-; CHECK: [[META3]] = !{!"foo", i64 10}
+; CHECK: [[META0]] = !{!"foo"}
+; CHECK: [[META1]] = !{!"bar"}
+; CHECK: [[META2]] = distinct !{[[META2]], !"foo"}
+; CHECK: [[META3]] = distinct !{[[META3]], !"foo"}
+; CHECK: [[META4]] = distinct !{[[META4]], !"bar"}
+; CHECK: [[META5]] = !{!"foo", i64 10}
 ;.
