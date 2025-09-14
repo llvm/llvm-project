@@ -125,7 +125,7 @@ AST_MATCHER_P2(Stmt, hasPreTwoVarDecl, ast_matchers::internal::Matcher<VarDecl>,
 AST_MATCHER_P2(Stmt, hasNextTwoVarDecl,
                ast_matchers::internal::Matcher<VarDecl>, InnerMatcher1,
                ast_matchers::internal::Matcher<VarDecl>, InnerMatcher2) {
-  DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
+  const DynTypedNodeList Parents = Finder->getASTContext().getParents(Node);
   if (Parents.size() != 1)
     return false;
 
