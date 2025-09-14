@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // RUN: rm -rf %t-dir && mkdir -p %t-dir
 // RUN: %clangxx_asan %s -o %t-dir/verbose-log-path_test-binary
 

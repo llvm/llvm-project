@@ -755,7 +755,6 @@ Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/switch.ll
-Transforms/FunctionSpecialization/function-specialization3.ll
 Transforms/GCOVProfiling/atomic-counter.ll
 Transforms/GCOVProfiling/exit-block.ll
 Transforms/GCOVProfiling/function-numbering.ll
@@ -831,7 +830,6 @@ Transforms/IndVarSimplify/invalidate-modified-lcssa-phi.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/Inline/optimization-remarks-hotness-threshold.ll
-Transforms/InstCombine/2004-09-20-BadLoadCombine2.ll
 Transforms/InstCombine/2004-09-20-BadLoadCombine.ll
 Transforms/InstCombine/2005-04-07-UDivSelectCrash.ll
 Transforms/InstCombine/2011-02-14-InfLoop.ll
@@ -1304,6 +1302,7 @@ Transforms/LoopVectorize/explicit_outer_uniform_diverg_branch.ll
 Transforms/LoopVectorize/first-order-recurrence-complex.ll
 Transforms/LoopVectorize/first-order-recurrence.ll
 Transforms/LoopVectorize/first-order-recurrence-sink-replicate-region.ll
+Transforms/LoopVectorize/first-order-recurrence-with-uniform-ops.ll
 Transforms/LoopVectorize/float-induction.ll
 Transforms/LoopVectorize/float-minmax-instruction-flag.ll
 Transforms/LoopVectorize/fmax-without-fast-math-flags-interleave.ll
