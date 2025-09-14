@@ -31,7 +31,7 @@ def Ptr_AddressAttr : Ptr_Attr<"Address", "address", [
   ]> {
   let summary = "Address attribute";
   let description = [{
-    The `address` attribute represents a raw memory address.
+    The `address` attribute represents a raw memory address, expressed in bytes.
 
     Example:
 
