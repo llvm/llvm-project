@@ -4004,6 +4004,8 @@ __m512i test_mm512_maskz_cvtepi16_epi32(__mmask16 __U, __m256i __A) {
   return _mm512_maskz_cvtepi16_epi32(__U, __A); 
 }
 
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_cvtepi16_epi32(/*1001 1101 1001 1110=*/0x9d9e, _mm256_setr_epi16(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16)), 0, -2, 3, -4, 5, 0, 0, -8, 9, 0, 11, -12, 13, 0, 0, -16));
+
 __m512i test_mm512_cvtepi16_epi64(__m128i __A) {
   // CHECK-LABEL: test_mm512_cvtepi16_epi64
   // CHECK: sext <8 x i16> %{{.*}} to <8 x i64>
