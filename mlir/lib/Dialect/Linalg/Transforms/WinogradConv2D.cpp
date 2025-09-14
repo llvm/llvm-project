@@ -46,46 +46,46 @@ namespace {
 ///   BTMatrices, BMatrices, ATMatrices, or AMatrices map.
 /// 3. Add a enum value F_m_r to WinogradConv2DFmr enum.
 ///
-constexpr double G_2x2_3x3[] = {
+constexpr float G_2x2_3x3[] = {
    -1,     0,   0,
  1./2, -1./2, 1./2,
  1./2,  1./2, 1./2,
     0,     0,    1
 };
 
-constexpr double GT_2x2_3x3[] = {
+constexpr float GT_2x2_3x3[] = {
    -1,  1./2, 1./2, 0,
     0, -1./2, 1./2, 0,
     0,  1./2, 1./2, 1
 };
 
-constexpr double BT_2x2_3x3[] = {
+constexpr float BT_2x2_3x3[] = {
    -1,    0,   1,   0,
     0,   -1,   1,   0,
     0,    1,   1,   0,
     0,   -1,   0,   1
 };
 
-constexpr double B_2x2_3x3[] = {
+constexpr float B_2x2_3x3[] = {
    -1,    0,   0,   0,
     0,   -1,   1,  -1,
     1,    1,   1,   0,
     0,    0,   0,   1
 };
 
-constexpr double AT_2x2_3x3[] = {
+constexpr float AT_2x2_3x3[] = {
     1,    1,   1,   0,
     0,   -1,   1,   1
 };
 
-constexpr double A_2x2_3x3[] = {
+constexpr float A_2x2_3x3[] = {
     1,    0,
     1,   -1,
     1,    1,
     0,    1
 };
 
-constexpr double G_4x4_3x3[] = {
+constexpr float G_4x4_3x3[] = {
      1,     0,     0,
  -1./3,  1./3, -1./3,
  -1./3, -1./3, -1./3,
@@ -94,13 +94,13 @@ constexpr double G_4x4_3x3[] = {
      0,     0,     1
 };
 
-constexpr double GT_4x4_3x3[] = {
+constexpr float GT_4x4_3x3[] = {
  1,  -1./3, -1./3, 1./12, 1./12, 0,
  0,   1./3, -1./3, -1./6,  1./6, 0,
  0,  -1./3, -1./3,  1./3,  1./3, 1
 };
 
-constexpr double BT_4x4_3x3[] = {
+constexpr float BT_4x4_3x3[] = {
  1./4,     0, -5./16,      0, 1./16,     0,
     0,  1./4,  -1./4, -1./16, 1./16,     0,
     0, -1./4,  -1./4,  1./16, 1./16,     0,
@@ -109,7 +109,7 @@ constexpr double BT_4x4_3x3[] = {
     0,  1./4,      0, -5./16,     0, 1./16
 };
 
-constexpr double B_4x4_3x3[] = {
+constexpr float B_4x4_3x3[] = {
    1./4,      0,     0,     0,     0,      0,
       0,   1./4, -1./4,  1./4, -1./4,   1./4,
  -5./16,  -1./4, -1./4, -1./8, -1./8,      0,
@@ -118,14 +118,14 @@ constexpr double B_4x4_3x3[] = {
       0,      0,     0,     0,     0,  1./16
 };
 
-constexpr double AT_4x4_3x3[] = {
+constexpr float AT_4x4_3x3[] = {
  1./8,  1./4, 1./4,  1./8, 1./8,    0,
     0, -1./4, 1./4, -1./4, 1./4,    0,
     0,  1./4, 1./4,  1./2, 1./2,    0,
     0, -1./4, 1./4,    -1,    1, 1./2
 };
 
-constexpr double A_4x4_3x3[] = {
+constexpr float A_4x4_3x3[] = {
   1./8,     0,    0,     0,
   1./4, -1./4, 1./4, -1./4,
   1./4,  1./4, 1./4,  1./4,
@@ -134,7 +134,7 @@ constexpr double A_4x4_3x3[] = {
      0,     0,    0,  1./2
 };
 
-constexpr double G_2x2_5x5[] = {
+constexpr float G_2x2_5x5[] = {
      1,     0,      0,      0,      0,
   1./6, -1./6,   1./6,  -1./6,   1./6,
  -1./6, -1./6,  -1./6,  -1./6,  -1./6,
@@ -143,7 +143,7 @@ constexpr double G_2x2_5x5[] = {
      0,     0,      0,      0,      1
 };
 
-constexpr double GT_2x2_5x5[] = {
+constexpr float GT_2x2_5x5[] = {
    1,  1./6, -1./6, -4./15, 1./60, 0,
    0, -1./6, -1./6,  2./15, 1./30, 0,
    0,  1./6, -1./6, -1./15, 1./15, 0,
@@ -151,7 +151,7 @@ constexpr double GT_2x2_5x5[] = {
    0,  1./6, -1./6, -1./60, 4./15, 1
 };
 
-constexpr double BT_2x2_5x5[] = {
+constexpr float BT_2x2_5x5[] = {
  1./8,  3./16,  -1./4,  -3./16,   1./8,    0,
     0,   1./8,  1./16,  -5./16,   1./8,    0,
     0,  -1./8, -5./16,  -1./16,   1./8,    0,
@@ -160,7 +160,7 @@ constexpr double BT_2x2_5x5[] = {
     0,   1./8,  3./16,   -1./4, -3./16, 1./8
 };
 
-constexpr double B_2x2_5x5[] = {
+constexpr float B_2x2_5x5[] = {
    1./8,      0,      0,     0,     0,      0,
   3./16,   1./8,  -1./8,  1./4, -1./8,   1./8,
   -1./4,  1./16, -5./16, -1./8, -1./4,  3./16,
@@ -169,12 +169,12 @@ constexpr double B_2x2_5x5[] = {
       0,      0,      0,     0,     0,   1./8
 };
 
-constexpr double AT_2x2_5x5[] = {
+constexpr float AT_2x2_5x5[] = {
   1./2,  1, 1,  2, 1,    0,
      0, -1, 1, -1, 2, 1./2
 };
 
-constexpr double A_2x2_5x5[] = {
+constexpr float A_2x2_5x5[] = {
  1./2,    0,
     1,   -1,
     1,    1,
@@ -186,12 +186,12 @@ constexpr double A_2x2_5x5[] = {
 
 /// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
-  TransformMatrix(ArrayRef<double> table, int64_t rows, int64_t cols,
+  TransformMatrix(ArrayRef<float> table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
-      : table(llvm::map_to_vector(table, [](double val) { return APFloat(val); })), rows(rows), cols(cols), scalarFactor(scalarFactor) {
+      : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {
   }
 
-  SmallVector<APFloat> table;
+  ArrayRef<float> table;
   int64_t rows;
   int64_t cols;
   int64_t scalarFactor;
@@ -199,17 +199,14 @@ struct TransformMatrix {
 
 /// Utility function to convert constant array to arith.constant Value.
 Value create2DTransformMatrix(OpBuilder &builder, Location loc,
-                              TransformMatrix transform, Type type) {
-  assert(type.isFloat());
-  assert(transform.table.size() == (transform.rows * transform.cols));
-  ArrayRef<APFloat> constVec(transform.table.data(), transform.rows * transform.cols);
-
+                              TransformMatrix transform) {
+  assert(transform.table.size() == static_cast<size_t>(transform.rows * transform.cols));
+  ArrayRef<float> constVec(transform.table.data(), transform.rows * transform.cols);
+  SmallVector<int64_t, 2> shape{transform.rows, transform.cols};
   return arith::ConstantOp::create(
       builder, loc,
       DenseFPElementsAttr::get(
-          RankedTensorType::get(
-              SmallVector<int64_t>{transform.rows, transform.cols}, type),
-          constVec));
+          RankedTensorType::get(shape, builder.getF32Type()), constVec));
 }
 
 /// Extract height x width data from 4D tensors.
@@ -407,7 +404,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value G = create2DTransformMatrix(builder, loc, GMatrix, elementType);
+      Value G = create2DTransformMatrix(builder, loc, GMatrix);
       // Multiply G x g.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{G, extractFilter},
@@ -430,7 +427,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value GT = create2DTransformMatrix(builder, loc, GTMatrix, elementType);
+      Value GT = create2DTransformMatrix(builder, loc, GTMatrix);
       // Multiply u = (G x g) x GT.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, GT},
@@ -500,6 +497,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
   std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto inputType = cast<ShapedType>(input.getType());
   Type elementType = inputType.getElementType();
+  // assert(elementType.isF32() && "NYI: support non-f32");
   auto inputShape = inputType.getShape(); // N, H, W, C
   int64_t inputN = inputShape[0];
   int64_t inputC = inputShape[3];
@@ -555,7 +553,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
       Value BT =
-          create2DTransformMatrix(builder, loc, BTMatrix, builder.getF32Type());
+          create2DTransformMatrix(builder, loc, BTMatrix);
       // Multiply BT x d.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{BT, matmulRetValue},
@@ -578,7 +576,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       Value B =
-          create2DTransformMatrix(builder, loc, BMatrix, builder.getF32Type());
+          create2DTransformMatrix(builder, loc, BMatrix);
       // Multiply v = (BT x d) x B.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, B},
@@ -723,6 +721,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
   std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
+  // assert(elementType.isF32() && "NYI: support non-f32");
   auto valueShape = valueType.getShape(); // H, W, TileH, TileW, N, F
   int64_t valueH = valueShape[0];
   int64_t valueW = valueShape[1];
@@ -786,7 +785,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
         init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
-      Value AT = create2DTransformMatrix(builder, loc, ATMatrix, elementType);
+      Value AT = create2DTransformMatrix(builder, loc, ATMatrix);
       // Multiply AT x m.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{AT, matmulRetValue},
@@ -805,7 +804,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
         init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
-      Value A = create2DTransformMatrix(builder, loc, AMatrix, elementType);
+      Value A = create2DTransformMatrix(builder, loc, AMatrix);
       // Multiply y = (AT x m) x A.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, A},
