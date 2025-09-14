@@ -99,6 +99,9 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   auto pathEqual = [](llvm::StringRef l, llvm::StringRef r) { return l == r; };
 #endif
   Index->lookup(Request, [&](const Symbol &Sym) {
+    if (llvm::StringRef{Sym.Definition.FileURI}.empty() ||
+        llvm::StringRef{Sym.CanonicalDeclaration.FileURI}.empty())
+      return;
     auto TargetPathDefinition =
         URI::resolve(Sym.Definition.FileURI, OriginalFile);
     if (!TargetPathDefinition)
