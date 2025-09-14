@@ -17,6 +17,7 @@
 #include "Common/InfoByHwMode.h"
 #include "Common/InstructionEncoding.h"
 #include "Common/VarLenCodeEmitterGen.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "TableGenBackends.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -517,7 +518,7 @@ private:
   bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
                              raw_ostream &OS) const;
 
-  bool emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
+  void emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
 
   void emitPredicateTableEntry(unsigned EncodingID) const;
 
@@ -837,7 +838,7 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
   // The predicate function is just a big switch statement based on the
   // input predicate index.
   OS << "static bool checkDecoderPredicate(unsigned Idx, const FeatureBitset "
-        "&Bits) {\n";
+        "&FB) {\n";
   OS << "  switch (Idx) {\n";
   OS << "  default: llvm_unreachable(\"Invalid index!\");\n";
   for (const auto &[Index, Predicate] : enumerate(Predicates)) {
@@ -1132,27 +1133,14 @@ bool DecoderTableBuilder::emitPredicateMatchAux(const Init &Val,
   return true;
 }
 
-bool DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
+void DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
                                              unsigned EncodingID) const {
-  const ListInit *Predicates =
+  const ListInit *PredicateList =
       Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
-  ListSeparator LS(" && ");
-  bool AnyPredicate = false;
-  for (unsigned i = 0; i < Predicates->size(); ++i) {
-    const Record *Pred = Predicates->getElementAsRecord(i);
-    if (!Pred->getValue("AssemblerMatcherPredicate"))
-      continue;
-
-    if (!isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
-      continue;
-
-    AnyPredicate = true;
-    OS << LS;
-    if (emitPredicateMatchAux(*Pred->getValueAsDag("AssemblerCondDag"),
-                              Predicates->size() > 1, OS))
-      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-  }
-  return AnyPredicate;
+  std::vector<const Record *> Predicates;
+  for (unsigned i = 0; i < PredicateList->size(); ++i)
+    Predicates.push_back(PredicateList->getElementAsRecord(i));
+  SubtargetFeatureInfo::emitMCPredicateCheck(OS, Target.getName(), Predicates);
 }
 
 unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
@@ -1172,10 +1160,12 @@ unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
 void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
   // Build up the predicate string.
   SmallString<256> Predicate;
-  // FIXME: emitPredicateMatch() functions can take a buffer directly rather
-  // than a stream.
   raw_svector_ostream PS(Predicate);
-  if (!emitPredicateMatch(PS, EncodingID))
+  emitPredicateMatch(PS, EncodingID);
+  // Predicate being empty indicates that there are no predicates.
+  // Predicate being "false" indicate that there are predicates but with no
+  // AssemblerMatcherPredicate.
+  if (Predicate.empty() || Predicate == "false")
     return;
 
   // Figure out the index into the predicate table for the predicate just
