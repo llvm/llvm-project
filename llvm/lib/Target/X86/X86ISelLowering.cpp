@@ -38449,9 +38449,9 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
     return false;
   }
 
-  // Only optimize Ands to prevent shrinking a constant that could be
-  // matched by movzx.
-  if (Opcode != ISD::AND)
+  // Only optimize certain opcodes to prevent shrinking a constant that could be
+  // matched by specific instructions.
+  if (Opcode != ISD::AND && Opcode != ISD::XOR)
     return false;
 
   // Make sure the RHS really is a constant.
@@ -38460,6 +38460,21 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
     return false;
 
   const APInt &Mask = C->getAPIntValue();
+
+  if (Opcode == ISD::XOR) {
+    // If all demanded bits are 1s in the mask, we can replace the mask with
+    // all 1s, which allows this to be turned into a NOT.
+    if (DemandedBits.isSubsetOf(Mask)) {
+      if (Mask.isAllOnes())
+        return false;
+      // Replace the constant with all ones.
+      SDLoc DL(Op);
+      SDValue NewC = TLO.DAG.getConstant(APInt::getAllOnes(EltSize), DL, VT);
+      SDValue NewOp = TLO.DAG.getNode(ISD::XOR, DL, VT, Op.getOperand(0), NewC);
+      return TLO.CombineTo(Op, NewOp);
+    }
+    return false;
+  }
 
   // Clear all non-demanded bits initially.
   APInt ShrunkMask = Mask & DemandedBits;
