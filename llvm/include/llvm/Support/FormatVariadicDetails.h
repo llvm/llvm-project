@@ -66,13 +66,10 @@ public:
   typedef void (*Signature_format)(const Decayed &, llvm::raw_ostream &,
                                    StringRef);
 
-  template <typename U>
-  static char test(SameType<Signature_format, &U::format> *);
+  template <typename U> using check = SameType<Signature_format, &U::format>;
 
-  template <typename U> static double test(...);
-
-  static bool const value =
-      (sizeof(test<llvm::format_provider<Decayed>>(nullptr)) == 1);
+  static constexpr bool value =
+      llvm::is_detected<check, llvm::format_provider<Decayed>>::value;
 };
 
 // Test if raw_ostream& << T -> raw_ostream& is findable via ADL.
