@@ -9,6 +9,7 @@ struct TestClass {
   int a;
   int b;
   TestClass() : a(0), b(0) {}
+  TestClass& operator++();
   TestClass(int x, int y) : a(x), b(y) {}
 };
 
@@ -123,6 +124,12 @@ void forRangeNotWarnCases() {
   }
 
   std::pair<TestClass, TestClass> ClassPairs[10];
+  for (auto P : ClassPairs) {
+    TestClass c1 = P.first;
+    ++ c1 ;
+    TestClass c2 = P.second;
+  }
+
   int c;
   for (auto P : ClassPairs) {
     TestClass c1 = P.first;
