@@ -472,7 +472,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
 
   VPValue *Op;
-  if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
+  if (match(DefR,
+            m_VPInstruction<VPInstruction::UnpackVector>(m_VPValue(Op)))) {
     auto LaneDefs = Def2LaneDefs.find(Op);
     if (LaneDefs != Def2LaneDefs.end())
       return LaneDefs->second[Lane.getKnownLane()];
@@ -486,7 +487,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   SmallVector<VPValue *> NewOps;
   for (VPValue *Op : DefR->operands()) {
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
-      match(Op, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)));
+      match(Op, m_VPInstruction<VPInstruction::UnpackVector>(m_VPValue(Op)));
       NewOps.push_back(
           Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
       continue;
@@ -562,7 +563,8 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
           (isa<VPReplicateRecipe>(&R) &&
            cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
           (isa<VPInstruction>(&R) &&
-           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() && cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
+           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() &&
+           cast<VPInstruction>(&R)->getOpcode() != VPInstruction::UnpackVector))
         continue;
 
       auto *DefR = cast<VPRecipeWithIRFlags>(&R);

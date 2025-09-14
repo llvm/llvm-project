@@ -84,9 +84,11 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (PreservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
+  if (auto *Reduce = dyn_cast<VPReductionRecipe>(VPV))
+    return true;
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
-  return isa<VPExpandSCEVRecipe, VPPhi>(VPV);
+  return isa<VPExpandSCEVRecipe>(VPV);
 }
 
 /// Return true if \p V is a header mask in \p Plan.

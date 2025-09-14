@@ -1230,7 +1230,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                                                              m_VPValue(Idx)))) {
     auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
     Def->replaceAllUsesWith(BuildVector->getOperand(
-        dyn_cast<ConstantInt>(Idx->getLiveInIRValue())->getZExtValue()));
+        cast<ConstantInt>(Idx->getLiveInIRValue())->getZExtValue()));
     return;
   }
 
@@ -3694,7 +3694,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   BTC->replaceAllUsesWith(TCMO);
 }
 
-void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
+void VPlanTransforms::materializeBuildAndUnpackVectors(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -3770,13 +3770,14 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
                     }))
           continue;
 
-        auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
+        auto *UnpackVector =
+            new VPInstruction(VPInstruction::UnpackVector, {Def});
         if (R.isPhi())
-          Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
+          UnpackVector->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
-          Unpack->insertAfter(&R);
+          UnpackVector->insertAfter(&R);
         Def->replaceUsesWithIf(
-            Unpack,
+            UnpackVector,
             [Def, &UsesVectorOrInsideReplicateRegion](VPUser &U, unsigned) {
               return !UsesVectorOrInsideReplicateRegion(&U) &&
                      U.usesScalars(Def);
