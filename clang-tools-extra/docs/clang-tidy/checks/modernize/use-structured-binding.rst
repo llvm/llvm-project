@@ -6,9 +6,11 @@ modernize-use-structured-binding
 Finds places where structured bindings could be used to decompose pairs and
 suggests replacing them.
 
-This check finds three code patterns and recommends using structured bindings for clearer, more idiomatic C++17 code.
+This check finds three code patterns and recommends using structured bindings
+for clearer, more idiomatic C++17 code.
 
-1. Decompose a pair variable by assigning its members to separate variables right after its definition:
+1. Decompose a pair variable by assigning its members to separate variables
+right after its definition:
 
 .. code-block:: c++
 
@@ -32,7 +34,8 @@ This check finds three code patterns and recommends using structured bindings fo
 
   auto [a, b] = getPair<int, int>();
 
-3. Manually decompose a pair by assigning to its members to local variables in a range-based for loop:
+3. Manually decompose a pair by assigning to its members to local variables
+in a range-based for loop:
 
 .. code-block:: c++
 
@@ -48,12 +51,14 @@ This check finds three code patterns and recommends using structured bindings fo
     // use x and y
   }
 
-The check also supports custom pair-like types via the :option:`PairTypes` option.
+The check also supports custom pair-like types via the :option:`PairTypes`
+option.
 
 Options
 -------
 
 .. option:: PairTypes
 
-   A Semicolon-separated list of type names to be treated as pair-like for structured binding suggestions.  
-   Example: `MyPairType;OtherPairType`. Default is `std::pair`.
+   A Semicolon-separated list of type names to be treated as pair-like for
+   structured binding suggestions. Example: `MyPairType;OtherPairType`. 
+   Default is `std::pair`.
