@@ -3132,33 +3132,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (VF.isScalable())
       return InstructionCost::getInvalid();
 
-    // Compute the cost of scalarizing the result and operands if needed.
-    InstructionCost ScalarizationCost = 0;
-    if (VF.isVector()) {
-      if (!ResultTy->isVoidTy()) {
-        for (Type *VectorTy :
-             to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
-          ScalarizationCost += Ctx.TTI.getScalarizationOverhead(
-              cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-              /*Insert=*/true,
-              /*Extract=*/false, Ctx.CostKind);
-        }
-      }
-      // Skip operands that do not require extraction/scalarization and do not
-      // incur any overhead.
-      SmallPtrSet<const VPValue *, 4> UniqueOperands;
-      Tys.clear();
-      for (auto *Op : ArgOps) {
-        if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
-            !UniqueOperands.insert(Op).second)
-          continue;
-        Tys.push_back(toVectorizedTy(Ctx.Types.inferScalarType(Op), VF));
-      }
-      ScalarizationCost +=
-          Ctx.TTI.getOperandsScalarizationOverhead(Tys, Ctx.CostKind);
-    }
-
-    return ScalarCallCost * VF.getFixedValue() + ScalarizationCost;
+    return ScalarCallCost * VF.getFixedValue() +
+           Ctx.getScalarizationOverhead(ResultTy, ArgOps, VF);
   }
   case Instruction::Add:
   case Instruction::Sub:
