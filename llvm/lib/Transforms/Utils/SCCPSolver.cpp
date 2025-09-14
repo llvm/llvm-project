@@ -316,7 +316,7 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       return std::nullopt;
     };
 
-    if (auto CR = MatchExactTwoInstructionRangeCheck()) {
+    if (auto CR = MatchTwoInstructionExactRangeCheck()) {
       ConstantRange LRange = GetRange(X);
       if (auto NewCR = CR->exactUnionWith(LRange.inverse())) {
         ICmpInst::Predicate Pred;
