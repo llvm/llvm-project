@@ -1447,7 +1447,12 @@ func.func @move_single_resource_basic() attributes {} {
   %c2_i32 = arith.constant 1 : i32
   %c0_i32_0 = arith.constant 0 : i32
 
+  // Single write effect on one resource in a triple-nested loop
+  // No loop-variant inputs to op and no read effects -> movable
   // CHECK: "test.test_effects_write_A"() : () -> ()
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK: scf.for
 
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
@@ -1468,14 +1473,18 @@ func.func @move_single_resource_write_dominant() attributes {} {
   %c2_i32 = arith.constant 1 : i32
   %c0_i32_0 = arith.constant 0 : i32
 
+  // Write effect on one resource followed by a Read.
+  // No loop-variant inputs to Write op, no conflict on
+  // "A" --> both ops movable
   // CHECK: "test.test_effects_write_A"() : () -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK: scf.for
 
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
-        
-        // CHECK: "test.test_effects_read_A"() : () -> ()
-
         "test.test_effects_write_A"() : () -> ()
         "test.test_effects_read_A"() : () -> ()
       }
@@ -1493,10 +1502,16 @@ func.func @move_single_resource_read_dominant() attributes {} {
   %c2_i32 = arith.constant 1 : i32
   %c0_i32_0 = arith.constant 0 : i32
   
+  // CHECK: scf.for %arg0
+  // CHECK: scf.for %arg1
+  // CHECK: scf.for %arg2
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         
+        // Read effect on "A" dominates write.
+        // Causes conflict "A" --> not movable.
         // CHECK: "test.test_effects_read_A"() : () -> ()
         // CHECK: "test.test_effects_write_A"() : () -> ()
 
@@ -1519,12 +1534,19 @@ func.func @move_single_resource_basic_conflict() attributes {} {
   %c0_i32_1 = arith.constant 0 : i32
   %c0_i32_2 = arith.constant 0 : i32
 
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
 
         // CHECK: "test.test_effects_write_A"() : () -> ()
         // CHECK: "test.test_effects_read_A"() : () -> ()
+        // Read of "A" dominates Write "A" --> "A" is in conflict.
+        // "C" is not in conflict but, since all resources used
+        // by op aren't conflict free, they're not movable.
         // CHECK: "test.test_effects_write_AC"() : () -> ()
         // CHECK: "test.test_effects_read_AC"() : () -> ()
 
@@ -1547,13 +1569,18 @@ func.func @move_single_resource_if_region() attributes {} {
   %c2_i32 = arith.constant 1 : i32
   %c3_i32 = arith.constant 5 : i32
 
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         %1 = arith.cmpi slt, %arg0, %c3_i32 : i32
 
         scf.if %1 {
-
+          // Checking that we're not moving ops out of
+          // non-loop regions.
           // CHECK: "test.test_effects_write_A"() : () -> ()
           // CHECK: "test.test_effects_read_A"() : () -> ()
 
@@ -1575,13 +1602,21 @@ func.func @move_single_resource_for_inside_if_region() attributes {} {
   %c2_i32 = arith.constant 1 : i32
   %c3_i32 = arith.constant 5 : i32
 
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     %1 = arith.cmpi slt, %arg0, %c3_i32 : i32
 
+    // CHECK: scf.if
     scf.if %1 {
       %c0_i32_0 = arith.constant 0 : i32
 
+      // Checking that we can move ops out of loops nested
+      // within other regions, without moving ops out of
+      // the parent, non-loop region.
       // CHECK: "test.test_effects_write_A"() : () -> ()
+      // CHECK: scf.for
+      // CHECK: scf.for
 
       scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
@@ -1603,6 +1638,10 @@ func.func @move_multi_resource_comprehensive() attributes {} {
   %c0_i32_2 = arith.constant 0 : i32
   %c3_i32 = arith.constant 5 : i32
 
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
 
     // CHECK: "test.test_effects_write_CD"() : () -> ()
@@ -1610,6 +1649,7 @@ func.func @move_multi_resource_comprehensive() attributes {} {
     // CHECK: "test.test_effects_write_EF"() : () -> ()
     // CHECK: "test.test_effects_read_EF"() : () -> ()
 
+    // Both of these should be moved out of their parent
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         "test.test_effects_write_CD"() : () -> ()
@@ -1624,19 +1664,25 @@ func.func @move_multi_resource_comprehensive() attributes {} {
       %c0_i32_0 = arith.constant 0 : i32
       %c0_i32_1 = arith.constant 0 : i32
 
+      // CHECK: scf.for
       // CHECK: "test.test_effects_write_B"() : () -> ()
       // CHECK: "test.test_effects_read_B"() : () -> ()
+      // CHECK: scf.for
+      // CHECK: scf.for
+      // CHECK: scf.for
 
       scf.for %arg3 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
 
         // CHECK: "test.test_effects_write_A"() : () -> ()
         // CHECK: "test.test_effects_read_A"() : () -> ()
         
+        // Loop should be moved out of parent
         scf.for %arg4 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_A"() : () -> ()
           "test.test_effects_read_A"() : () -> ()
         }
 
+        // Loop should be moved out of parent
         scf.for %arg5 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {          
           "test.test_effects_write_B"() : () -> ()
           "test.test_effects_read_B"() : () -> ()
@@ -1645,6 +1691,7 @@ func.func @move_multi_resource_comprehensive() attributes {} {
         // CHECK: "test.test_effects_write_AC"() : () -> ()
         // CHECK: "test.test_effects_read_AC"() : () -> ()
 
+        // Loop should be moved out of parent
         scf.for %arg6 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_AC"() : () -> ()
           "test.test_effects_read_AC"() : () -> ()
@@ -1672,6 +1719,8 @@ func.func @move_multi_resource_write_conflicts() attributes {} {
 
   // CHECK: "test.test_effects_write_B"() : () -> ()
   // CHECK: "test.test_effects_read_B"() : () -> ()
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     // CHECK: "test.test_effects_write_A_with_input"(%c7) : (index) -> ()
     // CHECK: "test.test_effects_read_A"() : () -> ()
@@ -1685,6 +1734,8 @@ func.func @move_multi_resource_write_conflicts() attributes {} {
   }
 
   // CHECK: "test.test_effects_read_A"() : () -> ()
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     // CHECK: "test.test_effects_read_A_write_B"() : () -> ()
     // CHECK: "test.test_effects_read_B"() : () -> ()
@@ -1696,6 +1747,8 @@ func.func @move_multi_resource_write_conflicts() attributes {} {
   }
 
   // CHECK: "test.test_effects_read_A"() : () -> ()
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     // CHECK: "test.test_effects_read_A_then_write_B"() : () -> ()
     // CHECK: "test.test_effects_read_B"() : () -> ()
@@ -1709,6 +1762,8 @@ func.func @move_multi_resource_write_conflicts() attributes {} {
   // CHECK: "test.test_effects_write_A_then_read_B"() : () -> ()
   // CHECK: "test.test_effects_read_B"() : () -> ()
   // CHECK: "test.test_effects_read_A"() : () -> ()
+  // CHECK: scf.for
+
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
     "test.test_effects_write_A_then_read_B"() : () -> ()
     "test.test_effects_read_B"() : () -> ()
