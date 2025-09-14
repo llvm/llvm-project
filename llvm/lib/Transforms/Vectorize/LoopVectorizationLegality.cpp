@@ -40,10 +40,10 @@ static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
 
-static cl::opt<bool>
-AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
-                       cl::desc("Enable recognition of non-constant strided "
-                                "pointer induction variables."));
+static cl::opt<bool> AllowStridedPointerIVs(
+    "lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
+    cl::desc("Enable recognition of non-constant strided "
+             "pointer induction variables."));
 
 static cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
@@ -420,8 +420,8 @@ static IntegerType *getWiderInductionTy(const DataLayout &DL, Type *Ty0,
 /// identified reduction variable.
 static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
                                SmallPtrSetImpl<Value *> &AllowedExit) {
-  // Reductions, Inductions and non-header phis are allowed to have exit users. All
-  // other instructions must not have external users.
+  // Reductions, Inductions and non-header phis are allowed to have exit users.
+  // All other instructions must not have external users.
   if (!AllowedExit.count(Inst))
     // Check that all of the users of the loop are inside the BB.
     for (User *U : Inst->users()) {
@@ -459,12 +459,13 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // pointer is checked to reference consecutive elements suitable for a
   // masked access.
   const auto &Strides =
-    LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
+      LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
   bool CanAddPredicate = !llvm::shouldOptimizeForSize(
       TheLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
-  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
-                            CanAddPredicate, false).value_or(0);
+  int Stride =
+      getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides, CanAddPredicate, false)
+          .value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
   return 0;
@@ -622,7 +623,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // not supported yet.
     auto *Br = dyn_cast<BranchInst>(BB->getTerminator());
     if (!Br) {
-      reportVectorizationFailure("Unsupported basic block terminator",
+      reportVectorizationFailure(
+          "Unsupported basic block terminator",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -641,7 +643,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
         !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure("Unsupported conditional branch",
+      reportVectorizationFailure(
+          "Unsupported conditional branch",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -655,9 +658,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   // simple outer loops scenarios with uniform nested loops.
   if (!isUniformLoopNest(TheLoop /*loop nest*/,
                          TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure("Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Outer loop contains divergent loops",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1623,9 +1627,10 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!Lp->getLoopPreheader()) {
-    reportVectorizationFailure("Loop doesn't have a legal pre-header",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Loop doesn't have a legal pre-header",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1634,9 +1639,10 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single backedge.
   if (Lp->getNumBackEdges() != 1) {
-    reportVectorizationFailure("The loop must have a single backedge",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "The loop must have a single backedge",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -2049,7 +2055,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
                          "due to SCEVThreshold");
-    reportVectorizationFailure("Too many SCEV checks needed",
+    reportVectorizationFailure(
+        "Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);
     if (DoExtraAnalysis)
