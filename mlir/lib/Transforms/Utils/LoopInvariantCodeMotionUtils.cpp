@@ -81,19 +81,25 @@ mergeResource(DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
   bool srcIsAllocOrFree = isa<MemoryEffects::Allocate>(srcEffect.getEffect()) ||
                           isa<MemoryEffects::Free>(srcEffect.getEffect());
 
+  LDBG() << "   Merging Effect \"" << srcEffect.getEffect() << "<" << srcEffect.getResource()->getName() << ">\"";
+
   bool conflict = srcHasConflict || srcIsAllocOrFree;
 
   auto [dstIt, inserted] = resourceConflicts.insert(
         std::make_pair(srcResourceID, std::make_pair(conflict, srcEffect)));
-  if (inserted)
+  if (inserted) {
+    LDBG() << "   Effect inserted to map";
     return;
+  }
 
   // resource already in use
   bool dstHasConflict = dstIt->second.first;
   auto dstEffect = dstIt->second.second;
 
-  if (dstHasConflict)
+  if (dstHasConflict) {
+    LDBG() << "   Resource has existing conflict from Effect \"" << dstEffect.getEffect() << "<" << dstEffect.getResource()->getName() << ">\"";
     return;
+  }
 
   bool srcWrite = isa<MemoryEffects::Write>(srcEffect.getEffect());
   bool dstRead = isa<MemoryEffects::Read>(dstEffect.getEffect());
@@ -101,12 +107,13 @@ mergeResource(DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
 
   conflict = conflict || readBeforeWrite;
 
+  LDBG() << "   Resource " << dstEffect.getResource()->getName() << " updated to conflict status = " << conflict;
   dstIt->second = std::make_pair(conflict, srcEffect);
 }
 
 /// Returns true if any of op's operands is defined inside the loop.
 static bool hasLoopVariantInput(LoopLikeOpInterface loopLike, Operation *op) {
-  return llvm::any_of(op->getOperands(), [] (Value v) {
+  return llvm::any_of(op->getOperands(), [&] (Value v) {
     return !loopLike.isDefinedOutsideOfLoop(v);
   });
 }
@@ -120,6 +127,8 @@ static bool mayHaveMemoryEffectConflict(
     Operation *op,
     DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
         &resourceConflicts) {
+  LDBG() << "Checking for memory effect conflict on op: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
   auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
 
@@ -144,12 +153,14 @@ static bool mayHaveMemoryEffectConflict(
     auto resourceID = effect.getResource()->getResourceID();
 
     auto resConIt = resourceConflicts.find(resourceID);
-    if (resConIt == resourceConflicts.end())
-      return true; // RFC realistically shouldn't reach here but just in case?
+    assert(resConIt != resourceConflicts.end());
 
     bool hasConflict = resConIt->second.first;
-    if (hasConflict)
+    if (hasConflict) {
+      LDBG() << "    has conflict on resource " << effect.getResource()->getName() 
+             << " from Memory Effect Mem" << effect.getEffect();
       return true;
+    }
   }
 
   return false;
@@ -160,30 +171,46 @@ void mlir::gatherResourceConflicts(
     DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
         &resourceConflicts) {
 
+  LDBG() << "Gather conflicts: on loop " 
+    << OpWithFlags(loopLike.getOperation(), OpPrintingFlags().skipRegions()) 
+    << ", visiting op: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     // gather all effects on op
     SmallVector<MemoryEffects::EffectInstance> effects =
         MemoryEffects::getMemoryEffectsSorted(op);
 
     if (!effects.empty()) {
-      // any variant input to the op could be the data source
-      // for writes, set all writes to conflict
+      LDBG() << "    # of effects = " << effects.size();
+
+      // Any input to the op could be the input data source
+      // for write effects in the same op. E.g.,
+      // scf.for ... {
+      //    %0 = foo.bar(...) : ...
+      //    foo.baz(%0) // foo.baz has a MemWrite<SomeResource, 0> effect
+      // }
+      // The input %0 could be the data source for the write effect in
+      // foo.baz. Since %0 is loop-variant, this may cause a conflict on 
+      // SomeResource as the MemWrite contents may change between loop iterations. 
+      // A more complex analysis would be needed to determine
+      // if this is a true conflict or not.
       bool writesConflict = hasLoopVariantInput(loopLike, op);
+      LDBG() << "    has loop-variant input? "
+             << (writesConflict ? "true" : "false");
 
       for (const MemoryEffects::EffectInstance &effect : effects) {
-        bool conflict = false;
-        bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
-
-        // all writes to a resource that follow a read on any other resource
-        // have to be considered a conflict as guaranteeing that the read
-        // is invariant and won't affect the write requires more robust logic
-        if (isa<MemoryEffects::Read>(effect.getEffect()))
-          writesConflict = true;
-
-        if (isWrite && writesConflict)
-          conflict = true;
+        bool conflict = writesConflict && isa<MemoryEffects::Write>(effect.getEffect());
 
         mergeResource(resourceConflicts, effect, conflict);
+
+        // All writes to a resource that follow a read on any other resource
+        // have to be considered as causing a conflict, similar
+        // to how we handle loop-variant inputs above; guaranteeing that the read
+        // is invariant and won't affect the write requires more robust logic. 
+        if (isa<MemoryEffects::Read>(effect.getEffect())) {
+          LDBG() << "    has MemRead; subsequent Writes will be treated as conflicting";
+          writesConflict = true;
+        }
       }
     }
   }
