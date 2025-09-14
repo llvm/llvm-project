@@ -20,7 +20,7 @@ This check finds three code patterns and recommends using structured bindings fo
 
   auto [x, y] = getPair<int, int>();
 
-2. Use `std::tie` to decompose a pair into two predefined variables:
+2. Use ``std::tie`` to decompose a pair into two predefined variables:
 
 .. code-block:: c++
 
