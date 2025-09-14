@@ -3672,13 +3672,11 @@ define i1 @neg_or_icmp_eq_double_and_pow2(i32 %x) {
   ret i1 %ret
 }
 
-define i1 @neg_select_icmp_eq_and_pow2(i32 %x) {
-; CHECK-LABEL: @neg_select_icmp_eq_and_pow2(
-; CHECK-NEXT:    [[ICMP1:%.*]] = icmp sgt i32 [[X:%.*]], 127
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], -32
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i32 [[AND]], 128
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+define i1 @implied_select_icmp_eq_and_pow2(i32 %x) {
+; CHECK-LABEL: @implied_select_icmp_eq_and_pow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -32
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 128
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %icmp1 = icmp sgt i32 %x, 127
   %and = and i32 %x, -32
@@ -3689,11 +3687,9 @@ define i1 @neg_select_icmp_eq_and_pow2(i32 %x) {
 
 define i1 @implied_range_check(i8 %a) {
 ; CHECK-LABEL: @implied_range_check(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], 5
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A]], -2
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A:%.*]], -2
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED]], 2
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp ult i8 %a, 5
   %masked = and i8 %a, -2
@@ -3704,11 +3700,8 @@ define i1 @implied_range_check(i8 %a) {
 
 define i1 @merge_range_check_and(i8 %a) {
 ; CHECK-LABEL: @merge_range_check_and(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A]], -2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED]], 2
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp ult i8 %a, 3
   %masked = and i8 %a, -2
@@ -3719,10 +3712,7 @@ define i1 @merge_range_check_and(i8 %a) {
 
 define i1 @merge_range_check_or(i8 %a) {
 ; CHECK-LABEL: @merge_range_check_or(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A]], -2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED]], 2
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[A:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %cmp1 = icmp ult i8 %a, 3

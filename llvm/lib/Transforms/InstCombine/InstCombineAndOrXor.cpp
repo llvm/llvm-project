@@ -1320,74 +1320,49 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
                                                      ICmpInst *ICmp2,
                                                      bool IsAnd) {
-  CmpPredicate Pred1, Pred2;
-  Value *V1, *V2;
-  const APInt *C1, *C2;
-  if (!match(ICmp1, m_ICmp(Pred1, m_Value(V1), m_APInt(C1))) ||
-      !match(ICmp2, m_ICmp(Pred2, m_Value(V2), m_APInt(C2))))
-    return nullptr;
-
-  // Look through add of a constant offset on V1, V2, or both operands. This
-  // allows us to interpret the V + C' < C'' range idiom into a proper range.
-  const APInt *Offset1 = nullptr, *Offset2 = nullptr;
-  if (V1 != V2) {
+  auto MatchRangeCheck =
+      [](ICmpInst *ICmp) -> std::optional<std::pair<Value *, ConstantRange>> {
+    const APInt *C;
+    if (!match(ICmp->getOperand(1), m_APInt(C)))
+      return std::nullopt;
+    Value *LHS = ICmp->getOperand(0);
+    CmpPredicate Pred = ICmp->getPredicate();
     Value *X;
-    if (match(V1, m_Add(m_Value(X), m_APInt(Offset1))))
-      V1 = X;
-    if (match(V2, m_Add(m_Value(X), m_APInt(Offset2))))
-      V2 = X;
-  }
-
-  // Look through and with a negative power of 2 mask on V1 or V2. This
-  // detects idioms of the form `(x == A) || ((x & Mask) == A + 1)` where A + 1
-  // is aligned to the mask and A + 1 >= |Mask|. This pattern corresponds to a
-  // contiguous range check, which can be folded into an addition and compare.
-  // The same applies for `(x != A) && ((x & Mask) != A + 1)`.
-  auto AreContiguousRangePredicates = [](CmpPredicate Pred1, CmpPredicate Pred2,
-                                         bool IsAnd) {
-    if (IsAnd)
-      return Pred1 == ICmpInst::ICMP_NE && Pred2 == ICmpInst::ICMP_NE;
-    return Pred1 == ICmpInst::ICMP_EQ && Pred2 == ICmpInst::ICMP_EQ;
+    // Match (x & NegPow2) ==/!= C
+    const APInt *Mask;
+    if (ICmpInst::isEquality(Pred) &&
+        match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
+        C->countr_zero() >= Mask->countr_zero()) {
+      ConstantRange CR{*C, *C - *Mask};
+      if (Pred == ICmpInst::ICMP_NE)
+        CR = CR.inverse();
+      return std::make_pair(X, CR);
+    }
+    ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+    // Match (add X, C1) pred C
+    const APInt *C1;
+    if (match(LHS, m_AddLike(m_Value(X), m_APInt(C1))))
+      return std::make_pair(X, CR.subtract(*C1));
+    return std::make_pair(LHS, CR);
   };
-  const APInt *Mask1 = nullptr, *Mask2 = nullptr;
-  bool MatchedAnd1 = false, MatchedAnd2 = false;
-  if (V1 != V2 && AreContiguousRangePredicates(Pred1, Pred2, IsAnd)) {
-    Value *X;
-    if (match(V1, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask1)))) &&
-        C1->getBitWidth() == C2->getBitWidth() && *C1 == *C2 + 1 &&
-        C1->uge(Mask1->abs()) && C1->isPowerOf2()) {
-      MatchedAnd1 = true;
-      V1 = X;
-    }
-    if (match(V2, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask2)))) &&
-        C1->getBitWidth() == C2->getBitWidth() && *C2 == *C1 + 1 &&
-        C2->uge(Mask2->abs()) && C2->isPowerOf2()) {
-      MatchedAnd2 = true;
-      V2 = X;
-    }
-  }
 
-  if (V1 != V2)
+  auto RC1 = MatchRangeCheck(ICmp1);
+  if (!RC1)
     return nullptr;
 
-  ConstantRange CR1 =
-      MatchedAnd1
-          ? ConstantRange(*C1, *C1 - *Mask1)
-          : ConstantRange::makeExactICmpRegion(
-                IsAnd ? ICmpInst::getInverseCmpPredicate(Pred1) : Pred1, *C1);
-  if (Offset1)
-    CR1 = CR1.subtract(*Offset1);
+  auto RC2 = MatchRangeCheck(ICmp2);
+  if (!RC2)
+    return nullptr;
 
-  ConstantRange CR2 =
-      MatchedAnd2
-          ? ConstantRange(*C2, *C2 - *Mask2)
-          : ConstantRange::makeExactICmpRegion(
-                IsAnd ? ICmpInst::getInverseCmpPredicate(Pred2) : Pred2, *C2);
-  if (Offset2)
-    CR2 = CR2.subtract(*Offset2);
+  if (RC1->first != RC2->first)
+    return nullptr;
 
-  Type *Ty = V1->getType();
-  Value *NewV = V1;
+  Value *V = RC1->first;
+  auto CR1 = IsAnd ? RC1->second.inverse() : RC1->second;
+  auto CR2 = IsAnd ? RC2->second.inverse() : RC2->second;
+
+  Type *Ty = V->getType();
+  Value *NewV = V;
   std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
     if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
