@@ -102,6 +102,35 @@ void forRangeWarnCases() {
   }
 }
 
+void forRangeNotWarnCases() {
+  std::pair<int, int> Pairs[10];
+  for (auto P : Pairs) {
+    int x = P.first;
+    MarkUsed(x);
+    int y = P.second;
+  }
+
+  for (auto P : Pairs) {
+    MarkUsed(P);
+    int x = P.first;
+    int y = P.second;
+  }
+
+  for (auto P : Pairs) {
+    int x = P.first;
+    int y = P.second;
+    MarkUsed(P);
+  }
+
+  std::pair<TestClass, TestClass> ClassPairs[10];
+  int c;
+  for (auto P : ClassPairs) {
+    TestClass c1 = P.first;
+    c ++ ;
+    TestClass c2 = P.second;
+  }
+}
+
 void stdTieWarnCases() {
   int a = 0;
   int b = 0;
