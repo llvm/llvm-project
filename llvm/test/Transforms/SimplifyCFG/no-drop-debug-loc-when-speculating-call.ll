@@ -10,9 +10,8 @@ define i1 @specfn() readnone nounwind speculatable {
 ; CHECK-LABEL: @test1(
 ; CHECK: call i1 @specfn(), !dbg
 ; CHECK: select i1
-define void @test1() !dbg !6 {
+define void @test1(i1 %cond) !dbg !6 {
 start:
-  %cond = call i1 @make_condition(), !dbg !8
   br i1 %cond, label %then, label %else, !dbg !9
 
 then:                                             ; preds = %start
