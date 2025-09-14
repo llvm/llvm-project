@@ -1100,3 +1100,25 @@ namespace DiscardedTrivialCXXConstructExpr {
   constexpr int y = foo(12); // both-error {{must be initialized by a constant expression}} \
                              // both-note {{in call to}}
 }
+
+namespace VirtualFunctionCallThroughArrayElem {
+  struct X {
+    constexpr virtual int foo() const {
+      return 3;
+    }
+  };
+  constexpr X xs[5];
+  static_assert(xs[3].foo() == 3);
+
+  constexpr X xs2[1][2];
+  static_assert(xs2[0].foo() == 3); // both-error {{is not a structure or union}}
+  static_assert(xs2[0][0].foo() == 3);
+
+  struct Y: public X {
+    constexpr int foo() const override {
+      return 1;
+    }
+  };
+  constexpr Y ys[20];
+  static_assert(ys[12].foo() == static_cast<const X&>(ys[12]).foo());
+}
