@@ -147,6 +147,11 @@ std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {
         for (auto *D : Scope->decls())
           TraverseDecl(D);
       }
+      // ClassTemplateDecl does not inherit from DeclContext
+      if (auto *Scope = llvm::dyn_cast<ClassTemplateDecl>(ND)) {
+        for (auto *D : Scope->getTemplatedDecl()->decls())
+          TraverseDecl(D);
+      }
     }
     if (llvm::isa<NamespaceDecl>(D))
       return; // namespace is indexable, but we're not interested.

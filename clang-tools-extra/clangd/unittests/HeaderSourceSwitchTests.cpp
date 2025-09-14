@@ -379,6 +379,48 @@ TEST(HeaderSourceSwitchTest, FromImplHeaderToHeader) {
                                              Index.get()));
   }
 }
+
+TEST(HeaderSourceSwitchTest, FromHeaderToImplHeaderClassTemplate) {
+  // build a proper index, which contains symbols:
+  //   A_Sym1, declared in TestTU.h, defined in a_ext.h
+  //   B_Sym[1-2], declared in TestTU.h, defined in b_ext.h
+  SymbolSlab::Builder AllSymbols;
+  TestTU Testing;
+  Testing.Filename = "a.cpp";
+  Testing.Code = R"cpp(void f() {}
+    void g(){})cpp";
+  Testing.HeaderFilename = "TestTU.h";
+  Testing.HeaderCode = R"cpp(void f();
+    void g();
+    template<typename T> struct S
+    {
+      void a();
+      void b();
+      void c();
+    };)cpp";
+  for (auto &Sym : Testing.headerSymbols())
+    AllSymbols.insert(Sym);
+
+  Testing.Filename = "b_ext.h";
+  Testing.Code =
+      R"cpp(template<typename T> void S<T>::a(){}
+    template<typename T> void S<T>::b(){}
+    template<typename T> void S<T>::c(){})cpp";
+  Testing.ExtraArgs.push_back("-xc++-header"); // inform clang this is a header.
+
+  for (auto &Sym : Testing.headerSymbols())
+    AllSymbols.insert(Sym);
+  auto Index = MemIndex::build(std::move(AllSymbols).build(), {}, {});
+
+  TestTU TU = TestTU::withCode(Testing.HeaderCode);
+  TU.Filename = "TestTU.h";
+  TU.ExtraArgs.push_back("-xc++-header"); // inform clang this is a header.
+  auto HeaderAST = TU.build();
+  EXPECT_EQ(testPath("b_ext.h"),
+            getCorrespondingHeaderOrSource(testPath(TU.Filename), HeaderAST,
+                                           Index.get()));
+}
+
 TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
   // build a proper index, which contains symbols:
   //   A_Sym1, declared in a.h, defined in TestTU.cpp
