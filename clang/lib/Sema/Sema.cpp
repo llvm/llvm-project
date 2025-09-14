@@ -750,6 +750,47 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
       << FixItHint::CreateReplacement(E->getSourceRange(), "nullptr");
 }
 
+void Sema::DiagnoseAssignmentBoolContext(Expr *E, QualType Ty) {
+  if (Ty->isBooleanType()) {
+    // `bool(x=0)` and if (x=0){} emit:
+    // - ImplicitCastExpr bool IntegralToBoolean
+    // -- ImplicitCastExpr int LValueToRValue
+    // --- Assignment ...
+    // But should still emit this warning (at least gcc does), even if bool-cast
+    // is not directly followed by assignment.
+    while (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      // If there is another implicit cast to bool then this warning would have
+      // been already emitted.
+      if (ICE->getType()->isBooleanType())
+        return;
+      E = ICE->getSubExpr();
+    }
+
+    // Condition-assignment warnings are already handled by
+    // `DiagnoseAssignmentAsCondition()`
+    if (E->isInsideCondition())
+      return;
+
+    if (BinaryOperator *Op = dyn_cast<BinaryOperator>(E)) {
+      // Should only be issued for regular assignment `=`,
+      // not for compound-assign like `+=`.
+      // NOTE: Might make sense to emit for all assignments even if gcc
+      // only does for regular assignment.
+      if (Op->getOpcode() == BO_Assign) {
+        SourceLocation Loc = Op->getOperatorLoc();
+        Diag(Loc, diag::warn_assignment_bool_context) << E->getSourceRange();
+
+        SourceLocation Open = E->getBeginLoc();
+        SourceLocation Close =
+            getLocForEndOfToken(E->getSourceRange().getEnd());
+        Diag(Loc, diag::note_condition_assign_silence)
+            << FixItHint::CreateInsertion(Open, "(")
+            << FixItHint::CreateInsertion(Close, ")");
+      }
+    }
+  }
+}
+
 /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit cast.
 /// If there is already an implicit cast, merge into the existing one.
 /// The result is of the given category.
@@ -833,6 +874,8 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
       }
     }
   }
+
+  DiagnoseAssignmentBoolContext(E, Ty);
 
   if (ImplicitCastExpr *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
     if (ImpCast->getCastKind() == Kind && (!BasePath || BasePath->empty())) {
