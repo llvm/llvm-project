@@ -535,6 +535,7 @@ struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
     IO.enumCase(Value, "None", FormatStyle::PPDIS_None);
     IO.enumCase(Value, "AfterHash", FormatStyle::PPDIS_AfterHash);
     IO.enumCase(Value, "BeforeHash", FormatStyle::PPDIS_BeforeHash);
+    IO.enumCase(Value, "Leave", FormatStyle::PPDIS_Leave);
   }
 };
 
