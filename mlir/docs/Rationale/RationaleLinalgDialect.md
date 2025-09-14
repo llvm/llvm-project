@@ -508,21 +508,14 @@ and LLVMIR.
 
 ### Interchangeability of Forms<a name="forms"></a>
 
-Linalg's various forms (named, generic) also carry information, and that
-information should be preserved as much as possible during the progressive
-lowering. A `matmul` operation is a special case of a `contract` operation,
-which in turn is a special case of `generic` operation. Transformations on
-the more special forms should not be converted to the more generic ones
-unnecessarily, in the same way that they should not be broken down into
-loops + arithmetic if they can still be represented as a Linalg op.
-
 #### The Linalg Forms
 
 The core Linalg operation tree has three forms:
 * **Generic:** Represented by `linalg.generic` and can encode all perfectly-nested
 loop operations.
 * **Category:** Represented by `linalg.contract` and `linalg.elementwise`,
-which are special (einsum) forms of the `generic` operation.
+which are special (einsum) forms of the `generic` operation. In the future, other
+category operations are planned (e.g.: `linalg.convolution` and `linalg.pooling`).
 * **Named:** All _named_ forms that can lower to either _category_ or
 _generic_ forms. For example, `linalg.matmul`, `linalg.add`, etc.
 
@@ -533,18 +526,18 @@ preserved. The various forms in the Linalg dialect are meant to facilitate
 pattern matching (single operations or DAGs) and to be able to consider
 different forms as *canonical* for different transforms.
 
-#### Special Operations<a name="special_ops"></a>
+In addition to the three forms above, there's a separate class that does not
+belong to the tree, as it does not generalize. These are **composite:** operations
+that compose multiple Linalg operations, for example `linalg.softmax` and
+`linalg.winograd*`. These can be converted to a DAG of Linalg operations.
 
-Not all Linalg operations represent perfectly nested loops, and therefore
-cannot be represented as a `linalg.generic`. There are two kinds of Linalg
-operations that fall into this category:
-* **Composite:** Operations that compose multiple Linalg operations, for
-example `linalg.softmax`. These can be converted to a DAG of Linalg operations
-(in any form).
-* **Special Named:** Operations that are usually matched against library calls
-or special lowering, but can only be lowered to a combination of Linalg and
-non-Linalg operations, for example `linalg.*conv*`, `linalg.winograd*`,
-`linalg.pooling*`, etc.
+Linalg's various forms (named, generic) also carry information, and that
+information should be preserved as much as possible during the progressive
+lowering. A `matmul` operation is a special case of a `contract` operation,
+which in turn is a special case of `generic` operation. Transformations on
+the more special forms should not be converted to the more generic ones
+unnecessarily, in the same way that they should not be broken down into
+loops + arithmetic if they can still be represented as a Linalg op.
 
 #### Canonical Forms<a name="canonical_forms"></a>
 
