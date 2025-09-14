@@ -3,7 +3,8 @@
 modernize-use-structured-binding
 ================================
 
-Suggests using C++17 structured bindings to decompose pairs.
+Finds places where structured bindings could be used to decompose pairs and
+suggests replacing them.
 
 This check finds three code patterns and recommends using structured bindings for clearer, more idiomatic C++17 code.
 
