@@ -30,6 +30,7 @@
 
 using clang::format::FormatStyle;
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::KeywordedFunctionLikeMacro)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
 
 namespace llvm {
@@ -407,6 +408,14 @@ template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
     IO.mapOptional("AtEndOfFile", Value.AtEndOfFile);
     IO.mapOptional("AtStartOfBlock", Value.AtStartOfBlock);
     IO.mapOptional("AtStartOfFile", Value.AtStartOfFile);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::KeywordedFunctionLikeMacro> {
+  static void mapping(IO &IO,
+                      FormatStyle::KeywordedFunctionLikeMacro &Function) {
+    IO.mapOptional("Name", Function.Name);
+    IO.mapOptional("Keywords", Function.Keywords);
   }
 };
 
@@ -1130,6 +1139,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
     IO.mapOptional("KeepFormFeed", Style.KeepFormFeed);
+    IO.mapOptional("KeywordedFunctionLikeMacros",
+                   Style.KeywordedFunctionLikeMacros);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);

@@ -475,6 +475,8 @@ clang-format
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
+- Allow to apply parameters bin-packing options to function-like macros that
+  use keywords to delimit parameters (e.g. Q_PROPERTY).
 
 libclang
 --------

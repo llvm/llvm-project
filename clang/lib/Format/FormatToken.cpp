@@ -329,6 +329,8 @@ bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style) {
   }
   if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
     return true;
+  if (Current.is(TT_FunctionParameterKeyword))
+    return true;
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||
            Style.BreakConstructorInitializers !=
