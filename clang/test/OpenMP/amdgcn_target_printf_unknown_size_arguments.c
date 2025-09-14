@@ -39,7 +39,7 @@ int CheckMultipleArgs(int a) {
 // CHECK:   store ptr %add.ptr, ptr [[T_CAST]], align 8
 // CHECK:   [[LOAD_T:%[0-9]+]] = load ptr, ptr [[T_CAST]], align 8
 // CHECK:   [[LOAD_TEST_AGAIN:%[0-9]+]] = load ptr, ptr [[TEST_CAST]], align 8
-// CHECK:   call i32 (ptr, ...) @printf(ptr noundef addrspacecast (ptr addrspace(4) {{.*}} to ptr), ptr noundef [[LOAD_T]], i32 noundef 21, ptr noundef [[LOAD_TEST_AGAIN]])
+// CHECK:   call ptr @__llvm_omp_emissary_premalloc(i32 %total_buffer_size)
 // CHECK:   call void @__kmpc_target_deinit()
 // CHECK:   ret void
 
