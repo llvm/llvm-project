@@ -372,8 +372,8 @@ protected:
     // Ensure that "NumEntries * 4 < NumBuckets * 3"
     if (NumEntries == 0)
       return 0;
-    // +1 is required because of the strict equality.
-    // For example if NumEntries is 48, we need to return 401.
+    // +1 is required because of the strict inequality.
+    // For example, if NumEntries is 48, we need to return 128.
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
@@ -738,7 +738,7 @@ public:
 
   ~DenseMap() {
     this->destroyAll();
-    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
+    deallocateBuckets();
   }
 
   void swap(DenseMap &RHS) {
@@ -758,7 +758,7 @@ public:
 
   DenseMap &operator=(DenseMap &&other) {
     this->destroyAll();
-    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
+    deallocateBuckets();
     init(0);
     swap(other);
     return *this;
@@ -766,7 +766,7 @@ public:
 
   void copyFrom(const DenseMap &other) {
     this->destroyAll();
-    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
+    deallocateBuckets();
     if (allocateBuckets(other.NumBuckets)) {
       this->BaseT::copyFrom(other);
     } else {
@@ -826,6 +826,10 @@ private:
   BucketT *getBuckets() const { return Buckets; }
 
   unsigned getNumBuckets() const { return NumBuckets; }
+
+  void deallocateBuckets() {
+    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
+  }
 
   bool allocateBuckets(unsigned Num) {
     NumBuckets = Num;
@@ -1184,10 +1188,14 @@ public:
   using iterator_category = std::forward_iterator_tag;
 
 private:
-  pointer Ptr = nullptr;
-  pointer End = nullptr;
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate<KeyT>(),
+                         std::reverse_iterator<pointer>, pointer>;
 
-  DenseMapIterator(pointer Pos, pointer E, const DebugEpochBase &Epoch)
+  BucketItTy Ptr = {};
+  BucketItTy End = {};
+
+  DenseMapIterator(BucketItTy Pos, BucketItTy E, const DebugEpochBase &Epoch)
       : DebugEpochBase::HandleBase(&Epoch), Ptr(Pos), End(E) {
     assert(isHandleInSync() && "invalid construction!");
   }
@@ -1201,29 +1209,24 @@ public:
     // empty buckets.
     if (IsEmpty)
       return makeEnd(Buckets, Epoch);
-    if (shouldReverseIterate<KeyT>()) {
-      DenseMapIterator Iter(Buckets.end(), Buckets.begin(), Epoch);
-      Iter.RetreatPastEmptyBuckets();
-      return Iter;
-    }
-    DenseMapIterator Iter(Buckets.begin(), Buckets.end(), Epoch);
+    auto R = maybeReverse(Buckets);
+    DenseMapIterator Iter(R.begin(), R.end(), Epoch);
     Iter.AdvancePastEmptyBuckets();
     return Iter;
   }
 
   static DenseMapIterator makeEnd(iterator_range<pointer> Buckets,
                                   const DebugEpochBase &Epoch) {
-    if (shouldReverseIterate<KeyT>())
-      return DenseMapIterator(Buckets.begin(), Buckets.begin(), Epoch);
-    return DenseMapIterator(Buckets.end(), Buckets.end(), Epoch);
+    auto R = maybeReverse(Buckets);
+    return DenseMapIterator(R.end(), R.end(), Epoch);
   }
 
   static DenseMapIterator makeIterator(pointer P,
                                        iterator_range<pointer> Buckets,
                                        const DebugEpochBase &Epoch) {
-    if (shouldReverseIterate<KeyT>())
-      return DenseMapIterator(P + 1, Buckets.begin(), Epoch);
-    return DenseMapIterator(P, Buckets.end(), Epoch);
+    auto R = maybeReverse(Buckets);
+    constexpr int Offset = shouldReverseIterate<KeyT>() ? 1 : 0;
+    return DenseMapIterator(BucketItTy(P + Offset), R.end(), Epoch);
   }
 
   // Converting ctor from non-const iterators to const iterators. SFINAE'd out
@@ -1238,16 +1241,16 @@ public:
   reference operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
     assert(Ptr != End && "dereferencing end() iterator");
-    if (shouldReverseIterate<KeyT>())
-      return Ptr[-1];
     return *Ptr;
   }
   pointer operator->() const { return &operator*(); }
 
   friend bool operator==(const DenseMapIterator &LHS,
                          const DenseMapIterator &RHS) {
-    assert((!LHS.Ptr || LHS.isHandleInSync()) && "handle not in sync!");
-    assert((!RHS.Ptr || RHS.isHandleInSync()) && "handle not in sync!");
+    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
+           "handle not in sync!");
+    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
+           "handle not in sync!");
     assert(LHS.getEpochAddress() == RHS.getEpochAddress() &&
            "comparing incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
@@ -1261,11 +1264,6 @@ public:
   inline DenseMapIterator &operator++() { // Preincrement
     assert(isHandleInSync() && "invalid iterator access!");
     assert(Ptr != End && "incrementing end() iterator");
-    if (shouldReverseIterate<KeyT>()) {
-      --Ptr;
-      RetreatPastEmptyBuckets();
-      return *this;
-    }
     ++Ptr;
     AdvancePastEmptyBuckets();
     return *this;
@@ -1288,14 +1286,11 @@ private:
       ++Ptr;
   }
 
-  void RetreatPastEmptyBuckets() {
-    assert(Ptr >= End);
-    const KeyT Empty = KeyInfoT::getEmptyKey();
-    const KeyT Tombstone = KeyInfoT::getTombstoneKey();
-
-    while (Ptr != End && (KeyInfoT::isEqual(Ptr[-1].getFirst(), Empty) ||
-                          KeyInfoT::isEqual(Ptr[-1].getFirst(), Tombstone)))
-      --Ptr;
+  static auto maybeReverse(iterator_range<pointer> Range) {
+    if constexpr (shouldReverseIterate<KeyT>())
+      return reverse(Range);
+    else
+      return Range;
   }
 };
 
