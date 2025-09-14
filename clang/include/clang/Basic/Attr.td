@@ -3686,6 +3686,14 @@ def DiagnoseIf : InheritableAttr {
   let Documentation = [DiagnoseIfDocs];
 }
 
+def LifetimeBoundIf : Attr {
+  let Spellings = [Clang<"lifetimebound_if">];
+  let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
+  let Args = [ExprArgument<"Cond">];
+  // FIXME: add documentation
+  let Documentation = [InternalOnly];
+}
+
 def NoSpecializations : InheritableAttr {
   let Spellings = [Clang<"no_specializations", /*AllowInC*/0>];
   let Args = [StringArgument<"Message", 1>];
