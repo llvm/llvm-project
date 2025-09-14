@@ -4111,6 +4111,8 @@ __m512i test_mm512_maskz_cvtepu32_epi64(__mmask8 __U, __m256i __X) {
   return _mm512_maskz_cvtepu32_epi64(__U, __X); 
 }
 
+TEST_CONSTEXPR(match_v8di(_mm512_maskz_cvtepu32_epi64(/*0101 0001=*/0x51, (__m256i)(__v8su){1, 2, 3, 4, 5, 6, 7, 8}), 1, 0, 0, 0, 5, 0, 7, 0));
+
 __m512i test_mm512_cvtepu16_epi32(__m256i __A) {
   // CHECK-LABEL: test_mm512_cvtepu16_epi32
   // CHECK: zext <16 x i16> %{{.*}} to <16 x i32>
