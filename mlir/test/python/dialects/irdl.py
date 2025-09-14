@@ -35,11 +35,13 @@ def testIRDL():
 
         irdl.load_dialects(module)
 
-        m = Module.parse("""
+        m = Module.parse(
+            """
           module {
             %a = arith.constant 1.0 : f32
             "irdl_test.test_op"(%a) : (f32) -> ()
           }
-        """)
+        """
+        )
         # CHECK: "irdl_test.test_op"(%cst) : (f32) -> ()
         m.dump()
