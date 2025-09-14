@@ -237,6 +237,8 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getNoInline())
+      return failure();
     if (!isa<FunctionOpInterface, ExecuteRegionOp>(op->getParentOp()))
       return failure();
 
