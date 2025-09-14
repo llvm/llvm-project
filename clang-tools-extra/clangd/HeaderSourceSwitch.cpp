@@ -101,9 +101,11 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   Index->lookup(Request, [&](const Symbol &Sym) {
     auto TargetPathDefinition =
         URI::resolve(Sym.Definition.FileURI, OriginalFile);
+    if (!TargetPathDefinition)
+      return;
     auto TargetPathDeclaration =
         URI::resolve(Sym.CanonicalDeclaration.FileURI, OriginalFile);
-    if (!TargetPathDefinition || !TargetPathDeclaration)
+    if (!TargetPathDeclaration)
       return;
     if (pathEqual(*TargetPathDefinition, OriginalFile)) {
       if (!pathEqual(*TargetPathDeclaration, OriginalFile))
