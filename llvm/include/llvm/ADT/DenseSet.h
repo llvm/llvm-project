@@ -66,8 +66,7 @@ public:
   using value_type = ValueT;
   using size_type = unsigned;
 
-  DenseSetImpl() = default;
-  explicit DenseSetImpl(unsigned InitialReserve) : TheMap(InitialReserve) {}
+  explicit DenseSetImpl(unsigned InitialReserve = 0) : TheMap(InitialReserve) {}
 
   template <typename InputIt>
   DenseSetImpl(const InputIt &I, const InputIt &E)
@@ -251,25 +250,40 @@ bool operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
   return !(LHS == RHS);
 }
 
+template <typename ValueT, typename ValueInfoT>
+using DenseSet = DenseSetImpl<
+    ValueT, DenseMap<ValueT, DenseSetEmpty, ValueInfoT, DenseSetPair<ValueT>>,
+    ValueInfoT>;
+
+template <typename ValueT, unsigned InlineBuckets, typename ValueInfoT>
+using SmallDenseSet =
+    DenseSetImpl<ValueT,
+                 SmallDenseMap<ValueT, DenseSetEmpty, InlineBuckets, ValueInfoT,
+                               DenseSetPair<ValueT>>,
+                 ValueInfoT>;
+
 } // end namespace detail
 
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
-using DenseSet =
-    detail::DenseSetImpl<ValueT,
-                         DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
-                                  detail::DenseSetPair<ValueT>>,
-                         ValueInfoT>;
+class DenseSet : public detail::DenseSet<ValueT, ValueInfoT> {
+  using BaseT = detail::DenseSet<ValueT, ValueInfoT>;
+
+public:
+  using BaseT::BaseT;
+};
 
 /// Implements a dense probed hash-table based set with some number of buckets
 /// stored inline.
 template <typename ValueT, unsigned InlineBuckets = 4,
           typename ValueInfoT = DenseMapInfo<ValueT>>
-using SmallDenseSet = detail::DenseSetImpl<
-    ValueT,
-    SmallDenseMap<ValueT, detail::DenseSetEmpty, InlineBuckets, ValueInfoT,
-                  detail::DenseSetPair<ValueT>>,
-    ValueInfoT>;
+class SmallDenseSet
+    : public detail::SmallDenseSet<ValueT, InlineBuckets, ValueInfoT> {
+  using BaseT = detail::SmallDenseSet<ValueT, InlineBuckets, ValueInfoT>;
+
+public:
+  using BaseT::BaseT;
+};
 
 } // end namespace llvm
 

@@ -55,13 +55,8 @@ template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
 template <typename T, typename Enable>
 struct DenseMapInfo;
-namespace detail {
-template <typename ValueT, typename MapTy, typename ValueInfoT>
-class DenseSetImpl;
-struct DenseSetEmpty;
-template <typename KeyT>
-class DenseSetPair;
-} // namespace detail
+template <typename ValueT, typename ValueInfoT>
+class DenseSet;
 class MallocAllocator;
 template <typename T>
 class MutableArrayRef;
@@ -130,11 +125,7 @@ template <typename KeyT, typename ValueT,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
 using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
-using DenseSet = llvm::detail::DenseSetImpl<
-    ValueT,
-    llvm::DenseMap<ValueT, llvm::detail::DenseSetEmpty, ValueInfoT,
-                   llvm::detail::DenseSetPair<ValueT>>,
-    ValueInfoT>;
+using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
 template <typename T, typename Vector = llvm::SmallVector<T, 0>,
           typename Set = DenseSet<T>, unsigned N = 0>
 using SetVector = llvm::SetVector<T, Vector, Set, N>;
