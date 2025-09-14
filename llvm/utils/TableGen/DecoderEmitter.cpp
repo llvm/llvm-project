@@ -929,8 +929,8 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       uint64_t NegativeMask = DecodeAndEmitULEB128(I, OS);
 
       StartComment();
-      OS << "+ve mask: " << format_hex(PositiveMask, 0)
-         << "-ve mask: " << format_hex(NegativeMask, 0);
+      OS << "positive mask: " << format_hex(PositiveMask, 0)
+         << "negative mask: " << format_hex(NegativeMask, 0);
       break;
     }
     }
