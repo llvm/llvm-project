@@ -297,13 +297,9 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
 
       Value *LHS = ICmp->getOperand(0);
       ICmpInst::Predicate Pred = ICmp->getPredicate();
-      unsigned BitWidth = RHSC->getBitWidth();
-      if (Pred == ICmpInst::ICMP_ULT) {
-        const APInt *Offset;
-        if (match(LHS, m_AddLike(m_Value(X), m_APInt(Offset))))
-          return ConstantRange(APInt::getZero(BitWidth), *RHSC).sub(*Offset);
-        return std::nullopt;
-      }
+      const APInt *Offset;
+      if (match(LHS, m_OneUse(m_AddLike(m_Value(X), m_APInt(Offset)))))
+        return ConstantRange::makeExactICmpRegion(Pred, *RHSC).sub(*Offset);
       // Match icmp eq/ne X & NegPow2, C
       if (ICmp->isEquality()) {
         const APInt *Mask;
@@ -320,16 +316,20 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       ConstantRange LRange = GetRange(X);
       if (LRange.isFullSet())
         return nullptr;
-      if (auto NewCR = CR->exactUnionWith(LRange.inverse())) {
-        ICmpInst::Predicate Pred;
-        APInt RHS;
-        if (NewCR->getEquivalentICmp(Pred, RHS)) {
-          IRBuilder<NoFolder> Builder(&Inst);
-          Value *NewICmp =
-              Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
-          InsertedValues.insert(NewICmp);
-          return NewICmp;
-        }
+      auto NewCR = CR->exactUnionWith(LRange.inverse());
+      if (!NewCR)
+        return nullptr;
+      // Avoid transforming cases which do not relax the range.
+      if (NewCR.value() == *CR)
+        return nullptr;
+      ICmpInst::Predicate Pred;
+      APInt RHS;
+      if (NewCR->getEquivalentICmp(Pred, RHS)) {
+        IRBuilder<NoFolder> Builder(&Inst);
+        Value *NewICmp =
+            Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+        InsertedValues.insert(NewICmp);
+        return NewICmp;
       }
     }
   }

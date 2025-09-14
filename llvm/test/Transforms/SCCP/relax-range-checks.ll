@@ -75,4 +75,18 @@ define i1 @relax_range_check_highbits_check_multiuse(i8 range(i8 2, 0) %x)  {
   ret i1 %ret
 }
 
+define i1 @relax_range_check_multiuse(i8 range(i8 0, 5) %x)  {
+; CHECK-LABEL: define i1 @relax_range_check_multiuse(
+; CHECK-SAME: i8 range(i8 0, 5) [[X:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], -3
+; CHECK-NEXT:    call void @use(i8 [[ADD]])
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[ADD]], 2
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %add = add i8 %x, -3
+  call void @use(i8 %add)
+  %ret = icmp ult i8 %add, 2
+  ret i1 %ret
+}
+
 declare void @use(i8)
