@@ -92,13 +92,11 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   // For each symbol in the original file, we get its target location (decl or
   // def) from the index, then award that target file.
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
-  auto pathEqual = [](const llvm::StringRef &l, const llvm::StringRef &r) {
+  auto pathEqual = [](llvm::StringRef l, llvm::StringRef r) {
     return l.equals_insensitive(r);
   };
 #else
-  auto pathEqual = [](const llvm::StringRef &l, const llvm::StringRef &r) {
-    return l == r;
-  };
+  auto pathEqual = [](llvm::StringRef l, llvm::StringRef r) { return l == r; };
 #endif
   Index->lookup(Request, [&](const Symbol &Sym) {
     auto TargetPathDefinition =
