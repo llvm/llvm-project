@@ -4621,9 +4621,8 @@ _mm512_cvtepu8_epi32(__m128i __A) {
   return (__m512i)__builtin_convertvector((__v16qu)__A, __v16si);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_mask_cvtepu8_epi32(__m512i __W, __mmask16 __U, __m128i __A)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_cvtepu8_epi32(__m512i __W, __mmask16 __U, __m128i __A) {
   return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
                                              (__v16si)_mm512_cvtepu8_epi32(__A),
                                              (__v16si)__W);

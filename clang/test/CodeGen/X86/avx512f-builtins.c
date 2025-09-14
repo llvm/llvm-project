@@ -4051,6 +4051,8 @@ __m512i test_mm512_mask_cvtepu8_epi32(__m512i __W, __mmask16 __U, __m128i __A) {
   return _mm512_mask_cvtepu8_epi32(__W, __U, __A); 
 }
 
+TEST_CONSTEXPR(match_v16si(_mm512_mask_cvtepu8_epi32(_mm512_set1_epi32(-777), /*1010 0101 1101 0101=*/0xa5d5, (__m128i)(__v16qu){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, -777, 3, -777, 5, -777, 7, 8, 9, -777, 11, -777, -777, 14, -777, 16));
+
 __m512i test_mm512_maskz_cvtepu8_epi32(__mmask16 __U, __m128i __A) {
   // CHECK-LABEL: test_mm512_maskz_cvtepu8_epi32
   // CHECK: zext <16 x i8> %{{.*}} to <16 x i32>
