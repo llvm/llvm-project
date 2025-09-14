@@ -371,8 +371,10 @@ convertPtrDiffOp(PtrDiffOp ptrDiffOp, llvm::IRBuilderBase &builder,
 
   // Convert both pointers to integers using ptrtoaddr, and compute the
   // difference: lhs - rhs
+  llvm::Value *llLhs = builder.CreatePtrToAddr(lhs);
+  llvm::Value *llRhs = builder.CreatePtrToAddr(rhs);
   llvm::Value *result = builder.CreateSub(
-      builder.CreatePtrToAddr(lhs), builder.CreatePtrToAddr(rhs), /*Name=*/"",
+      llLhs, llRhs, /*Name=*/"",
       /*HasNUW=*/(flags & PtrDiffFlags::nuw) == PtrDiffFlags::nuw,
       /*HasNSW=*/(flags & PtrDiffFlags::nsw) == PtrDiffFlags::nsw);
 
