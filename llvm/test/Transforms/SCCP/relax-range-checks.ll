@@ -48,3 +48,31 @@ define i1 @relax_range_check_not_profitable(i8 range(i8 0, 6) %x)  {
   %ret = icmp ult i8 %add, 2
   ret i1 %ret
 }
+
+define i1 @relax_range_check_unknown_range(i64 %x)  {
+; CHECK-LABEL: define i1 @relax_range_check_unknown_range(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X]], -67108864
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %and = and i64 %x, -67108864
+  %test = icmp eq i64 %and, 0
+  ret i1 %test
+}
+
+define i1 @relax_range_check_highbits_check_multiuse(i8 range(i8 2, 0) %x)  {
+; CHECK-LABEL: define i1 @relax_range_check_highbits_check_multiuse(
+; CHECK-SAME: i8 range(i8 2, 0) [[X:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[AND]], 2
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %and = and i8 %x, -2
+  call void @use(i8 %and)
+  %ret = icmp eq i8 %and, 2
+  ret i1 %ret
+}
+
+declare void @use(i8)

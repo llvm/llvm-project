@@ -40,7 +40,7 @@ define void @val_undef_range() {
 ; CHECK-LABEL: @val_undef_range(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 undef, 0
-; CHECK-NEXT:    [[BC_1:%.*]] = icmp ult i32 undef, 127
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp ult i32 [[A]], 127
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)

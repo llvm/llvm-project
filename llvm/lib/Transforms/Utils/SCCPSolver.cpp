@@ -307,7 +307,7 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       // Match icmp eq/ne X & NegPow2, C
       if (ICmp->isEquality()) {
         const APInt *Mask;
-        if (match(LHS, m_And(m_Value(X), m_NegatedPower2(Mask))) &&
+        if (match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
             RHSC->countr_zero() >= Mask->countr_zero()) {
           ConstantRange CR(*RHSC, *RHSC - *Mask);
           return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
@@ -318,6 +318,8 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
 
     if (auto CR = MatchTwoInstructionExactRangeCheck()) {
       ConstantRange LRange = GetRange(X);
+      if (LRange.isFullSet())
+        return nullptr;
       if (auto NewCR = CR->exactUnionWith(LRange.inverse())) {
         ICmpInst::Predicate Pred;
         APInt RHS;
