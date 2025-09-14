@@ -978,7 +978,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
 }
 
-std::optional<InstructionCost> VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
+InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     unsigned Opcode, ElementCount VF, VPCostContext &Ctx) const {
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
   Type *ResultTy = VF.isVector() ? toVectorTy(ScalarTy, VF) : ScalarTy;
@@ -1044,7 +1044,7 @@ std::optional<InstructionCost> VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
   }
-  return std::nullopt;
+  llvm_unreachable("called for unsupported opcode");
 }
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
@@ -1059,7 +1059,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
-    return *getCostForRecipeWithOpcode(
+    return getCostForRecipeWithOpcode(
         getOpcode(),
         vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   }
@@ -2206,7 +2206,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   case Instruction::ExtractValue:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return *getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -3151,15 +3151,15 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
-    return *getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                       Ctx) *
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
   case Instruction::URem: {
-    InstructionCost ScalarCost = *getCostForRecipeWithOpcode(
-        getOpcode(), ElementCount::getFixed(1), Ctx);
+    InstructionCost ScalarCost =
+        getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1), Ctx);
     if (isSingleScalar())
       return ScalarCost;
 
