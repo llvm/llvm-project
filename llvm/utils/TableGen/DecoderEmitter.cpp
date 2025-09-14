@@ -159,6 +159,8 @@ struct EncodingField {
 };
 
 struct OperandInfo {
+  StringRef Name;
+  bool HasNoEncoding = false;
   std::vector<EncodingField> Fields;
   std::string Decoder;
   bool HasCompleteDecoder;
@@ -621,6 +623,7 @@ public:
 
 private:
   void emitBinaryParser(raw_ostream &OS, indent Indent,
+                        const InstructionEncoding &Encoding,
                         const OperandInfo &OpInfo) const;
 
   void emitDecoder(raw_ostream &OS, indent Indent, unsigned EncodingID) const;
@@ -1089,7 +1092,18 @@ FilterChooser::getIslands(const KnownBits &EncodingBits) const {
 }
 
 void DecoderTableBuilder::emitBinaryParser(raw_ostream &OS, indent Indent,
+                                           const InstructionEncoding &Encoding,
                                            const OperandInfo &OpInfo) const {
+  if (OpInfo.HasNoEncoding) {
+    // If an operand has no encoding, the old behavior is to not decode it
+    // automatically and let the target do it. This is error-prone, so the
+    // new behavior is to report an error.
+    if (!IgnoreNonDecodableOperands)
+      PrintError(Encoding.getRecord()->getLoc(),
+                 "could not find field for operand '" + OpInfo.Name + "'");
+    return;
+  }
+
   // Special case for 'bits<0>'.
   if (OpInfo.Fields.empty() && !OpInfo.InitValue) {
     if (IgnoreNonDecodableOperands)
@@ -1154,7 +1168,7 @@ void DecoderTableBuilder::emitDecoder(raw_ostream &OS, indent Indent,
   }
 
   for (const OperandInfo &Op : Encoding.getOperands())
-    emitBinaryParser(OS, Indent, Op);
+    emitBinaryParser(OS, Indent, Encoding, Op);
 }
 
 unsigned DecoderTableBuilder::getDecoderIndex(unsigned EncodingID) const {
@@ -1903,6 +1917,8 @@ static void addOneOperandFields(const Record *EncodingDef,
                                 std::map<StringRef, StringRef> &TiedNames,
                                 const Record *OpRec, StringRef OpName,
                                 OperandInfo &OpInfo) {
+  OpInfo.Name = OpName;
+
   // Find a field with the operand's name.
   const RecordVal *OpEncodingField = EncodingDef->getValue(OpName);
 
@@ -1911,13 +1927,9 @@ static void addOneOperandFields(const Record *EncodingDef,
     if (auto I = TiedNames.find(OpName); I != TiedNames.end())
       OpEncodingField = EncodingDef->getValue(I->second);
 
-    // If still no luck, the old behavior is to not decode this operand
-    // automatically and let the target do it. This is error-prone, so
-    // the new behavior is to report an error.
+    // If still no luck, we're done with this operand.
     if (!OpEncodingField) {
-      if (!IgnoreNonDecodableOperands)
-        PrintError(EncodingDef->getLoc(),
-                   "could not find field for operand '" + OpName + "'");
+      OpInfo.HasNoEncoding = true;
       return;
     }
   }
