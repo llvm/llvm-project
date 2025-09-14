@@ -54,6 +54,37 @@ in a range-based for loop:
 The check also supports custom pair-like types via the :option:`PairTypes`
 option.
 
+Limitations
+-----------
+
+The check currently ignores variables defined with attributes or qualifiers
+except const and & since it's not very common:
+
+.. code-block:: c++
+
+  static auto pair = getPair();
+  static int b = pair.first;
+  static int c = pair.second;
+
+The check doesn't check for some situations which could possibly transfered
+to structured bnindings, for example:
+
+.. code-block:: c++
+
+  const auto& results = mapping.try_emplace("hello!"); 
+  const iterator& it = results.first;
+  bool succeed = results.second;
+  // succeed is not changed in the following code
+
+and:
+
+.. code-block:: c++
+
+  const auto results = mapping.try_emplace("hello!");
+  if (results.second) {
+      handle_inserted(results.first);
+  }
+
 Options
 -------
 
