@@ -313,3 +313,35 @@ module attributes {transform.with_named_sequence} {
       transform.yield
   }
 }
+
+// -----
+
+// CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-LABEL: func @arith_binop_fastmath(
+//  CHECK-SAME:   %[[X:.+]]: tensor<?xf32>,  %[[Y:.+]]: tensor<?xf32>
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : index
+//       CHECK:   %[[DIM:.+]] = tensor.dim %[[X]], %[[C0]] : tensor<?xf32>
+//       CHECK:   %[[EMPTY:.+]] = tensor.empty(%[[DIM]]) : tensor<?xf32>
+//       CHECK:   %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:       {indexing_maps = [#[[$map]], #[[$map]], #[[$map]]], iterator_types = ["parallel"]}
+//  CHECK-SAME:       ins(%[[X:.+]], %[[Y:.+]] : tensor<?xf32>, tensor<?xf32>) outs(%[[EMPTY]] : tensor<?xf32>) {
+//       CHECK:     ^bb0(%[[x:.+]]: f32, %[[y:.+]]: f32, %[[Out:.+]]: f32):
+//       CHECK:        %[[z:.+]] = arith.addf %[[x]], %[[y]] fastmath<fast> : f32
+//       CHECK:        linalg.yield %[[z]] : f32
+//       CHECK:  return %[[GENERIC]] : tensor<?xf32>
+
+func.func @arith_binop_fastmath(%x : tensor<?xf32>, %y : tensor<?xf32>)
+    -> tensor<?xf32> {
+  %z = arith.addf %x, %y fastmath<fast> : tensor<?xf32>
+  return %z : tensor<?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addf"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.rewrite_in_destination_passing_style %0
+      : (!transform.any_op) -> !transform.any_op
+     transform.yield
+  }
+}

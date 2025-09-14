@@ -650,6 +650,11 @@ rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
                                       rewriter.getMultiDimIdentityMap(rank));
   SmallVector<utils::IteratorType> iteratorTypes(rank,
                                                  utils::IteratorType::parallel);
+
+  // Check 'fast-math'. If present, propagate it.
+  auto fmfOpInterface =
+      llvm::dyn_cast<arith::ArithFastMathInterface>(op.getOperation());
+
   auto genericOp = linalg::GenericOp::create(
       rewriter, loc, tensorType,
       op->getOperands(), // inputs
@@ -658,12 +663,32 @@ rewriteArithInDestinationPassingStyle(RewriterBase &rewriter, OpTy op) {
       [&](OpBuilder &builder, Location loc, ValueRange args) {
         Value res;
         if (args.size() == 2) {
-          res =
-              builder.create<OpTy>(loc, args[1].getType(), ValueRange{args[0]})
-                  .getResult();
+          if (fmfOpInterface) {
+            auto attr = fmfOpInterface.getFastMathFlagsAttr();
+            auto fmf = rewriter.getNamedAttr("fastmath", attr);
+            res = builder
+                      .create<OpTy>(loc, args[1].getType(), ValueRange{args[0]},
+                                    fmf)
+                      .getResult();
+          } else {
+            res = builder
+                      .create<OpTy>(loc, args[1].getType(), ValueRange{args[0]})
+                      .getResult();
+          }
         } else if (args.size() == 3) {
-          res = builder.create<OpTy>(loc, args[2].getType(),
-                                     ValueRange{args[0], args[1]});
+          if (fmfOpInterface) {
+            auto attr = fmfOpInterface.getFastMathFlagsAttr();
+            auto fmf = rewriter.getNamedAttr("fastmath", attr);
+            res = builder
+                      .create<OpTy>(loc, args[2].getType(),
+                                    ValueRange{args[0], args[1]}, fmf)
+                      .getResult();
+          } else {
+            res = builder
+                      .create<OpTy>(loc, args[2].getType(),
+                                    ValueRange{args[0], args[1]})
+                      .getResult();
+          }
         } else
           llvm_unreachable("did not expect ops other than nary and binary");
         linalg::YieldOp::create(builder, loc, res);
