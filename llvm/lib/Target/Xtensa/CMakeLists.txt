@@ -33,6 +33,7 @@ add_llvm_target(XtensaCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   XtensaDesc
   XtensaInfo
 
