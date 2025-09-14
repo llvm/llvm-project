@@ -3686,3 +3686,48 @@ define i1 @neg_select_icmp_eq_and_pow2(i32 %x) {
   %1 = select i1 %icmp1, i1 %icmp2, i1 false
   ret i1 %1
 }
+
+define i1 @implied_range_check(i8 %a) {
+; CHECK-LABEL: @implied_range_check(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], 5
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A]], -2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ult i8 %a, 5
+  %masked = and i8 %a, -2
+  %cmp2 = icmp eq i8 %masked, 2
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define i1 @merge_range_check_and(i8 %a) {
+; CHECK-LABEL: @merge_range_check_and(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], 3
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A]], -2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ult i8 %a, 3
+  %masked = and i8 %a, -2
+  %cmp2 = icmp eq i8 %masked, 2
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define i1 @merge_range_check_or(i8 %a) {
+; CHECK-LABEL: @merge_range_check_or(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A:%.*]], 3
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[A]], -2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASKED]], 2
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ult i8 %a, 3
+  %masked = and i8 %a, -2
+  %cmp2 = icmp eq i8 %masked, 2
+  %and = or i1 %cmp1, %cmp2
+  ret i1 %and
+}
