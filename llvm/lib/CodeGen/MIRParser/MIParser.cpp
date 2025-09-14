@@ -1968,13 +1968,13 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   if (Token.range().starts_with("f") || Token.range().starts_with("bf")) {
     LLT::FPVariant FPVariant;
-    if (Token.range().starts_with("f")) {
+    if (Token.range().starts_with("f"))
       FPVariant = LLT::FPVariant::IEEE_FLOAT;
-    } else if (Token.range().starts_with("bf")) {
+    else if (Token.range().starts_with("bf"))
       FPVariant = LLT::FPVariant::BRAIN_FLOAT;
-    } else {
+    else
       return error("unknown floating point type identifier");
-    }
+
     auto ScalarSize = APSInt(TypeDigits).getZExtValue();
     if (!ScalarSize || !verifyScalarSize(ScalarSize))
       return error("invalid size for scalar type");
