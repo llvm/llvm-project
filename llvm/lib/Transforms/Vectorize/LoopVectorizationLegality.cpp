@@ -182,14 +182,41 @@ void LoopVectorizeHints::setAlreadyVectorized() {
 bool LoopVectorizeHints::allowVectorization(
     Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: #pragma vectorize disable.\n");
-    emitRemarkWithHints();
+    if (Force.Value == LoopVectorizeHints::FK_Disabled) {
+      LLVM_DEBUG(dbgs() << "LV: Not vectorizing: #pragma vectorize disable.\n");
+      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
+                                        TheLoop->getStartLoc(),
+                                        TheLoop->getHeader())
+               << "loop not vectorized: vectorization is explicitly disabled");
+    } else if (hasDisableAllTransformsHint(TheLoop)) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Not vectorizing: loop hasDisableAllTransformsHint.\n");
+      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedTrafoDisabled",
+                                        TheLoop->getStartLoc(),
+                                        TheLoop->getHeader())
+               << "loop not vectorized: loop transformations are disabled");
+    } else {
+      // This should be unreachable unless there is a bug.
+      LLVM_DEBUG(
+          dbgs() << "LV: [FIXME] Not vectorizing: loop vect disabled for "
+                    "an unknown reason!\n");
+      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedUnknown",
+                                        TheLoop->getStartLoc(),
+                                        TheLoop->getHeader())
+               << "loop not vectorized: unknown reason, please file a bug "
+                  "report on the LLVM issue tracker");
+    }
     return false;
   }
 
   if (VectorizeOnlyWhenForced && getForce() != LoopVectorizeHints::FK_Enabled) {
-    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: No #pragma vectorize enable.\n");
-    emitRemarkWithHints();
+    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: VectorizeOnlyWhenForced is set, "
+                         "and no #pragma vectorize enable.\n");
+    ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedForceOnly",
+                                      TheLoop->getStartLoc(),
+                                      TheLoop->getHeader())
+             << "loop not vectorized: only vectorizing loops that "
+                "explicitly request it");
     return false;
   }
 
