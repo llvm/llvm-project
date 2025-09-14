@@ -388,3 +388,33 @@ entry:
   ret <3 x i32> %res
 }
 declare <3 x i32> @llvm.abs.v3i32(<3 x i32>, i1)
+
+define i32 @combine_subs_multiple_sub_uses(i32 %a, i32 %b) {
+; CHECK-LABEL: combine_subs_multiple_sub_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w8, w0, w1
+; CHECK-NEXT:    csel w9, w0, w1, ne
+; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 %a, %b
+  %cc = icmp ne i32 %sub, 0
+  %sel = select i1 %cc, i32 %a, i32 %b
+  %add = add i32 %sel, %sub
+  ret i32 %add
+}
+
+define i32 @do_not_combine_subs_multiple_flag_uses(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: do_not_combine_subs_multiple_flag_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w1
+; CHECK-NEXT:    csel w8, w0, w1, ne
+; CHECK-NEXT:    csel w9, w2, w3, ne
+; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    ret
+  %sub = sub i32 %a, %b
+  %cc = icmp ne i32 %sub, 0
+  %sel = select i1 %cc, i32 %a, i32 %b
+  %other = select i1 %cc, i32 %c, i32 %d
+  %add = add i32 %sel, %other
+  ret i32 %add
+}
