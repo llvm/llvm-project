@@ -1,7 +1,9 @@
 # Check the ulimit command
 
 # ulimit does not work on non-POSIX platforms.
-# UNSUPPORTED: system-windows
+# Solaris for some reason does not respect ulimit -n, so mark it unsupported
+# as well.
+# UNSUPPORTED: system-windows, system-solaris
 
 # RUN: not %{lit} -a -v %{inputs}/shtest-ulimit | FileCheck %s
 
