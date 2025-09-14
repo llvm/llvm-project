@@ -48,7 +48,7 @@ This check finds three code patterns and recommends using structured bindings fo
     // use x and y
   }
 
-The check also supports custom pair-like types via the `PairTypes` option.
+The check also supports custom pair-like types via the :option:`PairTypes` option.
 
 Options
 -------
