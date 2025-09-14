@@ -97,7 +97,7 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   };
 #else
   auto pathEqual = [](const llvm::StringRef &l, const llvm::StringRef &r) {
-    return l.equals(r);
+    return l == r;
   };
 #endif
   Index->lookup(Request, [&](const Symbol &Sym) {
