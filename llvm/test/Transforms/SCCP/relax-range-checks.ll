@@ -5,7 +5,7 @@ define i1 @relax_range_check(i8 range(i8 0, 5) %x)  {
 ; CHECK-LABEL: define i1 @relax_range_check(
 ; CHECK-SAME: i8 range(i8 0, 5) [[X:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], -3
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[ADD]], 2
+; CHECK-NEXT:    [[RET:%.*]] = icmp uge i8 [[X]], 3
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %add = add i8 %x, -3
@@ -17,7 +17,7 @@ define i1 @relax_range_check_highbits_check(i8 range(i8 2, 0) %x)  {
 ; CHECK-LABEL: define i1 @relax_range_check_highbits_check(
 ; CHECK-SAME: i8 range(i8 2, 0) [[X:%.*]]) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -2
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq i8 [[AND]], 2
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %and = and i8 %x, -2

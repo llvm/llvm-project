@@ -19,8 +19,10 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
@@ -282,6 +284,52 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       InsertedValues.insert(Sub);
     }
     return Sub;
+  }
+
+  // Relax range checks.
+  if (auto *ICmp = dyn_cast<ICmpInst>(&Inst)) {
+    Value *X;
+    auto MatchTwoInstructionExactRangeCheck =
+        [&]() -> std::optional<ConstantRange> {
+      const APInt *RHSC;
+      if (!match(ICmp->getOperand(1), m_APInt(RHSC)))
+        return std::nullopt;
+
+      Value *LHS = ICmp->getOperand(0);
+      ICmpInst::Predicate Pred = ICmp->getPredicate();
+      unsigned BitWidth = RHSC->getBitWidth();
+      if (Pred == ICmpInst::ICMP_ULT) {
+        const APInt *Offset;
+        if (match(LHS, m_AddLike(m_Value(X), m_APInt(Offset))))
+          return ConstantRange(APInt::getZero(BitWidth), *RHSC).sub(*Offset);
+        return std::nullopt;
+      }
+      // Match icmp eq/ne X & NegPow2, C
+      if (ICmp->isEquality()) {
+        const APInt *Mask;
+        if (match(LHS, m_And(m_Value(X), m_NegatedPower2(Mask))) &&
+            RHSC->countr_zero() >= Mask->countr_zero()) {
+          ConstantRange CR(*RHSC, *RHSC - *Mask);
+          return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
+        }
+      }
+      return std::nullopt;
+    };
+
+    if (auto CR = MatchExactTwoInstructionRangeCheck()) {
+      ConstantRange LRange = GetRange(X);
+      if (auto NewCR = CR->exactUnionWith(LRange.inverse())) {
+        ICmpInst::Predicate Pred;
+        APInt RHS;
+        if (NewCR->getEquivalentICmp(Pred, RHS)) {
+          IRBuilder<NoFolder> Builder(&Inst);
+          Value *NewICmp =
+              Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+          InsertedValues.insert(NewICmp);
+          return NewICmp;
+        }
+      }
+    }
   }
 
   return nullptr;
