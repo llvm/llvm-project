@@ -14,6 +14,7 @@
 #define ORC_RT_WRAPPERFUNCTION_H
 
 #include "orc-rt-c/WrapperFunction.h"
+#include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/bind.h"
 
@@ -105,37 +106,16 @@ private:
 
 namespace detail {
 
+template <typename RetT, typename ReturnT, typename... ArgTs>
+struct WFHandlerTraitsImpl {
+  static_assert(std::is_void_v<RetT>,
+                "Async wrapper function handler must return void");
+  typedef ReturnT YieldType;
+  typedef std::tuple<ArgTs...> ArgTupleType;
+};
+
 template <typename C>
-struct WFCallableTraits
-    : public WFCallableTraits<
-          decltype(&std::remove_cv_t<std::remove_reference_t<C>>::operator())> {
-};
-
-template <typename RetT> struct WFCallableTraits<RetT()> {
-  typedef void HeadArgType;
-};
-
-template <typename RetT, typename ArgT, typename... ArgTs>
-struct WFCallableTraits<RetT(ArgT, ArgTs...)> {
-  typedef ArgT HeadArgType;
-  typedef std::tuple<ArgTs...> TailArgTuple;
-};
-
-template <typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (*)(ArgTs...)>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
-
-template <typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (&)(ArgTs...)>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
-
-template <typename ClassT, typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (ClassT::*)(ArgTs...)>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
-
-template <typename ClassT, typename RetT, typename... ArgTs>
-struct WFCallableTraits<RetT (ClassT::*)(ArgTs...) const>
-    : public WFCallableTraits<RetT(ArgTs...)> {};
+using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImpl, C>;
 
 template <typename Serializer> class StructuredYieldBase {
 public:
@@ -151,8 +131,11 @@ protected:
   std::decay_t<Serializer> S;
 };
 
+template <typename RetT, typename Serializer> class StructuredYield;
+
 template <typename RetT, typename Serializer>
-class StructuredYield : public StructuredYieldBase<Serializer> {
+class StructuredYield<std::tuple<RetT>, Serializer>
+    : public StructuredYieldBase<Serializer> {
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()(RetT &&R) {
@@ -167,7 +150,7 @@ public:
 };
 
 template <typename Serializer>
-class StructuredYield<void, Serializer>
+class StructuredYield<std::tuple<>, Serializer>
     : public StructuredYieldBase<Serializer> {
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
@@ -180,7 +163,7 @@ public:
 template <typename T, typename Serializer> struct ResultDeserializer;
 
 template <typename T, typename Serializer>
-struct ResultDeserializer<Expected<T>, Serializer> {
+struct ResultDeserializer<std::tuple<Expected<T>>, Serializer> {
   static Expected<T> deserialize(WrapperFunctionBuffer ResultBytes,
                                  Serializer &S) {
     T Val;
@@ -191,7 +174,8 @@ struct ResultDeserializer<Expected<T>, Serializer> {
   }
 };
 
-template <typename Serializer> struct ResultDeserializer<Error, Serializer> {
+template <typename Serializer>
+struct ResultDeserializer<std::tuple<Error>, Serializer> {
   static Error deserialize(WrapperFunctionBuffer ResultBytes, Serializer &S) {
     assert(ResultBytes.empty());
     return Error::success();
@@ -213,11 +197,13 @@ struct WrapperFunction {
             typename... ArgTs>
   static void call(Caller &&C, Serializer &&S, ResultHandler &&RH,
                    ArgTs &&...Args) {
-    typedef detail::WFCallableTraits<ResultHandler> ResultHandlerTraits;
+    typedef CallableArgInfo<ResultHandler> ResultHandlerTraits;
+    static_assert(std::is_void_v<typename ResultHandlerTraits::return_type>,
+                  "Result handler should return void");
     static_assert(
-        std::tuple_size_v<typename ResultHandlerTraits::TailArgTuple> == 0,
-        "Expected one argument to result-handler");
-    typedef typename ResultHandlerTraits::HeadArgType ResultType;
+        std::tuple_size_v<typename ResultHandlerTraits::args_tuple_type> == 1,
+        "Result-handler should have exactly one argument");
+    typedef typename ResultHandlerTraits::args_tuple_type ResultTupleType;
 
     if (auto ArgBytes = S.argumentSerializer()(std::forward<ArgTs>(Args)...)) {
       C(
@@ -227,9 +213,8 @@ struct WrapperFunction {
             if (const char *ErrMsg = ResultBytes.getOutOfBandError())
               RH(make_error<StringError>(ErrMsg));
             else
-              RH(detail::ResultDeserializer<
-                  ResultType, Serializer>::deserialize(std::move(ResultBytes),
-                                                       S));
+              RH(detail::ResultDeserializer<ResultTupleType, Serializer>::
+                     deserialize(std::move(ResultBytes), S));
           },
           std::move(*ArgBytes));
     } else
@@ -246,10 +231,12 @@ struct WrapperFunction {
                      orc_rt_WrapperFunctionReturn Return,
                      WrapperFunctionBuffer ArgBytes, Serializer &&S,
                      Handler &&H) {
-    typedef detail::WFCallableTraits<Handler> HandlerTraits;
-    typedef typename HandlerTraits::HeadArgType Yield;
-    typedef typename HandlerTraits::TailArgTuple ArgTuple;
-    typedef typename detail::WFCallableTraits<Yield>::HeadArgType RetType;
+    typedef detail::WFHandlerTraits<Handler> HandlerTraits;
+    typedef typename HandlerTraits::ArgTupleType ArgTuple;
+    typedef typename HandlerTraits::YieldType Yield;
+    static_assert(std::is_void_v<typename CallableArgInfo<Yield>::return_type>,
+                  "Return callback must return void");
+    typedef typename CallableArgInfo<Yield>::args_tuple_type RetTupleType;
 
     if (ArgBytes.getOutOfBandError())
       return Return(Session, CallCtx, ArgBytes.release());
@@ -258,7 +245,7 @@ struct WrapperFunction {
     if (std::apply(bind_front(S.argumentDeserializer(), std::move(ArgBytes)),
                    Args))
       std::apply(bind_front(std::forward<Handler>(H),
-                            detail::StructuredYield<RetType, Serializer>(
+                            detail::StructuredYield<RetTupleType, Serializer>(
                                 Session, CallCtx, Return, std::move(S))),
                  std::move(Args));
     else
