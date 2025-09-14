@@ -351,21 +351,21 @@ translateConstantOp(ConstantOp constantOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Convert ptr.ptr_diff operation
+/// Translate ptr.ptr_diff operation operation to LLVM IR.
 static LogicalResult
-convertPtrDiffOp(PtrDiffOp ptrDiffOp, llvm::IRBuilderBase &builder,
-                 LLVM::ModuleTranslation &moduleTranslation) {
+translatePtrDiffOp(PtrDiffOp ptrDiffOp, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Value *lhs = moduleTranslation.lookupValue(ptrDiffOp.getLhs());
   llvm::Value *rhs = moduleTranslation.lookupValue(ptrDiffOp.getRhs());
 
   if (!lhs || !rhs)
     return ptrDiffOp.emitError("Failed to lookup operands");
 
-  // Convert result type to LLVM type
+  // Translate result type to LLVM type
   llvm::Type *resultType =
       moduleTranslation.convertType(ptrDiffOp.getResult().getType());
   if (!resultType)
-    return ptrDiffOp.emitError("Failed to convert result type");
+    return ptrDiffOp.emitError("Failed to translate result type");
 
   PtrDiffFlags flags = ptrDiffOp.getFlags();
 
@@ -408,7 +408,7 @@ public:
           return translatePtrAddOp(ptrAddOp, builder, moduleTranslation);
         })
         .Case([&](PtrDiffOp ptrDiffOp) {
-          return convertPtrDiffOp(ptrDiffOp, builder, moduleTranslation);
+          return translatePtrDiffOp(ptrDiffOp, builder, moduleTranslation);
         })
         .Case([&](LoadOp loadOp) {
           return translateLoadOp(loadOp, builder, moduleTranslation);
