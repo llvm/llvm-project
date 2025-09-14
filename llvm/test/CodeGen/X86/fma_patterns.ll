@@ -9,7 +9,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512vl -enable-no-infs-fp-math | FileCheck %s --check-prefixes=AVX512,AVX512-NOINFS
 
 ;
-; Pattern: (fadd contract (fmul contract x, y), z) -> (fmadd x,y,z)
+; Pattern: (fadd (fmul x, y), z) -> (fmadd x,y,z)
 ;
 
 define float @test_f32_fmadd(float %a0, float %a1, float %a2) {
@@ -133,7 +133,7 @@ define <4 x double> @test_4f64_fmadd(<4 x double> %a0, <4 x double> %a1, <4 x do
 }
 
 ;
-; Pattern: (fsub contract (fmul contract x, y), z) -> (fmsub x, y, z)
+; Pattern: (fsub (fmul x, y), z) -> (fmsub x, y, z)
 ;
 
 define float @test_f32_fmsub(float %a0, float %a1, float %a2) {
@@ -257,7 +257,7 @@ define <4 x double> @test_4f64_fmsub(<4 x double> %a0, <4 x double> %a1, <4 x do
 }
 
 ;
-; Pattern: (fsub contract z, (fmul contract x, y)) -> (fnmadd x, y, z)
+; Pattern: (fsub z, (fmul x, y)) -> (fnmadd x, y, z)
 ;
 
 define float @test_f32_fnmadd(float %a0, float %a1, float %a2) {
@@ -381,7 +381,7 @@ define <4 x double> @test_4f64_fnmadd(<4 x double> %a0, <4 x double> %a1, <4 x d
 }
 
 ;
-; Pattern: (fsub contract (fneg (fmul contract x, y)), z) -> (fnmsub x, y, z)
+; Pattern: (fsub (fneg (fmul x, y)), z) -> (fnmsub x, y, z)
 ;
 
 define float @test_f32_fnmsub(float %a0, float %a1, float %a2) {
@@ -1654,7 +1654,7 @@ define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, 
 }
 
 ;
-; Pattern: (fma x, c1, (fmul contract x, c2)) -> (fmul contract x, c1+c2)
+; Pattern: (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
 ;
 
 define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) {
@@ -1679,7 +1679,7 @@ define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) {
 }
 
 ;
-; Pattern: (fma (fmul contract x, c1), c2, y) -> (fma x, c1*c2, y)
+; Pattern: (fma (fmul x, c1), c2, y) -> (fma x, c1*c2, y)
 ;
 
 define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y) {
@@ -1703,7 +1703,7 @@ define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y
   ret <4 x float> %a
 }
 
-; Pattern: (fneg (fmul contract x, y)) -> (fnmsub x, y, 0)
+; Pattern: (fneg (fmul x, y)) -> (fnmsub x, y, 0)
 
 define double @test_f64_fneg_fmul(double %x, double %y) {
 ; FMA-LABEL: test_f64_fneg_fmul:
@@ -1824,8 +1824,8 @@ define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, doubl
   ret double %a2
 }
 
-; Minimum FMF - the 1st fadd contract is contracted because that combines
-; fmul contract+fadd contract as specified by the order of operations; the 2nd fadd contract
+; Minimum FMF - the 1st fadd is contracted because that combines
+; fmul+fadd as specified by the order of operations; the 2nd fadd
 ; requires reassociation to fuse with c*d.
 
 define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n0) nounwind {
@@ -1883,7 +1883,7 @@ define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0)
   ret float %a2
 }
 
-; The final fadd contract can be folded with either 1 of the leading fmul contracts.
+; The final fadd can be folded with either 1 of the leading fmuls.
 
 define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x double> %x3, <2 x double> %x4, <2 x double> %x5, <2 x double> %x6, <2 x double> %x7, <2 x double> %x8) nounwind {
 ; FMA-LABEL: fadd_fma_fmul_3:
