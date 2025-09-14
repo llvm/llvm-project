@@ -2662,6 +2662,17 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
+  // On COFF platform, we shouldn't emit a reference to an external entity (i.e.
+  // VTable) into debug info, which is constructed within a discardable section.
+  // If that entity ends up implicitly dllimported from another DLL, the linker
+  // may produce a runtime pseudo-relocation for it (BFD-ld only. LLD prohibits
+  // to emit such relocation). If the debug section is stripped, the runtime
+  // pseudo-relocation points to memory space outside of the module, causing an
+  // access violation.
+  if (CGM.getTarget().getTriple().isOSBinFormatCOFF() &&
+      VTable->isDeclarationForLinker())
+    return;
+
   ASTContext &Context = CGM.getContext();
   StringRef SymbolName = "_vtable$";
   SourceLocation Loc;

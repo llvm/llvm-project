@@ -44,6 +44,8 @@ int main() {
 
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-mingw -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-mingw -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - | FileCheck %s
 
 // CHECK: $_ZTVN3NSP5CBaseE = comdat any
 // CHECK: $_ZTVN5NSP_15CLeftE = comdat any
