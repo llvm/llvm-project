@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_INSTRUCTIONENCODING_H
-#define LLVM_UTILS_TABLEGEN_INSTRUCTIONENCODING_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_INSTRUCTIONENCODING_H
+#define LLVM_UTILS_TABLEGEN_COMMON_INSTRUCTIONENCODING_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -147,4 +147,4 @@ private:
 
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_INSTRUCTIONENCODING_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_INSTRUCTIONENCODING_H
