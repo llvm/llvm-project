@@ -25,8 +25,11 @@ long double f_ld(long double x) { return x; }
 struct empty {};
 struct emptyarr { struct empty a[10]; };
 
-// 16-byte structs with 16-byte alignment gets passed as if i128.
-struct align16 { _Alignas(16) int x; };
+// In 16-byte structs, 16-byte aligned members are expanded
+// to their corresponding i128/f128 types.
+struct align16_int { _Alignas(16) int x; };
+struct align16_mixed { _Alignas(16) int x; double y; };
+struct align16_longdouble { long double x; };
 
 // CHECK-LABEL: define{{.*}} i64 @f_empty(i64 %x.coerce)
 struct empty f_empty(struct empty x) { return x; }
@@ -34,10 +37,21 @@ struct empty f_empty(struct empty x) { return x; }
 // CHECK-LABEL: define{{.*}} i64 @f_emptyarr(i64 %x.coerce)
 struct empty f_emptyarr(struct emptyarr x) { return x.a[0]; }
 
-// CHECK-LABEL: define{{.*}} void @f_aligncaller(i128 %a.coerce)
-void f_aligncallee(int pad, struct align16 a);
-void f_aligncaller(struct align16 a) {
+// CHECK-LABEL: define{{.*}} void @f_aligncaller(i64 %a.coerce0, i64 %a.coerce1)
+// CHECK-LABEL: declare{{.*}} void @f_aligncallee(i32 noundef signext, i64, i64, i64)
+void f_aligncallee(int pad, struct align16_int a);
+void f_aligncaller(struct align16_int a) {
     f_aligncallee(0, a);
+}
+
+// CHECK-LABEL: define{{.*}} double @f_mixed_aligned(i64 noundef %a, i64 %0, i64 %b.coerce0, double %b.coerce1)
+double f_mixed_aligned(long a, struct align16_mixed b) {
+	return b.y;
+}
+
+// CHECK-LABEL: define{{.*}} fp128 @f_longdouble(i64 noundef %a, i64 %0, fp128 %b.coerce)
+long double f_longdouble(long a, struct align16_longdouble b) {
+	return b.x;
 }
 
 // CHECK-LABEL: define{{.*}} i64 @f_emptyvar(i32 noundef zeroext %count, ...)
