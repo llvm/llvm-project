@@ -629,11 +629,17 @@ def testVariadicOperandAccess():
                 [zero, one], two, [three, four]
             )
             # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
-            print(variadic_operands.non_variadic)
+            non_variadic = variadic_operands.non_variadic
+            print(non_variadic)
+            assert isinstance(non_variadic, Value)
             # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
-            print(values(variadic_operands.variadic1))
+            variadic1 = variadic_operands.variadic1
+            print(values(variadic1))
+            assert isinstance(variadic1, OpOperandList)
             # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
-            print(values(variadic_operands.variadic2))
+            variadic2 = variadic_operands.variadic2
+            print(values(variadic2))
+            assert isinstance(variadic2, OpOperandList)
 
             assert (
                 inspect.signature(test.same_variadic_operand).return_annotation
@@ -692,7 +698,9 @@ def testVariadicResultAccess():
             # CHECK: i1
             print(op.non_variadic2.type)
             # CHECK: [IntegerType(i2), IntegerType(i3), IntegerType(i4)]
-            print(types(op.variadic))
+            variadic = op.variadic
+            print(types(variadic))
+            assert isinstance(variadic, OpResultList)
 
             #  Test Variadic-Variadic-Fixed
             op = test.SameVariadicResultSizeOpVVF(
@@ -754,3 +762,14 @@ def testVariadicResultAccess():
                 test.results_variadic([i[0]]),
                 OpResult,
             )
+
+
+# CHECK-LABEL: TEST: testVariadicAndNormalRegion
+@run
+def testVariadicAndNormalRegionOp():
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            region_op = test.VariadicAndNormalRegionOp(2)
+            assert isinstance(region_op.region, Region)
+            assert isinstance(region_op.variadic, RegionSequence)
