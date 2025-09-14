@@ -14,6 +14,7 @@ from ._ods_common import (
 )
 from ..extras.meta import region_op
 
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class DialectOp(DialectOp):
     """Specialization for the dialect op class."""
@@ -25,6 +26,7 @@ class DialectOp(DialectOp):
     @property
     def body(self):
         return self.regions[0].blocks[0]
+
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class OperationOp(OperationOp):
@@ -38,6 +40,9 @@ class OperationOp(OperationOp):
     def body(self):
         return self.regions[0].blocks[0]
 
+
 @register_attribute_builder("VariadicityArrayAttr")
 def _variadicity_array_attr(x, context):
-    return _ods_cext.ir.Attribute.parse(f"#irdl<variadicity_array [{', '.join(str(i) for i in x)}]>")
+    return _ods_cext.ir.Attribute.parse(
+        f"#irdl<variadicity_array [{', '.join(str(i) for i in x)}]>"
+    )
