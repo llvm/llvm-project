@@ -48396,13 +48396,17 @@ static SDValue checkSignTestSetCCCombine(SDValue Cmp, X86::CondCode &CC,
   MVT SrcVT = Src.getSimpleValueType();
   APInt BitMask = APInt::getSignMask(SrcVT.getScalarSizeInBits());
 
-  // If Src came from a SHL (probably from an expanded SIGN_EXTEND_INREG), then
-  // peek through and adjust the TEST bit.
+  // If Src came from a SIGN_EXTEND_INREG or SHL (probably from an expanded
+  // SIGN_EXTEND_INREG), then peek through and adjust the TEST bit.
   if (Src.getOpcode() == ISD::SHL) {
     if (std::optional<unsigned> ShiftAmt = DAG.getValidShiftAmount(Src)) {
       Src = Src.getOperand(0);
       BitMask.lshrInPlace(*ShiftAmt);
     }
+  } else if (Src.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    EVT ExtVT = cast<VTSDNode>(Src.getOperand(1))->getVT();
+    Src = Src.getOperand(0);
+    BitMask.lshrInPlace(BitMask.getBitWidth() - ExtVT.getScalarSizeInBits());
   }
 
   SDValue Mask = DAG.getNode(ISD::AND, DL, SrcVT, Src,
@@ -50936,10 +50940,12 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
 // Given a target type \p VT, we generate
 //   or (and x, y), (xor z, zext(build_vector (constants)))
 // given x, y and z are of type \p VT. We can do so, if operands are either
-// truncates from VT types, the second operand is a vector of constants or can
-// be recursively promoted.
+// truncates from VT types, the second operand is a vector of constants, can
+// be recursively promoted or is an existing extension we can extend further.
 static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL, EVT VT,
-                                     SelectionDAG &DAG, unsigned Depth) {
+                                     SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget,
+                                     unsigned Depth) {
   // Limit recursion to avoid excessive compile times.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
@@ -50954,28 +50960,32 @@ static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL, EVT VT,
   if (!TLI.isOperationLegalOrPromote(N.getOpcode(), VT))
     return SDValue();
 
-  if (SDValue NN0 = PromoteMaskArithmetic(N0, DL, VT, DAG, Depth + 1))
+  if (SDValue NN0 =
+          PromoteMaskArithmetic(N0, DL, VT, DAG, Subtarget, Depth + 1))
     N0 = NN0;
   else {
-    // The left side has to be a trunc.
-    if (N0.getOpcode() != ISD::TRUNCATE)
+    // The left side has to be a 'trunc'.
+    bool LHSTrunc = N0.getOpcode() == ISD::TRUNCATE &&
+                    N0.getOperand(0).getValueType() == VT;
+    if (LHSTrunc)
+      N0 = N0.getOperand(0);
+    else
       return SDValue();
-
-    // The type of the truncated inputs.
-    if (N0.getOperand(0).getValueType() != VT)
-      return SDValue();
-
-    N0 = N0.getOperand(0);
   }
 
-  if (SDValue NN1 = PromoteMaskArithmetic(N1, DL, VT, DAG, Depth + 1))
+  if (SDValue NN1 =
+          PromoteMaskArithmetic(N1, DL, VT, DAG, Subtarget, Depth + 1))
     N1 = NN1;
   else {
-    // The right side has to be a 'trunc' or a (foldable) constant.
+    // The right side has to be a 'trunc', a (foldable) constant or an
+    // existing extension we can extend further.
     bool RHSTrunc = N1.getOpcode() == ISD::TRUNCATE &&
                     N1.getOperand(0).getValueType() == VT;
     if (RHSTrunc)
       N1 = N1.getOperand(0);
+    else if (ISD::isExtVecInRegOpcode(N1.getOpcode()) && VT.is256BitVector() &&
+             Subtarget.hasInt256() && N1.hasOneUse())
+      N1 = DAG.getNode(N1.getOpcode(), DL, VT, N1.getOperand(0));
     else if (SDValue Cst =
                  DAG.FoldConstantArithmetic(ISD::ZERO_EXTEND, DL, VT, {N1}))
       N1 = Cst;
@@ -51005,7 +51015,7 @@ static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL,
   EVT NarrowVT = Narrow.getValueType();
 
   // Generate the wide operation.
-  SDValue Op = PromoteMaskArithmetic(Narrow, DL, VT, DAG, 0);
+  SDValue Op = PromoteMaskArithmetic(Narrow, DL, VT, DAG, Subtarget, 0);
   if (!Op)
     return SDValue();
   switch (N.getOpcode()) {
@@ -57964,6 +57974,51 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
                      Cmov.getOperand(3));
 }
 
+// Attempt to turn ADD(MUL(x, y), acc)) -> VPMADD52L
+// When upper 12 bits of x, y and MUL(x, y) are known to be 0
+static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
+                             EVT VT, const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+  if (!VT.isVector() || VT.getScalarSizeInBits() != 64 ||
+      (!Subtarget.hasAVXIFMA() && !Subtarget.hasIFMA()))
+    return SDValue();
+
+  // Need AVX-512VL vector length extensions if operating on XMM/YMM registers
+  if (!Subtarget.hasAVXIFMA() && !Subtarget.hasVLX() &&
+      VT.getSizeInBits() < 512)
+    return SDValue();
+
+  const auto TotalSize = VT.getSizeInBits();
+  if (TotalSize < 128 || !isPowerOf2_64(TotalSize))
+    return SDValue();
+
+  SDValue X, Y, Acc;
+  if (!sd_match(N, m_Add(m_Mul(m_Value(X), m_Value(Y)), m_Value(Acc))))
+    return SDValue();
+
+  KnownBits KnownX = DAG.computeKnownBits(X);
+  if (KnownX.countMinLeadingZeros() < 12)
+    return SDValue();
+  KnownBits KnownY = DAG.computeKnownBits(Y);
+  if (KnownY.countMinLeadingZeros() < 12)
+    return SDValue();
+  KnownBits KnownMul = KnownBits::mul(KnownX, KnownY);
+  if (KnownMul.countMinLeadingZeros() < 12)
+    return SDValue();
+
+  auto VPMADD52Builder = [](SelectionDAG &G, SDLoc DL,
+                            ArrayRef<SDValue> SubOps) {
+    EVT SubVT = SubOps[0].getValueType();
+    assert(SubVT.getScalarSizeInBits() == 64 &&
+           "Unexpected element size, only supports 64bit size");
+    return G.getNode(X86ISD::VPMADD52L, DL, SubVT, SubOps[1] /*X*/,
+                     SubOps[2] /*Y*/, SubOps[0] /*Acc*/);
+  };
+
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, {Acc, X, Y}, VPMADD52Builder,
+                          /*CheckBWI*/ false);
+}
+
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -58066,6 +58121,9 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::ADC, SDLoc(Op0), Op0->getVTList(), Op1,
                        Op0.getOperand(0), Op0.getOperand(2));
   }
+
+  if (SDValue IFMA52 = matchVPMADD52(N, DAG, DL, VT, Subtarget))
+    return IFMA52;
 
   return combineAddOrSubToADCOrSBB(N, DL, DAG);
 }
