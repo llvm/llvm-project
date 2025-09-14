@@ -859,6 +859,18 @@ TEST_F(RtsanOpenedFileTest, FchmodDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanFileTest, PathconfDiesWhenRealtime) {
+  auto Func = [this]() { pathconf(GetTemporaryFilePath(), _PC_LINK_MAX); };
+  ExpectRealtimeDeath(Func, "pathconf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FpathconfDiesWhenRealtime) {
+  auto Func = [this]() { fpathconf(GetOpenFd(), _PC_LINK_MAX); };
+  ExpectRealtimeDeath(Func, "fpathconf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST(TestRtsanInterceptors, UmaskDiesWhenRealtime) {
   auto Func = []() { umask(0); };
   ExpectRealtimeDeath(Func, "umask");
