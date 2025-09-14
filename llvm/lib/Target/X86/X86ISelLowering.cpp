@@ -44958,6 +44958,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
+    KnownBits OrigKnownOp0, OrigKnownOp1;
     KnownBits KnownOp0, KnownOp1, KnownOp2;
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
@@ -44965,11 +44966,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
     //  operand 2).
     APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
-    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, KnownOp0,
+    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, OrigKnownOp0,
                              TLO, Depth + 1))
       return true;
 
-    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
+    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, OrigKnownOp1,
                              TLO, Depth + 1))
       return true;
 
@@ -44978,17 +44979,31 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return true;
 
     KnownBits KnownMul;
-    KnownOp0 = KnownOp0.trunc(52);
-    KnownOp1 = KnownOp1.trunc(52);
+    KnownOp0 = OrigKnownOp0.trunc(52);
+    KnownOp1 = OrigKnownOp1.trunc(52);
     KnownMul = Opc == X86ISD::VPMADD52L ? KnownBits::mul(KnownOp0, KnownOp1)
                                         : KnownBits::mulhu(KnownOp0, KnownOp1);
     KnownMul = KnownMul.zext(64);
 
+    SDLoc DL(Op);
     // lo/hi(X * Y) + Z --> C + Z
     if (KnownMul.isConstant()) {
-      SDLoc DL(Op);
       SDValue C = TLO.DAG.getConstant(KnownMul.getConstant(), DL, VT);
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, C, Op2));
+    }
+
+    // C * X --> X * C
+    if (KnownOp0.isConstant()) {
+      std::swap(OrigKnownOp0, OrigKnownOp1);
+      std::swap(KnownOp0, KnownOp1);
+      std::swap(Op0, Op1);
+    }
+
+    // lo(X * 1) + Z --> lo(X) + Z --> X iff X == lo(X)
+    if (Opc == X86ISD::VPMADD52L && KnownOp1.isConstant() &&
+        KnownOp1.getConstant().isOne() &&
+        OrigKnownOp0.countMinLeadingZeros() >= 12) {
+      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, Op0, Op2));
     }
 
     Known = KnownBits::add(KnownMul, KnownOp2);
