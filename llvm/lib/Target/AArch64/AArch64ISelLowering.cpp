@@ -3712,7 +3712,8 @@ static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &DL,
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                              const SDLoc &DL, SelectionDAG &DAG) {
+                              const SDLoc &DL, SelectionDAG &DAG,
+                              bool MIOrPLSupported = false) {
   EVT VT = LHS.getValueType();
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
 
@@ -3755,6 +3756,33 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     } else if (LHS.getOpcode() == AArch64ISD::ANDS) {
       // Use result of ANDS
       return LHS.getValue(1);
+    } else if (MIOrPLSupported) {
+      // For MIOrPLSupported, optimize SUB/ADD operations with zero comparison
+      if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETLT) {
+        // SUB(x, y) < 0 -> SUBS(x, y)
+        return DAG
+            .getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETGE) {
+        // ADD(x, y) >= 0 -> ADDS(x, y)
+        return DAG
+            .getNode(AArch64ISD::ADDS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETLT) {
+        // ADD(x, y) < 0 -> SUBS(x, y)
+        return DAG
+            .getNode(AArch64ISD::ADDS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      } else if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETGE) {
+        // SUB(x, y) >= 0 -> ADDS(x, y)
+        return DAG
+            .getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      }
     }
   }
 
@@ -3819,7 +3847,8 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
                                          AArch64CC::CondCode Predicate,
                                          AArch64CC::CondCode OutCC,
-                                         const SDLoc &DL, SelectionDAG &DAG) {
+                                         const SDLoc &DL, SelectionDAG &DAG,
+                                         bool MIOrPLSupported = false) {
   unsigned Opcode = 0;
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
 
@@ -3846,6 +3875,30 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
     // we combine a (CCMP (sub 0, op1), op2) into a CCMN instruction ?
     Opcode = AArch64ISD::CCMN;
     LHS = LHS.getOperand(1);
+  } else if (isNullConstant(RHS) && !isUnsignedIntSetCC(CC) &&
+             MIOrPLSupported) {
+    // For MIOrPLSupported, optimize SUB/ADD operations with zero comparison
+    if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETLT) {
+      // SUB(x, y) < 0 -> CCMP(x, y) with appropriate condition
+      Opcode = AArch64ISD::CCMP;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETGE) {
+      // ADD(x, y) >= 0 -> CCMP(x, y) with appropriate condition
+      Opcode = AArch64ISD::CCMN;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETLT) {
+      // ADD(x, y) < 0 -> CCMP(x, -y) with appropriate condition
+      Opcode = AArch64ISD::CCMN;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    } else if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETGE) {
+      // SUB(x, y) >= 0 -> CCMP(-x, y) with appropriate condition
+      Opcode = AArch64ISD::CCMP;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    }
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
@@ -3972,7 +4025,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
       return emitComparison(LHS, RHS, CC, DL, DAG);
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
-                                     DAG);
+                                     DAG, true);
   }
   assert(Val->hasOneUse() && "Valid conjunction/disjunction tree");
 
@@ -4251,7 +4304,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   }
 
   if (!Cmp) {
-    Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
+    Cmp = emitComparison(LHS, RHS, CC, DL, DAG, true);
     AArch64CC = changeIntCCToAArch64CC(CC, RHS);
   }
   AArch64cc = getCondCode(DAG, AArch64CC);
@@ -7371,13 +7424,13 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABS_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
-  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, VT);
 
-  // Generate SUBS & CSEL.
-  SDValue Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
-                            Op.getOperand(0), DAG.getConstant(0, DL, VT));
+  // Generate CMP & CSEL.
+  SDValue Cmp = emitComparison(Op.getOperand(0), DAG.getConstant(0, DL, VT),
+                               ISD::SETGE, DL, DAG, true);
+  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, VT);
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, Op.getOperand(0), Neg,
-                     getCondCode(DAG, AArch64CC::PL), Cmp.getValue(1));
+                     getCondCode(DAG, AArch64CC::PL), Cmp);
 }
 
 static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
