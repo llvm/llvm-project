@@ -497,7 +497,6 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
   std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto inputType = cast<ShapedType>(input.getType());
   Type elementType = inputType.getElementType();
-  // assert(elementType.isF32() && "NYI: support non-f32");
   auto inputShape = inputType.getShape(); // N, H, W, C
   int64_t inputN = inputShape[0];
   int64_t inputC = inputShape[3];
@@ -721,7 +720,6 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
   std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
-  // assert(elementType.isF32() && "NYI: support non-f32");
   auto valueShape = valueType.getShape(); // H, W, TileH, TileW, N, F
   int64_t valueH = valueShape[0];
   int64_t valueW = valueShape[1];
