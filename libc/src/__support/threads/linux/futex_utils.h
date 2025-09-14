@@ -16,28 +16,21 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include "src/__support/time/linux/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
 
 namespace LIBC_NAMESPACE_DECL {
 class Futex : public cpp::Atomic<FutexWordType> {
 public:
-  using Timeout = internal::AbsTimeout;
   LIBC_INLINE constexpr Futex(FutexWordType value)
       : cpp::Atomic<FutexWordType>(value) {}
   LIBC_INLINE Futex &operator=(FutexWordType value) {
     cpp::Atomic<FutexWordType>::store(value);
     return *this;
   }
-  LIBC_INLINE long wait(FutexWordType expected,
-                        cpp::optional<Timeout> timeout = cpp::nullopt,
-                        bool is_shared = false) {
+  LIBC_INLINE long wait(FutexWordType expected, bool is_shared = false) {
     // use bitset variants to enforce abs_time
     uint32_t op = is_shared ? FUTEX_WAIT_BITSET : FUTEX_WAIT_BITSET_PRIVATE;
-    if (timeout && timeout->is_realtime()) {
-      op |= FUTEX_CLOCK_REALTIME;
-    }
     for (;;) {
       if (this->load(cpp::MemoryOrder::RELAXED) != expected)
         return 0;
@@ -47,7 +40,7 @@ public:
           /* futex address */ this,
           /* futex operation  */ op,
           /* expected value */ expected,
-          /* timeout */ timeout ? &timeout->get_timespec() : nullptr,
+          /* timeout */ nullptr,
           /* ignored */ nullptr,
           /* bitset */ FUTEX_BITSET_MATCH_ANY);
 
