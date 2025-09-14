@@ -3393,9 +3393,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // Similarly strip attributes that maybe dependent on condition we are
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
-    if ((!SpeculatedStoreValue || &I != SpeculatedStore) &&
-        !isa<CallBase>(&I)) {
-      I.setDebugLoc(DebugLoc::getDropped());
+    if (!SpeculatedStoreValue || &I != SpeculatedStore) {
+      I.dropLocation();
     }
     I.dropUBImplyingAttrsAndMetadata();
 
