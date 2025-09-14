@@ -62,10 +62,16 @@ public:
     // having the right size in adjustToUnmodifiedline.
     if (Line.Level >= IndentForLevel.size())
       IndentForLevel.resize(Line.Level + 1, -1);
-    if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
-        (Line.InPPDirective ||
-         (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
-          Line.Type == LT_CommentAbovePPDirective))) {
+    if (Style.IndentPPDirectives == FormatStyle::PPDIS_Leave &&
+        (Line.InPPDirective || Line.Type == LT_CommentAbovePPDirective)) {
+      Indent = Line.InMacroBody
+                   ? (Line.Level - Line.PPLevel) * Style.IndentWidth +
+                         AdditionalIndent
+                   : Line.First->OriginalColumn;
+    } else if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
+               (Line.InPPDirective ||
+                (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+                 Line.Type == LT_CommentAbovePPDirective))) {
       unsigned PPIndentWidth =
           (Style.PPIndentWidth >= 0) ? Style.PPIndentWidth : Style.IndentWidth;
       Indent = Line.InMacroBody
@@ -1656,7 +1662,7 @@ void UnwrappedLineFormatter::formatFirstToken(
   // Preprocessor directives get indented before the hash only if specified. In
   // Javascript import statements are indented like normal statements.
   if (!Style.isJavaScript() &&
-      Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
       (Line.Type == LT_PreprocessorDirective ||
        Line.Type == LT_ImportStatement)) {
     Indent = 0;
