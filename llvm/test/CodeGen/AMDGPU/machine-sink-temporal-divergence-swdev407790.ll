@@ -3,9 +3,6 @@
 
 ; ModuleID = 'kernel_round1_passing.bc'
 source_filename = "/tmp/comgr-295d04/input/CompileSource"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-target triple = "amdgcn-amd-amdhsa"
-
 @kernel_round1.first_words_data = external hidden unnamed_addr addrspace(3) global [896 x i8], align 1
 @kernel_round1.collisionsData = external hidden unnamed_addr addrspace(3) global [3840 x i32], align 4
 @kernel_round1.collisionsNum = external hidden addrspace(3) global i32, align 4
@@ -282,11 +279,11 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v58
 ; CHECK-NEXT:    s_branch .LBB0_7
-; CHECK-NEXT:  .LBB0_16: ; %Flow45
+; CHECK-NEXT:  .LBB0_16: ; %Flow43
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s69
 ; CHECK-NEXT:    v_mov_b32_e32 v57, v0
-; CHECK-NEXT:  .LBB0_17: ; %Flow46
+; CHECK-NEXT:  .LBB0_17: ; %Flow44
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s68
 ; CHECK-NEXT:    s_mov_b32 s55, exec_lo
@@ -333,11 +330,11 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v57
 ; CHECK-NEXT:    s_branch .LBB0_19
-; CHECK-NEXT:  .LBB0_22: ; %Flow43
+; CHECK-NEXT:  .LBB0_22: ; %Flow41
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_inst_prefetch 0x2
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s68
-; CHECK-NEXT:  .LBB0_23: ; %Flow44
+; CHECK-NEXT:  .LBB0_23: ; %Flow42
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
 ; CHECK-NEXT:  ; %bb.24: ; in Loop: Header=BB0_5 Depth=1
@@ -350,7 +347,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_or_b32 s53, s4, s53
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s53
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_5
-; CHECK-NEXT:  .LBB0_25: ; %Flow51
+; CHECK-NEXT:  .LBB0_25: ; %Flow49
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s52
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1

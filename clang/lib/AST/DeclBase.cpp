@@ -58,10 +58,6 @@ using namespace clang;
 #define ABSTRACT_DECL(DECL)
 #include "clang/AST/DeclNodes.inc"
 
-void Decl::updateOutOfDate(IdentifierInfo &II) const {
-  getASTContext().getExternalSource()->updateOutOfDateIdentifier(II);
-}
-
 #define DECL(DERIVED, BASE)                                                    \
   static_assert(alignof(Decl) >= alignof(DERIVED##Decl),                       \
                 "Alignment sufficient after objects prepended to " #DERIVED);
@@ -489,8 +485,7 @@ bool Decl::isFlexibleArrayMemberLike(
 
       // Look through typedefs.
       if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
-        const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
-        TInfo = TDL->getTypeSourceInfo();
+        TInfo = TTL.getDecl()->getTypeSourceInfo();
         continue;
       }
 
@@ -695,27 +690,31 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
     IdentifierInfo *IIEnv = A->getEnvironment();
-    StringRef TargetEnv =
-        Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
-        Context.getTargetInfo().getTriple().getEnvironment());
-    // Matching environment or no environment on attribute
-    if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
+    auto &Triple = Context.getTargetInfo().getTriple();
+    StringRef TargetEnv = Triple.getEnvironmentName();
+    StringRef EnvName =
+        llvm::Triple::getEnvironmentTypeName(Triple.getEnvironment());
+    // Matching environment or no environment on attribute.
+    if (!IIEnv || (Triple.hasEnvironment() && IIEnv->getName() == TargetEnv)) {
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
         VersionTuple VTI(A->getIntroduced());
-        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
-            << EnvName << HintMessage;
+        Out << "introduced in " << PrettyPlatformName << " " << VTI;
+        if (Triple.hasEnvironment())
+          Out << " " << EnvName;
+        Out << HintMessage;
       }
     }
-    // Non-matching environment or no environment on target
+    // Non-matching environment or no environment on target.
     else {
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
-        Out << "not available on " << PrettyPlatformName << " " << EnvName
-            << HintMessage;
+        Out << "not available on " << PrettyPlatformName;
+        if (Triple.hasEnvironment())
+          Out << " " << EnvName;
+        Out << HintMessage;
       }
     }
 
@@ -882,6 +881,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCProperty:
     case MSProperty:
     case HLSLBuffer:
+    case HLSLRootSignature:
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;
@@ -1125,6 +1125,14 @@ bool Decl::isInExportDeclContext() const {
     DC = DC->getLexicalParent();
 
   return isa_and_nonnull<ExportDecl>(DC);
+}
+
+bool Decl::isModuleLocal() const {
+  if (isa<NamespaceDecl, TranslationUnitDecl>(this))
+    return false;
+  auto *M = getOwningModule();
+  return M && M->isNamedModule() &&
+         getModuleOwnershipKind() == ModuleOwnershipKind::ReachableWhenImported;
 }
 
 bool Decl::isInAnotherModuleUnit() const {
@@ -1422,7 +1430,18 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
     return getPrimaryContext()->Encloses(DC);
 
   for (; DC; DC = DC->getParent())
-    if (!isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC) &&
+    if (!isa<LinkageSpecDecl, ExportDecl>(DC) &&
+        DC->getPrimaryContext() == this)
+      return true;
+  return false;
+}
+
+bool DeclContext::LexicallyEncloses(const DeclContext *DC) const {
+  if (getPrimaryContext() != this)
+    return getPrimaryContext()->LexicallyEncloses(DC);
+
+  for (; DC; DC = DC->getLexicalParent())
+    if (!isa<LinkageSpecDecl, ExportDecl>(DC) &&
         DC->getPrimaryContext() == this)
       return true;
   return false;
@@ -1488,30 +1507,19 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ObjCCategoryImpl:
     return this;
 
+  // If this is a tag type that has a definition or is currently
+  // being defined, that definition is our primary context.
+  case Decl::ClassTemplatePartialSpecialization:
+  case Decl::ClassTemplateSpecialization:
+  case Decl::CXXRecord:
+    return cast<CXXRecordDecl>(this)->getDefinitionOrSelf();
+  case Decl::Record:
+  case Decl::Enum:
+    return cast<TagDecl>(this)->getDefinitionOrSelf();
+
   default:
-    if (getDeclKind() >= Decl::firstTag && getDeclKind() <= Decl::lastTag) {
-      // If this is a tag type that has a definition or is currently
-      // being defined, that definition is our primary context.
-      auto *Tag = cast<TagDecl>(this);
-
-      if (TagDecl *Def = Tag->getDefinition())
-        return Def;
-
-      if (const auto *TagTy = dyn_cast<TagType>(Tag->getTypeForDecl())) {
-        // Note, TagType::getDecl returns the (partial) definition one exists.
-        TagDecl *PossiblePartialDef = TagTy->getDecl();
-        if (PossiblePartialDef->isBeingDefined())
-          return PossiblePartialDef;
-      } else {
-        assert(isa<InjectedClassNameType>(Tag->getTypeForDecl()));
-      }
-
-      return Tag;
-    }
-
     assert(getDeclKind() >= Decl::firstFunction &&
-           getDeclKind() <= Decl::lastFunction &&
-          "Unknown DeclContext kind");
+           getDeclKind() <= Decl::lastFunction && "Unknown DeclContext kind");
     return this;
   }
 }
@@ -1908,8 +1916,7 @@ DeclContext::lookupImpl(DeclarationName Name,
       Map = CreateStoredDeclsMap(getParentASTContext());
 
     // If we have a lookup result with no external decls, we are done.
-    std::pair<StoredDeclsMap::iterator, bool> R =
-        Map->insert(std::make_pair(Name, StoredDeclsList()));
+    std::pair<StoredDeclsMap::iterator, bool> R = Map->try_emplace(Name);
     if (!R.second && !R.first->second.hasExternalDecls())
       return R.first->second.getLookupResult();
 
@@ -2138,8 +2145,7 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
   // have already checked the external source.
   if (!Internal)
     if (ExternalASTSource *Source = getParentASTContext().getExternalSource())
-      if (hasExternalVisibleStorage() &&
-          Map->find(D->getDeclName()) == Map->end())
+      if (hasExternalVisibleStorage() && !Map->contains(D->getDeclName()))
         Source->FindExternalVisibleDeclsByName(this, D->getDeclName(),
                                                D->getDeclContext());
 

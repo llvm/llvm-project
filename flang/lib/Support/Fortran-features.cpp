@@ -8,11 +8,68 @@
 
 #include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
+#include "flang/Parser/characters.h"
 #include "flang/Support/Fortran.h"
+#include <string>
+#include <string_view>
 
 namespace Fortran::common {
 
+static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
+  std::vector<std::string_view> result;
+  // NB, we start at 1 because the first character is never a word boundary.
+  size_t xSize{x.size()}, wordStart{0}, wordEnd{1};
+  for (; wordEnd < xSize; ++wordEnd) {
+    // Identify when wordEnd is at the start of a new word.
+    if ((!parser::IsUpperCaseLetter(x[wordEnd - 1]) &&
+            parser::IsUpperCaseLetter(x[wordEnd])) ||
+        // ACCUsage => ACC-Usage, CComment => C-Comment, etc.
+        (parser::IsUpperCaseLetter(x[wordEnd]) && wordEnd + 1 < xSize &&
+            parser::IsLowerCaseLetter(x[wordEnd + 1]))) {
+      result.push_back(x.substr(wordStart, wordEnd - wordStart));
+      wordStart = wordEnd;
+    }
+  }
+  // We went one past the end of the last word.
+  result.push_back(x.substr(wordStart, wordEnd - wordStart));
+  return result;
+}
+
+// Namespace for helper functions for parsing Cli options used instead of static
+// so that there can be unit tests for this function.
+namespace details {
+std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
+  std::vector<std::string_view> words{SplitCamelCase(x)};
+  std::string result{};
+  result.reserve(x.size() + words.size() + 1);
+  for (size_t i{0}; i < words.size(); ++i) {
+    std::string word{parser::ToLowerCaseLetters(words[i])};
+    result += i == 0 ? "" : "-";
+    result += word;
+  }
+  return result;
+}
+} // namespace details
+
 LanguageFeatureControl::LanguageFeatureControl() {
+  // Initialize the bidirectional maps with the default spellings.
+  cliOptions_.reserve(LanguageFeature_enumSize + UsageWarning_enumSize);
+  ForEachLanguageFeature([&](auto feature) {
+    std::string_view name{Fortran::common::EnumToString(feature)};
+    std::string cliOption{details::CamelCaseToLowerCaseHyphenated(name)};
+    cliOptions_.insert({cliOption, {feature}});
+    languageFeatureCliCanonicalSpelling_[EnumToInt(feature)] =
+        std::move(cliOption);
+  });
+
+  ForEachUsageWarning([&](auto warning) {
+    std::string_view name{Fortran::common::EnumToString(warning)};
+    std::string cliOption{details::CamelCaseToLowerCaseHyphenated(name)};
+    cliOptions_.insert({cliOption, {warning}});
+    usageWarningCliCanonicalSpelling_[EnumToInt(warning)] =
+        std::move(cliOption);
+  });
+
   // These features must be explicitly enabled by command line options.
   disable_.set(LanguageFeature::OldDebugLines);
   disable_.set(LanguageFeature::OpenACC);
@@ -33,6 +90,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::OldStyleParameter);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
+  disable_.set(LanguageFeature::Coarray);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -45,6 +103,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
   warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
+  warnLanguage_.set(LanguageFeature::AmbiguousStructureConstructor);
+  warnLanguage_.set(LanguageFeature::TransferBOZ);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);
@@ -87,62 +147,46 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::NullActualForDefaultIntentAllocatable);
   warnUsage_.set(UsageWarning::UseAssociationIntoSameNameSubprogram);
   warnUsage_.set(UsageWarning::HostAssociatedIntentOutInSpecExpr);
+  warnUsage_.set(UsageWarning::NonVolatilePointerToVolatile);
+  warnUsage_.set(UsageWarning::RealConstantWidening);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-// Ignore case and any inserted punctuation (like '-'/'_')
-static std::optional<char> GetWarningChar(char ch) {
-  if (ch >= 'a' && ch <= 'z') {
-    return ch;
-  } else if (ch >= 'A' && ch <= 'Z') {
-    return ch - 'A' + 'a';
-  } else if (ch >= '0' && ch <= '9') {
-    return ch;
-  } else {
-    return std::nullopt;
+std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
+    std::string_view input) {
+  bool negated{false};
+  if (input.size() > 3 && input.substr(0, 3) == "no-") {
+    negated = true;
+    input = input.substr(3);
   }
-}
-
-static bool WarningNameMatch(const char *a, const char *b) {
-  while (true) {
-    auto ach{GetWarningChar(*a)};
-    while (!ach && *a) {
-      ach = GetWarningChar(*++a);
-    }
-    auto bch{GetWarningChar(*b)};
-    while (!bch && *b) {
-      bch = GetWarningChar(*++b);
-    }
-    if (!ach && !bch) {
-      return true;
-    } else if (!ach || !bch || *ach != *bch) {
-      return false;
-    }
-    ++a, ++b;
-  }
-}
-
-template <typename ENUM, std::size_t N>
-std::optional<ENUM> ScanEnum(const char *name) {
-  if (name) {
-    for (std::size_t j{0}; j < N; ++j) {
-      auto feature{static_cast<ENUM>(j)};
-      if (WarningNameMatch(name, EnumToString(feature).data())) {
-        return feature;
-      }
-    }
+  if (auto it{cliOptions_.find(std::string{input})}; it != cliOptions_.end()) {
+    return std::make_pair(it->second, !negated);
   }
   return std::nullopt;
 }
 
-std::optional<LanguageFeature> FindLanguageFeature(const char *name) {
-  return ScanEnum<LanguageFeature, LanguageFeature_enumSize>(name);
+bool LanguageFeatureControl::EnableWarning(std::string_view input) {
+  if (auto warningAndEnabled{FindWarning(input)}) {
+    EnableWarning(warningAndEnabled->first, warningAndEnabled->second);
+    return true;
+  }
+  return false;
 }
 
-std::optional<UsageWarning> FindUsageWarning(const char *name) {
-  return ScanEnum<UsageWarning, UsageWarning_enumSize>(name);
+void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
+    LanguageFeature f, std::string input) {
+  cliOptions_.erase(languageFeatureCliCanonicalSpelling_[EnumToInt(f)]);
+  cliOptions_.insert({input, {f}});
+  languageFeatureCliCanonicalSpelling_[EnumToInt(f)] = std::move(input);
+}
+
+void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
+    UsageWarning w, std::string input) {
+  cliOptions_.erase(usageWarningCliCanonicalSpelling_[EnumToInt(w)]);
+  cliOptions_.insert({input, {w}});
+  usageWarningCliCanonicalSpelling_[EnumToInt(w)] = std::move(input);
 }
 
 std::vector<const char *> LanguageFeatureControl::GetNames(
@@ -199,4 +243,26 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
   }
 }
 
+void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
+  warnAllLanguage_ = yes;
+  warnLanguage_.reset();
+  if (yes) {
+    disableAllWarnings_ = false;
+    warnLanguage_.flip();
+    // These three features do not need to be warned about,
+    // but we do want their feature flags.
+    warnLanguage_.set(LanguageFeature::OpenMP, false);
+    warnLanguage_.set(LanguageFeature::OpenACC, false);
+    warnLanguage_.set(LanguageFeature::CUDA, false);
+  }
+}
+
+void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
+  warnAllUsage_ = yes;
+  warnUsage_.reset();
+  if (yes) {
+    disableAllWarnings_ = false;
+    warnUsage_.flip();
+  }
+}
 } // namespace Fortran::common

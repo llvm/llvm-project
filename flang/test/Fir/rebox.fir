@@ -9,7 +9,7 @@
 
 func.func private @bar1(!fir.box<!fir.array<?xf32>>)
 // CHECK-LABEL: define void @test_rebox_1(
-// CHECK-SAME: ptr %[[INBOX:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[INBOX:.*]])
 func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   %c2 = arith.constant 2 : index
@@ -54,7 +54,7 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 
 func.func private @bar_rebox_test2(!fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 // CHECK-LABEL: define void @test_rebox_2(
-// CHECK-SAME: ptr %[[INBOX:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[INBOX:.*]])
 func.func @test_rebox_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -82,7 +82,7 @@ func.func @test_rebox_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
 
 func.func private @bar_rebox_test3(!fir.box<!fir.array<?x?x?xf32>>)
 // CHECK-LABEL: define void @test_rebox_3(
-// CHECK-SAME: ptr %[[INBOX:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[INBOX:.*]])
 func.func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [3 x [3 x i64]] }
   %c2 = arith.constant 2 : index
@@ -116,7 +116,7 @@ func.func @test_rebox_3(%arg0: !fir.box<!fir.array<?xf32>>) {
 // time constant length.
 
 // CHECK-LABEL: define void @test_rebox_4(
-// CHECK-SAME: ptr %[[INPUT:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[INPUT:.*]])
 func.func @test_rebox_4(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
   // CHECK: %[[NEWBOX_STORAGE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   // CHECK: %[[EXTENT_GEP:.*]] = getelementptr {{{.*}}}, ptr %[[INPUT]], i32 0, i32 7, i32 0, i32 1
@@ -144,7 +144,7 @@ func.func private @bar_test_rebox_4(!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,1
 //   end subroutine
 
 // CHECK-LABEL: define void @test_cmplx_1(
-// CHECK-SAME: ptr %[[INBOX:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[INBOX:.*]])
 func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   %c1 = arith.constant 1 : index
@@ -184,7 +184,7 @@ func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
 //   end subroutine
 
 // CHECK-LABEL: define void @test_cmplx_2(
-// CHECK-SAME: ptr %[[INBOX:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[INBOX:.*]])
 func.func @test_cmplx_2(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
   %c7 = arith.constant 7 : index

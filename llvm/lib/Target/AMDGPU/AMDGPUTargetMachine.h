@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
 #include <optional>
 #include <utility>
 
@@ -156,39 +155,6 @@ public:
       return false;
     return Opt;
   }
-};
-
-//===----------------------------------------------------------------------===//
-// AMDGPU CodeGen Pass Builder interface.
-//===----------------------------------------------------------------------===//
-
-class AMDGPUCodeGenPassBuilder
-    : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine> {
-  using Base = CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine>;
-
-public:
-  AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
-                           const CGPassBuilderOption &Opts,
-                           PassInstrumentationCallbacks *PIC);
-
-  void addIRPasses(AddIRPass &) const;
-  void addCodeGenPrepare(AddIRPass &) const;
-  void addPreISel(AddIRPass &addPass) const;
-  void addILPOpts(AddMachinePass &) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
-  void addPreRewrite(AddMachinePass &) const;
-  void addMachineSSAOptimization(AddMachinePass &) const;
-  void addPostRegAlloc(AddMachinePass &) const;
-  void addPreEmitPass(AddMachinePass &) const;
-
-  /// Check if a pass is enabled given \p Opt option. The option always
-  /// overrides defaults if explicitly used. Otherwise its default will be used
-  /// given that a pass shall work at an optimization \p Level minimum.
-  bool isPassEnabled(const cl::opt<bool> &Opt,
-                     CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
-  void addEarlyCSEOrGVNPass(AddIRPass &) const;
-  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
 };
 
 } // end namespace llvm

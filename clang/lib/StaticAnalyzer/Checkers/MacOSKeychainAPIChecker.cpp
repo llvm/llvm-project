@@ -20,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -557,8 +556,7 @@ void MacOSKeychainAPIChecker::checkDeadSymbols(SymbolReaper &SR,
     return;
   }
 
-  static CheckerProgramPointTag Tag(this, "DeadSymbolsLeak");
-  ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag);
+  ExplodedNode *N = C.generateNonFatalErrorNode(C.getState());
   if (!N)
     return;
 

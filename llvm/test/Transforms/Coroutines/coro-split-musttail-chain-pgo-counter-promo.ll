@@ -33,8 +33,8 @@ declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8)
 declare i8 @llvm.coro.suspend(token, i1)
 declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 declare void @llvm.instrprof.value.profile(ptr, i64, i64, i32, i32)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 ; Function Attrs: noinline nounwind presplitcoroutine uwtable
 define ptr @f(i32 %0) presplitcoroutine align 32 {
@@ -56,11 +56,11 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
 12:                                               ; preds = %8, %1
   %13 = phi ptr [ null, %1 ], [ %11, %8 ]
   %14 = call ptr @llvm.coro.begin(token %6, ptr %13) #28
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %3) #9
+  call void @llvm.lifetime.start.p0(ptr nonnull %3) #9
   store ptr null, ptr %3, align 16
   %15 = getelementptr inbounds {ptr, i64}, ptr %3, i64 0, i32 1
   store i64 0, ptr %15, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %4) #9
+  call void @llvm.lifetime.start.p0(ptr nonnull %4) #9
   store ptr %3, ptr %4, align 8
   %16 = call token @llvm.coro.save(ptr null)
   call void @await_suspend(ptr noundef nonnull align 1 dereferenceable(1) %4, ptr %14) #9
@@ -71,7 +71,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   ]
 
 18:                                               ; preds = %12
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %4) #9
+  call void @llvm.lifetime.end.p0(ptr nonnull %4) #9
   %19 = icmp slt i32 0, %0
   br i1 %19, label %20, label %36
 
@@ -79,12 +79,12 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   br label %22
 
 21:                                               ; preds = %12
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %4) #9
+  call void @llvm.lifetime.end.p0(ptr nonnull %4) #9
   br label %54
 
 22:                                               ; preds = %20, %31
   %23 = phi i32 [ 0, %20 ], [ %32, %31 ]
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %5) #9
+  call void @llvm.lifetime.start.p0(ptr nonnull %5) #9
   %24 = call ptr @other_coro()
   store ptr %3, ptr %5, align 8
   %25 = getelementptr inbounds { ptr, ptr }, ptr %5, i64 0, i32 1
@@ -98,13 +98,13 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   ]
 
 31:                                               ; preds = %22
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %5) #9
+  call void @llvm.lifetime.end.p0(ptr nonnull %5) #9
   %32 = add nuw nsw i32 %23, 1
   %33 = icmp slt i32 %32, %0
   br i1 %33, label %22, label %35, !llvm.loop !0
 
 34:                                               ; preds = %22
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %5) #9
+  call void @llvm.lifetime.end.p0(ptr nonnull %5) #9
   br label %54
 
 35:                                               ; preds = %31
@@ -142,11 +142,11 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   br label %54
 
 53:                                               ; preds = %47
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %2) #9
+  call void @llvm.lifetime.start.p0(ptr nonnull %2) #9
   unreachable
 
 54:                                               ; preds = %52, %34, %21
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %3) #9
+  call void @llvm.lifetime.end.p0(ptr nonnull %3) #9
   %55 = call ptr @llvm.coro.free(token %6, ptr %14)
   %56 = icmp eq ptr %55, null
   br i1 %56, label %61, label %57

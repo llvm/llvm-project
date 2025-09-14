@@ -96,3 +96,27 @@ module m3
     call sub(cat%p)
   end
 end
+
+subroutine s4
+  type t
+    real, allocatable :: a(:)[:]
+  end type
+  type t2
+    !ERROR: Allocatable or array component 'bad1' may not have a coarray ultimate component '%a'
+    type(t), allocatable :: bad1
+    !ERROR: Pointer 'bad2' may not have a coarray potential component '%a'
+    type(t), pointer :: bad2
+    !ERROR: Allocatable or array component 'bad3' may not have a coarray ultimate component '%a'
+    type(t) :: bad3(2)
+    !ERROR: Component 'bad4' is a coarray and must have the ALLOCATABLE attribute and have a deferred coshape
+    !ERROR: Coarray 'bad4' may not have a coarray potential component '%a'
+    type(t) :: bad4[*]
+  end type
+  type(t), save :: ta(2)
+  !ERROR: 'a' has corank 1, but coindexed reference has 2 cosubscripts
+  print *, ta(1)%a(1)[1,2]
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  print *, ta(:)%a(1)[1]
+  !ERROR: Subscripts must appear in a coindexed reference when its base is an array
+  print *, ta(1)%a[1]
+end

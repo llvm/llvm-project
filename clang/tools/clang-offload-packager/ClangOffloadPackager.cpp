@@ -106,7 +106,6 @@ static Error bundleImages() {
     // Permit using multiple instances of `file` in a single string.
     for (auto &File : llvm::split(Args["file"], ",")) {
       OffloadBinary::OffloadingImage ImageBinary{};
-      std::unique_ptr<llvm::MemoryBuffer> DeviceImage;
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(File);

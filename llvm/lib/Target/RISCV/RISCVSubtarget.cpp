@@ -17,8 +17,6 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -218,7 +216,7 @@ unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
 }
 
 void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                         unsigned NumRegionInstrs) const {
+                                         const SchedRegion &Region) const {
   // Do bidirectional scheduling since it provides a more balanced scheduling
   // leading to better performance. This will increase compile time.
   Policy.OnlyTopDown = false;
@@ -233,8 +231,8 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 }
 
-void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                               unsigned NumRegionInstrs) const {
+void RISCVSubtarget::overridePostRASchedPolicy(
+    MachineSchedPolicy &Policy, const SchedRegion &Region) const {
   MISched::Direction PostRASchedDirection = getPostRASchedDirection();
   if (PostRASchedDirection == MISched::TopDown) {
     Policy.OnlyTopDown = true;

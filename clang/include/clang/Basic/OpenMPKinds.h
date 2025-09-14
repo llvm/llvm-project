@@ -223,6 +223,12 @@ enum OpenMPNumTasksClauseModifier {
   OMPC_NUMTASKS_unknown
 };
 
+enum OpenMPNumThreadsClauseModifier {
+#define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTHREADS_unknown
+};
+
 /// OpenMP dependence types for 'doacross' clause.
 enum OpenMPDoacrossClauseModifier {
 #define OPENMP_DOACROSS_MODIFIER(Name) OMPC_DOACROSS_##Name,
@@ -358,6 +364,13 @@ bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 /// directives that need loop bound sharing across loops outlined in nested
 /// functions
 bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop nest.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.

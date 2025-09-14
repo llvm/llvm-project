@@ -1,0 +1,47 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny11 %s -o - \
+# RUN:     | FileCheck --check-prefix=NOSPH %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atmega328 %s -o - \
+# RUN:     | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny817 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atxmega64a1 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=atxmega256a3u %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=attiny1614 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mtriple=avr -mcpu=avr128db28 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
+
+--- |
+  target triple = "avr--"
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test
+    ; CHECK:       $r0 = INRdA 63
+    ; CHECK:       BCLRs 7, implicit-def $sreg
+    ; CHECK:       OUTARr 62, $r15
+    ; CHECK:       OUTARr 63, killed $r0
+    ; CHECK:       OUTARr 61, $r14
+
+    ; NOSPH-LABEL: test
+    ; NOSPH:       $r0 = INRdA 63
+    ; NOSPH:       BCLRs 7, implicit-def $sreg
+    ; NOSPH:       OUTARr 63, killed $r0
+    ; NOSPH:       OUTARr 61, $r14
+
+    ; XMEGA-LABEL: test
+    ; XMEGA-LABEL: OUTARr 61, $r14
+    ; XMEGA-LABEL: OUTARr 62, $r15
+
+    $sp = SPWRITE implicit-def $sp, implicit $sp, $r15r14
+...

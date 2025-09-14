@@ -15,7 +15,7 @@ entry:
   %ref.tmp7 = alloca %"struct.lean_future<int>::Awaiter", align 8
   %testval = alloca i32
   ; lifetime of %testval starts here, but not used until await.ready.
-  call void @llvm.lifetime.start.p0(i64 4, ptr %testval)
+  call void @llvm.lifetime.start.p0(ptr %testval)
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -44,7 +44,7 @@ await.ready:
 after.await:
   %test1 = load i32, ptr %testval
   call void @print(i32 %test1)
-  call void @llvm.lifetime.end.p0(i64 4, ptr  %testval)
+  call void @llvm.lifetime.end.p0(ptr  %testval)
   br label %exit
 
 exit:
@@ -54,7 +54,7 @@ exit:
 
 ; CHECK-LABEL: @a.resume(
 ; CHECK:    %[[VAL:testval.+]] = getelementptr inbounds %a.Frame
-; CHECK-NOT:     call void @llvm.lifetime.start.p0(i64 4, ptr %{{.*}})
+; CHECK-NOT:     call void @llvm.lifetime.start.p0(ptr %{{.*}})
 ; CHECK:         %test = load i32, ptr %[[VAL]]
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
@@ -69,5 +69,5 @@ declare i8 @llvm.coro.suspend(token, i1) #3
 declare void @"\01??3@YAXPEAX@Z"(ptr) local_unnamed_addr #10
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
 declare i1 @llvm.coro.end(ptr, i1, token) #3
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #4
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
+declare void @llvm.lifetime.start.p0(ptr nocapture) #4
+declare void @llvm.lifetime.end.p0(ptr nocapture) #4

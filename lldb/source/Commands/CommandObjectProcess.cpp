@@ -35,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/FormatAdapters.h"
 
 #include "llvm/ADT/ScopeExit.h"
 
@@ -258,7 +259,7 @@ protected:
         if (!exe_module_sp)
           exe_module_sp = target->GetExecutableModule();
         if (!exe_module_sp) {
-          result.AppendWarning("Could not get executable module after launch.");
+          result.AppendWarning("could not get executable module after launch");
         } else {
 
           const char *archname =
@@ -642,8 +643,12 @@ protected:
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
             if (!with_locs.Contains(tmp_id) && loc_sp->IsEnabled()) {
-              locs_disabled.push_back(tmp_id);
-              loc_sp->SetEnabled(false);
+              if (llvm::Error error = loc_sp->SetEnabled(false))
+                result.AppendErrorWithFormatv(
+                    "failed to disable breakpoint location: {0}",
+                    llvm::fmt_consume(std::move(error)));
+              else
+                locs_disabled.push_back(tmp_id);
             }
           }
         }
@@ -698,8 +703,12 @@ protected:
         if (bp_sp) {
           BreakpointLocationSP loc_sp
               = bp_sp->FindLocationByID(bkpt_id.GetLocationID());
-          if (loc_sp)
-            loc_sp->SetEnabled(true);
+          if (loc_sp) {
+            if (llvm::Error error = loc_sp->SetEnabled(true))
+              result.AppendErrorWithFormatv(
+                  "failed to enable breakpoint location: {0}",
+                  llvm::fmt_consume(std::move(error)));
+          }
         }
       }
 
@@ -1281,7 +1290,27 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_process_save_core_options);
+      if (!m_opt_def.empty())
+        return llvm::ArrayRef(m_opt_def);
+
+      auto orig = llvm::ArrayRef(g_process_save_core_options);
+      m_opt_def.resize(orig.size());
+      llvm::copy(g_process_save_core_options, m_opt_def.data());
+      for (OptionDefinition &value : m_opt_def) {
+        llvm::StringRef opt_name = value.long_option;
+        if (opt_name != "plugin-name")
+          continue;
+
+        std::vector<llvm::StringRef> plugin_names =
+            PluginManager::GetSaveCorePluginNames();
+        m_plugin_enums.resize(plugin_names.size());
+        for (auto [num, val] : llvm::zip(plugin_names, m_plugin_enums)) {
+          val.string_value = num.data();
+        }
+        value.enum_values = llvm::ArrayRef(m_plugin_enums);
+        break;
+      }
+      return llvm::ArrayRef(m_opt_def);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1303,7 +1332,7 @@ public:
         llvm_unreachable("Unimplemented option");
       }
 
-      return {};
+      return error;
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
@@ -1312,6 +1341,8 @@ public:
 
     // Instance variables to hold the values for command options.
     SaveCoreOptions m_core_dump_options;
+    llvm::SmallVector<OptionEnumValueElement> m_plugin_enums;
+    std::vector<OptionDefinition> m_opt_def;
   };
 
 protected:
@@ -1323,7 +1354,8 @@ protected:
         FileSystem::Instance().Resolve(output_file);
         auto &core_dump_options = m_options.m_core_dump_options;
         core_dump_options.SetOutputFile(output_file);
-        Status error = PluginManager::SaveCore(process_sp, core_dump_options);
+        core_dump_options.SetProcess(process_sp);
+        Status error = PluginManager::SaveCore(core_dump_options);
         if (error.Success()) {
           if (core_dump_options.GetStyle() ==
                   SaveCoreStyle::eSaveCoreDirtyOnly ||
@@ -1388,6 +1420,9 @@ public:
       case 'v':
         m_verbose = true;
         break;
+      case 'd':
+        m_dump = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1397,6 +1432,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_verbose = false;
+      m_dump = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1405,6 +1441,7 @@ public:
 
     // Instance variables to hold the values for command options.
     bool m_verbose = false;
+    bool m_dump = false;
   };
 
 protected:
@@ -1457,6 +1494,14 @@ protected:
         strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
         crash_info_sp->GetDescription(strm);
+      }
+    }
+
+    if (m_options.m_dump) {
+      StateType state = process->GetState();
+      if (state == eStateStopped) {
+        ProcessModID process_mod_id = process->GetModID();
+        process_mod_id.Dump(result.GetOutputStream());
       }
     }
   }

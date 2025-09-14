@@ -5,7 +5,6 @@
 
 kernel void ker() {};
 // CHECK: define{{.*}}@ker() #[[ATTR0:[0-9]+]]
-// CHECK: call void @__clang_ocl_kern_imp_ker() #[[ATTR2:[0-9]+]]
 
 // CHECK: define{{.*}}@__clang_ocl_kern_imp_ker() #[[ATTR1:[0-9]+]]
 
@@ -17,7 +16,4 @@ void foo() {};
 // CHECK-NONUNIFORM: "uniform-work-group-size"="false"
 
 // CHECK: attributes #[[ATTR1]]
-// CHECK-NOT: uniform-work-group-size
-
-// CHECK: attributes #[[ATTR2]]
 // CHECK-NOT: uniform-work-group-size

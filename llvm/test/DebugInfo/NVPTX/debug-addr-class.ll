@@ -317,7 +317,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b8 5                                   // DW_AT_location
 ; CHECK-NEXT: .b8 144
 ; CHECK-NEXT: .b8 177
-; CHECK-NEXT: .b8 204
+; CHECK-NEXT: .b8 228
 ; CHECK-NEXT: .b8 149
 ; CHECK-NEXT: .b8 1
 ; CHECK-NEXT: .b8 97                                  // DW_AT_name
@@ -357,7 +357,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b8 2                                   // DW_AT_address_class
 ; CHECK-NEXT: .b8 5                                   // DW_AT_location
 ; CHECK-NEXT: .b8 144
-; CHECK-NEXT: .b8 177
+; CHECK-NEXT: .b8 178
 ; CHECK-NEXT: .b8 228
 ; CHECK-NEXT: .b8 149
 ; CHECK-NEXT: .b8 1

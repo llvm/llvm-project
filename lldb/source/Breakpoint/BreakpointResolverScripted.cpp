@@ -35,7 +35,7 @@ BreakpointResolverScripted::BreakpointResolverScripted(
 
 void BreakpointResolverScripted::CreateImplementationIfNeeded(
     BreakpointSP breakpoint_sp) {
-  if (m_implementation_sp)
+  if (m_interface_sp)
     return;
 
   if (m_class_name.empty())
@@ -50,8 +50,27 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
   if (!script_interp)
     return;
 
-  m_implementation_sp = script_interp->CreateScriptedBreakpointResolver(
-      m_class_name.c_str(), m_args, breakpoint_sp);
+  m_interface_sp = script_interp->CreateScriptedBreakpointInterface();
+  if (!m_interface_sp) {
+    m_error = Status::FromErrorStringWithFormat(
+        "BreakpointResolverScripted::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Breakpoint Interface");
+    return;
+  }
+
+  auto obj_or_err =
+      m_interface_sp->CreatePluginObject(m_class_name, breakpoint_sp, m_args);
+  if (!obj_or_err) {
+    m_error = Status::FromError(obj_or_err.takeError());
+    return;
+  }
+
+  StructuredData::ObjectSP object_sp = *obj_or_err;
+  if (!object_sp || !object_sp->IsValid()) {
+    m_error = Status::FromErrorStringWithFormat(
+        "ScriptedBreakpoint::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
+  }
 }
 
 void BreakpointResolverScripted::NotifyBreakpointSet() {
@@ -104,13 +123,10 @@ ScriptInterpreter *BreakpointResolverScripted::GetScriptInterpreter() {
 Searcher::CallbackReturn BreakpointResolverScripted::SearchCallback(
     SearchFilter &filter, SymbolContext &context, Address *addr) {
   bool should_continue = true;
-  if (!m_implementation_sp)
+  if (!m_interface_sp)
     return Searcher::eCallbackReturnStop;
 
-  ScriptInterpreter *interp = GetScriptInterpreter();
-  should_continue = interp->ScriptedBreakpointResolverSearchCallback(
-      m_implementation_sp,
-      &context);
+  should_continue = m_interface_sp->ResolverCallback(context);
   if (should_continue)
     return Searcher::eCallbackReturnContinue;
 
@@ -120,25 +136,21 @@ Searcher::CallbackReturn BreakpointResolverScripted::SearchCallback(
 lldb::SearchDepth
 BreakpointResolverScripted::GetDepth() {
   lldb::SearchDepth depth = lldb::eSearchDepthModule;
-  if (m_implementation_sp) {
-    ScriptInterpreter *interp = GetScriptInterpreter();
-    depth = interp->ScriptedBreakpointResolverSearchDepth(
-        m_implementation_sp);
-  }
+  if (m_interface_sp)
+    depth = m_interface_sp->GetDepth();
+
   return depth;
 }
 
 void BreakpointResolverScripted::GetDescription(Stream *s) {
   StructuredData::GenericSP generic_sp;
-  std::string short_help;
+  std::optional<std::string> short_help;
 
-  if (m_implementation_sp) {
-    ScriptInterpreter *interp = GetScriptInterpreter();
-    interp->GetShortHelpForCommandObject(m_implementation_sp,
-                                         short_help);
+  if (m_interface_sp) {
+    short_help = m_interface_sp->GetShortHelp();
   }
-  if (!short_help.empty())
-    s->PutCString(short_help.c_str());
+  if (short_help && !short_help->empty())
+    s->PutCString(short_help->c_str());
   else
     s->Printf("python class = %s", m_class_name.c_str());
 }

@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -273,7 +272,7 @@ MemoryEffects llvm::computeFunctionBodyMemoryAccess(Function &F,
 /// Deduce readonly/readnone/writeonly attributes for the SCC.
 template <typename AARGetterT>
 static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
-                           SmallSet<Function *, 8> &Changed) {
+                           SmallPtrSet<Function *, 8> &Changed) {
   MemoryEffects ME = MemoryEffects::none();
   MemoryEffects RecursiveArgME = MemoryEffects::none();
   for (Function *F : SCCNodes) {
@@ -675,14 +674,24 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset &&
-        ConstantLength->getValue().isStrictlyPositive()) {
-      return ConstantRange(
-          APInt(64, *Offset, true),
-          APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    if (ConstantLength && Offset) {
+      int64_t Len = ConstantLength->getSExtValue();
+
+      // Reject zero or negative lengths
+      if (Len <= 0)
+        return std::nullopt;
+
+      APInt Low(64, *Offset, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Len, true), Overflow);
+      if (Overflow)
+        return std::nullopt;
+
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
+
   if (auto *SI = dyn_cast<StoreInst>(I)) {
     if (SI->isSimple() && &SI->getOperandUse(1) == ArgUse.U) {
       // Get the fixed type size of "SI". Since the access range of a write
@@ -908,7 +917,7 @@ determinePointerAccessAttrs(Argument *A,
         for (Use &UU : CB.uses())
           if (Visited.insert(&UU).second)
             Worklist.push_back(&UU);
-      } else if (!CB.doesNotCapture(UseIndex)) {
+      } else if (capturesAnyProvenance(CB.getCaptureInfo(UseIndex))) {
         if (!CB.onlyReadsMemory())
           // If the callee can save a copy into other memory, then simply
           // scanning uses of the call is insufficient.  We have no way
@@ -992,7 +1001,7 @@ determinePointerAccessAttrs(Argument *A,
 
 /// Deduce returned attributes for the SCC.
 static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
-                                     SmallSet<Function *, 8> &Changed) {
+                                     SmallPtrSet<Function *, 8> &Changed) {
   // Check each function in turn, determining if an argument is always returned.
   for (Function *F : SCCNodes) {
     // We can infer and propagate function attributes only when we know that the
@@ -1228,7 +1237,7 @@ static bool inferInitializes(Argument &A, Function &F) {
 
 /// Deduce nocapture attributes for the SCC.
 static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
-                             SmallSet<Function *, 8> &Changed,
+                             SmallPtrSet<Function *, 8> &Changed,
                              bool SkipInitializes) {
   ArgumentGraph AG;
 
@@ -1382,10 +1391,9 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       }
     }
 
-    // TODO(captures): Ignore address-only captures.
-    if (capturesAnything(CC)) {
-      // As the pointer may be captured, determine the pointer attributes
-      // looking at each argument individually.
+    if (capturesAnyProvenance(CC)) {
+      // As the pointer provenance may be captured, determine the pointer
+      // attributes looking at each argument individually.
       for (ArgumentGraphNode *N : ArgumentSCC) {
         if (DetermineAccessAttrsForSingleton(N->Definition))
           Changed.insert(N->Definition->getParent());
@@ -1501,7 +1509,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
 
 /// Deduce noalias attributes for the SCC.
 static void addNoAliasAttrs(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   // Check each function in turn, determining which functions return noalias
   // pointers.
   for (Function *F : SCCNodes) {
@@ -1614,7 +1622,7 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
 
 /// Deduce nonnull attributes for the SCC.
 static void addNonNullAttrs(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   // Speculative that all functions in the SCC return only nonnull
   // pointers.  We may refute this as we analyze functions.
   bool SCCReturnsNonNull = true;
@@ -1671,7 +1679,7 @@ static void addNonNullAttrs(const SCCNodeSet &SCCNodes,
 
 /// Deduce noundef attributes for the SCC.
 static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   // Check each function in turn, determining which functions return noundef
   // values.
   for (Function *F : SCCNodes) {
@@ -1779,13 +1787,13 @@ public:
     InferenceDescriptors.push_back(AttrInference);
   }
 
-  void run(const SCCNodeSet &SCCNodes, SmallSet<Function *, 8> &Changed);
+  void run(const SCCNodeSet &SCCNodes, SmallPtrSet<Function *, 8> &Changed);
 };
 
 /// Perform all the requested attribute inference actions according to the
 /// attribute predicates stored before.
 void AttributeInferer::run(const SCCNodeSet &SCCNodes,
-                           SmallSet<Function *, 8> &Changed) {
+                           SmallPtrSet<Function *, 8> &Changed) {
   SmallVector<InferenceDescriptor, 4> InferInSCC = InferenceDescriptors;
   // Go through all the functions in SCC and check corresponding attribute
   // assumptions for each of them. Attributes that are invalid for this SCC
@@ -1854,7 +1862,6 @@ void AttributeInferer::run(const SCCNodeSet &SCCNodes,
 
 struct SCCNodesResult {
   SCCNodeSet SCCNodes;
-  bool HasUnknownCall;
 };
 
 } // end anonymous namespace
@@ -1961,7 +1968,7 @@ static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
 ///
 /// Returns true if any changes to function attributes were made.
 static void inferConvergent(const SCCNodeSet &SCCNodes,
-                            SmallSet<Function *, 8> &Changed) {
+                            SmallPtrSet<Function *, 8> &Changed) {
   AttributeInferer AI;
 
   // Request to remove the convergent attribute from all functions in the SCC
@@ -1992,7 +1999,7 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
 ///
 /// Returns true if any changes to function attributes were made.
 static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
-                                         SmallSet<Function *, 8> &Changed) {
+                                         SmallPtrSet<Function *, 8> &Changed) {
   AttributeInferer AI;
 
   if (!DisableNoUnwindInference)
@@ -2061,7 +2068,7 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
 }
 
 static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
-                              SmallSet<Function *, 8> &Changed) {
+                              SmallPtrSet<Function *, 8> &Changed) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
@@ -2097,7 +2104,7 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
 
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
-                             SmallSet<Function *, 8> &Changed) {
+                             SmallPtrSet<Function *, 8> &Changed) {
   for (Function *F : SCCNodes) {
     if (!F || !F->hasExactDefinition() || F->hasFnAttribute(Attribute::Naked) ||
         F->doesNotReturn())
@@ -2158,7 +2165,7 @@ static bool allPathsGoThroughCold(Function &F) {
 
 // Set the cold function attribute if possible.
 static void addColdAttrs(const SCCNodeSet &SCCNodes,
-                         SmallSet<Function *, 8> &Changed) {
+                         SmallPtrSet<Function *, 8> &Changed) {
   for (Function *F : SCCNodes) {
     if (!F || !F->hasExactDefinition() || F->hasFnAttribute(Attribute::Naked) ||
         F->hasFnAttribute(Attribute::Cold) || F->hasFnAttribute(Attribute::Hot))
@@ -2205,7 +2212,7 @@ static bool functionWillReturn(const Function &F) {
 
 // Set the willreturn function attribute if possible.
 static void addWillReturn(const SCCNodeSet &SCCNodes,
-                          SmallSet<Function *, 8> &Changed) {
+                          SmallPtrSet<Function *, 8> &Changed) {
   for (Function *F : SCCNodes) {
     if (!F || F->willReturn() || !functionWillReturn(*F))
       continue;
@@ -2218,36 +2225,20 @@ static void addWillReturn(const SCCNodeSet &SCCNodes,
 
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
-  Res.HasUnknownCall = false;
   for (Function *F : Functions) {
     if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked) ||
         F->isPresplitCoroutine()) {
-      // Treat any function we're trying not to optimize as if it were an
-      // indirect call and omit it from the node set used below.
-      Res.HasUnknownCall = true;
+      // Omit any functions we're trying not to optimize from the set.
       continue;
     }
-    // Track whether any functions in this SCC have an unknown call edge.
-    // Note: if this is ever a performance hit, we can common it with
-    // subsequent routines which also do scans over the instructions of the
-    // function.
-    if (!Res.HasUnknownCall) {
-      for (Instruction &I : instructions(*F)) {
-        if (auto *CB = dyn_cast<CallBase>(&I)) {
-          if (!CB->getCalledFunction()) {
-            Res.HasUnknownCall = true;
-            break;
-          }
-        }
-      }
-    }
+
     Res.SCCNodes.insert(F);
   }
   return Res;
 }
 
 template <typename AARGetterT>
-static SmallSet<Function *, 8>
+static SmallPtrSet<Function *, 8>
 deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
                        bool ArgAttrsOnly) {
   SCCNodesResult Nodes = createSCCNodeSet(Functions);
@@ -2256,7 +2247,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   if (Nodes.SCCNodes.empty())
     return {};
 
-  SmallSet<Function *, 8> Changed;
+  SmallPtrSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
     // ArgAttrsOnly means to only infer attributes that may aid optimizations
     // on the *current* function. "initializes" attribute is to aid
@@ -2273,15 +2264,10 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   addColdAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);
   addNoUndefAttrs(Nodes.SCCNodes, Changed);
-
-  // If we have no external nodes participating in the SCC, we can deduce some
-  // more precise attributes as well.
-  if (!Nodes.HasUnknownCall) {
-    addNoAliasAttrs(Nodes.SCCNodes, Changed);
-    addNonNullAttrs(Nodes.SCCNodes, Changed);
-    inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
-    addNoRecurseAttrs(Nodes.SCCNodes, Changed);
-  }
+  addNoAliasAttrs(Nodes.SCCNodes, Changed);
+  addNonNullAttrs(Nodes.SCCNodes, Changed);
+  inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
+  addNoRecurseAttrs(Nodes.SCCNodes, Changed);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
   // above.  This is handling the cases where one attribute on a signature
@@ -2341,7 +2327,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     // through function attributes.
     for (auto *U : Changed->users()) {
       if (auto *Call = dyn_cast<CallBase>(U)) {
-        if (Call->getCalledFunction() == Changed)
+        if (Call->getCalledOperand() == Changed)
           FAM.invalidate(*Call->getFunction(), FuncPA);
       }
     }

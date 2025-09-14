@@ -170,12 +170,11 @@ template <size_t Bits> struct DyadicFloat {
     return DyadicFloat(result_sign, result_exponent, result_mantissa);
   }
 
-#ifdef LIBC_TYPES_HAS_FLOAT16
   template <typename T, bool ShouldSignalExceptions>
   LIBC_INLINE constexpr cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
   generic_as() const {
-    using FPBits = FPBits<float16>;
+    using FPBits = FPBits<T>;
     using StorageType = typename FPBits::StorageType;
 
     constexpr int EXTRA_FRACTION_LEN = Bits - 1 - FPBits::FRACTION_LEN;
@@ -277,7 +276,6 @@ template <size_t Bits> struct DyadicFloat {
 
     return FPBits(result).get_val();
   }
-#endif // LIBC_TYPES_HAS_FLOAT16
 
   template <typename T, bool ShouldSignalExceptions,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
@@ -411,11 +409,14 @@ template <size_t Bits> struct DyadicFloat {
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   LIBC_INLINE constexpr T as() const {
+    if constexpr (cpp::is_same_v<T, bfloat16>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-    if constexpr (cpp::is_same_v<T, float16>)
-      return generic_as<T, ShouldSignalExceptions>();
+                  || cpp::is_same_v<T, float16>
 #endif
-    return fast_as<T, ShouldSignalExceptions>();
+    )
+      return generic_as<T, ShouldSignalExceptions>();
+    else
+      return fast_as<T, ShouldSignalExceptions>();
   }
 
   template <typename T,
@@ -465,7 +466,10 @@ template <size_t Bits> struct DyadicFloat {
         // exponents coming in to this function _shouldn't_ be that large). The
         // result should always end up as a positive size_t.
         size_t shift = -static_cast<size_t>(exponent);
-        new_mant >>= shift;
+        if (shift >= Bits)
+          new_mant = 0;
+        else
+          new_mant >>= shift;
         round_dir = rounding_direction(mantissa, shift, sign);
         if (round_dir > 0)
           ++new_mant;
@@ -572,7 +576,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(const DyadicFloat<Bits> &a,
     // Check the leading bit directly, should be faster than using clz in
     // normalize().
     if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORD_COUNT - 1] >>
-            63 ==
+            (DyadicFloat<Bits>::MantissaType::WORD_SIZE - 1) ==
         0)
       result.shift_left(1);
   } else {

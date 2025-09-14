@@ -11,8 +11,8 @@
 #include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
 #include <sys/syscall.h> // For syscall numbers.

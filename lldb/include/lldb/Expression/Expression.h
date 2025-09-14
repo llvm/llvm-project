@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/Support/FormatProviders.h"
 
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
 #include "lldb/lldb-forward.h"
@@ -96,6 +97,66 @@ protected:
                                  ///invalid.
 };
 
+/// Holds parsed information about a function call label that
+/// LLDB attaches as an AsmLabel to function AST nodes it parses
+/// from debug-info.
+///
+/// The format being:
+///
+///   <prefix>:<discriminator>:<module uid>:<symbol uid>:<name>
+///
+/// The label string needs to stay valid for the entire lifetime
+/// of this object.
+struct FunctionCallLabel {
+  /// Arbitrary string which language plugins can interpret for their
+  /// own needs.
+  llvm::StringRef discriminator;
+
+  /// Unique identifier of the lldb_private::Module
+  /// which contains the symbol identified by \c symbol_id.
+  lldb::user_id_t module_id;
+
+  /// Unique identifier of the function symbol on which to
+  /// perform the function call. For example, for DWARF this would
+  /// be the DIE UID.
+  lldb::user_id_t symbol_id;
+
+  /// Name to use when searching for the function symbol in
+  /// \c module_id. For most function calls this will be a
+  /// mangled name. In cases where a mangled name can't be used,
+  /// this will be the function name.
+  ///
+  /// NOTE: kept as last element so we don't have to worry about
+  /// ':' in the mangled name when parsing the label.
+  llvm::StringRef lookup_name;
+
+  /// Decodes the specified function \c label into a \c FunctionCallLabel.
+  static llvm::Expected<FunctionCallLabel> fromString(llvm::StringRef label);
+
+  /// Encode this FunctionCallLabel into its string representation.
+  ///
+  /// The representation roundtrips through \c fromString:
+  /// \code{.cpp}
+  /// llvm::StringRef encoded = "$__lldb_func:blah:0x0:0x0:_Z3foov";
+  /// FunctionCallLabel label = *fromString(label);
+  ///
+  /// assert (label.toString() == encoded);
+  /// assert (*fromString(label.toString()) == label);
+  /// \endcode
+  std::string toString() const;
+};
+
+/// LLDB attaches this prefix to mangled names of functions that get called
+/// from JITted expressions.
+inline constexpr llvm::StringRef FunctionCallLabelPrefix = "$__lldb_func";
+
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb_private::FunctionCallLabel> {
+  static void format(const lldb_private::FunctionCallLabel &label,
+                     raw_ostream &OS, StringRef Style);
+};
+} // namespace llvm
 
 #endif // LLDB_EXPRESSION_EXPRESSION_H

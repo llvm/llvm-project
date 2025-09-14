@@ -43,6 +43,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/NoTrivialPPDirectiveTracer.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/PreprocessorLexer.h"
@@ -319,7 +320,7 @@ Preprocessor::macro_begin(bool IncludeExternalMacros) const {
 
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
-    CurSubmoduleState->Macros.insert(std::make_pair(Macro.II, MacroState()));
+    CurSubmoduleState->Macros.try_emplace(Macro.II);
 
   return CurSubmoduleState->Macros.begin();
 }
@@ -508,7 +509,7 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
 SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length) {
   auto &SM = getSourceManager();
   SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SpellingLoc);
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(SpellingLoc);
   bool Invalid = false;
   StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
   if (Invalid)
@@ -564,6 +565,24 @@ void Preprocessor::EnterMainSourceFile() {
     // #imported, it won't be re-entered.
     if (OptionalFileEntryRef FE = SourceMgr.getFileEntryRefForID(MainFileID))
       markIncluded(*FE);
+
+    // Record the first PP token in the main file. This is used to generate
+    // better diagnostics for C++ modules.
+    //
+    // // This is a comment.
+    // #define FOO int  // note: add 'module;' to the start of the file
+    // ^ FirstPPToken   //       to introduce a global module fragment.
+    //
+    // export module M; // error: module declaration must occur
+    //                  //        at the start of the translation unit.
+    if (getLangOpts().CPlusPlusModules) {
+      auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
+      DirTracer = Tracer.get();
+      addPPCallbacks(std::move(Tracer));
+      std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
+      if (FirstPPTok)
+        FirstPPTokenLoc = FirstPPTok->getLocation();
+    }
   }
 
   // Preprocess Predefines to populate the initial preprocessor state.
@@ -759,6 +778,8 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
 
 void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
+  assert(getExternalSource() &&
+         "getExternalSource() should not return nullptr");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
@@ -809,14 +830,14 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
       if (!Identifier.isExpandDisabled() && MI->isEnabled()) {
         // C99 6.10.3p10: If the preprocessing token immediately after the
         // macro name isn't a '(', this macro should not be expanded.
-        if (!MI->isFunctionLike() || isNextPPTokenLParen())
+        if (!MI->isFunctionLike() || isNextPPTokenOneOf(tok::l_paren))
           return HandleMacroExpandedIdentifier(Identifier, MD);
       } else {
         // C99 6.10.3.4p2 says that a disabled macro may never again be
         // expanded, even if it's in a context where it could be expanded in the
         // future.
         Identifier.setFlag(Token::DisableExpand);
-        if (MI->isObjectLike() || isNextPPTokenLParen())
+        if (MI->isObjectLike() || isNextPPTokenOneOf(tok::l_paren))
           Diag(Identifier, diag::pp_disabled_macro_expansion);
       }
     }
@@ -833,6 +854,11 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     // Don't diagnose this keyword again in this translation unit.
     II.setIsFutureCompatKeyword(false);
   }
+
+  // If this identifier would be a keyword in C++, diagnose as a compatibility
+  // issue.
+  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion)
+    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
 
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.
@@ -916,6 +942,8 @@ void Preprocessor::Lex(Token &Result) {
       StdCXXImportSeqState.handleHeaderName();
       break;
     case tok::kw_export:
+      if (hasSeenNoTrivialPPDirective())
+        Result.setFlag(Token::HasSeenNoTrivialPPDirective);
       TrackGMFState.handleExport();
       StdCXXImportSeqState.handleExport();
       ModuleDeclState.handleExport();
@@ -925,6 +953,8 @@ void Preprocessor::Lex(Token &Result) {
       break;
     case tok::period:
       ModuleDeclState.handlePeriod();
+      break;
+    case tok::eod:
       break;
     case tok::identifier:
       // Check "import" and "module" when there is no open bracket. The two
@@ -942,6 +972,8 @@ void Preprocessor::Lex(Token &Result) {
           }
           break;
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
+          if (hasSeenNoTrivialPPDirective())
+            Result.setFlag(Token::HasSeenNoTrivialPPDirective);
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
           break;
@@ -1655,4 +1687,32 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   }
 
   return nullptr;
+}
+
+bool Preprocessor::hasSeenNoTrivialPPDirective() const {
+  return DirTracer && DirTracer->hasSeenNoTrivialPPDirective();
+}
+
+bool NoTrivialPPDirectiveTracer::hasSeenNoTrivialPPDirective() const {
+  return SeenNoTrivialPPDirective;
+}
+
+void NoTrivialPPDirectiveTracer::setSeenNoTrivialPPDirective() {
+  if (InMainFile && !SeenNoTrivialPPDirective)
+    SeenNoTrivialPPDirective = true;
+}
+
+void NoTrivialPPDirectiveTracer::LexedFileChanged(
+    FileID FID, LexedFileChangeReason Reason,
+    SrcMgr::CharacteristicKind FileType, FileID PrevFID, SourceLocation Loc) {
+  InMainFile = (FID == PP.getSourceManager().getMainFileID());
+}
+
+void NoTrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
+                                              const MacroDefinition &MD,
+                                              SourceRange Range,
+                                              const MacroArgs *Args) {
+  // FIXME: Does only enable builtin macro expansion make sense?
+  if (!MD.getMacroInfo()->isBuiltinMacro())
+    setSeenNoTrivialPPDirective();
 }

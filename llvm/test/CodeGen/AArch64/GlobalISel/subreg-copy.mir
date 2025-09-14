@@ -9,15 +9,17 @@ tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_128_fpr_truncation
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRQui]].ssub
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-  ; CHECK:   TBNZW [[COPY2]], 0, %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+  ; CHECK-NEXT:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRQui]].ssub
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   TBNZW [[COPY2]], 0, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $x0
     %1:gpr(p0) = COPY $x0
@@ -42,15 +44,17 @@ tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: no_trunc
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64all = COPY [[LDRQui]].dsub
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
-  ; CHECK:   TBNZX [[COPY2]], 33, %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+  ; CHECK-NEXT:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64all = COPY [[LDRQui]].dsub
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   TBNZX [[COPY2]], 33, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $x0
     %1:gpr(p0) = COPY $x0

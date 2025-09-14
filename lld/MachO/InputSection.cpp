@@ -15,12 +15,10 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "UnwindInfoSection.h"
 #include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 
 using namespace llvm;

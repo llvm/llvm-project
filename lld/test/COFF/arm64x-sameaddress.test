@@ -1,0 +1,153 @@
+REQUIRES: aarch64
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func-arm64ec.s -o func-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows func-arm64.s -o func-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-arm64ec.s -o ref-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows ref-arm64.s -o ref-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows drectve.s -o drectve.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows drectve.s -o drectve-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj ref-arm64.obj ref-arm64ec.obj drectve.obj
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+DISASM:      000000180001000 <.text>:
+DISASM-NEXT: 180001000: d2800020     mov     x0, #0x1                // =1
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: 00000019     udf     #0x19
+DISASM-NEXT: 180002004: d2800040     mov     x0, #0x2                // =2
+DISASM-NEXT: 180002008: d65f03c0     ret
+DISASM-NEXT: 18000200c: 0000000d     udf     #0xd
+DISASM-NEXT: 180002010: f0fffff0     adrp    x16, 0x180001000 <.text>
+DISASM-NEXT: 180002014: 91000210     add     x16, x16, #0x0
+DISASM-NEXT: 180002018: d61f0200     br      x16
+DISASM-NEXT: 18000201c: d2800060     mov     x0, #0x3                // =3
+DISASM-NEXT: 180002020: d65f03c0     ret
+
+RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
+TESTSEC: 10200000 10200000 10200000
+
+RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=DYNRELOCS %s
+DYNRELOCS:      DynamicRelocations [
+DYNRELOCS-NEXT:   Version: 0x1
+DYNRELOCS-NEXT:   Arm64X [
+DYNRELOCS-NEXT:     Entry [
+DYNRELOCS-NEXT:       RVA: 0x7C
+DYNRELOCS-NEXT:       Type: VALUE
+DYNRELOCS-NEXT:       Size: 0x2
+DYNRELOCS-NEXT:       Value: 0x8664
+DYNRELOCS-NEXT:     ]
+DYNRELOCS-NEXT:     Entry [
+DYNRELOCS-NEXT:       RVA: 0x150
+DYNRELOCS-NEXT:       Type: VALUE
+DYNRELOCS-NEXT:       Size: 0x4
+DYNRELOCS-NEXT:       Value: 0x3150
+DYNRELOCS-NEXT:     ]
+DYNRELOCS-NEXT:     Entry [
+DYNRELOCS-NEXT:       RVA: 0x154
+DYNRELOCS-NEXT:       Type: VALUE
+DYNRELOCS-NEXT:       Size: 0x4
+DYNRELOCS-NEXT:       Value: 0x140
+DYNRELOCS-NEXT:     ]
+DYNRELOCS-NEXT:     Entry [
+DYNRELOCS-NEXT:       RVA: 0x2010
+DYNRELOCS-NEXT:       Type: VALUE
+DYNRELOCS-NEXT:       Size: 0x4
+DYNRELOCS-NEXT:       Value: 0x90000010
+DYNRELOCS-NEXT:     ]
+DYNRELOCS-NEXT:     Entry [
+DYNRELOCS-NEXT:       RVA: 0x2014
+DYNRELOCS-NEXT:       Type: VALUE
+DYNRELOCS-NEXT:       Size: 0x4
+DYNRELOCS-NEXT:       Value: 0x91001210
+DYNRELOCS-NEXT:     ]
+DYNRELOCS-NEXT:   ]
+DYNRELOCS-NEXT: ]
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-cmd.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj ref-arm64.obj ref-arm64ec.obj -arm64xsameaddress:func
+RUN: llvm-objdump -d out-cmd.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test out-cmd.dll | FileCheck --check-prefix=TESTSEC %s
+RUN: llvm-readobj --coff-load-config out-cmd.dll | FileCheck --check-prefix=DYNRELOCS %s
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-both.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj ref-arm64.obj ref-arm64ec.obj drectve.obj -arm64xsameaddress:func
+RUN: llvm-objdump -d out-both.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test out-both.dll | FileCheck --check-prefix=TESTSEC %s
+RUN: llvm-readobj --coff-load-config out-both.dll | FileCheck --check-prefix=DYNRELOCS %s
+
+Check that if any of the sameaddress symbols is not alive, the thunk is not generated.
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-live1.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj ref-arm64ec.obj drectve.obj
+RUN: llvm-objdump -d out-live1.dll | FileCheck --check-prefix=DISASM-LIVE1 %s
+DISASM-LIVE1:      0000000180001000 <.text>:
+DISASM-LIVE1-NEXT: 180001000: 00000009     udf     #0x9
+DISASM-LIVE1-NEXT: 180001004: d2800040     mov     x0, #0x2                // =2
+DISASM-LIVE1-NEXT: 180001008: d65f03c0     ret
+DISASM-LIVE1-NEXT: 18000100c: d2800060     mov     x0, #0x3                // =3
+DISASM-LIVE1-NEXT: 180001010: d65f03c0     ret
+DISASM-LIVE1-NOT:  br
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-live2.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj ref-arm64.obj drectve.obj
+RUN: llvm-objdump -d out-live2.dll | FileCheck --check-prefix=DISASM-LIVE2 %s
+DISASM-LIVE2:      0000000180001000 <.text>:
+DISASM-LIVE2-NEXT: 180001000: d2800020     mov     x0, #0x1                // =1
+DISASM-LIVE2-NEXT: 180001004: d65f03c0     ret
+DISASM-LIVE2-NOT:  br
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out-ec.dll loadconfig-arm64ec.obj func-arm64ec.obj drectve.obj
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:out-warn.dll loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          func-arm64.obj func-arm64ec.obj drectve-arm64.obj 2>&1 | FileCheck --check-prefix=WARN %s
+WARN: lld-link: warning: -arm64xsameaddress: is not allowed in non-ARM64EC files (drectve-arm64.obj)
+
+RUN: lld-link -machine:arm64 -dll -noentry -out:out-warn2.dll loadconfig-arm64.obj \
+RUN:          func-arm64.obj -arm64xsameaddress:func 2>&1 | FileCheck --check-prefix=WARN2 %s
+WARN2: lld-link: warning: -arm64xsameaddress: is allowed only on EC targets
+
+#--- func-arm64.s
+        .section .text,"xr",discard,func
+        .globl func
+func:
+        mov x0, #1
+        ret
+
+#--- ref-arm64.s
+        .section .test,"dr"
+        .rva func
+
+#--- func-arm64ec.s
+        .section .text,"xr",discard,"#func"
+        .globl "#func"
+"#func":
+        mov x0, #2
+        ret
+
+        .weak_anti_dep func
+        .set func,"#func"
+
+        .section .wowthk,"xr",discard,entry_thunk
+        .globl entry_thunk
+entry_thunk:
+        mov x0, #3
+        ret
+
+	.section .hybmp$x,"yi"
+	.symidx "#func"
+	.symidx entry_thunk
+	.word 1
+
+#--- ref-arm64ec.s
+        .section .test,"dr"
+        .rva func
+        .rva "#func"
+
+#--- drectve.s
+        .section .drectve, "yn"
+        .ascii " -arm64xsameaddress:func"

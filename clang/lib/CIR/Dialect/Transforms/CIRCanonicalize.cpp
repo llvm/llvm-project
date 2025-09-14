@@ -47,8 +47,8 @@ struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
-    assert(!cir::MissingFeatures::labelOp());
-
+    if (isa<cir::LabelOp>(dest->front()))
+      return failure();
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
         dest->getSinglePredecessor() == block) {
@@ -81,6 +81,19 @@ struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
     }
 
     return failure();
+  }
+};
+
+struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
+  using OpRewritePattern<SwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SwitchOp op,
+                                PatternRewriter &rewriter) const final {
+    if (!(op.getBody().empty() || isa<YieldOp>(op.getBody().front().front())))
+      return failure();
+
+    rewriter.eraseOp(op);
+    return success();
   }
 };
 
@@ -121,14 +134,17 @@ void CIRCanonicalizePass::runOnOperation() {
   getOperation()->walk([&](Operation *op) {
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::selectOp());
-    assert(!cir::MissingFeatures::complexCreateOp());
     assert(!cir::MissingFeatures::complexRealOp());
     assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
-    // CastOp and UnaryOp are here to perform a manual `fold` in
+
+    // Many operations are here to perform a manual `fold` in
     // applyOpPatternsGreedily.
-    if (isa<BrOp, BrCondOp, ScopeOp, CastOp, UnaryOp>(op))
+    if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp,
+            ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
+            VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
+            VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
+            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp>(op))
       ops.push_back(op);
   });
 

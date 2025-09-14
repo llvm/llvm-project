@@ -17,11 +17,13 @@ using namespace llvm;
 
 // Wrapper so we don't have to constantly init and shutdown Offload in every
 // test, while having sensible lifetime for the platform environment
+#ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
   OffloadInitWrapper() { olInit(); }
   ~OffloadInitWrapper() { olShutDown(); }
 };
 static OffloadInitWrapper Wrapper{};
+#endif
 
 static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),
@@ -33,6 +35,15 @@ raw_ostream &operator<<(raw_ostream &Out,
   olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_NAME, &Size);
   std::vector<char> Name(Size);
   olGetPlatformInfo(Platform, OL_PLATFORM_INFO_NAME, Size, Name.data());
+  Out << Name.data();
+  return Out;
+}
+
+raw_ostream &operator<<(raw_ostream &Out, const ol_device_handle_t &Device) {
+  size_t Size;
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PRODUCT_NAME, &Size);
+  std::vector<char> Name(Size);
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data());
   Out << Name.data();
   return Out;
 }
@@ -61,48 +72,67 @@ void printPlatforms() {
   }
 }
 
-ol_device_handle_t TestEnvironment::getDevice() {
-  static ol_device_handle_t Device = nullptr;
+const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
+  static std::vector<TestEnvironment::Device> Devices{};
+  if (Devices.empty()) {
+    // If a specific platform is requested, filter to devices belonging to it.
+    if (const char *EnvStr = getenv("OFFLOAD_UNITTEST_PLATFORM")) {
+      if (SelectedPlatform != "")
+        errs() << "Warning: --platform argument ignored as "
+                  "OFFLOAD_UNITTEST_PLATFORM env var overrides it.\n";
+      SelectedPlatform = EnvStr;
+    }
 
-  if (!Device) {
     if (SelectedPlatform != "") {
       olIterateDevices(
           [](ol_device_handle_t D, void *Data) {
             ol_platform_handle_t Platform;
             olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
                             &Platform);
-
+            ol_platform_backend_t Backend;
+            olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                              sizeof(Backend), &Backend);
             std::string PlatformName;
             raw_string_ostream S(PlatformName);
             S << Platform;
-
-            if (PlatformName == SelectedPlatform) {
-              *(static_cast<ol_device_handle_t *>(Data)) = D;
-              return false;
+            if (PlatformName == SelectedPlatform &&
+                Backend != OL_PLATFORM_BACKEND_HOST) {
+              std::string Name;
+              raw_string_ostream NameStr(Name);
+              NameStr << PlatformName << "_" << D;
+              static_cast<std::vector<TestEnvironment::Device> *>(Data)
+                  ->push_back({D, Name});
             }
-
             return true;
           },
-          &Device);
-
-      if (Device == nullptr) {
-        errs() << "No device found with the platform \"" << SelectedPlatform
-               << "\". Choose from:"
-               << "\n";
-        printPlatforms();
-        std::exit(1);
-      }
+          &Devices);
     } else {
+      // No platform specified, discover every device that isn't the host.
       olIterateDevices(
           [](ol_device_handle_t D, void *Data) {
-            *(static_cast<ol_device_handle_t *>(Data)) = D;
-            return false;
+            ol_platform_handle_t Platform;
+            olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                            &Platform);
+            ol_platform_backend_t Backend;
+            olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                              sizeof(Backend), &Backend);
+            if (Backend != OL_PLATFORM_BACKEND_HOST) {
+              std::string Name;
+              raw_string_ostream NameStr(Name);
+              NameStr << Platform << "_" << D;
+              static_cast<std::vector<TestEnvironment::Device> *>(Data)
+                  ->push_back({D, Name});
+            }
+            return true;
           },
-          &Device);
+          &Devices);
     }
   }
 
-  return Device;
+  if (Devices.size() == 0)
+    errs() << "Warning: No devices found for OffloadAPI tests.\n";
+
+  return Devices;
 }
 
 ol_device_handle_t TestEnvironment::getHostDevice() {

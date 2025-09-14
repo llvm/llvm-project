@@ -53,24 +53,15 @@ static bool traverseMoveUse(MachineInstr &U, const MachineRegisterInfo &MRI,
                             SmallVectorImpl<MachineInstr *> &RemoveList,
                             SmallVectorImpl<MachineInstr *> &LoadInsts) {
   switch (U.getOpcode()) {
-  case NVPTX::LD_f32:
-  case NVPTX::LD_f64:
   case NVPTX::LD_i16:
   case NVPTX::LD_i32:
   case NVPTX::LD_i64:
-  case NVPTX::LD_i8:
-  case NVPTX::LDV_f32_v2:
-  case NVPTX::LDV_f32_v4:
-  case NVPTX::LDV_f64_v2:
-  case NVPTX::LDV_f64_v4:
   case NVPTX::LDV_i16_v2:
   case NVPTX::LDV_i16_v4:
   case NVPTX::LDV_i32_v2:
   case NVPTX::LDV_i32_v4:
   case NVPTX::LDV_i64_v2:
-  case NVPTX::LDV_i64_v4:
-  case NVPTX::LDV_i8_v2:
-  case NVPTX::LDV_i8_v4: {
+  case NVPTX::LDV_i64_v4: {
     LoadInsts.push_back(&U);
     return true;
   }
@@ -105,7 +96,7 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  constexpr unsigned LDInstBasePtrOpIdx = 6;
+  constexpr unsigned LDInstBasePtrOpIdx = 5;
   constexpr unsigned LDInstAddrSpaceOpIdx = 2;
   for (auto *LI : LoadInsts) {
     (LI->uses().begin() + LDInstBasePtrOpIdx)

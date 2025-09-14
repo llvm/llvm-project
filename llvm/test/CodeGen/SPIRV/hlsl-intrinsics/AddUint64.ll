@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; Code here is an excerpt of clang/test/CodeGenHLSL/builtins/AddUint64.hlsl compiled for spirv using the following command
 ; clang -cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute clang/test/CodeGenHLSL/builtins/AddUint64.hlsl -emit-llvm -disable-llvm-passes -o llvm/test/CodeGen/SPIRV/hlsl-intrinsics/uadd_with_overflow.ll

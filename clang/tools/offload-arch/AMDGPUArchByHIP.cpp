@@ -165,8 +165,9 @@ int printGPUsByHIP() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(DynamicHIPPath.c_str(),
                                                      &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    llvm::errs() << "Failed to load " << DynamicHIPPath << ": " << ErrMsg
-                 << '\n';
+    if (Verbose)
+      llvm::errs() << "Failed to load " << DynamicHIPPath << ": " << ErrMsg
+                   << '\n';
     return 1;
   }
 

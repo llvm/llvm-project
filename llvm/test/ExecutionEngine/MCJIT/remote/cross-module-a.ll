@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -extra-module=%p/Inputs/cross-module-b.ll -disable-lazy-compilation=true -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
+; RUN: %lli -jit-kind=mcjit -extra-module=%p/Inputs/cross-module-b.ll -disable-lazy-compilation=true -remote-mcjit -mcjit-remote-process=lli-child-target %s > /dev/null
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}
 ; REQUIRES: thread_support
 ; UNSUPPORTED: target=powerpc64-unknown-linux-gnu

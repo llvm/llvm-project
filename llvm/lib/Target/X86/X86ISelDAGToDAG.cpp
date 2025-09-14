@@ -2512,7 +2512,6 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchAddress: ";
     AM.dump(CurDAG);
@@ -2903,7 +2902,6 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
 bool X86DAGToDAGISel::matchVectorAddressRecursively(SDValue N,
                                                     X86ISelAddressMode &AM,
                                                     unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchVectorAddress: ";
     AM.dump(CurDAG);
@@ -5430,10 +5428,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::BRIND:
   case X86ISD::NT_BRIND: {
-    if (Subtarget->isTargetNaCl())
-      // NaCl has its own pass where jmp %r32 are converted to jmp %r64. We
-      // leave the instruction alone.
-      break;
     if (Subtarget->isTarget64BitILP32()) {
       // Converts a 32-bit register to a 64-bit, zero-extended version of
       // it. This is needed because x86-64 can do many things, but jmp %r32

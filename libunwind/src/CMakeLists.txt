@@ -6,7 +6,7 @@ set(LIBUNWIND_CXX_SOURCES
     Unwind-seh.cpp
     )
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   list(APPEND LIBUNWIND_CXX_SOURCES
     Unwind_AIXExtras.cpp
     )
@@ -71,18 +71,6 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  add_link_flags_if_supported(-nostdlib++)
-else()
-  if (LIBUNWIND_USE_COMPILER_RT)
-    add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
-  else()
-    add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
-    add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
-  endif()
-  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
-endif()
-
 if (NOT APPLE)
   add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
 endif()
@@ -118,22 +106,6 @@ if (HAIKU)
 
   add_compile_flags("-D_DEFAULT_SOURCE")
   add_compile_flags("-DPT_GNU_EH_FRAME=PT_EH_FRAME")
-
-  find_path(LIBUNWIND_HAIKU_PRIVATE_HEADERS
-            "commpage_defs.h"
-            PATHS ${CMAKE_SYSTEM_INCLUDE_PATH}
-            PATH_SUFFIXES "/private/system"
-            NO_DEFAULT_PATH
-            REQUIRED)
-
-  include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}")
-  if (LIBUNWIND_TARGET_TRIPLE)
-    if (${LIBUNWIND_TARGET_TRIPLE} MATCHES "^x86_64")
-      include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}/arch/x86_64")
-    endif()
-  else()
-    include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}/arch/${CMAKE_SYSTEM_PROCESSOR}")
-  endif()
 endif ()
 
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")
@@ -160,9 +132,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_shared_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_shared_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -175,7 +148,7 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 
 add_library(unwind_shared SHARED)
-target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
+target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
 set_target_properties(unwind_shared
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
@@ -201,9 +174,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_static_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_static_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -222,7 +196,7 @@ if(LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
 add_library(unwind_static STATIC)
-target_link_libraries(unwind_static PUBLIC unwind_static_objects)
+target_link_libraries(unwind_static PUBLIC unwind_static_objects runtimes-libc-static)
 set_target_properties(unwind_static
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"

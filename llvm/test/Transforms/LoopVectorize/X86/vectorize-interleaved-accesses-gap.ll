@@ -71,15 +71,14 @@ define void @test_pr59090(ptr %l_out, ptr noalias %b) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <48 x i1> [[INTERLEAVED_MASK]], <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false>
 ; CHECK-NEXT:    call void @llvm.masked.store.v48i8.p0(<48 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 poison>, ptr [[TMP13]], i32 1, <48 x i1> [[TMP15]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10008
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10008
+; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_MUL:%.*]] = mul nuw i64 [[IV]], 6
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    store i8 [[L]], ptr [[B]], align 1, !llvm.access.group [[ACC_GRP0]]

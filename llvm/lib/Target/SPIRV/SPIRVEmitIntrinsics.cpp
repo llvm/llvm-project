@@ -13,7 +13,6 @@
 
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
-#include "SPIRVMetadata.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -22,7 +21,9 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #include <queue>
 #include <unordered_set>
@@ -188,12 +189,50 @@ class SPIRVEmitIntrinsics
 
   void applyDemangledPtrArgTypes(IRBuilder<> &B);
 
+  GetElementPtrInst *simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP);
+
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
 
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
+
+  // Tries to walk the type accessed by the given GEP instruction.
+  // For each nested type access, one of the 2 callbacks is called:
+  //  - OnLiteralIndexing when the index is a known constant value.
+  //    Parameters:
+  //      PointedType: the pointed type resulting of this indexing.
+  //        If the parent type is an array, this is the index in the array.
+  //        If the parent type is a struct, this is the field index.
+  //      Index: index of the element in the parent type.
+  //  - OnDynamnicIndexing when the index is a non-constant value.
+  //    This callback is only called when indexing into an array.
+  //    Parameters:
+  //      ElementType: the type of the elements stored in the parent array.
+  //      Offset: the Value* containing the byte offset into the array.
+  // Return true if an error occured during the walk, false otherwise.
+  bool walkLogicalAccessChain(
+      GetElementPtrInst &GEP,
+      const std::function<void(Type *PointedType, uint64_t Index)>
+          &OnLiteralIndexing,
+      const std::function<void(Type *ElementType, Value *Offset)>
+          &OnDynamicIndexing);
+
+  // Returns the type accessed using the given GEP instruction by relying
+  // on the GEP type.
+  // FIXME: GEP types are not supposed to be used to retrieve the pointed
+  // type. This must be fixed.
+  Type *getGEPType(GetElementPtrInst *GEP);
+
+  // Returns the type accessed using the given GEP instruction by walking
+  // the source type using the GEP indices.
+  // FIXME: without help from the frontend, this method cannot reliably retrieve
+  // the stored type, nor can robustly determine the depth of the type
+  // we are accessing.
+  Type *getGEPTypeLogical(GetElementPtrInst *GEP);
+
+  Instruction *buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP);
 
 public:
   static char ID;
@@ -245,6 +284,17 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   default:
     return false;
   }
+}
+
+// Returns the source pointer from `I` ignoring intermediate ptrcast.
+Value *getPointerRoot(Value *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::spv_ptrcast) {
+      Value *V = II->getArgOperand(0);
+      return getPointerRoot(V);
+    }
+  }
+  return I;
 }
 
 } // namespace
@@ -449,7 +499,7 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
   std::unordered_set<Value *> Visited;
   DenseMap<Function *, CallInst *> Ptrcasts;
   propagateElemTypeRec(Op, PtrElemTy, CastElemTy, VisitedSubst, Visited,
-                       Ptrcasts);
+                       std::move(Ptrcasts));
 }
 
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
@@ -556,7 +606,112 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   Ty = RefTy;
 }
 
-Type *getGEPType(GetElementPtrInst *Ref) {
+bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
+    GetElementPtrInst &GEP,
+    const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
+    const std::function<void(Type *, Value *)> &OnDynamicIndexing) {
+  // We only rewrite i8* GEP. Other should be left as-is.
+  // Valid i8* GEP must always have a single index.
+  assert(GEP.getSourceElementType() ==
+         IntegerType::getInt8Ty(CurrF->getContext()));
+  assert(GEP.getNumIndices() == 1);
+
+  auto &DL = CurrF->getDataLayout();
+  Value *Src = getPointerRoot(GEP.getPointerOperand());
+  Type *CurType = deduceElementType(Src, true);
+
+  Value *Operand = *GEP.idx_begin();
+  ConstantInt *CI = dyn_cast<ConstantInt>(Operand);
+  if (!CI) {
+    ArrayType *AT = dyn_cast<ArrayType>(CurType);
+    // Operand is not constant. Either we have an array and accept it, or we
+    // give up.
+    if (AT)
+      OnDynamicIndexing(AT->getElementType(), Operand);
+    return AT == nullptr;
+  }
+
+  assert(CI);
+  uint64_t Offset = CI->getZExtValue();
+
+  do {
+    if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
+      uint32_t EltTypeSize = DL.getTypeSizeInBits(AT->getElementType()) / 8;
+      assert(Offset < AT->getNumElements() * EltTypeSize);
+      uint64_t Index = Offset / EltTypeSize;
+      Offset = Offset - (Index * EltTypeSize);
+      CurType = AT->getElementType();
+      OnLiteralIndexing(CurType, Index);
+    } else if (StructType *ST = dyn_cast<StructType>(CurType)) {
+      uint32_t StructSize = DL.getTypeSizeInBits(ST) / 8;
+      assert(Offset < StructSize);
+      (void)StructSize;
+      const auto &STL = DL.getStructLayout(ST);
+      unsigned Element = STL->getElementContainingOffset(Offset);
+      Offset -= STL->getElementOffset(Element);
+      CurType = ST->getElementType(Element);
+      OnLiteralIndexing(CurType, Element);
+    } else {
+      // Vector type indexing should not use GEP.
+      // So if we have an index left, something is wrong. Giving up.
+      return true;
+    }
+  } while (Offset > 0);
+
+  return false;
+}
+
+Instruction *
+SPIRVEmitIntrinsics::buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP) {
+  auto &DL = CurrF->getDataLayout();
+  IRBuilder<> B(GEP.getParent());
+  B.SetInsertPoint(&GEP);
+
+  std::vector<Value *> Indices;
+  Indices.push_back(ConstantInt::get(
+      IntegerType::getInt32Ty(CurrF->getContext()), 0, /* Signed= */ false));
+  walkLogicalAccessChain(
+      GEP,
+      [&Indices, &B](Type *EltType, uint64_t Index) {
+        Indices.push_back(
+            ConstantInt::get(B.getInt64Ty(), Index, /* Signed= */ false));
+      },
+      [&Indices, &B, &DL](Type *EltType, Value *Offset) {
+        uint32_t EltTypeSize = DL.getTypeSizeInBits(EltType) / 8;
+        Value *Index = B.CreateUDiv(
+            Offset, ConstantInt::get(Offset->getType(), EltTypeSize,
+                                     /* Signed= */ false));
+        Indices.push_back(Index);
+      });
+
+  SmallVector<Type *, 2> Types = {GEP.getType(), GEP.getOperand(0)->getType()};
+  SmallVector<Value *, 4> Args;
+  Args.push_back(B.getInt1(GEP.isInBounds()));
+  Args.push_back(GEP.getOperand(0));
+  llvm::append_range(Args, Indices);
+  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+  replaceAllUsesWithAndErase(B, &GEP, NewI);
+  return NewI;
+}
+
+Type *SPIRVEmitIntrinsics::getGEPTypeLogical(GetElementPtrInst *GEP) {
+
+  Type *CurType = GEP->getResultElementType();
+
+  bool Interrupted = walkLogicalAccessChain(
+      *GEP, [&CurType](Type *EltType, uint64_t Index) { CurType = EltType; },
+      [&CurType](Type *EltType, Value *Index) { CurType = EltType; });
+
+  return Interrupted ? GEP->getResultElementType() : CurType;
+}
+
+Type *SPIRVEmitIntrinsics::getGEPType(GetElementPtrInst *Ref) {
+  if (Ref->getSourceElementType() ==
+          IntegerType::getInt8Ty(CurrF->getContext()) &&
+      TM->getSubtargetImpl()->isLogicalSPIRV()) {
+    return getGEPTypeLogical(Ref);
+  }
+
   Type *Ty = nullptr;
   // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
   // useful here
@@ -664,22 +819,33 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     auto *II = dyn_cast<IntrinsicInst>(I);
     if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
-      if (HandleType->getTargetExtName() == "spirv.Image") {
-        if (II->hasOneUse()) {
-          auto *U = *II->users().begin();
+      if (HandleType->getTargetExtName() == "spirv.Image" ||
+          HandleType->getTargetExtName() == "spirv.SignedImage") {
+        for (User *U : II->users()) {
           Ty = cast<Instruction>(U)->getAccessType();
-          assert(Ty && "Unable to get type for resource pointer.");
+          if (Ty)
+            break;
         }
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        assert(Ty->isArrayTy() &&
-               "spv_resource_getpointer indexes into an array, so the type of "
-               "the buffer should be an array.");
-        Ty = Ty->getArrayElementType();
+        if (Ty->isArrayTy())
+          Ty = Ty->getArrayElementType();
+        else {
+          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
+          assert(BufferTy->getTargetExtName() == "spirv.Layout");
+          Ty = BufferTy->getTypeParameter(0);
+          assert(Ty && Ty->isStructTy());
+          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+          Ty = cast<StructType>(Ty)->getElementType(Index);
+        }
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
+    } else if (II && II->getIntrinsicID() ==
+                         Intrinsic::spv_generic_cast_to_ptr_explicit) {
+      Ty = deduceElementTypeHelper(CI->getArgOperand(0), Visited,
+                                   UnknownElemTypeI8);
     } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
@@ -731,17 +897,16 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {
       Value *Op = U->getOperand(i);
+      assert(Op && "Operands should not be null.");
       Type *OpTy = Op->getType();
       Type *Ty = OpTy;
-      if (Op) {
-        if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-          if (Type *NestedTy =
-                  deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-            Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-        } else {
-          Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                      UnknownElemTypeI8);
-        }
+      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
+        if (Type *NestedTy =
+                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
+          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+      } else {
+        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                    UnknownElemTypeI8);
       }
       Tys.push_back(Ty);
       Change |= Ty != OpTy;
@@ -1077,15 +1242,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       return;
     Value *Op0 = Ref->getOperand(0);
     Value *Op1 = Ref->getOperand(1);
-    Type *ElemTy0 = GR->findDeducedElementType(Op0);
+    bool Incomplete0 = isTodoType(Op0);
+    bool Incomplete1 = isTodoType(Op1);
     Type *ElemTy1 = GR->findDeducedElementType(Op1);
+    Type *ElemTy0 = (Incomplete0 && !Incomplete1 && ElemTy1)
+                        ? nullptr
+                        : GR->findDeducedElementType(Op0);
     if (ElemTy0) {
       KnownElemTy = ElemTy0;
-      Incomplete = isTodoType(Op0);
+      Incomplete = Incomplete0;
       Ops.push_back(std::make_pair(Op1, 1));
     } else if (ElemTy1) {
       KnownElemTy = ElemTy1;
-      Incomplete = isTodoType(Op1);
+      Incomplete = Incomplete1;
       Ops.push_back(std::make_pair(Op0, 0));
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
@@ -1104,8 +1273,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
   IRBuilder<> B(Ctx);
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
-    if (Op->use_empty())
-      continue;
     if (AskOps && !AskOps->contains(Op))
       continue;
     Type *AskTy = nullptr;
@@ -1120,7 +1287,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
+    if (Op->hasUseList() &&
+        (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
       // check if KnownElemTy is complete
@@ -1293,6 +1461,24 @@ static void createSaturatedConversionDecoration(Instruction *I,
   createDecorationIntrinsic(I, SaturatedConversionNode, B);
 }
 
+static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (Function *Fu = CI->getCalledFunction()) {
+      if (Fu->isIntrinsic()) {
+        unsigned const int IntrinsicId = Fu->getIntrinsicID();
+        switch (IntrinsicId) {
+        case Intrinsic::fptosi_sat:
+        case Intrinsic::fptoui_sat:
+          createSaturatedConversionDecoration(I, B);
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
+}
+
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -1382,6 +1568,13 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
+  if (I.getSourceElementType() == IntegerType::getInt8Ty(CurrF->getContext()) &&
+      TM->getSubtargetImpl()->isLogicalSPIRV()) {
+    Instruction *Result = buildLogicalAccessChainFromGEP(I);
+    if (Result)
+      return Result;
+  }
+
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
@@ -1470,34 +1663,36 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   // Do not emit new spv_ptrcast if equivalent one already exists or when
   // spv_assign_ptr_type already targets this pointer with the same element
   // type.
-  for (auto User : Pointer->users()) {
-    auto *II = dyn_cast<IntrinsicInst>(User);
-    if (!II ||
-        (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
-         II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
-        II->getOperand(0) != Pointer)
-      continue;
+  if (Pointer->hasUseList()) {
+    for (auto User : Pointer->users()) {
+      auto *II = dyn_cast<IntrinsicInst>(User);
+      if (!II ||
+          (II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type &&
+           II->getIntrinsicID() != Intrinsic::spv_ptrcast) ||
+          II->getOperand(0) != Pointer)
+        continue;
 
-    // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
-    // pointer.
-    FirstPtrCastOrAssignPtrType = false;
-    if (II->getOperand(1) != VMD ||
-        dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
-            AddressSpace)
-      continue;
+      // There is some spv_ptrcast/spv_assign_ptr_type already targeting this
+      // pointer.
+      FirstPtrCastOrAssignPtrType = false;
+      if (II->getOperand(1) != VMD ||
+          dyn_cast<ConstantInt>(II->getOperand(2))->getSExtValue() !=
+              AddressSpace)
+        continue;
 
-    // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the same
-    // element type and address space.
-    if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
+      // The spv_ptrcast/spv_assign_ptr_type targeting this pointer is of the
+      // same element type and address space.
+      if (II->getIntrinsicID() != Intrinsic::spv_ptrcast)
+        return;
+
+      // This must be a spv_ptrcast, do not emit new if this one has the same BB
+      // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
+      if (II->getParent() != I->getParent())
+        continue;
+
+      I->setOperand(OperandToReplace, II);
       return;
-
-    // This must be a spv_ptrcast, do not emit new if this one has the same BB
-    // as I. Otherwise, search for other spv_ptrcast/spv_assign_ptr_type.
-    if (II->getParent() != I->getParent())
-      continue;
-
-    I->setOperand(OperandToReplace, II);
-    return;
+    }
   }
 
   if (isa<Instruction>(Pointer) || isa<Argument>(Pointer)) {
@@ -1573,7 +1768,24 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
   }
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I)) {
     Value *Pointer = GEPI->getPointerOperand();
-    Type *OpTy = GEPI->getSourceElementType();
+    Type *OpTy = nullptr;
+
+    // Knowing the accessed type is mandatory for logical SPIR-V. Sadly,
+    // the GEP source element type should not be used for this purpose, and
+    // the alternative type-scavenging method is not working.
+    // Physical SPIR-V can work around this, but not logical, hence still
+    // try to rely on the broken type scavenging for logical.
+    bool IsRewrittenGEP =
+        GEPI->getSourceElementType() == IntegerType::getInt8Ty(I->getContext());
+    if (IsRewrittenGEP && TM->getSubtargetImpl()->isLogicalSPIRV()) {
+      Value *Src = getPointerRoot(Pointer);
+      OpTy = GR->findDeducedElementType(Src);
+    }
+
+    // In all cases, fall back to the GEP type if type scavenging failed.
+    if (!OpTy)
+      OpTy = GEPI->getSourceElementType();
+
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 0, B);
     if (isNestedPointer(OpTy))
       insertTodoType(Pointer);
@@ -1947,10 +2159,16 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           GR->buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true),
                              Op);
         } else {
+          Value *OpTyVal = Op;
+          if (OpTy->isTargetExtTy()) {
+            // We need to do this in order to be consistent with how target ext
+            // types are handled in `processInstrAfterVisit`
+            OpTyVal = getNormalizedPoisonValue(OpTy);
+          }
           CallInst *AssignCI =
               buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
-                              getNormalizedPoisonValue(OpTy), Op, {}, B);
-          GR->addAssignPtrTypeInstr(Op, AssignCI);
+                              getNormalizedPoisonValue(OpTy), OpTyVal, {}, B);
+          GR->addAssignPtrTypeInstr(OpTyVal, AssignCI);
         }
       }
     }
@@ -2061,22 +2279,14 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       BPrepared = true;
     }
     Type *OpTy = Op->getType();
-    Value *OpTyVal = Op;
-    if (OpTy->isTargetExtTy())
-      OpTyVal = getNormalizedPoisonValue(OpTy);
     Type *OpElemTy = GR->findDeducedElementType(Op);
     Value *NewOp = Op;
     if (OpTy->isTargetExtTy()) {
+      // Since this value is replaced by poison, we need to do the same in
+      // `insertAssignTypeIntrs`.
+      Value *OpTyVal = getNormalizedPoisonValue(OpTy);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-      if (isPointerTy(OpTy)) {
-        if (OpElemTy) {
-          GR->buildAssignPtr(B, OpElemTy, NewOp);
-        } else {
-          insertTodoType(NewOp);
-          GR->buildAssignPtr(B, OpTy, NewOp);
-        }
-      }
     }
     if (!IsConstComposite && isPointerTy(OpTy) && OpElemTy != nullptr &&
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
@@ -2354,6 +2564,30 @@ void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
   }
 }
 
+GetElementPtrInst *
+SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
+  // getelementptr [0 x T], P, 0 (zero), I -> getelementptr T, P, I.
+  // If type is 0-length array and first index is 0 (zero), drop both the
+  // 0-length array type and the first index. This is a common pattern in the
+  // IR, e.g. when using a zero-length array as a placeholder for a flexible
+  // array such as unbound arrays.
+  assert(GEP && "GEP is null");
+  Type *SrcTy = GEP->getSourceElementType();
+  SmallVector<Value *, 8> Indices(GEP->indices());
+  ArrayType *ArrTy = dyn_cast<ArrayType>(SrcTy);
+  if (ArrTy && ArrTy->getNumElements() == 0 &&
+      PatternMatch::match(Indices[0], PatternMatch::m_Zero())) {
+    IRBuilder<> Builder(GEP);
+    Indices.erase(Indices.begin());
+    SrcTy = ArrTy->getElementType();
+    Value *NewGEP = Builder.CreateGEP(SrcTy, GEP->getPointerOperand(), Indices,
+                                      "", GEP->getNoWrapFlags());
+    assert(llvm::isa<GetElementPtrInst>(NewGEP) && "NewGEP should be a GEP");
+    return cast<GetElementPtrInst>(NewGEP);
+  }
+  return nullptr;
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -2371,13 +2605,29 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
-  // fix GEP result types ahead of inference
+  // Fix GEP result types ahead of inference, and simplify if possible.
+  // Data structure for dead instructions that were simplified and replaced.
+  SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
     auto *Ref = dyn_cast<GetElementPtrInst>(&I);
     if (!Ref || GR->findDeducedElementType(Ref))
       continue;
+
+    GetElementPtrInst *NewGEP = simplifyZeroLengthArrayGepInst(Ref);
+    if (NewGEP) {
+      Ref->replaceAllUsesWith(NewGEP);
+      if (isInstructionTriviallyDead(Ref))
+        DeadInsts.insert(Ref);
+
+      Ref = NewGEP;
+    }
     if (Type *GepTy = getGEPType(Ref))
       GR->addDeducedElementType(Ref, normalizeType(GepTy));
+  }
+  // Remove dead instructions that were simplified and replaced.
+  for (auto *I : DeadInsts) {
+    assert(I->use_empty() && "Dead instruction should not have any uses left");
+    I->eraseFromParent();
   }
 
   processParamTypesByFunHeader(CurrF, B);
@@ -2451,6 +2701,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (isConvergenceIntrinsic(I))
       continue;
 
+    addSaturatedDecorationToIntrinsic(I, B);
     processInstrAfterVisit(I, B);
   }
 
@@ -2486,10 +2737,13 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
         }
       }
     }
-    for (User *U : Op->users()) {
-      Instruction *Inst = dyn_cast<Instruction>(U);
-      if (Inst && !isa<IntrinsicInst>(Inst))
-        ToProcess[Inst].insert(Op);
+
+    if (Op->hasUseList()) {
+      for (User *U : Op->users()) {
+        Instruction *Inst = dyn_cast<Instruction>(U);
+        if (Inst && !isa<IntrinsicInst>(Inst))
+          ToProcess[Inst].insert(Op);
+      }
     }
   }
   if (TodoTypeSz == 0)

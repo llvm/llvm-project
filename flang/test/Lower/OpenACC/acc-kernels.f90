@@ -38,9 +38,9 @@ subroutine acc_kernels
   !$acc kernels async
   !$acc end kernels
 
-! CHECK:      acc.kernels  {
+! CHECK:      acc.kernels async {
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
+! CHECK-NEXT: }
 
   !$acc kernels async(1)
   !$acc end kernels

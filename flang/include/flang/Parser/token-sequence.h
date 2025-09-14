@@ -137,7 +137,7 @@ public:
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
   TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(
-      Messages &, const Prescanner &, bool allowAmpersand) const;
+      Messages &, const Prescanner &, bool preprocessingOnly) const;
   bool BadlyNestedParentheses() const;
   const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;

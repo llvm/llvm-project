@@ -340,8 +340,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
           return createStringError(
               errc::invalid_argument,
               "failed to parse file entry because the MD5 hash is invalid");
-        std::uninitialized_copy_n(Value.getAsBlock()->begin(), 16,
-                                  FileEntry.Checksum.begin());
+        llvm::uninitialized_copy(*Value.getAsBlock(),
+                                 FileEntry.Checksum.begin());
         break;
       default:
         break;

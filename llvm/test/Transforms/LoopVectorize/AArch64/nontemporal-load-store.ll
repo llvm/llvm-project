@@ -259,7 +259,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 define i4 @test_i4_load(ptr %ddst) {
 ; CHECK-LABEL: define i4 @test_i4_load
 ; CHECK-NOT: vector.body:
-; CHECk: ret i4 %{{.*}}
+; CHECK: ret i4 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -282,7 +282,7 @@ define i8 @test_load_i8(ptr %ddst) {
 ; CHECK-LABEL: @test_load_i8(
 ; CHECK:   vector.body:
 ; CHECK: load <4 x i8>, ptr {{.*}}, align 1, !nontemporal !0
-; CHECk: ret i8 %{{.*}}
+; CHECK: ret i8 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -305,7 +305,7 @@ define half @test_half_load(ptr %ddst) {
 ; CHECK-LABEL: @test_half_load
 ; CHECK-LABEL:   vector.body:
 ; CHECK: load <4 x half>, ptr {{.*}}, align 2, !nontemporal !0
-; CHECk: ret half %{{.*}}
+; CHECK: ret half %{{.*}}
 ;
 entry:
   br label %for.body
@@ -328,7 +328,7 @@ define i16 @test_i16_load(ptr %ddst) {
 ; CHECK-LABEL: @test_i16_load
 ; CHECK-LABEL:   vector.body:
 ; CHECK: load <4 x i16>, ptr {{.*}}, align 2, !nontemporal !0
-; CHECk: ret i16 %{{.*}}
+; CHECK: ret i16 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -351,7 +351,7 @@ define i32 @test_i32_load(ptr %ddst) {
 ; CHECK-LABEL: @test_i32_load
 ; CHECK-LABEL:   vector.body:
 ; CHECK: load <4 x i32>, ptr {{.*}}, align 4, !nontemporal !0
-; CHECk: ret i32 %{{.*}}
+; CHECK: ret i32 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -373,7 +373,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 define i33 @test_i33_load(ptr %ddst) {
 ; CHECK-LABEL: @test_i33_load
 ; CHECK-NOT:   vector.body:
-; CHECk: ret i33 %{{.*}}
+; CHECK: ret i33 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -395,7 +395,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 define i40 @test_i40_load(ptr %ddst) {
 ; CHECK-LABEL: @test_i40_load
 ; CHECK-NOT:   vector.body:
-; CHECk: ret i40 %{{.*}}
+; CHECK: ret i40 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -418,7 +418,7 @@ define i64 @test_i64_load(ptr %ddst) {
 ; CHECK-LABEL: @test_i64_load
 ; CHECK-LABEL:   vector.body:
 ; CHECK: load <4 x i64>, ptr {{.*}}, align 4, !nontemporal !0
-; CHECk: ret i64 %{{.*}}
+; CHECK: ret i64 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -441,7 +441,7 @@ define double @test_double_load(ptr %ddst) {
 ; CHECK-LABEL: @test_double_load
 ; CHECK-LABEL:   vector.body:
 ; CHECK: load <4 x double>, ptr {{.*}}, align 4, !nontemporal !0
-; CHECk: ret double %{{.*}}
+; CHECK: ret double %{{.*}}
 ;
 entry:
   br label %for.body
@@ -464,7 +464,7 @@ define i128 @test_i128_load(ptr %ddst) {
 ; CHECK-LABEL: @test_i128_load
 ; CHECK-LABEL:   vector.body:
 ; CHECK: load <4 x i128>, ptr {{.*}}, align 4, !nontemporal !0
-; CHECk: ret i128 %{{.*}}
+; CHECK: ret i128 %{{.*}}
 ;
 entry:
   br label %for.body
@@ -486,7 +486,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 define i256 @test_256_load(ptr %ddst) {
 ; CHECK-LABEL: @test_256_load
 ; CHECK-NOT:   vector.body:
-; CHECk: ret i256 %{{.*}}
+; CHECK: ret i256 %{{.*}}
 ;
 entry:
   br label %for.body

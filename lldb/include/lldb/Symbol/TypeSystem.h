@@ -310,7 +310,8 @@ public:
 
   // Exploring the type
 
-  virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
+  virtual const llvm::fltSemantics &
+  GetFloatTypeSemantics(size_t byte_size, lldb::Format format) = 0;
 
   virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
@@ -364,6 +365,12 @@ public:
     return CompilerDecl();
   }
 
+  virtual llvm::Expected<CompilerType>
+  GetDereferencedType(lldb::opaque_compiler_type_t type,
+                      ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) = 0;
+
   virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
@@ -373,9 +380,12 @@ public:
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) = 0;
 
-  virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                           llvm::StringRef name,
-                                           bool omit_empty_base_classes) = 0;
+  // Lookup a child given a name. This function will match base class names and
+  // member member names in "clang_type" only, not descendants.
+  virtual llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                          llvm::StringRef name,
+                          bool omit_empty_base_classes) = 0;
 
   virtual size_t GetIndexOfChildMemberWithName(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
@@ -434,7 +444,11 @@ public:
   /// given stream.
   ///
   /// This should not modify the state of the TypeSystem if possible.
-  virtual void Dump(llvm::raw_ostream &output) = 0;
+  ///
+  /// \param[out] output Stream to dup the AST into.
+  /// \param[in] filter If empty, dump whole AST. If non-empty, will only
+  /// dump decls whose names contain \c filter.
+  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;

@@ -27,6 +27,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Casting.h"
@@ -537,7 +538,6 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
       return E;
   }
 
-  SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
@@ -557,8 +557,8 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
       return E;
 
     bool Inserted = true;
-    std::tie(std::ignore, Inserted) =
-        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(
+        GlobalValue::getGUIDAssumingExternalLinkage(Name), &VTable);
     if (!Inserted)
       LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();
@@ -573,12 +573,8 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
   return Error::success();
 }
 
-/// \c NameStrings is a string composed of one of more possibly encoded
-/// sub-strings. The substrings are separated by 0 or more zero bytes. This
-/// method decodes the string and calls `NameCallback` for each substring.
-static Error
-readAndDecodeStrings(StringRef NameStrings,
-                     std::function<Error(StringRef)> NameCallback) {
+Error readAndDecodeStrings(StringRef NameStrings,
+                           std::function<Error(StringRef)> NameCallback) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -621,28 +617,24 @@ readAndDecodeStrings(StringRef NameStrings,
 }
 
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readAndDecodeStrings(
-      NameStrings,
-      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+  return readAndDecodeStrings(NameStrings,
+                              [&](StringRef S) { return addFuncName(S); });
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
                               StringRef VTableNameStrings) {
-  if (Error E = readAndDecodeStrings(FuncNameStrings,
-                                     std::bind(&InstrProfSymtab::addFuncName,
-                                               this, std::placeholders::_1)))
+  if (Error E = readAndDecodeStrings(
+          FuncNameStrings, [&](StringRef S) { return addFuncName(S); }))
     return E;
 
-  return readAndDecodeStrings(
-      VTableNameStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(VTableNameStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
     StringRef CompressedVTableStrings) {
-  return readAndDecodeStrings(
-      CompressedVTableStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(CompressedVTableStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
@@ -676,7 +668,7 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    MD5FuncMap.emplace_back(Function::getGUIDAssumingExternalLinkage(Name), &F);
     return Error::success();
   };
   if (Error E = NameToGUIDMap(PGOFuncName))
@@ -692,13 +684,13 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   return Error::success();
 }
 
-uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) const {
   // Given a runtime address, look up the hash value in the interval map, and
   // fallback to value 0 if a hash value is not found.
   return VTableAddrMap.lookup(Address, 0);
 }
 
-uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) const {
   finalizeSymtab();
   auto It = partition_point(AddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
     return A.first < Address;
@@ -1168,8 +1160,7 @@ void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
-  ValueProfData *VD =
-      (ValueProfData *)(new (::operator new(TotalSizeInBytes)) ValueProfData());
+  ValueProfData *VD = new (::operator new(TotalSizeInBytes)) ValueProfData();
   memset(VD, 0, TotalSizeInBytes);
   return VD;
 }
@@ -1363,7 +1354,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;
   // Tag
-  Vals.push_back(MDHelper.createString("VP"));
+  Vals.push_back(MDHelper.createString(MDProfLabels::ValueProfile));
   // Value Kind
   Vals.push_back(MDHelper.createConstant(
       ConstantInt::get(Type::getInt32Ty(Ctx), ValueKind)));
@@ -1394,7 +1385,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || Tag->getString() != "VP")
+  if (!Tag || Tag->getString() != MDProfLabels::ValueProfile)
     return nullptr;
 
   // Now check kind:
@@ -1616,7 +1607,7 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
   const char *EntryName =
       (Level == ProgramLevel ? "functions" : "edge counters");
   if (Level == ProgramLevel) {
-    OS << "Profile overlap infomation for base_profile: " << *BaseFilename
+    OS << "Profile overlap information for base_profile: " << *BaseFilename
        << " and test_profile: " << *TestFilename << "\nProgram level:\n";
   } else {
     OS << "Function level:\n"

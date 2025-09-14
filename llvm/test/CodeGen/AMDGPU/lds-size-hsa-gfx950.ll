@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefix=MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx950 < %s | FileCheck -check-prefix=MESA %s
 
 ; gfx950 supports upto 160 KB configurable LDS memory.
 ; This test checks the max and above the old i.e. 128 KiB size of LDS that can be allocated.
