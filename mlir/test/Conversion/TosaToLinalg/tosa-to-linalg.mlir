@@ -912,6 +912,7 @@ func.func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<
 
 // -----
 
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: @reduce_bf16
 // CHECK-SAME: [[ARG0:%.+]]: tensor<5x4xbf16>
 func.func @reduce_bf16(%arg0: tensor<5x4xbf16>) -> () {
@@ -924,9 +925,13 @@ func.func @reduce_bf16(%arg0: tensor<5x4xbf16>) -> () {
   // CHECK:   [[ACC:%.+]] = arith.addf [[EXTF]], %[[ARG2]] : f32
   // CHECK:   linalg.yield [[ACC]] : f32
   // CHECK:  }
-  // CHECK:  [[TRUNCF:%.+]] = tensor.empty() : tensor<4xbf16>
-  // CHECK:  [[RES:%.+]] = linalg.map { arith.truncf } ins([[REDUCE]]{{.*}}outs([[TRUNCF]]
-  // CHECK:  tensor.expand_shape [[RES]] {{\[}}[0, 1]] output_shape [1, 4] : tensor<4xbf16> into tensor<1x4xbf16>
+  // CHECK: [[INIT_RES:%.+]] = tensor.empty() : tensor<4xbf16>
+  // CHECK: [[RES:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[REDUCE]] : tensor<4xf32>) outs([[INIT_RES]] : tensor<4xbf16>)
+  // CHECK:  ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: bf16):
+  // CHECK:   [[TRUNCF:%.+]] = arith.truncf %[[IN]] : f32 to bf16
+  // CHECK:   linalg.yield [[TRUNCF]] : bf16
+  // CHECK:  }
+  // CHECK: tensor.expand_shape [[RES]] {{\[}}[0, 1]] output_shape [1, 4] : tensor<4xbf16> into tensor<1x4xbf16>
   %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<5x4xbf16>) -> tensor<1x4xbf16>
   return
 }

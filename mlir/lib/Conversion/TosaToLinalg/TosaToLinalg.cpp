@@ -1320,14 +1320,22 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
     auto resEmptyOp =
         tensor::EmptyOp::create(rewriter, loc, reduceShape, elementTy, dynDims)
             .getResult();
-    reducedRes = linalg::MapOp::create(
-                     rewriter, loc, ValueRange{reducedRes}, resEmptyOp,
-                     [&](OpBuilder &builder, Location loc, ValueRange args) {
-                       Value val = arith::TruncFOp::create(builder, loc,
-                                                           elementTy, args[0]);
-                       linalg::YieldOp::create(builder, loc, ValueRange{val});
-                     })
-                     .getResult()[0];
+
+    const unsigned reducedRank =
+        cast<ShapedType>(reducedRes.getType()).getRank();
+    auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
+    reducedRes =
+        linalg::GenericOp::create(
+            rewriter, loc, resEmptyOp.getType(), ValueRange{reducedRes},
+            ValueRange{resEmptyOp},
+            ArrayRef<AffineMap>{identityMap, identityMap},
+            getNParallelLoopsAttrs(reducedRank),
+            [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+              Value truncf = arith::TruncFOp::create(nestedBuilder, nestedLoc,
+                                                     elementTy, args[0]);
+              linalg::YieldOp::create(nestedBuilder, nestedLoc, truncf);
+            })
+            .getResults()[0];
   }
 
   SmallVector<ReassociationExprs, 4> reassociationMap;
