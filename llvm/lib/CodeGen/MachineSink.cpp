@@ -106,7 +106,13 @@ static cl::opt<bool>
     SinkInstsIntoCycle("sink-insts-to-avoid-spills",
                        cl::desc("Sink instructions into cycles to avoid "
                                 "register spills"),
-                       cl::init(false), cl::Hidden);
+                       cl::init(true), cl::Hidden);
+
+static cl::opt<bool> AggressivelySinkInstsIntoCycle(
+    "aggressively-sink-insts-to-avoid-spills",
+    cl::desc("Aggressively sink instructions into cycles to avoid "
+             "register spills"),
+    cl::init(false), cl::Hidden);
 
 static cl::opt<unsigned> SinkIntoCycleLimit(
     "machine-sink-cycle-limit",
@@ -262,6 +268,8 @@ private:
   bool
   aggressivelySinkIntoCycle(MachineCycle *Cycle, MachineInstr &I,
                             DenseMap<SinkItem, MachineInstr *> &SunkInstrs);
+
+  bool rematerializeIntoCycle(MachineCycle *Cycle, MachineInstr &I);
 
   bool isProfitableToSinkTo(Register Reg, MachineInstr &MI,
                             MachineBasicBlock *MBB,
@@ -815,21 +823,28 @@ bool MachineSinking::run(MachineFunction &MF) {
   if (SinkInstsIntoCycle) {
     SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
-    bool HasHighPressure;
 
     DenseMap<SinkItem, MachineInstr *> SunkInstrs;
 
-    enum CycleSinkStage { COPY, LOW_LATENCY, AGGRESSIVE, END };
-    for (unsigned Stage = CycleSinkStage::COPY; Stage != CycleSinkStage::END;
-         ++Stage, SunkInstrs.clear()) {
-      HasHighPressure = false;
+    enum CycleSinkStage {
+      COPY,
+      LOW_LATENCY,
+      REMATERIALIZATION,
+      AGGRESSIVE,
+      END
+    };
+    for (auto *Cycle : Cycles) {
+      MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+      if (!Preheader) {
+        LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
+        continue;
+      }
+      bool HasHighPressure = registerPressureExceedsLimit(*Preheader);
+      if (!HasHighPressure)
+        continue;
+      for (unsigned Stage = CycleSinkStage::COPY; Stage != CycleSinkStage::END;
+           ++Stage, SunkInstrs.clear()) {
 
-      for (auto *Cycle : Cycles) {
-        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
-        if (!Preheader) {
-          LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
-          continue;
-        }
         SmallVector<MachineInstr *, 8> Candidates;
         for (auto &MI : *Preheader)
           if (isSinkIntoCycleCandidate(MI, Cycle, MRI, TII))
@@ -860,18 +875,23 @@ bool MachineSinking::run(MachineFunction &MF) {
               !TII->hasLowDefLatency(SchedModel, *I, 0))
             continue;
 
-          if (!aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs))
-            continue;
+          if (Stage == CycleSinkStage::AGGRESSIVE &&
+              AggressivelySinkInstsIntoCycle) {
+            if (!aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs))
+              continue;
+          } else {
+            if (!rematerializeIntoCycle(Cycle, *I))
+              continue;
+          }
           EverMadeChange = true;
           ++NumCycleSunk;
         }
 
         // Recalculate the pressure after sinking
+        HasHighPressure = registerPressureExceedsLimit(*Preheader);
         if (!HasHighPressure)
-          HasHighPressure = registerPressureExceedsLimit(*Preheader);
+          break;
       }
-      if (!HasHighPressure)
-        break;
     }
   }
 
@@ -1768,6 +1788,86 @@ bool MachineSinking::aggressivelySinkIntoCycle(
   // If we have replaced all uses, then delete the dead instruction
   if (I.isDead(*MRI))
     I.eraseFromParent();
+  return true;
+}
+
+/// Rematerialize instructions into cycles,
+/// since LICM in the middle-end hoisted every instructions without considering
+/// register pressure.
+bool MachineSinking::rematerializeIntoCycle(MachineCycle *Cycle,
+                                            MachineInstr &I) {
+  LLVM_DEBUG(dbgs() << "Rematerialization: Finding sink block for: " << I);
+  MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+  assert(Preheader && "Cycle sink needs a preheader block");
+  MachineBasicBlock *SinkBlock = nullptr;
+  const MachineOperand &MO = I.getOperand(0);
+  for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
+    LLVM_DEBUG(dbgs() << "Rematerialization:   Analysing use: " << MI);
+    if (!Cycle->contains(MI.getParent())) {
+      LLVM_DEBUG(
+          dbgs() << "Rematerialization:   Use not in cycle, can't sink.\n");
+      return false;
+    }
+    if (!SinkBlock) {
+      SinkBlock = MI.getParent();
+      LLVM_DEBUG(dbgs() << "Rematerialization:   Setting sink block to: "
+                        << printMBBReference(*SinkBlock) << "\n");
+      continue;
+    }
+    if (MI.isPHI()) {
+      for (unsigned I = 1; I != MI.getNumOperands(); I += 2) {
+        Register SrcReg = MI.getOperand(I).getReg();
+        if (TRI->regsOverlap(SrcReg, MO.getReg())) {
+          MachineBasicBlock *SrcBB = MI.getOperand(I + 1).getMBB();
+          if (SrcBB != SinkBlock) {
+            SinkBlock = DT->findNearestCommonDominator(SinkBlock, SrcBB);
+            if (!SinkBlock)
+              break;
+          }
+        }
+      }
+    } else {
+      SinkBlock = DT->findNearestCommonDominator(SinkBlock, MI.getParent());
+    }
+    if (!SinkBlock) {
+      LLVM_DEBUG(
+          dbgs() << "Rematerialization:   Can't find nearest dominator\n");
+      return false;
+    }
+    LLVM_DEBUG(
+        dbgs() << "Rematerialization:   Setting nearest common dom block: "
+               << printMBBReference(*SinkBlock) << "\n");
+  }
+  if (!SinkBlock) {
+    LLVM_DEBUG(
+        dbgs() << "Rematerialization: Not sinking, can't find sink block.\n");
+    return false;
+  }
+  if (SinkBlock == Preheader) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Rematerialization: Not sinking, sink block is the preheader\n");
+    return false;
+  }
+  for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
+    if (MI.isPHI() && MI.getParent() == SinkBlock) {
+      LLVM_DEBUG(dbgs() << "Rematerialization: Not sinking, sink block is "
+                           "using it on PHI.\n");
+      return false;
+    }
+  }
+  LLVM_DEBUG(dbgs() << "Rematerialization: Sinking instruction!\n");
+  SinkBlock->splice(SinkBlock->SkipPHIsAndLabels(SinkBlock->begin()), Preheader,
+                    I);
+  // Conservatively clear any kill flags on uses of sunk instruction
+  for (MachineOperand &MO : I.operands()) {
+    if (MO.isReg() && MO.readsReg())
+      MRI->clearKillFlags(MO.getReg());
+  }
+  // The instruction is moved from its basic block, so do not retain the
+  // debug information.
+  assert(!I.isDebugInstr() && "Should not sink debug inst");
+  I.setDebugLoc(DebugLoc());
   return true;
 }
 

@@ -102,7 +102,7 @@ static cl::opt<bool> SinkInstsIntoCycleBeforeLICM(
     "sink-insts-before-licm",
     cl::desc("Sink instructions into cycles to avoid "
              "register spills"),
-    cl::init(true), cl::Hidden);
+    cl::init(false), cl::Hidden);
 
 STATISTIC(NumHoisted,
           "Number of machine instructions hoisted out of loops");
