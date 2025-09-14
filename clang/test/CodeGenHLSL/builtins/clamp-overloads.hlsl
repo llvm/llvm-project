@@ -90,6 +90,12 @@ double4 test_clamp_double4_mismatch1(double4 p0, double p1) { return clamp(p0, p
 // CHECK: [[CLAMP:%.*]] = call reassoc nnan ninf nsz arcp afn {{.*}} <4 x double> @llvm.[[TARGET]].nclamp.v4f64(<4 x double> %{{.*}}, <4 x double> [[CONV1]], <4 x double> %{{.*}})
 // CHECK: ret <4 x double> [[CLAMP]]
 double4 test_clamp_double4_mismatch2(double4 p0, double p1) { return clamp(p0, p1,p0); }
+// CHECK: define [[FNATTRS]] [[FFNATTRS]] <4 x double> {{.*}}test_clamp_double4_mismatch3
+// CHECK: [[CONV0:%.*]] = insertelement <4 x double> poison, double %{{.*}}, i64 0
+// CHECK: [[CONV1:%.*]] = shufflevector <4 x double> [[CONV0]], <4 x double> poison, <4 x i32> zeroinitializer
+// CHECK: [[CLAMP:%.*]] = call reassoc nnan ninf nsz arcp afn {{.*}} <4 x double> @llvm.[[TARGET]].nclamp.v4f64(<4 x double> [[CONV1]], <4 x double> %{{.*}}, <4 x double> %{{.*}})
+// CHECK: ret <4 x double> [[CLAMP]]
+double4 test_clamp_double4_mismatch3(double4 p0, double p1) { return clamp(p1, p0, p0); }
 
 // CHECK: define [[FNATTRS]] <3 x i32> {{.*}}test_overloads3
 // CHECK: [[CONV0:%.*]] = insertelement <3 x i32> poison, i32 %{{.*}}, i64 0
