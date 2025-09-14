@@ -386,7 +386,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
       !Res.empty())
     InitE = Res[0].getNodeAs<Expr>("init_expr");
 
-  std::optional<TransferType> PairCaptureType =
+  const std::optional<TransferType> PairCaptureType =
       getTransferType(*Result.Context, PairVar->getType(), InitE->getType());
   std::optional<TransferType> FirstVarCaptureType =
       getTransferType(*Result.Context, FirstVar->getType(),
