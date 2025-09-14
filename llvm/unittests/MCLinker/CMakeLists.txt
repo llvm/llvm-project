@@ -1,0 +1,24 @@
+set(LLVM_LINK_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+  Analysis
+  AsmParser
+  AsmPrinter
+  CodeGen
+  CodeGenTypes
+  Core
+  FileCheck
+  IRPrinter
+  MC
+  MCLinker
+  MIRParser
+  ModuleSplitter
+  Passes
+  Support
+  Target
+  TargetParser
+  TransformUtils
+  )
+
+add_llvm_unittest(MCLinkerTests
+  MCLinkerTest.cpp
+  )
