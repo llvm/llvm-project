@@ -43,5 +43,7 @@ def testIRDL():
           }
         """
         )
-        # CHECK: "irdl_test.test_op"(%cst) : (f32) -> ()
+        # CHECK: module {
+        # CHECK:   "irdl_test.test_op"(%cst) : (f32) -> ()
+        # CHECK: }
         m.dump()
