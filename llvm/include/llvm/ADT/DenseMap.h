@@ -372,8 +372,8 @@ protected:
     // Ensure that "NumEntries * 4 < NumBuckets * 3"
     if (NumEntries == 0)
       return 0;
-    // +1 is required because of the strict equality.
-    // For example if NumEntries is 48, we need to return 401.
+    // +1 is required because of the strict inequality.
+    // For example, if NumEntries is 48, we need to return 128.
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
@@ -887,10 +887,8 @@ class SmallDenseMap
   AlignedCharArrayUnion<BucketT[InlineBuckets], LargeRep> storage;
 
 public:
-  explicit SmallDenseMap(unsigned NumInitBuckets = 0) {
-    if (NumInitBuckets > InlineBuckets)
-      NumInitBuckets = llvm::bit_ceil(NumInitBuckets);
-    init(NumInitBuckets);
+  explicit SmallDenseMap(unsigned NumElementsToReservre = 0) {
+    init(NumElementsToReservre);
   }
 
   SmallDenseMap(const SmallDenseMap &other) : BaseT() {
@@ -905,7 +903,7 @@ public:
 
   template <typename InputIt>
   SmallDenseMap(const InputIt &I, const InputIt &E) {
-    init(NextPowerOf2(std::distance(I, E)));
+    init(std::distance(I, E));
     this->insert(I, E);
   }
 
@@ -1017,7 +1015,8 @@ public:
     this->BaseT::copyFrom(other);
   }
 
-  void init(unsigned InitBuckets) {
+  void init(unsigned InitNumEntries) {
+    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
     Small = true;
     if (InitBuckets > InlineBuckets) {
       Small = false;
