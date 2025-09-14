@@ -710,10 +710,10 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumBuckets;
 
 public:
-  /// Create a DenseMap with an optional \p NumElementsToReservre to guarantee
+  /// Create a DenseMap with an optional \p NumElementsToReserve to guarantee
   /// that this number of elements can be inserted in the map without grow().
-  explicit DenseMap(unsigned NumElementsToReservre = 0) {
-    init(NumElementsToReservre);
+  explicit DenseMap(unsigned NumElementsToReserve = 0) {
+    init(NumElementsToReserve);
   }
 
   DenseMap(const DenseMap &other) : BaseT() {
@@ -889,8 +889,8 @@ class SmallDenseMap
   AlignedCharArrayUnion<BucketT[InlineBuckets], LargeRep> storage;
 
 public:
-  explicit SmallDenseMap(unsigned NumElementsToReservre = 0) {
-    init(NumElementsToReservre);
+  explicit SmallDenseMap(unsigned NumElementsToReserve = 0) {
+    init(NumElementsToReserve);
   }
 
   SmallDenseMap(const SmallDenseMap &other) : BaseT() {
