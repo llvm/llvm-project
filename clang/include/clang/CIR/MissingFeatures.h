@@ -296,8 +296,6 @@ struct MissingFeatures {
   // Future CIR operations
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool complexImagOp() { return false; }
-  static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
   static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
