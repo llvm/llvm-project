@@ -3387,9 +3387,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // Metadata can be dependent on the condition we are hoisting above.
   // Strip all UB-implying metadata on the instruction. Drop the debug loc
   // to avoid making it appear as if the condition is a constant, which would
-  // be misleading while debugging. However, make sure to keep debug info
-  // for calls as inlinable function calls in a function with debug info must
-  // have a !dbg location.
+  // be misleading while debugging.
   // Similarly strip attributes that maybe dependent on condition we are
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
