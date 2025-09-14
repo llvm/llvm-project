@@ -188,8 +188,7 @@ constexpr float A_2x2_5x5[] = {
 struct TransformMatrix {
   TransformMatrix(ArrayRef<float> table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
-      : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {
-  }
+      : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {}
 
   ArrayRef<float> table;
   int64_t rows;
@@ -200,8 +199,10 @@ struct TransformMatrix {
 /// Utility function to convert constant array to arith.constant Value.
 Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                               TransformMatrix transform) {
-  assert(transform.table.size() == static_cast<size_t>(transform.rows * transform.cols));
-  ArrayRef<float> constVec(transform.table.data(), transform.rows * transform.cols);
+  assert(transform.table.size() ==
+         static_cast<size_t>(transform.rows * transform.cols));
+  ArrayRef<float> constVec(transform.table.data(),
+                           transform.rows * transform.cols);
   SmallVector<int64_t, 2> shape{transform.rows, transform.cols};
   return arith::ConstantOp::create(
       builder, loc,
@@ -551,8 +552,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value BT =
-          create2DTransformMatrix(builder, loc, BTMatrix);
+      Value BT = create2DTransformMatrix(builder, loc, BTMatrix);
       // Multiply BT x d.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{BT, matmulRetValue},
@@ -574,8 +574,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                        .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
-      Value B =
-          create2DTransformMatrix(builder, loc, BMatrix);
+      Value B = create2DTransformMatrix(builder, loc, BMatrix);
       // Multiply v = (BT x d) x B.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, B},
