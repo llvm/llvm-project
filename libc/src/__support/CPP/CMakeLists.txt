@@ -224,4 +224,7 @@ add_header_library(
   simd
   HDRS
     simd.h
+  DEPENDS
+    .utility
+    .tuple
 )

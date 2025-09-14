@@ -38,6 +38,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -402,12 +403,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Legal);
   }
 
-  if (Subtarget.hasStdExtZbb() ||
-      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  if (Subtarget.hasCTZLike()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
+  }
+
+  if (!Subtarget.hasCPOPLike()) {
     // TODO: These should be set to LibCall, but this currently breaks
     //   the Linux kernel build. See #101786. Lacks i128 tests, too.
     if (Subtarget.is64Bit())
@@ -417,11 +420,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  if (Subtarget.hasCLZLike()) {
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
-    if (Subtarget.is64Bit())
+    // Use default promotion for i32 without Zbb.
+    if (Subtarget.is64Bit() && Subtarget.hasStdExtZbb())
       setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
@@ -2156,13 +2159,11 @@ bool RISCVTargetLowering::signExtendConstant(const ConstantInt *CI) const {
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() ||
-         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
+  return Subtarget.hasCTZLike();
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
+  return Subtarget.hasCLZLike();
 }
 
 bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -18838,6 +18839,8 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   case ISD::ADD:
   case ISD::OR:
   case ISD::XOR:
+  case ISD::UMIN:
+  case ISD::UMAX:
     break;
   }
 
@@ -18947,7 +18950,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
 
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
-  if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
+  if (Subtarget.hasBEXTILike() && VT.isScalarInteger() &&
       (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
@@ -23257,6 +23260,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (VA.isRegLoc()) {
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
+
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.EmitCallSiteInfo)
+        CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
       assert(!IsTailCall && "Tail call not allowed if stack is used "
@@ -23358,9 +23365,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
-    if (MF.getTarget().Options.EmitCallGraphSection && CB &&
-        CB->isIndirectCall())
-      DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
 
@@ -23369,10 +23374,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
-
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
@@ -24841,7 +24844,7 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
     return isTypeLegal(VT) && Subtarget.hasStdExtZvbb();
   if (VT.isFixedLengthVector() && Subtarget.hasStdExtZvbb())
     return true;
-  return Subtarget.hasStdExtZbb() &&
+  return Subtarget.hasCPOPLike() &&
          (VT == MVT::i32 || VT == MVT::i64 || VT.isFixedLengthVector());
 }
 
@@ -24890,6 +24893,12 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       Op == Instruction::Freeze || Op == Instruction::Store)
     return false;
 
+  if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+    // Mark RVV intrinsic as supported.
+    if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(II->getIntrinsicID()))
+      return false;
+  }
+
   if (Inst.getType()->isScalableTy())
     return true;
 
@@ -24929,8 +24938,8 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike())
-    return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
+  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())
+    return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
 
