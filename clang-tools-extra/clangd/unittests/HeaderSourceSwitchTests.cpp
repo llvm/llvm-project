@@ -535,14 +535,14 @@ TEST(HeaderSourceSwitchTest, CaseSensitivity) {
   // We expect the heuristics to pick:
   // - header on case sensitive file systems, because the HeaderAbsPath doesn't
   //   match what we've seen through index.
-  // - source on case insensitive file systems, as the HeaderAbsPath would match
-  //   the filename in index.
+  // - nullopt on case insensitive file systems, as the HeaderAbsPath doesn't
+  //   match the filename in index.
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
   EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
               llvm::ValueIs(testing::StrCaseEq(testPath(TU.Filename))));
 #else
-  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
-              llvm::ValueIs(testing::StrCaseEq(testPath(TU.HeaderFilename))));
+  EXPECT_EQ(std::optional<std::string>{},
+            getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()));
 #endif
 }
 
