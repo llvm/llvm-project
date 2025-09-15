@@ -18,7 +18,7 @@
 // CHECK-WITH-G1-DWARF5-SAME: -dwarf-version=5
 
 // CHECK-WITHOUT-G-DWARF5: -debug-info-kind=standalone
-// CHECK-WITHOUT-G-DWARF5: -dwarf-version=5
+// CHECK-WITHOUT-G-DWARF5-SAME: -dwarf-version=5
 
 // CHECK-DWARF4: -dwarf-version=4
 
