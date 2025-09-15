@@ -464,17 +464,15 @@ _mm512_maskz_mullo_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
                                              (__v32hi)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_mask_blend_epi8 (__mmask64 __U, __m512i __A, __m512i __W)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_blend_epi8(__mmask64 __U, __m512i __A, __m512i __W) {
   return (__m512i) __builtin_ia32_selectb_512 ((__mmask64) __U,
               (__v64qi) __W,
               (__v64qi) __A);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_mask_blend_epi16 (__mmask32 __U, __m512i __A, __m512i __W)
-{
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_blend_epi16(__mmask32 __U, __m512i __A, __m512i __W) {
   return (__m512i) __builtin_ia32_selectw_512 ((__mmask32) __U,
               (__v32hi) __W,
               (__v32hi) __A);
