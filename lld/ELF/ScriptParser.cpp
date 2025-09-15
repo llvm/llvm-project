@@ -996,8 +996,13 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
       ctx.script->createOutputSection(readName(), getCurrentLocation());
   osd->osec.inOverlay = true;
   expect("{");
-  while (auto tok = till("}"))
-    osd->osec.commands.push_back(readInputSectionDescription(tok));
+  while (auto tok = till("}")) {
+    if (SymbolAssignment *assign = readAssignment(tok)) {
+      osd->osec.commands.push_back(assign);
+    } else {
+      osd->osec.commands.push_back(readInputSectionDescription(tok));
+    }
+  }
   osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
 }
