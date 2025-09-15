@@ -13,6 +13,7 @@
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -249,7 +250,53 @@ public:
     }
   }
 
+  void visitCodeCommand(const comments::VerbatimBlockComment *VB) {
+    std::string CodeLang = "";
+    auto *FirstLine = VB->child_begin();
+    // The \\code command has an optional language argument.
+    // This argument is currently not parsed by the clang doxygen parser.
+    // Therefore we try to extract it from the first line of the verbatim
+    // block.
+    if (VB->getNumLines() > 0) {
+      if (const auto *Line =
+              cast<comments::VerbatimBlockLineComment>(*FirstLine)) {
+        llvm::StringRef Text = Line->getText();
+        // Language is a single word enclosed in {}.
+        if (llvm::none_of(Text, llvm::isSpace) && Text.consume_front("{") &&
+            Text.consume_back("}")) {
+          // drop a potential . since this is not supported in Markdown
+          // fenced code blocks.
+          Text.consume_front(".");
+          // Language is alphanumeric or '+'.
+          CodeLang = Text.take_while([](char C) {
+                           return llvm::isAlnum(C) || C == '+';
+                         })
+                         .str();
+          // Skip the first line for the verbatim text.
+          ++FirstLine;
+        }
+      }
+    }
+
+    std::string CodeBlockText;
+
+    for (const auto *LI = FirstLine; LI != VB->child_end(); ++LI) {
+      if (const auto *Line = cast<comments::VerbatimBlockLineComment>(*LI)) {
+        CodeBlockText += Line->getText().str() + "\n";
+      }
+    }
+
+    Out.addCodeBlock(CodeBlockText, CodeLang);
+  }
+
   void visitVerbatimBlockComment(const comments::VerbatimBlockComment *VB) {
+    // The \\code command is a special verbatim block command which we handle
+    // separately.
+    if (VB->getCommandID() == comments::CommandTraits::KCI_code) {
+      visitCodeCommand(VB);
+      return;
+    }
+
     commandToMarkup(Out.addParagraph(), VB->getCommandName(Traits),
                     VB->getCommandMarker(), "");
 
@@ -291,6 +338,110 @@ private:
     Out.addRuler();
   }
 };
+
+void SymbolDocCommentVisitor::preprocessDocumentation(StringRef Doc) {
+  enum State {
+    Normal,
+    FencedCodeblock,
+  } State = Normal;
+  std::string CodeFence;
+
+  llvm::raw_string_ostream OS(CommentWithMarkers);
+
+  // The documentation string is processed line by line.
+  // The raw documentation string does not contain the comment markers
+  // (e.g. /// or /** */).
+  // But the comment lexer expects doxygen markers, so add them back.
+  // We need to use the /// style doxygen markers because the comment could
+  // contain the closing tag "*/" of a C Style "/** */" comment
+  // which would break the parsing if we would just enclose the comment text
+  // with "/** */".
+
+  // Escape doxygen commands inside markdown inline code spans.
+  // This is required to not let the doxygen parser interpret them as
+  // commands.
+  // Note: This is a heuristic which may fail in some cases.
+  bool InCodeSpan = false;
+
+  llvm::StringRef Line, Rest;
+  for (std::tie(Line, Rest) = Doc.split('\n'); !(Line.empty() && Rest.empty());
+       std::tie(Line, Rest) = Rest.split('\n')) {
+
+    // Detect code fence (``` or ~~~)
+    if (State == Normal) {
+      llvm::StringRef Trimmed = Line.ltrim();
+      if (Trimmed.starts_with("```") || Trimmed.starts_with("~~~")) {
+        // https://www.doxygen.nl/manual/markdown.html#md_fenced
+        CodeFence =
+            Trimmed.take_while([](char C) { return C == '`' || C == '~'; })
+                .str();
+        // Try to detect language: first word after fence. Could also be
+        // enclosed in {}
+        llvm::StringRef AfterFence =
+            Trimmed.drop_front(CodeFence.size()).ltrim();
+        // ignore '{' at the beginning of the language name to not duplicate it
+        // for the doxygen command
+        AfterFence.consume_front("{");
+        // The name is alphanumeric or '.' or '+'
+        StringRef CodeLang = AfterFence.take_while(
+            [](char C) { return llvm::isAlnum(C) || C == '.' || C == '+'; });
+
+        OS << "///@code";
+
+        if (!CodeLang.empty())
+          OS << "{" << CodeLang.str() << "}";
+
+        OS << "\n";
+
+        State = FencedCodeblock;
+        continue;
+      }
+
+      // FIXME: handle indented code blocks too?
+      // In doxygen, the indentation which triggers a code block depends on the
+      // indentation of the previous paragraph.
+      // https://www.doxygen.nl/manual/markdown.html#mddox_code_blocks
+    } else if (State == FencedCodeblock) {
+      // End of code fence
+      if (Line.ltrim().starts_with(CodeFence)) {
+        OS << "///@endcode\n";
+        State = Normal;
+        continue;
+      }
+      OS << "///" << Line << "\n";
+      continue;
+    }
+
+    // Normal line preprocessing (add doxygen markers, handle escaping)
+    OS << "///";
+
+    if (Line.empty() || Line.trim().empty()) {
+      OS << "\n";
+      // Empty lines reset the InCodeSpan state.
+      InCodeSpan = false;
+      continue;
+    }
+
+    if (Line.starts_with("<"))
+      // A comment line starting with '///<' is treated as a doxygen
+      // command. To avoid this, we add a space before the '<'.
+      OS << ' ';
+
+    for (char C : Line) {
+      if (C == '`')
+        InCodeSpan = !InCodeSpan;
+      else if (InCodeSpan && (C == '@' || C == '\\'))
+        OS << '\\';
+      OS << C;
+    }
+
+    OS << "\n";
+  }
+
+  // Close any unclosed code block
+  if (State == FencedCodeblock)
+    OS << "///@endcode\n";
+}
 
 void SymbolDocCommentVisitor::visitBlockCommandComment(
     const comments::BlockCommandComment *B) {

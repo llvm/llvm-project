@@ -21,6 +21,7 @@
 #include "clang/AST/CommentSema.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -51,31 +52,8 @@ public:
     CommentWithMarkers.reserve(Documentation.size() +
                                Documentation.count('\n') * 3);
 
-    // The comment lexer expects doxygen markers, so add them back.
-    // We need to use the /// style doxygen markers because the comment could
-    // contain the closing the closing tag "*/" of a C Style "/** */" comment
-    // which would break the parsing if we would just enclose the comment text
-    // with "/** */".
-    CommentWithMarkers = "///";
-    bool NewLine = true;
-    for (char C : Documentation) {
-      if (C == '\n') {
-        CommentWithMarkers += "\n///";
-        NewLine = true;
-      } else {
-        if (NewLine && (C == '<')) {
-          // A comment line starting with '///<' is treated as a doxygen
-          // comment. Therefore add a space to separate the '<' from the comment
-          // marker. This allows to parse html tags at the beginning of a line
-          // and the escape marker prevents adding the artificial space in the
-          // markup documentation. The extra space will not be rendered, since
-          // we render it as markdown.
-          CommentWithMarkers += ' ';
-        }
-        CommentWithMarkers += C;
-        NewLine = false;
-      }
-    }
+    preprocessDocumentation(Documentation);
+
     SourceManagerForFile SourceMgrForFile("mock_file.cpp", CommentWithMarkers);
 
     SourceManager &SourceMgr = SourceMgrForFile.get();
@@ -148,6 +126,27 @@ public:
   void visitTParamCommandComment(const comments::TParamCommandComment *TP) {
     TemplateParameters[TP->getParamNameAsWritten()] = std::move(TP);
   }
+
+  /// \brief Preprocesses the raw documentation string to prepare it for doxygen
+  /// parsing.
+  ///
+  /// This is a workaround to provide better support for markdown in
+  /// doxygen. Clang's doxygen parser e.g. does not handle markdown code blocks.
+  ///
+  /// The documentation string is preprocessed to replace some markdown
+  /// constructs with parsable doxygen commands. E.g. markdown code blocks are
+  /// replaced with doxygen \\code{.lang} ...
+  /// \\endcode blocks.
+  ///
+  /// Additionally, potential doxygen commands inside markdown
+  /// inline code spans are escaped to avoid that doxygen tries to interpret
+  /// them as commands.
+  ///
+  /// \note Although this is a workaround, it is very similar to what
+  /// doxygen itself does for markdown. In doxygen, the first parsing step is
+  /// also a markdown preprocessing step.
+  /// See https://www.doxygen.nl/manual/markdown.html
+  void preprocessDocumentation(StringRef Doc);
 
 private:
   comments::CommandTraits Traits;
