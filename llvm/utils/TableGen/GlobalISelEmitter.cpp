@@ -1133,9 +1133,8 @@ Error GlobalISelEmitter::importChildMatcher(
     auto *ChildRec = ChildDefInit->getDef();
 
     // Check for register classes.
-    if (ChildRec->isSubClassOf("RegisterClass") ||
-        ChildRec->isSubClassOf("RegisterOperand") ||
-        ChildRec->isSubClassOf("RegClassByHwMode")) {
+    if (ChildRec->isSubClassOf("RegisterClassLike") ||
+        ChildRec->isSubClassOf("RegisterOperand")) {
       OM.addPredicate<RegisterBankOperandMatcher>(
           Target.getRegisterClass(Target.getInitValueAsRegClass(
               ChildDefInit,
