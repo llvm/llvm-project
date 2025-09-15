@@ -2119,8 +2119,12 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // generated local labels used for internal purposes (e.g. debugging,
     // optimization) and are not relevant for symbol resolution or external
     // linkage.
-    if (llvm::StringRef(symbol_name).starts_with(".L"))
-      continue;
+    // LoongArch64 always uses symbols for relocations, so temporary symbols
+    // starting with ".L" should be preserved.
+    if (arch.GetMachine() != llvm::Triple::loongarch64) {
+      if (llvm::StringRef(symbol_name).starts_with(".L"))
+        continue;
+    }
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
