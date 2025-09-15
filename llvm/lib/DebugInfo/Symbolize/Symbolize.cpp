@@ -676,13 +676,12 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
                                   const std::string &ArchName) {
   // First check for archive(member) format - more efficient to check closing
   // paren first.
-  size_t CloseParen = Path.rfind(')');
-  if (CloseParen != std::string::npos && CloseParen == Path.length() - 1) {
-    size_t OpenParen = Path.rfind('(', CloseParen);
+  if (!Path.empty() && Path.back() == ')') {
+    size_t OpenParen = Path.rfind('(', Path.size() - 1);
     if (OpenParen != std::string::npos) {
       StringRef ArchivePath = StringRef(Path).substr(0, OpenParen);
       StringRef MemberName =
-          StringRef(Path).substr(OpenParen + 1, CloseParen - OpenParen - 1);
+          StringRef(Path).substr(OpenParen + 1, Path.size() - OpenParen - 2);
       return getOrCreateObjectFromArchive(ArchivePath, MemberName, ArchName);
     }
   }

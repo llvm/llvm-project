@@ -13,6 +13,8 @@
 // RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-1.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-1
 // RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%{t:stem}.tmp-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
 // RUN: llvm-symbolizer --obj="%t.a(%{t:stem}.tmp-2.o):ppc64le" 0x0 | FileCheck %s --check-prefix=CHECK-2
+// RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%t-1.o)" 0x0 | FileCheck %s --check-prefix=CHECK-1
+// RUN: llvm-symbolizer --default-arch=ppc64le --obj="%t.a(%t-2.o)" 0x0 | FileCheck %s --check-prefix=CHECK-2
 // CHECK-1: foo1
 // CHECK-2: foo2
 
@@ -21,3 +23,9 @@
 // CHECK-ERROR: error: {{.*}}no matching member{{.*}}
 // RUN: not llvm-symbolizer --obj="%t-1.o(%{t:stem}.tmp-1.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-NOTARCHIVE
 // CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive
+// RUN: not llvm-symbolizer --obj="%t.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-EMPTY
+// CHECK-EMPTY: {{.*}}no matching member{{.*}}
+// RUN: not llvm-symbolizer --obj="%t.a(%t.o" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-FORMAT-1
+// CHECK-INCORRECT-FORMAT-1: {{.*}}No such file or directory{{.*}}
+// RUN: not llvm-symbolizer --obj="%t.a%t.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-FORMAT-2
+// CHECK-INCORRECT-FORMAT-2: {{.*}}Not a directory{{.*}}
