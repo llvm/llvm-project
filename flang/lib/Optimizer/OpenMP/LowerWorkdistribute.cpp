@@ -569,7 +569,7 @@ static bool usedOutsideSplit(Value v, Operation *split) {
       return true;
   }
   return false;
-};
+}
 
 // isRecomputableAfterFission checks if an operation can be recomputed
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
