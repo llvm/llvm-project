@@ -55,14 +55,13 @@ static bool isZero(Value v) {
 }
 
 void ConvertComplexPowPass::runOnOperation() {
-  auto func = getOperation();
-  auto mod = func->getParentOfType<ModuleOp>();
+  ModuleOp mod = getOperation();
   if (fir::getTargetTriple(mod).isAMDGCN())
     return;
 
-  fir::FirOpBuilder builder(func, fir::getKindMapping(mod));
+  fir::FirOpBuilder builder(mod, fir::getKindMapping(mod));
 
-  func.walk([&](complex::PowOp op) {
+  mod.walk([&](complex::PowOp op) {
     builder.setInsertionPoint(op);
     Location loc = op.getLoc();
     auto complexTy = cast<ComplexType>(op.getType());

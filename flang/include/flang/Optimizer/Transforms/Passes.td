@@ -551,7 +551,7 @@ def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
       "Prefer expanding without using Fortran runtime calls.">];
 }
 
-def ConvertComplexPow : Pass<"convert-complex-pow", "mlir::func::FuncOp"> {
+def ConvertComplexPow : Pass<"convert-complex-pow", "mlir::ModuleOp"> {
   let summary = "Convert complex.pow operations to library calls";
   let description = [{
     Replace `complex.pow` operations with calls to the appropriate
