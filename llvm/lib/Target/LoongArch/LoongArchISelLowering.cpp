@@ -43,27 +43,32 @@ using namespace llvm;
 STATISTIC(NumTailCalls, "Number of tail calls");
 
 enum MaterializeFPImm {
-  NoMaterializeFPImm,
-  MaterializeFPImm1Ins,
-  MaterializeFPImm2Ins,
-  MaterializeFPImm3Ins,
-  MaterializeFPImm4Ins
+  NoMaterializeFPImm = 0,
+  MaterializeFPImm2Ins = 2,
+  MaterializeFPImm3Ins = 3,
+  MaterializeFPImm4Ins = 4,
+  MaterializeFPImm5Ins = 5,
+  MaterializeFPImm6Ins = 6
 };
 
 static cl::opt<MaterializeFPImm> MaterializeFPImmInsNum(
     "loongarch-materialize-float-imm", cl::Hidden,
-    cl::desc("Maximum number of instructions used when materializing "
-             "floating-point immediates (default = 2)"),
-    cl::init(MaterializeFPImm2Ins),
+    cl::desc("Maximum number of instructions used (including code sequence "
+             "to generate the value and moving the value to FPR) when "
+             "materializing floating-point immediates (default = 3)"),
+    cl::init(MaterializeFPImm3Ins),
     cl::values(clEnumValN(NoMaterializeFPImm, "0", "Use constant pool"),
-               clEnumValN(MaterializeFPImm1Ins, "1",
-                          "Materialize FP immediate within 1 instruction"),
                clEnumValN(MaterializeFPImm2Ins, "2",
                           "Materialize FP immediate within 2 instructions"),
                clEnumValN(MaterializeFPImm3Ins, "3",
                           "Materialize FP immediate within 3 instructions"),
                clEnumValN(MaterializeFPImm4Ins, "4",
-                          "Materialize FP immediate within 4 instructions")));
+                          "Materialize FP immediate within 4 instructions"),
+               clEnumValN(MaterializeFPImm5Ins, "5",
+                          "Materialize FP immediate within 5 instructions"),
+               clEnumValN(MaterializeFPImm6Ins, "6",
+                          "Materialize FP immediate within 6 instructions "
+                          "(behaves same as 5 on loongarch64)")));
 
 static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
                                   cl::desc("Trap on integer division by zero."),
@@ -601,6 +606,15 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
 
   // Construct as integer, and move to float register.
   APInt INTVal = FPVal.bitcastToAPInt();
+
+  // If more than MaterializeFPImmInsNum instructions will be used to
+  // generate the INTVal and move it to float register, fallback to
+  // use floating point load from the constant pool.
+  auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
+  int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
+  if (InsNum > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
+    return SDValue();
+
   switch (VT.getSimpleVT().SimpleTy) {
   default:
     llvm_unreachable("Unexpected floating point type!");
@@ -614,18 +628,10 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
                        DL, VT, NewVal);
   }
   case MVT::f64: {
-    // If more than MaterializeFPImmInsNum instructions will be used to
-    // generate the INTVal, fallback to use floating point load from the
-    // constant pool.
-    auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
-    if (Seq.size() > MaterializeFPImmInsNum && !FPVal.isExactlyValue(+1.0))
-      return SDValue();
-
     if (Subtarget.is64Bit()) {
       SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i64);
       return DAG.getNode(LoongArchISD::MOVGR2FR_D, DL, VT, NewVal);
     }
-
     SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
     SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
     return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
