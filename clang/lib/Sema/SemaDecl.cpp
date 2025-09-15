@@ -5267,6 +5267,9 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   assert(EllipsisLoc.isInvalid() &&
          "Friend ellipsis but not friend-specified?");
 
+  if (DS.isExportSpecified())
+    mergeVisibilityType(Tag, DS.getExportSpecLoc(), VisibilityAttr::Default);
+
   // Track whether this decl-specifier declares anything.
   bool DeclaresAnything = true;
 
@@ -6613,6 +6616,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
+  if (D.IsExport())
+    mergeVisibilityType(New, D.getExportLoc(), VisibilityAttr::Default);
+
   warnOnCTypeHiddenInCPlusPlus(New);
 
   // If this has an identifier and is not a function template specialization,
@@ -6851,6 +6857,9 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
           << D.getName().getSourceRange();
     return nullptr;
   }
+
+  if (D.IsExport())
+    Diag(D.getName().StartLocation, diag::err_cannot_be_exported);
 
   TypedefDecl *NewTD = ParseTypedefDecl(S, D, TInfo->getType(), TInfo);
   if (!NewTD) return nullptr;
@@ -8308,6 +8317,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
+
+  if (D.IsExport() && !NewVD->hasExternalFormalLinkage())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
@@ -10954,6 +10966,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   ProcessPragmaWeak(S, NewFD);
   checkAttributesAfterMerging(*this, *NewFD);
+
+  if (D.IsExport() && !NewFD->hasExternalFormalLinkage())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
 
   AddKnownFunctionAttributes(NewFD);
 
@@ -15538,6 +15553,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(New);
 
+  if (D.IsExport())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
+
   return New;
 }
 
@@ -19186,6 +19204,9 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
+
+  if (D && D->IsExport())
+    Diag(D->getIdentifierLoc(), diag::err_cannot_be_exported);
 
   NewFD->setAccess(AS);
   return NewFD;
