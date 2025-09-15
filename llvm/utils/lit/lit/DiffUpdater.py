@@ -1,6 +1,7 @@
 import shutil
 import os
 import shlex
+import pathlib
 
 """
 This file provides the `diff_test_updater` function, which is invoked on failed RUN lines when lit is executed with --update-tests.
@@ -61,29 +62,29 @@ class SplitFileTarget:
 
     @staticmethod
     def get_target_dir(commands, test_path):
+        # posix=True breaks Windows paths because \ is treated as an escaping character
         for cmd in commands:
-            split = shlex.split(cmd)
+            split = shlex.split(cmd, posix=False)
             if "split-file" not in split:
                 continue
             start_idx = split.index("split-file")
             split = split[start_idx:]
             if len(split) < 3:
                 continue
-            if split[1].strip() != test_path:
+            p = unquote(split[1].strip())
+            if not test_path.samefile(p):
                 continue
-            return split[2].strip()
+            return unquote(split[2].strip())
         return None
 
     @staticmethod
     def create(path, commands, test_path, target_dir):
-        filename = path.replace(target_dir, "")
-        if filename.startswith(os.sep):
-            filename = filename[len(os.sep) :]
+        path = pathlib.Path(path)
         with open(test_path, "r") as f:
             lines = f.readlines()
         for i, l in enumerate(lines):
             p = SplitFileTarget._get_split_line_path(l)
-            if p == filename:
+            if p and path.samefile(os.path.join(target_dir, p)):
                 idx = i
                 break
         else:
@@ -103,6 +104,12 @@ class SplitFileTarget:
         else:
             return None
         return l.rstrip()
+
+
+def unquote(s):
+    if len(s) > 1 and s[0] == s[-1] and (s[0] == '"' or s[0] == "'"):
+        return s[1:-1]
+    return s
 
 
 def get_source_and_target(a, b, test_path, commands):
@@ -146,7 +153,7 @@ def diff_test_updater(result, test, commands):
     [cmd, a, b] = args
     if cmd != "diff":
         return None
-    res = get_source_and_target(a, b, test.getFilePath(), commands)
+    res = get_source_and_target(a, b, pathlib.Path(test.getFilePath()), commands)
     if not res:
         return f"update-diff-test: could not deduce source and target from {a} and {b}"
     source, target = res
