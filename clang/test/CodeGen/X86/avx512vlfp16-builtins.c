@@ -2077,6 +2077,8 @@ __m128h test_mm256_maskz_cvtepi32_ph(__mmask8 A, __m256i B) {
   return _mm256_maskz_cvtepi32_ph(A, B);
 }
 
+ TEST_CONSTEXPR(match_m128h(_mm256_maskz_cvtepi32_ph(/*1001 0011=*/0x93, (__m256i)(__v8si){1, 1, 2, 2, 4, 4, 8, 8}), 1.0, 1.0, 0.0, 0.0, 4.0, 0.0, 0.0, 8.0));
+
 __m128h test_mm_cvtepu32_ph(__m128i A) {
   // CHECK-LABEL: test_mm_cvtepu32_ph
   // CHECK: @llvm.x86.avx512fp16.mask.vcvtudq2ph.128
