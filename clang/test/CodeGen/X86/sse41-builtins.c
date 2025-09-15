@@ -27,18 +27,30 @@ __m128i test_mm_blend_epi16(__m128i V1, __m128i V2) {
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 7>
   return _mm_blend_epi16(V1, V2, 42);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0x00),1,2,3,4,5,6,7,8));
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0x5A),1,-2,3,-4,-5,6,-7,8));
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0x94),1,2,-3,4,-5,6,7,-8));
+TEST_CONSTEXPR(match_v8hi(_mm_blend_epi16(((__m128i)(__v8hi){1,2,3,4,5,6,7,8}),((__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,-7,-8}),0xFF),-1,-2,-3,-4,-5,-6,-7,-8));
 
 __m128d test_mm_blend_pd(__m128d V1, __m128d V2) {
   // CHECK-LABEL: test_mm_blend_pd
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 0, i32 3>
   return _mm_blend_pd(V1, V2, 2);
 }
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 0), 1.0, 2.0));
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 1), 3.0, 2.0));
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 2), 1.0, 4.0));
+TEST_CONSTEXPR(match_m128d(_mm_blend_pd(((__m128d){1.0, 2.0}), ((__m128d){3.0, 4.0}), 3), 3.0, 4.0));
 
 __m128 test_mm_blend_ps(__m128 V1, __m128 V2) {
   // CHECK-LABEL: test_mm_blend_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   return _mm_blend_ps(V1, V2, 6);
 }
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0x0), 1.0f, 2.0f, 3.0f, 4.0f));
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0x5), 5.0f, 2.0f, 7.0f, 4.0f));
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0xA), 1.0f, 6.0f, 3.0f, 8.0f));
+TEST_CONSTEXPR(match_m128(_mm_blend_ps(((__m128){1.0f, 2.0f, 3.0f, 4.0f}), ((__m128){5.0f, 6.0f, 7.0f, 8.0f}), 0xF), 5.0f, 6.0f, 7.0f, 8.0f));
 
 __m128i test_mm_blendv_epi8(__m128i V1, __m128i V2, __m128i V3) {
   // CHECK-LABEL: test_mm_blendv_epi8
@@ -459,4 +471,3 @@ int test_mm_testz_si128(__m128i x, __m128i y) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testz_si128(x, y);
 }
-
