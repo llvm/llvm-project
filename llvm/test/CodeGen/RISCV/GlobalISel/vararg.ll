@@ -437,8 +437,8 @@ define void @va1_caller() nounwind {
 ; LP64:       # %bb.0:
 ; LP64-NEXT:    addi sp, sp, -16
 ; LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; LP64-NEXT:    lui a0, %hi(.LCPI3_0)
-; LP64-NEXT:    ld a1, %lo(.LCPI3_0)(a0)
+; LP64-NEXT:    li a1, 1023
+; LP64-NEXT:    slli a1, a1, 52
 ; LP64-NEXT:    li a2, 2
 ; LP64-NEXT:    call va1
 ; LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -494,8 +494,8 @@ define void @va1_caller() nounwind {
 ; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
-; RV64-WITHFP-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV64-WITHFP-NEXT:    ld a1, %lo(.LCPI3_0)(a0)
+; RV64-WITHFP-NEXT:    li a1, 1023
+; RV64-WITHFP-NEXT:    slli a1, a1, 52
 ; RV64-WITHFP-NEXT:    li a2, 2
 ; RV64-WITHFP-NEXT:    call va1
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
