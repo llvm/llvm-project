@@ -1455,7 +1455,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return corresponds
                                                    to the swapped element of the first argument.
 
-
   llvm.amdgcn.permlane32.swap                      Provide direct access to `v_permlane32_swap_b32` instruction on supported targets.
                                                    Swaps the values across lanes of first 2 operands. Rows 2 and 3 of the first operand are
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
@@ -1476,6 +1475,25 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
+  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx1250, ignored on earlier targets.
+                                                   First argument is flat, global, or constant address space pointer.
+                                                   Any other address space is not supported.
+                                                   On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
+                                                   Second argument is rw and currently ignored. Can be 0 or 1.
+                                                   Third argument is locality, 0-3. Translates to memory scope:
+
+                                                   * 0 - SCOPE_SYS
+                                                   * 1 - SCOPE_DEV
+                                                   * 2 - SCOPE_SE
+                                                   * 3 - SCOPE_SE
+
+                                                   Note that SCOPE_CU is not generated and not safe on an invalid address.
+                                                   Fourth argument is cache type:
+
+                                                   * 0 - Instruction cache, currently ignored and no code is generated.
+                                                   * 1 - Data cache.
+
+                                                   Instruction cache prefetches are unsafe on invalid address.
   ==============================================   ==========================================================
 
 .. TODO::
@@ -1654,6 +1672,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-workgroup-id-z"                       The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.workgroup.id.z intrinsic.
 
+     "amdgpu-no-cluster-id-x"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.x intrinsic.
+
+     "amdgpu-no-cluster-id-y"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.y intrinsic.
+
+     "amdgpu-no-cluster-id-z"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.z intrinsic.
+
      "amdgpu-no-dispatch-ptr"                         The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.ptr intrinsic.
 
@@ -1793,6 +1820,13 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       prefixed with "_dvgpr$" with the value of the function symbol,
                                                       offset by one less than the number of dynamic VGPR blocks required
                                                       by the function encoded in bits 5..3.
+
+     "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
+                                                      cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
+                                                      but the dimensions cannot be determined at compile time. Any other value explicitly
+                                                      specifies the cluster dimensions.
+
+                                                      This is only relevant on targets with cluster support.
 
      ================================================ ==========================================================
 
@@ -4805,7 +4839,24 @@ Code object V5 metadata is the same as
 
      ====================== ============== ========= ================================
 
-..
+.. _amdgpu-amdhsa-code-object-metadata-v6:
+
+Code Object V6 Metadata
++++++++++++++++++++++++
+
+Code object V6 metadata is the same as
+:ref:`amdgpu-amdhsa-code-object-metadata-v5` with the changes defined in table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6`.
+
+    .. table:: AMDHSA Code Object V6 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6
+
+     ============================= ============= ========== =======================================
+     String Key                    Value Type     Required? Description
+     ============================= ============= ========== =======================================
+     ".cluster_dims"               sequence of              The dimension of the cluster.
+                                   3 integers
+     ============================= ============= ========== =======================================
 
 Kernel Dispatch
 ~~~~~~~~~~~~~~~

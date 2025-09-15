@@ -393,6 +393,10 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> ConsiderRegPressure(
+    "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
+    cl::desc("Discard VFs if their register pressure is too high."));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -3693,6 +3697,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 bool LoopVectorizationCostModel::shouldConsiderRegPressureForVF(
     ElementCount VF) {
+  if (ConsiderRegPressure.getNumOccurrences())
+    return ConsiderRegPressure;
+
+  // TODO: We should eventually consider register pressure for all targets. The
+  // TTI hook is temporary whilst target-specific issues are being fixed.
+  if (TTI.shouldConsiderVectorizationRegPressure())
+    return true;
+
   if (!useMaxBandwidth(VF.isScalable()
                            ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector))
@@ -6907,6 +6919,16 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
 
+      // The VPlan-based cost model can analyze if recipes are scalar
+      // recursively, but the legacy cost model cannot.
+      if (auto *WidenMemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+        auto *AddrI = dyn_cast<Instruction>(
+            getLoadStorePointerOperand(&WidenMemR->getIngredient()));
+        if (AddrI && vputils::isSingleScalar(WidenMemR->getAddr()) !=
+                         CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
+          return true;
+      }
+
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
@@ -9535,7 +9557,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   auto ResumePhiIter =
       find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
-                                                           m_SpecificInt(0)));
+                                                           m_ZeroInt()));
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {

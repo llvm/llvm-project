@@ -455,6 +455,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
     {"dprod", &I::genDprod},
+    {"dsecnds",
+     &I::genDsecnds,
+     {{{"refTime", asAddr}}},
+     /*isElemental=*/false},
     {"dshiftl", &I::genDshiftl},
     {"dshiftr", &I::genDshiftr},
     {"eoshift",
@@ -3716,7 +3720,7 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
 
 // CO_BROADCAST
 void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value sourceImage = fir::getBase(args[1]);
   mlir::Value status =
@@ -3735,7 +3739,7 @@ void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_MAX
 void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
       fir::AbsentOp::create(builder, loc,
@@ -3755,7 +3759,7 @@ void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_MIN
 void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value refNone =
       fir::AbsentOp::create(builder, loc,
@@ -3775,7 +3779,7 @@ void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
 
 // CO_SUM
 void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 4);
   mlir::Value absentInt =
       fir::AbsentOp::create(builder, loc,
@@ -4046,6 +4050,23 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   mlir::Value a = builder.createConvert(loc, resultType, args[0]);
   mlir::Value b = builder.createConvert(loc, resultType, args[1]);
   return mlir::arith::MulFOp::create(builder, loc, a, b);
+}
+
+// DSECNDS
+// Double precision variant of SECNDS (PGI extension)
+fir::ExtendedValue
+IntrinsicLibrary::genDsecnds(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "DSECNDS expects one argument");
+
+  mlir::Value refTime = fir::getBase(args[0]);
+
+  if (!refTime)
+    fir::emitFatalError(loc, "expected REFERENCE TIME parameter");
+
+  mlir::Value result = fir::runtime::genDsecnds(builder, loc, refTime);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 // DSHIFTL
@@ -7438,7 +7459,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
 fir::ExtendedValue
 IntrinsicLibrary::genNumImages(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
@@ -8519,7 +8540,7 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genThisImage(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
   mlir::Value team =

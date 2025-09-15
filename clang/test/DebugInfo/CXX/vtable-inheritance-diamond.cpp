@@ -1,5 +1,3 @@
-// REQUIRES: target={{x86_64.*-linux.*}}
-
 // Diamond inheritance case:
 // For CBase, CLeft, CRight and CDerived we check:
 // - Generation of their vtables (including attributes).
@@ -44,17 +42,18 @@ int main() {
   return 0;
 }
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -S -g %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 -disable-llvm-passes %s -o - | FileCheck %s
 
 // CHECK: $_ZTVN3NSP5CBaseE = comdat any
 // CHECK: $_ZTVN5NSP_15CLeftE = comdat any
 // CHECK: $_ZTVN5NSP_26CRightE = comdat any
 // CHECK: $_ZTV8CDerived = comdat any
 
-// CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTVN5NSP_15CLeftE = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[LEFT_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTVN5NSP_26CRightE = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[RIGHT_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTV8CDerived = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTVN5NSP_15CLeftE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[LEFT_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTVN5NSP_26CRightE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[RIGHT_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
 
 // CHECK: [[BASE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-NEXT: [[BASE_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTVN3NSP5CBaseE"

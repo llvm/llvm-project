@@ -63,10 +63,6 @@
 ; - llvm.x86.avx512.permvar.df.256
 ; - llvm.x86.avx512.pternlog.d.128, llvm.x86.avx512.pternlog.d.256
 ; - llvm.x86.avx512.pternlog.q.128, llvm.x86.avx512.pternlog.q.256
-; - llvm.x86.avx512.rcp14.pd.128, llvm.x86.avx512.rcp14.pd.256
-; - llvm.x86.avx512.rcp14.ps.128, llvm.x86.avx512.rcp14.ps.256
-; - llvm.x86.avx512.rsqrt14.pd.128, llvm.x86.avx512.rsqrt14.pd.256
-; - llvm.x86.avx512.rsqrt14.ps.128, llvm.x86.avx512.rsqrt14.ps.256
 ;
 ; Handled heuristically: (none)
 
@@ -8066,15 +8062,11 @@ define <8 x float> @test_rsqrt_ps_256_rr(<8 x float> %a0) #0 {
 ; CHECK-SAME: <8 x float> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> splat (i1 true), <8 x i32> [[TMP3]], <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> [[A0]], <8 x float> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 -1)
@@ -8085,20 +8077,21 @@ define <8 x float> @test_rsqrt_ps_256_rrkz(<8 x float> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <8 x float> @test_rsqrt_ps_256_rrkz(
 ; CHECK-SAME: <8 x float> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP3]], <8 x i32> [[TMP5]], <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> [[A0]], <8 x float> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 %mask)
@@ -8109,24 +8102,22 @@ define <8 x float> @test_rsqrt_ps_256_rrk(<8 x float> %a0, <8 x float> %a1, i8 %
 ;
 ; CHECK-LABEL: define <8 x float> @test_rsqrt_ps_256_rrk(
 ; CHECK-SAME: <8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i1> [[TMP5]] to <8 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <8 x i1> [[TMP4]], <8 x i32> [[TMP6]], <8 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> [[A0]], <8 x float> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %a0, <8 x float> %a1, i8 %mask)
@@ -8138,15 +8129,11 @@ define <4 x float> @test_rsqrt_ps_128_rr(<4 x float> %a0) #0 {
 ; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> splat (i1 true), <4 x i32> [[TMP3]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> [[A0]], <4 x float> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 -1)
@@ -8157,20 +8144,22 @@ define <4 x float> @test_rsqrt_ps_128_rrkz(<4 x float> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <4 x float> @test_rsqrt_ps_128_rrkz(
 ; CHECK-SAME: <4 x float> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i4 [[TMP3]] to <4 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP6]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> [[A0]], <4 x float> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 %mask)
@@ -8181,24 +8170,23 @@ define <4 x float> @test_rsqrt_ps_128_rrk(<4 x float> %a0, <4 x float> %a1, i8 %
 ;
 ; CHECK-LABEL: define <4 x float> @test_rsqrt_ps_128_rrk(
 ; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i4 [[TMP4]] to <4 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP7]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> [[A0]], <4 x float> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %a0, <4 x float> %a1, i8 %mask)
@@ -8213,15 +8201,11 @@ define <8 x float> @test_rcp_ps_256_rr(<8 x float> %a0) #0 {
 ; CHECK-SAME: <8 x float> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> splat (i1 true), <8 x i32> [[TMP3]], <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> [[A0]], <8 x float> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 -1)
@@ -8232,20 +8216,21 @@ define <8 x float> @test_rcp_ps_256_rrkz(<8 x float> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <8 x float> @test_rcp_ps_256_rrkz(
 ; CHECK-SAME: <8 x float> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP3]], <8 x i32> [[TMP5]], <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> [[A0]], <8 x float> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %a0, <8 x float> zeroinitializer, i8 %mask)
@@ -8256,24 +8241,22 @@ define <8 x float> @test_rcp_ps_256_rrk(<8 x float> %a0, <8 x float> %a1, i8 %ma
 ;
 ; CHECK-LABEL: define <8 x float> @test_rcp_ps_256_rrk(
 ; CHECK-SAME: <8 x float> [[A0:%.*]], <8 x float> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i1> [[TMP5]] to <8 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <8 x i1> [[TMP4]], <8 x i32> [[TMP6]], <8 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> [[A0]], <8 x float> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %res = call <8 x float> @llvm.x86.avx512.rcp14.ps.256(<8 x float> %a0, <8 x float> %a1, i8 %mask)
@@ -8285,15 +8268,11 @@ define <4 x float> @test_rcp_ps_128_rr(<4 x float> %a0) #0 {
 ; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> splat (i1 true), <4 x i32> [[TMP3]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> [[A0]], <4 x float> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 -1)
@@ -8304,20 +8283,22 @@ define <4 x float> @test_rcp_ps_128_rrkz(<4 x float> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <4 x float> @test_rcp_ps_128_rrkz(
 ; CHECK-SAME: <4 x float> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i4 [[TMP3]] to <4 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP6]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> [[A0]], <4 x float> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %a0, <4 x float> zeroinitializer, i8 %mask)
@@ -8328,24 +8309,23 @@ define <4 x float> @test_rcp_ps_128_rrk(<4 x float> %a0, <4 x float> %a1, i8 %ma
 ;
 ; CHECK-LABEL: define <4 x float> @test_rcp_ps_128_rrk(
 ; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i4 [[TMP4]] to <4 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP7]], <4 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> [[A0]], <4 x float> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx512.rcp14.ps.128(<4 x float> %a0, <4 x float> %a1, i8 %mask)
@@ -8360,15 +8340,11 @@ define <4 x double> @test_rsqrt_pd_256_rr(<4 x double> %a0) #0 {
 ; CHECK-SAME: <4 x double> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> splat (i1 true), <4 x i64> [[TMP3]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> [[A0]], <4 x double> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 -1)
@@ -8379,20 +8355,22 @@ define <4 x double> @test_rsqrt_pd_256_rrkz(<4 x double> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <4 x double> @test_rsqrt_pd_256_rrkz(
 ; CHECK-SAME: <4 x double> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i4 [[TMP3]] to <4 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> [[A0]], <4 x double> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 %mask)
@@ -8403,24 +8381,23 @@ define <4 x double> @test_rsqrt_pd_256_rrk(<4 x double> %a0, <4 x double> %a1, i
 ;
 ; CHECK-LABEL: define <4 x double> @test_rsqrt_pd_256_rrk(
 ; CHECK-SAME: <4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i4 [[TMP4]] to <4 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP7]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> [[A0]], <4 x double> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx512.rsqrt14.pd.256(<4 x double> %a0, <4 x double> %a1, i8 %mask)
@@ -8432,15 +8409,11 @@ define <2 x double> @test_rsqrt_pd_128_rr(<2 x double> %a0) #0 {
 ; CHECK-SAME: <2 x double> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> splat (i1 true), <2 x i64> [[TMP3]], <2 x i64> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> [[A0]], <2 x double> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 -1)
@@ -8451,20 +8424,22 @@ define <2 x double> @test_rsqrt_pd_128_rrkz(<2 x double> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <2 x double> @test_rsqrt_pd_128_rrkz(
 ; CHECK-SAME: <2 x double> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[MASK]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i2 [[TMP3]] to <2 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i64> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <2 x i1> [[TMP5]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP4]], <2 x i64> [[TMP6]], <2 x i64> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> [[A0]], <2 x double> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 %mask)
@@ -8475,24 +8450,23 @@ define <2 x double> @test_rsqrt_pd_128_rrk(<2 x double> %a0, <2 x double> %a1, i
 ;
 ; CHECK-LABEL: define <2 x double> @test_rsqrt_pd_128_rrk(
 ; CHECK-SAME: <2 x double> [[A0:%.*]], <2 x double> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[MASK]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i2 [[TMP4]] to <2 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <2 x i1> [[TMP6]] to <2 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP5]], <2 x i64> [[TMP7]], <2 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> [[A0]], <2 x double> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.x86.avx512.rsqrt14.pd.128(<2 x double> %a0, <2 x double> %a1, i8 %mask)
@@ -8507,15 +8481,11 @@ define <4 x double> @test_rcp_pd_256_rr(<4 x double> %a0) #0 {
 ; CHECK-SAME: <4 x double> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> splat (i1 true), <4 x i64> [[TMP3]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> [[A0]], <4 x double> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 -1)
@@ -8526,20 +8496,22 @@ define <4 x double> @test_rcp_pd_256_rrkz(<4 x double> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <4 x double> @test_rcp_pd_256_rrkz(
 ; CHECK-SAME: <4 x double> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i4 [[TMP3]] to <4 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP6]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> [[A0]], <4 x double> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> zeroinitializer, i8 %mask)
@@ -8550,24 +8522,23 @@ define <4 x double> @test_rcp_pd_256_rrk(<4 x double> %a0, <4 x double> %a1, i8 
 ;
 ; CHECK-LABEL: define <4 x double> @test_rcp_pd_256_rrk(
 ; CHECK-SAME: <4 x double> [[A0:%.*]], <4 x double> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[MASK]] to i4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i4 [[TMP4]] to <4 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i1> [[TMP6]] to <4 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP7]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> [[A0]], <4 x double> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %res = call <4 x double> @llvm.x86.avx512.rcp14.pd.256(<4 x double> %a0, <4 x double> %a1, i8 %mask)
@@ -8579,15 +8550,11 @@ define <2 x double> @test_rcp_pd_128_rr(<2 x double> %a0) #0 {
 ; CHECK-SAME: <2 x double> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> splat (i1 true), <2 x i64> [[TMP3]], <2 x i64> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> [[A0]], <2 x double> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 -1)
@@ -8598,20 +8565,22 @@ define <2 x double> @test_rcp_pd_128_rrkz(<2 x double> %a0, i8 %mask) #0 {
 ;
 ; CHECK-LABEL: define <2 x double> @test_rcp_pd_128_rrkz(
 ; CHECK-SAME: <2 x double> [[A0:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[MASK]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i2 [[TMP3]] to <2 x i1>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i64> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <2 x i1> [[TMP5]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP4]], <2 x i64> [[TMP6]], <2 x i64> zeroinitializer
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i8 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB4:.*]], label %[[BB5:.*]], !prof [[PROF1]]
-; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB5]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> [[A0]], <2 x double> zeroinitializer, i8 [[MASK]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> zeroinitializer, i8 %mask)
@@ -8622,24 +8591,23 @@ define <2 x double> @test_rcp_pd_128_rrk(<2 x double> %a0, <2 x double> %a1, i8 
 ;
 ; CHECK-LABEL: define <2 x double> @test_rcp_pd_128_rrk(
 ; CHECK-SAME: <2 x double> [[A0:%.*]], <2 x double> [[A1:%.*]], i8 [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i8 [[MASK]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i2 [[TMP4]] to <2 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <2 x i1> [[TMP6]] to <2 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP5]], <2 x i64> [[TMP7]], <2 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i8 [[TMP3]], 0
-; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label %[[BB9:.*]], label %[[BB10:.*]], !prof [[PROF1]]
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> [[A0]], <2 x double> [[A1]], i8 [[MASK]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.x86.avx512.rcp14.pd.128(<2 x double> %a0, <2 x double> %a1, i8 %mask)

@@ -1134,10 +1134,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
-  if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
+  if (match(Def, m_c_Mul(m_VPValue(A), m_One())))
     return Def->replaceAllUsesWith(A);
 
-  if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(0))))
+  if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(R.getOperand(0) == A ? R.getOperand(1)
                                                         : R.getOperand(0));
 
@@ -1176,16 +1176,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
-  if ((match(Def,
-             m_DerivedIV(m_SpecificInt(0), m_VPValue(A), m_SpecificInt(1))) ||
-       match(Def,
-             m_DerivedIV(m_SpecificInt(0), m_SpecificInt(0), m_VPValue()))) &&
+  if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
+       match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
       TypeInfo.inferScalarType(Def->getOperand(1)) ==
           TypeInfo.inferScalarType(Def))
     return Def->replaceAllUsesWith(Def->getOperand(1));
 
-  if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(
-                     m_VPValue(X), m_SpecificInt(1)))) {
+  if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
+                                                            m_One()))) {
     Type *WideStepTy = TypeInfo.inferScalarType(Def);
     if (TypeInfo.inferScalarType(X) != WideStepTy)
       X = Builder.createWidenCast(Instruction::Trunc, X, WideStepTy);
@@ -1272,9 +1270,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   if (match(Def,
             m_VPInstruction<VPInstruction::ExtractLastElement>(m_VPValue(A))) &&
-      vputils::isSingleScalar(A) && all_of(A->users(), [Def, A](VPUser *U) {
-        return U->usesScalars(A) || Def == U;
-      })) {
+      ((isa<VPInstruction>(A) && vputils::isSingleScalar(A)) ||
+       (isa<VPReplicateRecipe>(A) &&
+        cast<VPReplicateRecipe>(A)->isSingleScalar())) &&
+      all_of(A->users(),
+             [Def, A](VPUser *U) { return U->usesScalars(A) || Def == U; })) {
     return Def->replaceAllUsesWith(A);
   }
 }
@@ -1308,6 +1308,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+      if (RepR && isa<StoreInst>(RepR->getUnderlyingInstr()) &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        auto *Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Metadata*/);
+        Clone->insertBefore(RepOrWidenR);
+        auto *Ext = new VPInstruction(VPInstruction::ExtractLastElement,
+                                      {Clone->getOperand(0)});
+        Ext->insertBefore(Clone);
+        Clone->setOperand(0, Ext);
+        RepR->eraseFromParent();
+        continue;
+      }
+
       // Skip recipes that aren't single scalars or don't have only their
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
@@ -2217,8 +2231,8 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(simplifyRecipes, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(simplifyBlends, Plan);
-  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan);
   runPass(removeBranchOnConst, Plan);
@@ -3681,34 +3695,39 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
       vp_depth_first_shallow(Plan.getEntry()));
   auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
       vp_depth_first_shallow(LoopRegion->getEntry()));
-  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
-  // excluding ones in replicate regions. Those are not materialized explicitly
-  // yet. Those vector users are still handled in VPReplicateRegion::execute(),
-  // via shouldPack().
+  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes and
+  // VPInstructions, excluding ones in replicate regions. Those are not
+  // materialized explicitly yet. Those vector users are still handled in
+  // VPReplicateRegion::execute(), via shouldPack().
   // TODO: materialize build vectors for replicating recipes in replicating
   // regions.
-  // TODO: materialize build vectors for VPInstructions.
   for (VPBasicBlock *VPBB :
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      auto UsesVectorOrInsideReplicateRegion = [RepR, LoopRegion](VPUser *U) {
+      if (!isa<VPReplicateRecipe, VPInstruction>(&R))
+        continue;
+      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion =
             cast<VPRecipeBase>(U)->getParent()->getParent();
-        return !U->usesScalars(RepR) || ParentRegion != LoopRegion;
+        return !U->usesScalars(DefR) || ParentRegion != LoopRegion;
       };
-      if (!RepR || RepR->isSingleScalar() ||
-          none_of(RepR->users(), UsesVectorOrInsideReplicateRegion))
+      if ((isa<VPReplicateRecipe>(DefR) &&
+           cast<VPReplicateRecipe>(DefR)->isSingleScalar()) ||
+          (isa<VPInstruction>(DefR) &&
+           (vputils::onlyFirstLaneUsed(DefR) ||
+            !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes())) ||
+          none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
         continue;
 
-      Type *ScalarTy = TypeInfo.inferScalarType(RepR);
+      Type *ScalarTy = TypeInfo.inferScalarType(DefR);
       unsigned Opcode = ScalarTy->isStructTy()
                             ? VPInstruction::BuildStructVector
                             : VPInstruction::BuildVector;
-      auto *BuildVector = new VPInstruction(Opcode, {RepR});
-      BuildVector->insertAfter(RepR);
+      auto *BuildVector = new VPInstruction(Opcode, {DefR});
+      BuildVector->insertAfter(DefR);
 
-      RepR->replaceUsesWithIf(
+      DefR->replaceUsesWithIf(
           BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
                            VPUser &U, unsigned) {
             return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
