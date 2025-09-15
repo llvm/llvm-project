@@ -489,8 +489,9 @@ clang-format
   ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketBracedList'',
   ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
   ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch`` options.
-- Remove ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
-  ``AlignAfterOpenBracket`` option.
+- Deprecate ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
+  ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
+  ``bool`` type.
 
 libclang
 --------
