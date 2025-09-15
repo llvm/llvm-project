@@ -162,16 +162,15 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
 
 static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
                                             dxbc::RootFlags Mask) {
-  if ((Flags & Mask) != Mask) 
+  if ((Flags & Mask) != Mask)
     return;
-  
+
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
   OS << "Shader has root bindings but root signature uses a DENY flag to "
         "disallow root binding access to the shader stage.";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
-
 
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
@@ -257,12 +256,14 @@ static void validateRootSignature(Module &M,
     }
 
     const auto *ParamInfo =
-          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+        static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
     bool IsRootSRVOrUAV = RC == ResourceClass::SRV || RC == ResourceClass::UAV;
-    bool IsDescriptorTable = ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
-    bool IsRawOrStructuredBuffer = RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer;
-    if (IsRootSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer ) {
+    bool IsDescriptorTable =
+        ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
+    bool IsRawOrStructuredBuffer =
+        RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer;
+    if (IsRootSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer) {
       reportInvalidHandleTyError(M, RC, Binding);
       continue;
     }
