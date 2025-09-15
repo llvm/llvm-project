@@ -230,9 +230,13 @@ size_t mlir::moveLoopInvariantCode(
   // TODO: see if this can be spec'd in a meaningful way to add back later.
   //
   // check that the loop isn't dead
-  // auto isDead = loopLike.isZeroTrip();
-  // if (!isDead.has_value() || isDead.value())
-  //   return numMoved;
+  auto isDead = loopLike.isZeroTrip();
+
+  LDBG() << "Loop " << OpWithFlags(loopLike.getOperation(), OpPrintingFlags().skipRegions())
+    << " has constant bounds and steps? isZeroTrip()? " << (isDead.has_value() ? (isDead.value() ? "YES, YES" : "YES, NO") : "NO, NULL");
+
+  if (!isDead.has_value() || isDead.value())
+    return numMoved;
 
   // Go through loop body and map out resource usages.
   // op->regions are essentially merged sequentially.

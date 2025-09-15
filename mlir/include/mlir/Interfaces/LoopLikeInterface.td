@@ -318,6 +318,35 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
           $_op->operand_begin() + firstOperandIndex + initsMutable.size());
     }
 
+    /// Return whether the loop is known to have zero iterations.
+    /// Returns std::nullopt if not enough constant information is available.
+    ::std::optional<bool> isZeroTrip() {
+      auto lbs = $_op.getLoopLowerBounds();
+      auto ubs = $_op.getLoopUpperBounds();
+      auto steps = $_op.getLoopSteps();
+
+      if (!lbs || !ubs || !steps)
+        return ::std::nullopt;
+
+      if (lbs->size() != ubs->size() || ubs->size() != steps->size())
+        return ::std::nullopt;
+
+      for (size_t i = 0; i < steps->size(); ++i) {
+        auto lb = ::mlir::getConstantIntValue((*lbs)[i]);
+        auto ub = ::mlir::getConstantIntValue((*ubs)[i]);
+        auto st = ::mlir::getConstantIntValue((*steps)[i]);
+
+        if (!lb || !ub || !st)
+          return ::std::nullopt; // non-constant -> unknown
+
+        if (*st >= 0 && *lb >= *ub)
+          return true;
+        if (*st < 0 && *lb <= *ub)
+          return true;
+      }
+      return false;
+    }
+
     /// Return the region iter_arg that corresponds to the given init operand.
     /// Return an "empty" block argument if the given operand is not an init
     /// operand of this loop op.
