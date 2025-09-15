@@ -41,14 +41,24 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
-/// Map for newly created IR instructions and their uniformity.
-using NewUniformityMap = DenseMap<const Value *, bool>;
+/// Tracks uniformity of newly created instructions.
+/// Wraps a ValueMap so we can enforce consistent mark/erase usage.
+struct UniformityTracker : DenseMap<const Value *, bool> {
+  /// Record that V has known uniformity.
+  void mark(Value *V, bool IsUniform) { (*this)[V] = IsUniform; }
+
+  /// Erase V from the map if it is an instruction with no uses anymore.
+  void eraseIfDead(Value *V) {
+    if (auto *I = dyn_cast<Instruction>(V); I && I->use_empty())
+      this->erase(V);
+  }
+};
 
 /// Wrapper for querying uniformity info that first checks new instructions.
 static bool isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
-                                  const NewUniformityMap &NewUMap) {
+                                  const UniformityTracker &Tracker) {
   Value *V = U.get();
-  if (auto It = NewUMap.find(V); It != NewUMap.end())
+  if (auto It = Tracker.find(V); It != Tracker.end())
     return !It->second; // divergent if marked false
   return UI.isDivergentUse(U);
 }
@@ -56,7 +66,7 @@ static bool isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
 /// Optimizes uniform intrinsics.
 static bool optimizeUniformIntrinsic(IntrinsicInst &II,
                                      const UniformityInfo &UI,
-                                     NewUniformityMap &NewUMap) {
+                                     UniformityTracker &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
 
   switch (IID) {
@@ -64,16 +74,17 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
-    if (isDivergentUseWithNew(II.getOperandUse(0), UI, NewUMap))
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
+    Tracker.eraseIfDead(&II);
     II.eraseFromParent();
     return true;
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    if (isDivergentUseWithNew(II.getOperandUse(0), UI, NewUMap))
+    if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
 
@@ -93,10 +104,10 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
           // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
-          // Record uniformity: Src is uniform, and NOT preserves uniformity.
-          NewUMap[NotOp] = true;
+          Tracker.mark(NotOp, true); // NOT preserves uniformity
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
+          Tracker.eraseIfDead(ICmp);
           ICmp->eraseFromParent();
           Changed = true;
         } else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
@@ -104,14 +115,17 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
                             << *Src << '\n');
           ICmp->replaceAllUsesWith(Src);
+          Tracker.eraseIfDead(ICmp);
           ICmp->eraseFromParent();
           Changed = true;
         }
       }
     }
     // Erase the intrinsic if it has no remaining uses.
-    if (II.use_empty())
+    if (II.use_empty()) {
+      Tracker.eraseIfDead(&II);
       II.eraseFromParent();
+    }
     return Changed;
   }
   default:
@@ -123,7 +137,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 /// Iterate over intrinsics in the module to optimise.
 static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   bool IsChanged = false;
-  NewUniformityMap NewUMap;
+  UniformityTracker Tracker;
 
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -145,7 +159,7 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
         continue;
 
       const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
-      IsChanged |= optimizeUniformIntrinsic(*II, UI, NewUMap);
+      IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
     }
   }
   return IsChanged;
