@@ -126,15 +126,18 @@ public:
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
 
-  /// Separator used between all of the rest consecutive parts of a name
+  /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
-  // Grid Value for the GPU target
+  // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
   /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
   /// false`), this contains the list of offloading triples associated, if any.
   SmallVector<Triple> TargetTriples;
+
+  // Default address space for the target.
+  unsigned DefaultTargetAS = 0;
 
   LLVM_ABI OpenMPIRBuilderConfig();
   LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
@@ -165,6 +168,8 @@ public:
     assert(GridValue.has_value() && "GridValue is not set");
     return *GridValue;
   }
+
+  unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
   LLVM_ABI bool hasRequiresReverseOffload() const;
@@ -203,6 +208,7 @@ public:
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
+  void setDefaultTargetAS(unsigned AS) { DefaultTargetAS = AS; }
 
   LLVM_ABI void setHasRequiresReverseOffload(bool Value);
   LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
