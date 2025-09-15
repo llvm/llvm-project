@@ -1449,6 +1449,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP fuse directive.
     OMP_FUSE_DIRECTIVE = 311
 
+    # OpenMP taskgraph directive.
+    OMP_TASKGRAPH_DIRECTIVE = 312
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 

@@ -2166,6 +2166,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPFuseDirective = 311,
 
+  /** OpenMP taskgraph directive.
+   */
+  CXCursor_OMPTaskgraphDirective = 312,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,

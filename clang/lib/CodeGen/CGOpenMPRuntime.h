@@ -1364,6 +1364,10 @@ public:
   virtual void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
                                 const OMPTaskDataTy &Data);
 
+  /// Emit code for 'taskgraph' directive.
+  virtual void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                 const OMPExecutableDirective &D);
+
   /// Emit code for 'cancellation point' construct.
   /// \param CancelRegion Region kind for which the cancellation point must be
   /// emitted.
@@ -2191,6 +2195,10 @@ public:
   /// Emit code for 'taskwait' directive.
   void emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
                         const OMPTaskDataTy &Data) override;
+
+  /// Emit code for 'taskgraph' directive.
+  void emitTaskgraphCall(CodeGenFunction &CGF, SourceLocation Loc,
+                         const OMPExecutableDirective &D) override;
 
   /// Emit code for 'cancellation point' construct.
   /// \param CancelRegion Region kind for which the cancellation point must be

@@ -4469,6 +4469,14 @@ getUnknownRegionParams(Sema &SemaRef) {
 }
 
 static SmallVector<SemaOpenMP::CapturedParamNameType>
+getTaskgraphRegionParams(Sema &SemaRef) {
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params{
+      std::make_pair(StringRef(), QualType()) // __context with shared vars
+  };
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
 getTaskloopRegionParams(Sema &SemaRef) {
   ASTContext &Context = SemaRef.getASTContext();
   QualType KmpInt32Ty =
@@ -4540,6 +4548,10 @@ static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
       // Mark this captured region as inlined, because we don't use outlined
       // function directly.
       MarkAsInlined(SemaRef.getCurCapturedRegion());
+      break;
+    case OMPD_taskgraph:
+      SemaRef.ActOnCapturedRegionStart(
+          Loc, CurScope, CR_OpenMP, getTaskgraphRegionParams(SemaRef), Level);
       break;
     case OMPD_target:
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
@@ -6501,6 +6513,12 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     assert(AStmt == nullptr &&
            "No associated statement allowed for 'omp taskwait' directive");
     Res = ActOnOpenMPTaskwaitDirective(ClausesWithImplicit, StartLoc, EndLoc);
+    break;
+  case OMPD_taskgraph:
+    assert(AStmt &&
+           "Associated statement required for 'omp taskgraph' directive");
+    Res = ActOnOpenMPTaskgraphDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                        EndLoc);
     break;
   case OMPD_taskgroup:
     Res = ActOnOpenMPTaskgroupDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -11337,6 +11355,19 @@ SemaOpenMP::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPTaskwaitDirective::Create(getASTContext(), StartLoc, EndLoc,
                                       Clauses);
+}
+
+StmtResult
+SemaOpenMP::ActOnOpenMPTaskgraphDirective(ArrayRef<OMPClause *> Clauses,
+                                          Stmt *AStmt, SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  if (!AStmt)
+    return StmtError();
+
+  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+
+  return OMPTaskgraphDirective::Create(getASTContext(), StartLoc, EndLoc,
+                                       Clauses, AStmt);
 }
 
 StmtResult
