@@ -756,50 +756,6 @@ struct TestVectorGatherLowering
   }
 };
 
-struct TestUnrollVectorFromElements
-    : public PassWrapper<TestUnrollVectorFromElements,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnrollVectorFromElements)
-
-  StringRef getArgument() const final {
-    return "test-unroll-vector-from-elements";
-  }
-  StringRef getDescription() const final {
-    return "Test unrolling patterns for from_elements ops";
-  }
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<func::FuncDialect, vector::VectorDialect, ub::UBDialect>();
-  }
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    populateVectorFromElementsLoweringPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-  }
-};
-
-struct TestUnrollVectorToElements
-    : public PassWrapper<TestUnrollVectorToElements,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnrollVectorToElements)
-
-  StringRef getArgument() const final {
-    return "test-unroll-vector-to-elements";
-  }
-  StringRef getDescription() const final {
-    return "Test unrolling patterns for to_elements ops";
-  }
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<func::FuncDialect, vector::VectorDialect>();
-  }
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    populateVectorToElementsLoweringPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-  }
-};
-
 struct TestFoldArithExtensionIntoVectorContractPatterns
     : public PassWrapper<TestFoldArithExtensionIntoVectorContractPatterns,
                          OperationPass<func::FuncOp>> {
@@ -1070,10 +1026,6 @@ void registerTestVectorLowerings() {
   PassRegistration<TestCreateVectorBroadcast>();
 
   PassRegistration<TestVectorGatherLowering>();
-
-  PassRegistration<TestUnrollVectorFromElements>();
-
-  PassRegistration<TestUnrollVectorToElements>();
 
   PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
 
