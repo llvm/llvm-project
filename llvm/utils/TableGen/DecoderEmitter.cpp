@@ -843,7 +843,7 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
   OS << "  default: llvm_unreachable(\"Invalid index!\");\n";
   for (const auto &[Index, Predicate] : enumerate(Predicates)) {
     OS << "  case " << Index << ":\n";
-    OS << "    return (" << Predicate << ");\n";
+    OS << "    return " << Predicate << ";\n";
   }
   OS << "  }\n";
   OS << "}\n\n";
