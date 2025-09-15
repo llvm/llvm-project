@@ -5226,6 +5226,27 @@ libc_support_library(
 )
 
 libc_function(
+    name = "index",
+    srcs = ["src/strings/index.cpp"],
+    hdrs = ["src/strings/index.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "rindex",
+    srcs = ["src/strings/rindex.cpp"],
+    hdrs = ["src/strings/rindex.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_utils",
+    ],
+)
+
+libc_function(
     name = "memchr",
     srcs = ["src/string/memchr.cpp"],
     hdrs = ["src/string/memchr.h"],
@@ -5248,6 +5269,16 @@ libc_function(
 )
 
 libc_function(
+    name = "memccpy",
+    srcs = ["src/string/memccpy.cpp"],
+    hdrs = ["src/string/memccpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+    ],
+)
+
+libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
@@ -5259,9 +5290,31 @@ libc_function(
 )
 
 libc_function(
+    name = "memset_explicit",
+    srcs = ["src/string/memset_explicit.cpp"],
+    hdrs = ["src/string/memset_explicit.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "memmem",
+    srcs = ["src/string/memmem.cpp"],
+    hdrs = ["src/string/memmem.h"],
     deps = [
         ":__support_common",
         ":__support_macros_null_check",
@@ -5334,6 +5387,30 @@ libc_function(
 )
 
 libc_function(
+    name = "stpcpy",
+    srcs = ["src/string/stpcpy.cpp"],
+    hdrs = ["src/string/stpcpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "stpncpy",
+    srcs = ["src/string/stpncpy.cpp"],
+    hdrs = ["src/string/stpncpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
     name = "strlen",
     srcs = ["src/string/strlen.cpp"],
     hdrs = ["src/string/strlen.h"],
@@ -5352,6 +5429,17 @@ libc_function(
         ":__support_common",
         ":__support_macros_null_check",
         ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strlcpy",
+    srcs = ["src/string/strlcpy.cpp"],
+    hdrs = ["src/string/strlcpy.h"],
+    deps = [
+        ":__support_common",
+        ":llvm_libc_types_size_t",
         ":string_utils",
     ],
 )
@@ -5378,6 +5466,40 @@ libc_function(
 )
 
 libc_function(
+    name = "strncmp",
+    srcs = ["src/string/strncmp.cpp"],
+    hdrs = ["src/string/strncmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcasecmp",
+    srcs = ["src/strings/strcasecmp.cpp"],
+    hdrs = ["src/strings/strcasecmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strncasecmp",
+    srcs = ["src/strings/strncasecmp.cpp"],
+    hdrs = ["src/strings/strncasecmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
     name = "strchr",
     srcs = ["src/string/strchr.cpp"],
     hdrs = ["src/string/strchr.h"],
@@ -5391,6 +5513,16 @@ libc_function(
     name = "strrchr",
     srcs = ["src/string/strrchr.cpp"],
     hdrs = ["src/string/strrchr.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strchrnul",
+    srcs = ["src/string/strchrnul.cpp"],
+    hdrs = ["src/string/strchrnul.h"],
     deps = [
         ":__support_common",
         ":string_utils",
@@ -5418,6 +5550,51 @@ libc_function(
         ":__support_common",
         ":__support_macros_null_check",
         ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcasestr",
+    srcs = ["src/string/strcasestr.cpp"],
+    hdrs = ["src/string/strcasestr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_ctype_utils",
+        ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strcat",
+    srcs = ["src/string/strcat.cpp"],
+    hdrs = ["src/string/strcat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strlcat",
+    srcs = ["src/string/strlcat.cpp"],
+    hdrs = ["src/string/strlcat.h"],
+    deps = [
+        ":__support_common",
+        ":string_utils",
+    ],
+)
+
+libc_function(
+    name = "strncat",
+    srcs = ["src/string/strncat.cpp"],
+    hdrs = ["src/string/strncat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
         ":string_utils",
     ],
 )
