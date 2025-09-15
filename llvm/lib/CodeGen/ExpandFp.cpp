@@ -977,18 +977,17 @@ static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
   return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
 }
 
-static void enqueueInstruction(Instruction &I,
-                               SmallVector<Instruction *, 4> &Replace) {
-
+static void addToWorklist(Instruction &I,
+                          SmallVector<Instruction *, 4> &Worklist) {
   if (I.getOperand(0)->getType()->isVectorTy())
-    scalarize(&I, Replace);
+    scalarize(&I, Worklist);
   else
-    Replace.push_back(&I);
+    Worklist.push_back(&I);
 }
 
 static bool runImpl(Function &F, const TargetLowering &TLI,
                     AssumptionCache *AC) {
-  SmallVector<Instruction *, 4> Replace;
+  SmallVector<Instruction *, 4> Worklist;
   bool Modified = false;
 
   unsigned MaxLegalFpConvertBitWidth =
@@ -1010,7 +1009,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem:
       if (!targetSupportsFrem(TLI, Ty) &&
           FRemExpander::canExpandType(Ty->getScalarType())) {
-        enqueueInstruction(I, Replace);
+        addToWorklist(I, Worklist);
         Modified = true;
       }
       break;
@@ -1020,7 +1019,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      enqueueInstruction(I, Replace);
+      addToWorklist(I, Worklist);
       Modified = true;
       break;
     }
@@ -1031,7 +1030,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      enqueueInstruction(I, Replace);
+      addToWorklist(I, Worklist);
       break;
     }
     default:
@@ -1039,8 +1038,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
   }
 
-  while (!Replace.empty()) {
-    Instruction *I = Replace.pop_back_val();
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
     if (I->getOpcode() == Instruction::FRem) {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
