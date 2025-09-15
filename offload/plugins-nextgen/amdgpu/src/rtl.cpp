@@ -4993,21 +4993,21 @@ private:
   /// Struct holding time in ns at a point in time for both host and device
   /// This is used to compute a device-to-host offset and skew. Required for
   /// OMPT function translate_time.
-  struct DHTime {
-    double Host;
+  struct DevHostTimePair {
     uint64_t Device;
+    double Host;
   };
 
   /// Get a DHTimepoint
-  DHTime getDHTime() const {
-    return DHTime{getTimeOfDay(), getSystemTimestampInNs()};
+  DevHostTimePair getDHTime() const {
+    return DevHostTimePair{getSystemTimestampInNs(), getTimeOfDay()};
   }
 
   /// Compute time differences for host and device between Start and End
   /// Assume host (h) timing is related to device (d) timing as
   /// h = m.d + o, where m is the slope and o is the offset.
   /// Calculate slope and offset from the two host and device timepoints.
-  void deriveHostToDeviceClockOffset(DHTime Start, DHTime End) {
+  void deriveHostToDeviceClockOffset(DevHostTimePair Start, DevHostTimePair End) {
     double HostDiff = End.Host - Start.Host;
     uint64_t DeviceDiff = End.Device - Start.Device;
     double Slope = DeviceDiff != 0 ? (HostDiff / DeviceDiff) : HostDiff;
