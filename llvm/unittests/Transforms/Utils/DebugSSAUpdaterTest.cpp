@@ -90,7 +90,7 @@ exit:
   BasicBlock *ExitBlock = &Foo->back();
   // We should have 5 ranges: 1 in the entry block, and 2 in each `if` block,
   // while there should be no range for the exit block.
-  EXPECT_EQ(DbgValueRanges.getVariableRanges(VarA).size(), 5);
+  EXPECT_EQ(DbgValueRanges.getVariableRanges(VarA).size(), 5u);
   EXPECT_TRUE(none_of(DbgValueRanges.getVariableRanges(VarA),
                       [&](DbgRangeEntry VarRange) {
                         return VarRange.Start->getParent() == ExitBlock;
@@ -149,7 +149,7 @@ exit:
   DbgValueRanges.addVariable(Foo, VarA);
   // We should have 3 ranges: 1 in the entry block, and 1 live-in entry for each
   // of the loops.
-  EXPECT_EQ(DbgValueRanges.getVariableRanges(VarA).size(), 3);
+  EXPECT_EQ(DbgValueRanges.getVariableRanges(VarA).size(), 3u);
   EXPECT_TRUE(
       all_of(DbgValueRanges.getVariableRanges(VarA),
              [&](DbgRangeEntry VarRange) { return !VarRange.Value.IsUndef; }));
@@ -214,6 +214,6 @@ exit:
   DbgValueRanges.addVariable(Foo, VarA);
   // There should be no variable ranges emitted for a variable that has only
   // undef dbg_values.
-  EXPECT_EQ(DbgValueRanges.getVariableRanges(VarA).size(), 0);
+  EXPECT_EQ(DbgValueRanges.getVariableRanges(VarA).size(), 0u);
 }
 } // namespace
