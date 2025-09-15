@@ -3326,8 +3326,12 @@ func.func @from_elements_to_elements_shuffle(%a: vector<4x2xf32>) -> vector<4x2x
 
 // -----
 
-// CHECK-LABEL: func @from_elements_all_elements_constant(
-func.func @from_elements_all_elements_constant() -> vector<2x2xi32> {
+// +---------------------------------------------------------------------------
+// Tests for foldFromElementsToConstant
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL: func @from_elements_to_constant(
+func.func @from_elements_to_constant() -> vector<2x2xi32> {
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 1 : i32
   %c2_i32 = arith.constant 2 : i32
@@ -3340,9 +3344,11 @@ func.func @from_elements_all_elements_constant() -> vector<2x2xi32> {
 
 // -----
 
-// CHECK-LABEL: func @from_elements_partial_elements_constant(
+// One of the elements is not a constant, the folder should fail.
+
+// CHECK-LABEL: func @negative_from_elements_to_constant(
 // CHECK-SAME:     %[[A:.*]]: f32
-func.func @from_elements_partial_elements_constant(%arg0: f32) -> vector<2xf32> {
+func.func @negative_from_elements_to_constant(%arg0: f32) -> vector<2xf32> {
   // CHECK: %[[C:.*]] = arith.constant 1.000000e+00 : f32
   %c = arith.constant 1.0 : f32
   // CHECK: %[[RES:.*]] = vector.from_elements %[[A]], %[[C]] : vector<2xf32>
@@ -3350,6 +3356,28 @@ func.func @from_elements_partial_elements_constant(%arg0: f32) -> vector<2xf32> 
   // CHECK: return %[[RES]]
   return %res : vector<2xf32>
 }
+
+// -----
+
+// While all inputs in this example are constant, we cannot create a
+// DenselElemAttr containing llvm.mlir.addressof. Instead,
+// `foldFromElementsToConstant` bails out. Note that in this case, a different
+// folder is applied (`rewriteFromElementsAsBroadcast`).
+llvm.mlir.global constant @my_symbol() : i32
+
+// CHECK-LABEL: func @negative_from_elements_to_constant
+//       CHECK:   %[[A:.*]] = llvm.mlir.addressof @my_symbol
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[A]] : !llvm.ptr to vector<1x!llvm.ptr>
+//       CHECK:   return %[[B]]
+func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
+  %a = llvm.mlir.addressof @my_symbol : !llvm.ptr
+  %b = vector.from_elements %a : vector<1x!llvm.ptr>
+  return %b : vector<1x!llvm.ptr>
+}
+
+// +---------------------------------------------------------------------------
+// End of  Tests for foldFromElementsToConstant
+// +---------------------------------------------------------------------------
 
 // -----
 
@@ -3725,18 +3753,4 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32
   %v_0 = vector.insert %val, %arg[0] : f32 into vector<4xf32>
   %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
   return %v_1 : vector<4xf32>
-}
-
-// -----
-
-llvm.mlir.global constant @my_symbol() : i32
-
-// CHECK-LABEL: func @from_address_of_regression
-//       CHECK:   %[[a:.*]] = llvm.mlir.addressof @my_symbol
-//       CHECK:   %[[b:.*]] = vector.broadcast %[[a]] : !llvm.ptr to vector<1x!llvm.ptr>
-//       CHECK:   return %[[b]]
-func.func @from_address_of_regression() -> vector<1x!llvm.ptr> {
-  %a = llvm.mlir.addressof @my_symbol : !llvm.ptr
-  %b = vector.from_elements %a : vector<1x!llvm.ptr>
-  return %b : vector<1x!llvm.ptr>
 }
