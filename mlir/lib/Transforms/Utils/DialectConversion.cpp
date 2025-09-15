@@ -3098,8 +3098,154 @@ unsigned OperationLegalizer::applyCostModelToPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
+
+/// Try to reconcile all given UnrealizedConversionCastOps and store the
+/// left-over ops in `remainingCastOps` (if provided). See documentation in
+/// DialectConversion.h for more details.
+/// The `isCastOpOfInterestFn` is used to filter the cast ops to proceed: the
+/// algorithm may visit an operand (or user) which is a cast op, but will not
+/// try to reconcile it if not in the filtered set.
+template <typename RangeT>
+static void reconcileUnrealizedCastsImpl(
+    RangeT castOps,
+    function_ref<bool(UnrealizedConversionCastOp)> isCastOpOfInterestFn,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  // A worklist of cast ops to process.
+  SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
+
+  // Helper function that return the unrealized_conversion_cast op that
+  // defines all inputs of the given op (in the same order). Return "nullptr"
+  // if there is no such op.
+  auto getInputCast =
+      [](UnrealizedConversionCastOp castOp) -> UnrealizedConversionCastOp {
+    if (castOp.getInputs().empty())
+      return {};
+    auto inputCastOp =
+        castOp.getInputs().front().getDefiningOp<UnrealizedConversionCastOp>();
+    if (!inputCastOp)
+      return {};
+    if (inputCastOp.getOutputs() != castOp.getInputs())
+      return {};
+    return inputCastOp;
+  };
+
+  // Process ops in the worklist bottom-to-top.
+  while (!worklist.empty()) {
+    UnrealizedConversionCastOp castOp = worklist.pop_back_val();
+
+    // Traverse the chain of input cast ops to see if an op with the same
+    // input types can be found.
+    UnrealizedConversionCastOp nextCast = castOp;
+    while (nextCast) {
+      if (nextCast.getInputs().getTypes() == castOp.getResultTypes()) {
+        if (llvm::any_of(nextCast.getInputs(), [&](Value v) {
+              return v.getDefiningOp() == castOp;
+            })) {
+          // Ran into a cycle.
+          break;
+        }
+
+        // Found a cast where the input types match the output types of the
+        // matched op. We can directly use those inputs.
+        castOp.replaceAllUsesWith(nextCast.getInputs());
+        break;
+      }
+      nextCast = getInputCast(nextCast);
+    }
+  }
+
+  // A set of all alive cast ops. I.e., ops whose results are (transitively)
+  // used by an op that is not a cast op.
+  DenseSet<Operation *> liveOps;
+
+  // Helper function that marks the given op and transitively reachable input
+  // cast ops as alive.
+  auto markOpLive = [&](Operation *rootOp) {
+    SmallVector<Operation *> worklist;
+    worklist.push_back(rootOp);
+    while (!worklist.empty()) {
+      Operation *op = worklist.pop_back_val();
+      if (liveOps.insert(op).second) {
+        // Successfully inserted: process reachable input cast ops.
+        for (Value v : op->getOperands())
+          if (auto castOp = v.getDefiningOp<UnrealizedConversionCastOp>())
+            if (isCastOpOfInterestFn(castOp))
+              worklist.push_back(castOp);
+      }
+    }
+  };
+
+  // Find all alive cast ops.
+  for (UnrealizedConversionCastOp op : castOps) {
+    // The op may have been marked live already as being an operand of another
+    // live cast op.
+    if (liveOps.contains(op.getOperation()))
+      continue;
+    // If any of the users is not a cast op, mark the current op (and its
+    // input ops) as live.
+    if (llvm::any_of(op->getUsers(), [&](Operation *user) {
+          auto castOp = dyn_cast<UnrealizedConversionCastOp>(user);
+          return !castOp || !isCastOpOfInterestFn(castOp);
+        }))
+      markOpLive(op);
+  }
+
+  // Erase all dead cast ops.
+  for (UnrealizedConversionCastOp op : castOps) {
+    if (liveOps.contains(op)) {
+      // Op is alive and was not erased. Add it to the remaining cast ops.
+      if (remainingCastOps)
+        remainingCastOps->push_back(op);
+      continue;
+    }
+
+    // Op is dead. Erase it.
+    op->dropAllUses();
+    op->erase();
+  }
+}
+
+void mlir::reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  // Set of all cast ops for faster lookups.
+  DenseSet<UnrealizedConversionCastOp> castOpSet;
+  for (UnrealizedConversionCastOp op : castOps)
+    castOpSet.insert(op);
+  reconcileUnrealizedCasts(castOpSet, remainingCastOps);
+}
+
+void mlir::reconcileUnrealizedCasts(
+    const DenseSet<UnrealizedConversionCastOp> &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  reconcileUnrealizedCastsImpl(
+      llvm::make_range(castOps.begin(), castOps.end()),
+      [&](UnrealizedConversionCastOp castOp) {
+        return castOps.contains(castOp);
+      },
+      remainingCastOps);
+}
+
+namespace mlir {
+static void reconcileUnrealizedCasts(
+    const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
+        &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  reconcileUnrealizedCastsImpl(
+      castOps.keys(),
+      [&](UnrealizedConversionCastOp castOp) {
+        return castOps.contains(castOp);
+      },
+      remainingCastOps);
+}
+} // namespace mlir
+
+//===----------------------------------------------------------------------===//
 // OperationConverter
 //===----------------------------------------------------------------------===//
+
 namespace {
 enum OpConversionMode {
   /// In this mode, the conversion will ignore failed conversions to allow
@@ -3264,18 +3410,13 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
 
-  // Gather all unresolved materializations.
-  SmallVector<UnrealizedConversionCastOp> allCastOps;
+  // Reconcile all UnrealizedConversionCastOps that were inserted by the
+  // dialect conversion frameworks. (Not the ones that were inserted by
+  // patterns.)
   const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
       &materializations = rewriterImpl.unresolvedMaterializations;
-  for (auto it : materializations)
-    allCastOps.push_back(it.first);
-
-  // Reconcile all UnrealizedConversionCastOps that were inserted by the
-  // dialect conversion frameworks. (Not the one that were inserted by
-  // patterns.)
   SmallVector<UnrealizedConversionCastOp> remainingCastOps;
-  reconcileUnrealizedCasts(allCastOps, &remainingCastOps);
+  reconcileUnrealizedCasts(materializations, &remainingCastOps);
 
   // Drop markers.
   for (UnrealizedConversionCastOp castOp : remainingCastOps)
@@ -3297,79 +3438,6 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Reconcile Unrealized Casts
-//===----------------------------------------------------------------------===//
-
-void mlir::reconcileUnrealizedCasts(
-    ArrayRef<UnrealizedConversionCastOp> castOps,
-    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
-  SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
-  // This set is maintained only if `remainingCastOps` is provided.
-  DenseSet<Operation *> erasedOps;
-
-  // Helper function that adds all operands to the worklist that are an
-  // unrealized_conversion_cast op result.
-  auto enqueueOperands = [&](UnrealizedConversionCastOp castOp) {
-    for (Value v : castOp.getInputs())
-      if (auto inputCastOp = v.getDefiningOp<UnrealizedConversionCastOp>())
-        worklist.insert(inputCastOp);
-  };
-
-  // Helper function that return the unrealized_conversion_cast op that
-  // defines all inputs of the given op (in the same order). Return "nullptr"
-  // if there is no such op.
-  auto getInputCast =
-      [](UnrealizedConversionCastOp castOp) -> UnrealizedConversionCastOp {
-    if (castOp.getInputs().empty())
-      return {};
-    auto inputCastOp =
-        castOp.getInputs().front().getDefiningOp<UnrealizedConversionCastOp>();
-    if (!inputCastOp)
-      return {};
-    if (inputCastOp.getOutputs() != castOp.getInputs())
-      return {};
-    return inputCastOp;
-  };
-
-  // Process ops in the worklist bottom-to-top.
-  while (!worklist.empty()) {
-    UnrealizedConversionCastOp castOp = worklist.pop_back_val();
-    if (castOp->use_empty()) {
-      // DCE: If the op has no users, erase it. Add the operands to the
-      // worklist to find additional DCE opportunities.
-      enqueueOperands(castOp);
-      if (remainingCastOps)
-        erasedOps.insert(castOp.getOperation());
-      castOp->erase();
-      continue;
-    }
-
-    // Traverse the chain of input cast ops to see if an op with the same
-    // input types can be found.
-    UnrealizedConversionCastOp nextCast = castOp;
-    while (nextCast) {
-      if (nextCast.getInputs().getTypes() == castOp.getResultTypes()) {
-        // Found a cast where the input types match the output types of the
-        // matched op. We can directly use those inputs and the matched op can
-        // be removed.
-        enqueueOperands(castOp);
-        castOp.replaceAllUsesWith(nextCast.getInputs());
-        if (remainingCastOps)
-          erasedOps.insert(castOp.getOperation());
-        castOp->erase();
-        break;
-      }
-      nextCast = getInputCast(nextCast);
-    }
-  }
-
-  if (remainingCastOps)
-    for (UnrealizedConversionCastOp op : castOps)
-      if (!erasedOps.contains(op.getOperation()))
-        remainingCastOps->push_back(op);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3406,10 +3474,19 @@ void TypeConverter::SignatureConversion::remapInput(
       SmallVector<Value, 1>(replacements.begin(), replacements.end())};
 }
 
-LogicalResult TypeConverter::convertType(Type t,
-                                         SmallVectorImpl<Type> &results) const {
-  assert(t && "expected non-null type");
-
+/// Internal implementation of the type conversion.
+/// This is used with either a Type or a Value as the first argument.
+/// - we can cache the context-free conversions until the last registered
+/// context-aware conversion.
+/// - we can't cache the result of type conversion happening after context-aware
+/// conversions, because the type converter may return different results for the
+/// same input type.
+LogicalResult
+TypeConverter::convertTypeImpl(PointerUnion<Type, Value> typeOrValue,
+                               SmallVectorImpl<Type> &results) const {
+  assert(typeOrValue && "expected non-null type");
+  Type t = (isa<Value>(typeOrValue)) ? cast<Value>(typeOrValue).getType()
+                                     : cast<Type>(typeOrValue);
   {
     std::shared_lock<decltype(cacheMutex)> cacheReadLock(cacheMutex,
                                                          std::defer_lock);
@@ -3431,52 +3508,53 @@ LogicalResult TypeConverter::convertType(Type t,
   // registered first.
   size_t currentCount = results.size();
 
+  // We can cache the context-free conversions until the last registered
+  // context-aware conversion. But only if we're processing a Value right now.
+  auto isCacheable = [&](int index) {
+    int numberOfConversionsUntilContextAware =
+        conversions.size() - 1 - contextAwareTypeConversionsIndex;
+    return index < numberOfConversionsUntilContextAware;
+  };
+
   std::unique_lock<decltype(cacheMutex)> cacheWriteLock(cacheMutex,
                                                         std::defer_lock);
 
-  for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
-    if (std::optional<LogicalResult> result = converter(t, results)) {
-      if (t.getContext()->isMultithreadingEnabled())
-        cacheWriteLock.lock();
-      if (!succeeded(*result)) {
-        assert(results.size() == currentCount &&
-               "failed type conversion should not change results");
-        cachedDirectConversions.try_emplace(t, nullptr);
-        return failure();
-      }
-      auto newTypes = ArrayRef<Type>(results).drop_front(currentCount);
-      if (newTypes.size() == 1)
-        cachedDirectConversions.try_emplace(t, newTypes.front());
-      else
-        cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
-      return success();
-    } else {
+  for (auto indexedConverter : llvm::enumerate(llvm::reverse(conversions))) {
+    const ConversionCallbackFn &converter = indexedConverter.value();
+    std::optional<LogicalResult> result = converter(typeOrValue, results);
+    if (!result) {
       assert(results.size() == currentCount &&
              "failed type conversion should not change results");
+      continue;
     }
+    if (!isCacheable(indexedConverter.index()))
+      return success();
+    if (t.getContext()->isMultithreadingEnabled())
+      cacheWriteLock.lock();
+    if (!succeeded(*result)) {
+      assert(results.size() == currentCount &&
+             "failed type conversion should not change results");
+      cachedDirectConversions.try_emplace(t, nullptr);
+      return failure();
+    }
+    auto newTypes = ArrayRef<Type>(results).drop_front(currentCount);
+    if (newTypes.size() == 1)
+      cachedDirectConversions.try_emplace(t, newTypes.front());
+    else
+      cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
+    return success();
   }
   return failure();
 }
 
+LogicalResult TypeConverter::convertType(Type t,
+                                         SmallVectorImpl<Type> &results) const {
+  return convertTypeImpl(t, results);
+}
+
 LogicalResult TypeConverter::convertType(Value v,
                                          SmallVectorImpl<Type> &results) const {
-  assert(v && "expected non-null value");
-
-  // If this type converter does not have context-aware type conversions, call
-  // the type-based overload, which has caching.
-  if (!hasContextAwareTypeConversions)
-    return convertType(v.getType(), results);
-
-  // Walk the added converters in reverse order to apply the most recently
-  // registered first.
-  for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
-    if (std::optional<LogicalResult> result = converter(v, results)) {
-      if (!succeeded(*result))
-        return failure();
-      return success();
-    }
-  }
-  return failure();
+  return convertTypeImpl(v, results);
 }
 
 Type TypeConverter::convertType(Type t) const {
