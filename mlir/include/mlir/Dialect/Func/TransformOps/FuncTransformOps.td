@@ -134,4 +134,30 @@ def ReplaceFuncSignatureOp
   }];
 }
 
+def DeduplicateFuncArgsOp
+    : Op<Transform_Dialect, "func.deduplicate_func_args",
+         [DeclareOpInterfaceMethods<TransformOpInterface>,
+          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+      This transform takes a module and a function name, and deduplicates
+      the arguments of the function. The function is expected to be defined in
+      the module.
+
+      This transform will emit a silenceable failure if:
+       - The function with the given name does not exist in the module.
+       - The function does not have duplicate arguments.
+       - The function does not have a single call.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$module,
+      SymbolRefAttr:$function_name);
+  let results = (outs TransformHandleTypeInterface:$transformed_module,
+                      TransformHandleTypeInterface:$transformed_function);
+
+  let assemblyFormat = [{
+    $function_name
+    `at` $module attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // FUNC_TRANSFORM_OPS
