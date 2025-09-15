@@ -181,8 +181,6 @@ struct AMDGPUVectorIdiomImpl {
                                    AssumptionCache *AC) {
     LLVM_DEBUG(dbgs() << "[AMDGPUVectorIdiom] Considering memcpy(select-src): "
                       << MT << '\n');
-    // Note: SelectInst has no volatility, but keep the check for consistency
-    // with original logic; emit a debug message if it ever triggers.
     IRBuilder<> B(&MT);
     Value *Dst = MT.getRawDest();
     Value *A = Sel.getTrueValue();
@@ -425,7 +423,6 @@ AMDGPUVectorIdiomCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
              << "  - dstIsSelect=" << (isa<SelectInst>(DstV) ? "true" : "false")
              << '\n';
 
-      // Detailed dumps
       dumpSelect("src", SrcV);
       dumpSelect("dst", DstV);
     });
