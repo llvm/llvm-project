@@ -24,6 +24,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AlignOf.h"
@@ -878,13 +879,18 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     return BinaryOperator::CreateAdd(Builder.CreateNot(Y), X);
 
   // zext(bool) + C -> bool ? C + 1 : C
+  SelectInst *SI = nullptr;
   if (match(Op0, m_ZExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return SelectInst::Create(X, InstCombiner::AddOne(Op1C), Op1);
+    SI = SelectInst::Create(X, InstCombiner::AddOne(Op1C), Op1);
   // sext(bool) + C -> bool ? C - 1 : C
   if (match(Op0, m_SExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
-    return SelectInst::Create(X, InstCombiner::SubOne(Op1C), Op1);
+    SI = SelectInst::Create(X, InstCombiner::SubOne(Op1C), Op1);
+  if (SI) {
+    setExplicitlyUnknownBranchWeights(*SI, DEBUG_TYPE);
+    return SI;
+  }
 
   // ~X + C --> (C-1) - X
   if (match(Op0, m_Not(m_Value(X)))) {
