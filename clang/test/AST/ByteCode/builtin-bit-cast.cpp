@@ -530,6 +530,8 @@ constexpr const intptr_t &returns_local() { return 0L; }
 // both-note@+1 {{read of temporary whose lifetime has ended}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
+
+#ifdef __SIZEOF_INT128__
 namespace VectorCast {
   typedef unsigned X          __attribute__ ((vector_size (64)));
   typedef unsigned __int128 Y __attribute__ ((vector_size (64)));
@@ -568,5 +570,5 @@ namespace VectorCast {
   static_assert(s.a == 0); // ref-error {{not an integral constant expression}} \
                            // ref-note {{initializer of 's' is not a constant expression}}
 #endif
-
 }
+#endif
