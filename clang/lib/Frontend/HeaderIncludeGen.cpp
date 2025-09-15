@@ -457,7 +457,7 @@ void HeaderIncludesDirectPerFileCallback::InclusionDirective(
   if (!FromFile)
     return;
 
-  FileEntryRef HeaderOrModule = *File;
+  FileEntryRef HeaderOrModuleMapFile = *File;
   if (ModuleImported && SuggestedModule) {
     OptionalFileEntryRef ModuleMapFile = HSI.getModuleMap().getModuleMapFileForUniquing(SuggestedModule);
     if (ModuleMapFile) {
