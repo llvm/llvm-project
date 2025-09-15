@@ -17,7 +17,8 @@ It honours cycles, lambdas, and unspecified call order in compound expressions.
 It finds the last local variable usage, and if it is a copy, emits a warning.
 The check is based on pure AST matching and doesn't take into account any
 data flow information. Thus, it doesn't catch assign-after-copy cases.
-Also it doesn't notice variable references "behind the scenes":
+
+Also it does notice variable references "behind the scenes":
 
 .. code-block:: c++
 
@@ -25,8 +26,22 @@ Also it doesn't notice variable references "behind the scenes":
 
    void g(X x) {
      auto &y = x;
-     f(x);  // emits a warning...
-     y.f();  // ...but it is still used
+     f(x);  // does not emit a warning
+     y.f();  // because is still used
    }
 
-Such rare cases should be silenced using `// NOLINT`.
+If you want to ignore assigns to reference variables, set ``StrictMode``
+to ``false``.
+
+
+Options
+-------
+
+.. option:: StrictMode
+
+   A variable X can be referenced by another variable R. In this case the last
+   variable usage might be not from X, but from R. It is quite difficult to
+   find in a large function, so if the plugin sees some R references X, then
+   it will not emit a warning for X not to provoke false positive. If you're
+   sure that such references don't extend X' lifetime and ready to handle possible
+   false positives, then set StrictMode to false.
