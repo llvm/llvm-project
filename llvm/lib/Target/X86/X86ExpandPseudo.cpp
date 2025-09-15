@@ -269,13 +269,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNdi:
   case X86::TCRETURNdicc:
   case X86::TCRETURNri:
+  case X86::TCRETURN_WIN64ri:
+  case X86::TCRETURN_HIPE32ri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
   case X86::TCRETURNri64_ImpCall:
-  case X86::TCRETURNmi64: {
-    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
+  case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64: {
+    bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+                 Opcode == X86::TCRETURN_WINmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
     MachineOperand &StackAdjust = MBBI->getOperand(isMem ? X86::AddrNumOperands
                                                          : 1);
@@ -339,15 +343,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         MIB.addImm(MBBI->getOperand(2).getImm());
       }
 
-    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64) {
+    } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64 ||
+               Opcode == X86::TCRETURN_WINmi64) {
       unsigned Op = (Opcode == X86::TCRETURNmi)
                         ? X86::TAILJMPm
                         : (IsX64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if ((Opcode == X86::TCRETURNri64) ||
-               (Opcode == X86::TCRETURNri64_ImpCall)) {
+    } else if (Opcode == X86::TCRETURNri64 ||
+               Opcode == X86::TCRETURNri64_ImpCall ||
+               Opcode == X86::TCRETURN_WIN64ri) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
               TII->get(IsX64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))

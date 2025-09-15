@@ -1076,6 +1076,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;

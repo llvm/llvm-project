@@ -98,11 +98,6 @@ bool IsOnlySpaces(const EditLineStringType &content) {
   return true;
 }
 
-static size_t ColumnWidth(llvm::StringRef str) {
-  std::string stripped = ansi::StripAnsiTerminalCodes(str);
-  return llvm::sys::locale::columnWidth(stripped);
-}
-
 static int GetOperation(HistoryOperation op) {
   // The naming used by editline for the history operations is counter
   // intuitive to how it's used in LLDB's editline implementation.
@@ -329,8 +324,8 @@ std::string Editline::PromptForIndex(int line_index) {
   if (m_set_continuation_prompt.length() > 0) {
     continuation_prompt = m_set_continuation_prompt;
     // Ensure that both prompts are the same length through space padding
-    const size_t prompt_width = ColumnWidth(prompt);
-    const size_t cont_prompt_width = ColumnWidth(continuation_prompt);
+    const size_t prompt_width = ansi::ColumnWidth(prompt);
+    const size_t cont_prompt_width = ansi::ColumnWidth(continuation_prompt);
     const size_t padded_prompt_width =
         std::max(prompt_width, cont_prompt_width);
     if (prompt_width < padded_prompt_width)
@@ -355,7 +350,9 @@ void Editline::SetCurrentLine(int line_index) {
   m_current_prompt = PromptForIndex(line_index);
 }
 
-size_t Editline::GetPromptWidth() { return ColumnWidth(PromptForIndex(0)); }
+size_t Editline::GetPromptWidth() {
+  return ansi::ColumnWidth(PromptForIndex(0));
+}
 
 bool Editline::IsEmacs() {
   const char *editor;
@@ -445,7 +442,7 @@ void Editline::DisplayInput(int firstIndex) {
 int Editline::CountRowsForLine(const EditLineStringType &content) {
   std::string prompt =
       PromptForIndex(0); // Prompt width is constant during an edit session
-  int line_length = (int)(content.length() + ColumnWidth(prompt));
+  int line_length = (int)(content.length() + ansi::ColumnWidth(prompt));
   return (line_length / m_terminal_width) + 1;
 }
 

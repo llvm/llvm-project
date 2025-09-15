@@ -51,22 +51,6 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let Uses = !if(has_m0_read, [M0, EXEC], [EXEC]);
 }
 
-class DstOperandIsAV<dag OperandList> {
-  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
-}
-
-class DstOperandIsAGPR<dag OperandList> {
-  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
-}
-
-class DataOperandIsAV<dag OperandList> {
-  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
-}
-
-class DataOperandIsAGPR<dag OperandList> {
-  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
-}
-
 class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands>,
   Enc64 {
@@ -115,13 +99,13 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   // register fields are only 8-bit, so data operands must all be AGPR
   // or VGPR.
   defvar DstOpIsAV = !if(ps.has_vdst,
-                         DstOperandIsAV<ps.OutOperandList>.ret, 0);
+                         VDstOperandIsAV<ps.OutOperandList>.ret, 0);
   defvar DstOpIsAGPR = !if(ps.has_vdst,
-                           DstOperandIsAGPR<ps.OutOperandList>.ret, 0);
+                           VDstOperandIsAGPR<ps.OutOperandList>.ret, 0);
   defvar DataOpIsAV = !if(!or(ps.has_data0, ps.has_gws_data0),
-                          DataOperandIsAV<ps.InOperandList>.ret, 0);
+                          Data0OperandIsAV<ps.InOperandList>.ret, 0);
   defvar DataOpIsAGPR = !if(!or(ps.has_data0, ps.has_gws_data0),
-                            DataOperandIsAGPR<ps.InOperandList>.ret, 0);
+                            Data0OperandIsAGPR<ps.InOperandList>.ret, 0);
 
   bits<1> acc = !if(ps.has_vdst,
                     !if(DstOpIsAV, vdst{9}, DstOpIsAGPR),

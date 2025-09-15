@@ -197,7 +197,36 @@ enum class LineType {
   CallSiteProfile,
   BodyProfile,
   Metadata,
+  VirtualCallTypeProfile,
 };
+
+// Parse `Input` as a white-space separated list of `vtable:count` pairs. An
+// example input line is `_ZTVbar:1471 _ZTVfoo:630`.
+static bool parseTypeCountMap(StringRef Input,
+                              DenseMap<StringRef, uint64_t> &TypeCountMap) {
+  for (size_t Index = Input.find_first_not_of(' '); Index != StringRef::npos;) {
+    size_t ColonIndex = Input.find(':', Index);
+    if (ColonIndex == StringRef::npos)
+      return false; // No colon found, invalid format.
+    StringRef TypeName = Input.substr(Index, ColonIndex - Index);
+    // CountIndex is the start index of count.
+    size_t CountStartIndex = ColonIndex + 1;
+    // NextIndex is the start index after the 'target:count' pair.
+    size_t NextIndex = Input.find_first_of(' ', CountStartIndex);
+    uint64_t Count;
+    if (Input.substr(CountStartIndex, NextIndex - CountStartIndex)
+            .getAsInteger(10, Count))
+      return false; // Invalid count.
+    // Error on duplicated type names in one line of input.
+    auto [Iter, Inserted] = TypeCountMap.insert({TypeName, Count});
+    if (!Inserted)
+      return false;
+    Index = (NextIndex == StringRef::npos)
+                ? StringRef::npos
+                : Input.find_first_not_of(' ', NextIndex);
+  }
+  return true;
+}
 
 /// Parse \p Input as line sample.
 ///
@@ -215,6 +244,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
                       uint64_t &NumSamples, uint32_t &LineOffset,
                       uint32_t &Discriminator, StringRef &CalleeName,
                       DenseMap<StringRef, uint64_t> &TargetCountMap,
+                      DenseMap<StringRef, uint64_t> &TypeCountMap,
                       uint64_t &FunctionHash, uint32_t &Attributes,
                       bool &IsFlat) {
   for (Depth = 0; Input[Depth] == ' '; Depth++)
@@ -306,6 +336,10 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
       // Change n3 to the next blank space after colon + integer pair.
       n3 = n4;
     }
+  } else if (Rest.starts_with(kVTableProfPrefix)) {
+    LineTy = LineType::VirtualCallTypeProfile;
+    return parseTypeCountMap(Rest.substr(strlen(kVTableProfPrefix)),
+                             TypeCountMap);
   } else {
     LineTy = LineType::CallSiteProfile;
     size_t n3 = Rest.find_last_of(':');
@@ -374,18 +408,26 @@ std::error_code SampleProfileReaderText::readImpl() {
       uint64_t NumSamples;
       StringRef FName;
       DenseMap<StringRef, uint64_t> TargetCountMap;
+      DenseMap<StringRef, uint64_t> TypeCountMap;
       uint32_t Depth, LineOffset, Discriminator;
       LineType LineTy = LineType::BodyProfile;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
+      // TODO: Update ParseLine to return an error code instead of a bool and
+      // report it.
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
-                     Discriminator, FName, TargetCountMap, FunctionHash,
-                     Attributes, IsFlat)) {
+                     Discriminator, FName, TargetCountMap, TypeCountMap,
+                     FunctionHash, Attributes, IsFlat)) {
         switch (LineTy) {
         case LineType::Metadata:
           reportError(LineIt.line_number(),
                       "Cannot parse metadata: " + *LineIt);
+          break;
+        case LineType::VirtualCallTypeProfile:
+          reportError(LineIt.line_number(),
+                      "Expected 'vtables [mangled_vtable:NUM]+', found " +
+                          *LineIt);
           break;
         default:
           reportError(LineIt.line_number(),
@@ -417,6 +459,14 @@ std::error_code SampleProfileReaderText::readImpl() {
         DepthMetadata = 0;
         break;
       }
+
+      case LineType::VirtualCallTypeProfile: {
+        mergeSampleProfErrors(
+            Result, InlineStack.back()->addCallsiteVTableTypeProfAt(
+                        LineLocation(LineOffset, Discriminator), TypeCountMap));
+        break;
+      }
+
       case LineType::BodyProfile: {
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
@@ -599,6 +649,67 @@ SampleProfileReaderBinary::readSampleContextFromTable() {
 }
 
 std::error_code
+SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
+  auto NumVTableTypes = readNumber<uint32_t>();
+  if (std::error_code EC = NumVTableTypes.getError())
+    return EC;
+
+  for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
+    auto VTableType(readStringFromTable());
+    if (std::error_code EC = VTableType.getError())
+      return EC;
+
+    auto VTableSamples = readNumber<uint64_t>();
+    if (std::error_code EC = VTableSamples.getError())
+      return EC;
+    // The source profile should not have duplicate vtable records at the same
+    // location. In case duplicate vtables are found, reader can emit a warning
+    // but continue processing the profile.
+    if (!M.insert(std::make_pair(*VTableType, *VTableSamples)).second) {
+      Ctx.diagnose(DiagnosticInfoSampleProfile(
+          Buffer->getBufferIdentifier(), 0,
+          "Duplicate vtable type " + VTableType->str() +
+              " at the same location. Additional counters will be ignored.",
+          DS_Warning));
+      continue;
+    }
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
+  assert(ReadVTableProf &&
+         "Cannot read vtable profiles if ReadVTableProf is false");
+
+  // Read the vtable type profile for the callsite.
+  auto NumCallsites = readNumber<uint32_t>();
+  if (std::error_code EC = NumCallsites.getError())
+    return EC;
+
+  for (uint32_t I = 0; I < *NumCallsites; ++I) {
+    auto LineOffset = readNumber<uint64_t>();
+    if (std::error_code EC = LineOffset.getError())
+      return EC;
+
+    if (!isOffsetLegal(*LineOffset))
+      return sampleprof_error::illegal_line_offset;
+
+    auto Discriminator = readNumber<uint64_t>();
+    if (std::error_code EC = Discriminator.getError())
+      return EC;
+
+    // Here we handle FS discriminators:
+    const uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
+
+    if (std::error_code EC = readVTableTypeCountMap(FProfile.getTypeSamplesAt(
+            LineLocation(*LineOffset, DiscriminatorVal))))
+      return EC;
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code
 SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
   auto NumSamples = readNumber<uint64_t>();
   if (std::error_code EC = NumSamples.getError())
@@ -678,6 +789,9 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
   }
 
+  if (ReadVTableProf)
+    return readCallsiteVTableProf(FProfile);
+
   return sampleprof_error::success;
 }
 
@@ -740,6 +854,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf))
+      ReadVTableProf = true;
     break;
   case SecNameTable: {
     bool FixedLengthMD5 =

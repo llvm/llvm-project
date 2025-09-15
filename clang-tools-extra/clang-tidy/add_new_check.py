@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- add_new_check.py - clang-tidy check generator ---------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.

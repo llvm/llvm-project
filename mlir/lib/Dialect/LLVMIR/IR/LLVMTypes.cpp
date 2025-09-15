@@ -703,14 +703,14 @@ const llvm::fltSemantics &LLVMPPCFP128Type::getFloatSemantics() const {
 //===----------------------------------------------------------------------===//
 
 /// Check whether type is a compatible ptr type. These are pointer-like types
-/// with no element type, no metadata, and using the LLVM AddressSpaceAttr
-/// memory space.
+/// with no element type, no metadata, and using the LLVM
+/// LLVMAddrSpaceAttrInterface memory space.
 static bool isCompatiblePtrType(Type type) {
   auto ptrTy = dyn_cast<PtrLikeTypeInterface>(type);
   if (!ptrTy)
     return false;
   return !ptrTy.hasPtrMetadata() && ptrTy.getElementType() == nullptr &&
-         isa<AddressSpaceAttr>(ptrTy.getMemorySpace());
+         isa<LLVMAddrSpaceAttrInterface>(ptrTy.getMemorySpace());
 }
 
 bool mlir::LLVM::isCompatibleOuterType(Type type) {

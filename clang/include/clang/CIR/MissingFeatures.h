@@ -62,7 +62,6 @@ struct MissingFeatures {
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
-  static bool opAllocaDynAllocSize() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
@@ -133,6 +132,7 @@ struct MissingFeatures {
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool recordZeroInit() { return false; }
+  static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
@@ -244,6 +244,7 @@ struct MissingFeatures {
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
@@ -295,8 +296,6 @@ struct MissingFeatures {
   // Future CIR operations
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool complexImagOp() { return false; }
-  static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
   static bool invokeOp() { return false; }
   static bool labelOp() { return false; }

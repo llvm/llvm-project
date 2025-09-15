@@ -5945,10 +5945,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
       // interesting bits will end up at the wrong place.
       if (DAG.getDataLayout().isBigEndian()) {
         unsigned ShiftAmt = NInVT.getSizeInBits() - InVT.getSizeInBits();
-        EVT ShiftAmtTy = TLI.getShiftAmountTy(NInVT, DAG.getDataLayout());
-        assert(ShiftAmt < WidenVT.getSizeInBits() && "Too large shift amount!");
         NInOp = DAG.getNode(ISD::SHL, dl, NInVT, NInOp,
-                           DAG.getConstant(ShiftAmt, dl, ShiftAmtTy));
+                            DAG.getShiftAmountConstant(ShiftAmt, NInVT, dl));
       }
       return DAG.getNode(ISD::BITCAST, dl, WidenVT, NInOp);
     }

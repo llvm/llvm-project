@@ -91,7 +91,10 @@ public:
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
                                        Expr *arrayFiller);
-
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope Scope(cgf, die);
+    Visit(die->getExpr());
+  }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
     assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
     Visit(e->getSubExpr());
@@ -231,10 +234,6 @@ public:
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
     cgf.cgm.errorNYI(dae->getSourceRange(),
                      "AggExprEmitter: VisitCXXDefaultArgExpr");
-  }
-  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
-    cgf.cgm.errorNYI(die->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultInitExpr");
   }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -792,6 +791,26 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
       builder.createCopy(destPtr.getPointer(), srcPtr.getPointer());
 
   assert(!cir::MissingFeatures::opTBAA());
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t
+CIRGenFunction::getOverlapForFieldInit(const FieldDecl *fd) {
+  if (!fd->hasAttr<NoUniqueAddressAttr>() || !fd->getType()->isRecordType())
+    return AggValueSlot::DoesNotOverlap;
+
+  // If the field lies entirely within the enclosing class's nvsize, its tail
+  // padding cannot overlap any already-initialized object. (The only subobjects
+  // with greater addresses that might already be initialized are vbases.)
+  const RecordDecl *classRD = fd->getParent();
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(classRD);
+  if (layout.getFieldOffset(fd->getFieldIndex()) +
+          getContext().getTypeSize(fd->getType()) <=
+      (uint64_t)getContext().toBits(layout.getNonVirtualSize()))
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {

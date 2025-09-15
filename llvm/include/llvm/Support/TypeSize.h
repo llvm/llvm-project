@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_TYPESIZE_H
 
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -371,7 +372,14 @@ public:
   //     else
   //       bail out early for scalable vectors and use getFixedValue()
   //   }
-  LLVM_ABI operator ScalarTy() const;
+  operator ScalarTy() const {
+    if (isScalable()) {
+      reportFatalInternalError(
+          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "`TypeSize::operator ScalarTy()`");
+    }
+    return getFixedValue();
+  }
 
   // Additional operators needed to avoid ambiguous parses
   // because of the implicit conversion hack.

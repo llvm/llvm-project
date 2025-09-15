@@ -36,7 +36,7 @@ public:
   bool isBigEndian() const { return bigEndian; }
 
   /// Internal helper method that returns requested alignment for type.
-  llvm::Align getAlignment(mlir::Type ty, bool abiOrPref) const;
+  llvm::Align getAlignment(mlir::Type ty, bool useABIAlign) const;
 
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);

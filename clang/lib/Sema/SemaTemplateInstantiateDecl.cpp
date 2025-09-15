@@ -234,6 +234,32 @@ static void instantiateDependentAnnotationAttr(
   }
 }
 
+template <typename Attr>
+static void sharedInstantiateConstructorDestructorAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs, const Attr *A,
+    Decl *New, ASTContext &C) {
+  Expr *tempInstPriority = nullptr;
+  {
+    EnterExpressionEvaluationContext Unevaluated(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    ExprResult Result = S.SubstExpr(A->getPriority(), TemplateArgs);
+    if (Result.isInvalid())
+      return;
+    tempInstPriority = Result.get();
+    if (std::optional<llvm::APSInt> CE =
+            tempInstPriority->getIntegerConstantExpr(C)) {
+      // Consistent with non-templated priority arguments, which must fit in a
+      // 32-bit unsigned integer.
+      if (!CE->isIntN(32)) {
+        S.Diag(tempInstPriority->getExprLoc(), diag::err_ice_too_large)
+            << toString(*CE, 10, false) << /*Size=*/32 << /*Unsigned=*/1;
+        return;
+      }
+    }
+  }
+  New->addAttr(Attr::Create(C, tempInstPriority, *A));
+}
+
 static Expr *instantiateDependentFunctionAttrCondition(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const Attr *A, Expr *OldCond, const Decl *Tmpl, FunctionDecl *New) {
@@ -822,6 +848,18 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     if (const auto *Annotate = dyn_cast<AnnotateAttr>(TmplAttr)) {
       instantiateDependentAnnotationAttr(*this, TemplateArgs, Annotate, New);
+      continue;
+    }
+
+    if (auto *Constructor = dyn_cast<ConstructorAttr>(TmplAttr)) {
+      sharedInstantiateConstructorDestructorAttr(*this, TemplateArgs,
+                                                 Constructor, New, Context);
+      continue;
+    }
+
+    if (auto *Destructor = dyn_cast<DestructorAttr>(TmplAttr)) {
+      sharedInstantiateConstructorDestructorAttr(*this, TemplateArgs,
+                                                 Destructor, New, Context);
       continue;
     }
 
@@ -6913,8 +6951,9 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
               Args.addArgument(
                   getTrivialTemplateArgumentLoc(UnpackedArg, QualType(), Loc));
           }
-          QualType T = CheckTemplateIdType(ElaboratedTypeKeyword::None,
-                                           TemplateName(TD), Loc, Args);
+          QualType T = CheckTemplateIdType(
+              ElaboratedTypeKeyword::None, TemplateName(TD), Loc, Args,
+              /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
           // We may get a non-null type with errors, in which case
           // `getAsCXXRecordDecl` will return `nullptr`. For instance, this
           // happens when one of the template arguments is an invalid

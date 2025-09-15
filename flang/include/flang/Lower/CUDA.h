@@ -47,10 +47,6 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   return kDefaultAllocator;
 }
 
-void initializeDeviceComponentAllocator(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::semantics::Symbol &sym, const fir::MutableBoxValue &box);
-
 mlir::Type gatherDeviceComponentCoordinatesAndType(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::semantics::Symbol &sym, fir::RecordType recTy,

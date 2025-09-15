@@ -15,13 +15,7 @@ import threading
 import typing
 import traceback
 from typing import Optional, Tuple
-
-import io
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
@@ -98,11 +92,12 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1):
+    def __init__(self, cwd, env, umask=-1, ulimit={}):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
+        self.ulimit = ulimit
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -325,6 +320,10 @@ def updateEnv(env, args):
         # from the environment.
         if arg == "-u":
             unset_next_env_var = True
+            continue
+        # Support for the -i flag which clears the environment
+        if arg == "-i":
+            env.env = {}
             continue
         if unset_next_env_var:
             unset_next_env_var = False
@@ -597,6 +596,27 @@ def executeBuiltinUmask(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
+def executeBuiltinUlimit(cmd, shenv):
+    """executeBuiltinUlimit - Change the current limits."""
+    if os.name != "posix":
+        raise InternalShellError(cmd, "'ulimit' not supported on this system")
+    if len(cmd.args) != 3:
+        raise InternalShellError(cmd, "'ulimit' requires two arguments")
+    try:
+        new_limit = int(cmd.args[2])
+    except ValueError as err:
+        raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
+    if cmd.args[1] == "-v":
+        shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
+    elif cmd.args[1] == "-n":
+        shenv.ulimit["RLIMIT_NOFILE"] = new_limit
+    else:
+        raise InternalShellError(
+            cmd, "'ulimit' does not support option: %s" % cmd.args[1]
+        )
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+
 def executeBuiltinColon(cmd, cmd_shenv):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return ShellCommandResult(cmd, "", "", 0, False)
@@ -751,6 +771,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         "popd": executeBuiltinPopd,
         "pushd": executeBuiltinPushd,
         "rm": executeBuiltinRm,
+        "ulimit": executeBuiltinUlimit,
         "umask": executeBuiltinUmask,
         ":": executeBuiltinColon,
     }
@@ -890,20 +911,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if os.path.isfile(exe_in_cwd):
                 executable = exe_in_cwd
         if not executable:
-            executable = lit.util.which(args[0], cmd_shenv.env["PATH"])
+            # Use the path from cmd_shenv by default, but if the environment variable
+            # is unset (like if the user is using env -i), use the standard path.
+            path = (
+                cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
+            )
+            executable = lit.util.which(args[0], shenv.env["PATH"])
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
-            # In Python 2.x, basestring is the base class for all string (including unicode)
-            # In Python 3.x, basestring no longer exist and str is always unicode
-            try:
-                str_type = basestring
-            except NameError:
-                str_type = str
             for i, arg in enumerate(args):
-                if isinstance(arg, str_type) and kDevNull in arg:
+                if isinstance(arg, str) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
                     named_temp_files.append(f.name)
@@ -916,6 +936,19 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # with some core utility distributions.
         if kIsWindows:
             args = quote_windows_command(args)
+
+        # Handle any resource limits. We do this by launching the command with
+        # a wrapper that sets the necessary limits. We use a wrapper rather than
+        # setting the limits in process as we cannot reraise the limits back to
+        # their defaults without elevated permissions.
+        if cmd_shenv.ulimit:
+            executable = sys.executable
+            args.insert(0, sys.executable)
+            args.insert(1, os.path.join(builtin_commands_dir, "_launch_with_limit.py"))
+            for limit in cmd_shenv.ulimit:
+                cmd_shenv.env["LIT_INTERNAL_ULIMIT_" + limit] = str(
+                    cmd_shenv.ulimit[limit]
+                )
 
         try:
             # TODO(boomanaiden154): We currently wrap the subprocess.Popen with
@@ -1238,7 +1271,7 @@ def executeScriptInternal(
         ):
             for test_updater in litConfig.test_updaters:
                 try:
-                    update_output = test_updater(result, test)
+                    update_output = test_updater(result, test, commands)
                 except Exception as e:
                     output = out
                     output += err

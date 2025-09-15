@@ -92,7 +92,7 @@ struct RootDescriptorYaml {
 };
 
 struct DescriptorRangeYaml {
-  uint32_t RangeType;
+  dxil::ResourceClass RangeType;
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
@@ -111,12 +111,12 @@ struct DescriptorTableYaml {
 };
 
 struct RootParameterHeaderYaml {
-  uint32_t Type;
-  uint32_t Visibility;
+  dxbc::RootParameterType Type;
+  dxbc::ShaderVisibility Visibility;
   uint32_t Offset;
 
   RootParameterHeaderYaml(){};
-  RootParameterHeaderYaml(uint32_t T) : Type(T) {}
+  RootParameterHeaderYaml(dxbc::RootParameterType T) : Type(T) {}
 };
 
 struct RootParameterLocationYaml {
@@ -165,21 +165,19 @@ struct RootParameterYamlDesc {
 };
 
 struct StaticSamplerYamlDesc {
-  uint32_t Filter = llvm::to_underlying(dxbc::SamplerFilter::Anisotropic);
-  uint32_t AddressU = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
-  uint32_t AddressV = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
-  uint32_t AddressW = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  dxbc::SamplerFilter Filter = dxbc::SamplerFilter::Anisotropic;
+  dxbc::TextureAddressMode AddressU = dxbc::TextureAddressMode::Wrap;
+  dxbc::TextureAddressMode AddressV = dxbc::TextureAddressMode::Wrap;
+  dxbc::TextureAddressMode AddressW = dxbc::TextureAddressMode::Wrap;
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16u;
-  uint32_t ComparisonFunc =
-      llvm::to_underlying(dxbc::ComparisonFunc::LessEqual);
-  uint32_t BorderColor =
-      llvm::to_underlying(dxbc::StaticBorderColor::OpaqueWhite);
+  dxbc::ComparisonFunc ComparisonFunc = dxbc::ComparisonFunc::LessEqual;
+  dxbc::StaticBorderColor BorderColor = dxbc::StaticBorderColor::OpaqueWhite;
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
-  uint32_t ShaderVisibility;
+  dxbc::ShaderVisibility ShaderVisibility;
 };
 
 struct RootSignatureYamlDesc {
@@ -321,6 +319,13 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(dxil::ResourceClass)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SamplerFilter)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::StaticBorderColor)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::TextureAddressMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ComparisonFunc)
 
 namespace llvm {
 

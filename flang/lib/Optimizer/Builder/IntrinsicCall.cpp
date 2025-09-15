@@ -397,6 +397,34 @@ static constexpr IntrinsicHandler handlers[]{
     {"cmplx",
      &I::genCmplx,
      {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
+    {"co_broadcast",
+     &I::genCoBroadcast,
+     {{{"a", asBox},
+       {"source_image", asAddr},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_max",
+     &I::genCoMax,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_min",
+     &I::genCoMin,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
+    {"co_sum",
+     &I::genCoSum,
+     {{{"a", asBox},
+       {"result_image", asAddr, handleDynamicOptional},
+       {"stat", asAddr, handleDynamicOptional},
+       {"errmsg", asBox, handleDynamicOptional}}},
+     /*isElemental*/ false},
     {"command_argument_count", &I::genCommandArgumentCount},
     {"conjg", &I::genConjg},
     {"cosd", &I::genCosd},
@@ -427,6 +455,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
     {"dprod", &I::genDprod},
+    {"dsecnds",
+     &I::genDsecnds,
+     {{{"refTime", asAddr}}},
+     /*isElemental=*/false},
     {"dshiftl", &I::genDshiftl},
     {"dshiftr", &I::genDshiftr},
     {"eoshift",
@@ -3686,6 +3718,85 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
                                                            imag);
 }
 
+// CO_BROADCAST
+void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value sourceImage = fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2])
+          ? fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+                .getResult()
+          : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoBroadcast(builder, loc, fir::getBase(args[0]), sourceImage,
+                               status, errmsg);
+}
+
+// CO_MAX
+void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value refNone =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoMax(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
+// CO_MIN
+void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value refNone =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoMin(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
+// CO_SUM
+void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 4);
+  mlir::Value absentInt =
+      fir::AbsentOp::create(builder, loc,
+                            builder.getRefType(builder.getI32Type()))
+          .getResult();
+  mlir::Value resultImage =
+      isStaticallyAbsent(args[1]) ? absentInt : fir::getBase(args[1]);
+  mlir::Value status =
+      isStaticallyAbsent(args[2]) ? absentInt : fir::getBase(args[2]);
+  mlir::Value errmsg =
+      isStaticallyAbsent(args[3])
+          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
+          : fir::getBase(args[3]);
+  fir::runtime::genCoSum(builder, loc, fir::getBase(args[0]), resultImage,
+                         status, errmsg);
+}
+
 // COMMAND_ARGUMENT_COUNT
 fir::ExtendedValue IntrinsicLibrary::genCommandArgumentCount(
     mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -3939,6 +4050,23 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   mlir::Value a = builder.createConvert(loc, resultType, args[0]);
   mlir::Value b = builder.createConvert(loc, resultType, args[1]);
   return mlir::arith::MulFOp::create(builder, loc, a, b);
+}
+
+// DSECNDS
+// Double precision variant of SECNDS (PGI extension)
+fir::ExtendedValue
+IntrinsicLibrary::genDsecnds(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "DSECNDS expects one argument");
+
+  mlir::Value refTime = fir::getBase(args[0]);
+
+  if (!refTime)
+    fir::emitFatalError(loc, "expected REFERENCE TIME parameter");
+
+  mlir::Value result = fir::runtime::genDsecnds(builder, loc, refTime);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 // DSHIFTL
@@ -7331,7 +7459,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
 fir::ExtendedValue
 IntrinsicLibrary::genNumImages(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
@@ -8412,7 +8540,7 @@ mlir::Value IntrinsicLibrary::genThisGrid(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genThisImage(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  checkCoarrayEnabled();
+  converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
   mlir::Value team =

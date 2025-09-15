@@ -35,6 +35,8 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   static void printRegOperand(MCRegister Reg, raw_ostream &O,
                               const MCRegisterInfo &MRI);
+  void printRegOperand(MCRegister Reg, unsigned Opc, unsigned OpNo,
+                       raw_ostream &O, const MCRegisterInfo &MRI);
 
 private:
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -70,7 +72,7 @@ private:
   void printSymbolicFormat(const MCInst *MI,
                            const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printRegOperand(unsigned RegNo, raw_ostream &O);
+  void printRegOperand(MCRegister Reg, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

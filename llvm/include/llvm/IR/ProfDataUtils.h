@@ -16,7 +16,6 @@
 #define LLVM_IR_PROFDATAUTILS_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Compiler.h"
 
@@ -29,6 +28,10 @@ struct MDProfLabels {
   LLVM_ABI static const char *ExpectedBranchWeights;
   LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
+
+/// Profile-based loop metadata that should be accessed only by using
+/// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
+LLVM_ABI extern const char *LLVMLoopEstimatedTripCount;
 
 /// Checks if an Instruction has MD_prof Metadata
 LLVM_ABI bool hasProfMD(const Instruction &I);
@@ -177,14 +180,49 @@ inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
 /// do not accidentally drop profile info, and this API is called in cases where
 /// the pass explicitly cannot provide that info. Defaulting it in would hide
 /// bugs where the pass forgets to transfer over or otherwise specify profile
-/// info.
-LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I);
+/// info. Use `PassName` to capture the pass name (i.e. DEBUG_TYPE) for
+/// debuggability.
+LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
+                                                StringRef PassName);
 
-LLVM_ABI bool isExplicitlyUnknownBranchWeightsMetadata(const MDNode &MD);
+/// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
+/// entry counts.
+LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,
+                                                     StringRef PassName);
+
+LLVM_ABI bool isExplicitlyUnknownProfileMetadata(const MDNode &MD);
 LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
 
+/// Get the branch weights of a branch conditioned on b1 || b2, where b1 and b2
+/// are 2 booleans that are the conditions of 2 branches for which we have the
+/// branch weights B1 and B2, respectively. In both B1 and B2, the first
+/// position (index 0) is for the 'true' branch, and the second position (index
+/// 1) is for the 'false' branch.
+inline SmallVector<uint64_t, 2>
+getDisjunctionWeights(const SmallVector<uint32_t, 2> &B1,
+                      const SmallVector<uint32_t, 2> &B2) {
+  // For the first conditional branch, the probability the "true" case is taken
+  // is p(b1) = B1[0] / (B1[0] + B1[1]). The "false" case's probability is
+  // p(not b1) = B1[1] / (B1[0] + B1[1]).
+  // Similarly for the second conditional branch and B2.
+  //
+  // The probability of the new branch NOT being taken is:
+  // not P = p((not b1) and (not b2)) =
+  //       = B1[1] / (B1[0]+B1[1]) * B2[1] / (B2[0]+B2[1]) =
+  //       = B1[1] * B2[1] / (B1[0] + B1[1]) * (B2[0] + B2[1])
+  // Then the probability of it being taken is: P = 1 - (not P).
+  // The denominator will be the same as above, and the numerator of P will be:
+  // (B1[0] + B1[1]) * (B2[0] + B2[1]) - B1[1]*B2[1]
+  // Which then reduces to what's shown below (out of the 4 terms coming out of
+  // the product of sums, the subtracted one cancels out).
+  assert(B1.size() == 2);
+  assert(B2.size() == 2);
+  auto FalseWeight = B1[1] * B2[1];
+  auto TrueWeight = B1[0] * B2[0] + B1[0] * B2[1] + B1[1] * B2[0];
+  return {TrueWeight, FalseWeight};
+}
 } // namespace llvm
 #endif

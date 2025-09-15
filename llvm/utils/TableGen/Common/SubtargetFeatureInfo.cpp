@@ -163,6 +163,38 @@ static bool emitFeaturesAux(StringRef TargetName, const Init &Val,
   return true;
 }
 
+void SubtargetFeatureInfo::emitPredicateCheck(
+    raw_ostream &OS, ArrayRef<const Record *> Predicates) {
+  ListSeparator LS(" && ");
+  for (const Record *R : Predicates) {
+    StringRef CondString = R->getValueAsString("CondString");
+    if (CondString.empty())
+      continue;
+    OS << LS << '(' << CondString << ')';
+  }
+}
+
+void SubtargetFeatureInfo::emitMCPredicateCheck(
+    raw_ostream &OS, StringRef TargetName,
+    ArrayRef<const Record *> Predicates) {
+  auto MCPredicates = make_filter_range(Predicates, [](const Record *R) {
+    return R->getValueAsBit("AssemblerMatcherPredicate");
+  });
+
+  if (MCPredicates.empty()) {
+    OS << "false";
+    return;
+  }
+
+  ListSeparator LS(" && ");
+  bool ParenIfBinOp = range_size(MCPredicates) > 1;
+  for (const Record *R : MCPredicates) {
+    OS << LS;
+    emitFeaturesAux(TargetName, *R->getValueAsDag("AssemblerCondDag"),
+                    ParenIfBinOp, OS);
+  }
+}
+
 void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {

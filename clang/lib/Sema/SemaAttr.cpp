@@ -157,8 +157,8 @@ void Sema::inferGslPointerAttribute(TypedefNameDecl *TD) {
     if (auto *TST =
             dyn_cast<TemplateSpecializationType>(Canonical.getTypePtr())) {
 
-      RD = dyn_cast_or_null<CXXRecordDecl>(
-          TST->getTemplateName().getAsTemplateDecl()->getTemplatedDecl());
+      if (const auto *TD = TST->getTemplateName().getAsTemplateDecl())
+        RD = dyn_cast_or_null<CXXRecordDecl>(TD->getTemplatedDecl());
     }
   }
 

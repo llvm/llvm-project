@@ -620,6 +620,16 @@ func.func @prefetch_tensormap(%gen_ptr: !llvm.ptr, %const_ptr: !llvm.ptr<4>) {
   return
 }
 
+// CHECK-LABEL: @nvvm_address_space
+func.func private @nvvm_address_space(
+    !ptr.ptr<#nvvm.memory_space<global>>,
+    !ptr.ptr<#nvvm.memory_space<shared>>,
+    !ptr.ptr<#nvvm.memory_space<constant>>,
+    !ptr.ptr<#nvvm.memory_space<local>>,
+    !ptr.ptr<#nvvm.memory_space<tensor>>,
+    !ptr.ptr<#nvvm.memory_space<shared_cluster>>
+  ) -> !ptr.ptr<#nvvm.memory_space<generic>>
+
 // -----
 
 // Just check these don't emit errors.
