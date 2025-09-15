@@ -326,7 +326,7 @@ public:
   /// Returns true if DWARF4 or lower is used.
   bool isDWARFLegacyUsed() const { return ContainsDwarfLegacy; }
 
-  // Return true if DWARFUnit is valid.
+  /// Returns true if DWARFUnit is valid.
   bool isValidDwarfUnit(DWARFUnit *const DU) const;
 
   std::map<unsigned, DwarfLineTable> &getDwarfLineTables() {
