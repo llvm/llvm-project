@@ -48,6 +48,7 @@
 
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
+using namespace llvm::KernArgPreload;
 
 #define DEBUG_TYPE "si-lower"
 
@@ -2924,6 +2925,18 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
   // these from the dispatch pointer.
 }
 
+// Maps a hidden kernel argument to its preload index in
+// PreloadHiddenArgsIndexMap.
+static void mapHiddenArgToPreloadIndex(AMDGPUFunctionArgInfo &ArgInfo,
+                                       unsigned ArgOffset,
+                                       unsigned ImplicitArgOffset,
+                                       unsigned ArgIdx) {
+  auto [It, Inserted] = ArgInfo.PreloadHiddenArgsIndexMap.try_emplace(
+      HiddenArgUtils::getHiddenArgFromOffset(ArgOffset - ImplicitArgOffset));
+  assert(Inserted && "Preload hidden kernel argument allocated twice.");
+  It->second = ArgIdx;
+}
+
 // Allocate pre-loaded kernel arguemtns. Arguments to be preloading must be
 // sequential starting from the first argument.
 void SITargetLowering::allocatePreloadKernArgSGPRs(
@@ -2936,6 +2949,7 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
   bool InPreloadSequence = true;
   unsigned InIdx = 0;
   bool AlignedForImplictArgs = false;
+  unsigned ImplicitArgOffsetAdjustment = 0;
   unsigned ImplicitArgOffset = 0;
   for (auto &Arg : F.args()) {
     if (!InPreloadSequence || !Arg.hasInRegAttr())
@@ -2964,18 +2978,35 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
         if (!AlignedForImplictArgs) {
           ImplicitArgOffset =
               alignTo(LastExplicitArgOffset,
-                      Subtarget->getAlignmentForImplicitArgPtr()) -
-              LastExplicitArgOffset;
+                      Subtarget->getAlignmentForImplicitArgPtr());
+          ImplicitArgOffsetAdjustment =
+              ImplicitArgOffset - LastExplicitArgOffset;
           AlignedForImplictArgs = true;
         }
-        ArgOffset += ImplicitArgOffset;
+        ArgOffset += ImplicitArgOffsetAdjustment;
       }
 
       // Arg is preloaded into the previous SGPR.
       if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
         assert(InIdx >= 1 && "No previous SGPR");
-        Info.getArgInfo().PreloadKernArgs[InIdx].Regs.push_back(
-            Info.getArgInfo().PreloadKernArgs[InIdx - 1].Regs[0]);
+        auto &PreloadKernArgs = Info.getArgInfo().PreloadKernArgs;
+        PreloadKernArgs.grow(InIdx);
+        KernArgPreloadDescriptor &PreloadDesc = PreloadKernArgs[InIdx];
+        assert(!PreloadDesc.IsValid &&
+               "Preload kernel argument allocated twice.");
+
+        const KernArgPreloadDescriptor &PrevDesc = PreloadKernArgs[InIdx - 1];
+        assert(PrevDesc.IsValid &&
+               "Previous preload kernel argument not allocated.");
+        PreloadDesc.Regs.push_back(PrevDesc.Regs[0]);
+
+        PreloadDesc.OrigArgIdx = Arg.getArgNo();
+        PreloadDesc.PartIdx = InIdx;
+        PreloadDesc.IsValid = true;
+        if (Arg.hasAttribute("amdgpu-hidden-argument"))
+          mapHiddenArgToPreloadIndex(Info.getArgInfo(), ArgOffset,
+                                     ImplicitArgOffset, InIdx);
+
         continue;
       }
 
@@ -2987,11 +3018,15 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
         break;
       }
 
+      if (Arg.hasAttribute("amdgpu-hidden-argument"))
+        mapHiddenArgToPreloadIndex(Info.getArgInfo(), ArgOffset,
+                                   ImplicitArgOffset, InIdx);
+
       // Preload this argument.
       const TargetRegisterClass *RC =
           TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
-      SmallVectorImpl<MCRegister> *PreloadRegs =
-          Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, InIdx, PaddingSGPRs);
+      SmallVectorImpl<MCRegister> *PreloadRegs = Info.addPreloadedKernArg(
+          TRI, RC, NumAllocSGPRs, InIdx, Arg.getArgNo(), PaddingSGPRs);
 
       if (PreloadRegs->size() > 1)
         RC = &AMDGPU::SGPR_32RegClass;
@@ -3404,7 +3439,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       }
 
       SDValue NewArg;
-      if (Arg.isOrigArg() && Info->getArgInfo().PreloadKernArgs.count(i)) {
+      auto &PreloadKernArgs = Info->getArgInfo().PreloadKernArgs;
+      if (Arg.isOrigArg() && PreloadKernArgs.inBounds(i) &&
+          PreloadKernArgs[i].IsValid) {
         if (MemVT.getStoreSize() < 4 && Alignment < 4) {
           // In this case the argument is packed into the previous preload SGPR.
           int64_t AlignDownOffset = alignDown(Offset, 4);
@@ -3414,8 +3451,7 @@ SDValue SITargetLowering::LowerFormalArguments(
           const SIMachineFunctionInfo *Info =
               MF.getInfo<SIMachineFunctionInfo>();
           MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
-          Register Reg =
-              Info->getArgInfo().PreloadKernArgs.find(i)->getSecond().Regs[0];
+          Register Reg = Info->getArgInfo().PreloadKernArgs[i].Regs[0];
 
           assert(Reg);
           Register VReg = MRI.getLiveInVirtReg(Reg);
@@ -3435,7 +3471,7 @@ SDValue SITargetLowering::LowerFormalArguments(
               MF.getInfo<SIMachineFunctionInfo>();
           MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
           const SmallVectorImpl<MCRegister> &PreloadRegs =
-              Info->getArgInfo().PreloadKernArgs.find(i)->getSecond().Regs;
+              Info->getArgInfo().PreloadKernArgs[i].Regs;
 
           SDValue Copy;
           if (PreloadRegs.size() == 1) {

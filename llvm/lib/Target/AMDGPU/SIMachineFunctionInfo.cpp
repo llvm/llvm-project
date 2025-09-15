@@ -278,9 +278,16 @@ Register SIMachineFunctionInfo::addLDSKernelId() {
 
 SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
     const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
-    unsigned AllocSizeDWord, int KernArgIdx, int PaddingSGPRs) {
-  auto [It, Inserted] = ArgInfo.PreloadKernArgs.try_emplace(KernArgIdx);
-  assert(Inserted && "Preload kernel argument allocated twice.");
+    unsigned AllocSizeDWord, unsigned PartIdx, unsigned ArgIdx,
+    unsigned PaddingSGPRs) {
+  ArgInfo.PreloadKernArgs.grow(PartIdx);
+  KernArgPreload::KernArgPreloadDescriptor &PreloadDesc =
+      ArgInfo.PreloadKernArgs[PartIdx];
+  assert(!PreloadDesc.IsValid && "Preload kernel argument allocated twice.");
+  PreloadDesc.PartIdx = PartIdx;
+  PreloadDesc.OrigArgIdx = ArgIdx;
+  PreloadDesc.IsValid = true;
+
   NumUserSGPRs += PaddingSGPRs;
   // If the available register tuples are aligned with the kernarg to be
   // preloaded use that register, otherwise we need to use a set of SGPRs and
@@ -289,7 +296,7 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
     ArgInfo.FirstKernArgPreloadReg = getNextUserSGPR();
   Register PreloadReg =
       TRI.getMatchingSuperReg(getNextUserSGPR(), AMDGPU::sub0, RC);
-  auto &Regs = It->second.Regs;
+  auto &Regs = PreloadDesc.Regs;
   if (PreloadReg &&
       (RC == &AMDGPU::SReg_32RegClass || RC == &AMDGPU::SReg_64RegClass)) {
     Regs.push_back(PreloadReg);
