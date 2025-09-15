@@ -562,6 +562,11 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fixed inconsistent shadow warnings for lambda capture of structured bindings.
+  Previously, ``[val = val]`` (regular parameter) produced no warnings with ``-Wshadow``
+  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``) 
+  incorrectly produced warnings. Both cases now consistently show no warnings with 
+  ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
 
@@ -773,6 +778,7 @@ OpenMP Support
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
+- Added support for ``variable-category`` modifier in ``default clause``.
 
 Improvements
 ^^^^^^^^^^^^
