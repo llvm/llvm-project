@@ -30,10 +30,11 @@ body:             |
     ; GFX90A-NEXT: [[COPY10:%[0-9]+]].sub5:sgpr_256 = COPY [[COPY4]]
     ; GFX90A-NEXT: [[COPY10:%[0-9]+]].sub6:sgpr_256 = COPY [[COPY3]]
     ; GFX90A-NEXT: [[COPY10:%[0-9]+]].sub7:sgpr_256 = COPY [[COPY2]]
-    ; GFX90A-NEXT: undef [[COPY11:%[0-9]+]].sub0:vreg_64_align2 = COPY [[COPY]]
-    ; GFX90A-NEXT: [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
-    ; GFX90A-NEXT: [[COPY12:%[0-9]+]]:vgpr_32 = IMAGE_ATOMIC_SWAP_V1_V1_gfx90a [[COPY12]], [[COPY11]].sub0, [[COPY10]], 1, -1, 1, 0, 0, 0, implicit $exec, implicit [[COPY11]] :: (volatile dereferenceable load store (s32), addrspace 8)
-    ; GFX90A-NEXT: $vgpr0 = COPY [[COPY12]]
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]].sub0:vreg_64_align2 = COPY [[COPY]]
+    ; GFX90A-NEXT: [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+    ; GFX90A-NEXT: [[COPY11:%[0-9]+]]:vgpr_32 = IMAGE_ATOMIC_SWAP_V1_V1_gfx90a [[COPY11]], [[DEF]].sub0, [[COPY10]], 1, -1, 1, 0, 0, 0, implicit $exec, implicit [[DEF]] :: (volatile dereferenceable load store (s32), addrspace 8)
+    ; GFX90A-NEXT: $vgpr0 = COPY [[COPY11]]
     ; GFX90A-NEXT: SI_RETURN_TO_EPILOG $vgpr0
     %9:vgpr_32 = COPY $vgpr1
     %8:vgpr_32 = COPY $vgpr0

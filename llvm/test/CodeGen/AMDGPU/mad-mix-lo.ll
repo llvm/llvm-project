@@ -411,9 +411,10 @@ define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_v2f32:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v4, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    ; implicit-def: $vgpr3
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v3.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v4.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
@@ -534,10 +535,11 @@ define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_v3f32:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v7, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    ; implicit-def: $vgpr6
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v6.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v7.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v6
@@ -704,11 +706,13 @@ define <4 x half> @v_mad_mix_v4f32(<4 x half> %src0, <4 x half> %src1, <4 x half
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_v4f32:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v8, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v9, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    ; implicit-def: $vgpr6
+; SDAG-GFX1100-TRUE16-NEXT:    ; implicit-def: $vgpr7
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v6.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v8.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v9.l
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v7, v1, v3, v5 op_sel_hi:[1,1,1]
@@ -1452,9 +1456,12 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half>
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_v2f32_clamp_postcvt_lo:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v4, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX1100-TRUE16-NEXT:    ; implicit-def: $vgpr3
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1617,9 +1624,12 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_v2f32_clamp_postcvt_hi:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixlo_f16 v4, v0, v1, v2 op_sel_hi:[1,1,1]
+; SDAG-GFX1100-TRUE16-NEXT:    ; implicit-def: $vgpr3
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
