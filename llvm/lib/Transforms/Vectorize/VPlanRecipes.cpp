@@ -3159,6 +3159,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
               /*Extract=*/false, Ctx.CostKind);
         }
       }
+      ScalarizationCost +=
+          Ctx.TTI.getCallScalarizationOverhead(cast<CallInst>(UI), VF);
       // Skip operands that do not require extraction/scalarization and do not
       // incur any overhead.
       SmallPtrSet<const VPValue *, 4> UniqueOperands;

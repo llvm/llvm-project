@@ -46,8 +46,13 @@ static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
 static cl::opt<unsigned> SVEScatterOverhead("sve-scatter-overhead",
                                             cl::init(10), cl::Hidden);
 
-static cl::opt<unsigned> SVETailFoldInsnThreshold("sve-tail-folding-insn-threshold",
-                                                  cl::init(15), cl::Hidden);
+static cl::opt<unsigned>
+    SVETailFoldInsnThreshold("sve-tail-folding-insn-threshold", cl::init(15),
+                             cl::Hidden);
+
+static cl::opt<unsigned>
+    CallScalarizationCostMultiplier("call-scalarization-cost-multiplier",
+                                    cl::init(10), cl::Hidden);
 
 static cl::opt<unsigned>
     NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(10),
@@ -594,6 +599,12 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   return InstructionCost::getInvalid();
 }
 
+static InstructionCost getCallScalarizationCost(ElementCount VF) {
+  if (VF.isScalable())
+    return InstructionCost::getInvalid();
+  return VF.getFixedValue() * CallScalarizationCostMultiplier;
+}
+
 InstructionCost
 AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) const {
@@ -606,6 +617,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (VTy->getElementCount() == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
 
+  InstructionCost BaseCost = 0;
   switch (ICA.getID()) {
   case Intrinsic::experimental_vector_histogram_add: {
     InstructionCost HistCost = getHistogramCost(ST, ICA);
@@ -1004,10 +1016,44 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
+  case Intrinsic::atan2:
+  case Intrinsic::sin:
+  case Intrinsic::cos:
+  case Intrinsic::tan:
+  case Intrinsic::sinh:
+  case Intrinsic::cosh:
+  case Intrinsic::tanh:
+  case Intrinsic::pow:
+  case Intrinsic::exp:
+  case Intrinsic::exp10:
+  case Intrinsic::exp2:
+  case Intrinsic::log:
+  case Intrinsic::log10:
+  case Intrinsic::log2: {
+    if (auto *FixedVTy = dyn_cast<FixedVectorType>(RetTy))
+      BaseCost = getCallScalarizationCost(FixedVTy->getElementCount());
+    break;
+  }
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi: {
+    Type *FirstRetTy = getContainedTypes(RetTy).front();
+    if (auto *FixedVTy = dyn_cast<FixedVectorType>(FirstRetTy)) {
+      EVT ScalarVT = getTLI()->getValueType(DL, FirstRetTy).getScalarType();
+      RTLIB::Libcall LC = ICA.getID() == Intrinsic::sincos
+                              ? RTLIB::getSINCOS(ScalarVT)
+                              : RTLIB::getSINCOSPI(ScalarVT);
+      if (!getMultipleResultIntrinsicVectorLibCallDesc(ICA, LC))
+        BaseCost = getCallScalarizationCost(FixedVTy->getElementCount());
+    }
+    break;
+  }
   default:
     break;
   }
-  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+  return BaseCost + BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 /// The function will remove redundant reinterprets casting in the presence
@@ -4043,6 +4089,12 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   unsigned VecInstCost =
       CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
   return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
+}
+
+InstructionCost
+AArch64TTIImpl::getCallScalarizationOverhead(CallInst *CI,
+                                             ElementCount VF) const {
+  return getCallScalarizationCost(VF);
 }
 
 std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(

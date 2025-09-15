@@ -479,6 +479,9 @@ public:
       TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
       ArrayRef<Value *> VL = {}) const override;
 
+  InstructionCost getCallScalarizationOverhead(CallInst *CI,
+                                               ElementCount VF) const override;
+
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.

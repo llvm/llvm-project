@@ -464,6 +464,11 @@ public:
     return 0;
   }
 
+  virtual InstructionCost getCallScalarizationOverhead(CallInst *CI,
+                                                       ElementCount VF) const {
+    return 0;
+  }
+
   virtual bool supportsEfficientVectorElementLoadStore() const { return false; }
 
   virtual bool supportsTailCalls() const { return true; }

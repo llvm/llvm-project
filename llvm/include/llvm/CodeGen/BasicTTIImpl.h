@@ -304,30 +304,14 @@ private:
       const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind,
       RTLIB::Libcall LC,
       std::optional<unsigned> CallRetElementIndex = {}) const {
-    Type *RetTy = ICA.getReturnType();
-    // Vector variants of the intrinsic can be mapped to a vector library call.
-    auto const *LibInfo = ICA.getLibInfo();
-    if (!LibInfo || !isa<StructType>(RetTy) ||
-        !isVectorizedStructTy(cast<StructType>(RetTy)))
-      return std::nullopt;
-
-    // Find associated libcall.
-    const char *LCName = getTLI()->getLibcallName(LC);
-    if (!LCName)
-      return std::nullopt;
-
-    // Search for a corresponding vector variant.
-    LLVMContext &Ctx = RetTy->getContext();
-    ElementCount VF = getVectorizedTypeVF(RetTy);
-    VecDesc const *VD = nullptr;
-    for (bool Masked : {false, true}) {
-      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
-        break;
-    }
+    VecDesc const *VD = getMultipleResultIntrinsicVectorLibCallDesc(ICA, LC);
     if (!VD)
       return std::nullopt;
 
     // Cost the call + mask.
+    Type *RetTy = ICA.getReturnType();
+    ElementCount VF = getVectorizedTypeVF(RetTy);
+    LLVMContext &Ctx = RetTy->getContext();
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
     if (VD->isMasked()) {
@@ -371,6 +355,30 @@ protected:
   using TargetTransformInfoImplBase::DL;
 
 public:
+  VecDesc const *getMultipleResultIntrinsicVectorLibCallDesc(
+      const IntrinsicCostAttributes &ICA, RTLIB::Libcall LC) const {
+    Type *RetTy = ICA.getReturnType();
+    // Vector variants of the intrinsic can be mapped to a vector library call.
+    auto const *LibInfo = ICA.getLibInfo();
+    if (!LibInfo || !isa<StructType>(RetTy) ||
+        !isVectorizedStructTy(cast<StructType>(RetTy)))
+      return nullptr;
+
+    // Find associated libcall.
+    const char *LCName = getTLI()->getLibcallName(LC);
+    if (!LCName)
+      return nullptr;
+
+    // Search for a corresponding vector variant.
+    ElementCount VF = getVectorizedTypeVF(RetTy);
+    VecDesc const *VD = nullptr;
+    for (bool Masked : {false, true}) {
+      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
+        break;
+    }
+    return VD;
+  }
+
   /// \name Scalar TTI Implementations
   /// @{
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,

@@ -641,6 +641,12 @@ InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
   return TTIImpl->getOperandsScalarizationOverhead(Tys, CostKind);
 }
 
+InstructionCost
+TargetTransformInfo::getCallScalarizationOverhead(CallInst *CI,
+                                                  ElementCount VF) const {
+  return TTIImpl->getCallScalarizationOverhead(CI, VF);
+}
+
 bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
   return TTIImpl->supportsEfficientVectorElementLoadStore();
 }

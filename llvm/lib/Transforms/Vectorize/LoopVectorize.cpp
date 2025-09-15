@@ -5775,6 +5775,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         // Compute costs of unpacking argument values for the scalar calls and
         // packing the return values to a vector.
         InstructionCost ScalarizationCost = getScalarizationOverhead(CI, VF);
+        ScalarizationCost += TTI.getCallScalarizationOverhead(CI, VF);
         ScalarCost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
       } else {
         // There is no point attempting to calculate the scalar cost for a

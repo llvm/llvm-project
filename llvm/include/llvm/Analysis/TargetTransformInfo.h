@@ -968,6 +968,9 @@ public:
   LLVM_ABI InstructionCost getOperandsScalarizationOverhead(
       ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const;
 
+  LLVM_ABI InstructionCost getCallScalarizationOverhead(CallInst *CI,
+                                                        ElementCount VF) const;
+
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
   /// the scalarization cost of a load/store.
