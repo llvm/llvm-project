@@ -21,13 +21,16 @@ namespace clang::tidy::performance {
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance/lost-std-move.html
 class LostStdMoveCheck : public ClangTidyCheck {
 public:
-  LostStdMoveCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  LostStdMoveCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
+
+private:
+  const bool StrictMode;
 };
 
 } // namespace clang::tidy::performance

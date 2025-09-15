@@ -36,6 +36,21 @@ allDeclRefExprsHonourLambda(const VarDecl &VarDecl, const Decl &Decl,
   return DeclRefs;
 }
 
+static llvm::SmallPtrSet<const VarDecl *, 16>
+allVarDeclsExprs(const VarDecl &VarDecl, const Decl &Decl,
+                            ASTContext &Context) {
+  auto Matches = match(
+      decl(forEachDescendant(
+          declRefExpr(to(varDecl(equalsNode(&VarDecl))),
+                      hasParent(decl(varDecl(hasType(qualType(referenceType()))).bind("varDecl"))),
+                      unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
+                          capturesVar(varDecl(equalsNode(&VarDecl))))))))))),
+      Decl, Context);
+  llvm::SmallPtrSet<const class VarDecl *, 16> VarDecls;
+  extractNodesByIdTo(Matches, "varDecl", VarDecls);
+  return VarDecls;
+}
+
 static const Expr *
 getLastVarUsage(const llvm::SmallPtrSet<const DeclRefExpr *, 16> &Exprs) {
   const Expr *LastExpr = nullptr;
@@ -53,6 +68,15 @@ getLastVarUsage(const llvm::SmallPtrSet<const DeclRefExpr *, 16> &Exprs) {
 AST_MATCHER(CXXRecordDecl, hasTrivialMoveConstructor) {
   return Node.hasDefinition() && Node.hasTrivialMoveConstructor();
 }
+
+void LostStdMoveCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StrictMode", StrictMode);
+}
+
+LostStdMoveCheck::LostStdMoveCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context),
+      StrictMode(Options.get("StrictMode", true)) {}
 
 void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto ReturnParent =
@@ -125,15 +149,17 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  llvm::SmallPtrSet<const DeclRefExpr *, 16> AllReferences =
-      allDeclRefExprsHonourLambda(*MatchedDecl, *MatchedFunc, *Result.Context);
-  for (const auto *Reference : AllReferences) {
-    if (Reference->getType()->isLValueReferenceType()) {
-      // variable may be caught by reference and still used via reference during
-      // MatchedUse
+  if (StrictMode) {
+    llvm::SmallPtrSet<const VarDecl *, 16> AllVarDecls =
+        allVarDeclsExprs(*MatchedDecl, *MatchedFunc, *Result.Context);
+    if (!AllVarDecls.empty()) {
+      // x is referenced by local var, it may outlive the "use"
       return;
     }
   }
+
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> AllReferences =
+      allDeclRefExprsHonourLambda(*MatchedDecl, *MatchedFunc, *Result.Context);
   const Expr *LastUsage = getLastVarUsage(AllReferences);
 
   if (LastUsage && LastUsage->getBeginLoc() > MatchedUse->getBeginLoc()) {
