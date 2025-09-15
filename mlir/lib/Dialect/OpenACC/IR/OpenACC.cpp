@@ -3513,7 +3513,8 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
         "at least one operand must appear on the declare operation");
 
   for (mlir::Value operand : operands) {
-    if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
                    acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
             operand.getDefiningOp()))
