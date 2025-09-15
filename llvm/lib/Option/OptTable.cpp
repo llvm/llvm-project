@@ -795,14 +795,12 @@ void OptTable::internalPrintHelp(
       OS << "USAGE: " << ActiveCommand->Usage << "\n\n";
   } else {
     OS << "USAGE: " << Usage << "\n\n";
-    // Assume top level command (toolname) is active.
-    StringRef TopLevelCommandName = "TopLevelCommand";
     if (Commands.size() > 1) {
       OS << "SUBCOMMANDS:\n\n";
       // This loop prints subcommands list and sets ActiveCommand to
       // TopLevelCommand while iterating over all commands.
       for (const auto &C : Commands) {
-        if (C.Name == TopLevelCommandName) {
+        if (StringRef(C.Name) == "TopLevelCommand") {
           ActiveCommand = &C;
           continue;
         }
