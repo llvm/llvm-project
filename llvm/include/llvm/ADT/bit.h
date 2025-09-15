@@ -150,30 +150,31 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 
 /// Count the number of set bits in a value.
 /// Ex. popcount(0xF000F000) = 8
-/// Returns 0 if the word is zero.
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+/// Returns 0 if Value is zero.
+template <typename T>
 [[nodiscard]] inline int popcount(T Value) noexcept {
+  static_assert(std::is_unsigned_v<T>, "T must be an unsigned integer type");
+  static_assert(sizeof(T) <= 8, "T must be 8 bytes or less");
+
   if constexpr (sizeof(T) <= 4) {
 #if defined(__GNUC__)
     return (int)__builtin_popcount(Value);
 #else
-    uint32_t v = Value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return int(((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
+    uint32_t V = Value;
+    V = V - ((V >> 1) & 0x55555555);
+    V = (V & 0x33333333) + ((V >> 2) & 0x33333333);
+    return int(((V + (V >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
 #endif
-  } else if constexpr (sizeof(T) <= 8) {
+  } else {
 #if defined(__GNUC__)
     return (int)__builtin_popcountll(Value);
 #else
-    uint64_t v = Value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return int((uint64_t)(v * 0x0101010101010101ULL) >> 56);
+    uint64_t V = Value;
+    V = V - ((V >> 1) & 0x5555555555555555ULL);
+    V = (V & 0x3333333333333333ULL) + ((V >> 2) & 0x3333333333333333ULL);
+    V = (V + (V >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return int((uint64_t)(V * 0x0101010101010101ULL) >> 56);
 #endif
-  } else {
-    static_assert(sizeof(T) == 0, "T must be 8 bytes or less");
   }
 }
 
