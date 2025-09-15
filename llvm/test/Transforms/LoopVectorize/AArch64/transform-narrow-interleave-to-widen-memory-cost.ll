@@ -503,5 +503,4 @@ exit:
   ret void
 }
 
-
 attributes #0 = { "target-cpu"="neoverse-v2" }
