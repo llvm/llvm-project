@@ -525,6 +525,14 @@ std::optional<int64_t> BitsInit::convertInitializerToInt() const {
   return Result;
 }
 
+uint64_t BitsInit::convertKnownBitsToInt() const {
+  uint64_t Result = 0;
+  for (auto [Idx, InitV] : enumerate(getBits()))
+    if (auto *Bit = dyn_cast<BitInit>(InitV))
+      Result |= static_cast<int64_t>(Bit->getValue()) << Idx;
+  return Result;
+}
+
 const Init *
 BitsInit::convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
   SmallVector<const Init *, 16> NewBits(Bits.size());

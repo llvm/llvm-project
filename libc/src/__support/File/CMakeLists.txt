@@ -22,18 +22,6 @@ add_object_library(
     libc.src.__support.error_or
 )
 
-add_header_library(
-  cookie_file
-  HDRS
-    cookie_file.h
-  DEPENDS
-    .file
-    libc.hdr.errno_macros
-    libc.hdr.types.cookie_io_functions_t
-    libc.hdr.types.off_t
-    libc.src.__support.CPP.new
-)
-
 add_object_library(
   dir
   SRCS
@@ -53,11 +41,7 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_OS})
 
-if(LIBC_TARGET_OS_IS_BAREMETAL)
-  set(target_file libc.src.__support.File.cookie_file)
-else()
-  set(target_file libc.src.__support.File.${LIBC_TARGET_OS}.file)
-endif()
+set(target_file libc.src.__support.File.${LIBC_TARGET_OS}.file)
 set(target_stdout libc.src.__support.File.${LIBC_TARGET_OS}.stdout)
 set(target_stderr libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
 set(target_stdin libc.src.__support.File.${LIBC_TARGET_OS}.stdin)
