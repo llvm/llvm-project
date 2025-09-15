@@ -16,25 +16,13 @@ from clang.cindex import (
     TokenKind,
     TranslationUnit,
     TypeKind,
+    PrintingPolicyProperty,
+    BaseEnumeration,
 )
 
 
 class TestEnums(unittest.TestCase):
-    enums = [
-        TokenKind,
-        CursorKind,
-        TemplateArgumentKind,
-        ExceptionSpecificationKind,
-        AvailabilityKind,
-        AccessSpecifier,
-        TypeKind,
-        RefQualifierKind,
-        LanguageKind,
-        LinkageKind,
-        TLSKind,
-        StorageClass,
-        BinaryOperator,
-    ]
+    enums = BaseEnumeration.__subclasses__()
 
     def test_from_id(self):
         """Check that kinds can be constructed from valid IDs"""
@@ -61,7 +49,9 @@ class TestEnums(unittest.TestCase):
             "CXBinaryOperatorKind": BinaryOperator,
             "CXCursorKind": CursorKind,
             "CXCursor_ExceptionSpecificationKind": ExceptionSpecificationKind,
+            "CXLanguageKind": LanguageKind,
             "CXLinkageKind": LinkageKind,
+            "CXPrintingPolicyProperty": PrintingPolicyProperty,
             "CXRefQualifierKind": RefQualifierKind,
             "CX_StorageClass": StorageClass,
             "CXTemplateArgumentKind": TemplateArgumentKind,
