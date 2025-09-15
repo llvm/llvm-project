@@ -334,13 +334,14 @@ struct VPlanTransforms {
                                                      ScalarEvolution &SE);
 
   /// Try to find a single VF among \p Plan's VFs for which all interleave
-  /// groups (with VF elements) can be replaced by wide loads ans tores
-  /// processing VF elements, if all transformed interleave groups access the
-  /// full vector width (checked via \o VectorRegWidth). If the transformation
-  /// can be applied, the original \p Plan will be split in 2, if is has
-  /// multiple VFs: a) a new clone which contains all VFs of Plan, except
-  /// VFToOptimize, and b) the original Plan with VFToOptimize as single VF. In
-  /// that case, the new clone is returned.
+  /// groups (with known minimum VF elements) can be replaced by wide loads and
+  /// stores processing VF elements, if all transformed interleave groups access
+  /// the full vector width (checked via the maximum vector register width). If
+  /// the transformation can be applied, the original \p Plan will be split in
+  /// 2:
+  ///  1. The original Plan with the single VF containing the optimized recipes
+  ///  using wide loads instead of interleave groups.
+  ///  2. A new clone which contains all VFs of Plan except the optimized VF.
   ///
   /// This effectively is a very simple form of loop-aware SLP, where we use
   /// interleave groups to identify candidates.

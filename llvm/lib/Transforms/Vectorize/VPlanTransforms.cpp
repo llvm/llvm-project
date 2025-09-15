@@ -3896,14 +3896,14 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
   return false;
 }
 
-/// Returns true if \p IR is a full interleave group with factor and number of
-/// members both equal to \p VF. The interleave group must also access the full
-/// vector width \p VectorRegWidth.
-static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
-                                         unsigned VF, VPTypeAnalysis &TypeInfo,
-                                         unsigned VectorRegWidth) {
+/// Returns VF from \p VFs if \p IR is a full interleave group with factor and
+/// number of members both equal to VF. The interleave group must also access
+/// the full vector width \p VectorRegWidth.
+static std::optional<ElementCount> isConsecutiveInterleaveGroup(
+    VPInterleaveRecipe *InterleaveR, ArrayRef<ElementCount> VFs,
+    VPTypeAnalysis &TypeInfo, const TargetTransformInfo &TTI) {
   if (!InterleaveR)
-    return false;
+    return std::nullopt;
 
   Type *GroupElementTy = nullptr;
   if (InterleaveR->getStoredValues().empty()) {
@@ -3912,7 +3912,7 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
                 [&TypeInfo, GroupElementTy](VPValue *Op) {
                   return TypeInfo.inferScalarType(Op) == GroupElementTy;
                 }))
-      return false;
+      return std::nullopt;
   } else {
     GroupElementTy =
         TypeInfo.inferScalarType(InterleaveR->getStoredValues()[0]);
@@ -3920,13 +3920,27 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
                 [&TypeInfo, GroupElementTy](VPValue *Op) {
                   return TypeInfo.inferScalarType(Op) == GroupElementTy;
                 }))
-      return false;
+      return std::nullopt;
   }
 
-  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
-  auto IG = InterleaveR->getInterleaveGroup();
-  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
-         GroupSize == VectorRegWidth;
+  auto GetVectorWidthForVF = [&TTI](ElementCount VF) {
+    TypeSize Size = TTI.getRegisterBitWidth(
+        VF.isFixed() ? TargetTransformInfo::RGK_FixedWidthVector
+                     : TargetTransformInfo::RGK_ScalableVector);
+    assert(Size.isScalable() == VF.isScalable() &&
+           "if Size is scalable, VF must to and vice versa");
+    return Size.getKnownMinValue();
+  };
+
+  for (ElementCount VF : VFs) {
+    unsigned MinVal = VF.getKnownMinValue();
+    unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * MinVal;
+    auto IG = InterleaveR->getInterleaveGroup();
+    if (IG->getFactor() == MinVal && IG->getNumMembers() == MinVal &&
+        GroupSize == GetVectorWidthForVF(VF))
+      return {VF};
+  }
+  return std::nullopt;
 }
 
 /// Returns true if \p VPValue is a narrow VPValue.
@@ -3945,14 +3959,6 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
   if (!VectorLoop)
     return nullptr;
-
-  auto GetVectorWidthForVF = [&TTI](ElementCount VF) {
-    return TTI
-        .getRegisterBitWidth(VF.isFixed()
-                                 ? TargetTransformInfo::RGK_FixedWidthVector
-                                 : TargetTransformInfo::RGK_ScalableVector)
-        .getKnownMinValue();
-  };
 
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPInterleaveRecipe *> StoreGroups;
@@ -3988,17 +3994,13 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     // suitable VF across the Plans VFs.
     //
     if (VFToOptimize) {
-      if (!isConsecutiveInterleaveGroup(
-              InterleaveR, VFToOptimize->getKnownMinValue(), TypeInfo,
-              GetVectorWidthForVF(*VFToOptimize)))
+      if (!isConsecutiveInterleaveGroup(InterleaveR, {*VFToOptimize}, TypeInfo,
+                                        TTI))
         return nullptr;
     } else {
-      for (ElementCount VF : Plan.vectorFactors()) {
-        if (isConsecutiveInterleaveGroup(InterleaveR, VF.getKnownMinValue(),
-                                         TypeInfo, GetVectorWidthForVF(VF))) {
-          VFToOptimize = VF;
-          break;
-        }
+      if (auto VF = isConsecutiveInterleaveGroup(
+              InterleaveR, to_vector(Plan.vectorFactors()), TypeInfo, TTI)) {
+        VFToOptimize = *VF;
       }
       if (!VFToOptimize)
         return nullptr;
@@ -4062,17 +4064,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   if (size(Plan.vectorFactors()) != 1) {
     NewPlan = std::unique_ptr<VPlan>(Plan.duplicate());
     Plan.setVF(*VFToOptimize);
-    bool First = true;
-    for (ElementCount VF : NewPlan->vectorFactors()) {
-      if (VF == VFToOptimize)
-        continue;
-      if (First) {
-        NewPlan->setVF(VF);
-        First = false;
-        continue;
-      }
-      NewPlan->addVF(VF);
-    }
+    NewPlan->removeVF(*VFToOptimize);
   }
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.

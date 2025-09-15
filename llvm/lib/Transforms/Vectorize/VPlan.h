@@ -4247,6 +4247,12 @@ public:
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
+  }
+
   void setVF(ElementCount VF) {
     assert(hasVF(VF) && "Cannot set VF not already in plan");
     VFs.clear();
