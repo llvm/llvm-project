@@ -134,7 +134,6 @@ static_library("CodeGen") {
     "MachineDomTreeUpdater.cpp",
     "MachineDominanceFrontier.cpp",
     "MachineDominators.cpp",
-    "MachineFloatingPointPredicateUtils.cpp",
     "MachineFrameInfo.cpp",
     "MachineFunction.cpp",
     "MachineFunctionAnalysis.cpp",
@@ -254,6 +253,7 @@ static_library("CodeGen") {
     "WasmEHPrepare.cpp",
     "WinEHPrepare.cpp",
     "WindowScheduler.cpp",
+    "WindowsSecureHotPatching.cpp",
     "XRayInstrumentation.cpp",
   ]
 }

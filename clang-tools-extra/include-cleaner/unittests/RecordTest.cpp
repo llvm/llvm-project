@@ -18,6 +18,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -511,6 +512,26 @@ TEST_F(PragmaIncludeTest, IWYUExportForStandardHeaders) {
   EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named("<string>"), FM),
               testing::UnorderedElementsAre(FileNamed("export.h")));
   EXPECT_THAT(PI.getExporters(llvm::cantFail(FM.getFileRef("string")), FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportForStandardHeadersRespectsLang) {
+  Inputs.Code = R"cpp(
+    #include "export.h"
+  )cpp";
+  Inputs.Language = TestLanguage::Lang_C99;
+  Inputs.ExtraFiles["export.h"] = R"cpp(
+    #include <stdlib.h> // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["stdlib.h"] = "";
+  Inputs.ExtraArgs = {"-isystem."};
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named(
+                                  "<stdlib.h>", tooling::stdlib::Lang::C),
+                              FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
+  EXPECT_THAT(PI.getExporters(llvm::cantFail(FM.getFileRef("stdlib.h")), FM),
               testing::UnorderedElementsAre(FileNamed("export.h")));
 }
 

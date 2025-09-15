@@ -1,4 +1,4 @@
-//===--- AvoidBindCheck.cpp - clang-tidy-----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -19,11 +18,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <string>
 
@@ -455,8 +452,8 @@ static bool isFixitSupported(const CallableInfo &Callee,
   return true;
 }
 
-const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
-                                    size_t NumArgs) {
+static const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
+                                           size_t NumArgs) {
   std::vector<const FunctionDecl *> Candidates =
       findCandidateCallOperators(Callable, NumArgs);
   if (Candidates.size() != 1)
@@ -465,7 +462,7 @@ const FunctionDecl *getCallOperator(const CXXRecordDecl *Callable,
   return Candidates.front();
 }
 
-const FunctionDecl *
+static const FunctionDecl *
 getCallMethodDecl(const MatchFinder::MatchResult &Result, CallableType Type,
                   CallableMaterializationKind Materialization) {
 
@@ -588,7 +585,7 @@ static bool emitCapture(llvm::StringSet<> &CaptureSet, StringRef Delimiter,
     return false;
 
   // This capture has already been emitted.
-  if (CaptureSet.count(Identifier) != 0)
+  if (CaptureSet.contains(Identifier))
     return false;
 
   Stream << Delimiter;

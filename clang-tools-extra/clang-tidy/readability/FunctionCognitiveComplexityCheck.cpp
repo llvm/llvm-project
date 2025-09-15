@@ -1,4 +1,4 @@
-//===--- FunctionCognitiveComplexityCheck.cpp - clang-tidy ------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,15 +21,12 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
 #include <optional>
 #include <stack>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -147,6 +144,8 @@ struct CognitiveComplexity final {
   void account(SourceLocation Loc, unsigned short Nesting, Criteria C);
 };
 
+} // namespace
+
 // All the possible messages that can be output. The choice of the message
 // to use is based of the combination of the CognitiveComplexity::Criteria.
 // It would be nice to have it in CognitiveComplexity struct, but then it is
@@ -166,23 +165,27 @@ static const std::array<const StringRef, 4> Msgs = {{
 }};
 
 // Criteria is a bitset, thus a few helpers are needed.
-CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
-                                        CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria
+operator|(CognitiveComplexity::Criteria LHS,
+          CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
                                                     llvm::to_underlying(RHS));
 }
-CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
-                                        CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria
+operator&(CognitiveComplexity::Criteria LHS,
+          CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
                                                     llvm::to_underlying(RHS));
 }
-CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
-                                          CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria &
+operator|=(CognitiveComplexity::Criteria &LHS,
+           CognitiveComplexity::Criteria RHS) {
   LHS = operator|(LHS, RHS);
   return LHS;
 }
-CognitiveComplexity::Criteria &operator&=(CognitiveComplexity::Criteria &LHS,
-                                          CognitiveComplexity::Criteria RHS) {
+static CognitiveComplexity::Criteria &
+operator&=(CognitiveComplexity::Criteria &LHS,
+           CognitiveComplexity::Criteria RHS) {
   LHS = operator&(LHS, RHS);
   return LHS;
 }
@@ -201,6 +204,8 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
 
   Total += Increase;
 }
+
+namespace {
 
 class FunctionASTVisitor final
     : public RecursiveASTVisitor<FunctionASTVisitor> {

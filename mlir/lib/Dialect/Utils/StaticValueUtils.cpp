@@ -142,8 +142,7 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
 }
 
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
-  auto val = getConstantIntValue(ofr);
-  return val && *val == value;
+  return getConstantIntValue(ofr) == value;
 }
 
 bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
@@ -182,12 +181,16 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
   return true;
 }
 
-/// Return a vector of OpFoldResults with the same size a staticValues, but all
+/// Return a vector of OpFoldResults with the same size as staticValues, but all
 /// elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
                                          ValueRange dynamicValues,
                                          MLIRContext *context) {
+  assert(dynamicValues.size() == static_cast<size_t>(llvm::count_if(
+                                     staticValues, ShapedType::isDynamic)) &&
+         "expected the rank of dynamic values to match the number of "
+         "values known to be dynamic");
   SmallVector<OpFoldResult> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;
@@ -209,7 +212,7 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 /// Decompose a vector of mixed static or dynamic values into the corresponding
 /// pair of arrays. This is the inverse function of `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {
@@ -273,7 +276,7 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
   if (!ubConstant)
     return std::nullopt;
   std::optional<int64_t> stepConstant = getConstantIntValue(step);
-  if (!stepConstant)
+  if (!stepConstant || *stepConstant == 0)
     return std::nullopt;
 
   return llvm::divideCeilSigned(*ubConstant - *lbConstant, *stepConstant);
@@ -281,13 +284,13 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {
   return llvm::none_of(sizesOrOffsets, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value < 0;
+    return ShapedType::isStatic(value) && value < 0;
   });
 }
 
 bool hasValidStrides(SmallVector<int64_t> strides) {
   return llvm::none_of(strides, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value == 0;
+    return ShapedType::isStatic(value) && value == 0;
   });
 }
 

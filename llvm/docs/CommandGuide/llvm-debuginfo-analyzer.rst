@@ -14,7 +14,7 @@ DESCRIPTION
 -----------
 :program:`llvm-debuginfo-analyzer` parses debug and text sections in
 binary object files and prints their contents in a logical view, which
-is a human readable representation that closely matches the structure
+is a human-readable representation that closely matches the structure
 of the original user source code. Supported object file formats include
 ELF, Mach-O, WebAssembly, PDB and COFF.
 
@@ -134,12 +134,13 @@ toolchain name, binary file format, etc.
  The following attributes describe the most common information for a
  logical element. They help to identify the lexical scope level; the
  element visibility across modules (global, local); the toolchain name
- that produced the binary file.
+ and source language that produced the binary file.
 
  .. code-block:: text
 
    =global: Element referenced across Compile Units.
    =format: Object file format name.
+   =language: Source language name.
    =level: Lexical scope level (File=0, Compile Unit=1).
    =local: Element referenced only in the Compile Unit.
    =producer: Toolchain identification name.
@@ -231,6 +232,7 @@ toolchain name, binary file format, etc.
    =filename
    =files
    =format
+   =language
    =level
    =producer
    =publics
@@ -674,8 +676,7 @@ INTERNAL
  Typically these kind of options are available only in *debug* builds.
 
  :program:`llvm-debuginfo-analyzer` supports these advanced options in
- both *release* and *debug* builds, with the exception of the unique ID
- that is generated only in *debug* builds.
+ both *release* and *debug* builds.
 
 .. option:: --internal=<value[,value,...]>
 

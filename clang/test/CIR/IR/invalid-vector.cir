@@ -4,7 +4,146 @@
 
 module  {
 
-// expected-error @below {{unsupported element type for CIR vector}}
+// expected-error @below {{failed to verify 'elementType'}}
 cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @vector_shuffle_invalid_element_type() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %vec_1 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    %vec_2 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    // expected-error @below {{element types of '!cir.vector<4 x !cir.int<s, 32>>' and '!cir.vector<4 x !cir.int<s, 64>>' don't match}}
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<4 x !s32i>) [#cir.int<7> : !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<4 x !s64i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @vector_shuffle_different_number_of_elements() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %vec_1 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    %vec_2 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    // expected-error @below {{the number of elements in [#cir.int<7> : !cir.int<s, 64>, #cir.int<5> : !cir.int<s, 64>, #cir.int<3> : !cir.int<s, 64>] and '!cir.vector<4 x !cir.int<s, 64>>' don't match}}
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<4 x !s32i>) [#cir.int<7> : !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i] : !cir.vector<4 x !s64i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @vector_create_different_size() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+
+    // expected-error @below {{operand count of 4 doesn't match vector type '!cir.vector<8 x !cir.int<s, 32>>' element count of 8}}
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<8 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @vector_create_different_type_size() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s64i
+
+    // expected-error @below {{operand type '!cir.int<s, 64>' doesn't match vector element type '!cir.int<s, 32>'}}
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s64i) : !cir.vector<4 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @vector_shift_invalid_result_type() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %5 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    %6 = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    // expected-error @below {{the type of the result must be a vector if it is vector shift}}
+    %7 = cir.shift(left, %5 : !cir.vector<4 x !s32i>, %6 : !cir.vector<4 x !s32i>) -> !s32i
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @vector_shuffle_dynamic_different_number_of_elements() {
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
+    %3 = cir.const #cir.int<3> : !s32i
+    %4 = cir.const #cir.int<4> : !s32i
+    %vec = cir.vec.create(%1, %2, %3, %4 : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+    %indices = cir.vec.create(%1, %2 : !s32i, !s32i) : !cir.vector<2 x !s32i>
+
+    // expected-error @below {{the number of elements in '!cir.vector<4 x !cir.int<s, 32>>' and '!cir.vector<2 x !cir.int<s, 32>>' don't match}}
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices : !cir.vector<2 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module  {
+  cir.func @vector_shuffle_invalid_index_value() -> !cir.vector<4 x !s32i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<3> : !s32i, #cir.int<5> : !s32i, #cir.int<7> : !s32i]> : !cir.vector<4 x !s32i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<2> : !s32i, #cir.int<4> : !s32i, #cir.int<6> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
+
+    // expected-error @below {{index for __builtin_shufflevector must be less than the total number of vector elements}}
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<4 x !s32i>) [#cir.int<9> : !s64i, #cir.int<4> : !s64i,
+      #cir.int<1> : !s64i, #cir.int<5> : !s64i] : !cir.vector<4 x !s32i>
+    cir.return %new_vec : !cir.vector<4 x !s32i>
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+// expected-error @below {{the number of vector elements must be non-zero}}
+cir.global external @vec_a = #cir.zero : !cir.vector<0 x !s32i>
 
 }

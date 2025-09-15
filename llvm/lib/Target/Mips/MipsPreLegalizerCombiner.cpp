@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "mips-prelegalizer-combiner"
 
@@ -113,8 +112,7 @@ MipsPreLegalizerCombiner::MipsPreLegalizerCombiner()
     : MachineFunctionPass(ID) {}
 
 bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   auto *TPC = &getAnalysis<TargetPassConfig>();

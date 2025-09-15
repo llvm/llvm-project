@@ -357,10 +357,8 @@ public:
 
       // Only consider implicit VCC specified by instruction descriptor.
       const bool HasImplicitVCC =
-          llvm::any_of(MI->getDesc().implicit_uses(),
-                       [](MCPhysReg Reg) { return isVCC(Reg); }) ||
-          llvm::any_of(MI->getDesc().implicit_defs(),
-                       [](MCPhysReg Reg) { return isVCC(Reg); });
+          llvm::any_of(MI->getDesc().implicit_uses(), isVCC) ||
+          llvm::any_of(MI->getDesc().implicit_defs(), isVCC);
 
       if (IsSetPC) {
         // All SGPR writes before a call/return must be flushed as the

@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Remarks/BitstreamRemarkParser.h"
 #include "BitstreamRemarkParser.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -308,8 +307,7 @@ static Error advanceToMetaBlock(BitstreamParserHelper &Helper) {
 
 Expected<std::unique_ptr<BitstreamRemarkParser>>
 remarks::createBitstreamParserFromMeta(
-    StringRef Buf, std::optional<ParsedStringTable> StrTab,
-    std::optional<StringRef> ExternalFilePrependPath) {
+    StringRef Buf, std::optional<StringRef> ExternalFilePrependPath) {
   BitstreamParserHelper Helper(Buf);
   Expected<std::array<char, 4>> MagicNumber = Helper.parseMagic();
   if (!MagicNumber)
@@ -319,9 +317,7 @@ remarks::createBitstreamParserFromMeta(
           StringRef(MagicNumber->data(), MagicNumber->size())))
     return std::move(E);
 
-  auto Parser =
-      StrTab ? std::make_unique<BitstreamRemarkParser>(Buf, std::move(*StrTab))
-             : std::make_unique<BitstreamRemarkParser>(Buf);
+  auto Parser = std::make_unique<BitstreamRemarkParser>(Buf);
 
   if (ExternalFilePrependPath)
     Parser->ExternalFilePrependPath = std::string(*ExternalFilePrependPath);
@@ -603,3 +599,5 @@ BitstreamRemarkParser::processRemark(BitstreamRemarkParserHelper &Helper) {
 
   return std::move(Result);
 }
+llvm::remarks::BitstreamRemarkParser::BitstreamRemarkParser(StringRef Buf)
+    : RemarkParser(Format::Bitstream), ParserHelper(Buf) {}

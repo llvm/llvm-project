@@ -1120,11 +1120,11 @@ void SBValue::SetSP(const lldb::ValueObjectSP &sp) {
       lldb::DynamicValueType use_dynamic = target_sp->GetPreferDynamicValue();
       bool use_synthetic =
           target_sp->TargetProperties::GetEnableSyntheticValue();
-      m_opaque_sp = ValueImplSP(new ValueImpl(sp, use_dynamic, use_synthetic));
+      m_opaque_sp = std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic);
     } else
-      m_opaque_sp = ValueImplSP(new ValueImpl(sp, eNoDynamicValues, true));
+      m_opaque_sp = std::make_shared<ValueImpl>(sp, eNoDynamicValues, true);
   } else
-    m_opaque_sp = ValueImplSP(new ValueImpl(sp, eNoDynamicValues, false));
+    m_opaque_sp = std::make_shared<ValueImpl>(sp, eNoDynamicValues, false);
 }
 
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
@@ -1155,14 +1155,14 @@ void SBValue::SetSP(const lldb::ValueObjectSP &sp, bool use_synthetic) {
 
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
                     lldb::DynamicValueType use_dynamic, bool use_synthetic) {
-  m_opaque_sp = ValueImplSP(new ValueImpl(sp, use_dynamic, use_synthetic));
+  m_opaque_sp = std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic);
 }
 
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
                     const char *name) {
   m_opaque_sp =
-      ValueImplSP(new ValueImpl(sp, use_dynamic, use_synthetic, name));
+      std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic, name);
 }
 
 bool SBValue::GetExpressionPath(SBStream &description) {
@@ -1336,10 +1336,8 @@ lldb::SBAddress SBValue::GetAddress() {
   if (value_sp) {
     TargetSP target_sp(value_sp->GetTargetSP());
     if (target_sp) {
-      lldb::addr_t value = LLDB_INVALID_ADDRESS;
-      const bool scalar_is_load_address = true;
-      AddressType addr_type;
-      value = value_sp->GetAddressOf(scalar_is_load_address, &addr_type);
+      auto [value, addr_type] =
+          value_sp->GetAddressOf(/*scalar_is_load_address=*/true);
       if (addr_type == eAddressTypeFile) {
         ModuleSP module_sp(value_sp->GetModule());
         if (module_sp)

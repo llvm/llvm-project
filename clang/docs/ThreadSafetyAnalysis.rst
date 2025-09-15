@@ -434,6 +434,21 @@ class can be used as a capability.  The string argument specifies the kind of
 capability in error messages, e.g. ``"mutex"``.  See the ``Container`` example
 given above, or the ``Mutex`` class in :ref:`mutexheader`.
 
+REENTRANT_CAPABILITY
+--------------------
+
+``REENTRANT_CAPABILITY`` is an attribute on capability classes, denoting that
+they are reentrant. Marking a capability as reentrant means that acquiring the
+same capability multiple times is safe. Acquiring the same capability with
+different access privileges (exclusive vs. shared) again is not considered
+reentrant by the analysis.
+
+Note: In many cases this attribute is only required where a capability is
+acquired reentrant within the same function, such as via macros or other
+helpers. Otherwise, best practice is to avoid explicitly acquiring a capability
+multiple times within the same function, and letting the analysis produce
+warnings on double-acquisition attempts.
+
 .. _scoped_capability:
 
 SCOPED_CAPABILITY
@@ -810,13 +825,6 @@ doesn't know that munl.mu == mutex.  The SCOPED_CAPABILITY attribute handles
 aliasing for MutexLocker, but does so only for that particular pattern.
 
 
-ACQUIRED_BEFORE(...) and ACQUIRED_AFTER(...) support is still experimental.
----------------------------------------------------------------------------
-
-ACQUIRED_BEFORE(...) and ACQUIRED_AFTER(...) are currently being developed under
-the ``-Wthread-safety-beta`` flag.
-
-
 .. _mutexheader:
 
 mutex.h
@@ -845,6 +853,9 @@ implementation.
 
   #define CAPABILITY(x) \
     THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
+
+  #define REENTRANT_CAPABILITY \
+    THREAD_ANNOTATION_ATTRIBUTE__(reentrant_capability)
 
   #define SCOPED_CAPABILITY \
     THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)

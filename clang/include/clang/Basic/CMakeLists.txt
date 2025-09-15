@@ -33,6 +33,7 @@ clang_diag_gen(Parse)
 clang_diag_gen(Refactoring)
 clang_diag_gen(Sema)
 clang_diag_gen(Serialization)
+clang_diag_gen(Trap)
 clang_tablegen(DiagnosticGroups.inc -gen-clang-diag-groups
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticGroups)
@@ -109,9 +110,17 @@ clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
 
-clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
-  SOURCE BuiltinsSPIRV.td
-  TARGET ClangBuiltinsSPIRV)
+clang_tablegen(BuiltinsSPIRVCommon.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVCommon.td
+  TARGET ClangBuiltinsSPIRVCommon)
+
+clang_tablegen(BuiltinsSPIRVVK.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVVK.td
+  TARGET ClangBuiltinsSPIRVVK)
+
+clang_tablegen(BuiltinsSPIRVCL.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVCL.td
+  TARGET ClangBuiltinsSPIRVCL)
 
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td

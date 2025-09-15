@@ -35,10 +35,10 @@ entry:
   %dummy_eq = icmp ugt i32 %loadres, 42
   tail call void @llvm.assume(i1 %dummy_eq)
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %dummy)
+  call void @llvm.lifetime.start.p0(ptr %dummy)
   %i = call ptr @llvm.invariant.start.p0(i64 1, ptr %dummy)
   call void @llvm.invariant.end.p0(ptr %i, i64 1, ptr %dummy)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %dummy)
+  call void @llvm.lifetime.end.p0(ptr %dummy)
 
   %m_a = call ptr @llvm.ptr.annotation.p0(ptr %m, ptr @.str, ptr @.str1, i32 2, ptr null)
   %objsz = call i64 @llvm.objectsize.i64.p0(ptr %c, i1 false)
@@ -61,8 +61,8 @@ declare i64 @llvm.objectsize.i64.p0(ptr, i1)
 declare i32 @llvm.annotation.i32(i32, ptr, ptr, i32)
 declare ptr @llvm.ptr.annotation.p0(ptr, ptr, ptr, i32, ptr)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare ptr @llvm.invariant.start.p0(i64, ptr nocapture)
 declare void @llvm.invariant.end.p0(ptr, i64, ptr nocapture)

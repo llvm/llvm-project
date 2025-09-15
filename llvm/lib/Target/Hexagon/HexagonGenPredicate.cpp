@@ -29,9 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
-#include <map>
 #include <queue>
-#include <set>
 #include <utility>
 
 #define DEBUG_TYPE "gen-pred"

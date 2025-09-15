@@ -13,12 +13,10 @@
 #define FORTRAN_RUNTIME_EXTENSIONS_H_
 
 #include "flang/Runtime/entry-names.h"
-
-#define FORTRAN_PROCEDURE_NAME(name) name##_
-
-#include "flang/Runtime/entry-names.h"
 #include <cstddef>
 #include <cstdint>
+
+#define FORTRAN_PROCEDURE_NAME(name) name##_
 
 #ifdef _WIN32
 // UID and GID don't exist on Windows, these exist to avoid errors.
@@ -29,6 +27,10 @@ typedef std::uint32_t gid_t;
 #endif
 
 extern "C" {
+
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime);
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line);
 
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
@@ -88,6 +90,13 @@ int FORTRAN_PROCEDURE_NAME(ierrno)();
 
 // GNU extension subroutine PERROR(STRING)
 void RTNAME(Perror)(const char *str);
+
+// MCLOCK -- returns accumulated time in ticks
+int FORTRAN_PROCEDURE_NAME(mclock)();
+
+// GNU extension subroutine SECNDS(refTime)
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

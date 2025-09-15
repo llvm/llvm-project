@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions
 
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fblocks %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions -fexperimental-new-constant-interpreter
 
 namespace test_lambda_is_literal {
 #ifdef CPP14_AND_EARLIER
@@ -372,4 +376,32 @@ static_assert(
   { return {}; }()());
 }
 
+#endif
+
+#ifndef CPP14_AND_EARLIER
+namespace GH145956 {
+  constexpr int f() {
+    struct Pair { int first; int second; };
+    Pair p = {1, 2};
+    auto const& [key, value] = p;
+    return [&] { return key; }();
+#if __cpp_constexpr < 202002L
+    // expected-warning@-2 {{captured structured bindings are a C++20 extension}}
+    // expected-note@-4 {{'key' declared here}}
+#endif
+  }
+  static_assert(f() == 1);
+  constexpr auto retlambda() {
+    struct Pair { int first; int second; };
+    Pair p = {1, 2};
+    auto const& [key, value] = p;
+    return [=] { return key; };
+#if __cpp_constexpr < 202002L
+    // expected-warning@-2 {{captured structured bindings are a C++20 extension}}
+    // expected-note@-4 {{'key' declared here}}
+#endif
+  }
+  constexpr auto lambda = retlambda();
+  static_assert(lambda() == 1);
+}
 #endif

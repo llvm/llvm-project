@@ -43,7 +43,7 @@ entry:
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
           ptr @my_async_function_fp)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %escaped_addr)
+  call void @llvm.lifetime.start.p0(ptr %escaped_addr)
   br label %callblock
 
 
@@ -81,15 +81,15 @@ loop:
   br label %callblock
 
 loop_exit:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %escaped_addr)
+  call void @llvm.lifetime.end.p0(ptr %escaped_addr)
   call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
   unreachable
 }
 
 ; CHECK: define {{.*}} void @my_async_function.resume.0(
-; CHECK-NOT:  call void @llvm.lifetime.start.p0(i64 4, ptr %3)
-; CHECK:  br i1 %exitCond, label %loop_exit, label %loop
-; CHECK: lifetime.end
+; CHECK-NOT: llvm.lifetime
+; CHECK:  br i1 %exitCond, label %common.ret, label %loop
+; CHECK-NOT: llvm.lifetime
 ; CHECK: }
 
 declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, ptr, ptr, ...)
@@ -104,6 +104,6 @@ declare void @llvm.coro.async.context.dealloc(ptr)
 declare swiftcc void @asyncSuspend(ptr)
 declare ptr @llvm.coro.async.resume()
 declare void @llvm.coro.async.size.replace(ptr, ptr)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 attributes #0 = { argmemonly nofree nosync nounwind willreturn }

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -mtriple arm64-linux -passes=loop-vectorize -mattr=+sve -debug-only=loop-vectorize -disable-output <%s 2>&1 | FileCheck %s
+; RUN: opt -mtriple arm64-linux -passes=loop-vectorize -mattr=+sve -debug-only=loop-vectorize,vplan -disable-output <%s 2>&1 | FileCheck %s
 
 ; Invariant register usage calculation should take into account if the
 ; invariant would be used in widened instructions. Only in such cases, a vector
@@ -14,7 +14,7 @@
 
 define void @get_invariant_reg_usage(ptr %z) {
 ; CHECK-LABEL: LV: Checking a loop in 'get_invariant_reg_usage'
-; CHECK: LV(REG): VF = vscale x 16
+; CHECK: LV(REG): VF = 16
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 1 registers

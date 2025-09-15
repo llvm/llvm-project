@@ -287,6 +287,10 @@ def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
 
+def err_flatten_function_needs_feature : Error<
+  "flatten function %0 calls %1 which requires target feature '%2', but the "
+  "caller is compiled without support for '%2'">;
+
 let CategoryName = "Codegen ABI Check" in {
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
@@ -308,6 +312,9 @@ def err_target_unsupported_type_for_abi
     : Error<"%0 requires %1 type support, but ABI '%2' does not support it">;
 }
 
+def err_omp_host_ir_file_not_found : Error<
+  "provided host compiler IR file '%0' is required to generate code for OpenMP "
+  "target regions but cannot be found">;
 def err_alias_to_undefined : Error<
   "%select{alias|ifunc}0 must point to a defined "
   "%select{variable or |}1function">;
@@ -392,6 +399,10 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+
+def err_hlsl_semantic_missing : Error<"semantic annotations must be present "
+                                      "for all input and outputs of an entry "
+                                      "function or patch constant function">;
 
 // ClangIR frontend errors
 def err_cir_to_cir_transform_failed : Error<

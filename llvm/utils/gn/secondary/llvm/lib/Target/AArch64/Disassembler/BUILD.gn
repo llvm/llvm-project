@@ -4,7 +4,7 @@ tablegen("AArch64GenDisassemblerTables") {
   visibility = [ ":Disassembler" ]
   args = [
     "-gen-disassembler",
-    "--large-decoder-table",
+    "-ignore-non-decodable-operands",
   ]
   td_file = "../AArch64.td"
 }

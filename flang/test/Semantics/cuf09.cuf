@@ -15,9 +15,20 @@ module m
     print*,'from device'
     print '(f10.5)', (x(ivar), ivar = 1, 10)
     write(*,*), "Hello world from device!"
-    !WARNING: I/O statement might not be supported on device
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     write(12,'(10F4.1)'), x
   end
+  attributes(global) subroutine devsub3(n)
+    implicit none
+    integer :: n
+    integer :: i, ig, iGrid
+    iGrid = gridDim%x*blockDim%x
+    ig = (blockIdx%x-1)*blockDim%x + threadIdx%x
+ 
+    !dir$ nounroll
+    do i = ig, n, iGrid
+    end do
+  end subroutine
   attributes(global) subroutine hostglobal(a)
     integer :: a(*)
     i = threadIdx%x

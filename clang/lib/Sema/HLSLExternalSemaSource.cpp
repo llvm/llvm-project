@@ -132,6 +132,10 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
   return BuiltinTypeDeclBuilder(S, Decl)
       .addHandleMember(RC, IsROV, RawBuffer)
       .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addCreateFromBinding()
+      .addCreateFromImplicitBinding()
       .addHandleConstructorFromBinding()
       .addHandleConstructorFromImplicitBinding();
 }
@@ -266,6 +270,19 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
   ConceptDecl *StructuredBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ false);
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Buffer")
+             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                    /*RawBuffer=*/false)
+        .addArraySubscriptOperators()
+        .addLoadMethods()
+        .completeDefinition();
+  });
+
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
              .finalizeForwardDeclaration();

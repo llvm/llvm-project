@@ -14,6 +14,7 @@
 // Constraints:
 // - is_same_v<remove_cvref_t<U>, in_place_t> is false; and
 // - is_same_v<expected, remove_cvref_t<U>> is false; and
+// - is_same_v<remove_cvref_t<U>, unexpect_t> is false; and
 // - remove_cvref_t<U> is not a specialization of unexpected; and
 // - is_constructible_v<T, U> is true.
 //
@@ -45,6 +46,16 @@ static_assert(!std::is_constructible_v<std::expected<FromJustInplace, int>, std:
 // is_same_v<expected, remove_cvref_t<U>>
 // Note that result is true because it is covered by the constructors that take expected
 static_assert(std::is_constructible_v<std::expected<int, int>, std::expected<int, int>&>);
+
+struct T {
+  explicit T(auto) {}
+};
+struct E {
+  E(int) {}
+};
+
+// is_same_v<remove_cvref_t<U>, unexpect_t> is false;
+static_assert(!std::is_constructible_v<std::expected<T, E>, std::unexpect_t>);
 
 // remove_cvref_t<U> is a specialization of unexpected
 // Note that result is true because it is covered by the constructors that take unexpected

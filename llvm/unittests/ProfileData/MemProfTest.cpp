@@ -15,17 +15,26 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <initializer_list>
 
+LLVM_ABI extern llvm::cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
+LLVM_ABI extern llvm::cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
+LLVM_ABI extern llvm::cl::opt<unsigned>
+    MemProfMinAveLifetimeAccessDensityHotThreshold;
+LLVM_ABI extern llvm::cl::opt<bool> MemProfUseHotHints;
+
 namespace llvm {
 namespace memprof {
+
 namespace {
 
 using ::llvm::DIGlobal;
@@ -393,6 +402,75 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
 
   EXPECT_EQ(Record, GotRecord);
+}
+
+TEST(MemProf, RecordSerializationRoundTripVersion4HotColdSchema) {
+  const auto Schema = getHotColdSchema();
+
+  MemInfoBlock Info;
+  Info.AllocCount = 11;
+  Info.TotalSize = 22;
+  Info.TotalLifetime = 33;
+  Info.TotalLifetimeAccessDensity = 44;
+
+  llvm::SmallVector<CallStackId> CallStackIds = {0x123, 0x456};
+
+  llvm::SmallVector<CallStackId> CallSiteIds = {0x333, 0x444};
+
+  IndexedMemProfRecord Record;
+  for (const auto &CSId : CallStackIds) {
+    // Use the same info block for both allocation sites.
+    Record.AllocSites.emplace_back(CSId, Info, Schema);
+  }
+  for (auto CSId : CallSiteIds)
+    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
+
+  std::bitset<llvm::to_underlying(Meta::Size)> SchemaBitSet;
+  for (auto Id : Schema)
+    SchemaBitSet.set(llvm::to_underlying(Id));
+
+  // Verify that SchemaBitSet has the fields we expect and nothing else, which
+  // we check with count().
+  EXPECT_EQ(SchemaBitSet.count(), 4U);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::AllocCount)]);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalSize)]);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalLifetime)]);
+  EXPECT_TRUE(
+      SchemaBitSet[llvm::to_underlying(Meta::TotalLifetimeAccessDensity)]);
+
+  // Verify that Schema has propagated all the way to the Info field in each
+  // IndexedAllocationInfo.
+  ASSERT_THAT(Record.AllocSites, SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[0].Info.getSchema(), SchemaBitSet);
+  EXPECT_EQ(Record.AllocSites[1].Info.getSchema(), SchemaBitSet);
+
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  // Need a dummy map for V4 serialization
+  llvm::DenseMap<CallStackId, LinearCallStackId> DummyMap = {
+      {0x123, 1}, {0x456, 2}, {0x333, 3}, {0x444, 4}};
+  Record.serialize(Schema, OS, Version4, &DummyMap);
+
+  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
+      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version4);
+
+  // Verify that Schema comes back correctly after deserialization. Technically,
+  // the comparison between Record and GotRecord below includes the comparison
+  // of their Schemas, but we'll verify the Schemas on our own.
+  ASSERT_THAT(GotRecord.AllocSites, SizeIs(2));
+  EXPECT_EQ(GotRecord.AllocSites[0].Info.getSchema(), SchemaBitSet);
+  EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
+
+  // Create the expected record using the linear IDs from the dummy map.
+  IndexedMemProfRecord ExpectedRecord;
+  for (const auto &CSId : CallStackIds) {
+    ExpectedRecord.AllocSites.emplace_back(DummyMap[CSId], Info, Schema);
+  }
+  for (const auto &CSId : CallSiteIds) {
+    ExpectedRecord.CallSites.emplace_back(DummyMap[CSId]);
+  }
+
+  EXPECT_EQ(ExpectedRecord, GotRecord);
 }
 
 TEST(MemProf, SymbolizationFilter) {
@@ -859,6 +937,74 @@ TotalLifetimeAccessDensity: 444
 ...
 )YAML");
 }
+
+// Test getAllocType helper.
+// Basic checks on the allocation type for values just above and below
+// the thresholds.
+TEST(MemProf, GetAllocType) {
+  const uint64_t AllocCount = 2;
+  // To be cold we require that
+  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
+  //    MemProfLifetimeAccessDensityColdThreshold
+  // so compute the ColdTotalLifetimeAccessDensityThreshold at the threshold.
+  const uint64_t ColdTotalLifetimeAccessDensityThreshold =
+      (uint64_t)(MemProfLifetimeAccessDensityColdThreshold * AllocCount * 100);
+  // To be cold we require that
+  // ((float)TotalLifetime) / AllocCount >=
+  //    MemProfAveLifetimeColdThreshold * 1000
+  // so compute the TotalLifetime right at the threshold.
+  const uint64_t ColdTotalLifetimeThreshold =
+      MemProfAveLifetimeColdThreshold * AllocCount * 1000;
+  // To be hot we require that
+  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+  //    MemProfMinAveLifetimeAccessDensityHotThreshold
+  // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
+  const uint64_t HotTotalLifetimeAccessDensityThreshold =
+      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
+                 100);
+
+  // Make sure the option for detecting hot allocations is set.
+  bool OrigMemProfUseHotHints = MemProfUseHotHints;
+  MemProfUseHotHints = true;
+
+  // Test Hot
+  // More accesses per byte per sec than hot threshold is hot.
+  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
+                         ColdTotalLifetimeThreshold + 1),
+            AllocationType::Hot);
+
+  // Restore original option value.
+  MemProfUseHotHints = OrigMemProfUseHotHints;
+
+  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
+  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
+                         ColdTotalLifetimeThreshold + 1),
+            AllocationType::NotCold);
+
+  // Test Cold
+  // Long lived with less accesses per byte per sec than cold threshold is cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1,
+                         AllocCount, ColdTotalLifetimeThreshold + 1),
+            AllocationType::Cold);
+
+  // Test NotCold
+  // Long lived with more accesses per byte per sec than cold threshold is not
+  // cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1,
+                         AllocCount, ColdTotalLifetimeThreshold + 1),
+            AllocationType::NotCold);
+  // Short lived with more accesses per byte per sec than cold threshold is not
+  // cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1,
+                         AllocCount, ColdTotalLifetimeThreshold - 1),
+            AllocationType::NotCold);
+  // Short lived with less accesses per byte per sec than cold threshold is not
+  // cold.
+  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1,
+                         AllocCount, ColdTotalLifetimeThreshold - 1),
+            AllocationType::NotCold);
+}
+
 } // namespace
 } // namespace memprof
 } // namespace llvm

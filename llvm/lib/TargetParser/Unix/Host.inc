@@ -55,7 +55,7 @@ static std::string updateTripleOSVersion(std::string TargetTripleString) {
   // On AIX, the AIX version and release should be that of the current host
   // unless if the version has already been specified.
   if (Triple(LLVM_HOST_TRIPLE).getOS() == Triple::AIX) {
-    Triple TT(TargetTripleString);
+    Triple TT{TargetTripleString};
     if (TT.getOS() == Triple::AIX && !TT.getOSMajorVersion()) {
       struct utsname name;
       if (uname(&name) != -1) {

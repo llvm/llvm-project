@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_divide.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/native_divide.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION native_divide
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION native_divide
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/math/gentype.inc>

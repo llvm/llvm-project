@@ -24,10 +24,11 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <fstream>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
@@ -305,6 +306,11 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   return HasErrors ? 1 : 0;
 }
 
+void StartRssThread(Fuzzer *F, size_t RssLimitMb);
+
+// Fuchsia needs to do some book checking before starting the RssThread,
+// so it has its own implementation.
+#if !LIBFUZZER_FUCHSIA
 static void RssThread(Fuzzer *F, size_t RssLimitMb) {
   while (true) {
     SleepSeconds(1);
@@ -314,12 +320,13 @@ static void RssThread(Fuzzer *F, size_t RssLimitMb) {
   }
 }
 
-static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
+void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
   if (!RssLimitMb)
     return;
   std::thread T(RssThread, F, RssLimitMb);
   T.detach();
 }
+#endif
 
 int RunOneTest(Fuzzer *F, const char *InputFilePath, size_t MaxLen) {
   Unit U = FileToVector(InputFilePath);
@@ -833,6 +840,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleInt = Flags.handle_int;
   Options.HandleSegv = Flags.handle_segv;
   Options.HandleTerm = Flags.handle_term;
+  Options.HandleTrap = Flags.handle_trap;
   Options.HandleXfsz = Flags.handle_xfsz;
   Options.HandleUsr1 = Flags.handle_usr1;
   Options.HandleUsr2 = Flags.handle_usr2;

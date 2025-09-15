@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; GCN-LABEL: {{^}}convergent_inlineasm:

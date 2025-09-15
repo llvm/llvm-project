@@ -308,24 +308,7 @@ define { i64, i1 } @cmpxchg_flat_agent_i64__noalias_addrspace_edge_case0(ptr %pt
 define { i64, i1 } @cmpxchg_flat_agent_i64__no_2_6(ptr %ptr, i64 %val, i64 %swap) {
 ; CHECK-LABEL: define { i64, i1 } @cmpxchg_flat_agent_i64__no_2_6(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[VAL:%.*]], i64 [[SWAP:%.*]]) {
-; CHECK-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
-; CHECK-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
-; CHECK:       [[ATOMICRMW_PRIVATE]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(5) [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], [[VAL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 [[SWAP]], i64 [[TMP2]]
-; CHECK-NEXT:    store i64 [[TMP4]], ptr addrspace(5) [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP3]], 1
-; CHECK-NEXT:    br label %[[ATOMICRMW_PHI:.*]]
-; CHECK:       [[ATOMICRMW_GLOBAL]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[PTR]], i64 [[VAL]], i64 [[SWAP]] syncscope("agent") monotonic seq_cst, align 8, !noalias.addrspace [[META0]]
-; CHECK-NEXT:    br label %[[ATOMICRMW_PHI]]
-; CHECK:       [[ATOMICRMW_PHI]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi { i64, i1 } [ [[TMP6]], %[[ATOMICRMW_PRIVATE]] ], [ [[TMP7]], %[[ATOMICRMW_GLOBAL]] ]
-; CHECK-NEXT:    br label %[[ATOMICRMW_END:.*]]
-; CHECK:       [[ATOMICRMW_END]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = cmpxchg ptr [[PTR]], i64 [[VAL]], i64 [[SWAP]] syncscope("agent") monotonic seq_cst, align 8, !noalias.addrspace [[META4:![0-9]+]]
 ; CHECK-NEXT:    ret { i64, i1 } [[RESULT]]
 ;
   %result = cmpxchg ptr %ptr, i64 %val, i64 %swap syncscope("agent") monotonic seq_cst, !noalias.addrspace !7
@@ -335,7 +318,7 @@ define { i64, i1 } @cmpxchg_flat_agent_i64__no_2_6(ptr %ptr, i64 %val, i64 %swap
 define { i64, i1 } @cmpxchg_flat_agent_i64__no_2_3_5(ptr %ptr, i64 %val, i64 %swap) {
 ; CHECK-LABEL: define { i64, i1 } @cmpxchg_flat_agent_i64__no_2_3_5(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[VAL:%.*]], i64 [[SWAP:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = cmpxchg ptr [[PTR]], i64 [[VAL]], i64 [[SWAP]] syncscope("agent") monotonic seq_cst, align 8, !noalias.addrspace [[META4:![0-9]+]]
+; CHECK-NEXT:    [[RESULT:%.*]] = cmpxchg ptr [[PTR]], i64 [[VAL]], i64 [[SWAP]] syncscope("agent") monotonic seq_cst, align 8, !noalias.addrspace [[META5:![0-9]+]]
 ; CHECK-NEXT:    ret { i64, i1 } [[RESULT]]
 ;
   %result = cmpxchg ptr %ptr, i64 %val, i64 %swap syncscope("agent") monotonic seq_cst, !noalias.addrspace !8
@@ -357,5 +340,6 @@ define { i64, i1 } @cmpxchg_flat_agent_i64__no_2_3_5(ptr %ptr, i64 %val, i64 %sw
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"foo", !"bar"}
 ; CHECK: [[META3]] = !{!"bux", !"baz"}
-; CHECK: [[META4]] = !{i32 2, i32 4, i32 5, i32 6}
+; CHECK: [[META4]] = !{i32 2, i32 6}
+; CHECK: [[META5]] = !{i32 2, i32 4, i32 5, i32 6}
 ;.

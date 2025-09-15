@@ -156,7 +156,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
   )
   target_link_libraries(omptarget.${target_name} PRIVATE omptarget.${target_name}.all_objs)
   target_link_options(omptarget.${target_name} PRIVATE "--target=${target_triple}"
-                      "-Wno-unused-command-line-argument""-r" "-nostdlib" "-flto"
+                      "-Wno-unused-command-line-argument" "-r" "-nostdlib" "-flto"
                        "-Wl,--lto-emit-llvm" "-fuse-ld=lld" "-march=" "-mcpu=")
 
   install(TARGETS omptarget.${target_name}

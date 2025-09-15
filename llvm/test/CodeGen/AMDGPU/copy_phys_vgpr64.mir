@@ -4,6 +4,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx942 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX942 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX10 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass postrapseudos %s -o - | FileCheck -check-prefix=GFX1250 %s
 
 ---
 name: copy_v64_to_v64
@@ -32,6 +33,10 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr2_vgpr3
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit killed $vgpr2_vgpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_v64_to_v64
+    ; GFX1250: liveins: $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 killed $vgpr2_vgpr3, implicit $exec, implicit $exec
     $vgpr0_vgpr1 = COPY killed $vgpr2_vgpr3, implicit $exec
 ...
 
@@ -62,6 +67,10 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr2_sgpr3
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr3, implicit $exec, implicit killed $sgpr2_sgpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_s64_to_v64
+    ; GFX1250: liveins: $sgpr2_sgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 killed $sgpr2_sgpr3, implicit $exec, implicit $exec
     $vgpr0_vgpr1 = COPY killed $sgpr2_sgpr3, implicit $exec
 ...
 
@@ -94,6 +103,11 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $agpr2_agpr3
     ; GFX10-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit killed $agpr2_agpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_a64_to_v64
+    ; GFX1250: liveins: $agpr2_agpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $agpr2_agpr3
+    ; GFX1250-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit killed $agpr2_agpr3, implicit $exec
     $vgpr0_vgpr1 = COPY killed $agpr2_agpr3, implicit $exec
 ...
 
@@ -130,6 +144,11 @@ body: |
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5, implicit $exec
+    ; GFX1250-LABEL: name: copy_v128_to_v128_fwd
+    ; GFX1250: liveins: $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $vgpr2_vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GFX1250-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 $vgpr4_vgpr5, implicit $exec, implicit $vgpr2_vgpr3_vgpr4_vgpr5, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed $vgpr2_vgpr3_vgpr4_vgpr5, implicit $exec
 ...
 
@@ -166,6 +185,11 @@ body: |
     ; GFX10-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_v128_to_v128_back
+    ; GFX1250: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr4_vgpr5 = V_MOV_B64_e32 $vgpr2_vgpr3, implicit $exec, implicit-def $vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX1250-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 $vgpr0_vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
     $vgpr2_vgpr3_vgpr4_vgpr5 = COPY killed $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
 ...
 
@@ -202,6 +226,12 @@ body: |
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr4_vgpr5_vgpr6
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit $vgpr4_vgpr5_vgpr6
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr6, implicit $exec, implicit killed $vgpr4_vgpr5_vgpr6, implicit $exec
+    ; GFX1250-LABEL: name: copy_v96_to_v96
+    ; GFX1250: liveins: $vgpr4_vgpr5_vgpr6
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr4_vgpr5_vgpr6
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit $vgpr4_vgpr5_vgpr6
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr6, implicit $exec, implicit killed $vgpr4_vgpr5_vgpr6, implicit $exec
     $vgpr0_vgpr1_vgpr2 = COPY killed $vgpr4_vgpr5_vgpr6, implicit $exec
 ...
 
@@ -232,6 +262,10 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr2_vgpr3
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit killed $vgpr2_vgpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_v64_to_v64_undef_sub0
+    ; GFX1250: liveins: $vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 killed $vgpr2_vgpr3, implicit $exec, implicit $exec
     $vgpr0_vgpr1 = COPY killed $vgpr2_vgpr3, implicit $exec
 ...
 
@@ -262,6 +296,10 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr2_vgpr3
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit killed $vgpr2_vgpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_v64_to_v64_undef_sub1
+    ; GFX1250: liveins: $vgpr2
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 killed $vgpr2_vgpr3, implicit $exec, implicit $exec
     $vgpr0_vgpr1 = COPY killed $vgpr2_vgpr3, implicit $exec
 ...
 
@@ -298,6 +336,11 @@ body: |
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr5, implicit $exec, implicit $sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr6, implicit $exec, implicit $sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $sgpr7, implicit $exec, implicit killed $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX1250-LABEL: name: copy_s128_to_v128_killed
+    ; GFX1250: liveins: $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $sgpr4_sgpr5, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GFX1250-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 $sgpr6_sgpr7, implicit $exec, implicit killed $sgpr4_sgpr5_sgpr6_sgpr7
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed $sgpr4_sgpr5_sgpr6_sgpr7
 ...
 
@@ -330,6 +373,11 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $vgpr2_vgpr3
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3, implicit $exec
+    ; GFX1250-LABEL: name: copy_v64_to_v64_unaligned
+    ; GFX1250: liveins: $vgpr2_vgpr3
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $vgpr2_vgpr3
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit $vgpr2_vgpr3, implicit $exec
     $vgpr1_vgpr2 = COPY killed $vgpr2_vgpr3, implicit $exec
 ...
 
@@ -362,6 +410,11 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr3_vgpr4
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit killed $vgpr3_vgpr4, implicit $exec
+    ; GFX1250-LABEL: name: copy_v64_unaligned_to_v64
+    ; GFX1250: liveins: $vgpr3_vgpr4
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr3_vgpr4
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit killed $vgpr3_vgpr4, implicit $exec
     $vgpr0_vgpr1 = COPY killed $vgpr3_vgpr4, implicit $exec
 ...
 
@@ -402,6 +455,13 @@ body: |
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
     ; GFX10-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr11, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10_vgpr11, implicit $exec
+    ; GFX1250-LABEL: name: copy_v128_to_v128_unaligned
+    ; GFX1250: liveins: $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX1250-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit $vgpr8_vgpr9_vgpr10_vgpr11
+    ; GFX1250-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr11, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10_vgpr11, implicit $exec
     $vgpr1_vgpr2_vgpr3_vgpr4 = COPY killed $vgpr8_vgpr9_vgpr10_vgpr11, implicit $exec
 ...
 
@@ -442,6 +502,13 @@ body: |
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9_vgpr10, implicit $exec
+    ; GFX1250-LABEL: name: copy_v128_unaligned_to_v128
+    ; GFX1250: liveins: $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr7_vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9_vgpr10, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed $vgpr7_vgpr8_vgpr9_vgpr10, implicit $exec
 ...
 
@@ -474,6 +541,11 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr8_sgpr9
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit killed $sgpr8_sgpr9, implicit $exec
+    ; GFX1250-LABEL: name: copy_s64_to_v64_unaligned
+    ; GFX1250: liveins: $sgpr8_sgpr9
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr8_sgpr9
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit killed $sgpr8_sgpr9, implicit $exec
     $vgpr1_vgpr2 = COPY killed $sgpr8_sgpr9, implicit $exec
 ...
 
@@ -514,6 +586,13 @@ body: |
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
     ; GFX10-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr11, implicit $exec, implicit killed $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
+    ; GFX1250-LABEL: name: copy_s128_to_v128_unaligned
+    ; GFX1250: liveins: $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr9, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX1250-NEXT: $vgpr3 = V_MOV_B32_e32 $sgpr10, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GFX1250-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr11, implicit $exec, implicit killed $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
     $vgpr1_vgpr2_vgpr3_vgpr4 = COPY killed $sgpr8_sgpr9_sgpr10_sgpr11, implicit $exec
 ...
 
@@ -550,6 +629,12 @@ body: |
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $vgpr8_vgpr9_vgpr10
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10, implicit $exec
+    ; GFX1250-LABEL: name: copy_v96_to_v96_unaligned
+    ; GFX1250: liveins: $vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit $vgpr8_vgpr9_vgpr10
+    ; GFX1250-NEXT: $vgpr3 = V_MOV_B32_e32 $vgpr10, implicit $exec, implicit killed $vgpr8_vgpr9_vgpr10, implicit $exec
     $vgpr1_vgpr2_vgpr3 = COPY killed $vgpr8_vgpr9_vgpr10, implicit $exec
 ...
 
@@ -586,6 +671,12 @@ body: |
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr7_vgpr8_vgpr9
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9, implicit $exec
+    ; GFX1250-LABEL: name: copy_v96_unaligned_to_v96
+    ; GFX1250: liveins: $vgpr7_vgpr8_vgpr9
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr7_vgpr8_vgpr9
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr8, implicit $exec, implicit $vgpr7_vgpr8_vgpr9
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr9, implicit $exec, implicit killed $vgpr7_vgpr8_vgpr9, implicit $exec
     $vgpr0_vgpr1_vgpr2 = COPY killed $vgpr7_vgpr8_vgpr9, implicit $exec
 ...
 
@@ -622,6 +713,12 @@ body: |
     ; GFX10-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $sgpr0_sgpr1_sgpr2
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
+    ; GFX1250-LABEL: name: copy_s96_to_v96
+    ; GFX1250: liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
     $vgpr0_vgpr1_vgpr2 = COPY killed $sgpr0_sgpr1_sgpr2, implicit $exec
 ...
 
@@ -658,5 +755,11 @@ body: |
     ; GFX10-NEXT: $vgpr3 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $sgpr0_sgpr1_sgpr2
     ; GFX10-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
     ; GFX10-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
+    ; GFX1250-LABEL: name: copy_s96_to_v96_unaligned
+    ; GFX1250: liveins: $sgpr0_sgpr1_sgpr2
+    ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: $vgpr3 = V_MOV_B32_e32 $sgpr2, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX1250-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2
+    ; GFX1250-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit killed $sgpr0_sgpr1_sgpr2, implicit $exec
     $vgpr1_vgpr2_vgpr3 = COPY killed $sgpr0_sgpr1_sgpr2, implicit $exec
 ...

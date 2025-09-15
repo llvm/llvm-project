@@ -364,15 +364,19 @@ public:
 
   // Compound assignments.
   ComplexPairTy VisitBinAddAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinAdd);
   }
   ComplexPairTy VisitBinSubAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinSub);
   }
   ComplexPairTy VisitBinMulAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinMul);
   }
   ComplexPairTy VisitBinDivAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinDiv);
   }
 
@@ -461,8 +465,12 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
-  Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
-  Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  auto *R =
+      Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
+  CGF.addInstToCurrentSourceAtom(R, Val.first);
+  auto *I =
+      Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  CGF.addInstToCurrentSourceAtom(I, Val.second);
 }
 
 
@@ -1357,6 +1365,7 @@ LValue ComplexExprEmitter::EmitBinAssignLValue(const BinaryOperator *E,
 
 ComplexPairTy ComplexExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   ComplexPairTy Val;
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   LValue LV = EmitBinAssignLValue(E, Val);
 
   // The result of an assignment in C is the assigned r-value.
@@ -1532,6 +1541,7 @@ static CompoundFunc getComplexOp(BinaryOperatorKind Op) {
 
 LValue CodeGenFunction::
 EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
+  ApplyAtomGroup Grp(getDebugInfo());
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   return ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);
@@ -1540,6 +1550,8 @@ EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
 LValue CodeGenFunction::
 EmitScalarCompoundAssignWithComplex(const CompoundAssignOperator *E,
                                     llvm::Value *&Result) {
+  // Key Instructions: Don't need to create an atom group here; one will already
+  // be active through scalar handling code.
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   LValue Ret = ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);

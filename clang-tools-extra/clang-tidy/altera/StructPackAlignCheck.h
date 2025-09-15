@@ -1,4 +1,4 @@
-//===--- StructPackAlignCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ class StructPackAlignCheck : public ClangTidyCheck {
 public:
   StructPackAlignCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-    MaxConfiguredAlignment(Options.get("MaxConfiguredAlignment", 128)) {}
+        MaxConfiguredAlignment(Options.get("MaxConfiguredAlignment", 128)) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

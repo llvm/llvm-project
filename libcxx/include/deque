@@ -461,9 +461,8 @@ private:
       __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, _DiffType, _BlockSize>;
 
 public:
-  using __is_segmented_iterator _LIBCPP_NODEBUG = true_type;
-  using __segment_iterator _LIBCPP_NODEBUG      = _MapPointer;
-  using __local_iterator _LIBCPP_NODEBUG        = _Pointer;
+  using __segment_iterator _LIBCPP_NODEBUG = _MapPointer;
+  using __local_iterator _LIBCPP_NODEBUG   = _Pointer;
 
   static _LIBCPP_HIDE_FROM_ABI __segment_iterator __segment(_Iterator __iter) { return __iter.__m_iter_; }
   static _LIBCPP_HIDE_FROM_ABI __local_iterator __local(_Iterator __iter) { return __iter.__ptr_; }
@@ -488,6 +487,9 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class deque {
+  template <class _Up, class _Alloc>
+  using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+
 public:
   // types:
 
@@ -930,7 +932,7 @@ private:
     (void)__end;
     (void)__annotation_type;
     (void)__place;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     // __beg - index of the first item to annotate
     // __end - index behind the last item to annotate (so last item + 1)
     // __annotation_type - __asan_unposion or __asan_poison
@@ -1023,23 +1025,23 @@ private:
       std::__annotate_double_ended_contiguous_container<_Allocator>(
           __mem_beg, __mem_end, __old_beg, __old_end, __new_beg, __new_end);
     }
-#  endif // _LIBCPP_HAS_ASAN
+#  endif // __has_feature(address_sanitizer)
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     if (__current_size == 0)
       __annotate_from_to(0, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     else {
       __annotate_from_to(0, __start_, __asan_poison, __asan_front_moved);
       __annotate_from_to(__start_ + __current_size, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     }
-#  endif // _LIBCPP_HAS_ASAN
+#  endif // __has_feature(address_sanitizer)
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     if (empty()) {
       for (size_t __i = 0; __i < __map_.size(); ++__i) {
         __annotate_whole_block(__i, __asan_unposion);
@@ -1048,19 +1050,19 @@ private:
       __annotate_from_to(0, __start_, __asan_unposion, __asan_front_moved);
       __annotate_from_to(__start_ + size(), __map_.size() * __block_size, __asan_unposion, __asan_back_moved);
     }
-#  endif // _LIBCPP_HAS_ASAN
+#  endif // __has_feature(address_sanitizer)
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_front(size_type __n) const _NOEXCEPT {
     (void)__n;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     __annotate_from_to(__start_ - __n, __start_, __asan_unposion, __asan_front_moved);
 #  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_back(size_type __n) const _NOEXCEPT {
     (void)__n;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     __annotate_from_to(__start_ + size(), __start_ + size() + __n, __asan_unposion, __asan_back_moved);
 #  endif
   }
@@ -1068,7 +1070,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_front(size_type __old_size, size_type __old_start) const _NOEXCEPT {
     (void)__old_size;
     (void)__old_start;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     __annotate_from_to(__old_start, __old_start + (__old_size - size()), __asan_poison, __asan_front_moved);
 #  endif
   }
@@ -1076,7 +1078,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_back(size_type __old_size, size_type __old_start) const _NOEXCEPT {
     (void)__old_size;
     (void)__old_start;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     __annotate_from_to(__old_start + size(), __old_start + __old_size, __asan_poison, __asan_back_moved);
 #  endif
   }
@@ -1089,7 +1091,7 @@ private:
   __annotate_whole_block(size_t __block_index, __asan_annotation_type __annotation_type) const _NOEXCEPT {
     (void)__block_index;
     (void)__annotation_type;
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
     __map_const_iterator __block_it = __map_.begin() + __block_index;
     const void* __block_start       = std::__to_address(*__block_it);
     const void* __block_end         = std::__to_address(*__block_it + __block_size);
@@ -1102,7 +1104,7 @@ private:
     }
 #  endif
   }
-#  if _LIBCPP_HAS_ASAN
+#  if __has_feature(address_sanitizer)
 
 public:
   _LIBCPP_HIDE_FROM_ABI bool __verify_asan_annotations() const _NOEXCEPT {
@@ -1164,7 +1166,7 @@ public:
   }
 
 private:
-#  endif // _LIBCPP_HAS_ASAN
+#  endif // __has_feature(address_sanitizer)
   _LIBCPP_HIDE_FROM_ABI bool __maybe_remove_front_spare(bool __keep_one = true) {
     if (__front_spare_blocks() >= 2 || (!__keep_one && __front_spare_blocks())) {
       __annotate_whole_block(0, __asan_unposion);
@@ -1239,8 +1241,8 @@ private:
       clear();
       shrink_to_fit();
     }
-    __alloc()       = __c.__alloc();
-    __map_.__alloc_ = __c.__map_.__alloc_;
+    __alloc()                = __c.__alloc();
+    __map_.__get_allocator() = __c.__map_.__get_allocator();
   }
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const deque&, false_type) {}
@@ -1319,7 +1321,7 @@ deque<_Tp, _Allocator>::deque(const deque& __c)
     : __map_(__pointer_allocator(__alloc_traits::select_on_container_copy_construction(__c.__alloc()))),
       __start_(0),
       __size_(0),
-      __alloc_(__map_.__alloc_) {
+      __alloc_(__map_.__get_allocator()) {
   __annotate_new(0);
   __append(__c.begin(), __c.end());
 }
@@ -2072,7 +2074,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__alloc_);
+        std::max<size_type>(2 * __map_.capacity(), 1), 0, __map_.__get_allocator());
 
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
@@ -2081,10 +2083,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity() {
 
     for (__map_pointer __i = __map_.begin(); __i != __map_.end(); ++__i)
       __buf.emplace_back(*__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __start_ = __map_.size() == 1 ? __block_size / 2 : __start_ + __block_size;
   }
   __annotate_whole_block(0, __asan_poison);
@@ -2135,7 +2134,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
   else {
     size_type __ds = (__nb + __back_capacity) * __block_size - __map_.empty();
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__alloc_);
+        std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()), 0, __map_.__get_allocator());
 #  if _LIBCPP_HAS_EXCEPTIONS
     try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
@@ -2158,10 +2157,7 @@ void deque<_Tp, _Allocator>::__add_front_capacity(size_type __n) {
     }
     for (__map_pointer __i = __map_.begin(); __i != __map_.end(); ++__i)
       __buf.emplace_back(*__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __start_ += __ds;
   }
 }
@@ -2195,7 +2191,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
   // Else need to allocate 1 buffer, *and* we need to reallocate __map_.
   else {
     __split_buffer<pointer, __pointer_allocator&> __buf(
-        std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__alloc_);
+        std::max<size_type>(2 * __map_.capacity(), 1), __map_.size(), __map_.__get_allocator());
 
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
@@ -2204,10 +2200,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
 
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
       __buf.emplace_front(*--__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __annotate_whole_block(__map_.size() - 1, __asan_poison);
   }
 }
@@ -2260,7 +2253,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     __split_buffer<pointer, __pointer_allocator&> __buf(
         std::max<size_type>(2 * __map_.capacity(), __nb + __map_.size()),
         __map_.size() - __front_capacity,
-        __map_.__alloc_);
+        __map_.__get_allocator());
 #  if _LIBCPP_HAS_EXCEPTIONS
     try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
@@ -2283,10 +2276,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity(size_type __n) {
     }
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
       __buf.emplace_front(*--__i);
-    std::swap(__map_.__first_, __buf.__first_);
-    std::swap(__map_.__begin_, __buf.__begin_);
-    std::swap(__map_.__end_, __buf.__end_);
-    std::swap(__map_.__cap_, __buf.__cap_);
+    __map_.__swap_without_allocator(__buf);
     __start_ -= __ds;
   }
 }
@@ -2631,6 +2621,8 @@ struct __container_traits<deque<_Tp, _Allocator> > {
   //  non-Cpp17CopyInsertable T, the effects are unspecified.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
       is_nothrow_move_constructible<_Tp>::value || __is_cpp17_copy_insertable_v<_Allocator>;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };
 
 _LIBCPP_END_NAMESPACE_STD

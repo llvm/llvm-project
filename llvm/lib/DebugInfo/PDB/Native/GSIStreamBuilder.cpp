@@ -119,7 +119,7 @@ static CVSymbol serializePublic(uint8_t *Mem, const BulkPublic &Pub) {
   memcpy(NameMem, Pub.Name, NameLen);
   // Zero the null terminator and remaining bytes.
   memset(&NameMem[NameLen], 0, Size - sizeof(PublicSym32Layout) - NameLen);
-  return CVSymbol(ArrayRef(reinterpret_cast<uint8_t *>(Mem), Size));
+  return CVSymbol(ArrayRef(Mem, Size));
 }
 
 uint32_t GSIHashStreamBuilder::calculateSerializedLength() const {
@@ -323,8 +323,8 @@ Error GSIStreamBuilder::finalizeMsfLayout() {
   uint64_t RecordBytes = PSH->RecordByteSize + GSH->RecordByteSize;
   if (RecordBytes > UINT32_MAX)
     return make_error<StringError>(
-        formatv("the public ({0} bytes) and global ({1} bytes) "
-                "symbols are too large to fit in a PDB file; "
+        formatv("the public symbols ({0} bytes) and global symbols ({1} bytes) "
+                "are too large to fit in a PDB file; "
                 "the maximum total is {2} bytes.",
                 PSH->RecordByteSize, GSH->RecordByteSize, UINT32_MAX),
         inconvertibleErrorCode());

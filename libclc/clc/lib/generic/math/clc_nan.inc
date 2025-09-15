@@ -20,4 +20,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_nan(__CLC_U_GENTYPE code) {
   return __CLC_AS_GENTYPE(res);
 }
 
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_nan(__CLC_S_GENTYPE code) {
+  return __clc_nan(__CLC_AS_U_GENTYPE(code));
+}
+
 #undef NAN_MASK

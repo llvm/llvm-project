@@ -182,6 +182,7 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitSubtargetFeatureBitsetImpl(OS, Rules);
   emitComplexPredicates(OS, ComplexOperandMatchers);
   emitMIPredicateFns(OS);
+  emitLeafPredicateFns(OS);
   emitI64ImmPredicateFns(OS);
   emitAPFloatImmPredicateFns(OS);
   emitAPIntImmPredicateFns(OS);
@@ -233,6 +234,9 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
      << "  const uint8_t *getMatchTable() const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
+        "const override;\n"
+     << "  bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand "
+        "&MO, const MatcherState &State) "
         "const override;\n"
      << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
      << "  bool runCustomAction(unsigned FnID, const MatcherState &State, "

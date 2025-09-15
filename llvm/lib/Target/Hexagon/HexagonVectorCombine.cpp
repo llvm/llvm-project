@@ -1677,9 +1677,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return m_CombineOr(m_LShr(V, S), m_AShr(V, S));
   };
 
-  const APInt *Qn = nullptr;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_APInt(Qn)))) {
-    Op.Frac = Qn->getZExtValue();
+  uint64_t Qn = 0;
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+    Op.Frac = Qn;
     Exp = T;
   } else {
     Op.Frac = 0;
@@ -1689,9 +1689,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return std::nullopt;
 
   // Check if there is rounding added.
-  const APInt *C = nullptr;
-  if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    uint64_t CV = C->getZExtValue();
+  uint64_t CV;
+  if (Value *T;
+      Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
@@ -2829,13 +2829,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
 auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
                                                  const Instruction *CtxI) const
     -> unsigned {
-  return ComputeMaxSignificantBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return ComputeMaxSignificantBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return computeKnownBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {

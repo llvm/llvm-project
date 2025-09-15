@@ -14,6 +14,7 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
+#include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -147,7 +148,7 @@ bool TypeSetByHwMode::constrain(const TypeSetByHwMode &VTS) {
       unsigned M = I.first;
       if (M == DefaultMode || hasMode(M))
         continue;
-      Map.insert({M, Map.at(DefaultMode)});
+      Map.try_emplace(M, Map.at(DefaultMode));
       Changed = true;
     }
   }
@@ -730,8 +731,8 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   // processed identically.
   auto NoLength = [](const SmallDenseSet<ElementCount> &Lengths,
                      MVT T) -> bool {
-    return !Lengths.count(T.isVector() ? T.getVectorElementCount()
-                                       : ElementCount());
+    return !Lengths.contains(T.isVector() ? T.getVectorElementCount()
+                                          : ElementCount());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -778,7 +779,7 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   typedef SmallSet<TypeSize, 2, TypeSizeComparator> TypeSizeSet;
 
   auto NoSize = [](const TypeSizeSet &Sizes, MVT T) -> bool {
-    return !Sizes.count(T.getSizeInBits());
+    return !Sizes.contains(T.getSizeInBits());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -899,6 +900,11 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
   assert(
       (!hasPredCode() || !hasImmCode()) &&
       ".td file corrupt: can't have a node predicate *and* an imm predicate");
+
+  if (hasGISelPredicateCode() && hasGISelLeafPredicateCode())
+    PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                    ".td file corrupt: can't have GISelPredicateCode *and* "
+                    "GISelLeafPredicateCode");
 }
 
 bool TreePredicateFn::hasPredCode() const {
@@ -1293,8 +1299,20 @@ bool TreePredicateFn::hasGISelPredicateCode() const {
 }
 
 std::string TreePredicateFn::getGISelPredicateCode() const {
-  return std::string(
-      PatFragRec->getRecord()->getValueAsString("GISelPredicateCode"));
+  return PatFragRec->getRecord()->getValueAsString("GISelPredicateCode").str();
+}
+
+bool TreePredicateFn::hasGISelLeafPredicateCode() const {
+  return PatFragRec->getRecord()
+      ->getValueAsOptionalString("GISelLeafPredicateCode")
+      .has_value();
+}
+
+std::string TreePredicateFn::getGISelLeafPredicateCode() const {
+  return PatFragRec->getRecord()
+      ->getValueAsOptionalString("GISelLeafPredicateCode")
+      .value_or(StringRef())
+      .str();
 }
 
 StringRef TreePredicateFn::getImmType() const {
@@ -1807,8 +1825,8 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
 }
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
-  for (unsigned i = 0, e = Types.size(); i != e; ++i)
-    if (!TP.getInfer().isConcrete(Types[i], true))
+  for (const TypeSetByHwMode &Type : Types)
+    if (!TP.getInfer().isConcrete(Type, true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))
@@ -2086,7 +2104,7 @@ TreePatternNodePtr TreePatternNode::clone() const {
 /// RemoveAllTypes - Recursively strip all the types of this tree.
 void TreePatternNode::RemoveAllTypes() {
   // Reset to unknown type.
-  std::fill(Types.begin(), Types.end(), TypeSetByHwMode());
+  llvm::fill(Types, TypeSetByHwMode());
   if (isLeaf())
     return;
   for (TreePatternNode &Child : children())
@@ -3170,7 +3188,7 @@ bool TreePattern::InferAllTypes(
           return true;
         }
 
-        const SmallVectorImpl<TreePatternNode *> &InNodes = InIter->second;
+        ArrayRef<TreePatternNode *> InNodes = InIter->second;
 
         // The input types should be fully resolved by now.
         for (TreePatternNode *Node : Nodes) {
@@ -3297,14 +3315,14 @@ void CodeGenDAGPatterns::ParseNodeTransforms() {
        reverse(Records.getAllDerivedDefinitions("SDNodeXForm"))) {
     const Record *SDNode = XFormNode->getValueAsDef("Opcode");
     StringRef Code = XFormNode->getValueAsString("XFormFunction");
-    SDNodeXForms.insert({XFormNode, NodeXForm(SDNode, Code.str())});
+    SDNodeXForms.try_emplace(XFormNode, NodeXForm(SDNode, Code.str()));
   }
 }
 
 void CodeGenDAGPatterns::ParseComplexPatterns() {
   for (const Record *R :
        reverse(Records.getAllDerivedDefinitions("ComplexPattern")))
-    ComplexPatterns.insert({R, R});
+    ComplexPatterns.try_emplace(R, R);
 }
 
 /// ParsePatternFragments - Parse all of the PatFrag definitions in the .td
@@ -3331,7 +3349,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     auto ArgsCopy = Args;
     SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
 
-    if (OperandsSet.count(""))
+    if (OperandsSet.contains(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
 
     // Parse the operands list.
@@ -3587,16 +3605,14 @@ class InstAnalyzer {
   const CodeGenDAGPatterns &CDP;
 
 public:
-  bool hasSideEffects;
-  bool mayStore;
-  bool mayLoad;
-  bool isBitcast;
-  bool isVariadic;
-  bool hasChain;
+  bool hasSideEffects = false;
+  bool mayStore = false;
+  bool mayLoad = false;
+  bool isBitcast = false;
+  bool isVariadic = false;
+  bool hasChain = false;
 
-  InstAnalyzer(const CodeGenDAGPatterns &cdp)
-      : CDP(cdp), hasSideEffects(false), mayStore(false), mayLoad(false),
-        isBitcast(false), isVariadic(false), hasChain(false) {}
+  InstAnalyzer(const CodeGenDAGPatterns &cdp) : CDP(cdp) {}
 
   void Analyze(const PatternToMatch &Pat) {
     const TreePatternNode &N = Pat.getSrcPattern();
@@ -4107,8 +4123,7 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
 }
 
 void CodeGenDAGPatterns::InferInstructionFlags() {
-  ArrayRef<const CodeGenInstruction *> Instructions =
-      Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
 
   unsigned Errors = 0;
 
@@ -4484,13 +4499,17 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
       // Fill the map entry for this mode.
       const HwMode &HM = CGH.getMode(M);
-      AppendPattern(P, M, HM.Predicates);
+
+      SmallString<128> PredicateCheck;
+      raw_svector_ostream PS(PredicateCheck);
+      SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
+      AppendPattern(P, M, PredicateCheck);
 
       // Add negations of the HM's predicates to the default predicate.
       if (!DefaultCheck.empty())
         DefaultCheck += " && ";
       DefaultCheck += "!(";
-      DefaultCheck += HM.Predicates;
+      DefaultCheck.append(PredicateCheck);
       DefaultCheck += ")";
     }
 

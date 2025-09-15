@@ -65,7 +65,6 @@ private:
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE) || defined(_LIBCPP_BUILDING_LIBRARY)
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default;
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default {
@@ -91,7 +90,6 @@ public:
 };
 
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void

@@ -7,20 +7,18 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @foo(ptr %0) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  vector.scevcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], i64 4
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr null, i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[SCEVGEP]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x ptr> [[TMP2]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <4 x ptr> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> <ptr poison, ptr null>, ptr [[TMP0:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i64> splat (i64 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[SCEVGEP3]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP7]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <4 x ptr> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i1> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i1> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_OP]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x ptr> [[TMP6]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x ptr> [[TMP5]], <4 x ptr> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x ptr> [[TMP3]], <4 x ptr> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x ptr> [[TMP12]], <8 x ptr> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6, i32 7, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <8 x ptr> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = and <8 x i1> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP10]])
 ; CHECK-NEXT:    br i1 [[OP_RDX]], label [[DOTLR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    ret void

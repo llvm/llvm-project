@@ -419,7 +419,7 @@ int main(int argc, char **argv) {
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+      TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
   assert(STI && "Unable to create subtarget info!");
   if (!STI->isCPUStringValid(MCPU))
     return 1;
@@ -441,12 +441,12 @@ int main(int argc, char **argv) {
   bool IsOutOfOrder = STI->getSchedModel().isOutOfOrder();
   processViewOptions(IsOutOfOrder);
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
   SourceMgr SrcMgr;

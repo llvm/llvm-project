@@ -368,7 +368,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
   IsReadOnlyLoop = true;
   using namespace ore;
   // Get LoopAccessInfo from current loop via the proxy.
-  LAI = &LAIs.getInfo(*CurLoop);
+  LAI = &LAIs.getInfo(*CurLoop, /*AllowPartial=*/true);
   // Check LoopAccessInfo for need of runtime check.
   if (LAI->getRuntimePointerChecking()->getChecks().empty()) {
     LLVM_DEBUG(dbgs() << "    LAA: Runtime check not found !!\n");
@@ -551,7 +551,7 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   const Function *F = L.getHeader()->getParent();
   OptimizationRemarkEmitter ORE(F);
 
-  LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, nullptr);
+  LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, nullptr, &LAR.AC);
   if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, LAR.LI, &L).run(DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();

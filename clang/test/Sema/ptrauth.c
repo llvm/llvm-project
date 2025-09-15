@@ -57,7 +57,7 @@ void test_string_discriminator(const char *str) {
   __builtin_ptrauth_string_discriminator(str); // expected-error {{argument must be a string literal}}
   __builtin_ptrauth_string_discriminator(L"wide test"); // expected-error {{argument must be a string literal}} expected-warning {{incompatible pointer types passing 'int[10]' to parameter of type 'const char *'}}
 
-  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type 'unsigned long'}}
+  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type '__size_t'}}
 }
 
 

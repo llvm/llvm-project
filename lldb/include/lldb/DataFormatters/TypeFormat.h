@@ -133,6 +133,10 @@ public:
 
   void SetOptions(uint32_t value) { m_flags.SetValue(value); }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
   uint32_t &GetRevision() { return m_my_revision; }
 
   enum class Type { eTypeUnknown, eTypeFormat, eTypeEnum };
@@ -150,6 +154,7 @@ public:
 protected:
   Flags m_flags;
   uint32_t m_my_revision = 0;
+  uint32_t m_ptr_match_depth = 1;
 
 private:
   TypeFormatImpl(const TypeFormatImpl &) = delete;

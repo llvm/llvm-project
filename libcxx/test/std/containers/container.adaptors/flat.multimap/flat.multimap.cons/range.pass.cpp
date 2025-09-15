@@ -27,9 +27,11 @@
 #include <vector>
 
 #include "min_allocator.h"
+#include "MinSequenceContainer.h"
 #include "test_allocator.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "../helpers.h"
 #include "../../../test_compare.h"
 
 // test constraint container-compatible-range
@@ -66,7 +68,219 @@ static_assert(std::is_constructible_v<Map,
 static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<int>, std::less<int>, std::allocator<int>>);
 static_assert(!std::is_constructible_v<Map, std::from_range_t, RangeOf<double>, std::less<int>, std::allocator<int>>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+constexpr void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using P     = std::pair<Key, Value>;
+  P ar[]      = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
+  {
+    // flat_multimap(from_range_t, R&&)
+    // input_range && !common
+    using M    = std::flat_multimap<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+    using Iter = cpp20_input_iterator<const P*>;
+    using Sent = sentinel_wrapper<Iter>;
+    using R    = std::ranges::subrange<Iter, Sent>;
+    auto m     = M(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
+    assert(std::ranges::equal(m.keys(), KeyContainer{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<Value>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+
+    // explicit(false)
+    M m2 = {std::from_range, R(Iter(ar), Sent(Iter(ar + 9)))};
+    assert(m2 == m);
+  }
+  {
+    // flat_multimap(from_range_t, R&&)
+    // greater
+    using M    = std::flat_multimap<Key, Value, std::greater<int>, KeyContainer, ValueContainer>;
+    using Iter = cpp20_input_iterator<const P*>;
+    using Sent = sentinel_wrapper<Iter>;
+    using R    = std::ranges::subrange<Iter, Sent>;
+    auto m     = M(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
+    assert(std::ranges::equal(m.keys(), KeyContainer{3, 3, 3, 2, 2, 2, 1, 1, 1}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<Value>>{
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+        });
+  }
+  {
+    // flat_multimap(from_range_t, R&&)
+    // contiguous range
+    using M = std::flat_multimap<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+    using R = std::ranges::subrange<const P*>;
+    auto m  = M(std::from_range, R(ar, ar + 9));
+    assert(std::ranges::equal(m.keys(), KeyContainer{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<Value>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+  }
+  {
+    // flat_multimap(from_range_t, R&&, const key_compare&)
+    using C = test_less<int>;
+    using M = std::flat_multimap<Key, Value, C, KeyContainer, ValueContainer>;
+    using R = std::ranges::subrange<const P*>;
+    auto m  = M(std::from_range, R(ar, ar + 9), C(3));
+    assert(std::ranges::equal(m.keys(), KeyContainer{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<Value>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+    assert(m.key_comp() == C(3));
+
+    // explicit(false)
+    M m2 = {std::from_range, R(ar, ar + 9), C(3)};
+    assert(m2 == m);
+    assert(m2.key_comp() == C(3));
+  }
+}
+
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test_alloc() {
+  using P = std::pair<int, short>;
+  P ar[]  = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
+  {
+    // flat_multimap(from_range_t, R&&, const Allocator&)
+    using A1 = test_allocator<int>;
+    using A2 = test_allocator<short>;
+    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using R  = std::ranges::subrange<const P*>;
+    auto m   = M(std::from_range, R(ar, ar + 9), A1(5));
+    assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<short>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+  }
+  {
+    // flat_multimap(from_range_t, R&&, const Allocator&)
+    // explicit(false)
+    using A1 = test_allocator<int>;
+    using A2 = test_allocator<short>;
+    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using R  = std::ranges::subrange<const P*>;
+    M m      = {std::from_range, R(ar, ar + 9), A1(5)}; // implicit ctor
+    assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<short>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+  }
+  {
+    // flat_multimap(from_range_t, R&&, const key_compare&, const Allocator&)
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = test_allocator<short>;
+    using M  = std::flat_multimap<int, short, C, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using R  = std::ranges::subrange<const P*>;
+    auto m   = M(std::from_range, R(ar, ar + 9), C(3), A1(5));
+    assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<short>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+    assert(m.key_comp() == C(3));
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+  }
+  {
+    // flat_multimap(from_range_t, R&&, const key_compare&, const Allocator&)
+    // explicit(false)
+    using A1 = test_allocator<int>;
+    using A2 = test_allocator<short>;
+    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using R  = std::ranges::subrange<const P*>;
+    M m      = {std::from_range, R(ar, ar + 9), {}, A2(5)}; // implicit ctor
+    assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
+    check_possible_values(
+        m.values(),
+        std::vector<std::vector<short>>{
+            {1, 2, 3},
+            {1, 2, 3},
+            {1, 2, 3},
+            {4, 5, 7},
+            {4, 5, 7},
+            {4, 5, 7},
+            {6, 8, 9},
+            {6, 8, 9},
+            {6, 8, 9},
+        });
+    assert(m.keys().get_allocator() == A1(5));
+    assert(m.values().get_allocator() == A2(5));
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true
@@ -117,111 +331,28 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M, std::from_range_t, std::vector<NonPairLike>&, const C&, const A1&>);
   }
 
-  using P      = std::pair<int, short>;
-  P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
-  P expected[] = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {2, 7}, {3, 6}, {3, 8}, {3, 9}};
-  {
-    // flat_multimap(from_range_t, R&&)
-    // input_range && !common
-    using M    = std::flat_multimap<int, short>;
-    using Iter = cpp20_input_iterator<const P*>;
-    using Sent = sentinel_wrapper<Iter>;
-    using R    = std::ranges::subrange<Iter, Sent>;
-    auto m     = M(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
+  test<std::vector<int>, std::vector<int>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-    // explicit(false)
-    M m2 = {std::from_range, R(Iter(ar), Sent(Iter(ar + 9)))};
-    assert(m2 == m);
-  }
-  {
-    // flat_multimap(from_range_t, R&&)
-    // greater
-    using M = std::flat_multimap<int, short, std::greater<int>, std::deque<int, min_allocator<int>>, std::deque<short>>;
-    using Iter = cpp20_input_iterator<const P*>;
-    using Sent = sentinel_wrapper<Iter>;
-    using R    = std::ranges::subrange<Iter, Sent>;
-    auto m     = M(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
-    assert((m.keys() == std::deque<int, min_allocator<int>>{3, 3, 3, 2, 2, 2, 1, 1, 1}));
-    LIBCPP_ASSERT((m.values() == std::deque<short>{6, 8, 9, 4, 5, 7, 1, 2, 3}));
-  }
-  {
-    // flat_multimap(from_range_t, R&&)
-    // contiguous range
-    using M = std::flat_multimap<int, short>;
-    using R = std::ranges::subrange<const P*>;
-    auto m  = M(std::from_range, R(ar, ar + 9));
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-  }
-  {
-    // flat_multimap(from_range_t, R&&, const key_compare&)
-    using C = test_less<int>;
-    using M = std::flat_multimap<int, short, C, std::vector<int>, std::deque<short>>;
-    using R = std::ranges::subrange<const P*>;
-    auto m  = M(std::from_range, R(ar, ar + 9), C(3));
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-    assert(m.key_comp() == C(3));
+  test_alloc<std::vector, std::vector>();
 
-    // explicit(false)
-    M m2 = {std::from_range, R(ar, ar + 9), C(3)};
-    assert(m2 == m);
-    assert(m2.key_comp() == C(3));
-  }
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
-    // flat_multimap(from_range_t, R&&, const Allocator&)
-    using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
-    using R  = std::ranges::subrange<const P*>;
-    auto m   = M(std::from_range, R(ar, ar + 9), A1(5));
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
+    test<std::deque<int>, std::vector<double>>();
+    test_alloc<std::deque, std::deque>();
   }
-  {
-    // flat_multimap(from_range_t, R&&, const Allocator&)
-    // explicit(false)
-    using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
-    using R  = std::ranges::subrange<const P*>;
-    M m      = {std::from_range, R(ar, ar + 9), A1(5)}; // implicit ctor
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
-  }
-  {
-    // flat_multimap(from_range_t, R&&, const key_compare&, const Allocator&)
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, C, std::vector<int, A1>, std::deque<short, A2>>;
-    using R  = std::ranges::subrange<const P*>;
-    auto m   = M(std::from_range, R(ar, ar + 9), C(3), A1(5));
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-    assert(m.key_comp() == C(3));
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
-  }
-  {
-    // flat_multimap(from_range_t, R&&, const key_compare&, const Allocator&)
-    // explicit(false)
-    using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, std::deque<int, A1>, std::vector<short, A2>>;
-    using R  = std::ranges::subrange<const P*>;
-    M m      = {std::from_range, R(ar, ar + 9), {}, A2(5)}; // implicit ctor
-    assert(std::ranges::equal(m.keys(), expected | std::views::elements<0>));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
-    assert(m.keys().get_allocator() == A1(5));
-    assert(m.values().get_allocator() == A2(5));
-  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

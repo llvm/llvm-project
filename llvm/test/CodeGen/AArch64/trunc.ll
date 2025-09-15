@@ -297,10 +297,10 @@ define <3 x i32> @trunc_v3i32_v3i64(<3 x i64> %a) {
 ; CHECK-GI-LABEL: trunc_v3i32_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    fmov x8, d2
+; CHECK-GI-NEXT:    mov v0.s[1], w9
 ; CHECK-GI-NEXT:    mov v0.s[2], w8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -867,17 +867,11 @@ entry:
 }
 
 define <2 x i64> @trunc_v2i64_v2i128(<2 x i128> %a) {
-; CHECK-SD-LABEL: trunc_v2i64_v2i128:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    mov v0.d[1], x2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: trunc_v2i64_v2i128:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[0], x0
-; CHECK-GI-NEXT:    mov v0.d[1], x2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: trunc_v2i64_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    mov v0.d[1], x2
+; CHECK-NEXT:    ret
 entry:
   %c = trunc <2 x i128> %a to <2 x i64>
   ret <2 x i64> %c

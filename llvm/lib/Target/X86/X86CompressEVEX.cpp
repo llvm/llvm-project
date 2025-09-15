@@ -75,8 +75,7 @@ public:
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 
@@ -301,6 +300,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
 }
 
 bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "Start X86CompressEVEXPass\n";);
 #ifndef NDEBUG
   // Make sure the tables are sorted.
   static std::atomic<bool> TableChecked(false);
@@ -321,7 +321,7 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : MBB)
       Changed |= CompressEVEXImpl(MI, ST);
   }
-
+  LLVM_DEBUG(dbgs() << "End X86CompressEVEXPass\n";);
   return Changed;
 }
 

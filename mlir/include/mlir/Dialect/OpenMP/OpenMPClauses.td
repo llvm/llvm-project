@@ -23,6 +23,31 @@ include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
+// V5.2: [6.3] `align` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AlignClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$align
+  );
+
+  let optAssemblyFormat = [{
+    `align` `(` $align `)`
+  }];
+
+  let description = [{
+    The `align` clause is used to specify the byte alignment to use for
+    allocations associated with the construct on which the clause appears.
+  }];
+}
+
+def OpenMP_AlignClause : OpenMP_AlignClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.11] `aligned` clause
 //===----------------------------------------------------------------------===//
 
@@ -83,6 +108,32 @@ class OpenMP_AllocateClauseSkip<
 }
 
 def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [6.4] `allocator` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AllocatorClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    OptionalAttr<AllocatorHandleAttr>:$allocator
+  );
+
+  let optAssemblyFormat = [{
+    `allocator` `(` custom<ClauseAttr>($allocator) `)`
+  }];
+
+  let description = [{
+    `allocator` specifies the memory allocator to be used for allocations
+    associated with the construct on which the clause appears.
+  }];
+}
+
+def OpenMP_AllocatorClause : OpenMP_AllocatorClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // LLVM OpenMP extension `ompx_bare` clause
@@ -157,6 +208,23 @@ class OpenMP_BindClauseSkip<
 }
 
 def OpenMP_BindClause : OpenMP_BindClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [4.4.3] `collapse` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_CollapseClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      ConfinedAttr<DefaultValuedOptionalAttr<I64Attr, "1">, [IntMinValue<1>]>
+      :$collapse_num_loops
+  );
+}
+
+def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
@@ -1333,6 +1401,22 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V5.2: [9.1.1] `sizes` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_TileSizesClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+      OptionalAttr<DenseI64ArrayAttr>:$tile_sizes
+  );
+}
+
+def OpenMP_TileSizesClause : OpenMP_TileSizesClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [12.1] `untied` clause

@@ -45,7 +45,7 @@ public:
         im_.Compare(that.im_) == Relation::Equal;
   }
 
-  constexpr bool IsZero() const { return re_.IsZero() || im_.IsZero(); }
+  constexpr bool IsZero() const { return re_.IsZero() && im_.IsZero(); }
 
   constexpr bool IsInfinite() const {
     return re_.IsInfinite() || im_.IsInfinite();

@@ -8,8 +8,8 @@ body: |
     ; CHECK-LABEL: name: test_tryFoldZeroHighBits_skips_nonreg
     ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
-    ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 65535, 0, implicit $exec
-    ; CHECK-NEXT: S_NOP 0, implicit [[V_AND_B32_e64_]]
+    ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit [[V_MOV_B32_e32_1]]
   %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   %1:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
   %2:vgpr_32 = V_AND_B32_e64 65535, %1.sub0, implicit $exec

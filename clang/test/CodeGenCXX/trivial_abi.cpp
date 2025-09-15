@@ -68,11 +68,10 @@ struct D0 : B0, B1 {
 
 Small D0::m0() { return {}; }
 
-// CHECK: define{{.*}} void @_Z14testParamSmall5Small(i64 %[[A_COERCE:.*]])
+// CHECK: define{{.*}} void @_Z14testParamSmall5Small(ptr %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[A]], i32 0, i32 0
-// CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[A_COERCE]] to ptr
-// CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
+// CHECK: store ptr %[[A_COERCE]], ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5SmallD1Ev(ptr {{[^,]*}} %[[A]])
 // CHECK: ret void
 // CHECK: }
@@ -101,8 +100,7 @@ Small testReturnSmall() {
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN5SmallC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(8) %[[T]])
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
-// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V0]] to i64
-// CHECK: call void @_Z14testParamSmall5Small(i64 %[[COERCE_VAL_PI]])
+// CHECK: call void @_Z14testParamSmall5Small(ptr %[[V0]])
 // CHECK: %[[CALL2:.*]] = call noundef ptr @_ZN5SmallD1Ev(ptr {{[^,]*}} %[[T]])
 // CHECK: ret void
 // CHECK: }
@@ -120,8 +118,7 @@ void testCallSmall0() {
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_DIVE1:.*]] = getelementptr inbounds nuw %[[STRUCT_SMALL]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[COERCE_DIVE1]], align 8
-// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V0]] to i64
-// CHECK: call void @_Z14testParamSmall5Small(i64 %[[COERCE_VAL_PI]])
+// CHECK: call void @_Z14testParamSmall5Small(ptr %[[V0]])
 // CHECK: ret void
 // CHECK: }
 
@@ -143,7 +140,7 @@ void testIgnoredSmall() {
   testReturnSmall();
 }
 
-// CHECK: define{{.*}} void @_Z14testParamLarge5Large(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z14testParamLarge5Large(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5LargeD1Ev(ptr {{[^,]*}} %[[A]])
 // CHECK: ret void
 // CHECK: }
@@ -166,7 +163,7 @@ Large testReturnLarge() {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[T]])
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN5LargeC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(520) %[[T]])
-// CHECK: call void @_Z14testParamLarge5Large(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_Z14testParamLarge5Large(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK: %[[CALL2:.*]] = call noundef ptr @_ZN5LargeD1Ev(ptr {{[^,]*}} %[[T]])
 // CHECK: ret void
 // CHECK: }
@@ -179,7 +176,7 @@ void testCallLarge0() {
 // CHECK: define{{.*}} void @_Z14testCallLarge1v()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
 // CHECK: call void @_Z15testReturnLargev(ptr dead_on_unwind writable sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_TMP]])
-// CHECK: call void @_Z14testParamLarge5Large(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_Z14testParamLarge5Large(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK: ret void
 // CHECK: }
 
@@ -226,7 +223,7 @@ NonTrivial testReturnHasNonTrivial() {
 // CHECK: call noundef ptr @_ZN5SmallC1Ev(ptr {{[^,]*}} %[[AGG_TMP]])
 // CHECK: invoke noundef ptr @_ZN5SmallC1Ev(ptr {{[^,]*}} %[[AGG_TMP1]])
 
-// CHECK: call void @_Z20calleeExceptionSmall5SmallS_(i64 %{{.*}}, i64 %{{.*}})
+// CHECK: call void @_Z20calleeExceptionSmall5SmallS_(ptr %{{.*}}, ptr %{{.*}})
 // CHECK-NEXT: ret void
 
 // CHECK: landingpad { ptr, i32 }
@@ -247,7 +244,7 @@ void testExceptionSmall() {
 // CHECK: call noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[AGG_TMP]])
 // CHECK: invoke noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[AGG_TMP1]])
 
-// CHECK: call void @_Z20calleeExceptionLarge5LargeS_(ptr noundef %[[AGG_TMP]], ptr noundef %[[AGG_TMP1]])
+// CHECK: call void @_Z20calleeExceptionLarge5LargeS_(ptr dead_on_return noundef %[[AGG_TMP]], ptr dead_on_return noundef %[[AGG_TMP1]])
 // CHECK-NEXT: ret void
 
 // CHECK: landingpad { ptr, i32 }

@@ -638,7 +638,7 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   std::vector<lldb::addr_t> addr_cache(m_symbols.size(), LLDB_INVALID_ADDRESS);
 
   SymbolIndexComparator comparator(m_symbols, addr_cache);
-  std::stable_sort(indexes.begin(), indexes.end(), comparator);
+  llvm::stable_sort(indexes, comparator);
 
   // Remove any duplicates if requested
   if (remove_duplicates) {

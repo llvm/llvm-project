@@ -1,4 +1,4 @@
-//===--- NarrowingConversionsCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -85,6 +85,8 @@ private:
   bool handleConditionalOperator(const ASTContext &Context, const Expr &Lhs,
                                  const Expr &Rhs);
 
+  void handleConditionalOperatorArgument(const ASTContext &Context,
+                                         const Expr &Lhs, const Expr *Arg);
   void handleImplicitCast(const ASTContext &Context,
                           const ImplicitCastExpr &Cast);
 

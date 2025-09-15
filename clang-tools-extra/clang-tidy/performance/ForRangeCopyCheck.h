@@ -1,4 +1,4 @@
-//===--- ForRangeCopyCheck.h - clang-tidy------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ namespace clang::tidy::performance {
 class ForRangeCopyCheck : public ClangTidyCheck {
 public:
   ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context);
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override{
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

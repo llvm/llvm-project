@@ -147,6 +147,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCANDN:
   case RISCV::PseudoCCORN:
   case RISCV::PseudoCCXNOR:
+  case RISCV::PseudoCCNDS_BFOS:
+  case RISCV::PseudoCCNDS_BFOZ:
     return expandCCOp(MBB, MBBI, NextMBBI);
   case RISCV::PseudoVMCLR_M_B1:
   case RISCV::PseudoVMCLR_M_B2:
@@ -194,7 +196,7 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   CC = RISCVCC::getOppositeBranchCondition(CC);
 
   // Insert branch instruction.
-  BuildMI(MBB, MBBI, DL, TII->getBrCond(CC))
+  BuildMI(MBB, MBBI, DL, TII->get(RISCVCC::getBrCond(CC)))
       .addReg(MI.getOperand(1).getReg())
       .addReg(MI.getOperand(2).getReg())
       .addMBB(MergeBB);
@@ -240,10 +242,20 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCANDN:  NewOpc = RISCV::ANDN;  break;
     case RISCV::PseudoCCORN:   NewOpc = RISCV::ORN;   break;
     case RISCV::PseudoCCXNOR:  NewOpc = RISCV::XNOR;  break;
+    case RISCV::PseudoCCNDS_BFOS: NewOpc = RISCV::NDS_BFOS; break;
+    case RISCV::PseudoCCNDS_BFOZ: NewOpc = RISCV::NDS_BFOZ; break;
     }
-    BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
-        .add(MI.getOperand(5))
-        .add(MI.getOperand(6));
+
+    if (NewOpc == RISCV::NDS_BFOZ || NewOpc == RISCV::NDS_BFOS) {
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
+          .add(MI.getOperand(5))
+          .add(MI.getOperand(6))
+          .add(MI.getOperand(7));
+    } else {
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
+          .add(MI.getOperand(5))
+          .add(MI.getOperand(6));
+    }
   }
 
   TrueBB->addSuccessor(MergeBB);
@@ -323,6 +335,8 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
+  if (Hi == RISCV::DUMMY_REG_PAIR_WITH_X0)
+    Hi = RISCV::X0;
 
   auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
                    .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
@@ -370,6 +384,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
+  assert(Hi != RISCV::DUMMY_REG_PAIR_WITH_X0 && "Cannot write to X0_Pair");
 
   MachineInstrBuilder MIBLo, MIBHi;
 

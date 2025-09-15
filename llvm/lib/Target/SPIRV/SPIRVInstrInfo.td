@@ -245,7 +245,7 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, i32imm:$c, ID:$o, variable_ops),
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
@@ -445,6 +445,9 @@ def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938
 def OpConvertFToBF16INTEL : UnOp<"OpConvertFToBF16INTEL", 6116>;
 def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
+// SPV_INTEL_tensor_float32_conversion
+def OpRoundFToTF32INTEL : UnOp<"OpRoundFToTF32INTEL", 6426>;
+
 // 3.42.12 Composite Instructions
 
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
@@ -634,8 +637,8 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
   def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
   def OpUnreachable: SimpleOp<"OpUnreachable", 255>;
 }
-def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr, $sz">;
-def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr, $sz">;
+def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr $sz">;
+def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr $sz">;
 def OpDemoteToHelperInvocation: SimpleOp<"OpDemoteToHelperInvocation", 5380>;
 
 // 3.42.18 Atomic Instructions

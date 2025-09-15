@@ -58,6 +58,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Tessellation, Linkage], []> {
+  // CHECK: patch
+  spirv.GlobalVariable @var {patch} : !spirv.ptr<vector<4xf32>, Input>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  // CHECK: invariant
+  spirv.GlobalVariable @var {invariant} : !spirv.ptr<vector<2xf32>, Output>
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outSideGlobalVar1", linkage_type = <Import>>
   spirv.GlobalVariable @var1 {

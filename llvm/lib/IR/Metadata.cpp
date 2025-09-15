@@ -699,7 +699,7 @@ MDNode::Header::~Header() {
   }
   MDOperand *O = reinterpret_cast<MDOperand *>(this);
   for (MDOperand *E = O - SmallSize; O != E; --O)
-    (void)(O - 1)->~MDOperand();
+    (O - 1)->~MDOperand();
 }
 
 void *MDNode::Header::getSmallPtr() {
@@ -1007,8 +1007,7 @@ MDNode *MDNode::uniquify() {
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   case CLASS##Kind: {                                                          \
     CLASS *SubclassThis = cast<CLASS>(this);                                   \
-    std::integral_constant<bool, HasCachedHash<CLASS>::value>                  \
-        ShouldRecalculateHash;                                                 \
+    std::bool_constant<HasCachedHash<CLASS>::value> ShouldRecalculateHash;     \
     dispatchRecalculateHash(SubclassThis, ShouldRecalculateHash);              \
     return uniquifyImpl(SubclassThis, getContext().pImpl->CLASS##s);           \
   }
@@ -1065,7 +1064,7 @@ void MDNode::storeDistinctInContext() {
     llvm_unreachable("Invalid subclass of MDNode");
 #define HANDLE_MDNODE_LEAF(CLASS)                                              \
   case CLASS##Kind: {                                                          \
-    std::integral_constant<bool, HasCachedHash<CLASS>::value> ShouldResetHash; \
+    std::bool_constant<HasCachedHash<CLASS>::value> ShouldResetHash;           \
     dispatchResetHash(cast<CLASS>(this), ShouldResetHash);                     \
     break;                                                                     \
   }
@@ -1202,14 +1201,15 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
          "first operand should be a non-null MDString");
   StringRef AProfName = AMDS->getString();
   StringRef BProfName = BMDS->getString();
-  if (AProfName == "branch_weights" && BProfName == "branch_weights") {
+  if (AProfName == MDProfLabels::BranchWeights &&
+      BProfName == MDProfLabels::BranchWeights) {
     ConstantInt *AInstrWeight = mdconst::dyn_extract<ConstantInt>(
         A->getOperand(getBranchWeightOffset(A)));
     ConstantInt *BInstrWeight = mdconst::dyn_extract<ConstantInt>(
         B->getOperand(getBranchWeightOffset(B)));
     assert(AInstrWeight && BInstrWeight && "verified by LLVM verifier");
     return MDNode::get(Ctx,
-                       {MDHelper.createString("branch_weights"),
+                       {MDHelper.createString(MDProfLabels::BranchWeights),
                         MDHelper.createConstant(ConstantInt::get(
                             Type::getInt64Ty(Ctx),
                             SaturatingAdd(AInstrWeight->getZExtValue(),
@@ -1300,6 +1300,24 @@ static void addRange(SmallVectorImpl<ConstantInt *> &EndPoints,
 
   EndPoints.push_back(Low);
   EndPoints.push_back(High);
+}
+
+MDNode *MDNode::getMergedCalleeTypeMetadata(const MDNode *A, const MDNode *B) {
+  // Drop the callee_type metadata if either of the call instructions do not
+  // have it.
+  if (!A || !B)
+    return nullptr;
+  SmallVector<Metadata *, 8> AB;
+  SmallPtrSet<Metadata *, 8> MergedCallees;
+  auto AddUniqueCallees = [&AB, &MergedCallees](const MDNode *N) {
+    for (Metadata *MD : N->operands()) {
+      if (MergedCallees.insert(MD).second)
+        AB.push_back(MD);
+    }
+  };
+  AddUniqueCallees(A);
+  AddUniqueCallees(B);
+  return MDNode::get(A->getContext(), AB);
 }
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
@@ -1777,6 +1795,7 @@ AAMDNodes Instruction::getAAMetadata() const {
     Result.TBAAStruct = Info.lookup(LLVMContext::MD_tbaa_struct);
     Result.Scope = Info.lookup(LLVMContext::MD_alias_scope);
     Result.NoAlias = Info.lookup(LLVMContext::MD_noalias);
+    Result.NoAliasAddrSpace = Info.lookup(LLVMContext::MD_noalias_addrspace);
   }
   return Result;
 }
@@ -1786,6 +1805,7 @@ void Instruction::setAAMetadata(const AAMDNodes &N) {
   setMetadata(LLVMContext::MD_tbaa_struct, N.TBAAStruct);
   setMetadata(LLVMContext::MD_alias_scope, N.Scope);
   setMetadata(LLVMContext::MD_noalias, N.NoAlias);
+  setMetadata(LLVMContext::MD_noalias_addrspace, N.NoAliasAddrSpace);
 }
 
 void Instruction::setNoSanitizeMetadata() {

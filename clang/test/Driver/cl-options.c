@@ -54,11 +54,13 @@
 // fpfast: -funsafe-math-optimizations
 // fpfast: -ffast-math
 
-// RUN: %clang_cl /fp:fast /fp:precise -### -- %s 2>&1 | FileCheck -check-prefix=fpprecise %s
+// RUN: %clang_cl /fp:fast /fp:precise -Wno-overriding-complex-range -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=fpprecise %s
 // fpprecise-NOT: -funsafe-math-optimizations
 // fpprecise-NOT: -ffast-math
 
-// RUN: %clang_cl /fp:fast /fp:strict -### -- %s 2>&1 | FileCheck -check-prefix=fpstrict %s
+// RUN: %clang_cl /fp:fast /fp:strict -Wno-overriding-complex-range -### -- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=fpstrict %s
 // fpstrict-NOT: -funsafe-math-optimizations
 // fpstrict-NOT: -ffast-math
 // fpstrict: -ffp-contract=off
@@ -185,30 +187,30 @@
 
 // RUN: %clang_cl /Os --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
 // RUN: %clang_cl /Os --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
-// Os: -mframe-pointer=none
 // Os: -Os
+// Os: -mframe-pointer=none
 
 // RUN: %clang_cl /Ot --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // RUN: %clang_cl /Ot --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
-// Ot: -mframe-pointer=none
 // Ot: -O3
+// Ot: -mframe-pointer=none
 
 // RUN: %clang_cl /Ox --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // RUN: %clang_cl /Ox --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
-// Ox: -mframe-pointer=none
 // Ox: -O3
+// Ox: -mframe-pointer=none
 
 // RUN: %clang_cl --target=i686-pc-win32 /O2sy- -### -- %s 2>&1 | FileCheck -check-prefix=PR24003 %s
-// PR24003: -mframe-pointer=all
 // PR24003: -Os
+// PR24003: -mframe-pointer=all
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
-// Oy_2: -mframe-pointer=all
 // Oy_2: -O3
+// Oy_2: -mframe-pointer=all
 
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
-// Oy_aarch64: -mframe-pointer=non-leaf
 // Oy_aarch64: -O3
+// Oy_aarch64: -mframe-pointer=non-leaf
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
 // O2O2: "-O3"
@@ -361,6 +363,12 @@
 
 // RUN: %clang_cl -c -### /std:c11 -- %s 2>&1 | FileCheck -check-prefix CHECK-C11 %s
 // CHECK-C11: -std=c11
+
+// RUN: %clang_cl -c -### /std:c17 -- %s 2>&1 | FileCheck -check-prefix CHECK-C17 %s
+// CHECK-C17: -std=c17
+
+// RUN: %clang_cl -c -### /std:clatest -- %s 2>&1 | FileCheck -check-prefix CHECK-CLATEST %s
+// CHECK-CLATEST: -std=c23
 
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -wd12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
@@ -722,6 +730,7 @@
 // RUN:     -fno-profile-instr-use \
 // RUN:     -fcs-profile-generate \
 // RUN:     -fcs-profile-generate=dir \
+// RUN:     -fpseudo-probe-for-profiling \
 // RUN:     -ftime-trace \
 // RUN:     -fmodules \
 // RUN:     -fno-modules \
@@ -821,7 +830,11 @@
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
 // RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
-// EPILOGUNWIND: -fwinx64-eh-unwindv2
+// EPILOGUNWIND: -fwinx64-eh-unwindv2=best-effort
+
+// RUN: %clang_cl /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// RUN: %clang_cl /d2epilogunwindrequirev2 /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwindv2=require
 
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1

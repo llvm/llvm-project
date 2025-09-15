@@ -431,12 +431,12 @@ void LLVMAddModuleFlag(LLVMModuleRef M, LLVMModuleFlagBehavior Behavior,
                            {Key, KeyLen}, unwrap(Val));
 }
 
-LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) {
-  return unwrap(M)->IsNewDbgInfoFormat;
-}
+LLVMBool LLVMIsNewDbgInfoFormat(LLVMModuleRef M) { return true; }
 
 void LLVMSetIsNewDbgInfoFormat(LLVMModuleRef M, LLVMBool UseNewFormat) {
-  unwrap(M)->setIsNewDbgInfoFormat(UseNewFormat);
+  if (!UseNewFormat)
+    llvm_unreachable("LLVM no longer supports intrinsic based debug-info");
+  (void)M;
 }
 
 /*--.. Printing modules ....................................................--*/
@@ -2108,8 +2108,10 @@ LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global) {
 
 unsigned LLVMGetAlignment(LLVMValueRef V) {
   Value *P = unwrap(V);
-  if (GlobalObject *GV = dyn_cast<GlobalObject>(P))
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(P))
     return GV->getAlign() ? GV->getAlign()->value() : 0;
+  if (Function *F = dyn_cast<Function>(P))
+    return F->getAlign() ? F->getAlign()->value() : 0;
   if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
     return AI->getAlign().value();
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
@@ -2128,8 +2130,10 @@ unsigned LLVMGetAlignment(LLVMValueRef V) {
 
 void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   Value *P = unwrap(V);
-  if (GlobalObject *GV = dyn_cast<GlobalObject>(P))
+  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(P))
     GV->setAlignment(MaybeAlign(Bytes));
+  else if (Function *F = dyn_cast<Function>(P))
+    F->setAlignment(MaybeAlign(Bytes));
   else if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
     AI->setAlignment(Align(Bytes));
   else if (LoadInst *LI = dyn_cast<LoadInst>(P))
@@ -2182,12 +2186,22 @@ void LLVMGlobalSetMetadata(LLVMValueRef Global, unsigned Kind,
   unwrap<GlobalObject>(Global)->setMetadata(Kind, unwrap<MDNode>(MD));
 }
 
+void LLVMGlobalAddMetadata(LLVMValueRef Global, unsigned Kind,
+                           LLVMMetadataRef MD) {
+  unwrap<GlobalObject>(Global)->addMetadata(Kind, *unwrap<MDNode>(MD));
+}
+
 void LLVMGlobalEraseMetadata(LLVMValueRef Global, unsigned Kind) {
   unwrap<GlobalObject>(Global)->eraseMetadata(Kind);
 }
 
 void LLVMGlobalClearMetadata(LLVMValueRef Global) {
   unwrap<GlobalObject>(Global)->clearMetadata();
+}
+
+void LLVMGlobalAddDebugInfo(LLVMValueRef Global, LLVMMetadataRef GVE) {
+  unwrap<GlobalVariable>(Global)->addDebugInfo(
+      unwrap<DIGlobalVariableExpression>(GVE));
 }
 
 /*--.. Operations on global variables ......................................--*/
@@ -2945,6 +2959,14 @@ LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst) {
   if (ICmpInst *I = dyn_cast<ICmpInst>(unwrap(Inst)))
     return (LLVMIntPredicate)I->getPredicate();
   return (LLVMIntPredicate)0;
+}
+
+LLVMBool LLVMGetICmpSameSign(LLVMValueRef Inst) {
+  return unwrap<ICmpInst>(Inst)->hasSameSign();
+}
+
+void LLVMSetICmpSameSign(LLVMValueRef Inst, LLVMBool SameSign) {
+  unwrap<ICmpInst>(Inst)->setSameSign(SameSign);
 }
 
 LLVMRealPredicate LLVMGetFCmpPredicate(LLVMValueRef Inst) {

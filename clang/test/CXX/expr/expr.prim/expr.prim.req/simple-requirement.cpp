@@ -102,8 +102,10 @@ namespace std_example {
 // of a polymorphic type.
 class X { virtual ~X(); };
 constexpr bool b = requires (X &x) { static_cast<int(*)[(typeid(x), 0)]>(nullptr); };
-// expected-error@-1{{constraint variable 'x' cannot be used in an evaluated context}}
-// expected-note@-2{{'x' declared here}}
+// expected-warning@-1 {{left operand of comma operator has no effect}}
+// expected-warning@-2 {{variable length arrays in C++ are a Clang extension}}
+// expected-note@-3{{function parameter 'x' with unknown value cannot be used in a constant expression}}
+// expected-note@-4{{declared here}}
 
 namespace access_checks {
 namespace in_requires_expression {

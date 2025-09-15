@@ -257,9 +257,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   // We need to instruct the passes that we're done with SSA and virtual
   // registers.
   auto &Properties = MF.getProperties();
-  Properties.set(MachineFunctionProperties::Property::NoVRegs);
-  Properties.reset(MachineFunctionProperties::Property::IsSSA);
-  Properties.set(MachineFunctionProperties::Property::NoPHIs);
+  Properties.setNoVRegs().resetIsSSA().setNoPHIs();
 
   for (const MCRegister Reg : LiveIns)
     MF.getRegInfo().addLiveIn(Reg);
@@ -300,7 +298,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   // means that we won't know what values are in the registers.
   // FIXME: this should probably be an assertion.
   if (!IsSnippetSetupComplete)
-    Properties.reset(MachineFunctionProperties::Property::TracksLiveness);
+    Properties.resetTracksLiveness();
 
   Fill(Sink);
 

@@ -44,6 +44,7 @@ static const char *getStageName(CallingConv::ID CC) {
   case CallingConv::AMDGPU_LS:
     return ".ls";
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     llvm_unreachable("Callable shader has no hardware stage");
   default:
     return ".cs";
@@ -898,7 +899,7 @@ bool AMDGPUPALMetadata::setFromString(StringRef S) {
         errs() << "Unrecognized PAL metadata register key '" << S << "'\n";
         continue;
       }
-      Key = MsgPackDoc.getNode(uint64_t(Val));
+      Key = MsgPackDoc.getNode(Val);
     }
     Registers.getMap()[Key] = I.second;
   }
@@ -1058,6 +1059,17 @@ unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
 
 VersionTuple AMDGPUPALMetadata::getPALVersion() {
   return VersionTuple(getPALVersion(0), getPALVersion(1));
+}
+
+// Set the field in a given .hardware_stages entry to a maximum value
+void AMDGPUPALMetadata::updateHwStageMaximum(unsigned CC, StringRef field,
+                                             unsigned Val) {
+  msgpack::MapDocNode HwStageFieldMapNode = getHwStage(CC);
+  auto &Node = HwStageFieldMapNode[field];
+  if (Node.isEmpty())
+    Node = Val;
+  else
+    Node = std::max<unsigned>(Node.getUInt(), Val);
 }
 
 // Set the field in a given .hardware_stages entry

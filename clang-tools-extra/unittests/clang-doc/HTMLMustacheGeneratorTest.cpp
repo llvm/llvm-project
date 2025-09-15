@@ -20,10 +20,14 @@
 
 using namespace llvm;
 using namespace testing;
+using namespace clang;
 using namespace clang::doc;
 
-static const std::string ClangDocVersion =
-    clang::getClangToolFullVersion("clang-doc");
+// FIXME: Don't enable unit tests that can read files. Remove once we can use
+// lit to test these properties.
+#define ENABLE_LOCAL_TEST 0
+
+static const std::string ClangDocVersion = getClangToolFullVersion("clang-doc");
 
 static std::unique_ptr<Generator> getHTMLMustacheGenerator() {
   auto G = findGeneratorByName("mustache");
@@ -81,45 +85,4 @@ TEST(HTMLMustacheGeneratorTest, createResources) {
     llvm::sys::path::append(PathBuf, RootTestDirectory.path(), "mustache.js");
     verifyFileContents(PathBuf, "JavaScript");
   }
-}
-
-TEST(HTMLMustacheGeneratorTest, generateDocs) {
-  auto G = getHTMLMustacheGenerator();
-  assert(G && "Could not find HTMLMustacheGenerator");
-  ClangDocContext CDCtx = getClangDocContext();
-
-  unittest::TempDir RootTestDirectory("generateDocsTest", /*Unique=*/true);
-  CDCtx.OutDirectory = RootTestDirectory.path();
-
-  getMustacheHtmlFiles(CLANG_DOC_TEST_ASSET_DIR, CDCtx);
-
-  EXPECT_THAT_ERROR(G->generateDocs(RootTestDirectory.path(), {}, CDCtx),
-                    Succeeded())
-      << "Failed to generate docs.";
-}
-
-TEST(HTMLMustacheGeneratorTest, generateDocsForInfo) {
-  auto G = getHTMLMustacheGenerator();
-  assert(G && "Could not find HTMLMustacheGenerator");
-  ClangDocContext CDCtx = getClangDocContext();
-  std::string Buffer;
-  llvm::raw_string_ostream Actual(Buffer);
-  NamespaceInfo I;
-  I.Name = "Namespace";
-  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
-
-  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
-                                     InfoType::IT_namespace,
-                                     "Namespace::ChildNamespace", "Namespace");
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "Namespace::ChildStruct", "Namespace");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Access = clang::AccessSpecifier::AS_none;
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Enums.emplace_back();
-
-  EXPECT_THAT_ERROR(G->generateDocForInfo(&I, Actual, CDCtx), Failed());
-
-  std::string Expected = R"raw()raw";
-  EXPECT_THAT(Actual.str(), Eq(Expected));
 }

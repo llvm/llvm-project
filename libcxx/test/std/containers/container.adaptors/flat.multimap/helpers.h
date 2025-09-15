@@ -14,16 +14,25 @@
 #include <string>
 #include <vector>
 #include <flat_map>
+#include <ranges>
 
 #include "../flat_helpers.h"
 #include "test_allocator.h"
 #include "test_macros.h"
 
 template <class... Args>
-void check_invariant(const std::flat_multimap<Args...>& m) {
+constexpr void check_invariant(const std::flat_multimap<Args...>& m) {
   assert(m.keys().size() == m.values().size());
   const auto& keys = m.keys();
   assert(std::is_sorted(keys.begin(), keys.end(), m.key_comp()));
+}
+
+constexpr void check_possible_values(const auto& actual, const auto& expected) {
+  assert(std::ranges::size(actual) == std::ranges::size(expected));
+
+  for (const auto& [actual_value, possible_values] : std::views::zip(actual, expected)) {
+    assert(std::ranges::find(possible_values, actual_value) != std::ranges::end(possible_values));
+  }
 }
 
 template <class F>

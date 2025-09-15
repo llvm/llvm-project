@@ -1,4 +1,4 @@
-//===--- DurationDivisionCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ namespace clang::tidy::abseil {
 
 // Find potential incorrect uses of integer division of absl::Duration objects.
 //
-// For the user-facing documentation see: 
+// For the user-facing documentation see:
 // http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-division.html
 
 class DurationDivisionCheck : public ClangTidyCheck {

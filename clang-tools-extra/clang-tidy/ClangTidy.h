@@ -1,4 +1,4 @@
-//===--- ClangTidy.h - clang-tidy -------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,6 +76,11 @@ ClangTidyOptions::OptionMap
 getCheckOptions(const ClangTidyOptions &Options,
                 bool AllowEnablingAnalyzerAlphaCheckers);
 
+/// Filters CheckOptions in \p Options to only include options specified in
+/// the \p EnabledChecks which is a sorted vector.
+void filterCheckOptions(ClangTidyOptions &Options,
+                        const std::vector<std::string> &EnabledChecks);
+
 /// Run a set of clang-tidy checks on a set of files.
 ///
 /// \param EnableCheckProfile If provided, it enables check profile collection
@@ -89,7 +94,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
              bool ApplyAnyFix, bool EnableCheckProfile = false,
-             llvm::StringRef StoreCheckProfile = StringRef());
+             llvm::StringRef StoreCheckProfile = StringRef(),
+             bool Quiet = false);
 
 /// Controls what kind of fixes clang-tidy is allowed to apply.
 enum FixBehaviour {
