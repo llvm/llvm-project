@@ -1613,7 +1613,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z % bw)).
   if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amt) &&
       !TLI.isOperationLegalOrCustom(Opcode, VT)) {
-    SDValue HiShift = DAG.getConstant(OldBits, DL, VT);
+    SDValue HiShift = DAG.getShiftAmountConstant(OldBits, VT, DL);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, HiShift);
     Lo = DAG.getZeroExtendInReg(Lo, DL, OldVT);
     SDValue Res = DAG.getNode(ISD::OR, DL, VT, Hi, Lo);
@@ -1624,13 +1624,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   }
 
   // Shift Lo up to occupy the upper bits of the promoted type.
-  SDValue ShiftOffset = DAG.getConstant(NewBits - OldBits, DL, AmtVT);
-  Lo = DAG.getNode(ISD::SHL, DL, VT, Lo, ShiftOffset);
+  Lo = DAG.getNode(ISD::SHL, DL, VT, Lo,
+                   DAG.getShiftAmountConstant(NewBits - OldBits, VT, DL));
 
   // Increase Amount to shift the result into the lower bits of the promoted
   // type.
   if (IsFSHR)
-    Amt = DAG.getNode(ISD::ADD, DL, AmtVT, Amt, ShiftOffset);
+    Amt = DAG.getNode(ISD::ADD, DL, AmtVT, Amt,
+                      DAG.getConstant(NewBits - OldBits, DL, VT));
 
   return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt);
 }
