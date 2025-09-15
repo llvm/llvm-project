@@ -593,7 +593,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     LLVM_DEBUG(dbgs() << "LV(REG): At #" << Idx << " Interval # "
                       << OpenIntervals.size() << '\n');
 
-    // Add the VPValues defined by the current recipe to the list of open
+    // Add used VPValues defined by the current recipe to the list of open
     // intervals.
     for (VPValue *DefV : R->definedValues())
       if (Ends.contains(DefV))
