@@ -33,7 +33,7 @@ def InstB : TestInstruction {
 
 // CHECK:      /* 0 */       OPC_CheckField, 2, 1, 0,
 // CHECK-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
-// CHECK-NEXT: /* 8 */       OPC_Scope, 8, 0, // skip to 19
+// CHECK-NEXT: /* 8 */       OPC_Scope, 8, 0, // end scope at 19
 // CHECK-NEXT: /* 11 */      OPC_CheckField, 0, 2, 3,
 // CHECK-NEXT: /* 15 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
 // CHECK-NEXT: /* 19 */      OPC_CheckField, 3, 2, 0,
@@ -44,7 +44,7 @@ def InstB : TestInstruction {
 
 // CHECK-LARGE:      /* 0 */       OPC_CheckField, 2, 1, 0,
 // CHECK-LARGE-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
-// CHECK-LARGE-NEXT: /* 8 */       OPC_Scope, 8, 0, 0, // skip to 20
+// CHECK-LARGE-NEXT: /* 8 */       OPC_Scope, 8, 0, 0, // end scope at 20
 // CHECK-LARGE-NEXT: /* 12 */      OPC_CheckField, 0, 2, 3,
 // CHECK-LARGE-NEXT: /* 16 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
 // CHECK-LARGE-NEXT: /* 20 */      OPC_CheckField, 3, 2, 0,

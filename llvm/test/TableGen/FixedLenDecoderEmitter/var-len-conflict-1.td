@@ -18,7 +18,7 @@ class I : Instruction {
 // 00000001 ________  I16_1
 // 00000010 ________  I16_2
 
-// CHECK:      /* 0 */  OPC_Scope, 17, 0,               // skip to 20
+// CHECK:      /* 0 */  OPC_Scope, 17, 0,               // end scope at 20
 // CHECK-NEXT: /* 3 */  OPC_ExtractField, 0, 1,         // Field = Inst{0}
 // CHECK-NEXT: /* 6 */  OPC_FilterValueOrSkip, 0, 4, 0, // if Field != 0x0 skip to 14
 // CHECK-NEXT: /* 10 */ OPC_Decode, {{[0-9]+}}, 2, 0,   // Opcode: I8_0, DecodeIdx: 0

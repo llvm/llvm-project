@@ -807,7 +807,7 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
   };
 
   auto EmitNumToSkipComment = [&](uint32_t NumToSkip) {
-    uint32_t Index = ((I - Table.begin()) + NumToSkip);
+    uint32_t Index = (I - Table.begin()) + NumToSkip;
     OS << "skip to " << Index;
   };
 
@@ -848,7 +848,8 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     case OPC_Scope: {
       uint32_t NumToSkip = EmitNumToSkip(I, OS);
       StartComment();
-      EmitNumToSkipComment(NumToSkip);
+      uint32_t Index = (I - Table.begin()) + NumToSkip;
+      OS << "end scope at " << Index;
       break;
     }
     case OPC_ExtractField: {
