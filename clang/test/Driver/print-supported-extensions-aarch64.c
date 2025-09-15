@@ -18,6 +18,8 @@
 // CHECK-NEXT:     d128                FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128 Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers and instructions
 // CHECK-NEXT:     dit                 FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions
 // CHECK-NEXT:     dotprod             FEAT_DotProd                                           Enable dot product support
+// CHECK-NEXT:     f16f32dot           FEAT_F16F32DOT                                         Enable Armv9.7-A Advanced SIMD half-precision dot product accumulate to single-precision
+// CHECK-NEXT:     f16f32mm            FEAT_F16F32MM                                          Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision
 // CHECK-NEXT:     f16mm               FEAT_F16MM                                             Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate
 // CHECK-NEXT:     f32mm               FEAT_F32MM                                             Enable Matrix Multiply FP32 Extension
 // CHECK-NEXT:     f64mm               FEAT_F64MM                                             Enable Matrix Multiply FP64 Extension
