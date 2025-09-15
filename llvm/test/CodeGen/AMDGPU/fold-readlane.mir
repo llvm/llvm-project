@@ -371,8 +371,6 @@ body:             |
 # GCN-NEXT: %2:vgpr_32 = COPY %0
 # GCN-NEXT: %3:vgpr_32 = COPY %1
 # GCN-NEXT: %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, killed %3, %subreg.sub1
-# GCN-NEXT: %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub0, implicit $exec
-# GCN-NEXT: %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub1, implicit $exec
 ---
 name: fold-copy-readfirstlane-regsequence1
 tracksRegLiveness: true
