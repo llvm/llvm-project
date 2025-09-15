@@ -1705,10 +1705,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
-    if (ProfcheckDisableMetadataFixes)
-      I.dropUBImplyingAttrsAndMetadata();
-    else
-      I.dropUBImplyingAttrsAndMetadata({LLVMContext::MD_prof});
+    I.dropUBImplyingAttrsAndMetadata();
   }
 
   if (isa<PHINode>(I))

@@ -1169,7 +1169,8 @@ It also supports a `level` argument to control the verbosity of the output.
 
   LDBG(2) << "I am here!";
 
-A ``DEBUG_TYPE`` macro should be defined in the file before using ``LDBG()``.
+A ``DEBUG_TYPE`` macro may optionally be defined in the file before using
+``LDBG()``, otherwise the file name is used as the debug type.
 The file name and line number are automatically added to the output, as well as
 a terminating newline.
 
@@ -1180,7 +1181,7 @@ The debug output can be enabled by passing the ``-debug`` command line argument.
   $ opt < a.bc > /dev/null -mypass
   <no output>
   $ opt < a.bc > /dev/null -mypass -debug
-  [my-pass:2] MyPass.cpp:123 I am here!
+  [my-pass MyPass.cpp:123 2] I am here!
 
 While `LDBG()` is useful to add debug output to your code, there are cases
 where you may need to guard a block of code with a debug check. The
@@ -1222,29 +1223,29 @@ Fine grained debug info with ``DEBUG_TYPE`` and the ``-debug-only`` option
 Sometimes you may find yourself in a situation where enabling ``-debug`` just
 turns on **too much** information (such as when working on the code generator).
 If you want to enable debug information with more fine-grained control, you
-should define the ``DEBUG_TYPE`` macro and use the ``-debug-only`` option as
-follows:
+can control the debug type and level with associate with each logging statement
+as follows:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "foo"
+  #define DEBUG_TYPE "foo" // Optional: the file name is used instead if not defined
   LDBG(2) << "Hello,";
   // DEBUG_TYPE can be overridden locally, here with "bar"
   LDBG("bar", 3) << "'bar' debug type";
 
 
-A more fine-grained control can be achieved by passing the ``-debug-only``
-command line argument:
+A more fine-grained control of the output can be achieved by passing the
+``-debug-only`` command line argument:
 
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass -debug-only=foo
-  [foo:2] MyPass.cpp:123 Hello,
+  [foo MyPass.cpp:123 2] Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo,bar
-  [foo:2] MyPass.cpp:123 Hello,
-  [bar:3] MyPass.cpp:124 World!
+  [foo MyPass.cpp:123 2] Hello,
+  [bar MyPass.cpp:124 3] World!
   $ opt < a.bc > /dev/null -mypass -debug-only=bar
-  [bar:3] MyPass.cpp:124 World!
+  [bar MyPass.cpp:124 3] World!
 
 The debug-only argument is a comma separated list of debug types and levels.
 The level is an optional integer setting the maximum debug level to enable:
@@ -1252,9 +1253,9 @@ The level is an optional integer setting the maximum debug level to enable:
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass -debug-only=foo:2,bar:2
-  [foo:2] MyPass.cpp:123 Hello,
+  [foo MyPass.cpp:123 2] Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo:1,bar:3
-  [bar:3] MyPass.cpp:124 World!
+  [bar MyPass.cpp:124 3] World!
 
 Instead of opting in specific debug types, the ``-debug-only`` option also
 works to filter out debug output for specific debug types, by omitting the
@@ -1263,7 +1264,7 @@ level (or setting it to 0):
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass -debug-only=foo:
-  [bar:3] MyPass.cpp:124 World!
+  [bar MyPass.cpp:124 3] World!
   $ opt < a.bc > /dev/null -mypass -debug-only=bar:0,foo:
 
 
