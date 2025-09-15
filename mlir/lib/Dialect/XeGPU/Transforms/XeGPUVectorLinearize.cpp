@@ -35,8 +35,6 @@ namespace {
 struct XeGPUVectorLinearizePass final
     : public xegpu::impl::XeGPUVectorLinearizeBase<XeGPUVectorLinearizePass> {
   void runOnOperation() override {
-    auto *context = &getContext();
-
     // vector.broadcast and vector.gather requires progressive lowering
     {
       mlir::RewritePatternSet patterns(&getContext());
@@ -56,30 +54,32 @@ struct XeGPUVectorLinearizePass final
       mlir::vector::UnrollVectorOptions vectorOptions;
       vectorOptions.setNativeShapeFn(
           [](mlir::Operation *op) -> std::optional<mlir::SmallVector<int64_t>> {
-            // Only unroll for vector::LoadOp and vector::StoreOp
-            if (mlir::isa<mlir::vector::LoadOp>(op)) {
-              if (auto vecType = mlir::dyn_cast<mlir::VectorType>(
-                      op->getResult(0).getType())) {
-                auto shape = vecType.getShape();
-                if (shape.size() == 2)
-                  return mlir::SmallVector<int64_t>{1, shape[1]};
-              }
-            }
-            if (mlir::isa<mlir::vector::StoreOp>(op)) {
-              if (auto vecType = mlir::dyn_cast<mlir::VectorType>(
-                      op->getOperand(0).getType())) {
-                auto shape = vecType.getShape();
-                if (shape.size() == 2)
-                  return mlir::SmallVector<int64_t>{1, shape[1]};
-              }
-            }
-            return std::nullopt;
+            auto extractVectorType =
+                [](mlir::Operation *op) -> mlir::VectorType {
+              if (auto loadOp = mlir::dyn_cast<mlir::vector::LoadOp>(op))
+                return mlir::dyn_cast<mlir::VectorType>(
+                    loadOp.getResult().getType());
+              if (auto storeOp = mlir::dyn_cast<mlir::vector::StoreOp>(op))
+                return mlir::dyn_cast<mlir::VectorType>(
+                    storeOp.getValueToStore().getType());
+              return nullptr;
+            };
+
+            auto vecType = extractVectorType(op);
+            if (!vecType)
+              return std::nullopt;
+
+            auto shape = vecType.getShape();
+            if (shape.size() != 2)
+              return std::nullopt;
+
+            return mlir::SmallVector<int64_t>{1, shape[1]};
           });
       mlir::vector::populateVectorUnrollPatterns(patterns, vectorOptions);
       (void)mlir::applyPatternsGreedily(getOperation(), std::move(patterns));
     }
 
-    // Use upstream linearization patterns
+    // Use vector linearization patterns
     {
       mlir::MLIRContext &context = getContext();
       mlir::TypeConverter converter;
@@ -96,16 +96,6 @@ struct XeGPUVectorLinearizePass final
                                         std::move(patterns))))
         return signalPassFailure();
     }
-
-    mlir::TypeConverter typeConverter;
-    mlir::RewritePatternSet patterns(context);
-    mlir::ConversionTarget target(*context);
-    typeConverter.addConversion([](mlir::Type type) { return type; });
-
-    target.addIllegalOp<mlir::vector::TransposeOp>();
-    target.addLegalOp<mlir::vector::ShapeCastOp>();
-    target.addLegalOp<mlir::vector::ExtractOp>();
-    target.addLegalDialect<mlir::xegpu::XeGPUDialect>();
   }
 };
 } // namespace
