@@ -34,7 +34,7 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle) ||
+      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle ||
       !Common.ExtractSection.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for COFF");
@@ -56,7 +56,7 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle) ||
+      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle ||
       !Common.ExtractSection.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for MachO");
@@ -78,7 +78,7 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
       !Common.SymbolsToRename.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle) ||
+      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle ||
       !Common.ExtractSection.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "only flags for section dumping, removal, and "
@@ -109,12 +109,12 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
       Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
       Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle) ||
+      !Common.ChangeSectionAddress.empty() || Common.DumpOffloadBundle ||
       !Common.ExtractSection.empty()) {
     return createStringError(
         llvm::errc::invalid_argument,
         "no flags are supported yet, only basic copying is allowed");
-    }
+  }
 
   return XCOFF;
 }
