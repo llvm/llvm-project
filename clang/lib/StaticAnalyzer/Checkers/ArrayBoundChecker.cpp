@@ -389,15 +389,26 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
 }
 
 static Messages getPrecedesMsgs(const MemSpaceRegion *Space,
-                                const SubRegion *Region, NonLoc Offset) {
-  std::string RegName = getRegionName(Space, Region), OffsetStr = "";
+                                const SubRegion *Region, NonLoc Offset,
+                                QualType ElemType, int64_t ElemSize) {
+  std::string RegName = getRegionName(Space, Region);
 
-  if (auto ConcreteOffset = getConcreteValue(Offset))
+  std::string OffsetStr = "", ElemInfoStr = "";
+  if (std::optional<int64_t> ConcreteOffset = getConcreteValue(Offset)) {
     OffsetStr = formatv(" {0}", ConcreteOffset);
+    if (*ConcreteOffset % ElemSize == 0) {
+      int64_t Count = *ConcreteOffset / ElemSize;
+      if (Count != -1)
+        ElemInfoStr =
+            formatv(" = {0} * sizeof({1})", Count, ElemType.getAsString());
+      else
+        ElemInfoStr = formatv(" = -sizeof({0})", ElemType.getAsString());
+    }
+  }
 
-  return {
-      formatv("Out of bound access to memory preceding {0}", RegName),
-      formatv("Access of {0} at negative byte offset{1}", RegName, OffsetStr)};
+  return {formatv("Out of bound access to memory preceding {0}", RegName),
+          formatv("Access of {0} at negative byte offset{1}{2}", RegName,
+                  OffsetStr, ElemInfoStr)};
 }
 
 /// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
@@ -419,19 +430,14 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
-static Messages getExceedsMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
+static Messages getExceedsMsgs(const MemSpaceRegion *Space,
                                const SubRegion *Region, NonLoc Offset,
-                               NonLoc Extent, SVal Location,
-                               bool AlsoMentionUnderflow) {
+                               NonLoc Extent, bool AlsoMentionUnderflow,
+                               QualType ElemType, int64_t ElemSize) {
   std::string RegName = getRegionName(Space, Region);
-  const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
-  assert(EReg && "this checker only handles element access");
-  QualType ElemType = EReg->getElementType();
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
-
-  int64_t ElemSize = ACtx.getTypeSizeInChars(ElemType).getQuantity();
 
   bool UseByteOffsets = !tryDividePair(OffsetN, ExtentN, ElemSize);
   const char *OffsetOrIndex = UseByteOffsets ? "byte offset" : "index";
@@ -585,6 +591,13 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
   if (!RawOffset)
     return;
 
+  const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
+  assert(EReg && "this checker only handles element access");
+  QualType ElemType = EReg->getElementType();
+
+  int64_t ElemSize =
+      C.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
+
   auto [Reg, ByteOffset] = *RawOffset;
 
   // The state updates will be reported as a single note tag, which will be
@@ -635,7 +648,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Messages Msgs = getPrecedesMsgs(Space, Reg, ByteOffset);
+          Messages Msgs =
+              getPrecedesMsgs(Space, Reg, ByteOffset, ElemType, ElemSize);
           reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
           return;
         }
@@ -678,8 +692,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
         }
 
         Messages Msgs =
-            getExceedsMsgs(C.getASTContext(), Space, Reg, ByteOffset,
-                           *KnownSize, Location, AlsoMentionUnderflow);
+            getExceedsMsgs(Space, Reg, ByteOffset, *KnownSize,
+                           AlsoMentionUnderflow, ElemType, ElemSize);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }
