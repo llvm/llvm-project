@@ -86,7 +86,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     // FIXME: MayNeedAGPRs is a misnomer for how this is used. MFMA selection
     // should be separated from availability of AGPRs
     if (MFMAVGPRForm ||
-        (ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
+        (ST.getMaxNumVGPRs(F) <= ST.getAddressableNumArchVGPRs() &&
          !mayUseAGPRs(F)))
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
@@ -195,6 +195,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(

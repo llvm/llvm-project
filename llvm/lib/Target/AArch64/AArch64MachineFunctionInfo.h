@@ -235,6 +235,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
   SMEAttrs SMEFnAttrs;
 
+  // Holds the TPIDR2 block if allocated early (for Windows/stack probes
+  // support).
+  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
+
   // Note: The following properties are only used for the old SME ABI lowering:
   /// The frame-index for the TPIDR2 object used for lazy saves.
   TPIDR2Object TPIDR2;
@@ -252,6 +256,14 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  void setEarlyAllocSMESaveBuffer(Register Ptr) {
+    EarlyAllocSMESaveBuffer = Ptr;
+  }
+
+  Register getEarlyAllocSMESaveBuffer() const {
+    return EarlyAllocSMESaveBuffer;
+  }
 
   // Old SME ABI lowering state getters/setters:
   Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
@@ -588,6 +600,7 @@ namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<bool> HasRedZone;
   std::optional<uint64_t> StackSizeSVE;
+  std::optional<bool> HasStackFrame;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -600,6 +613,7 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
   static void mapping(IO &YamlIO, AArch64FunctionInfo &MFI) {
     YamlIO.mapOptional("hasRedZone", MFI.HasRedZone);
     YamlIO.mapOptional("stackSizeSVE", MFI.StackSizeSVE);
+    YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
   }
 };
 

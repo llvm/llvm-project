@@ -46,6 +46,21 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Renamed :program:`clang-tidy`'s option name of check
+  :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
+  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
+  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
+  correcting a spelling mistake.
+
 Improvements to clangd
 ----------------------
 
@@ -135,7 +150,7 @@ Improvements to clang-tidy
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` 
+- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
@@ -154,6 +169,12 @@ New checks
 
   Finds calls to ``operator[]`` in STL containers and suggests replacing them
   with safe alternatives.
+
+- New :doc:`google-runtime-float
+  <clang-tidy/checks/google/runtime-float>` check.
+
+  Finds uses of ``long double`` and suggests against their use due to lack of
+  portability.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
@@ -176,8 +197,18 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
+  :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
+  correcting a spelling mistake on its option
+  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
@@ -201,6 +232,11 @@ Changes in existing checks
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
+
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
@@ -215,8 +251,22 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
+
+  - Fix-it handles callees with nested-name-specifier correctly.
+
+  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+    handled correctly.
+
+  - ``for`` loops are supported.
+
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
+  which are part of an implicit instantiation of a template.
 
 - Improved :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
