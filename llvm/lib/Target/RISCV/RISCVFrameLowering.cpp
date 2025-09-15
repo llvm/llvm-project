@@ -106,8 +106,14 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  // We check Zimop instead of (Zimop || Zcmop) to determine whether HW shadow
+  // stack is available despite the fact that sspush/sspopchk both have a
+  // compressed form, because if only Zcmop is available, we would need to
+  // reserve X5 due to c.sspopchk only takes X5 and we currently do not support
+  // using X5 as the return address register.
+  // However, we can still aggressively use c.sspush x1 if zcmop is available.
   bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZicfiss();
+                          STI.hasStdExtZimop();
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -124,7 +130,12 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
+    if (STI.hasStdExtZcmop()) {
+      static_assert(RAReg == RISCV::X1, "C.SSPUSH only accepts X1");
+      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_C_SSPUSH));
+    } else {
+      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_SSPUSH)).addReg(RAReg);
+    }
     return;
   }
 
@@ -172,7 +183,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZicfiss();
+                          STI.hasStdExtZimop();
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -186,7 +197,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
+    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_SSPOPCHK)).addReg(RAReg);
     return;
   }
 
