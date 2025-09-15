@@ -2418,7 +2418,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
 
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.
-  translator.debugTranslation->addModuleFlagsIfNotPresent();
+  translator.debugTranslation->addModuleFlagsIfNotPresent(module);
 
   // Call the OpenMP IR Builder callbacks prior to verifying the module
   if (auto *ompBuilder = translator.getOpenMPBuilder())

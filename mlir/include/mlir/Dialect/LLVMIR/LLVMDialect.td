@@ -92,6 +92,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getDependentLibrariesAttrName() {
       return "llvm.dependent_libraries";
     }
+    /// Name of the dwarf version attribute.
+    static StringRef getDwarfVersionAttrName() { return "llvm.dwarf_version"; }
 
     /// Names of known llvm module flag keys.
     static StringRef getModuleFlagKeyCGProfileName() {

@@ -36,8 +36,9 @@ DebugTranslation::DebugTranslation(Operation *module, llvm::Module &llvmModule)
 
 static constexpr StringRef kDebugVersionKey = "Debug Info Version";
 static constexpr StringRef kCodeViewKey = "CodeView";
+static constexpr StringRef kDwarfVersionKey = "Dwarf Version";
 
-void DebugTranslation::addModuleFlagsIfNotPresent() {
+void DebugTranslation::addModuleFlagsIfNotPresent(Operation *module) {
   // TODO: The version information should be encoded on the LLVM module itself,
   // not implicitly set here.
 
@@ -52,6 +53,13 @@ void DebugTranslation::addModuleFlagsIfNotPresent() {
     // is set explicitly. Windows/MSVC should use CodeView instead.
     if (!llvmModule.getModuleFlag(kCodeViewKey))
       llvmModule.addModuleFlag(llvm::Module::Warning, kCodeViewKey, 1);
+  }
+  if (auto attr = module->getAttrOfType<IntegerAttr>(
+          LLVM::LLVMDialect::getDwarfVersionAttrName())) {
+    int32_t attrValue = attr.getInt();
+    assert((attrValue >= 2 && attrValue <= 5) && "Unsupported DWARF version");
+    if (!llvmModule.getModuleFlag(kDwarfVersionKey))
+      llvmModule.addModuleFlag(llvm::Module::Max, kDwarfVersionKey, attrValue);
   }
 }
 

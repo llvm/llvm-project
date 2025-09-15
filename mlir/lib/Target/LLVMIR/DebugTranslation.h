@@ -32,7 +32,7 @@ public:
   DebugTranslation(Operation *module, llvm::Module &llvmModule);
 
   /// Adds the necessary module flags to the module, if not yet present.
-  void addModuleFlagsIfNotPresent();
+  void addModuleFlagsIfNotPresent(Operation *module);
 
   /// Translate the given location to an llvm debug location.
   llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
