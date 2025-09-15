@@ -398,14 +398,21 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
 
 /// Converts an IntegerAttr to have the specified type if needed.
 /// This handles cases where constant attributes have a different type than the
-/// target element type. If the input attribute is not an IntegerAttr or already
-/// has the correct type, returns it unchanged.
+/// target element type. Returns null if the attribute is poison/invalid or
+/// conversion fails.
 static Attribute convertIntegerAttr(Attribute attr, Type expectedType) {
-  if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
-    if (intAttr.getType() != expectedType)
-      return IntegerAttr::get(expectedType, intAttr.getInt());
-  }
-  return attr;
+  // Check for poison attributes before any casting operations
+  if (!attr || isa<ub::PoisonAttrInterface>(attr))
+    return {}; // Poison or invalid attribute
+
+  auto intAttr = mlir::dyn_cast<IntegerAttr>(attr);
+  if (!intAttr)
+    return attr; // Not an IntegerAttr, return unchanged (e.g., FloatAttr)
+
+  if (intAttr.getType() == expectedType)
+    return attr; // Already correct type
+
+  return IntegerAttr::get(expectedType, intAttr.getInt());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2477,6 +2484,12 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
     return convertIntegerAttr(attr, destEltType);
   });
+
+  // Check if any attributes are poison/invalid (indicated by null attributes).
+  // Note: convertIntegerAttr returns valid non-integer attributes unchanged,
+  // only returns null for poison/invalid attributes.
+  if (llvm::any_of(convertedElements, [](Attribute attr) { return !attr; }))
+    return {};
 
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
