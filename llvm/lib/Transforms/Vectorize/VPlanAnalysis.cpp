@@ -394,20 +394,6 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-/// Get the VF scaling factor applied to the recipe's output, if the recipe has
-/// one.
-static unsigned getVFScaleFactor(VPRecipeBase *R) {
-  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
-    return RR->getVFScaleFactor();
-  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
-    return RR->getVFScaleFactor();
-  assert(
-      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
-                                     VPInstruction::ReductionStartVector) &&
-      "getting scaling factor of reduction-start-vector not implemented yet");
-  return 1;
-}
-
 bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
                                         unsigned OverrideMaxNumRegs) const {
   return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
@@ -569,7 +555,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         } else {
           // The output from scaled phis and scaled reductions actually has
           // fewer lanes than the VF.
-          unsigned ScaleFactor = getVFScaleFactor(R);
+          unsigned ScaleFactor = vputils::getVFScaleFactor(R);
           ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
           LLVM_DEBUG(if (VF != VFs[J]) {
             dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
