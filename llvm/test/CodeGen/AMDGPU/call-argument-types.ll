@@ -426,16 +426,27 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_call_external_void_func_i8_imm:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x7b
-; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8@rel32@hi+12
-; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX11-NEXT:    s_mov_b32 s32, 0
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: test_call_external_void_func_i8_imm:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x7b
+; GFX11-TRUE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-TRUE16-NEXT:    s_add_u32 s2, s2, external_void_func_i8@rel32@lo+4
+; GFX11-TRUE16-NEXT:    s_addc_u32 s3, s3, external_void_func_i8@rel32@hi+12
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-TRUE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: test_call_external_void_func_i8_imm:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GFX11-FAKE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-FAKE16-NEXT:    s_add_u32 s2, s2, external_void_func_i8@rel32@lo+4
+; GFX11-FAKE16-NEXT:    s_addc_u32 s3, s3, external_void_func_i8@rel32@hi+12
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-FAKE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-FAKE16-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_i8_imm:
 ; HSA:       ; %bb.0:
@@ -723,16 +734,27 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_call_external_void_func_i16_imm:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x7b
-; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16@rel32@hi+12
-; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX11-NEXT:    s_mov_b32 s32, 0
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: test_call_external_void_func_i16_imm:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x7b
+; GFX11-TRUE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-TRUE16-NEXT:    s_add_u32 s2, s2, external_void_func_i16@rel32@lo+4
+; GFX11-TRUE16-NEXT:    s_addc_u32 s3, s3, external_void_func_i16@rel32@hi+12
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-TRUE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: test_call_external_void_func_i16_imm:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GFX11-FAKE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-FAKE16-NEXT:    s_add_u32 s2, s2, external_void_func_i16@rel32@lo+4
+; GFX11-FAKE16-NEXT:    s_addc_u32 s3, s3, external_void_func_i16@rel32@hi+12
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-FAKE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-FAKE16-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_i16_imm:
 ; HSA:       ; %bb.0:
@@ -1642,16 +1664,27 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_call_external_void_func_f16_imm:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x4400
-; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f16@rel32@hi+12
-; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX11-NEXT:    s_mov_b32 s32, 0
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: test_call_external_void_func_f16_imm:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x4400
+; GFX11-TRUE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-TRUE16-NEXT:    s_add_u32 s2, s2, external_void_func_f16@rel32@lo+4
+; GFX11-TRUE16-NEXT:    s_addc_u32 s3, s3, external_void_func_f16@rel32@hi+12
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-TRUE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: test_call_external_void_func_f16_imm:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x4400
+; GFX11-FAKE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-FAKE16-NEXT:    s_add_u32 s2, s2, external_void_func_f16@rel32@lo+4
+; GFX11-FAKE16-NEXT:    s_addc_u32 s3, s3, external_void_func_f16@rel32@hi+12
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-FAKE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-FAKE16-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_f16_imm:
 ; HSA:       ; %bb.0:

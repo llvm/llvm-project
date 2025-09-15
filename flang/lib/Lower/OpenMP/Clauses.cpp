@@ -221,6 +221,8 @@ MAKE_EMPTY_CLASS(Capture, Capture);
 MAKE_EMPTY_CLASS(Compare, Compare);
 MAKE_EMPTY_CLASS(DynamicAllocators, DynamicAllocators);
 MAKE_EMPTY_CLASS(Full, Full);
+MAKE_EMPTY_CLASS(GraphId, GraphId);
+MAKE_EMPTY_CLASS(GraphReset, GraphReset);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
@@ -237,11 +239,11 @@ MAKE_EMPTY_CLASS(Relaxed, Relaxed);
 MAKE_EMPTY_CLASS(Release, Release);
 MAKE_EMPTY_CLASS(ReverseOffload, ReverseOffload);
 MAKE_EMPTY_CLASS(SeqCst, SeqCst);
+MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
 MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
-MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);
@@ -255,6 +257,8 @@ MAKE_EMPTY_CLASS(Threadprivate, Threadprivate);
 
 MAKE_INCOMPLETE_CLASS(AdjustArgs, AdjustArgs);
 MAKE_INCOMPLETE_CLASS(AppendArgs, AppendArgs);
+MAKE_INCOMPLETE_CLASS(Replayable, Replayable);
+MAKE_INCOMPLETE_CLASS(Transparent, Transparent);
 
 List<IteratorSpecifier>
 makeIteratorSpecifiers(const parser::OmpIteratorSpecifier &inp,
@@ -396,6 +400,8 @@ makePrescriptiveness(parser::OmpPrescriptiveness::Value v) {
   switch (v) {
   case parser::OmpPrescriptiveness::Value::Strict:
     return clause::Prescriptiveness::Strict;
+  case parser::OmpPrescriptiveness::Value::Fallback:
+    return clause::Prescriptiveness::Fallback;
   }
   llvm_unreachable("Unexpected prescriptiveness");
 }
@@ -769,6 +775,27 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 }
 
 // DynamicAllocators: empty
+
+DynGroupprivate make(const parser::OmpClause::DynGroupprivate &inp,
+                     semantics::SemanticsContext &semaCtx) {
+  // imp.v -> OmpDyngroupprivateClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAccessGroup::Value, DynGroupprivate::AccessGroup,
+      // clang-format off
+      MS(Cgroup,  Cgroup)
+      // clang-format on
+  );
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *m0 = semantics::OmpGetUniqueModifier<parser::OmpAccessGroup>(mods);
+  auto *m1 = semantics::OmpGetUniqueModifier<parser::OmpPrescriptiveness>(mods);
+  auto &size = std::get<parser::ScalarIntExpr>(inp.v.t);
+
+  return DynGroupprivate{
+      {/*AccessGroup=*/maybeApplyToV(convert, m0),
+       /*Prescriptiveness=*/maybeApplyToV(makePrescriptiveness, m1),
+       /*Size=*/makeExpr(size, semaCtx)}};
+}
 
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {

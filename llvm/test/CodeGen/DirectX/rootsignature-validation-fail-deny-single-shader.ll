@@ -3,13 +3,11 @@
 ; CHECK: error: Shader has root bindings but root signature uses a DENY flag to disallow root binding access to the shader stage.
 target triple = "dxil-pc-shadermodel6.6-pixel"
 
-%__cblayout_CB = type <{ float }>
+@SB.str = private unnamed_addr constant [3 x i8] c"SB\00", align 1
 
-@CB.str = private unnamed_addr constant [3 x i8] c"CB\00", align 1
-
-define void @CSMain() "hlsl.shader"="compute" {
+define void @CSMain() "hlsl.shader"="pixel" {
 entry:
-  %CB = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 4, 0)) @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false, ptr nonnull @CB.str)
+  %SB = tail call target("dx.RawBuffer", i32, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @SB.str)
   ret void
 }
 
@@ -17,5 +15,5 @@ entry:
 
 !0 = !{ptr @CSMain, !1, i32 2}
 !1 = !{!2, !3}
-!2 = !{!"RootConstants", i32 0, i32 2, i32 0, i32 4}
+!2 = !{!"RootSRV", i32 0, i32 0, i32 0, i32 4}
 !3 = !{!"RootFlags", i32 32} ; 32 = deny_pixel_shader_root_access

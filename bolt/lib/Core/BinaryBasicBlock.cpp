@@ -103,9 +103,18 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         Valid &= (Sym == Function->getFunctionEndLabel() ||
                   Sym == Function->getFunctionEndLabel(getFragmentNum()));
         if (!Valid) {
-          BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
-                    << Sym->getName() << "\n";
+          const BinaryFunction *TargetBF = BC.getFunctionForSymbol(Sym);
+          if (TargetBF) {
+            // It's possible for another function to be in the jump table entry
+            // as a result of built-in unreachable.
+            Valid = true;
+          } else {
+            BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
+                      << Sym->getName() << "\n";
+          }
         }
+        if (!Valid)
+          break;
       }
     }
   } else {

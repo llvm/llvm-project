@@ -5,6 +5,7 @@ import sys
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))

@@ -20,6 +20,7 @@ namespace pdb {
 class LLVM_ABI PDBSymbolTypeBuiltin : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::BuiltinType)
 public:
+  ~PDBSymbolTypeBuiltin();
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_METHOD(getBuiltinType)

@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -87,7 +86,7 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
   // Do this by introducing debug uses of each register definition. If that is
   // not possible (e.g. we have a phi or a meta instruction), emit a constant.
   uint64_t NextImm = 0;
-  SmallSet<DILocalVariable *, 16> VarSet;
+  SmallPtrSet<DILocalVariable *, 16> VarSet;
   const MCInstrDesc &DbgValDesc = TII.get(TargetOpcode::DBG_VALUE);
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator FirstNonPHIIt = MBB.getFirstNonPHI();

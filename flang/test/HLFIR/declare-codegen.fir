@@ -237,3 +237,30 @@ func.func @rebox_scalar_attrs(%arg0: !fir.class<!fir.ptr<!fir.type<sometype{i:i3
 // CHECK-LABEL: @rebox_scalar_attrs
 // CHECK: fir.rebox %{{.*}} : (!fir.class<!fir.ptr<!fir.type<sometype{i:i32}>>>) -> !fir.class<!fir.type<sometype{i:i32}>>
 // CHECK: return
+
+func.func @vars_within_physical_storage() {
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %1 = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+  %2 = fir.convert %1 : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %3 = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  %4 = fir.convert %3 : (!fir.ref<i8>) -> !fir.ref<f32>
+  %5:2 = hlfir.declare %4 storage (%1[0]) {uniq_name = "a"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %6 = fir.coordinate_of %2, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<f32>
+  %8:2 = hlfir.declare %7 storage (%1[4]) {uniq_name = "b"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+// CHECK-LABEL:   func.func @vars_within_physical_storage() {
+// CHECK:           %[[VAL_0:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_2:.*]] = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+// CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+// CHECK:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_1]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+// CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_5]] storage(%[[VAL_2]][0]) {uniq_name = "a"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+// CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<i8>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_9:.*]] = fir.declare %[[VAL_8]] storage(%[[VAL_2]][4]) {uniq_name = "b"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+// CHECK:           return
+// CHECK:         }

@@ -112,8 +112,22 @@ protected:
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
-  using OptLabelTy = std::optional<LabelTy>;
+  using OptLabelTy = UnsignedOrNone;
   using CaseMap = llvm::DenseMap<const SwitchCase *, LabelTy>;
+
+  struct LabelInfo {
+    const Stmt *Name;
+    const VariableScope<Emitter> *BreakOrContinueScope;
+    OptLabelTy BreakLabel;
+    OptLabelTy ContinueLabel;
+    OptLabelTy DefaultLabel;
+    LabelInfo(const Stmt *Name, OptLabelTy BreakLabel, OptLabelTy ContinueLabel,
+              OptLabelTy DefaultLabel,
+              const VariableScope<Emitter> *BreakOrContinueScope)
+        : Name(Name), BreakOrContinueScope(BreakOrContinueScope),
+          BreakLabel(BreakLabel), ContinueLabel(ContinueLabel),
+          DefaultLabel(DefaultLabel) {}
+  };
 
   /// Current compilation context.
   Context &Ctx;
@@ -282,6 +296,7 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
@@ -315,11 +330,11 @@ protected:
                                   bool IsConstexprUnknown = false);
 
   /// Allocates a space storing a local given its type.
-  std::optional<unsigned>
-  allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
-                const ValueDecl *ExtendingDecl = nullptr,
-                ScopeKind = ScopeKind::Block, bool IsConstexprUnknown = false);
-  std::optional<unsigned> allocateTemporary(const Expr *E);
+  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+                               const ValueDecl *ExtendingDecl = nullptr,
+                               ScopeKind = ScopeKind::Block,
+                               bool IsConstexprUnknown = false);
+  UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -346,9 +361,10 @@ private:
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
+  bool emitConst(const llvm::APInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
-    return emitConst(static_cast<llvm::APSInt>(Value), E);
+    return emitConst(Value, classifyPrim(E), E);
   }
 
   /// Emits an integer constant.
@@ -389,8 +405,8 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
-  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
+  bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
+  bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
   bool emitDummyPtr(const DeclTy &D, const Expr *E);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
@@ -426,6 +442,7 @@ protected:
   bool DiscardResult = false;
 
   bool InStmtExpr = false;
+  bool ToLValue = false;
 
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
@@ -440,17 +457,8 @@ protected:
 
   /// Switch case mapping.
   CaseMap CaseLabels;
-
-  /// Scope to cleanup until when we see a break statement.
-  VariableScope<Emitter> *BreakVarScope = nullptr;
-  /// Point to break to.
-  OptLabelTy BreakLabel;
-  /// Scope to cleanup until when we see a continue statement.
-  VariableScope<Emitter> *ContinueVarScope = nullptr;
-  /// Point to continue to.
-  OptLabelTy ContinueLabel;
-  /// Default case label.
-  OptLabelTy DefaultLabel;
+  /// Stack of label information for loops and switch statements.
+  llvm::SmallVector<LabelInfo> LabelInfoStack;
 
   const FunctionDecl *CompilingFunction = nullptr;
 };
@@ -565,7 +573,7 @@ public:
 
   void addLocal(const Scope::Local &Local) override {
     if (!Idx) {
-      Idx = this->Ctx->Descriptors.size();
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
       this->Ctx->emitInitScope(*Idx, {});
     }
@@ -584,11 +592,9 @@ public:
       if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
         return false;
 
-      if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
+      if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
         return false;
 
-      if (!this->Ctx->emitPopPtr(E))
-        return false;
       removeIfStoredOpaqueValue(Local);
     }
     return true;
@@ -613,7 +619,7 @@ public:
   }
 
   /// Index of the scope in the chain.
-  std::optional<unsigned> Idx;
+  UnsignedOrNone Idx = std::nullopt;
 };
 
 /// Scope for storage declared in a compound statement.

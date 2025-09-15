@@ -2,7 +2,7 @@
 
 void (^globalblock)(void) = ^{};
 // CHECK: [[BLOCK_DESCRIPTOR_NAME:@"__block_descriptor_.*"]] = linkonce_odr hidden unnamed_addr constant { i64, i64, ptr, ptr } { i64 0, i64 32, ptr @.str, ptr null }, comdat, align 8
-// CHECK: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr ptrauth (ptr @_NSConcreteGlobalBlock, i32 2, i64 27361, ptr @__block_literal_global), i32 1342177280, i32 0, ptr ptrauth (ptr @globalblock_block_invoke, i32 0, i64 0, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3)), ptr ptrauth (ptr [[BLOCK_DESCRIPTOR_NAME]], i32 2, i64 49339, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 4)) }
+// CHECK: @__block_literal_global = internal constant { ptr, i32, i32, ptr, ptr } { ptr ptrauth (ptr @_NSConcreteGlobalBlock, i32 2, i64 27361, ptr @__block_literal_global), i32 1342177280, i32 0, ptr ptrauth (ptr @globalblock_block_invoke, i32 0, i64 0, ptr getelementptr inbounds ({ ptr, i32, i32, ptr, ptr }, ptr @__block_literal_global, i32 0, i32 3)), ptr [[BLOCK_DESCRIPTOR_NAME]] }
 
 @interface A
 - (int) count;

@@ -194,6 +194,8 @@ public:
       return;
     if (SM.isWrittenInCommandLineFile(MacroNameTok.getLocation()))
       return;
+    if (SM.isInSystemHeader(MacroNameTok.getLocation()))
+      return;
     Check->checkMacro(MacroNameTok, Info, SM);
   }
 
@@ -348,6 +350,8 @@ public:
     const TemplateDecl *Decl =
         Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
             /*IgnoreDeduced=*/true);
+    if (!Decl)
+      return true;
 
     if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
       if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())

@@ -9,11 +9,11 @@
 #ifndef __CLC_OPENCL_INTEGER_RHADD_H__
 #define __CLC_OPENCL_INTEGER_RHADD_H__
 
-#define FUNCTION rhadd
+#define __CLC_FUNCTION rhadd
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_INTEGER_RHADD_H__

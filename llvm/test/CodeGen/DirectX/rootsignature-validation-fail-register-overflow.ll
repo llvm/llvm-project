@@ -1,7 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: Cannot append range with implicit lower bound after an unbounded range UAV(register=4294967295, space=0).
-@TB.str = private unnamed_addr constant [3 x i8] c"TB\00", align 1
-
+; CHECK: error: Overflow for shader register range: UAV(register=4294967295, space=0)
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
   ret void

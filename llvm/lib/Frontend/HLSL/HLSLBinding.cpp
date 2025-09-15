@@ -66,26 +66,6 @@ BindingInfo::RegisterSpace::findAvailableBinding(int32_t Size) {
   return std::nullopt;
 }
 
-bool BindingInfo::RegisterSpace::isBound(BindingRange B) {
-  BindingRange *It = llvm::lower_bound(
-      FreeRanges, B.LowerBound,
-      [](const BindingRange &R, uint32_t Val) { return R.UpperBound <= Val; });
-
-  if (It != FreeRanges.end()) {
-    // Check if B is fully contained in the found range
-    if (B.LowerBound >= It->LowerBound && B.UpperBound <= It->UpperBound)
-      return false;
-  }
-  return true;
-}
-
-bool BindingInfo::isBound(dxil::ResourceClass RC, uint32_t Space,
-                          BindingRange B) {
-  BindingSpaces &BS = getBindingSpaces(RC);
-  RegisterSpace &RS = BS.getOrInsertSpace(Space);
-  return RS.isBound(B);
-}
-
 BindingInfo BindingInfoBuilder::calculateBindingInfo(
     llvm::function_ref<void(const BindingInfoBuilder &Builder,
                             const Binding &Overlapping)>
@@ -151,9 +131,9 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   return Info;
 }
 
-const BindingInfoBuilder::Binding &BindingInfoBuilder::findOverlapping(
-    const BindingInfoBuilder::Binding &ReportedBinding) const {
-  for (const BindingInfoBuilder::Binding &Other : Bindings)
+const Binding &
+BindingInfoBuilder::findOverlapping(const Binding &ReportedBinding) const {
+  for (const Binding &Other : Bindings)
     if (ReportedBinding.LowerBound <= Other.UpperBound &&
         Other.LowerBound <= ReportedBinding.UpperBound)
       return Other;
