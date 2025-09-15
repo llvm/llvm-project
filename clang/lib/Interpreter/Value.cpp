@@ -239,8 +239,14 @@ void Value::print(llvm::raw_ostream &Out, ASTContext &Ctx) const {
 
 void ValueCleanup::operator()(Value &V) {
   using namespace llvm;
+
+  if (!V.isPointer() || V.getAddr() != 0)
+    return;
+
   LLVM_DEBUG(dbgs() << "ValueCleanup: destroying value at Addr=" << V.getAddr()
                     << ", Type=" << V.getType().getAsString() << "\n");
+  assert(!DtorWrapperFn.isNull() &&
+         "Expected valid destructor wrapper function address, but found null");
   if (ObjDtor) {
     auto ObjDtorAddrOrErr = ObjDtor(V.getType());
     if (ObjDtorAddrOrErr && !ObjDtorAddrOrErr->isNull()) {
@@ -259,6 +265,9 @@ void ValueCleanup::operator()(Value &V) {
       consumeError(ObjDtorAddrOrErr.takeError());
     }
   }
+
+  assert(!DtorFn.isNull() &&
+         "Expected valid destructor function address, but found null");
 
   Error E = Error::success();
   orc::ExecutorAddr Addr(V.getAddr());

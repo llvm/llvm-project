@@ -302,9 +302,6 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
         return;
       }
   }
-
-  ValMgr = ValueResultManager::Create(IncrExecutor->GetExecutionEngine(),
-                                      getASTContext());
 }
 
 Interpreter::~Interpreter() {
@@ -676,9 +673,11 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
   Executor =
       std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Config, Err);
 #endif
-  if (!Err)
+  if (!Err) {
     IncrExecutor = std::move(Executor);
-
+    ValMgr = ValueResultManager::Create(IncrExecutor->GetExecutionEngine(),
+                                        getASTContext());
+  }
   return Err;
 }
 

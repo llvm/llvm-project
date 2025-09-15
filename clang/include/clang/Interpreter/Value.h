@@ -325,7 +325,7 @@ protected:
   const StrValue &asStr() const { return const_cast<Value *>(this)->asStr(); }
 
 public:
-  // ---- Query helpers ----
+  // ---- BuiltinKind Query helpers ----
   bool hasBuiltinThis(BuiltinKind K) const {
     if (isBuiltin())
       return asBuiltin().getKind() == K;
@@ -451,16 +451,16 @@ private:
   void destroy() {
     switch (VKind) {
     case K_Builtin:
-      reinterpret_cast<Builtins *>(&Data)->~Builtins();
+      ((Builtins *)(char *)&Data)->~Builtins();
       break;
     case K_Array:
-      reinterpret_cast<ArrValue *>(&Data)->~ArrValue();
+      ((ArrValue *)(char *)&Data)->~ArrValue();
       break;
     case K_Pointer:
-      reinterpret_cast<PtrValue *>(&Data)->~PtrValue();
+      ((PtrValue *)(char *)&Data)->~PtrValue();
       break;
     case K_Str:
-      reinterpret_cast<StrValue *>(&Data)->~StrValue();
+      ((StrValue *)(char *)&Data)->~StrValue();
       break;
     default:
       break;
@@ -525,7 +525,7 @@ private:
   ASTContext &Ctx;
   llvm::orc::MemoryAccess &MemAcc;
   Value LastVal;
-  llvm::DenseMap<ValueId, clang::QualType> IdToType;
+  llvm::DenseMap<ValueId, QualType> IdToType;
   llvm::DenseMap<ValueId, ValueCleanup> IdToValCleanup;
 };
 
