@@ -271,19 +271,12 @@ static void collectIncludePCH(CompilerInstance &CI,
 
 static void collectVFSEntries(CompilerInstance &CI,
                               std::shared_ptr<ModuleDependencyCollector> MDC) {
-  if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
-    return;
-
   // Collect all VFS found.
   SmallVector<llvm::vfs::YAMLVFSEntry, 16> VFSEntries;
-  for (const std::string &VFSFile : CI.getHeaderSearchOpts().VFSOverlayFiles) {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-        llvm::MemoryBuffer::getFile(VFSFile);
-    if (!Buffer)
-      return;
-    llvm::vfs::collectVFSFromYAML(std::move(Buffer.get()),
-                                  /*DiagHandler*/ nullptr, VFSFile, VFSEntries);
-  }
+  CI.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &VFS) {
+    if (auto *RedirectingVFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&VFS))
+      llvm::vfs::collectVFSEntries(*RedirectingVFS, VFSEntries);
+  });
 
   for (auto &E : VFSEntries)
     MDC->addFile(E.VPath, E.RPath);
