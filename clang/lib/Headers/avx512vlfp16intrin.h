@@ -1070,7 +1070,7 @@ _mm_maskz_cvtepu32_ph(__mmask8 __U, __m128i __A) {
       (__v4su)__A, (__v8hf)_mm_setzero_ph(), (__mmask8)__U);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS256
+static __inline__ __m128h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_cvtepu32_ph(__m256i __A) {
   return (__m128h) __builtin_convertvector((__v8su)__A, __v8hf);
 }
