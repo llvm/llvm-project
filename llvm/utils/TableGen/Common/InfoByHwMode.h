@@ -253,9 +253,6 @@ public:
   RegClassByHwMode() = default;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
-raw_ostream &operator<<(raw_ostream &OS, const RegClassByHwMode &T);
-
 } // namespace llvm
 
 #endif // LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H

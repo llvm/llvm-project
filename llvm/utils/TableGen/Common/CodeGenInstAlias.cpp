@@ -53,14 +53,20 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
       const Record *ArgRec = ArgDef->getDef();
 
       // Match 'RegClass:$name' or 'RegOp:$name'.
-      if (const Record *ArgRC = T.getInitValueAsRegClass(Arg)) {
-        if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
-          return createStringError(
-              "argument register class" + ArgRC->getName() +
-              " is not a subclass of operand register class " +
-              OpRC->getName());
-        if (!ArgName)
-          return createStringError("register class argument must have a name");
+      if (const Record *ArgRC = T.getInitValueAsRegClassLike(Arg)) {
+        if (ArgRC->isSubClassOf("RegisterClass")) {
+          if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+            return createStringError(
+                "argument register class" + ArgRC->getName() +
+                " is not a subclass of operand register class " +
+                OpRC->getName());
+          if (!ArgName)
+            return createStringError(
+                "register class argument must have a name");
+        }
+
+        // TODO: Verify RegClassByHwMode usage
+
         return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
                                            ArgRec);
       }

@@ -152,7 +152,20 @@ public:
     return LegalValueTypes;
   }
 
-  const Record *getInitValueAsRegClass(const Init *V) const;
+  /// If \p V is a DefInit that can be interpreted as a RegisterClass (e.g.,
+  /// it's a RegisterOperand, or a direct RegisterClass reference), return the
+  /// Record for that RegisterClass.
+  ///
+  /// AssumeRegClassByHwModeIsDefault is a hack which should be removed. It's
+  /// only happens to be adequate for the current GlobalISel usage.
+  const Record *
+  getInitValueAsRegClass(const Init *V,
+                         bool AssumeRegClassByHwModeIsDefault = false) const;
+
+  /// If \p V is a DefInit that can be interpreted as a RegisterClassLike,
+  /// return the Record. This is used as a convenience function to handle direct
+  /// RegisterClass references, or those wrapped in a RegisterOperand.
+  const Record *getInitValueAsRegClassLike(const Init *V) const;
 
   CodeGenSchedModels &getSchedModels() const;
 

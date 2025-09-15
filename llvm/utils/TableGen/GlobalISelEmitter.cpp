@@ -1137,7 +1137,9 @@ Error GlobalISelEmitter::importChildMatcher(
         ChildRec->isSubClassOf("RegisterOperand") ||
         ChildRec->isSubClassOf("RegClassByHwMode")) {
       OM.addPredicate<RegisterBankOperandMatcher>(
-          Target.getRegisterClass(Target.getInitValueAsRegClass(ChildDefInit)));
+          Target.getRegisterClass(Target.getInitValueAsRegClass(
+              ChildDefInit,
+              /*AssumeRegClassByHwModeIsDefault=*/true)));
       return Error::success();
     }
 
