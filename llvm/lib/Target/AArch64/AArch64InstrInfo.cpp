@@ -6587,7 +6587,6 @@ static MachineInstr *unfoldAddXri(MachineInstr &MI, unsigned FrameReg,
       .addImm(MI.getOperand(3).getImm());
 
   MI.eraseFromParent();
-  Unfolded->getParent()->dump();
   return Unfolded;
 }
 
