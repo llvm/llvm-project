@@ -468,10 +468,13 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   if (SaveRegisters)
     saveSyscallRegisters(ConfigurePerfCounterCode, 3);
 
-  // FIXME: SYSCALL exits with EBADF error - file descriptor is invalid
-  // No file is opened previosly to add as file descriptor
-  dbgs() << "Warning: configurePerfCounter not implemented, measurements will "
-            "be unreliable\n";
+  ConfigurePerfCounterCode.push_back(loadImmediate(
+      AArch64::X0, 64, APInt(64, getAuxiliaryMemoryStartAddress()))); // fd
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(AArch64::X1, 64, APInt(64, Request))); // cmd
+  ConfigurePerfCounterCode.push_back(
+      loadImmediate(AArch64::X2, 64, APInt(64, PERF_IOC_FLAG_GROUP))); // arg
+  generateSysCall(SYS_ioctl, ConfigurePerfCounterCode); // SYS_ioctl is 29
 
   if (SaveRegisters)
     restoreSyscallRegisters(ConfigurePerfCounterCode, 3);
