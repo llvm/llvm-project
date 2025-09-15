@@ -68,9 +68,12 @@ void lld::macho::addInputSection(InputSection *inputSection) {
         in.objcMethnameSection->inputOrder = inputSectionsOrder++;
       in.objcMethnameSection->addInput(isec);
     } else {
-      if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-        in.cStringSection->inputOrder = inputSectionsOrder++;
-      in.cStringSection->addInput(isec);
+      auto *osec = in.getOrCreateCStringSection(
+          config->separateCstringLiteralSections ? isec->getName()
+                                                 : section_names::cString);
+      if (osec->inputOrder == UnspecifiedInputOrder)
+        osec->inputOrder = inputSectionsOrder++;
+      osec->addInput(isec);
     }
   } else if (auto *isec = dyn_cast<WordLiteralInputSection>(inputSection)) {
     if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)

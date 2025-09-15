@@ -1377,11 +1377,8 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupStrings)
-    in.cStringSection =
-        make<DeduplicatedCStringSection>(section_names::cString);
-  else
-    in.cStringSection = make<CStringSection>(section_names::cString);
+  // Materialize the cstring section
+  in.getOrCreateCStringSection(section_names::cString);
   in.objcMethnameSection =
       make<DeduplicatedCStringSection>(section_names::objcMethname);
   in.wordLiteralSection = make<WordLiteralSection>();

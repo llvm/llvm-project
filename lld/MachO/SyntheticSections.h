@@ -843,7 +843,7 @@ void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
-  CStringSection *cStringSection = nullptr;
+  llvm::StringMap<CStringSection *> cStringSectionMap;
   DeduplicatedCStringSection *objcMethnameSection = nullptr;
   WordLiteralSection *wordLiteralSection = nullptr;
   RebaseSection *rebase = nullptr;
@@ -863,6 +863,21 @@ struct InStruct {
   InitOffsetsSection *initOffsets = nullptr;
   ObjCMethListSection *objcMethList = nullptr;
   ChainedFixupsSection *chainedFixups = nullptr;
+
+  CStringSection *getOrCreateCStringSection(StringRef name) {
+    auto it = cStringSectionMap.find(name);
+    if (it != cStringSectionMap.end())
+      return it->getValue();
+
+    std::string &nameData = *make<std::string>(name);
+    CStringSection *sec;
+    if (config->dedupStrings)
+      sec = make<DeduplicatedCStringSection>(nameData.c_str());
+    else
+      sec = make<CStringSection>(nameData.c_str());
+    cStringSectionMap[name] = sec;
+    return sec;
+  }
 };
 
 extern InStruct in;

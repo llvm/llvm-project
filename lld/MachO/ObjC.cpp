@@ -1057,7 +1057,7 @@ Defined *ObjcCategoryMerger::emitCategoryName(const std::string &name,
   newStringSec->splitIntoPieces();
   newStringSec->pieces[0].live = true;
   newStringSec->parent = infoCategoryWriter.catNameInfo.outputSection;
-  in.cStringSection->addInput(newStringSec);
+  in.getOrCreateCStringSection(section_names::cString)->addInput(newStringSec);
   assert(newStringSec->pieces.size() == 1);
 
   Defined *catNameSym = make<Defined>(
