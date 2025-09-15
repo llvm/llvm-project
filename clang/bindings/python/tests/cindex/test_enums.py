@@ -42,7 +42,7 @@ class TestEnums(unittest.TestCase):
             self.assertEqual(num_declared_variants, num_unique_variants)
 
     def test_all_variants(self):
-        """Check that all libclang enum values are also defined in cindex"""
+        """Check that all libclang enum values are also defined in cindex.py"""
         cenum_to_pythonenum = {
             "CX_CXXAccessSpecifier": AccessSpecifier,
             "CX_StorageClass": StorageClass,
