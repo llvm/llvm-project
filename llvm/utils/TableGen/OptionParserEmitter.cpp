@@ -380,9 +380,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       assert((CurIndex == 0 || !Command.empty()) &&
              "Only first command set should be empty!");
       for (const auto &CommandKey : Command) {
-        auto It = llvm::find_if(Commands, [&](const Record *R) {
-          return R->getName() == CommandKey;
-        });
+        auto It = std::find_if(
+            Commands.begin(), Commands.end(),
+            [&](const Record *R) { return R->getName() == CommandKey; });
         assert(It != Commands.end() && "Command not found");
         OS << ", " << std::distance(Commands.begin(), It) << " /* '"
            << CommandKey << "' */";

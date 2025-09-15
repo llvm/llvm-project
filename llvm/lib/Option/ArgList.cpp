@@ -210,7 +210,6 @@ StringRef ArgList::getSubcommand(
     std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
     std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const {
 
-  StringRef SubCommand = {};
   SmallVector<StringRef, 4> SubCommands;
   SmallVector<StringRef, 4> OtherPositionals;
   for (const Arg *A : *this) {
@@ -238,7 +237,7 @@ StringRef ArgList::getSubcommand(
   }
   if (SubCommands.size() == 1)
     return SubCommands.front();
-  return SubCommand;
+  return {}; // No valid usage of subcommand found.
 }
 
 void InputArgList::releaseMemory() {

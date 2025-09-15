@@ -541,6 +541,14 @@ InputArgList OptTable::ParseArgs(ArrayRef<const char *> Args,
       });
 }
 
+static const OptTable::Command *
+getActiveCommand(ArrayRef<OptTable::Command> Commands, StringRef Subcommand) {
+  const OptTable::Command *FoundSC =
+      std::find_if(Commands.begin(), Commands.end(),
+                   [&](const auto &C) { return Subcommand == C.Name; });
+  return (FoundSC == Commands.end()) ? nullptr : FoundSC;
+}
+
 InputArgList OptTable::internalParseArgs(
     ArrayRef<const char *> ArgArr, unsigned &MissingArgIndex,
     unsigned &MissingArgCount,
@@ -553,17 +561,11 @@ InputArgList OptTable::internalParseArgs(
   unsigned Index = 0, End = ArgArr.size();
   const Command *ActiveCommand = nullptr;
 
-  // Look for subcommand which is positional.
+  // Look for subcommand.
   if (!Commands.empty() && Index < End) {
     StringRef FirstArg = Args.getArgString(Index);
-    if (isInput(PrefixesUnion, FirstArg)) {
-      for (const auto &C : Commands) {
-        if (FirstArg == C.Name) {
-          ActiveCommand = &C;
-          break;
-        }
-      }
-    }
+    if (isInput(PrefixesUnion, FirstArg))
+      ActiveCommand = getActiveCommand(Commands, FirstArg);
   }
 
   while (Index < End) {
@@ -773,15 +775,6 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
         return false;
       },
       Visibility(0));
-}
-
-static const OptTable::Command *
-getActiveCommand(ArrayRef<OptTable::Command> Commands, StringRef Subcommand) {
-  for (const auto &C : Commands) {
-    if (Subcommand == C.Name)
-      return &C;
-  }
-  return nullptr;
 }
 
 void OptTable::internalPrintHelp(
