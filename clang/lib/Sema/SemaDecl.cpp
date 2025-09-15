@@ -8395,7 +8395,7 @@ static ShadowedDeclKind computeShadowedDeclKind(const NamedDecl *ShadowedDecl,
 /// Return the location of the capture if the given lambda captures the given
 /// variable \p VD, or an invalid source location otherwise.
 static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
-                                         const VarDecl *VD) {
+                                         const ValueDecl *VD) {
   for (const Capture &Capture : LSI->Captures) {
     if (Capture.isVariableCapture() && Capture.getVariable() == VD)
       return Capture.getLocation();
@@ -8492,7 +8492,9 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
-        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+        // Handle both VarDecl and BindingDecl in lambda contexts
+        if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+          const auto *VD = cast<ValueDecl>(ShadowedDecl);
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
           if (RD->getLambdaCaptureDefault() == LCD_None) {
             // Try to avoid warnings for lambdas with an explicit capture
@@ -8521,18 +8523,27 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
           return;
         }
       }
-      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
-          VD && VD->hasLocalStorage()) {
-        // A variable can't shadow a local variable in an enclosing scope, if
-        // they are separated by a non-capturing declaration context.
-        for (DeclContext *ParentDC = NewDC;
-             ParentDC && !ParentDC->Equals(OldDC);
-             ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
-          // Only block literals, captured statements, and lambda expressions
-          // can capture; other scopes don't.
-          if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
-              !isLambdaCallOperator(ParentDC)) {
-            return;
+      // Apply scoping logic to both VarDecl and BindingDecl with local storage
+      if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+        bool HasLocalStorage = false;
+        if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl))
+          HasLocalStorage = VD->hasLocalStorage();
+        else if (const auto *BD = dyn_cast<BindingDecl>(ShadowedDecl))
+          HasLocalStorage =
+              cast<VarDecl>(BD->getDecomposedDecl())->hasLocalStorage();
+
+        if (HasLocalStorage) {
+          // A variable can't shadow a local variable or binding in an enclosing
+          // scope, if they are separated by a non-capturing declaration
+          // context.
+          for (DeclContext *ParentDC = NewDC;
+               ParentDC && !ParentDC->Equals(OldDC);
+               ParentDC = getLambdaAwareParentOfDeclContext(ParentDC)) {
+            // Only block literals, captured statements, and lambda expressions
+            // can capture; other scopes don't.
+            if (!isa<BlockDecl>(ParentDC) && !isa<CapturedDecl>(ParentDC) &&
+                !isLambdaCallOperator(ParentDC))
+              return;
           }
         }
       }
@@ -8579,7 +8590,8 @@ void Sema::DiagnoseShadowingLambdaDecls(const LambdaScopeInfo *LSI) {
     const NamedDecl *ShadowedDecl = Shadow.ShadowedDecl;
     // Try to avoid the warning when the shadowed decl isn't captured.
     const DeclContext *OldDC = ShadowedDecl->getDeclContext();
-    if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl)) {
+    if (isa<VarDecl, BindingDecl>(ShadowedDecl)) {
+      const auto *VD = cast<ValueDecl>(ShadowedDecl);
       SourceLocation CaptureLoc = getCaptureLocation(LSI, VD);
       Diag(Shadow.VD->getLocation(),
            CaptureLoc.isInvalid() ? diag::warn_decl_shadow_uncaptured_local
