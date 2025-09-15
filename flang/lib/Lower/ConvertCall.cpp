@@ -516,16 +516,8 @@ Fortran::lower::genCallOpAndResult(
     mlir::Value cast;
     auto *context = builder.getContext();
 
-    // Special handling for %VAL arguments: internal procedures expect
-    // reference parameters. When %VAL is used, the argument should be
-    // passed by value. Pass the originally loaded value.
-    if (fir::isa_ref_type(snd) && !fir::isa_ref_type(fst.getType()) &&
-        fir::dyn_cast_ptrEleTy(snd) == fst.getType()) {
-      auto loadOp = mlir::cast<fir::LoadOp>(fst.getDefiningOp());
-      mlir::Value originalStorage = loadOp.getMemref();
-      cast = originalStorage;
-    } else if (mlir::isa<fir::BoxProcType>(snd) &&
-               mlir::isa<mlir::FunctionType>(fst.getType())) {
+    if (mlir::isa<fir::BoxProcType>(snd) &&
+        mlir::isa<mlir::FunctionType>(fst.getType())) {
       mlir::FunctionType funcTy = mlir::FunctionType::get(context, {}, {});
       fir::BoxProcType boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
@@ -1677,17 +1669,8 @@ void prepareUserCallArguments(
         break;
       }
       // For %VAL arguments, we should pass the value directly without
-      // conversion to reference types. If argTy is different from value type,
-      // it might be due to signature mismatch with internal procedures.
-      if (argTy == value.getType())
-        caller.placeInput(arg, value);
-      else if (fir::isa_ref_type(argTy) &&
-               fir::dyn_cast_ptrEleTy(argTy) == value.getType()) {
-        auto loadOp = mlir::cast<fir::LoadOp>(value.getDefiningOp());
-        mlir::Value originalStorage = loadOp.getMemref();
-        caller.placeInput(arg, originalStorage);
-      } else
-        caller.placeInput(arg, builder.createConvert(loc, argTy, value));
+      // conversion to reference types.
+      caller.placeInput(arg, builder.createConvert(loc, argTy, value));
 
     } break;
     case PassBy::BaseAddressValueAttribute:
