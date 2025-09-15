@@ -4,7 +4,7 @@
 
 ; RUN: llc -mtriple=aarch64-none-linux -tail-dup-size=4 < %s | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llc -mtriple=aarch64-none-linux -tail-dup-placement-threshold=4 < %s | FileCheck %s --check-prefix=CHECK-O2
-; RUN: llc -mtriple=aarch64-none-linux -tail-dup-placement-threshold=6 < %s | FileCheck %s --check-prefix=CHECK-O3
+; RUN: llc -mtriple=aarch64-none-linux -tail-dup-placement-threshold=6 < %s | FileCheck %s --check-prefix=CHECK-O2-6
 
 %a = type { ptr, i32, %b }
 %b = type { %c }
@@ -29,7 +29,7 @@ define dso_local void @testcase(ptr nocapture %arg){
 ; CHECK-O2-NEXT:  .LBB0_3: // %if.end
 ; CHECK-O2-NEXT:    adrp x9, global_int
 ; CHECK-O2-NEXT:    add x2, x8, #16
-; CHECK-O2-NEXT:    mov w0, #10
+; CHECK-O2-NEXT:    mov w0, #10 // =0xa
 ; CHECK-O2-NEXT:    ldr w1, [x9, :lo12:global_int]
 ; CHECK-O2-NEXT:    b externalfunc
 ;
@@ -44,16 +44,38 @@ define dso_local void @testcase(ptr nocapture %arg){
 ; CHECK-O3-NEXT:    ldr x8, [x8, :lo12:global_ptr]
 ; CHECK-O3-NEXT:    adrp x9, global_int
 ; CHECK-O3-NEXT:    add x2, x8, #16
-; CHECK-O3-NEXT:    mov w0, #10
+; CHECK-O3-NEXT:    mov w0, #10 // =0xa
 ; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
 ; CHECK-O3-NEXT:    b externalfunc
 ; CHECK-O3-NEXT:  .LBB0_2:
 ; CHECK-O3-NEXT:    mov x8, xzr
 ; CHECK-O3-NEXT:    adrp x9, global_int
 ; CHECK-O3-NEXT:    add x2, x8, #16
-; CHECK-O3-NEXT:    mov w0, #10
+; CHECK-O3-NEXT:    mov w0, #10 // =0xa
 ; CHECK-O3-NEXT:    ldr w1, [x9, :lo12:global_int]
 ; CHECK-O3-NEXT:    b externalfunc
+;
+; CHECK-O2-6-LABEL: testcase:
+; CHECK-O2-6:       // %bb.0: // %entry
+; CHECK-O2-6-NEXT:    adrp x8, global_ptr
+; CHECK-O2-6-NEXT:    ldr x9, [x8, :lo12:global_ptr]
+; CHECK-O2-6-NEXT:    cbz x9, .LBB0_2
+; CHECK-O2-6-NEXT:  // %bb.1: // %if.then
+; CHECK-O2-6-NEXT:    ldr x9, [x9]
+; CHECK-O2-6-NEXT:    str x9, [x0]
+; CHECK-O2-6-NEXT:    ldr x8, [x8, :lo12:global_ptr]
+; CHECK-O2-6-NEXT:    adrp x9, global_int
+; CHECK-O2-6-NEXT:    add x2, x8, #16
+; CHECK-O2-6-NEXT:    mov w0, #10 // =0xa
+; CHECK-O2-6-NEXT:    ldr w1, [x9, :lo12:global_int]
+; CHECK-O2-6-NEXT:    b externalfunc
+; CHECK-O2-6-NEXT:  .LBB0_2:
+; CHECK-O2-6-NEXT:    mov x8, xzr
+; CHECK-O2-6-NEXT:    adrp x9, global_int
+; CHECK-O2-6-NEXT:    add x2, x8, #16
+; CHECK-O2-6-NEXT:    mov w0, #10 // =0xa
+; CHECK-O2-6-NEXT:    ldr w1, [x9, :lo12:global_int]
+; CHECK-O2-6-NEXT:    b externalfunc
 entry:
   %0 = load ptr, ptr @global_ptr, align 8
   %cmp.not = icmp eq ptr %0, null
