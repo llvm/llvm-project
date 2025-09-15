@@ -6074,6 +6074,7 @@ cc_library(
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
+        ":PtrDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
