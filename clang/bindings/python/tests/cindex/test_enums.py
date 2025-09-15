@@ -72,23 +72,31 @@ class TestEnums(unittest.TestCase):
             python_enum = cenum_to_pythonenum.get(cursor.type.spelling)
             if cursor.kind == CursorKind.ENUM_CONSTANT_DECL:
                 if python_enum not in enum_variant_map:
-                    enum_variant_map[python_enum] = []
-                enum_variant_map[python_enum].append(cursor.enum_value)
+                    enum_variant_map[python_enum] = dict()
+                enum_variant_map[python_enum][cursor.enum_value] = cursor.spelling
 
         for enum in self.enums:
             with self.subTest(enum):
                 python_kinds = set([kind.value for kind in enum])
+                num_to_c_kind = enum_variant_map[enum]
+                c_kinds = set(num_to_c_kind.keys())
                 # Defined in Index.h but not in cindex.py
                 missing_python_kinds = c_kinds - python_kinds
+                missing_names = set(
+                    [num_to_c_kind[kind] for kind in missing_python_kinds]
+                )
                 self.assertEqual(
-                    missing_python_kinds,
+                    missing_names,
                     set(),
                     f"Please ensure these are defined in {enum} in cindex.py.",
                 )
                 # Defined in cindex.py but not in Index.h
                 superfluous_python_kinds = python_kinds - c_kinds
+                missing_names = set(
+                    [enum.from_id(kind) for kind in superfluous_python_kinds]
+                )
                 self.assertEqual(
-                    superfluous_python_kinds,
+                    missing_names,
                     set(),
                     f"Please ensure that all {enum} kinds defined in cindex.py have an equivalent in Index.h",
                 )
