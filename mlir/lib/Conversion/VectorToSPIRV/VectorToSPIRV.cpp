@@ -189,8 +189,8 @@ struct VectorExtractOpConvert final
     if (!dstType)
       return failure();
 
-    if (isa<spirv::ScalarType>(adaptor.getVector().getType())) {
-      rewriter.replaceOp(extractOp, adaptor.getVector());
+    if (isa<spirv::ScalarType>(adaptor.getSource().getType())) {
+      rewriter.replaceOp(extractOp, adaptor.getSource());
       return success();
     }
 
@@ -201,7 +201,7 @@ struct VectorExtractOpConvert final
             extractOp,
             "Static use of poison index handled elsewhere (folded to poison)");
       rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
-          extractOp, dstType, adaptor.getVector(),
+          extractOp, dstType, adaptor.getSource(),
           rewriter.getI32ArrayAttr(id.value()));
     } else {
       Value sanitizedIndex = sanitizeDynamicIndex(
@@ -209,7 +209,7 @@ struct VectorExtractOpConvert final
           vector::ExtractOp::kPoisonIndex,
           extractOp.getSourceVectorType().getNumElements());
       rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
-          extractOp, dstType, adaptor.getVector(), sanitizedIndex);
+          extractOp, dstType, adaptor.getSource(), sanitizedIndex);
     }
     return success();
   }

@@ -25,6 +25,7 @@ static_library("Common") {
     "GlobalISel/PatternParser.cpp",
     "GlobalISel/Patterns.cpp",
     "InfoByHwMode.cpp",
+    "InstructionEncoding.cpp",
     "OptEmitter.cpp",
     "PredicateExpander.cpp",
     "SubtargetFeatureInfo.cpp",
