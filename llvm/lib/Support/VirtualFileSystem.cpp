@@ -2726,19 +2726,9 @@ static void getVFSEntries(RedirectingFileSystem::Entry *SrcE,
   Entries.push_back(YAMLVFSEntry(VPath.c_str(), FE->getExternalContentsPath()));
 }
 
-void vfs::collectVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
-                             SourceMgr::DiagHandlerTy DiagHandler,
-                             StringRef YAMLFilePath,
-                             SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
-                             void *DiagContext,
-                             IntrusiveRefCntPtr<FileSystem> ExternalFS) {
-  std::unique_ptr<RedirectingFileSystem> VFS = RedirectingFileSystem::create(
-      std::move(Buffer), DiagHandler, YAMLFilePath, DiagContext,
-      std::move(ExternalFS));
-  if (!VFS)
-    return;
-  ErrorOr<RedirectingFileSystem::LookupResult> RootResult =
-      VFS->lookupPath("/");
+void vfs::collectVFSEntries(RedirectingFileSystem &VFS,
+                            SmallVectorImpl<YAMLVFSEntry> &CollectedEntries) {
+  ErrorOr<RedirectingFileSystem::LookupResult> RootResult = VFS.lookupPath("/");
   if (!RootResult)
     return;
   SmallVector<StringRef, 8> Components;
