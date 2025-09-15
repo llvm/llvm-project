@@ -185,17 +185,19 @@ private:
   }
     REPL_BUILTIN_TYPES
 #undef X
+
+    Builtins(const Builtins &) = delete;
+    Builtins &operator=(const Builtins &) = delete;
   };
 
   /// Represents an array of `Value` elements.
   struct ArrValue {
-    std::vector<Value> Elements;
+    Value *Elements;
     uint64_t ArrSize;
-    ArrValue(uint64_t Size) : ArrSize(Size) {
-      Elements.reserve(ArrSize);
-      for (uint64_t I = 0; I < ArrSize; ++I)
-        Elements.emplace_back();
-    }
+    ArrValue(uint64_t Size) : Elements(new Value[Size]), ArrSize(Size) {}
+    ~ArrValue() { delete[] Elements; }
+    ArrValue(const ArrValue &) = delete;
+    ArrValue &operator=(const ArrValue &) = delete;
   };
 
   /// Represents a pointer. Holds the address and optionally a pointee `Value`.
@@ -207,13 +209,37 @@ private:
       if (Pointee != nullptr)
         delete Pointee;
     }
+
+    PtrValue(const PtrValue &) = delete;
+    PtrValue &operator=(const PtrValue &) = delete;
   };
 
   /// Represents a string value (wrapper over std::string).
   struct StrValue {
-    std::string StringBuf;
-    StrValue(std::string str) : StringBuf(std::move(str)) {}
-    ~StrValue() = default;
+    char *Buf;
+    size_t Length;
+
+    StrValue(const char *Str) {
+      Length = strlen(Str);
+      Buf = new char[Length + 1];
+      memcpy(Buf, Str, Length);
+      Buf[Length] = '\0';
+    }
+
+    ~StrValue() { delete[] Buf; }
+
+    StrValue(const StrValue &) = delete;
+    StrValue &operator=(const StrValue &) = delete;
+
+    void set(const char *Str) {
+      delete[] Buf;
+      Length = strlen(Str);
+      Buf = new char[Length + 1];
+      memcpy(Buf, Str, Length);
+      Buf[Length] = '\0';
+    }
+
+    const char *get() const { return Buf; }
   };
 
 public:
@@ -230,7 +256,7 @@ private:
   std::optional<ValueCleanup> Cleanup = std::nullopt;
 
 public:
-  Value() = default;
+  Value() : VKind(K_None) {}
   explicit Value(QualType Ty) : Ty(Ty), VKind(K_None) {}
   Value(const Value &RHS);
   Value(Value &&RHS)
@@ -335,23 +361,18 @@ public:
   // ---- String accessors ----
   void setStrVal(const char *buf) {
     assert(isStr() && "Not a Str");
-    asStr().StringBuf = buf;
+    asStr().set(buf);
   }
 
-  StringRef getStrVal() {
+  const char *getStrVal() const {
     assert(isStr() && "Not a Str");
-    return StringRef(asStr().StringBuf);
-  }
-
-  const StringRef getStrVal() const {
-    assert(isStr() && "Not a Str");
-    return StringRef(asStr().StringBuf);
+    return asStr().get();
   }
 
   // ---- Array accessors ----
   uint64_t getArraySize() const { return asArray().ArrSize; }
 
-  uint64_t getArrayInitializedElts() const { return asArray().Elements.size(); }
+  uint64_t getArrayInitializedElts() const { return asArray().ArrSize; }
 
   Value &getArrayInitializedElt(unsigned I) {
     assert(isArray() && "Invalid accessor");
@@ -427,7 +448,7 @@ private:
     VKind = K_Pointer;
   }
 
-  void MakeStr(std::string Str = "") {
+  void MakeStr(const char *Str) {
     assert(isAbsent() && "Bad state change");
     new ((void *)(char *)&Data) StrValue(Str);
     VKind = K_Str;

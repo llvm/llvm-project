@@ -162,7 +162,7 @@ Value::Value(const Value &RHS)
     break;
   }
   case K_Str:
-    MakeStr(RHS.getStrVal().str());
+    MakeStr(RHS.getStrVal());
     break;
   }
 }

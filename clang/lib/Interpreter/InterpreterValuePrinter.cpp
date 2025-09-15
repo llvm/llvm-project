@@ -155,6 +155,16 @@ static std::string FunctionToString(ASTContext &Ctx, QualType QT,
   return Str;
 }
 
+static std::string CharPtrToString(const char *Ptr) {
+  if (!Ptr)
+    return "0";
+
+  std::string Result = "\"";
+  Result += Ptr;
+  Result += '"';
+  return Result;
+}
+
 namespace clang {
 
 std::string ValueToString::toString(const Value *Buf) {
@@ -291,7 +301,7 @@ std::string ValueToString::PointerToString(const Value &P) {
     // char* -> print string literal
     if (PointeeTy->isCharType()) {
       if (P.HasPointee() && P.getPointerPointee().isStr())
-        return "\"" + P.getPointerPointee().getStrVal().str() + "\"";
+        return CharPtrToString(P.getPointerPointee().getStrVal());
       return std::to_string(P.getAddr());
     }
 
