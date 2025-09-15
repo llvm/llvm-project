@@ -1,21 +1,23 @@
 ; This test checks that we emit only the correct debug messages and
-; optimization remark when the loop vectorizer is disabled by loop metadata.
+; optimization remark when the loop is not vectorized due to the 
+; vectorize-forced-only pass option being set.
 
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -pass-remarks=loop-vectorize \
-; RUN:     -pass-remarks-missed=loop-vectorize \
-; RUN:     -pass-remarks-analysis=loop-vectorize -debug -disable-output \
-; RUN:     < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='loop-vectorize<vectorize-forced-only>' \
+; RUN:   -pass-remarks=loop-vectorize \
+; RUN:   -pass-remarks-missed=loop-vectorize \
+; RUN:   -pass-remarks-analysis=loop-vectorize -debug -disable-output \
+; RUN:   < %s 2>&1 | FileCheck %s
 ; CHECK-NOT: LV: We can vectorize this loop
 ; CHECK-NOT: LV: Not vectorizing: loop hasDisableAllTransformsHint
 ; CHECK-NOT: LV: [FIXME] Not vectorizing: loop vect disabled for an unknown reason
-; CHECK-NOT: LV: Not vectorizing: VectorizeOnlyWhenForced is set
+; CHECK-NOT: LV: Not vectorizing: #pragma vectorize disable
 ; CHECK-NOT: LV: Not vectorizing: Disabled/already vectorized
 ; CHECK-NOT: LV: Not vectorizing: Cannot prove legality
-; CHECK: LV: Loop hints: force=disabled
-; CHECK: LV: Not vectorizing: #pragma vectorize disable.
+; CHECK: LV: Loop hints: force=?
+; CHECK: LV: Not vectorizing: VectorizeOnlyWhenForced is set, and no #pragma vectorize enable
 ; CHECK: remark:
-; CHECK-SAME: loop not vectorized: vectorization is explicitly disabled
+; CHECK-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ; CHECK: LV: Loop hints prevent vectorization
 
 define dso_local noundef nofpclass(nan inf) double @_Z15CompareDistmatsPKdS0_(ptr noundef readonly captures(none) %distmat1, ptr noundef readonly captures(none) %distmat2) local_unnamed_addr {
@@ -40,8 +42,5 @@ for.body:                                         ; preds = %entry, %for.body
   %add = fadd fast double %mul, %RMSD.013
   %inc = add nuw nsw i64 %i.014, 1
   %exitcond.not = icmp eq i64 %inc, 15
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 false}
