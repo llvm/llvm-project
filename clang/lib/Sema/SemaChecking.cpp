@@ -2430,8 +2430,8 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   QualType PtrTy = PtrArg->getType();
   QualType PointeeTy = PtrTy->getPointeeType();
 
-  const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
+  const VectorType *MaskVecTy = MaskTy->castAs<VectorType>();
+  const VectorType *ValVecTy = ValTy->castAs<VectorType>();
   if (MaskVecTy->getNumElements() != IdxVecTy->getNumElements())
     return ExprError(
         S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
@@ -2450,7 +2450,7 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   if (!S.Context.hasSameType(ValTy, ArgTy))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
-                     << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
+                     << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ 2
                      << SourceRange(TheCall->getArg(1)->getBeginLoc(),
                                     TheCall->getArg(1)->getEndLoc()));
 
