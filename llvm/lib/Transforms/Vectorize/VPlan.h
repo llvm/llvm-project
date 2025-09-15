@@ -918,9 +918,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   void execute(VPTransformState &State) override = 0;
 
   /// Compute the cost for this recipe for \p VF, using \p Opcode and \p Ctx.
-  std::optional<InstructionCost>
-  getCostForRecipeWithOpcode(unsigned Opcode, ElementCount VF,
-                             VPCostContext &Ctx) const;
+  InstructionCost getCostForRecipeWithOpcode(unsigned Opcode, ElementCount VF,
+                                             VPCostContext &Ctx) const;
 };
 
 /// Helper to access the operand that contains the unroll part for this recipe
@@ -1795,6 +1794,9 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
+
+  /// This recipe generates a GEP instruction.
+  unsigned getOpcode() const { return Instruction::GetElementPtr; }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
