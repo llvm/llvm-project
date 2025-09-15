@@ -1920,11 +1920,6 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
           CmpInstr.getOperand(2).getImm() == 0) &&
          "Caller guarantees that CmpInstr compares with constant 0");
 
-  // NZCV is not supported if the stack offset is scalable.
-  auto &ST = MI.getParent()->getParent()->getSubtarget<AArch64Subtarget>();
-  if ((ST.hasSVE() || ST.isStreaming()) && MI.getOperand(1).isFI())
-    return false;
-
   std::optional<UsedNZCV> NZVCUsed = examineCFlagsUse(MI, CmpInstr, TRI);
   if (!NZVCUsed || NZVCUsed->C)
     return false;
@@ -6569,18 +6564,52 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
          (SOffset ? 0 : AArch64FrameOffsetIsLegal);
 }
 
+// Unfold ADDSXri:
+//    adds %dest, %stack, c
+//  -->
+//    add %dest, %stack, 0
+//    adds %dest, %dest, c
+static MachineInstr *unfoldAddXri(MachineInstr &MI, unsigned FrameReg,
+                                  const AArch64InstrInfo *TII) {
+  auto *MBB = MI.getParent();
+  Register DestReg = MI.getOperand(0).getReg();
+
+  auto *Unfolded =
+      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AArch64::ADDXri), DestReg)
+          .addReg(FrameReg)
+          .addImm(0)
+          .addImm(0)
+          .getInstr();
+
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AArch64::ADDSXri), DestReg)
+      .addReg(DestReg)
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(MI.getOperand(3).getImm());
+
+  MI.eraseFromParent();
+  Unfolded->getParent()->dump();
+  return Unfolded;
+}
+
 bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                                     unsigned FrameReg, StackOffset &Offset,
                                     const AArch64InstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
   unsigned ImmIdx = FrameRegIdx + 1;
 
+  MachineInstr *NewMI = &MI;
+  if (Opcode == AArch64::ADDSXri && Offset.getScalable()) {
+    NewMI = unfoldAddXri(MI, FrameReg, TII);
+    Opcode = AArch64::ADDXri;
+  }
+
   if (Opcode == AArch64::ADDSXri || Opcode == AArch64::ADDXri) {
-    Offset += StackOffset::getFixed(MI.getOperand(ImmIdx).getImm());
-    emitFrameOffset(*MI.getParent(), MI, MI.getDebugLoc(),
-                    MI.getOperand(0).getReg(), FrameReg, Offset, TII,
-                    MachineInstr::NoFlags, (Opcode == AArch64::ADDSXri));
-    MI.eraseFromParent();
+    Offset += StackOffset::getFixed(NewMI->getOperand(ImmIdx).getImm());
+    emitFrameOffset(*NewMI->getParent(), *NewMI,
+                    NewMI->getDebugLoc(), NewMI->getOperand(0).getReg(),
+                    FrameReg, Offset, TII, MachineInstr::NoFlags,
+                    (Opcode == AArch64::ADDSXri));
+    NewMI->eraseFromParent();
     Offset = StackOffset();
     return true;
   }
@@ -6588,16 +6617,16 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   int64_t NewOffset;
   unsigned UnscaledOp;
   bool UseUnscaledOp;
-  int Status = isAArch64FrameOffsetLegal(MI, Offset, &UseUnscaledOp,
+  int Status = isAArch64FrameOffsetLegal(*NewMI, Offset, &UseUnscaledOp,
                                          &UnscaledOp, &NewOffset);
   if (Status & AArch64FrameOffsetCanUpdate) {
     if (Status & AArch64FrameOffsetIsLegal)
       // Replace the FrameIndex with FrameReg.
-      MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
+      NewMI->getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
     if (UseUnscaledOp)
-      MI.setDesc(TII->get(UnscaledOp));
+      NewMI->setDesc(TII->get(UnscaledOp));
 
-    MI.getOperand(ImmIdx).ChangeToImmediate(NewOffset);
+    NewMI->getOperand(ImmIdx).ChangeToImmediate(NewOffset);
     return !Offset;
   }
 
