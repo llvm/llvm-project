@@ -36,7 +36,6 @@ from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
-    get_op_result_or_op_results as _get_op_result_or_op_results,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
 )
@@ -276,8 +275,9 @@ def {0}({2}) -> {4}:
 )Py";
 
 constexpr const char *valueBuilderVariadicTemplate = R"Py(
-def {0}({2}) -> {4}:
-  return _get_op_result_or_op_results({1}({3}))
+def {0}({2}) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, {1}]:
+  op = {1}({3}); results = op.results
+  return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 )Py";
 
 static llvm::cl::OptionCategory
@@ -1013,21 +1013,18 @@ static void emitValueBuilder(const Operator &op,
     nameWithoutDialect += "_";
   std::string params = llvm::join(valueBuilderParams, ", ");
   std::string args = llvm::join(opBuilderArgs, ", ");
-  const char *type =
-      (op.getNumResults() > 1
-           ? "_Sequence[_ods_ir.Value]"
-           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation"));
-  if (op.getNumVariableLengthResults() > 0) {
+  if (op.getNumVariableLengthResults()) {
     os << formatv(valueBuilderVariadicTemplate, nameWithoutDialect,
-                  op.getCppClassName(), params, args, type);
+                  op.getCppClassName(), params, args);
   } else {
-    const char *results;
-    if (op.getNumResults() == 0) {
-      results = "";
-    } else if (op.getNumResults() == 1) {
-      results = ".result";
-    } else {
+    std::string type = op.getCppClassName().str();
+    const char *results = "";
+    if (op.getNumResults() > 1) {
+      type = "_ods_ir.OpResultList";
       results = ".results";
+    } else if (op.getNumResults() == 1) {
+      type = "_ods_ir.OpResult";
+      results = ".result";
     }
     os << formatv(valueBuilderTemplate, nameWithoutDialect,
                   op.getCppClassName(), params, args, type, results);
