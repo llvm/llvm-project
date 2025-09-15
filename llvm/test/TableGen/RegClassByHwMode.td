@@ -97,7 +97,7 @@ include "llvm/Target/Target.td"
 // ASMMATCHER-NEXT:    };
 // ASMMATCHER-EMPTY:
 // ASMMATCHER-NEXT:    static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == 3);
-// ASMMATCHER-NEXT:    const unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegClass);
+// ASMMATCHER-NEXT:    const unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
 // ASMMATCHER-NEXT:    Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER + 1)];
 // ASMMATCHER-NEXT:  }
 
@@ -116,7 +116,7 @@ include "llvm/Target/Target.td"
 
 // DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeMyPtrRCRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
-// DISASM-NEXT:   switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
+// DISASM-NEXT:   switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 // DISASM-NEXT:   case 0: // DefaultMode
 // DISASM-NEXT:     return DecodePtrRegs32RegisterClass(Inst, Imm, Addr, Decoder);
 // DISASM-NEXT:   case 3: // Ptr64
@@ -128,7 +128,7 @@ include "llvm/Target/Target.td"
 
 // DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeXRegs_EvenIfRequiredRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
-// DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
+// DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 // DISASM-NEXT:  case 0: // DefaultMode
 // DISASM-NEXT:    return DecodeXRegsRegisterClass(Inst, Imm, Addr, Decoder);
 // DISASM-NEXT:  case 1: // EvenMode
@@ -142,7 +142,7 @@ include "llvm/Target/Target.td"
 // DISASM-EMPTY:
 // DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeYRegs_EvenIfRequiredRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
-// DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
+// DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 // DISASM-NEXT:  case 0: // DefaultMode
 // DISASM-NEXT:    return DecodeYRegsRegisterClass(Inst, Imm, Addr, Decoder);
 // DISASM-NEXT:  case 1: // EvenMode

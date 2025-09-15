@@ -858,8 +858,6 @@ void DecoderEmitter::emitRegClassByHwModeDecoders(
   if (RegClassByHwMode.empty())
     return;
 
-  const CodeGenRegBank &RegBank = Target.getRegBank();
-
   for (const Record *ClassByHwMode : RegClassByHwMode) {
     // Ignore cases that had an explicit DecoderMethod set.
     if (!InstructionEncoding::findOperandDecoderMethod(Target, ClassByHwMode)
@@ -876,11 +874,9 @@ void DecoderEmitter::emitRegClassByHwModeDecoders(
     OS << "static DecodeStatus Decode" << ClassByHwMode->getName()
        << "RegClassByHwMode";
     OS << R"((MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
-  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
+  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
 )";
     for (auto [ModeID, RegClassRec] : ModeSelect.Items) {
-      const CodeGenRegisterClass *RegClass = RegBank.getRegClass(RegClassRec);
-
       OS << indent(2) << "case " << ModeID << ": // "
          << CGH.getModeName(ModeID, /*IncludeDefault=*/true) << '\n'
          << indent(4) << "return "

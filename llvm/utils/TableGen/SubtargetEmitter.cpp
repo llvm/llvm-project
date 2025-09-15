@@ -1850,7 +1850,6 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
   OS << "  case HwMode_Default:\n    return llvm::countr_zero(Modes) + 1;\n";
   HandlePerMode("ValueType", ValueTypeModes);
   HandlePerMode("RegInfo", RegInfoModes);
-  HandlePerMode("RegClass", RegInfoModes);
   HandlePerMode("EncodingInfo", EncodingInfoModes);
   OS << "  }\n";
   OS << "  llvm_unreachable(\"unexpected HwModeType\");\n"

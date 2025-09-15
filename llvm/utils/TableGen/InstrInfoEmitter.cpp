@@ -1181,7 +1181,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   if (NumClassesByHwMode != 0)
     OS << ", " << TargetName
        << "RegClassByHwModeTables[STI.getHwMode(MCSubtargetInfo::HwMode_"
-          "RegClass)]";
+          "RegInfo)]";
 
   OS << ") {\n"
      << "  InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName

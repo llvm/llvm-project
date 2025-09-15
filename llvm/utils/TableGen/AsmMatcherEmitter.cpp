@@ -2606,7 +2606,7 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
 
     OS << indent(4)
        << "const unsigned HwMode = "
-          "STI.getHwMode(MCSubtargetInfo::HwMode_RegClass);\n"
+          "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n"
           "Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER "
           "+ 1)];\n"
           "  }\n\n";
