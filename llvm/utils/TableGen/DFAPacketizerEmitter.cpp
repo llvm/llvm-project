@@ -277,25 +277,11 @@ void DFAPacketizerEmitter::emitForItineraries(
        << Model->ModelName << "\n";
   }
   OS << "  };\n"
-     << "  unsigned Mid;\n"
-     << "  unsigned Start = 0;\n"
-     << "  unsigned End = " << ProcModels.size() << ";\n"
-     << "  while (Start < End) {\n"
-     << "  Mid = Start + (End - Start) / 2;\n"
-     << "  if (ProcID == " << TargetName << DFAName
-     << "ProcIdToProcResourceIdxTable[Mid][0]) {\n"
-     << "    break;\n"
-     << "  }\n"
-     << "  if (ProcID < " << TargetName << DFAName
-     << "ProcIdToProcResourceIdxTable[Mid][0])\n"
-     << "    End = Mid;\n"
-     << "  else\n"
-     << "    Start = Mid + 1;\n"
-     << "  }\n"
-     << "  if (Start == End)\n"
-     << "    return -1; // Didn't find\n"
-     << "  return " << TargetName << DFAName
-     << "ProcIdToProcResourceIdxTable[Mid][1];\n"
+     << "  auto It = std::lower_bound(\n"
+     << "      std::begin(" << TargetName << DFAName << "ProcIdToProcResourceIdxTable),\n"
+     << "      std::end(" << TargetName << DFAName << "ProcIdToProcResourceIdxTable), ProcID,\n"
+     << "      [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; });\n"
+     << "  return (*It)[1];\n"
      << "}\n\n";
 
   // The type of a state in the nondeterministic automaton we're defining.

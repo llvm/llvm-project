@@ -27,22 +27,11 @@ def Itin {
 // CHECK-NEXT:   static const unsigned TestTargetProcIdToProcResourceIdxTable[][2] = {
 // CHECK-NEXT:     { 2,  1 }, // TestItinerariesModel
 // CHECK-NEXT:   };
-// CHECK-NEXT:   unsigned Mid;
-// CHECK-NEXT:   unsigned Start = 0;
-// CHECK-NEXT:   unsigned End = 1;
-// CHECK-NEXT:   while (Start < End) {
-// CHECK-NEXT:   Mid = Start + (End - Start) / 2;
-// CHECK-NEXT:   if (ProcID == TestTargetProcIdToProcResourceIdxTable[Mid][0]) {
-// CHECK-NEXT:     break;
-// CHECK-NEXT:   }
-// CHECK-NEXT:   if (ProcID < TestTargetProcIdToProcResourceIdxTable[Mid][0])
-// CHECK-NEXT:     End = Mid;
-// CHECK-NEXT:   else
-// CHECK-NEXT:     Start = Mid + 1;
-// CHECK-NEXT:   }
-// CHECK-NEXT:   if (Start == End)
-// CHECK-NEXT:     return -1; // Didn't find
-// CHECK-NEXT:   return TestTargetProcIdToProcResourceIdxTable[Mid][1];
+// CHECK-NEXT:   auto It = std::lower_bound(
+// CHECK-NEXT:       std::begin(TestTargetProcIdToProcResourceIdxTable),
+// CHECK-NEXT:       std::end(TestTargetProcIdToProcResourceIdxTable), ProcID,
+// CHECK-NEXT:       [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; });
+// CHECK-NEXT:   return (*It)[1];
 // CHECK-NEXT: }
 
 // CHECK:  unsigned Index = TestTargetGetResourceIndex(IID->SchedModel.ProcID);
