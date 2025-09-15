@@ -5637,15 +5637,13 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     TheCall->setArg(I, ConstantExpr::Create(Context, Arg, APValue(*Result)));
   }
 
-  SmallVector<Expr *> Exprs;
-  for (unsigned I = 0; I != NumArgs; I++) {
-    Exprs.push_back(TheCall->getArg(I));
-    TheCall->setArg(I, nullptr);
-  }
+  auto *Result = new (Context) ShuffleVectorExpr(
+      Context, ArrayRef(TheCall->getArgs(), NumArgs), ResType,
+      TheCall->getCallee()->getBeginLoc(), TheCall->getRParenLoc());
 
-  return new (Context) ShuffleVectorExpr(Context, Exprs, ResType,
-                                         TheCall->getCallee()->getBeginLoc(),
-                                         TheCall->getRParenLoc());
+  // All moved to Result.
+  TheCall->shrinkNumArgs(0);
+  return Result;
 }
 
 ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
