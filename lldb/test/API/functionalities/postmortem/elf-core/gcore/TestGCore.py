@@ -37,7 +37,7 @@ class GCoreTestCase(TestBase):
         for thread in process:
             reason = thread.GetStopReason()
             self.assertStopReason(reason, lldb.eStopReasonSignal)
-            signal = thread.GetStopReasonDataAtIndex(1)
+            signal = thread.GetStopReasonDataAtIndex(0)
             # Check we got signal 19 (SIGSTOP)
             self.assertEqual(signal, 19)
 

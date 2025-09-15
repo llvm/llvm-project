@@ -34,6 +34,20 @@ BUILTIN(__builtin_amdgcn_workgroup_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_id_y, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workgroup_id_z, "Ui", "nc")
 
+TARGET_BUILTIN(__builtin_amdgcn_cluster_id_x, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_id_y, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_id_z, "Ui", "nc", "gfx1250-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_id_x, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_id_y, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_id_z, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_flat_id, "Ui", "nc", "gfx1250-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_max_id_x, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_max_id_y, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_max_id_z, "Ui", "nc", "gfx1250-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_workgroup_max_flat_id, "Ui", "nc", "gfx1250-insts")
+
 BUILTIN(__builtin_amdgcn_workitem_id_x, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workitem_id_y, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_workitem_id_z, "Ui", "nc")
@@ -363,6 +377,31 @@ BUILTIN(__builtin_amdgcn_endpgm, "v", "nr")
 
 BUILTIN(__builtin_amdgcn_get_fpenv, "WUi", "n")
 BUILTIN(__builtin_amdgcn_set_fpenv, "vWUi", "n")
+
+//===----------------------------------------------------------------------===//
+
+// Wave Reduction builtins.
+
+//===----------------------------------------------------------------------===//
+
+BUILTIN(__builtin_amdgcn_wave_reduce_add_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_i32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_i32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_u32, "ZUiZUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_and_b32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_or_b32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_xor_b32, "ZiZiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_add_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_sub_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_i64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_min_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_i64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_max_u64, "WUiWUiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_and_b64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_or_b64, "WiWiZi", "nc")
+BUILTIN(__builtin_amdgcn_wave_reduce_xor_b64, "WiWiZi", "nc")
 
 //===----------------------------------------------------------------------===//
 // R600-NI only builtins.
