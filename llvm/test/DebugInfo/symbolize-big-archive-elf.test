@@ -25,7 +25,3 @@
 // CHECK-NOTARCHIVE: error: '{{.*}}' is not a valid archive
 // RUN: not llvm-symbolizer --obj="%t.a()" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-EMPTY
 // CHECK-EMPTY: {{.*}}no matching member{{.*}}
-// RUN: not llvm-symbolizer --obj="%t.a(%t.o" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-FORMAT-1
-// CHECK-INCORRECT-FORMAT-1: {{.*}}No such file or directory{{.*}}
-// RUN: not llvm-symbolizer --obj="%t.a%t.o)" 0x1000 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-FORMAT-2
-// CHECK-INCORRECT-FORMAT-2: {{.*}}Not a directory{{.*}}

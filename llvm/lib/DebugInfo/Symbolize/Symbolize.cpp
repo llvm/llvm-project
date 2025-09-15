@@ -579,7 +579,6 @@ LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
 
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
   if (!BinOrErr) {
-    BinaryForPath.erase(Pair.first);
     return BinOrErr.takeError();
   }
 
