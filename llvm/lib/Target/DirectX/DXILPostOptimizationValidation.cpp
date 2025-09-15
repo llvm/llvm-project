@@ -263,8 +263,7 @@ static void validateRootSignature(Module &M,
         continue;
       }
 
-      if (RK != ResourceKind::RawBuffer &&
-          RK != ResourceKind::StructuredBuffer) {
+      if (RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer) {
         reportInvalidHandleTyError(M, RC, Binding);
         continue;
       }
@@ -334,9 +333,8 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
   assert(!DRBI.hasImplicitBinding() && "implicit bindings should be handled in "
                                        "DXILResourceImplicitBinding pass");
 
-  if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
+  if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) 
     validateRootSignature(M, *RSD, MMI, DRM, DRTM);
-  }
 }
 
 PreservedAnalyses
