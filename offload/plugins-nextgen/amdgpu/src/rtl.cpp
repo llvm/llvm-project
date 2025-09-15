@@ -1294,7 +1294,7 @@ private:
 
     uint64_t PreferredNumBlocks = TripCountNumBlocks;
     // Occupancy-based setting overrides block reuse.
-    if (OMPX_GenericSPMDOccupancyBasedOpt) {
+    if (OMPX_GenericSPMDOccupancyBasedOpt && NumTeamsEnvVar == 0 && NumTeamsClause[0] == 0) {
       PreferredNumBlocks =
           std::min(PreferredNumBlocks,
                    OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads));
