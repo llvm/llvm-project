@@ -406,6 +406,7 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
 
 void ExegesisAArch64Target::generateMmapAuxMem(
     std::vector<MCInst> &GeneratedCode) const {
+  dbgs() << "Warning: generateMmapAuxMem using anonymous mapping\n";
   int fd = -1;
   int flags = MAP_SHARED;
   uintptr_t address = getAuxiliaryMemoryStartAddress();
@@ -432,7 +433,7 @@ void ExegesisAArch64Target::generateMmapAuxMem(
 
 std::vector<MCInst> ExegesisAArch64Target::generateMemoryInitialSetup() const {
   std::vector<MCInst> MemoryInitialSetupCode;
-  generateMmapAuxMem(MemoryInitialSetupCode); // FIXME: Uninit file descriptor
+  generateMmapAuxMem(MemoryInitialSetupCode);
 
   // If using fixed address for auxiliary memory skip this step,
   // When using dynamic memory allocation (non-fixed address), we must preserve
