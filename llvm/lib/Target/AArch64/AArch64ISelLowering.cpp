@@ -11639,37 +11639,17 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
         (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG ||
          LHS.getOpcode() == ISD::SIGN_EXTEND)) {
 
-      SDValue OriginalVal = LHS.getOperand(0);
-      EVT OriginalVT = LHS.getOpcode() == ISD::SIGN_EXTEND_INREG
-                           ? cast<VTSDNode>(LHS.getOperand(1))->getVT()
-                           : OriginalVal.getValueType();
+      uint64_t SignBitPos;
+      std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
+      EVT TestVT = LHS.getValueType();
+      SDValue SignBitConst = DAG.getConstant(1ULL << SignBitPos, DL, TestVT);
+      SDValue TST =
+          DAG.getNode(AArch64ISD::ANDS, DL, DAG.getVTList(TestVT, MVT::i32),
+                      LHS, SignBitConst);
 
-      // Apply TST optimization for integer types
-      if (OriginalVT.isInteger()) {
-        // Calculate the sign bit for the original type
-        unsigned BitWidth = OriginalVT.getSizeInBits();
-        APInt SignBit = APInt::getSignedMinValue(BitWidth);
-        EVT TestVT = (BitWidth <= 32) ? MVT::i32 : MVT::i64;
-        unsigned TestBitWidth = TestVT.getSizeInBits();
-        if (BitWidth < TestBitWidth) {
-          SignBit = SignBit.zext(TestBitWidth);
-        }
-
-        SDValue SignBitConst = DAG.getConstant(SignBit, DL, TestVT);
-        SDValue TestOperand = OriginalVal;
-        if (OriginalVal.getValueType() != TestVT) {
-          TestOperand = DAG.getNode(ISD::ZERO_EXTEND, DL, TestVT, OriginalVal);
-        }
-
-        SDValue TST =
-            DAG.getNode(AArch64ISD::ANDS, DL, DAG.getVTList(TestVT, MVT::i32),
-                        TestOperand, SignBitConst);
-
-        SDValue Flags = TST.getValue(1);
-        return DAG.getNode(AArch64ISD::CSEL, DL, TVal.getValueType(), TVal,
-                           FVal, DAG.getConstant(AArch64CC::NE, DL, MVT::i32),
-                           Flags);
-      }
+      SDValue Flags = TST.getValue(1);
+      return DAG.getNode(AArch64ISD::CSEL, DL, TVal.getValueType(), TVal, FVal,
+                         DAG.getConstant(AArch64CC::NE, DL, MVT::i32), Flags);
     }
 
     // Canonicalise absolute difference patterns:
