@@ -39,6 +39,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
+#include <mutex>
 
 // NOTE: Since the REPL itself could also include this runtime, extreme caution
 // should be taken when MAKING CHANGES to this file, especially when INCLUDE NEW
@@ -176,9 +177,10 @@ private:
   void set##name(type Val) {                                                   \
     assert(BK == K_Unspecified || BK == K_##name);                             \
     m_##name = Val;                                                            \
+    BK = K_##name;                                                             \
   }                                                                            \
   type get##name() const {                                                     \
-    assert(BK == K_##name);                                                    \
+    assert(BK != K_Unspecified);                                               \
     return m_##name;                                                           \
   }
     REPL_BUILTIN_TYPES
@@ -501,6 +503,7 @@ public:
 
   ValueId registerPendingResult(QualType QT,
                                 std::optional<ValueCleanup> VC = std::nullopt) {
+    std::lock_guard<std::mutex> Lock(Mutex);
     ValueId NewID = NextID.fetch_add(1, std::memory_order_relaxed);
     IdToType.insert({NewID, QT});
     if (VC)

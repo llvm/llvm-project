@@ -242,7 +242,8 @@ void ValueCleanup::operator()(Value &V) {
   LLVM_DEBUG(dbgs() << "ValueCleanup: destroying value at Addr=" << V.getAddr()
                     << ", Type=" << V.getType().getAsString() << "\n");
   if (ObjDtor) {
-    if (auto ObjDtorAddrOrErr = ObjDtor(V.getType())) {
+    auto ObjDtorAddrOrErr = ObjDtor(V.getType());
+    if (ObjDtorAddrOrErr && !ObjDtorAddrOrErr->isNull()) {
       Error E = Error::success();
       orc::ExecutorAddr ObjDtorFn = *ObjDtorAddrOrErr;
       orc::ExecutorAddr Addr(V.getAddr());
@@ -255,8 +256,7 @@ void ValueCleanup::operator()(Value &V) {
       cantFail(std::move(E));
     } else {
       LLVM_DEBUG(dbgs() << "ValueCleanup: failed to get ObjDtor address\n");
-
-      cantFail(ObjDtorAddrOrErr.takeError());
+      consumeError(ObjDtorAddrOrErr.takeError());
     }
   }
 
@@ -298,40 +298,43 @@ class ValueReadVisitor
     : public TypeVisitor<ValueReadVisitor, llvm::Expected<Value>> {
   ValueReaderDispatcher &Dispatcher;
   llvm::orc::ExecutorAddr Addr;
+  QualType QT;
 
 public:
-  ValueReadVisitor(ValueReaderDispatcher &D, llvm::orc::ExecutorAddr A)
-      : Dispatcher(D), Addr(A) {}
+  ValueReadVisitor(ValueReaderDispatcher &D, llvm::orc::ExecutorAddr A,
+                   QualType QT)
+      : Dispatcher(D), Addr(A), QT(QT) {}
 
   llvm::Expected<Value> VisitType(const Type *T) {
-    return Dispatcher.readOtherObject(QualType(T, 0), Addr);
+    return Dispatcher.readOtherObject(QT, Addr);
   }
 
   llvm::Expected<Value> VisitBuiltinType(const BuiltinType *BT) {
-    return Dispatcher.readBuiltin(QualType(BT, 0), Addr);
+    return Dispatcher.readBuiltin(QT, Addr);
   }
 
   llvm::Expected<Value> VisitPointerType(const PointerType *PT) {
-    return Dispatcher.readPointer(QualType(PT, 0), Addr);
+    return Dispatcher.readPointer(QT, Addr);
   }
 
   llvm::Expected<Value> VisitConstantArrayType(const ConstantArrayType *AT) {
-    return Dispatcher.readArray(QualType(AT, 0), Addr);
+    return Dispatcher.readArray(QT, Addr);
   }
 
   llvm::Expected<Value> VisitEnumType(const EnumType *ET) {
-    return Dispatcher.readBuiltin(QualType(ET, 0), Addr);
+    return Dispatcher.readBuiltin(QT, Addr);
   }
 };
 
 llvm::Expected<Value>
 ValueReaderDispatcher::read(QualType QT, llvm::orc::ExecutorAddr Addr) {
-  ValueReadVisitor V(*this, Addr);
-  return V.Visit(QT.getTypePtr());
+  ValueReadVisitor V(*this, Addr, QT);
+  return V.Visit(QT.getCanonicalType().getTypePtr());
 }
 
 llvm::Expected<Value>
-ValueReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+ValueReaderDispatcher::readBuiltin(QualType QT, llvm::orc::ExecutorAddr Addr) {
+  QualType Ty = QT.getCanonicalType();
   LLVM_DEBUG(llvm::dbgs() << "readBuiltin: start, Addr=" << Addr.getValue()
                           << ", Type=" << Ty.getAsString() << "\n");
   if (Ty->isVoidType()) {
@@ -351,17 +354,16 @@ ValueReaderDispatcher::readBuiltin(QualType Ty, llvm::orc::ExecutorAddr Addr) {
   const auto &Res = *ResOrErr;
   LLVM_DEBUG(llvm::dbgs() << "readBuiltin: read succeeded, last byte addr="
                           << Res.back().data() << "\n");
-  return Value(Ty, Res.back());
+  return Value(QT, Res.back());
 }
 
 llvm::Expected<Value>
-ValueReaderDispatcher::readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr) {
-
+ValueReaderDispatcher::readPointer(QualType QT, llvm::orc::ExecutorAddr Addr) {
+  QualType Ty = QT.getCanonicalType();
   LLVM_DEBUG(llvm::dbgs() << "readPointer: start, Addr=" << Addr.getValue()
                           << "\n");
 
-  auto PtrTy = dyn_cast<PointerType>(Ty.getTypePtr());
-  if (!PtrTy) {
+  if (!Ty->isPointerType()) {
     LLVM_DEBUG(llvm::dbgs() << "readPointer: Not a PointerType!\n");
 
     return llvm::make_error<llvm::StringError>("Not a PointerType",
@@ -374,13 +376,13 @@ ValueReaderDispatcher::readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr) {
 
   if (PtrValAddr == 0) {
     LLVM_DEBUG(llvm::dbgs() << "readPointer: null pointer detected\n");
-    return Value(Ty, PtrValAddr); // null pointer
+    return Value(QT, PtrValAddr); // null pointer
   }
 
   llvm::orc::ExecutorAddr PointeeAddr(PtrValAddr);
-  Value Val(Ty, PtrValAddr);
+  Value Val(QT, PtrValAddr);
 
-  QualType PointeeTy = PtrTy->getPointeeType();
+  QualType PointeeTy = Ty->getPointeeType();
   LLVM_DEBUG(llvm::dbgs() << "readPointer: pointee type="
                           << PointeeTy.getAsString() << "\n");
   if (PointeeTy->isCharType()) {
@@ -408,9 +410,10 @@ ValueReaderDispatcher::readPointer(QualType Ty, llvm::orc::ExecutorAddr Addr) {
 }
 
 llvm::Expected<Value>
-ValueReaderDispatcher::readArray(QualType Ty, llvm::orc::ExecutorAddr Addr) {
+ValueReaderDispatcher::readArray(QualType QT, llvm::orc::ExecutorAddr Addr) {
   LLVM_DEBUG(llvm::dbgs() << "readArray: start, Addr=" << Addr.getValue()
                           << "\n");
+  QualType Ty = QT.getCanonicalType();
   const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty);
   if (!CAT) {
     LLVM_DEBUG(llvm::dbgs() << "readArray: Not a ConstantArrayType!\n");
@@ -425,7 +428,7 @@ ValueReaderDispatcher::readArray(QualType Ty, llvm::orc::ExecutorAddr Addr) {
   LLVM_DEBUG(llvm::dbgs() << "readArray: element type size=" << ElemSize
                           << ", element count=" << NumElts << "\n");
 
-  Value Val(Value::UninitArr(), Ty, NumElts);
+  Value Val(Value::UninitArr(), QT, NumElts);
   for (size_t i = 0; i < NumElts; ++i) {
     auto ElemAddr = Addr + i * ElemSize;
     LLVM_DEBUG(llvm::dbgs() << "readArray: reading element[" << i
@@ -510,7 +513,7 @@ void ValueResultManager::deliverResult(SendResultFn SendResult, ValueId ID,
       SendResult(llvm::make_error<llvm::StringError>(
           "Unknown ValueId in deliverResult", llvm::inconvertibleErrorCode()));
     }
-    Ty = It->second.getCanonicalType();
+    Ty = It->second;
     LLVM_DEBUG(llvm::dbgs() << "Resolved Type for ID=" << ID << "\n");
 
     IdToType.erase(It);
@@ -526,8 +529,8 @@ void ValueResultManager::deliverResult(SendResultFn SendResult, ValueId ID,
     }
   }
 
-  ValueReaderDispatcher Runner(Ctx, MemAcc);
-  auto BufOrErr = Runner.read(Ty, Addr);
+  ValueReaderDispatcher Dispatcher(Ctx, MemAcc);
+  auto BufOrErr = Dispatcher.read(Ty, Addr);
 
   if (!BufOrErr) {
     LLVM_DEBUG(llvm::dbgs() << "Failed to read value for ID=" << ID << "\n");

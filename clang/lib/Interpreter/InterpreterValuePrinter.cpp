@@ -275,19 +275,6 @@ std::string ValueToString::PointerToString(const Value &P) {
   QualType DesugaredTy = QT.getDesugaredType(Ctx);
   QualType NonRefTy = DesugaredTy.getNonReferenceType();
 
-  if (auto PtrTy = dyn_cast<PointerType>(QT.getTypePtr())) {
-    if (!PtrTy)
-      return "";
-
-    auto PointeeTy = PtrTy->getPointeeType();
-
-    // char* -> print string literal
-    if (PointeeTy->isCharType() && P.HasPointee()) {
-      if (P.getPointerPointee().isStr())
-        return "\"" + P.getPointerPointee().getStrVal().str() + "\"";
-    }
-  }
-
   if ((NonRefTy->isPointerType() || NonRefTy->isMemberPointerType()) &&
       NonRefTy->getPointeeType()->isFunctionProtoType())
     return FunctionToString(Ctx, QT, (void *)P.getAddr());
@@ -297,6 +284,21 @@ std::string ValueToString::PointerToString(const Value &P) {
 
   if (NonRefTy->isNullPtrType())
     return "nullptr\n";
+
+  if (NonRefTy->isPointerType()) {
+    auto PointeeTy = NonRefTy->getPointeeType();
+
+    // char* -> print string literal
+    if (PointeeTy->isCharType()) {
+      if (P.HasPointee() && P.getPointerPointee().isStr())
+        return "\"" + P.getPointerPointee().getStrVal().str() + "\"";
+      return std::to_string(P.getAddr());
+    }
+
+    std::ostringstream OS;
+    OS << "0x" << std::hex << P.getAddr();
+    return OS.str();
+  }
 
   std::ostringstream OS;
   OS << "@0x" << std::hex << P.getAddr();
@@ -509,8 +511,6 @@ public:
 
   ExprResult handleFunctionTypeExpr(const FunctionType *, QualType QTy,
                                     Expr *E) {
-    if (Ctx.getLangOpts().CPlusPlus)
-      return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/true);
     return CreateAddressOfVoidPtrExpr(QTy, E, /*takeAddr=*/false);
   }
 
