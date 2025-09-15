@@ -46,6 +46,21 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Renamed :program:`clang-tidy`'s option name of check
+  :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
+  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
+  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
+  correcting a spelling mistake.
+
 Improvements to clangd
 ----------------------
 
@@ -135,7 +150,7 @@ Improvements to clang-tidy
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
-- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` 
+- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
 
@@ -190,6 +205,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
+  correcting a spelling mistake on its option
+  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
@@ -213,8 +233,8 @@ Changes in existing checks
   tagged union respectively.
 
 - Improved :doc:`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting 
-  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to 
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
   prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
 
 - Improved :doc:`bugprone-unhandled-self-assignment

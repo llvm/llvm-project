@@ -4722,6 +4722,7 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -6074,6 +6075,7 @@ cc_library(
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
+        ":PtrDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -9082,7 +9084,9 @@ cc_library(
         ":Parser",
         ":Pass",
         ":PluginsLib",
+        ":RemarkStreamer",
         ":Support",
+        "//llvm:Remarks",
         "//llvm:Support",
     ],
 )
@@ -10817,6 +10821,7 @@ cc_library(
         ":LinalgTransformOpsIncGen",
         ":LinalgTransforms",
         ":LinalgUtils",
+        ":ParallelCombiningOpInterface",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",

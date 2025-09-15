@@ -11714,6 +11714,8 @@ def note_omp_default_dsa_none : Note<
   "explicit data sharing attribute requested here">;
 def note_omp_defaultmap_attr_none : Note<
   "explicit data sharing attribute, data mapping attribute, or is_device_ptr clause requested here">;
+def err_omp_default_vc : Error<
+  "wrong variable category specified with modifier %0 in the default clause">;
 def err_omp_wrong_dsa : Error<
   "%0 variable cannot be %1">;
 def err_omp_variably_modified_type_not_supported : Error<
