@@ -82,6 +82,24 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
+// the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
+// See https://llvm.org/PR154292
+template <class _If, class _Else>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool __cond, _If __if, _Else __else) {
+  if (__builtin_constant_p(__cond)) {
+    if (__cond)
+      __if();
+    else
+      __else();
+  } else {
+    if (__cond) [[__likely__]]
+      __if();
+    else
+      __else();
+  }
+}
+
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
   template <class _Up, class _Alloc>
@@ -463,14 +481,59 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void push_back(value_type&& __x) { emplace_back(std::move(__x)); }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference __emplace_back(_Args&&... __args) {
+    if constexpr (__libcpp_is_trivially_relocatable<value_type>::value &&
+                  __allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                  __allocator_has_trivial_destroy_v<allocator_type, value_type>) {
+      // This path is written in a way to have the fast path as compact as possible. Specifically,
+      // there is a branch in case there isn't enough capacity left over, which will return to the same location within
+      // the function after growing the vector. This ensures that the relocation code exists only once and the
+      // reallocation path is common across all `vector` instantiations of trivially relocatable types.
+      union _Tmp {
+        _LIBCPP_DIAGNOSTIC_PUSH
+        // Clang complains about __exclude_from_explicit_instantiation__ on a local class member.
+        _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wignored-attributes")
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tmp() {}
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~_Tmp() {}
+        _LIBCPP_DIAGNOSTIC_POP
+        value_type __val_;
+      };
+      _Tmp __tmp;
+
+      __alloc_traits::construct(__alloc_, std::addressof(__tmp.__val_), std::forward<_Args>(__args)...);
+
+      auto __guard =
+          std::__make_exception_guard([&, this] { __alloc_traits::destroy(__alloc_, std::addressof(__tmp.__val_)); });
+      std::__if_likely_else(size() != capacity(), [] {}, [this] { reserve(__recommend(size() + 1)); });
+      __guard.__complete();
+      std::__uninitialized_allocator_relocate(
+          __alloc_, std::addressof(__tmp.__val_), std::addressof(__tmp.__val_) + 1, std::__to_address(__end_));
+      ++__end_;
+    } else {
+      pointer __end = this->__end_;
+      std::__if_likely_else(
+          __end < this->__cap_,
+          [&] {
+            __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+            ++__end;
+          },
+          [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+
+      this->__end_ = __end;
+    }
+    return __end_[-1];
+  }
+
 #if _LIBCPP_STD_VER >= 17
-  reference
-  emplace_back(_Args&&... __args);
+  using __emplace_back_result = reference;
 #else
-  void
-  emplace_back(_Args&&... __args);
+  using __emplace_back_result = void;
 #endif
+
+  template <class... _Args>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __emplace_back_result emplace_back(_Args&&... __args) {
+    return static_cast<__emplace_back_result>(__emplace_back(std::forward<_Args>(__args)...));
+  }
 
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __emplace_back_assume_capacity(_Args&&... __args) {
@@ -1109,48 +1172,6 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   __v.__set_sentinel(++__end);
   __swap_out_circular_buffer(__v);
   return this->__end_;
-}
-
-// This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
-// the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
-// See https://llvm.org/PR154292
-template <class _If, class _Else>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool __cond, _If __if, _Else __else) {
-  if (__builtin_constant_p(__cond)) {
-    if (__cond)
-      __if();
-    else
-      __else();
-  } else {
-    if (__cond) [[__likely__]]
-      __if();
-    else
-      __else();
-  }
-}
-
-template <class _Tp, class _Allocator>
-template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline
-#if _LIBCPP_STD_VER >= 17
-    typename vector<_Tp, _Allocator>::reference
-#else
-    void
-#endif
-    vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
-  pointer __end = this->__end_;
-  std::__if_likely_else(
-      __end < this->__cap_,
-      [&] {
-        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-        ++__end;
-      },
-      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
-
-  this->__end_ = __end;
-#if _LIBCPP_STD_VER >= 17
-  return *(__end - 1);
-#endif
 }
 
 template <class _Tp, class _Allocator>
