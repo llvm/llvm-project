@@ -75,11 +75,8 @@ struct OffloadBundleEntry {
   uint64_t Size = 0u;
   uint64_t IDLength = 0u;
   std::string ID;
-  OffloadBundleEntry(uint64_t O, uint64_t S, uint64_t I, std::string T)
-      : Offset(O), Size(S), IDLength(I) {
-    ID.reserve(T.size());
-    ID = T;
-  }
+  OffloadBundleEntry(uint64_t O, uint64_t S, uint64_t I, StringRef T)
+      : Offset(O), Size(S), IDLength(I), ID(T.str()) {}
   void dumpInfo(raw_ostream &OS) {
     OS << "Offset = " << Offset << ", Size = " << Size
        << ", ID Length = " << IDLength << ", ID = " << ID << "\n";
@@ -96,8 +93,8 @@ class OffloadBundleFatBin {
   uint64_t Size = 0u;
   StringRef FileName;
   uint64_t NumberOfEntries;
-  SmallVector<OffloadBundleEntry> Entries;
   bool Decompressed;
+  SmallVector<OffloadBundleEntry> Entries;
 
 public:
   std::unique_ptr<MemoryBuffer> DecompressedBuffer;
@@ -128,7 +125,7 @@ public:
 
   OffloadBundleFatBin(MemoryBufferRef Source, StringRef File,
                       bool Decompress = false)
-      : FileName(File), Decompressed(Decompress), NumberOfEntries(0),
+      : FileName(File), NumberOfEntries(0), Decompressed(Decompress),
         Entries(SmallVector<OffloadBundleEntry>()) {
     if (Decompress)
       DecompressedBuffer =

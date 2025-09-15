@@ -62,7 +62,7 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
         return createFileError(FileName, EC);
 
       Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
-          CompressedOffloadBundle::decompress(**CodeOrErr, &nulls());
+          CompressedOffloadBundle::decompress(**CodeOrErr, nullptr);
       if (!DecompressedBufferOrErr)
         return createStringError(
             inconvertibleErrorCode(),
@@ -137,8 +137,7 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
       return errorCodeToError(object_error::parse_failed);
 
     auto Entry = std::make_unique<OffloadBundleEntry>(
-        EntryOffset + SectionOffset, EntrySize, EntryIDSize,
-        std::move(EntryID.str()));
+        EntryOffset + SectionOffset, EntrySize, EntryIDSize, EntryID);
 
     Entries.push_back(*Entry);
   }
