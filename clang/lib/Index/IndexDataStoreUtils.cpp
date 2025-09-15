@@ -191,6 +191,10 @@ SymbolSubKind index::getSymbolSubKind(indexstore_symbol_subkind_t K) {
     return SymbolSubKind::SwiftAssociatedType;
   case INDEXSTORE_SYMBOL_SUBKIND_SWIFTGENERICTYPEPARAM:
     return SymbolSubKind::SwiftGenericTypeParam;
+  case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORBORROW:
+    return SymbolSubKind::SwiftAccessorBorrow;
+  case INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMUTATE:
+    return SymbolSubKind::SwiftAccessorMutate;
   }
 }
 
