@@ -440,6 +440,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2i32, MVT::v2f32}, Legal);
   }
 
+  setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, MVT::v2i32, Legal);
+  // Prevent SELECT v2i32 from being implemented with the above bitwise ops and
+  // instead lower to cndmask in SITargetLowering::LowerSELECT().
+  setOperationAction(ISD::SELECT, MVT::v2i32, Custom);
+  // Enable MatchRotate to produce ISD::ROTR, which is later transformed to
+  // alignbit.
+  setOperationAction(ISD::ROTR, MVT::v2i32, Custom);
+
   setOperationAction(ISD::BUILD_VECTOR, {MVT::v4f16, MVT::v4i16, MVT::v4bf16},
                      Custom);
 
@@ -2090,10 +2098,16 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
       AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
     bool AlignedBy4 = Alignment >= Align(4);
+    if (Subtarget->hasUnalignedScratchAccessEnabled()) {
+      if (IsFast)
+        *IsFast = AlignedBy4 ? Size : 1;
+      return true;
+    }
+
     if (IsFast)
       *IsFast = AlignedBy4;
 
-    return AlignedBy4 || Subtarget->hasUnalignedScratchAccessEnabled();
+    return AlignedBy4;
   }
 
   // So long as they are correct, wide global memory operations perform better
@@ -2351,6 +2365,37 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   return DAG.getMergeValues({Val, Load.getValue(1)}, SL);
 }
 
+/// Coerce an argument which was passed in a different ABI type to the original
+/// expected value type.
+SDValue SITargetLowering::convertABITypeToValueType(SelectionDAG &DAG,
+                                                    SDValue Val,
+                                                    CCValAssign &VA,
+                                                    const SDLoc &SL) const {
+  EVT ValVT = VA.getValVT();
+
+  // If this is an 8 or 16-bit value, it is really passed promoted
+  // to 32 bits. Insert an assert[sz]ext to capture this, then
+  // truncate to the right size.
+  switch (VA.getLocInfo()) {
+  case CCValAssign::Full:
+    return Val;
+  case CCValAssign::BCvt:
+    return DAG.getNode(ISD::BITCAST, SL, ValVT, Val);
+  case CCValAssign::SExt:
+    Val = DAG.getNode(ISD::AssertSext, SL, VA.getLocVT(), Val,
+                      DAG.getValueType(ValVT));
+    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+  case CCValAssign::ZExt:
+    Val = DAG.getNode(ISD::AssertZext, SL, VA.getLocVT(), Val,
+                      DAG.getValueType(ValVT));
+    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+  case CCValAssign::AExt:
+    return DAG.getNode(ISD::TRUNCATE, SL, ValVT, Val);
+  default:
+    llvm_unreachable("Unknown loc info!");
+  }
+}
+
 SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
                                               CCValAssign &VA, const SDLoc &SL,
                                               SDValue Chain,
@@ -2371,7 +2416,6 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
 
   // Create load nodes to retrieve arguments from the stack.
   SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
-  SDValue ArgValue;
 
   // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
   ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
@@ -2394,10 +2438,62 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
     break;
   }
 
-  ArgValue = DAG.getExtLoad(
+  SDValue ArgValue = DAG.getExtLoad(
       ExtType, SL, VA.getLocVT(), Chain, FIN,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), MemVT);
-  return ArgValue;
+
+  SDValue ConvertedVal = convertABITypeToValueType(DAG, ArgValue, VA, SL);
+  if (ConvertedVal == ArgValue)
+    return ConvertedVal;
+
+  return DAG.getMergeValues({ConvertedVal, ArgValue.getValue(1)}, SL);
+}
+
+SDValue SITargetLowering::lowerWorkGroupId(
+    SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+    AMDGPUFunctionArgInfo::PreloadedValue WorkGroupIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+  if (!Subtarget->hasClusters())
+    return getPreloadedValue(DAG, MFI, VT, WorkGroupIdPV);
+
+  // Clusters are supported. Return the global position in the grid. If clusters
+  // are enabled, WorkGroupIdPV returns the cluster ID not the workgroup ID.
+
+  // WorkGroupIdXYZ = ClusterId == 0 ?
+  //   ClusterIdXYZ :
+  //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
+  SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, WorkGroupIdPV);
+  SDLoc SL(ClusterIdXYZ);
+  SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
+  SDValue One = DAG.getConstant(1, SL, VT);
+  SDValue ClusterSizeXYZ = DAG.getNode(ISD::ADD, SL, VT, ClusterMaxIdXYZ, One);
+  SDValue ClusterWorkGroupIdXYZ =
+      getPreloadedValue(DAG, MFI, VT, ClusterWorkGroupIdPV);
+  SDValue GlobalIdXYZ =
+      DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
+                  DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
+
+  switch (MFI.getClusterDims().getKind()) {
+  case AMDGPU::ClusterDimsAttr::Kind::FixedDims:
+  case AMDGPU::ClusterDimsAttr::Kind::VariableDims:
+    return GlobalIdXYZ;
+  case AMDGPU::ClusterDimsAttr::Kind::NoCluster:
+    return ClusterIdXYZ;
+  case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
+    using namespace AMDGPU::Hwreg;
+    SDValue ClusterIdField =
+        DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
+    SDNode *GetReg =
+        DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
+    SDValue ClusterId(GetReg, 0);
+    SDValue Zero = DAG.getConstant(0, SL, VT);
+    return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, ClusterIdXYZ,
+                       GlobalIdXYZ, DAG.getCondCode(ISD::SETEQ));
+  }
+  }
+
+  llvm_unreachable("nothing should reach here");
 }
 
 SDValue SITargetLowering::getPreloadedValue(
@@ -2418,9 +2514,30 @@ SDValue SITargetLowering::getPreloadedValue(
       AMDGPU::isEntryFunctionCC(CC) && !MFI.hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+  const ArgDescriptor ClusterWorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000000Fu);
+  const ArgDescriptor ClusterWorkGroupIDY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000000F0u);
+  const ArgDescriptor ClusterWorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00000F00u);
+  const ArgDescriptor ClusterWorkGroupMaxIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000F000u);
+  const ArgDescriptor ClusterWorkGroupMaxIDY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000F0000u);
+  const ArgDescriptor ClusterWorkGroupMaxIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
+  const ArgDescriptor ClusterWorkGroupMaxFlatID =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
+
+  auto LoadConstant = [&](unsigned N) {
+    return DAG.getConstant(N, SDLoc(), VT);
+  };
+
   if (Subtarget->hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
-       CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+    AMDGPU::ClusterDimsAttr ClusterDims = MFI.getClusterDims();
+    bool HasFixedDims = ClusterDims.isFixedDims();
+
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
@@ -2434,6 +2551,53 @@ SDValue SITargetLowering::getPreloadedValue(
       break;
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Reg = &WorkGroupIDZ;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      if (HasFixedDims && ClusterDims.getDims()[0] == 1)
+        return LoadConstant(0);
+      Reg = &ClusterWorkGroupIDX;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      if (HasFixedDims && ClusterDims.getDims()[1] == 1)
+        return LoadConstant(0);
+      Reg = &ClusterWorkGroupIDY;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      if (HasFixedDims && ClusterDims.getDims()[2] == 1)
+        return LoadConstant(0);
+      Reg = &ClusterWorkGroupIDZ;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      if (HasFixedDims)
+        return LoadConstant(ClusterDims.getDims()[0] - 1);
+      Reg = &ClusterWorkGroupMaxIDX;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      if (HasFixedDims)
+        return LoadConstant(ClusterDims.getDims()[1] - 1);
+      Reg = &ClusterWorkGroupMaxIDY;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      if (HasFixedDims)
+        return LoadConstant(ClusterDims.getDims()[2] - 1);
+      Reg = &ClusterWorkGroupMaxIDZ;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+      Reg = &ClusterWorkGroupMaxFlatID;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
@@ -3370,7 +3534,6 @@ SDValue SITargetLowering::LowerFormalArguments(
       RC = &AMDGPU::SGPR_32RegClass;
     else
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
-    EVT ValVT = VA.getValVT();
 
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
@@ -3388,30 +3551,7 @@ SDValue SITargetLowering::LowerFormalArguments(
           DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
     }
 
-    // If this is an 8 or 16-bit value, it is really passed promoted
-    // to 32 bits. Insert an assert[sz]ext to capture this, then
-    // truncate to the right size.
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
-      break;
-    case CCValAssign::SExt:
-      Val = DAG.getNode(ISD::AssertSext, DL, VT, Val, DAG.getValueType(ValVT));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
-      break;
-    case CCValAssign::ZExt:
-      Val = DAG.getNode(ISD::AssertZext, DL, VT, Val, DAG.getValueType(ValVT));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
-      break;
-    case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
-      break;
-    default:
-      llvm_unreachable("Unknown loc info!");
-    }
-
+    Val = convertABITypeToValueType(DAG, Val, VA, DL);
     InVals.push_back(Val);
   }
 
@@ -6528,6 +6668,20 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
 
+// Enable lowering of ROTR for vxi32 types. This is a workaround for a
+// regression whereby extra unnecessary instructions were added to codegen
+// for rotr operations, casued by legalising v2i32 or. This resulted in extra
+// instructions to extract the result from the vector.
+SDValue SITargetLowering::lowerROTR(SDValue Op, SelectionDAG &DAG) const {
+  [[maybe_unused]] EVT VT = Op.getValueType();
+
+  assert((VT == MVT::v2i32 || VT == MVT::v4i32 || VT == MVT::v8i32 ||
+          VT == MVT::v16i32) &&
+         "Unexpected ValueType.");
+
+  return DAG.UnrollVectorOp(Op.getNode());
+}
+
 // Work around LegalizeDAG doing the wrong thing and fully scalarizing if the
 // wider vector type is legal.
 SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
@@ -6719,6 +6873,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerGET_FPENV(Op, DAG);
   case ISD::SET_FPENV:
     return lowerSET_FPENV(Op, DAG);
+  case ISD::ROTR:
+    return lowerROTR(Op, DAG);
   }
   return SDValue();
 }
@@ -9504,6 +9660,19 @@ SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
                      DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
 }
 
+SDValue SITargetLowering::lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                                              AMDGPU::Hwreg::Id HwReg,
+                                              unsigned LowBit,
+                                              unsigned Width) const {
+  SDLoc SL(Op);
+  using namespace AMDGPU::Hwreg;
+  return {DAG.getMachineNode(
+              AMDGPU::S_GETREG_B32_const, SL, MVT::i32,
+              DAG.getTargetConstant(HwregEncoding::encode(HwReg, LowBit, Width),
+                                    SL, MVT::i32)),
+          0};
+}
+
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                                           unsigned Dim,
                                           const ArgDescriptor &Arg) const {
@@ -9650,14 +9819,81 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
-    return getPreloadedValue(DAG, *MFI, VT,
-                             AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
+    return lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
   case Intrinsic::amdgcn_workgroup_id_y:
-    return getPreloadedValue(DAG, *MFI, VT,
-                             AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
+    return lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_workgroup_id_z:
-    return getPreloadedValue(DAG, *MFI, VT,
-                             AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+    return lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_id_x:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::WORKGROUP_ID_X)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_id_y:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::WORKGROUP_ID_Y)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_id_z:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(DAG, *MFI, VT,
+                                   AMDGPUFunctionArgInfo::WORKGROUP_ID_Z)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_id_x:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_id_y:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_id_z:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_flat_id:
+    return Subtarget->hasClusters()
+               ? lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4)
+               : SDValue();
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z)
+               : DAG.getPOISON(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
+    return Subtarget->hasClusters()
+               ? getPreloadedValue(
+                     DAG, *MFI, VT,
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)
+               : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
@@ -13801,6 +14037,47 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
   }
 
+  // Detect identity v2i32 OR and replace with identity source node.
+  // Specifically an Or that has operands constructed from the same source node
+  // via extract_vector_elt and build_vector. I.E.
+  // v2i32 or(
+  //   v2i32 build_vector(
+  //     i32 extract_elt(%IdentitySrc, 0),
+  //     i32 0
+  //   ),
+  //   v2i32 build_vector(
+  //     i32 0,
+  //     i32 extract_elt(%IdentitySrc, 1)
+  //   ) )
+  // =>
+  // v2i32 %IdentitySrc
+
+  if (VT == MVT::v2i32 && LHS->getOpcode() == ISD::BUILD_VECTOR &&
+      RHS->getOpcode() == ISD::BUILD_VECTOR) {
+
+    ConstantSDNode *LC = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
+    ConstantSDNode *RC = dyn_cast<ConstantSDNode>(RHS->getOperand(0));
+
+    // Test for and normalise build vectors.
+    if (LC && RC && LC->getZExtValue() == 0 && RC->getZExtValue() == 0) {
+
+      // Get the extract_vector_element operands.
+      SDValue LEVE = LHS->getOperand(0);
+      SDValue REVE = RHS->getOperand(1);
+
+      if (LEVE->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          REVE->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        // Check that different elements from the same vector are
+        // extracted.
+        if (LEVE->getOperand(0) == REVE->getOperand(0) &&
+            LEVE->getOperand(1) != REVE->getOperand(1)) {
+          SDValue IdentitySrc = LEVE.getOperand(0);
+          return IdentitySrc;
+        }
+      }
+    }
+  }
+
   if (VT != MVT::i64 || DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -13848,7 +14125,7 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  const ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
   SelectionDAG &DAG = DCI.DAG;
 
   EVT VT = N->getValueType(0);
@@ -13856,6 +14133,23 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
     if (SDValue Split =
             splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::XOR, LHS, CRHS))
       return Split;
+  }
+
+  // v2i32 (xor (vselect cc, x, y), K) ->
+  // (v2i32 svelect cc, (xor x, K), (xor y, K)) This enables the xor to be
+  // replaced with source modifiers when the select is lowered to CNDMASK.
+  unsigned Opc = LHS.getOpcode();
+  if (((Opc == ISD::VSELECT && VT == MVT::v2i32) ||
+       (Opc == ISD::SELECT && VT == MVT::i64)) &&
+      CRHS && CRHS->getAPIntValue().isSignMask()) {
+    SDValue CC = LHS->getOperand(0);
+    SDValue TRUE = LHS->getOperand(1);
+    SDValue FALSE = LHS->getOperand(2);
+    SDValue XTrue = DAG.getNode(ISD::XOR, SDLoc(N), VT, TRUE, RHS);
+    SDValue XFalse = DAG.getNode(ISD::XOR, SDLoc(N), VT, FALSE, RHS);
+    SDValue XSelect =
+        DAG.getNode(ISD::VSELECT, SDLoc(N), VT, CC, XTrue, XFalse);
+    return XSelect;
   }
 
   // Make sure to apply the 64-bit constant splitting fold before trying to fold
@@ -14846,6 +15140,27 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     SDValue Elt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec.getOperand(0), Idx);
     return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
+  }
+
+  // (extract_vector_element (and {y0, y1}, (build_vector 0x1f, 0x1f)), index)
+  // -> (and (extract_vector_element {y0, y1}, index), 0x1f)
+  // There are optimisations to transform 64-bit shifts into 32-bit shifts
+  // depending on the shift operand. See e.g. performSraCombine().
+  // This combine ensures that the optimisation is compatible with v2i32
+  // legalised AND.
+  if (VecVT == MVT::v2i32 && Vec->getOpcode() == ISD::AND &&
+      Vec->getOperand(1)->getOpcode() == ISD::BUILD_VECTOR) {
+
+    const ConstantSDNode *C = isConstOrConstSplat(Vec.getOperand(1));
+    if (!C || C->getZExtValue() != 0x1f)
+      return SDValue();
+
+    SDLoc SL(N);
+    SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+    SDValue EVE = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                              Vec->getOperand(0), N->getOperand(1));
+    SDValue A = DAG.getNode(ISD::AND, SL, MVT::i32, EVE, AndMask);
+    DAG.ReplaceAllUsesWith(N, A.getNode());
   }
 
   // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)

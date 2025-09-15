@@ -6392,25 +6392,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_clz:
     return DAG.getNode(AArch64ISD::CTLZ_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
-  case Intrinsic::aarch64_sme_cntsb:
-    return DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(),
-                       DAG.getConstant(1, DL, MVT::i32));
-  case Intrinsic::aarch64_sme_cntsh: {
-    SDValue One = DAG.getConstant(1, DL, MVT::i32);
-    SDValue Bytes = DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(), One);
-    return DAG.getNode(ISD::SRL, DL, Op.getValueType(), Bytes, One);
-  }
-  case Intrinsic::aarch64_sme_cntsw: {
-    SDValue Bytes = DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(),
-                                DAG.getConstant(1, DL, MVT::i32));
-    return DAG.getNode(ISD::SRL, DL, Op.getValueType(), Bytes,
-                       DAG.getConstant(2, DL, MVT::i32));
-  }
   case Intrinsic::aarch64_sme_cntsd: {
     SDValue Bytes = DAG.getNode(AArch64ISD::RDSVL, DL, Op.getValueType(),
                                 DAG.getConstant(1, DL, MVT::i32));
     return DAG.getNode(ISD::SRL, DL, Op.getValueType(), Bytes,
-                       DAG.getConstant(3, DL, MVT::i32));
+                       DAG.getConstant(3, DL, MVT::i32), SDNodeFlags::Exact);
   }
   case Intrinsic::aarch64_sve_cnt: {
     SDValue Data = Op.getOperand(3);
@@ -9312,6 +9298,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
+
   if (UseNewSMEABILowering) {
     if (CallAttrs.requiresLazySave() ||
         CallAttrs.requiresPreservingAllZAState())
@@ -20195,13 +20182,21 @@ static bool isPredicateCCSettingOp(SDValue N) {
       (N.getOpcode() == ISD::GET_ACTIVE_LANE_MASK) ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehi ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehi_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehs ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilehs_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilele ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilele_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelo ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelo_x2 ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilels ||
-        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt)))
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilels_x2 ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt ||
+        N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilelt_x2)))
     return true;
 
   return false;
@@ -20227,7 +20222,7 @@ performFirstTrueTestVectorCombine(SDNode *N,
 
   // Restricted the DAG combine to only cases where we're extracting from a
   // flag-setting operation.
-  if (!isPredicateCCSettingOp(N0))
+  if (!isPredicateCCSettingOp(N0) || N0.getResNo() != 0)
     return SDValue();
 
   // Extracts of lane 0 for SVE can be expressed as PTEST(Op, FIRST) ? 1 : 0
@@ -27577,6 +27572,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ false))
       return R;
     return performFlagSettingCombine(N, DCI, AArch64ISD::SBC);
+  case AArch64ISD::ADDS:
+    return performFlagSettingCombine(N, DCI, ISD::ADD);
+  case AArch64ISD::SUBS:
+    return performFlagSettingCombine(N, DCI, ISD::SUB);
   case AArch64ISD::BICi: {
     APInt DemandedBits =
         APInt::getAllOnes(N->getValueType(0).getScalarSizeInBits());
