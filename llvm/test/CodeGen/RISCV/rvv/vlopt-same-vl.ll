@@ -11,7 +11,7 @@
 ; which was responsible for speeding it up. 
 
 define <vscale x 4 x i32> @same_vl_imm(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-  ; CHECK: User VL is: 4
+  ; CHECK: Trying to reduce VL for %{{.+}}:vrm2 = PseudoVADD_VV_M2
   ; CHECK: Abort due to CommonVL == VLOp, no point in reducing.
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 4)
   %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a, i64 4)
@@ -19,7 +19,7 @@ define <vscale x 4 x i32> @same_vl_imm(<vscale x 4 x i32> %passthru, <vscale x 4
 }
 
 define <vscale x 4 x i32> @same_vl_reg(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 %vl) {
-  ; CHECK: User VL is: %3:gprnox0
+  ; CHECK: Trying to reduce VL for %{{.+}}:vrm2 = PseudoVADD_VV_M2
   ; CHECK: Abort due to CommonVL == VLOp, no point in reducing.
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i64 %vl)
   %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a, i64 %vl)
