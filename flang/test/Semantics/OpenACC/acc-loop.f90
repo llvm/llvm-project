@@ -447,4 +447,35 @@ program openacc_loop_validity
     END DO
   END DO
 
+contains
+
+  subroutine sub1()
+    !$acc routine gang(dim:2)
+    implicit none
+    integer, parameter :: N = 256
+    integer :: i, j
+
+    !$acc loop gang(dim:2)
+    DO j = 1, N
+       !$acc loop gang(dim:1) vector
+       DO i = 1, N
+       END DO
+    END DO
+  end subroutine sub1
+
+  subroutine sub2()
+    !$acc routine gang(dim:2)
+    implicit none
+    integer, parameter :: N = 256
+    integer :: i, j
+
+    !$acc loop gang(dim:2)
+    DO j = 1, N
+       !ERROR: GANG(dim:2) clause is not allowed in the region of a loop with the GANG(dim:2) clause
+       !$acc loop gang(dim:2) vector
+       DO i = 1, N
+       END DO
+    END DO
+  end subroutine sub2
+
 end program openacc_loop_validity
