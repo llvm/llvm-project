@@ -878,14 +878,13 @@ void DecoderEmitter::emitRegClassByHwModeDecoders(
     OS << R"((MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
   switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
 )";
-    for (const HwModeSelect::PairType &P : ModeSelect.Items) {
-      const CodeGenRegisterClass *RegClass = RegBank.getRegClass(P.second);
+    for (auto [ModeID, RegClassRec] : ModeSelect.Items) {
+      const CodeGenRegisterClass *RegClass = RegBank.getRegClass(RegClassRec);
 
-      OS << indent(2) << "case " << P.first << ": // "
-         << CGH.getModeName(P.first, /*IncludeDefault=*/true) << '\n'
+      OS << indent(2) << "case " << ModeID << ": // "
+         << CGH.getModeName(ModeID, /*IncludeDefault=*/true) << '\n'
          << indent(4) << "return "
-         << InstructionEncoding::findOperandDecoderMethod(Target,
-                                                          RegClass->getDef())
+         << InstructionEncoding::findOperandDecoderMethod(Target, RegClassRec)
                 .first
          << "(Inst, Imm, Addr, Decoder);\n";
     }
