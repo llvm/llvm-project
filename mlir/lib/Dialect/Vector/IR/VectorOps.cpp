@@ -3503,19 +3503,16 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   /// Converts integer attributes to the expected type if there's a mismatch.
   /// Non-integer attributes are left unchanged.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
-    for (auto value : denseSource.getValues<Attribute>()) {
-      if (auto intAttr = dyn_cast<IntegerAttr>(value)) {
+    for (auto value : denseSource.getValues<Attribute>())
+      if (auto intAttr = dyn_cast<IntegerAttr>(value))
         insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-      } else {
+      else
         insertedValues.push_back(value); // Non-integer attributes unchanged
-      }
-    }
   } else {
-    if (auto intAttr = dyn_cast<IntegerAttr>(srcAttr)) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(srcAttr))
       insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
-    } else {
+    else
       insertedValues.push_back(srcAttr); // Non-integer attributes unchanged
-    }
   }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
