@@ -69,14 +69,11 @@ class TestEnums(unittest.TestCase):
         enum_variant_map = {}
         # For all enums in self.enums, extract all enum variants defined in Index.h
         for cursor in tu.cursor.walk_preorder():
-            type_class = cenum_to_pythonenum.get(cursor.type.spelling)
-            if (
-                cursor.kind == CursorKind.ENUM_CONSTANT_DECL
-                and type_class in self.enums
-            ):
-                if type_class not in enum_variant_map:
-                    enum_variant_map[type_class] = []
-                enum_variant_map[type_class].append(cursor.enum_value)
+            python_enum = cenum_to_pythonenum.get(cursor.type.spelling)
+            if cursor.kind == CursorKind.ENUM_CONSTANT_DECL:
+                if python_enum not in enum_variant_map:
+                    enum_variant_map[python_enum] = []
+                enum_variant_map[python_enum].append(cursor.enum_value)
 
         for enum in self.enums:
             with self.subTest(enum):
