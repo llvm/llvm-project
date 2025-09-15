@@ -27,60 +27,46 @@ entry:
   ret <vscale x 4 x i32> %partial.reduce
 }
 
-define <8 x i32> @udot_vl256(<8 x i32> %acc, <16 x i16> %a, <16 x i16> %b) vscale_range(2,2) {
+define void @udot_vl256(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(2,2) {
 ; CHECK-LABEL: udot_vl256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $q5 killed $q5 killed $z4_z5 def $z4_z5
-; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ptrue p1.s, vl4
-; CHECK-NEXT:    // kill: def $q4 killed $q4 killed $z4_z5 def $z4_z5
-; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    splice z4.h, p0, { z4.h, z5.h }
-; CHECK-NEXT:    splice z2.h, p0, { z2.h, z3.h }
-; CHECK-NEXT:    splice z0.s, p1, { z0.s, z1.s }
-; CHECK-NEXT:    udot z0.s, z2.h, z4.h
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    ldr z2, [x2]
+; CHECK-NEXT:    udot z0.s, z1.h, z2.h
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 entry:
+  %acc = load <8 x i32>, ptr %accptr
+  %a = load <16 x i16>, ptr %aptr
+  %b = load <16 x i16>, ptr %bptr
   %a.wide = zext <16 x i16> %a to <16 x i32>
   %b.wide = zext <16 x i16> %b to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %a.wide, %b.wide
   %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
-  ret <8 x i32> %partial.reduce
+  store <8 x i32> %partial.reduce, ptr %accptr
+  ret void
 }
 
-define <8 x i32> @sdot_vl256(<8 x i32> %acc, <16 x i16> %a, <16 x i16> %b) vscale_range(2,2) {
+define void @sdot_vl256(ptr %accptr, ptr %aptr, ptr %bptr) vscale_range(2,2) {
 ; CHECK-LABEL: sdot_vl256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $q5 killed $q5 killed $z4_z5 def $z4_z5
-; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    ptrue p1.s, vl4
-; CHECK-NEXT:    // kill: def $q4 killed $q4 killed $z4_z5 def $z4_z5
-; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    splice z4.h, p0, { z4.h, z5.h }
-; CHECK-NEXT:    splice z2.h, p0, { z2.h, z3.h }
-; CHECK-NEXT:    splice z0.s, p1, { z0.s, z1.s }
-; CHECK-NEXT:    sdot z0.s, z2.h, z4.h
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    ldr z2, [x2]
+; CHECK-NEXT:    sdot z0.s, z1.h, z2.h
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
 entry:
+  %acc = load <8 x i32>, ptr %accptr
+  %a = load <16 x i16>, ptr %aptr
+  %b = load <16 x i16>, ptr %bptr
   %a.wide = sext <16 x i16> %a to <16 x i32>
   %b.wide = sext <16 x i16> %b to <16 x i32>
   %mult = mul nuw nsw <16 x i32> %a.wide, %b.wide
   %partial.reduce = tail call <8 x i32> @llvm.experimental.vector.partial.reduce.add(<8 x i32> %acc, <16 x i32> %mult)
-  ret <8 x i32> %partial.reduce
+  store <8 x i32> %partial.reduce, ptr %accptr
+  ret void
 }
 
 define <4 x i32> @fixed_udot_s_h(<4 x i32> %acc, <8 x i16> %a, <8 x i16> %b) {
