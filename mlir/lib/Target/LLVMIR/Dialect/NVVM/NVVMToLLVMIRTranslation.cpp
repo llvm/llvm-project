@@ -253,8 +253,8 @@ getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
 /// Return the intrinsic ID associated with st.bulk for the given address type.
 static llvm::Intrinsic::ID
 getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
-  bool isSharedMemory =
-      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  bool isSharedMemory = addrType.getAddressSpace() ==
+                        static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
   return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
                         : llvm::Intrinsic::nvvm_st_bulk;
 }
