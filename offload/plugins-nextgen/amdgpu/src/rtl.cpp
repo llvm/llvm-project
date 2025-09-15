@@ -745,6 +745,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   AMDGPUKernelTy(const char *Name, GenericGlobalHandlerTy &Handler)
       : GenericKernelTy(Name),
         OMPX_SPMDOccupancyBasedOpt("OMPX_SPMD_OCCUPANCY_BASED_OPT", false),
+        OMPX_GenericSPMDOccupancyBasedOpt(
+            "OMPX_GENERIC_SPMD_OCCUPANCY_BASED_OPT", false),
         OMPX_BigJumpLoopOccupancyBasedOpt(
             "OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT", false),
         OMPX_XTeamReductionOccupancyBasedOpt(
@@ -887,6 +889,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Envar to enable occupancy-based optimization for SPMD kernel.
   BoolEnvar OMPX_SPMDOccupancyBasedOpt;
+
+  /// Envar to enable occupancy-based optimization for generic SPMD kernel.
+  BoolEnvar OMPX_GenericSPMDOccupancyBasedOpt;
 
   /// Envar to enable occupancy-based optimization for big jump loop.
   BoolEnvar OMPX_BigJumpLoopOccupancyBasedOpt;
@@ -1060,14 +1065,6 @@ private:
 
     if (isBigJumpLoopMode()) {
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
-
-      // If envar OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT is set and no
-      // OMP_NUM_TEAMS is specified, optimize the num of teams based on
-      // occupancy value.
-      if (OMPX_BigJumpLoopOccupancyBasedOpt && NumTeamsEnvVar == 0) {
-        return OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
-      }
-
       uint64_t NumGroups = 1;
       // Cannot assert a non-zero tripcount. Instead, launch with 1 team if the
       // tripcount is indeed zero.
@@ -1111,6 +1108,14 @@ private:
           NumGroups = LowTripCountBlocks;
         }
       }
+      // If envar OMPX_BIGJUMPLOOP_OCCUPANCY_BASED_OPT is set and no num_teams
+      // clause or OMP_NUM_TEAMS is specified, optimize the number of teams
+      // based on occupancy value.
+      if (OMPX_BigJumpLoopOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
+          NumTeamsClause[0] == 0) {
+        return std::min(NumGroups, OptimizeNumTeamsBaseOccupancy(GenericDevice,
+                                                                 NumThreads));
+      }
       return std::min(NumGroups,
                       static_cast<uint64_t>(GenericDevice.getBlockLimit()));
     }
@@ -1144,12 +1149,12 @@ private:
       }
 
       // If envar OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT is set and no
-      // OMP_NUM_TEAMS is specified, optimize the num of teams based on
-      // occupancy value.
-      if (OMPX_XTeamReductionOccupancyBasedOpt && NumTeamsEnvVar == 0) {
+      // OMP_NUM_TEAMS or num_teams clause is specified, optimize the num of
+      // teams based on occupancy value.
+      if (OMPX_XTeamReductionOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
+          NumTeamsClause[0] == 0) {
         uint64_t newNumTeams =
             OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
-
         return std::min(newNumTeams, MaxNumGroups);
       }
 
@@ -1222,10 +1227,6 @@ private:
     // If envar OMPX_SPMD_OCCUPANCY_BASED_OPT is set and no OMP_NUM_TEAMS is
     // specified, optimize the num of teams based on occupancy value.
     int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
-    if (isSPMDMode() && OMPX_SPMDOccupancyBasedOpt && NumTeamsEnvVar == 0) {
-      return OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads);
-    }
-
     uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
     if (LoopTripCount > 0) {
       if (isSPMDMode()) {
@@ -1251,6 +1252,12 @@ private:
         // loop.
         TripCountNumBlocks = LoopTripCount;
       }
+    }
+
+    if (isSPMDMode() && OMPX_SPMDOccupancyBasedOpt && NumTeamsEnvVar == 0 &&
+        NumTeamsClause[0] == 0) {
+      return std::min(TripCountNumBlocks,
+                      OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads));
     }
 
     auto getAdjustedDefaultNumBlocks =
@@ -1286,9 +1293,17 @@ private:
     }
 
     uint64_t PreferredNumBlocks = TripCountNumBlocks;
-    // If the loops are long running we rather reuse blocks than spawn too many.
-    if (GenericDevice.getReuseBlocksForHighTripCount())
+    // Occupancy-based setting overrides block reuse.
+    if (OMPX_GenericSPMDOccupancyBasedOpt) {
+      PreferredNumBlocks =
+          std::min(PreferredNumBlocks,
+                   OptimizeNumTeamsBaseOccupancy(GenericDevice, NumThreads));
+    } else if (GenericDevice.getReuseBlocksForHighTripCount()) {
+      // If the loops are long running we rather reuse blocks than spawn too
+      // many.
       PreferredNumBlocks = std::min(TripCountNumBlocks, AdjustedNumBlocks);
+    }
+
     return std::min(PreferredNumBlocks,
                     (uint64_t)GenericDevice.getBlockLimit());
   }
