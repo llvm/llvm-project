@@ -218,8 +218,7 @@ static void *MsanAllocate(BufferedStackTrace *stack, uptr size, uptr alignment,
   auto *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->requested_size = size;
   uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(allocated);
-  void* padding_start =
-      reinterpret_cast<void*>(reinterpret_cast<uptr>(allocated) + size);
+  void* padding_start = reinterpret_cast<char*>(allocated) + size;
   uptr padding_size = actually_allocated_size - size;
 
   // - With calloc(7,1), we can set the ideal tagging:
