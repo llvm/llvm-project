@@ -238,7 +238,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
         if (Part != 1)
           continue;
         VPValue *StartV;
-        if (match(VPI->getOperand(2), m_SpecificInt(1))) {
+        if (match(VPI->getOperand(2), m_One())) {
           StartV = VPI->getOperand(1);
         } else {
           auto *C = VPI->clone();
