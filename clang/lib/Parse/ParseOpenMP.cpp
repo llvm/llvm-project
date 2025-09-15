@@ -2019,7 +2019,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       ConsumeAnnotationToken();
       return Actions.OpenMP().ActOnOpenMPGroupPrivateDirective(
           Loc, Helper.getIdentifiers());
-    }   
+    }
     break;
   }
   case OMPD_allocate: {
@@ -2760,7 +2760,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
     }
     SkipUntil(tok::annot_pragma_openmp_end);
-    break; 
+    break;
   }
   case OMPD_allocate: {
     // FIXME: Should this be permitted in C++?
