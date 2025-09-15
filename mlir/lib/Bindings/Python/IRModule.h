@@ -218,6 +218,10 @@ public:
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
 
+  /// Gets the count of live modules associated with this context.
+  /// Used for testing.
+  size_t getLiveModuleCount();
+
   /// Enter and exit the context manager.
   static nanobind::object contextEnter(nanobind::object context);
   void contextExit(const nanobind::object &excType,
@@ -243,6 +247,14 @@ private:
   using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
   static nanobind::ft_mutex live_contexts_mutex;
   static LiveContextMap &getLiveContexts();
+
+  // Interns all live modules associated with this context. Modules tracked
+  // in this map are valid. When a module is invalidated, it is removed
+  // from this map, and while it still exists as an instance, any
+  // attempt to access it will raise an error.
+  using LiveModuleMap =
+      llvm::DenseMap<const void *, std::pair<nanobind::handle, PyModule *>>;
+  LiveModuleMap liveModules;
 
   bool emitErrorDiagnostics = false;
 
