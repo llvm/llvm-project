@@ -69,6 +69,7 @@ class XeVM_Op<string mnemonic, list<Trait> traits = []>
 }
 
 def XeVM_ElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, TF32, F16, BF16]>;
+def XeVM_1DBlockElemType : AnyTypeOf<[I8, I16, I32, I64]>;
 
 //===----------------------------------------------------------------------===//
 // XeVM Load Cache Control
@@ -189,7 +190,8 @@ def XeVM_StoreCacheControlAttr
 
 def XeVM_BlockLoadOp
     : XeVM_Op<"blockload">,
-      Results<(outs FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$res)>,
+      Results<(
+          outs FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$res)>,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block load";
@@ -220,12 +222,13 @@ def XeVM_BlockLoadOp
   let assemblyFormat = [{
     operands prop-dict attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 def XeVM_BlockStoreOp
     : XeVM_Op<"blockstore">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr,
-          FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$val,
+          FixedVectorOfRankAndType<[1], [XeVM_1DBlockElemType]>:$val,
           OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
   let summary = "subgroup block store";
   let description = [{
@@ -257,6 +260,7 @@ def XeVM_BlockStoreOp
   let assemblyFormat = [{
     operands prop-dict attr-dict `:` `(` type(operands) `)`
   }];
+  let hasVerifier = 1;
 }
 
 def XeVM_BlockLoad2dOp
