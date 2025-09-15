@@ -24845,9 +24845,8 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
     // If the element type is legal we can use cpop.v if it is enabled.
     if (isLegalElementTypeForRVV(SVT))
       return Subtarget.hasStdExtZvbb();
-    // If it will be scalarized, we might be able to use cpop.
-    return VT.isFixedLengthVector() && Subtarget.hasCPOPLike() &&
-           (SVT == MVT::i32 || SVT == MVT::i64);
+    // Don't consider it fast if the type needs to be legalized or scalarized.
+    return false;
   }
 
   return Subtarget.hasCPOPLike() && (VT == MVT::i32 || VT == MVT::i64);
