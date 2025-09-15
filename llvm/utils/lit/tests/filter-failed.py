@@ -10,8 +10,6 @@
 #
 # RUN: not %{lit} --filter-failed %{inputs}/filter-failed | FileCheck %s
 
-# END.
-
 # CHECK: Testing: 3 of 7 tests
 # CHECK-DAG: FAIL: filter-failed :: fail.txt
 # CHECK-DAG: UNRESOLVED: filter-failed :: unresolved.txt
