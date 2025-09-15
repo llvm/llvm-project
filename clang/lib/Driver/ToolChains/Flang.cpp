@@ -134,12 +134,17 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
-  } else if (Args.hasArg(options::OPT_g_Flag)) {
+  } else if (Args.hasArg(options::OPT_g_Group)) {
     DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
+  if (getDwarfNArg(Args)) {
+    const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
+    CmdArgs.push_back(
+        Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
+  }
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
