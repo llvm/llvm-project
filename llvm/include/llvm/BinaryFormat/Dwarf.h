@@ -759,6 +759,7 @@ enum CallingConvention {
   DW_CC_hi_user = 0xff
 };
 
+<<<<<<< HEAD
 enum MemorySpace {
 #define HANDLE_DW_MSPACE(ID, NAME) DW_MSPACE_LLVM_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -772,6 +773,15 @@ enum AddressSpace {
 #include "llvm/BinaryFormat/Dwarf.def"
 };
 
+||||||| 1287ed1fa2db
+=======
+enum AddressSpace {
+#define HANDLE_DW_ASPACE(ID, NAME) DW_ASPACE_LLVM_##NAME = ID,
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED) DW_ASPACE_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
+>>>>>>> 4a8bb08bd2261afe22c8addea9f830906084869e
 enum InlineAttribute {
   // Inline codes
   DW_INL_not_inlined = 0x00,
@@ -1026,8 +1036,13 @@ LLVM_ABI StringRef IndexString(unsigned Idx);
 LLVM_ABI StringRef FormatString(DwarfFormat Format);
 LLVM_ABI StringRef FormatString(bool IsDWARF64);
 LLVM_ABI StringRef RLEString(unsigned RLE);
+<<<<<<< HEAD
 LLVM_ABI StringRef MemorySpaceString(unsigned MS);
 LLVM_ABI StringRef AddressSpaceString(unsigned AS, llvm::Triple TT);
+||||||| 1287ed1fa2db
+=======
+LLVM_ABI StringRef AddressSpaceString(unsigned AS, const llvm::Triple &TT);
+>>>>>>> 4a8bb08bd2261afe22c8addea9f830906084869e
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
