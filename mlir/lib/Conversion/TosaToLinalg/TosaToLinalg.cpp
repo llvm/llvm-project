@@ -1827,8 +1827,8 @@ public:
     auto resultTy = cast<ShapedType>(op.getType());
     auto resultETy = resultTy.getElementType();
 
-    bool floatingPointMode = resultETy.isF16() || resultETy.isF32();
-    auto floatTy = resultETy.isF16() ? b.getF16Type() : b.getF32Type();
+    bool floatingPointMode = isa<FloatType>(resultETy);
+    auto floatTy = resultETy;
 
     auto imageH = inputTy.getShape()[1];
     auto imageW = inputTy.getShape()[2];
