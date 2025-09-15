@@ -397,20 +397,11 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
 }
 
 /// Converts an IntegerAttr to have the specified type if needed.
-/// This handles cases where constant attributes have a different type than the
-/// target element type. Returns null if the attribute is poison/invalid or
-/// conversion fails.
-static Attribute convertIntegerAttr(Attribute attr, Type expectedType) {
-  // Check for poison attributes before any casting operations
-  if (!attr || isa<ub::PoisonAttrInterface>(attr))
-    return {}; // Poison or invalid attribute
-
-  auto intAttr = mlir::dyn_cast<IntegerAttr>(attr);
-  if (!intAttr)
-    return attr; // Not an IntegerAttr, return unchanged (e.g., FloatAttr)
-
+/// This handles cases where integer constant attributes have a different type 
+/// than the target element type.
+static IntegerAttr convertIntegerAttr(IntegerAttr intAttr, Type expectedType) {
   if (intAttr.getType() == expectedType)
-    return attr; // Already correct type
+    return intAttr; // Already correct type
 
   return IntegerAttr::get(expectedType, intAttr.getInt());
 }
@@ -2470,7 +2461,10 @@ static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
 ///
 static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
                                                ArrayRef<Attribute> elements) {
-  if (llvm::any_of(elements, [](Attribute attr) { return !attr; }))
+  // Check for null or poison attributes before any processing.
+  if (llvm::any_of(elements, [](Attribute attr) { 
+    return !attr || isa<ub::PoisonAttrInterface>(attr); 
+  }))
     return {};
 
   // DenseElementsAttr only supports int/index/float/complex types.
@@ -2479,17 +2473,13 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
   if (!destEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(destEltType))
     return {};
 
-  // Constant attributes might have a different type than the return type.
-  // Convert them before creating the dense elements attribute.
-  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
-    return convertIntegerAttr(attr, destEltType);
+  // Convert integer attributes to the target type if needed, leave others unchanged.
+  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) -> Attribute {
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+      return convertIntegerAttr(intAttr, destEltType);
+    }
+    return attr; // Non-integer attributes (FloatAttr, etc.) returned unchanged
   });
-
-  // Check if any attributes are poison/invalid (indicated by null attributes).
-  // Note: convertIntegerAttr returns valid non-integer attributes unchanged,
-  // only returns null for poison/invalid attributes.
-  if (llvm::any_of(convertedElements, [](Attribute attr) { return !attr; }))
-    return {};
 
   return DenseElementsAttr::get(destVecType, convertedElements);
 }
@@ -3510,13 +3500,22 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   SmallVector<Attribute> insertedValues;
   Type destEltType = destTy.getElementType();
 
-  /// Converts the expected type to an IntegerAttr if there's
-  /// a mismatch.
+  /// Converts integer attributes to the expected type if there's a mismatch.
+  /// Non-integer attributes are left unchanged.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
-    for (auto value : denseSource.getValues<Attribute>())
-      insertedValues.push_back(convertIntegerAttr(value, destEltType));
+    for (auto value : denseSource.getValues<Attribute>()) {
+      if (auto intAttr = dyn_cast<IntegerAttr>(value)) {
+        insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
+      } else {
+        insertedValues.push_back(value); // Non-integer attributes unchanged
+      }
+    }
   } else {
-    insertedValues.push_back(convertIntegerAttr(srcAttr, destEltType));
+    if (auto intAttr = dyn_cast<IntegerAttr>(srcAttr)) {
+      insertedValues.push_back(convertIntegerAttr(intAttr, destEltType));
+    } else {
+      insertedValues.push_back(srcAttr); // Non-integer attributes unchanged
+    }
   }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
