@@ -179,7 +179,7 @@ New checks
 - New :doc:`performance-lost-std-move
   <clang-tidy/checks/performance/lost-std-move>` check.
 
-  Warns if copy constructor is used instead of std::move() and suggests a fix.
+  Warns if copy constructor is used instead of ``std::move()`` and suggests a fix.
   It honours cycles, lambdas, and unspecified call order in compound expressions.
 
 - New :doc:`llvm-mlir-op-builder
