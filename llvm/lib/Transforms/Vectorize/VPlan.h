@@ -1039,6 +1039,8 @@ public:
     // It produces the lane index across all unrolled iterations. Unrolling will
     // add all copies of its original operand as additional operands.
     FirstActiveLane,
+    // Returns a reversed vector for the operand.
+    Reverse,
 
     // The opcodes below are used for VPInstructionWithType.
     //
@@ -3326,6 +3328,15 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {Addr, S.getStoredValue(), &EVL}, S.isConsecutive(),
                             S.isReverse(), S, S.getDebugLoc()) {
+    setMask(Mask);
+  }
+
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
+                        VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
+                            {Addr, StoredVal, &EVL}, S.isConsecutive(),
+                            S.isReverse(), S, S.getDebugLoc()) {
+    assert(isReverse() && "Only reverse access need to set new stored value");
     setMask(Mask);
   }
 
