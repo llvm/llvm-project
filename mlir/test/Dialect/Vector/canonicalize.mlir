@@ -3365,7 +3365,7 @@ func.func @negative_from_elements_to_constant(%arg0: f32) -> vector<2xf32> {
 // folder is applied (`rewriteFromElementsAsBroadcast`).
 llvm.mlir.global constant @my_symbol() : i32
 
-// CHECK-LABEL: func @negative_from_address_to_constant
+// CHECK-LABEL: func @negative_from_elements_to_constant
 //       CHECK:   %[[A:.*]] = llvm.mlir.addressof @my_symbol
 //       CHECK:   %[[B:.*]] = vector.broadcast %[[A]] : !llvm.ptr to vector<1x!llvm.ptr>
 //       CHECK:   return %[[B]]
