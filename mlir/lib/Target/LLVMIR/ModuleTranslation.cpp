@@ -2257,13 +2257,11 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
         /* HasRequiresUnifiedAddress = */ false,
         /* HasRequiresUnifiedSharedMemory = */ false,
         /* HasRequiresDynamicAllocators = */ false);
-    unsigned int defaultAS = getLLVMModule()
-                               ->getDataLayout()
-                               .getProgramAddressSpace();
+    unsigned int defaultAS =
+        getLLVMModule()->getDataLayout().getProgramAddressSpace();
     config.setDefaultTargetAS(defaultAS);
     ompBuilder->setConfig(std::move(config));
     ompBuilder->initialize();
-
   }
   return ompBuilder.get();
 }
