@@ -1966,6 +1966,8 @@ __m128i test_mm256_maskz_cvtepi16_epi8(__mmask16 __M, __m256i __A) {
   return _mm256_maskz_cvtepi16_epi8(__M, __A); 
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm256_maskz_cvtepi16_epi8(/*1010 0011 0011 0101=*/0xa335, (__m256i)(__v16hi){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, 0, 3, 0, 5, 6, 0, 0, 9, 10, 0, 0, 0, 14, 0, 16));
+
 __m128i test_mm_mask_mulhrs_epi16(__m128i __W, __mmask8 __U, __m128i __X, __m128i __Y) {
   // CHECK-LABEL: test_mm_mask_mulhrs_epi16
   // CHECK: @llvm.x86.ssse3.pmul.hr.sw
