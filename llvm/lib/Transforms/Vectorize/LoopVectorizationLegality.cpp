@@ -191,7 +191,7 @@ bool LoopVectorizeHints::allowVectorization(
     } else if (hasDisableAllTransformsHint(TheLoop)) {
       LLVM_DEBUG(
           dbgs() << "LV: Not vectorizing: loop hasDisableAllTransformsHint.\n");
-      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedTrafoDisabled",
+      ORE.emit(OptimizationRemarkMissed(LV_NAME, "MissedTransformsDisabled",
                                         TheLoop->getStartLoc(),
                                         TheLoop->getHeader())
                << "loop not vectorized: loop transformations are disabled");
