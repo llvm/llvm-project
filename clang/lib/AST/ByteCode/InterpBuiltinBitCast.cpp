@@ -441,13 +441,27 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
         if (llvm::sys::IsBigEndianHost)
           swapBytes(Memory.get(), FullBitWidth.roundToBytes());
 
-        BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
-          if (BitWidth.nonZero())
-            P.deref<T>() = T::bitcastFromMemory(Memory.get(), T::bitWidth())
-                               .truncate(BitWidth.getQuantity());
-          else
-            P.deref<T>() = T::zero();
-        });
+        if (T == PT_IntAPS) {
+          P.deref<IntegralAP<true>>() =
+              S.allocAP<IntegralAP<true>>(FullBitWidth.getQuantity());
+          IntegralAP<true>::bitcastFromMemory(Memory.get(),
+                                              FullBitWidth.getQuantity(),
+                                              &P.deref<IntegralAP<true>>());
+        } else if (T == PT_IntAP) {
+          P.deref<IntegralAP<false>>() =
+              S.allocAP<IntegralAP<false>>(FullBitWidth.getQuantity());
+          IntegralAP<false>::bitcastFromMemory(Memory.get(),
+                                               FullBitWidth.getQuantity(),
+                                               &P.deref<IntegralAP<false>>());
+        } else {
+          BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
+            if (BitWidth.nonZero())
+              P.deref<T>() = T::bitcastFromMemory(Memory.get(), T::bitWidth())
+                                 .truncate(BitWidth.getQuantity());
+            else
+              P.deref<T>() = T::zero();
+          });
+        }
         P.initialize();
         return true;
       });

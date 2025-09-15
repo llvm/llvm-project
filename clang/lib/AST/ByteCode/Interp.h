@@ -3156,6 +3156,9 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   const auto &SrcPtr = S.Stk.pop<Pointer>();
   const auto &DestPtr = S.Stk.peek<Pointer>();
 
+  if (SrcPtr.isDummy() || DestPtr.isDummy())
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
