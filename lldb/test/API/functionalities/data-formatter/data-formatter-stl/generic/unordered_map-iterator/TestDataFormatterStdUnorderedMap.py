@@ -113,7 +113,6 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
         Test that pointers to std::unordered_map are formatted correctly.
         """
 
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here", lldb.SBFileSpec("main.cpp", False)
         )
