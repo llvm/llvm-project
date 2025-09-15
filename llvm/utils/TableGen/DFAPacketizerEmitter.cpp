@@ -256,16 +256,6 @@ void DFAPacketizerEmitter::emitForItineraries(
   }
   OS << "\n};\n\n";
 
-  // Output the mapping from proc ID to ResourceIndexStart
-  Idx = 1;
-  OS << "std::map<unsigned, unsigned> " << TargetName << DFAName
-     << "ProcIdToResourceIndexStartMapping = {\n";
-  for (const CodeGenProcModel *Model : ProcModels) {
-    OS << "  { " << Model->Index << ",  " << Idx++ << " }, // "
-       << Model->ModelName << "\n";
-  }
-  OS << "};\n\n";
-
   // And the mapping from Itinerary index into the previous table.
   OS << "constexpr unsigned " << TargetName << DFAName
      << "ProcResourceIndexStart[] = {\n";
@@ -275,6 +265,38 @@ void DFAPacketizerEmitter::emitForItineraries(
        << "\n";
   }
   OS << "  " << ScheduleClasses.size() << "\n};\n\n";
+
+  // Output the mapping from proc ID to ResourceIndexStart
+  Idx = 1;
+  OS << "int " << TargetName << DFAName
+     << "GetResourceIndex(unsigned ProcID) { \n"
+     << "  static const unsigned " << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable[][2] = {\n";
+  for (const CodeGenProcModel *Model : ProcModels) {
+    OS << "    { " << Model->Index << ",  " << Idx++ << " }, // "
+       << Model->ModelName << "\n";
+  }
+  OS << "  };\n"
+     << "  unsigned Mid;\n"
+     << "  unsigned Start = 0;\n"
+     << "  unsigned End = " << ProcModels.size() << ";\n"
+     << "  while (Start < End) {\n"
+     << "  Mid = Start + (End - Start) / 2;\n"
+     << "  if (ProcID == " << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable[Mid][0]) {\n"
+     << "    break;\n"
+     << "  }\n"
+     << "  if (ProcID < " << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable[Mid][0])\n"
+     << "    End = Mid;\n"
+     << "  else\n"
+     << "    Start = Mid + 1;\n"
+     << "  }\n"
+     << "  if (Start == End)\n"
+     << "    return -1; // Didn't find\n"
+     << "  return " << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable[Mid][1];\n"
+     << "}\n\n";
 
   // The type of a state in the nondeterministic automaton we're defining.
   using NfaStateTy = uint64_t;
@@ -355,7 +377,7 @@ void DFAPacketizerEmitter::emitForItineraries(
      << "Transition>(" << TargetAndDFAName << "Transitions), "
      << TargetAndDFAName << "TransitionInfo);\n"
      << "  unsigned Index = " << TargetName << DFAName
-     << "ProcIdToResourceIndexStartMapping[IID->SchedModel.ProcID];\n"
+     << "GetResourceIndex(IID->SchedModel.ProcID);\n"
      << "  unsigned ProcResIdxStart = " << TargetAndDFAName
      << "ProcResourceIndexStart[Index];\n"
      << "  unsigned ProcResIdxNum = " << TargetAndDFAName
