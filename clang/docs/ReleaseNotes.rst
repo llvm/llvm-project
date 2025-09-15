@@ -316,6 +316,11 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fixed inconsistent shadow warnings for lambda capture of structured bindings.
+  Previously, ``[val = val]`` (regular parameter) produced no warnings with ``-Wshadow``
+  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``) 
+  incorrectly produced warnings. Both cases now consistently show no warnings with 
+  ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
 
@@ -360,6 +365,8 @@ Bug Fixes to C++ Support
   authentication enabled. (#GH152601)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in
   cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Stop rejecting C++11-style attributes on the first argument of constructors in older
+  standards. (#GH156809).
 - Fix a crash when applying binary or ternary operators to two same function types with different spellings,
   where at least one of the function parameters has an attribute which affects
   the function type.
