@@ -259,6 +259,8 @@ public:
 
   unsigned getSemanticIndex() const { return SemanticIndex; }
 
+  bool isSemanticIndexExplicit() const { return SemanticExplicitIndex; }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
     return A->getKind() >= attr::FirstHLSLSemanticAttr &&
