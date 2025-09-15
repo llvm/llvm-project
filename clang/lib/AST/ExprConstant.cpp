@@ -11926,6 +11926,33 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_blendpd:
+  case X86::BI__builtin_ia32_blendpd256:
+  case X86::BI__builtin_ia32_blendps:
+  case X86::BI__builtin_ia32_blendps256:
+  case X86::BI__builtin_ia32_pblendw128:
+  case X86::BI__builtin_ia32_pblendw256:
+  case X86::BI__builtin_ia32_pblendd128:
+  case X86::BI__builtin_ia32_pblendd256: {
+    APValue SourceF, SourceT, SourceC;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceF) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceT) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceC))
+      return false;
+
+    const APInt &C = SourceC.getInt();
+    unsigned SourceLen = SourceF.getVectorLength();
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(SourceLen);
+    for (unsigned EltNum = 0; EltNum != SourceLen; ++EltNum) {
+      const APValue &F = SourceF.getVectorElt(EltNum);
+      const APValue &T = SourceT.getVectorElt(EltNum);
+      ResultElements.push_back(C[EltNum % 8] ? T : F);
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
   case X86::BI__builtin_ia32_blendvps:

@@ -3209,33 +3209,29 @@ _mm512_maskz_permutex2var_epi64(__mmask8 __U, __m512i __A, __m512i __I,
 
 /* Vector Blend */
 
-static __inline __m512d __DEFAULT_FN_ATTRS512
-_mm512_mask_blend_pd(__mmask8 __U, __m512d __A, __m512d __W)
-{
+static __inline __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_blend_pd(__mmask8 __U, __m512d __A, __m512d __W) {
   return (__m512d) __builtin_ia32_selectpd_512 ((__mmask8) __U,
                  (__v8df) __W,
                  (__v8df) __A);
 }
 
-static __inline __m512 __DEFAULT_FN_ATTRS512
-_mm512_mask_blend_ps(__mmask16 __U, __m512 __A, __m512 __W)
-{
+static __inline __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_blend_ps(__mmask16 __U, __m512 __A, __m512 __W) {
   return (__m512) __builtin_ia32_selectps_512 ((__mmask16) __U,
                 (__v16sf) __W,
                 (__v16sf) __A);
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
-_mm512_mask_blend_epi64(__mmask8 __U, __m512i __A, __m512i __W)
-{
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_blend_epi64(__mmask8 __U, __m512i __A, __m512i __W) {
   return (__m512i) __builtin_ia32_selectq_512 ((__mmask8) __U,
                 (__v8di) __W,
                 (__v8di) __A);
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
-_mm512_mask_blend_epi32(__mmask16 __U, __m512i __A, __m512i __W)
-{
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_mask_blend_epi32(__mmask16 __U, __m512i __A, __m512i __W) {
   return (__m512i) __builtin_ia32_selectd_512 ((__mmask16) __U,
                 (__v16si) __W,
                 (__v16si) __A);
