@@ -80,7 +80,10 @@ struct __exception_guard_exceptions {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __complete() _NOEXCEPT { __completed_ = true; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__exception_guard_exceptions() {
+  // __exception_guard is almost always used with a lambda, so the destructor is almost certainly unique to the calling
+  // function. LLVM doesn't know that, so it doesn't inline it due to the destructor being in a cold (exception) path.
+  // Annotate the function with always_inline to work around those problems.
+  _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__exception_guard_exceptions() {
     if (!__completed_)
       __rollback_();
   }
