@@ -25,16 +25,9 @@
       defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||              \
       defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
       defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
-<<<<<<< HEAD
       defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
       defined HANDLE_DW_MSPACE ||                                              \
       ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
-||||||| 1287ed1fa2db
-      defined HANDLE_DW_APPLE_ENUM_KIND)
-=======
-      defined HANDLE_DW_APPLE_ENUM_KIND ||                                     \
-      ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
->>>>>>> 4a8bb08bd2261afe22c8addea9f830906084869e
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -160,7 +153,6 @@
 #define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)
 #endif
 
-<<<<<<< HEAD
 #ifndef HANDLE_DW_MSPACE
 #define HANDLE_DW_MSPACE(ID, NAME)
 #endif
@@ -173,17 +165,6 @@
 #define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED)
 #endif
 
-||||||| 1287ed1fa2db
-=======
-#ifndef HANDLE_DW_ASPACE
-#define HANDLE_DW_ASPACE(ID, NAME)
-#endif
-
-#ifndef HANDLE_DW_ASPACE_PRED
-#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED)
-#endif
-
->>>>>>> 4a8bb08bd2261afe22c8addea9f830906084869e
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x0001, array_type, 2, DWARF, DW_KIND_TYPE)
 HANDLE_DW_TAG(0x0002, class_type, 2, DWARF, DW_KIND_TYPE)
@@ -661,7 +642,6 @@ HANDLE_DW_AT(0x3e0d, LLVM_coro_suspend_idx, 0, LLVM)
 // The DWARF v6 working draft defines DW_AT_alloc_type; use this LLVM-private ID
 // until that is released as an official standard.
 HANDLE_DW_AT(0x3e0e, LLVM_alloc_type, 0, LLVM)
-<<<<<<< HEAD
 // Heterogeneous Debugging Extension defined at
 // https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
 HANDLE_DW_AT(0x3e0f, LLVM_memory_space, 0, LLVM)
@@ -684,24 +664,6 @@ HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::REGION, AMDGPU_region, SELECT_AMDGPU)
 HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::LOCAL, AMDGPU_local, SELECT_AMDGPU)
 HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::PRIVATE_LANE, AMDGPU_private_lane, SELECT_AMDGPU)
 HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::PRIVATE_WAVE, AMDGPU_private_wave, SELECT_AMDGPU)
-||||||| 1287ed1fa2db
-=======
-// Heterogeneous Debugging Extension defined at
-// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
-HANDLE_DW_AT(0x3e0f, LLVM_memory_space, 0, LLVM)
-HANDLE_DW_AT(0x3e10, LLVM_address_space, 0, LLVM)
-HANDLE_DW_AT(0x3e11, LLVM_lanes, 0, LLVM)
-HANDLE_DW_AT(0x3e12, LLVM_lane_pc, 0, LLVM)
-HANDLE_DW_AT(0x3e13, LLVM_vector_size, 0, LLVM)
-
-// https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
-HANDLE_DW_ASPACE(0x0, none)
-HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::GENERIC, AMDGPU_generic, SELECT_AMDGPU)
-HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::REGION, AMDGPU_region, SELECT_AMDGPU)
-HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::LOCAL, AMDGPU_local, SELECT_AMDGPU)
-HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::PRIVATE_LANE, AMDGPU_private_lane, SELECT_AMDGPU)
-HANDLE_DW_ASPACE_PRED(AMDGPU::DWARFAS::PRIVATE_WAVE, AMDGPU_private_wave, SELECT_AMDGPU)
->>>>>>> 4a8bb08bd2261afe22c8addea9f830906084869e
 
 // Apple extensions.
 
@@ -1472,12 +1434,6 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
 #undef HANDLE_DW_APPLE_ENUM_KIND
-<<<<<<< HEAD
 #undef HANDLE_DW_MSPACE
 #undef HANDLE_DW_ASPACE
 #undef HANDLE_DW_ASPACE_PRED
-||||||| 1287ed1fa2db
-=======
-#undef HANDLE_DW_ASPACE
-#undef HANDLE_DW_ASPACE_PRED
->>>>>>> 4a8bb08bd2261afe22c8addea9f830906084869e
