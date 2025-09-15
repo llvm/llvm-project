@@ -699,3 +699,74 @@ body: |
     %11:vr = PseudoVADD_VV_M1 $noreg, %2, $noreg, 10, 5 /* e32 */, 3 /* ta, ma */
     $v10 = COPY %11
     PseudoRET implicit $v10
+...
+---
+name: recurrence
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: recurrence
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %avl:gprnox0 = COPY $x8
+  ; CHECK-NEXT:   %start:vr = PseudoVMV_V_I_M1 $noreg, 0, %avl, 3 /* e8 */, 3 /* ta, ma */
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %phi:vr = PHI %start, %bb.0, %inc, %bb.1
+  ; CHECK-NEXT:   %inc:vr = PseudoVADD_VI_M1 $noreg, %phi, 1, %avl, 3 /* e8 */, 3 /* ta, ma */
+  ; CHECK-NEXT:   BNE $noreg, $noreg, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   PseudoVSE8_V_M1 %inc, $noreg, %avl, 3 /* e8 */
+  bb.0:
+    liveins: $x8
+    %avl:gprnox0 = COPY $x8
+    %start:vr = PseudoVMV_V_I_M1 $noreg, 0, -1, 3 /* e8 */, 3, /* ta, ma */
+    PseudoBR %bb.1
+  bb.1:
+    %phi:vr = PHI %start, %bb.0, %inc, %bb.1
+    %inc:vr = PseudoVADD_VI_M1 $noreg, %phi, 1, -1, 3 /* e8 */, 3 /* ta, ma */
+    BNE $noreg, $noreg, %bb.1
+  bb.2:
+    PseudoVSE8_V_M1 %inc, $noreg, %avl, 3 /* e8 */
+...
+---
+name: recurrence_cant_reduce
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: recurrence_cant_reduce
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x8, $x9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %avl1:gprnox0 = COPY $x8
+  ; CHECK-NEXT:   %avl2:gprnox0 = COPY $x8
+  ; CHECK-NEXT:   %start:vr = PseudoVMV_V_I_M1 $noreg, 0, %avl1, 3 /* e8 */, 3 /* ta, ma */
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %phi:vr = PHI %start, %bb.0, %inc, %bb.1
+  ; CHECK-NEXT:   %inc:vr = PseudoVADD_VI_M1 $noreg, %phi, 1, %avl1, 3 /* e8 */, 3 /* ta, ma */
+  ; CHECK-NEXT:   BNE $noreg, $noreg, %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   PseudoVSE8_V_M1 %inc, $noreg, %avl2, 3 /* e8 */
+  bb.0:
+    liveins: $x8, $x9
+    %avl1:gprnox0 = COPY $x8
+    %avl2:gprnox0 = COPY $x8
+    %start:vr = PseudoVMV_V_I_M1 $noreg, 0, -1, 3 /* e8 */, 3, /* ta, ma */
+    PseudoBR %bb.1
+  bb.1:
+    %phi:vr = PHI %start, %bb.0, %inc, %bb.1
+    %inc:vr = PseudoVADD_VI_M1 $noreg, %phi, 1, %avl1, 3 /* e8 */, 3 /* ta, ma */
+    BNE $noreg, $noreg, %bb.1
+  bb.2:
+    PseudoVSE8_V_M1 %inc, $noreg, %avl2, 3 /* e8 */
+...
