@@ -94,11 +94,14 @@ public:
 
 /// Read serialized CommonEntityInfo.
 void ReadCommonEntityInfo(const uint8_t *&Data, CommonEntityInfo &Info) {
-  uint8_t UnavailableBits = *Data++;
-  Info.Unavailable = (UnavailableBits >> 1) & 0x01;
-  Info.UnavailableInSwift = UnavailableBits & 0x01;
-  if ((UnavailableBits >> 2) & 0x01)
-    Info.setSwiftPrivate(static_cast<bool>((UnavailableBits >> 3) & 0x01));
+  uint8_t EncodedBits = *Data++;
+  Info.Unavailable = (EncodedBits >> 1) & 0x01;
+  Info.UnavailableInSwift = EncodedBits & 0x01;
+  if ((EncodedBits >> 2) & 0x01)
+    Info.setSwiftPrivate(static_cast<bool>((EncodedBits >> 3) & 0x01));
+  if ((EncodedBits >> 4) & 0x01)
+    Info.setSwiftSafety(
+        static_cast<SwiftSafetyKind>((EncodedBits >> 5) & 0x03));
 
   unsigned MsgLength =
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
