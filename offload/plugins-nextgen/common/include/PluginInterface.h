@@ -1093,9 +1093,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   bool useAutoZeroCopy();
   virtual bool useAutoZeroCopyImpl() { return false; }
 
-  /// Returns true if the device has unified memory capabilities
-  bool supportsUnifiedMemory();
-  virtual bool supportsUnifiedMemoryImpl() { return false; }
+  /// Returns true if the plugin can guarantee that the associated
+  /// storage is accessible
+  bool isAccessiblePtr(const void *Ptr, size_t Size);
+  virtual bool isAccessiblePtrImpl(const void *Ptr, size_t Size) { return false; }
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
@@ -1527,8 +1528,8 @@ public:
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
-  /// Returns if the the device supports unified memory.
-  int32_t supports_unified_memory(int32_t DeviceId);
+  /// Returns if the associated storage is accessible for a given device.
+  int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
 
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,

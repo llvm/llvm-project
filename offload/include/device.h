@@ -158,8 +158,8 @@ struct DeviceTy {
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
 
-  /// Ask the device whether it supports unified memory.
-  bool supportsUnifiedMemory();
+  /// Ask the device whether the storage is accessible.
+  bool isAccessiblePtr(const void *Ptr, size_t Size);
 
   /// Check if there are pending images for this device.
   bool hasPendingImages() const { return HasPendingImages; }
