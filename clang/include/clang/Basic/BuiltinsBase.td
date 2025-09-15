@@ -32,7 +32,6 @@ def Const : Attribute<"c">;
 def NoThrow : Attribute<"n">;
 def Pure : Attribute<"U">;
 def ReturnsTwice : Attribute<"j">;
-//  FIXME: gcc has nonnull
 
 // builtin-specific attributes
 // ---------------------------
@@ -85,6 +84,7 @@ def Consteval : Attribute<"EG">;
 // Callback behavior: the first index argument is called with the arguments
 // indicated by the remaining indices.
 class Callback<list<int> ArgIndices> : MultiIndexAttribute<"C", ArgIndices>;
+class NonNull<list<int> ArgIndices> : MultiIndexAttribute<"N", ArgIndices>;
 
 // Prefixes
 // ========

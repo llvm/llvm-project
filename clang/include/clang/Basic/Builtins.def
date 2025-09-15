@@ -67,6 +67,7 @@
 // The third value provided to the macro specifies information about attributes
 // of the function.  These must be kept in sync with the predicates in the
 // Builtin::Context class.  Currently we have:
+//  N -> nonnull
 //  n -> nothrow
 //  r -> noreturn
 //  U -> pure
