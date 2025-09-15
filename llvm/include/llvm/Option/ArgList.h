@@ -281,7 +281,7 @@ public:
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
 
-  /// getSubcommand - Find a subcommand in the arguments.
+  /// getSubcommand - Find subcommand from the arguments if the usage is valid.
   ///
   /// \param Commands - A list of all valid subcommands.
   /// \param HandleMultipleSubcommands - A callback for the case where multiple
