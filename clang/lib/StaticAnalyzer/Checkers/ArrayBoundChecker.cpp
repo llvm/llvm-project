@@ -103,27 +103,6 @@ public:
 
 private:
   std::string getMessage(PathSensitiveBugReport &BR) const;
-
-  /// Return true if information about the value of `Sym` can put constraints
-  /// on some symbol which is interesting within the bug report `BR`.
-  /// In particular, this returns true when `Sym` is interesting within `BR`;
-  /// but it also returns true if `Sym` is an expression that contains integer
-  /// constants and a single symbolic operand which is interesting (in `BR`).
-  /// We need to use this instead of plain `BR.isInteresting()` because if we
-  /// are analyzing code like
-  ///   int array[10];
-  ///   int f(int arg) {
-  ///     return array[arg] && array[arg + 10];
-  ///   }
-  /// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
-  /// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
-  /// to detect this out of bounds access).
-  static bool providesInformationAboutInteresting(SymbolRef Sym,
-                                                  PathSensitiveBugReport &BR);
-  static bool providesInformationAboutInteresting(SVal SV,
-                                                  PathSensitiveBugReport &BR) {
-    return providesInformationAboutInteresting(SV.getAsSymbol(), BR);
-  }
 };
 
 struct Messages {
@@ -157,11 +136,26 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   BugType BT{this, "Out-of-bound access"};
   BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
+  enum class ConstantArrayIndexResult {
+    Done, //< Could model the index access based on its type
+    Unknown //< Could not model the array access based on its type
+  };
+
+  // `ConstantArrayType`s have a constant size, so use it to check the access.
+  ConstantArrayIndexResult
+  performCheckArrayTypeIndex(const ArraySubscriptExpr *E,
+                             CheckerContext &C) const;
+
   void performCheck(const Expr *E, CheckerContext &C) const;
 
   void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
                  NonLoc Offset, std::optional<NonLoc> Extent,
                  bool IsTaintBug = false) const;
+
+  void warnFlexibleArrayAccess(CheckerContext &C, ProgramStateRef State,
+                               const ArraySubscriptExpr *E, StringRef Name,
+                               NonLoc Index, nonloc::ConcreteInt ArraySize,
+                               QualType ArrayType) const;
 
   static void markPartsInteresting(PathSensitiveBugReport &BR,
                                    ProgramStateRef ErrorState, NonLoc Val,
@@ -177,8 +171,12 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   static bool isInAddressOf(const Stmt *S, ASTContext &AC);
 
 public:
+  bool EnableFakeFlexibleArrayWarn{false};
+
   void checkPostStmt(const ArraySubscriptExpr *E, CheckerContext &C) const {
-    performCheck(E, C);
+    if (performCheckArrayTypeIndex(E, C) == ConstantArrayIndexResult::Unknown) {
+      performCheck(E, C);
+    }
   }
   void checkPostStmt(const UnaryOperator *E, CheckerContext &C) const {
     if (E->getOpcode() == UO_Deref)
@@ -478,15 +476,50 @@ static Messages getNonTaintMsgs(const ASTContext &ACtx,
           std::string(Buf)};
 }
 
-static Messages getTaintMsgs(const MemSpaceRegion *Space,
-                             const SubRegion *Region, const char *OffsetName,
+static Messages getTaintMsgs(StringRef RegName, const char *OffsetName,
                              bool AlsoMentionUnderflow) {
-  std::string RegName = getRegionName(Space, Region);
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
                   RegName, OffsetName,
                   AlsoMentionUnderflow ? "negative or " : "")};
+}
+
+/// Return true if information about the value of `Sym` can put constraints
+/// on some symbol which is interesting within the bug report `BR`.
+/// In particular, this returns true when `Sym` is interesting within `BR`;
+/// but it also returns true if `Sym` is an expression that contains integer
+/// constants and a single symbolic operand which is interesting (in `BR`).
+/// We need to use this instead of plain `BR.isInteresting()` because if we
+/// are analyzing code like
+///   int array[10];
+///   int f(int arg) {
+///     return array[arg] && array[arg + 10];
+///   }
+/// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
+/// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
+/// to detect this out of bounds access).
+static bool providesInformationAboutInteresting(SymbolRef Sym,
+                                                PathSensitiveBugReport &BR) {
+  if (!Sym)
+    return false;
+  for (SymbolRef PartSym : Sym->symbols()) {
+    // The interestingess mark may appear on any layer as we're stripping off
+    // the SymIntExpr, UnarySymExpr etc. layers...
+    if (BR.isInteresting(PartSym))
+      return true;
+    // ...but if both sides of the expression are symbolic, then there is no
+    // practical algorithm to produce separate constraints for the two
+    // operands (from the single combined result).
+    if (isa<SymSymExpr>(PartSym))
+      return false;
+  }
+  return false;
+}
+
+static bool providesInformationAboutInteresting(SVal SV,
+                                                PathSensitiveBugReport &BR) {
+  return providesInformationAboutInteresting(SV.getAsSymbol(), BR);
 }
 
 const NoteTag *StateUpdateReporter::createNoteTag(CheckerContext &C) const {
@@ -555,22 +588,307 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
   return std::string(Out.str());
 }
 
-bool StateUpdateReporter::providesInformationAboutInteresting(
-    SymbolRef Sym, PathSensitiveBugReport &BR) {
-  if (!Sym)
-    return false;
-  for (SymbolRef PartSym : Sym->symbols()) {
-    // The interestingess mark may appear on any layer as we're stripping off
-    // the SymIntExpr, UnarySymExpr etc. layers...
-    if (BR.isInteresting(PartSym))
-      return true;
-    // ...but if both sides of the expression are symbolic, then there is no
-    // practical algorithm to produce separate constraints for the two
-    // operands (from the single combined result).
-    if (isa<SymSymExpr>(PartSym))
-      return false;
+// If the base expression of `expr` refers to a `ConstantArrayType`,
+// return the element type and the array size.
+// Note that "real" Flexible Array Members are `IncompleteArrayType`.
+// For them, this function returns `std::nullopt`.
+static std::optional<std::pair<QualType, nonloc::ConcreteInt>>
+getArrayTypeInfo(SValBuilder &svb, ArraySubscriptExpr const *expr) {
+  auto const *arrayBaseExpr = expr->getBase()->IgnoreParenImpCasts();
+  auto const arrayQualType = arrayBaseExpr->getType().getCanonicalType();
+  if (arrayQualType.isNull() || !arrayQualType->isConstantArrayType()) {
+    return std::nullopt;
   }
+  auto *constArrayType =
+      dyn_cast<ConstantArrayType>(arrayQualType->getAsArrayTypeUnsafe());
+  if (!constArrayType) {
+    return std::nullopt;
+  }
+  return std::make_pair(
+      constArrayType->getElementType(),
+      // Note that an array size is technically unsigned, but
+      // `compareValueToThreshold` (via `getSimplifiedOffsets`)
+      // will do some arithmetics that could overflow and cause FN. For instance
+      // ```
+      // int array[20];
+      // array[unsigned_index + 21];
+      // ```
+      // `unsigned_index + 21 < 20` is turned into `unsigned_index < 20 - 21`,
+      // and if 20 is unsigned, that will overflow to the biggest possible array
+      // which is always trivially true. We obviously do not want that, so we
+      // need to treat the size as signed.
+      svb.makeIntVal(llvm::APSInt{constArrayType->getSize(), false}));
+}
+
+static Messages getNegativeIndexMessage(StringRef Name,
+                                        nonloc::ConcreteInt ArraySize,
+                                        NonLoc Index) {
+  auto const ArraySizeVal = ArraySize.getValue()->getZExtValue();
+  std::string const IndexStr = [&]() -> std::string {
+    if (auto ConcreteIndex = getConcreteValue(Index);
+      ConcreteIndex.has_value()) {
+      return formatv(" {0}", ConcreteIndex);
+    }
+    return "";
+  }();
+
+  return {formatv("Out of bound access to {0} at a negative index", Name),
+          formatv("Access of {0} containing {1} elements at negative index{2}",
+                  Name, ArraySizeVal, IndexStr)};
+}
+
+static std::string truncateWithEllipsis(StringRef str, size_t maxLength) {
+  if (str.size() <= maxLength)
+    return str.str();
+
+  return (str.substr(0, maxLength - 3) + "...").str();
+}
+
+static Messages getOOBIndexMessage(StringRef Name, NonLoc Index,
+                                   nonloc::ConcreteInt ArraySize,
+                                   QualType ElemType,
+                                   bool AlsoMentionUnderflow) {
+  std::optional<int64_t> IndexN = getConcreteValue(Index);
+  int64_t ExtentN = ArraySize.getValue()->getZExtValue();
+
+  SmallString<256> Buf;
+  llvm::raw_svector_ostream Out(Buf);
+  Out << "Access of " << Name << " at ";
+  if (AlsoMentionUnderflow) {
+    Out << "a negative or overflowing index";
+  } else if (IndexN.has_value()) {
+    Out << "index " << *IndexN;
+  } else {
+    Out << "an overflowing index";
+  }
+
+  const auto ElemTypeStr = truncateWithEllipsis(ElemType.getAsString(), 20);
+
+  Out << ", while it holds only ";
+  if (ExtentN != 1)
+    Out << ExtentN << " '" << ElemTypeStr << "' elements";
+  else
+    Out << "a single " << "'" << ElemTypeStr << "' element";
+
+  return {formatv("Out of bound access to memory {0} {1}",
+                  AlsoMentionUnderflow ? "around" : "after the end of",
+                  Name),
+          std::string(Buf)};
+}
+
+// "True" flexible array members do not specify any size (`int elems[];`)
+// However, some projects use "fake flexible arrays" (aka "struct hack"), where
+// they specify a size of 0 or 1 to work around a compiler limitation.
+// "True" flexible array members are `IncompleteArrayType` and will be skipped
+// by `performCheckArrayTypeIndex`. We need an heuristic to identify "fake" ones.
+static bool isFakeFlexibleArrays(const ArraySubscriptExpr *E) {
+  auto getFieldDecl = [](ArraySubscriptExpr const *array)-> FieldDecl * {
+    const Expr *BaseExpr = array->getBase()->IgnoreParenImpCasts();
+    if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr)) {
+      return dyn_cast<FieldDecl>(ME->getMemberDecl());
+    }
+    return nullptr;
+  };
+  auto const isLastField = [
+      ](RecordDecl const *Parent, FieldDecl const *Field) {
+    const FieldDecl *LastField = nullptr;
+    for (const FieldDecl *F : Parent->fields()) {
+      LastField = F;
+    }
+
+    return (LastField == Field);
+  };
+  // We expect placeholder constant arrays to have size 0 or 1.
+  auto maybeConstArrayPlaceholder = [](QualType Type) {
+    const ConstantArrayType *CAT =
+        dyn_cast<ConstantArrayType>(Type->getAsArrayTypeUnsafe());
+    return CAT && CAT->getSize().getZExtValue() <= 1;
+  };
+
+  if (auto const *Field = getFieldDecl(E)) {
+    if (!maybeConstArrayPlaceholder(Field->getType()))
+      return false;
+
+    const RecordDecl *Parent = Field->getParent();
+    return Parent && (Parent->isUnion() || isLastField(Parent, Field));
+  }
+
   return false;
+}
+
+// Generate a representation of `Expr` suitable for diagnosis.
+SmallString<128> ExprReprForDiagnosis(ArraySubscriptExpr const *E,
+                                      CheckerContext &C) {
+  SmallString<128> Buf;
+  llvm::raw_svector_ostream Out(Buf);
+
+  auto const *Base = E->getBase()->IgnoreParenImpCasts();
+  switch (Base->getStmtClass()) {
+  case Stmt::MemberExprClass:
+    Out << "the field '";
+    Out << dyn_cast<MemberExpr>(Base)->getMemberDecl()->getName().str();
+    Out << '\'';
+    break;
+  case Stmt::ArraySubscriptExprClass:
+    Out << "the subarray '";
+    Base->printPretty(Out, nullptr, {C.getLangOpts()});
+    Out << '\'';
+    break;
+  default:
+    Out << '\'';
+    Base->printPretty(Out, nullptr, {C.getLangOpts()});
+    Out << '\'';
+  }
+
+  return Buf;
+}
+
+class StateIndexUpdateReporter {
+  std::string Repr;
+  QualType ElementType;
+  NonLoc Index;
+  nonloc::ConcreteInt ArraySize;
+  bool AssumedNonNegative = false;
+  bool AssumedInBounds = false;
+
+  std::string getMessage(PathSensitiveBugReport &BR) const {
+    SmallString<256> Buf;
+    if (providesInformationAboutInteresting(Index, BR)) {
+      llvm::raw_svector_ostream Out{Buf};
+      Out << "Assuming index is";
+      if (AssumedNonNegative)
+        Out << " non-negative";
+      if (AssumedInBounds) {
+        if (AssumedNonNegative)
+          Out << " and";
+        Out << " less than " << ArraySize.getValue()->getZExtValue() << ", ";
+        Out << "the number of '" << ElementType.getAsString() <<
+            "' elements in ";
+        Out << Repr;
+      }
+    }
+    return std::string{Buf.str()};
+  }
+
+public:
+  StateIndexUpdateReporter(StringRef Repr, QualType ElementType, NonLoc Index,
+                           nonloc::ConcreteInt ArraySize)
+    : Repr(Repr), ElementType{ElementType}, Index{Index}, ArraySize{ArraySize} {
+  }
+
+  void recordNonNegativeAssumption() {
+    AssumedNonNegative = true;
+  }
+
+  void recordInBoundsAssumption() {
+    AssumedInBounds = true;
+  }
+
+  const NoteTag *createNoteTag(CheckerContext &C) const {
+    // Don't create a note tag if we didn't assume anything:
+    if (!AssumedNonNegative && !AssumedInBounds) {
+      return nullptr;
+    }
+
+    return C.getNoteTag(
+        [*this](PathSensitiveBugReport &BR) { return getMessage(BR); });
+  }
+};
+
+// If the array is a `ConstantArrayType`, check the axis size.
+// It returns `ConstantArrayIndexResult::Unknown` if it could not reason about
+// the array access, deferring to the regular check based on the region.
+auto ArrayBoundChecker::performCheckArrayTypeIndex(
+    const ArraySubscriptExpr *E,
+    CheckerContext &C) const -> ConstantArrayIndexResult {
+  auto State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
+
+  auto const ArrayInfo = getArrayTypeInfo(SVB, E);
+  auto const Index = SVB.simplifySVal(State, C.getSVal(E->getIdx())).getAs<
+    NonLoc>();
+  if (!ArrayInfo || !Index)
+    return ConstantArrayIndexResult::Unknown;
+
+  auto const &[ArrayType, ArraySize] = *ArrayInfo;
+
+  auto const ExprAsStr = ExprReprForDiagnosis(E, C);
+  bool const IsFakeFAM = isFakeFlexibleArrays(E);
+
+  StateIndexUpdateReporter SUR(ExprAsStr, ArrayType, *Index, ArraySize);
+
+  // Is the index negative?
+  auto [NegativeIndexState, NonNegativeIndexState] =
+      compareValueToThreshold(State, *Index, SVB.makeZeroArrayIndex(), SVB);
+  bool const AlsoMentionUnderflow = (NegativeIndexState != nullptr);
+
+  // Negative is possible
+  if (NegativeIndexState) {
+    // But it can't be
+    if (E->getIdx()->getType()->isUnsignedIntegerOrEnumerationType()) {
+      // And positive isn't possible
+      if (!NonNegativeIndexState) {
+        // The state is broken
+        return ConstantArrayIndexResult::Done;
+      }
+      // As in `performCheck`, we add no assumptions about the index
+    } else if (!NonNegativeIndexState) {
+      // Positive is not possible, this is a bug
+      Messages Msgs = getNegativeIndexMessage(ExprAsStr, ArraySize, *Index);
+      reportOOB(C, NegativeIndexState, Msgs, *Index, ArraySize);
+      return ConstantArrayIndexResult::Done;
+
+    } else {
+      // Both negative and positive are possible, assume positive
+      SUR.recordNonNegativeAssumption();
+    }
+  } else if (!NonNegativeIndexState) {
+    // Broken state
+    return ConstantArrayIndexResult::Done;
+  }
+
+  // The index is greater than 0, is it within bounds?
+  auto [WithinUpperBound, OutOfBounds] =
+      compareValueToThreshold(NonNegativeIndexState, *Index, ArraySize, SVB);
+  if (!WithinUpperBound && !OutOfBounds) {
+    // Invalid state
+    return ConstantArrayIndexResult::Done;
+  }
+
+  if (!WithinUpperBound) {
+    if (isIdiomaticPastTheEndPtr(E, OutOfBounds, *Index, ArraySize, C)) {
+      C.addTransition(OutOfBounds, SUR.createNoteTag(C));
+      return ConstantArrayIndexResult::Done;
+    }
+    // Silence for fake flexible arrays unless explicitly enabled
+    if (!IsFakeFAM) {
+      Messages Msgs = getOOBIndexMessage(ExprAsStr, *Index, ArraySize, ArrayType,
+                                         AlsoMentionUnderflow);
+      reportOOB(C, OutOfBounds, Msgs, *Index, ArraySize);
+    } else if (EnableFakeFlexibleArrayWarn) {
+      warnFlexibleArrayAccess(C, OutOfBounds, E, ExprAsStr, *Index, ArraySize,
+                              ArrayType);
+    }
+    return ConstantArrayIndexResult::Done;
+  }
+
+  // The access might be within range, but it may be tainted
+  if (OutOfBounds && isTainted(OutOfBounds, *Index)) {
+    Messages Msgs = getTaintMsgs(ExprAsStr, "index", AlsoMentionUnderflow);
+    reportOOB(C, OutOfBounds, Msgs, *Index, ArraySize,
+              /*IsTaintBug=*/true);
+  }
+
+  // When "Flexible Array Members" are involved, assume only non-negative
+  // even if we want the warning for OOB FAM access.
+  if (!IsFakeFAM) {
+    if (WithinUpperBound != NonNegativeIndexState)
+      SUR.recordInBoundsAssumption();
+    C.addTransition(WithinUpperBound, SUR.createNoteTag(C));
+  } else
+    C.addTransition(NonNegativeIndexState, SUR.createNoteTag(C));
+
+  return ConstantArrayIndexResult::Done;
 }
 
 void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
@@ -708,8 +1026,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
           if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
             OffsetName = "index";
 
-        Messages Msgs =
-            getTaintMsgs(Space, Reg, OffsetName, AlsoMentionUnderflow);
+        Messages Msgs = getTaintMsgs(getRegionName(Space, Reg), OffsetName, AlsoMentionUnderflow);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
                   /*IsTaintBug=*/true);
         return;
@@ -785,6 +1102,40 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
   C.emitReport(std::move(BR));
 }
 
+void ArrayBoundChecker::warnFlexibleArrayAccess(
+    CheckerContext &C, ProgramStateRef State, const ArraySubscriptExpr *E,
+    StringRef Name, NonLoc Index,
+    nonloc::ConcreteInt ArraySize, QualType ElemType) const {
+  ExplodedNode *WarnNode = C.generateNonFatalErrorNode(State);
+  if (WarnNode) {
+    int64_t ExtentN = ArraySize.getValue()->getZExtValue();
+
+    assert(ExtentN <= 1 && "Flexible arrays are expected to have size 0 or 1");
+
+    SmallString<256> Buf;
+    llvm::raw_svector_ostream Out(Buf);
+    Out << "Access of " << Name << " containing ";
+    if (ExtentN != 1) {
+      Out << ExtentN << " '" << ElemType.getAsString() << "' elements";
+    } else {
+      Out << "a single '" << ElemType.getAsString() << "' element";
+    }
+    Out << " as a possible 'flexible array member'";
+
+    auto BR = std::make_unique<PathSensitiveBugReport>(
+        BT,
+        formatv("Potential out of bound access to {0}, which may be a 'flexible "
+                "array member'",
+                Name)
+            .str(),
+        Buf, WarnNode);
+
+    markPartsInteresting(*BR, State, Index, false);
+    markPartsInteresting(*BR, State, ArraySize, false);
+    C.emitReport(std::move(BR));
+  }
+}
+
 bool ArrayBoundChecker::isFromCtypeMacro(const Expr *E, ASTContext &ACtx) {
   SourceLocation Loc = E->getBeginLoc();
   if (!Loc.isMacroID())
@@ -837,7 +1188,10 @@ bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
 }
 
 void ento::registerArrayBoundChecker(CheckerManager &mgr) {
-  mgr.registerChecker<ArrayBoundChecker>();
+  auto *checker = mgr.registerChecker<ArrayBoundChecker>();
+  checker->EnableFakeFlexibleArrayWarn =
+      mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          checker->getName(), "EnableFakeFlexibleArrayWarn");
 }
 
 bool ento::shouldRegisterArrayBoundChecker(const CheckerManager &mgr) {

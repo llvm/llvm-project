@@ -10,8 +10,8 @@ int TenElements[10];
 
 void arrayUnderflow(void) {
   TenElements[-3] = 5;
-  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -3}}
+  // expected-warning@-1 {{Out of bound access to 'TenElements' at a negative index}}
+  // expected-note@-2 {{Access of 'TenElements' containing 10 elements at negative index -3}}
 }
 
 int underflowWithDeref(void) {
@@ -69,8 +69,8 @@ void gh86959(void) {
   // expected-note@+1 {{Entering loop body}}
   while (rng())
     TenElements[getIndex()] = 10;
-  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -172}}
+  // expected-warning@-1 {{Out of bound access to 'TenElements' at a negative index}}
+  // expected-note@-2 {{Access of 'TenElements' containing 10 elements at negative index -172}}
 }
 
 int scanf(const char *fmt, ...);
@@ -240,8 +240,8 @@ struct vec {
 
 double arrayInStruct(void) {
   return v.elems[64];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'v.elems'}}
-  // expected-note@-2 {{Access of 'v.elems' at index 64, while it holds only 64 'double' elements}}
+  // expected-warning@-1 {{Out of bound access to memory after the end of the field 'elems'}}
+  // expected-note@-2 {{Access of the field 'elems' at index 64, while it holds only 64 'double' elements}}
 }
 
 double arrayInStructPtr(struct vec *pv) {
@@ -431,4 +431,50 @@ int *nothingIsCertain(int x, int y) {
   (void)x;
 
   return mem;
+}
+
+// Should raise when the index for a given sub-array is out-of-bounds
+extern int actionBufferList[200][100];
+
+void recvToSubArrayIndex() {
+  int index = 0;
+  scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+
+  // expected-note@+2 {{Assuming 'index' is <= 100}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index > 100) {
+    return;
+  }
+
+  actionBufferList[0][index] = '\0';
+  // expected-warning@-1 {{Potential out of bound access to the subarray 'actionBufferList[0]' with tainted index}}
+  // expected-note@-2 {{Access of the subarray 'actionBufferList[0]' with a tainted index that may be negative or too large}}
+}
+
+
+#define LONGSTRUCT(x) struct VERYLONGPREFIXIFWEPRINTEVERYTHINGISUNREADABLE ## x
+
+LONGSTRUCT(Bar) {
+  int x;
+};
+
+int test_case_long_elem_name() {
+  LONGSTRUCT(Bar) table[10];
+  return table[55].x;
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'table'}}
+  // expected-note@-2 {{Access of 'table' at index 55, while it holds only 10 'struct VERYLONGPR...' elements}}
+}
+
+struct What {
+  int x[0];
+  int y;
+};
+
+int who() {
+  struct What who;
+  return who.x[1];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the field 'x'}}
+  // expected-note@-2 {{Access of the field 'x' at index 1, while it holds only 0 'int' elements}}
 }

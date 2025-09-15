@@ -915,9 +915,18 @@ def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
 
 let ParentPackage = Security in {
 
-  def ArrayBoundChecker : Checker<"ArrayBound">,
-                          HelpText<"Warn about out of bounds access to memory">,
-                          Documentation<HasDocumentation>;
+  def ArrayBoundChecker
+      : Checker<"ArrayBound">,
+        HelpText<"Warn about out of bounds access to memory">,
+        CheckerOptions<[
+          CmdLineOption<Boolean,
+                        "EnableFakeFlexibleArrayWarn",
+                        "Do not silence out-of-bound accesses to arrays of size 1 or 0 that are "
+                        "the last member of a record, or member of an union",
+                        "false",
+                          Released>,
+        ]>,
+        Documentation<HasDocumentation>;
 
   def FloatLoopCounter
       : Checker<"FloatLoopCounter">,
