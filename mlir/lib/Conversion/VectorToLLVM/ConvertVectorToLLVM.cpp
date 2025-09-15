@@ -1131,7 +1131,7 @@ public:
       positionVec.push_back(rewriter.getZeroAttr(idxType));
     }
 
-    Value extracted = adaptor.getVector();
+    Value extracted = adaptor.getSource();
     if (extractsAggregate) {
       ArrayRef<OpFoldResult> position(positionVec);
       if (extractsScalar) {
