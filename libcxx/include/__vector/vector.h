@@ -1188,19 +1188,43 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
     void
 #endif
     vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
-  pointer __end = this->__end_;
-  std::__if_likely_else(
-      __end < this->__cap_,
-      [&] {
-        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-        ++__end;
-      },
-      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+  if constexpr (__libcpp_is_trivially_relocatable<value_type>::value &&
+                __allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                __allocator_has_trivial_destroy_v<allocator_type, value_type>) {
+    union _Tmp {
+      _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tmp() {}
+      _LIBCPP_CONSTEXPR_SINCE_CXX20 ~_Tmp() {}
+      value_type __val_;
+    };
+    _Tmp __tmp;
 
-  this->__end_ = __end;
+    __alloc_traits::construct(__alloc_, std::addressof(__tmp.__val_), std::forward<_Args>(__args)...);
+
+    auto __guard =
+        std::__make_exception_guard([&, this] { __alloc_traits::destroy(__alloc_, std::addressof(__tmp.__val_)); });
+    std::__if_likely_else(size() != capacity(), [] {}, [this] { reserve(__recommend(size() + 1)); });
+    __guard.__complete();
+    std::__uninitialized_allocator_relocate(
+        __alloc_, std::addressof(__tmp.__val_), std::addressof(__tmp.__val_) + 1, std::__to_address(__end_));
+    ++__end_;
 #if _LIBCPP_STD_VER >= 17
-  return *(__end - 1);
+    return __end_[-1];
 #endif
+  } else {
+    pointer __end = this->__end_;
+    std::__if_likely_else(
+        __end < this->__cap_,
+        [&] {
+          __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+          ++__end;
+        },
+        [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+
+    this->__end_ = __end;
+#if _LIBCPP_STD_VER >= 17
+    return *(__end - 1);
+#endif
+  }
 }
 
 template <class _Tp, class _Allocator>
