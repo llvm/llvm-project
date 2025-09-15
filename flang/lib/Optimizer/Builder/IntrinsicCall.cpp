@@ -46,6 +46,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat-consts.h"
+#include "flang/Support/LangOptions.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -7027,6 +7028,11 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   bool useFastRealMod = true;
+  auto mod = builder.getModule();
+  if (auto attr = mod->getAttrOfType<mlir::omp::VersionAttr>("omp.version"))
+      fprintf(stderr, "omp version: %d\n", attr.getVersion());
+
+  fprintf(stderr, "--> -ffast-real-mod: %d\n", (int) useFastRealMod);
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
     mlir::Type signlessType = mlir::IntegerType::get(
@@ -7048,6 +7054,7 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                  genFastMod(builder, loc, args[0], args[1]));
   } else {
     // Use runtime.
+    fprintf(stderr, "--> emitting slow path MOD\n");
     return builder.createConvert(
         loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
   }
