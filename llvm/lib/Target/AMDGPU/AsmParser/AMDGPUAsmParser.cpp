@@ -8499,6 +8499,7 @@ SMLoc AMDGPUAsmParser::getInstLoc(const OperandVector &Operands) const {
   return ((AMDGPUOperand &)*Operands[0]).getStartLoc();
 }
 
+// Returns one of the given locations that comes later in the source.
 SMLoc AMDGPUAsmParser::getLaterLoc(SMLoc a, SMLoc b) {
   return a.getPointer() < b.getPointer() ? b : a;
 }

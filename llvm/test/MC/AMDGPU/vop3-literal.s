@@ -488,7 +488,7 @@ v_div_fmas_f64 v[6:7], 0x12345678, 0x12345678, 0x12345678
 // GFX1250: v_div_fmas_f64 v[6:7], 0x12345678, 0x12345678, 0x12345678 ; encoding: [0x06,0x00,0x38,0xd6,0xff,0xfe,0xfd,0x03,0x78,0x56,0x34,0x12]
 // GFX9-ERR: :[[@LINE-3]]:24: error: literal operands are not supported
 
-v_div_fmas_f64 v[4:5], v[1:2], 0x123457, 0x123456
+v_div_fmas_f64 v[4:5], v[2:3], 0x123457, 0x123456
 // GFX9-ERR: :[[@LINE-1]]:32: error: literal operands are not supported
 // GFX10-ERR: :[[@LINE-2]]:42: error: only one unique literal operand is allowed
 // GFX1250-ERR: :[[@LINE-3]]:42: error: only one unique literal operand is allowed
