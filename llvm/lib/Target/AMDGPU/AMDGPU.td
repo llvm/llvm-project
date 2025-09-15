@@ -589,7 +589,7 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
 def Feature16bitD16HWBug : SubtargetFeature<"d16-hw-bug",
   "Enable16bitD16HWBug",
   "true",
-  "D16 for 16 bit data type interfere the other half in true16 mode"
+  "D16 instructions potentially have 32-bit data dependencies"
 >;
 
 def FeatureBF16TransInsts : SubtargetFeature<"bf16-trans-insts",
