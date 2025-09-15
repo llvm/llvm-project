@@ -119,6 +119,7 @@ MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
+MODULE_PASS("norecurse-lto-inference", NoRecurseLTOInferencePass())
 MODULE_PASS("nsan", NumericalStabilitySanitizerPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
