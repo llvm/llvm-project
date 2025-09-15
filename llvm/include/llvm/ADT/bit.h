@@ -161,7 +161,7 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
     return std::numeric_limits<T>::digits;
 
   // Use the intrinsic if available.
-  if constexpr (sizeof(T) == 4) {
+  if constexpr (sizeof(T) <= 4) {
 #if __has_builtin(__builtin_ctz) || defined(__GNUC__)
     return __builtin_ctz(Val);
 #elif defined(_MSC_VER)
