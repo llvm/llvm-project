@@ -2061,6 +2061,8 @@ __m128h test_mm256_cvtepi32_ph(__m256i A) {
   return _mm256_cvtepi32_ph(A);
 }
 
+TEST_CONSTEXPR(match_m128h(_mm256_cvtepi32_ph((__m256i)(__v8si){-1, -1, 2, 2, -4, -4, 6, 6}), -1.0f, -1.0f, 2.0f, 2.0f, -4.0f, -4.0f, 6.0f, 6.0f));
+
 __m128h test_mm256_mask_cvtepi32_ph(__m128h A, __mmask8 B, __m256i C) {
   // CHECK-LABEL: test_mm256_mask_cvtepi32_ph
   // CHECK: %{{.*}} = sitofp <8 x i32> %{{.*}} to <8 x half>
