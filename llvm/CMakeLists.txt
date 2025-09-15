@@ -893,6 +893,10 @@ option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
 option(LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
   "Show the optional build config flags when tools are invoked with --version." ON)
 
+set(LLVM_CRASH_DIAGNOSTICS "" CACHE STRING "Controls whether to generate crash reproducers. Can be OFF, COMPILER, ALL")
+set(LLVM_CRASH_DIAGNOSTICS_DIR "" CACHE PATH "Path to use for crash reproducers")
+set(LLVM_GEN_REPRODUCER OFF CACHE STRING "Controls when to generate compiler reproducers. Can be OFF, CRASH, ERROR, ALWAYS")
+
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
 # list of LLVM components. All component names handled by llvm-config are valid.
