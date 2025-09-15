@@ -125,7 +125,8 @@ public:
   /// the section prefix metadata will be cleared if it exists.
   LLVM_ABI void setSectionPrefix(StringRef Prefix);
 
-  /// If \p Prefix is different from existing prefix, update section prefix.
+  /// If \p Prefix is different from existing prefix, update section prefix;
+  /// if \p Prefix is empty, an update clears the existing metadata.
   /// Returns true if an update happens and false otherwise.
   LLVM_ABI bool updateSectionPrefix(StringRef Prefix);
 

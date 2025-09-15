@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/GlobalObject.h"
-#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -56,8 +55,9 @@ TEST_F(GlobalObjectTest, SectionPrefix) {
   Foo->setSectionPrefix("unlikely");
   EXPECT_THAT(Foo->getSectionPrefix(), Optional(StrEq("unlikely")));
 
-  // Update prefix to empty is the same as clear.
+  // Set prefix to empty is the same as clear.
   Foo->setSectionPrefix("");
+  // Test that section prefix is cleared.
   EXPECT_THAT(Foo->getSectionPrefix(), Eq(std::nullopt));
 
   GlobalVariable *Bar = M->getGlobalVariable("bar");
@@ -66,11 +66,16 @@ TEST_F(GlobalObjectTest, SectionPrefix) {
   ASSERT_NE(Bar, nullptr);
   ASSERT_THAT(Bar->getSectionPrefix(), Eq(std::nullopt));
 
-  // No actual update.
+  // Teset that update method returns false since Bar doesn't have prefix
+  // metadata.
   EXPECT_FALSE(Bar->updateSectionPrefix(""));
 
   // Update from empty to hot.
   EXPECT_TRUE(Bar->updateSectionPrefix("hot"));
   EXPECT_THAT(Bar->getSectionPrefix(), Optional(StrEq("hot")));
+
+  // Teset that update method returns true and section prefix is cleared.
+  EXPECT_TRUE(Bar->updateSectionPrefix(""));
+  EXPECT_THAT(Bar->getSectionPrefix(), Eq(std::nullopt));
 }
 } // namespace

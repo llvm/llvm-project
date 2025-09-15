@@ -299,10 +299,9 @@ void GlobalObject::setSectionPrefix(StringRef Prefix) {
 }
 
 bool GlobalObject::updateSectionPrefix(StringRef Prefix) {
-  auto MD = getMetadata(LLVMContext::MD_section_prefix);
-  StringRef ExistingPrefix; // Empty by default.
-  if (MD != nullptr)
-    ExistingPrefix = cast<MDString>(MD->getOperand(1))->getString();
+  StringRef ExistingPrefix;
+  if (std::optional<StringRef> MaybePrefix = getSectionPrefix())
+    ExistingPrefix = *MaybePrefix;
 
   if (ExistingPrefix != Prefix) {
     setSectionPrefix(Prefix);
