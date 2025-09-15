@@ -1,5 +1,4 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core.builtin -verify -Wno-unused -Wno-error=incompatible-pointer-types %s
-// expected-no-diagnostics
 
 typedef union {
   int y;
