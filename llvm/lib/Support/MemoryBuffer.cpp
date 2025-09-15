@@ -266,9 +266,8 @@ MemoryBuffer::getFile(const Twine &Filename, bool IsText,
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
 getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
-                uint64_t MapSize, int64_t Offset, bool IsText,
-                bool RequiresNullTerminator, bool IsVolatile,
-                std::optional<Align> Alignment);
+                uint64_t MapSize, int64_t Offset, bool RequiresNullTerminator,
+                bool IsVolatile, std::optional<Align> Alignment);
 
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
@@ -281,8 +280,7 @@ getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
     return errorToErrorCode(FDOrErr.takeError());
   sys::fs::file_t FD = *FDOrErr;
   auto Ret = getOpenFileImpl<MB>(FD, Filename, /*FileSize=*/-1, MapSize, Offset,
-                                 IsText, RequiresNullTerminator, IsVolatile,
-                                 Alignment);
+                                 RequiresNullTerminator, IsVolatile, Alignment);
   sys::fs::closeFile(FD);
   return Ret;
 }
@@ -470,9 +468,8 @@ WriteThroughMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
 getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
-                uint64_t MapSize, int64_t Offset, bool IsText,
-                bool RequiresNullTerminator, bool IsVolatile,
-                std::optional<Align> Alignment) {
+                uint64_t MapSize, int64_t Offset, bool RequiresNullTerminator,
+                bool IsVolatile, std::optional<Align> Alignment) {
   static int PageSize = sys::Process::getPageSizeEstimate();
 
   // Default is to map the full file.
@@ -509,7 +506,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
       // from the page cache that are not properly filled with trailing zeroes,
       // if some prior user of the page wrote non-zero bytes. Detect this and
       // don't use mmap in that case.
-      if (!IsText || *Result->getBufferEnd() == '\0')
+      if (!RequiresNullTerminator || *Result->getBufferEnd() == '\0')
         return std::move(Result);
     }
   }
@@ -558,8 +555,8 @@ MemoryBuffer::getOpenFile(sys::fs::file_t FD, const Twine &Filename,
                           uint64_t FileSize, bool RequiresNullTerminator,
                           bool IsVolatile, std::optional<Align> Alignment) {
   return getOpenFileImpl<MemoryBuffer>(FD, Filename, FileSize, FileSize, 0,
-                                       false, RequiresNullTerminator,
-                                       IsVolatile, Alignment);
+                                       RequiresNullTerminator, IsVolatile,
+                                       Alignment);
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getOpenFileSlice(
@@ -567,7 +564,7 @@ ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getOpenFileSlice(
     bool IsVolatile, std::optional<Align> Alignment) {
   assert(MapSize != uint64_t(-1));
   return getOpenFileImpl<MemoryBuffer>(FD, Filename, -1, MapSize, Offset, false,
-                                       false, IsVolatile, Alignment);
+                                       IsVolatile, Alignment);
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>> MemoryBuffer::getSTDIN() {
