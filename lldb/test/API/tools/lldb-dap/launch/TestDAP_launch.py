@@ -630,18 +630,13 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         Test stdio redirection.
         """
-        temp_file = tempfile.NamedTemporaryFile().name
         self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
-        self.launch(program, stdio=[None, temp_file, None])
-        self.continue_to_exit()
-
-        try:
-            with open(temp_file, "r") as f:
-                lines = f.readlines()
-                self.assertIn(
-                    program, lines[0], "make sure program path is in first argument"
-                )
-        finally:
-            pathlib.Path(temp_file).unlink(missing_ok=True)
+        with tempfile.NamedTemporaryFile("rt") as f:
+            self.launch(program, stdio=[None, f.name, None])
+            self.continue_to_exit()
+            lines = f.readlines()
+            self.assertIn(
+                program, lines[0], "make sure program path is in first argument"
+            )
