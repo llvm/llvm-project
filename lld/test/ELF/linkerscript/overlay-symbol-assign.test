@@ -1,0 +1,32 @@
+# REQUIRES: x86
+# RUN: echo 'nop; .section .small, "a"; .long 0; .section .big1, "a"; .quad 1; .section .big2, "a"; .quad 2;' \
+# RUN:   | llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
+# RUN: ld.lld %t.o --script %s -o %t
+
+SECTIONS {
+  OVERLAY 0x1000 : AT ( 0x4000 ) {
+    .out.big { 
+      *(.big1)
+      . = ALIGN(0x100);
+      *(.big2)
+    }
+    .out.small { *(.small) }
+  }
+}
+
+## A variant of overlay.test with explicit program header assingment.
+## Check that we generate two program headers consistent with the overlay
+
+# RUN: llvm-readelf -S -l %t | FileCheck %s
+
+# CHECK: Section Headers:
+# CHECK:      Name       Type     Address          Off    Size
+# CHECK:      .out.big   PROGBITS 0000000000001000 001000 000108
+# CHECK-NEXT: .out.small PROGBITS 0000000000001000 002000 000004
+
+
+# CHECK:      Program Headers:
+# CHECK:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT: LOAD 0x001000 0x0000000000001000 0x0000000000004000 0x000108 0x000108 R   0x1000
+# CHECK-NEXT: LOAD 0x002000 0x0000000000001000 0x0000000000004108 0x000004 0x000004 R   0x1000
+
