@@ -178,7 +178,8 @@ Predefined Macros
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
 Note that some architecture specific AMDGPU macros will have default values when
-used from the HIP host compilation.
+used from the HIP host compilation. Other :doc:`AMDGPU macros <AMDGPUSupport>`
+like ``__AMDGCN_WAVEFRONT_SIZE__`` (deprecated) will default to 64 for example.
 
 Compilation Modes
 =================
