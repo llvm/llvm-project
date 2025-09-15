@@ -45,6 +45,7 @@ class TestEnums(unittest.TestCase):
         """Check that all libclang enum values are also defined in cindex"""
         cenum_to_pythonenum = {
             "CX_CXXAccessSpecifier": AccessSpecifier,
+            "CX_StorageClass": StorageClass,
             "CXAvailabilityKind": AvailabilityKind,
             "CXBinaryOperatorKind": BinaryOperator,
             "CXCursorKind": CursorKind,
@@ -53,7 +54,6 @@ class TestEnums(unittest.TestCase):
             "CXLinkageKind": LinkageKind,
             "CXPrintingPolicyProperty": PrintingPolicyProperty,
             "CXRefQualifierKind": RefQualifierKind,
-            "CX_StorageClass": StorageClass,
             "CXTemplateArgumentKind": TemplateArgumentKind,
             "CXTLSKind": TLSKind,
             "CXTokenKind": TokenKind,
