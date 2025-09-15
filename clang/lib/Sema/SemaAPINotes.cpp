@@ -13,6 +13,7 @@
 #include "CheckExprLifetime.h"
 #include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
+#include "clang/APINotes/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -288,6 +289,29 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         S, D, *SwiftPrivate, Metadata, [&] {
           return new (S.Context)
               SwiftPrivateAttr(S.Context, getPlaceholderAttrInfo());
+        });
+  }
+
+  // swift_safety
+  if (auto SafetyKind = Info.getSwiftSafety()) {
+    bool Addition = *SafetyKind != api_notes::SwiftSafetyKind::Unspecified;
+    handleAPINotedAttribute<SwiftAttrAttr>(
+        S, D, Addition, Metadata,
+        [&] {
+          return SwiftAttrAttr::Create(
+              S.Context, *SafetyKind == api_notes::SwiftSafetyKind::Safe
+                             ? "safe"
+                             : "unsafe");
+        },
+        [](const Decl *D) {
+          return llvm::find_if(D->attrs(), [](const Attr *attr) {
+            if (const auto *swiftAttr = dyn_cast<SwiftAttrAttr>(attr)) {
+              if (swiftAttr->getAttribute() == "safe" ||
+                  swiftAttr->getAttribute() == "unsafe")
+                return true;
+            }
+            return false;
+          });
         });
   }
 
