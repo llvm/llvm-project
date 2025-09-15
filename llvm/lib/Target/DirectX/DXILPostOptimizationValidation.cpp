@@ -160,7 +160,6 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
-
 static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
                                             dxbc::RootFlags Mask) {
   if ((Flags & Mask) == Mask) {
@@ -171,7 +170,6 @@ static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
     M.getContext().diagnose(DiagnosticInfoGeneric(Message));
   }
 }
-
 
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
@@ -238,7 +236,7 @@ static void validateRootSignature(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-  
+
   const hlsl::BoundRegs &BoundRegs = Builder.takeBoundRegs();
   bool HasBindings = false;
   for (const ResourceInfo &RI : DRM) {
@@ -253,35 +251,36 @@ static void validateRootSignature(Module &M,
 
     if (Reg != nullptr) {
       const auto *ParamInfo =
-      static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
-      
-      if (RC != ResourceClass::SRV && RC != ResourceClass::UAV){
+          static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
+
+      if (RC != ResourceClass::SRV && RC != ResourceClass::UAV) {
         HasBindings = true;
         continue;
       }
-    
-      if (ParamInfo->Type == dxbc::RootParameterType::DescriptorTable){
+
+      if (ParamInfo->Type == dxbc::RootParameterType::DescriptorTable) {
         HasBindings = true;
         continue;
       }
-      
-      if (RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer){
+
+      if (RK != ResourceKind::RawBuffer &&
+          RK != ResourceKind::StructuredBuffer) {
         reportInvalidHandleTyError(M, RC, Binding);
         continue;
       }
       HasBindings = true;
-      
+
     } else {
       reportRegNotBound(M, RC, Binding);
     }
   }
 
-  if(HasBindings && MMI.ShaderProfile != Triple::Compute){
+  if (HasBindings && MMI.ShaderProfile != Triple::Compute) {
     dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
     switch (MMI.ShaderProfile) {
     case Triple::Pixel:
-      reportIfDeniedShaderStageAccess(M, Flags,
-                                      dxbc::RootFlags::DenyPixelShaderRootAccess);
+      reportIfDeniedShaderStageAccess(
+          M, Flags, dxbc::RootFlags::DenyPixelShaderRootAccess);
       break;
     case Triple::Vertex:
       reportIfDeniedShaderStageAccess(
@@ -292,16 +291,16 @@ static void validateRootSignature(Module &M,
           M, Flags, dxbc::RootFlags::DenyGeometryShaderRootAccess);
       break;
     case Triple::Hull:
-      reportIfDeniedShaderStageAccess(M, Flags,
-                                      dxbc::RootFlags::DenyHullShaderRootAccess);
+      reportIfDeniedShaderStageAccess(
+          M, Flags, dxbc::RootFlags::DenyHullShaderRootAccess);
       break;
     case Triple::Domain:
       reportIfDeniedShaderStageAccess(
           M, Flags, dxbc::RootFlags::DenyDomainShaderRootAccess);
       break;
     case Triple::Mesh:
-      reportIfDeniedShaderStageAccess(M, Flags,
-                                      dxbc::RootFlags::DenyMeshShaderRootAccess);
+      reportIfDeniedShaderStageAccess(
+          M, Flags, dxbc::RootFlags::DenyMeshShaderRootAccess);
       break;
     case Triple::Amplification:
       reportIfDeniedShaderStageAccess(
@@ -311,7 +310,6 @@ static void validateRootSignature(Module &M,
       llvm_unreachable("Invalid triple to shader stage conversion");
     }
   }
-
 }
 
 static mcdxbc::RootSignatureDesc *
