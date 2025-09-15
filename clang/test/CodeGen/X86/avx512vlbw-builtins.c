@@ -1948,6 +1948,8 @@ __m128i test_mm256_cvtepi16_epi8(__m256i __A) {
   return _mm256_cvtepi16_epi8(__A); 
 }
 
+TEST_CONSTEXPR(match_v16qi(_mm256_cvtepi16_epi8((__m256i)(__v16hi){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
+
 __m128i test_mm256_mask_cvtepi16_epi8(__m128i __O, __mmask16 __M, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_cvtepi16_epi8
   // CHECK: trunc <16 x i16> %{{.*}} to <16 x i8>

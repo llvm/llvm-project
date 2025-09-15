@@ -1481,8 +1481,8 @@ _mm_mask_cvtusepi16_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
   __builtin_ia32_pmovuswb128mem_mask ((__v16qi *) __P, (__v8hi) __A, __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi16_epi8 (__m256i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi16_epi8(__m256i __A) {
   return (__m128i)__builtin_convertvector((__v16hi) __A, __v16qi);
 }
 
