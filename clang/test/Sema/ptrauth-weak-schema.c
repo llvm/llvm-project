@@ -50,11 +50,18 @@ void test_local_variables(void) {
     // expected-warning@-1 {{'l1_internal_weak' has internal linkage with a default pointer authentication schema that should be overridden by an explicit schema with unique diversifiers}}
     static void(* FN_PTR_AUTH(0, 0) l2_internal_weak)(void);
     // expected-warning@-1 {{'l2_internal_weak' has internal linkage with a pointer authentication schema that should be overridden by a schema with unique diversifiers}}
+    void(* l3_internal_weak)(void);
+    // expected-warning@-1 {{'l3_internal_weak' has internal linkage with a default pointer authentication schema that should be overridden by an explicit schema with unique diversifiers}}
+    void(* FN_PTR_AUTH(0, 0) l4_internal_weak)(void);
+    // expected-warning@-1 {{'l4_internal_weak' has internal linkage with a pointer authentication schema that should be overridden by a schema with unique diversifiers}}
     #endif
 
     // Local variables (internal linkage) with strong pointer authentication
     // should not raise any warning.
-    void(* FN_PTR_AUTH(1, 65535) l1_internal_strong)(void);
-    void(* FN_PTR_AUTH(0, 65535) l2_internal_strong)(void);
-    void(* FN_PTR_AUTH(1, 0) l3_internal_strong)(void);
+    static void(* FN_PTR_AUTH(1, 65535) l1_internal_strong)(void);
+    static void(* FN_PTR_AUTH(0, 65535) l2_internal_strong)(void);
+    static void(* FN_PTR_AUTH(1, 0) l3_internal_strong)(void);
+    void(* FN_PTR_AUTH(1, 65535) l4_internal_strong)(void);
+    void(* FN_PTR_AUTH(0, 65535) l5_internal_strong)(void);
+    void(* FN_PTR_AUTH(1, 0) l6_internal_strong)(void);
 }
