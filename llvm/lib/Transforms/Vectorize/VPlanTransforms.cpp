@@ -2198,6 +2198,9 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     VPValue *Cond;
+    // Skip blocks that don't have 2 successors or are not terminated by
+    // BranchOnCond. Empty blocks with 2 successors are also skipped; their
+    // branch condition will be added later.
     if (VPBB->getNumSuccessors() != 2 || VPBB->empty() ||
         !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
       continue;
