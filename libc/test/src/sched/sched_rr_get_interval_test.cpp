@@ -17,7 +17,8 @@
 #include "hdr/sched_macros.h"
 #include "hdr/types/struct_timespec.h"
 
-using LlvmLibcSchedRRGetIntervalTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcSchedRRGetIntervalTest =
+    LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
   auto SetSched = [&](int policy) {
