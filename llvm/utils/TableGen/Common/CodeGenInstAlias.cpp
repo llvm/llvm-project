@@ -38,17 +38,6 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
   return MIOpInfo->getNumArgs();
 }
 
-static const Record *getInitValueAsRegClass(const Init *V) {
-  if (const auto *VDefInit = dyn_cast<DefInit>(V)) {
-    const Record *R = VDefInit->getDef();
-    if (R->isSubClassOf("RegisterClass"))
-      return R;
-    if (R->isSubClassOf("RegisterOperand"))
-      return R->getValueAsDef("RegClass");
-  }
-  return nullptr;
-}
-
 using ResultOperand = CodeGenInstAlias::ResultOperand;
 
 static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
@@ -64,16 +53,12 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
       const Record *ArgRec = ArgDef->getDef();
 
       // Match 'RegClass:$name' or 'RegOp:$name'.
-      if (const Record *ArgRC = getInitValueAsRegClass(Arg)) {
-        if (OpRC->isSubClassOf("RegisterClass")) {
-          if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
-            return createStringError(
-                "argument register class" + ArgRC->getName() +
-                " is not a subclass of operand register class " +
-                OpRC->getName());
-        }
-        // FIXME: Do some validation on RegClassByHwMode
-
+      if (const Record *ArgRC = T.getInitValueAsRegClass(Arg)) {
+        if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+          return createStringError(
+              "argument register class" + ArgRC->getName() +
+              " is not a subclass of operand register class " +
+              OpRC->getName());
         if (!ArgName)
           return createStringError("register class argument must have a name");
         return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
