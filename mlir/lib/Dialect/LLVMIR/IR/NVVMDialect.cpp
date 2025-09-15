@@ -1762,6 +1762,14 @@ NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
   size_t redKind = static_cast<size_t>(thisOp.getRedKind());
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
+
+  assert(redKind < IDTable.size() &&
+         "Invalid redKind for CpAsyncBulkTensorReduceOp");
+  assert(mode < IDTable[redKind].size() &&
+         "Invalid mode for CpAsyncBulkTensorReduceOp");
+  assert(dim < IDTable[redKind][mode].size() &&
+         "Invalid dim for CpAsyncBulkTensorReduceOp");
+
   llvm::Intrinsic::ID intrinsicID = IDTable[redKind][mode][dim];
 
   assert(intrinsicID != noIntrinsic &&
