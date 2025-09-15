@@ -3101,10 +3101,13 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
   return BB;
 }
 
-// Helper function to find the instruction that defined a virtual register.
-// If unable to find such instruction, returns nullptr.
-static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
-                                           Register Reg) {
+// Helper function to find the instruction that defined a virtual register,
+// stripping and accumulating optional offset.
+// If unable to find such instruction, returns nullptr (Offset is unspecified).
+static const MachineInstr *
+stripAndAccumulateOffset(const MachineRegisterInfo &MRI, Register Reg,
+                         int64_t &Offset) {
+  Offset = 0;
   while (Reg.isVirtual()) {
     MachineInstr *DefMI = MRI.getVRegDef(Reg);
     assert(DefMI && "Virtual register definition not found");
@@ -3122,7 +3125,20 @@ static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
       continue;
     }
 
-    return DefMI;
+    // If this is neither a copy, nor inc/dec instruction, we are done.
+    if (Opcode != AArch64::ADDXri && Opcode != AArch64::SUBXri)
+      return DefMI;
+    // Handle cases like `ADDXri %stack.0.local_var, 0, 0`.
+    if (!DefMI->getOperand(1).isReg())
+      return DefMI;
+    // Inc/dec with shifted immediates are not handled.
+    if (DefMI->getOperand(3).getImm() != 0)
+      return DefMI;
+
+    int64_t Imm = DefMI->getOperand(2).getImm();
+    Offset += (Opcode == AArch64::ADDXri) ? Imm : -Imm;
+
+    Reg = DefMI->getOperand(1).getReg();
   }
   return nullptr;
 }
@@ -3138,8 +3154,13 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
   int64_t IntDisc = IntDiscOp.getImm();
   assert(IntDisc == 0 && "Blend components are already expanded");
 
-  const MachineInstr *DiscMI = stripVRegCopies(MRI, AddrDisc);
-  if (DiscMI) {
+  int64_t Offset = 0;
+  const MachineInstr *DiscMI = stripAndAccumulateOffset(MRI, AddrDisc, Offset);
+
+  // The result of any recognized discriminator computation may be copied, but
+  // without adding any offset. Nevertheless, perform the remaining fix-ups
+  // even on an opaque, pre-computed discriminator.
+  if (DiscMI && Offset == 0) {
     switch (DiscMI->getOpcode()) {
     case AArch64::MOVKXi:
       // blend(addr, imm) which is lowered as "MOVK addr, #imm, #48".
@@ -3176,6 +3197,54 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
 
   AddrDiscOp.setReg(AddrDisc);
   IntDiscOp.setImm(IntDisc);
+}
+
+MachineBasicBlock *
+AArch64TargetLowering::tryRewritingPAC(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  Register Val = MI.getOperand(1).getReg();
+  unsigned Key = MI.getOperand(2).getImm();
+  int64_t IntDisc = MI.getOperand(3).getImm();
+  Register AddrDisc = MI.getOperand(4).getReg();
+
+  // Try to find a known address-setting instruction, accumulating the offset
+  // along the way. If no known pattern is found, keep everything as-is.
+
+  int64_t AddrOffset = 0;
+  const MachineInstr *AddrDefInstr =
+      stripAndAccumulateOffset(MRI, Val, AddrOffset);
+  if (!AddrDefInstr)
+    return BB;
+
+  unsigned NewOpcode;
+  if (AddrDefInstr->getOpcode() == AArch64::LOADgot ||
+      AddrDefInstr->getOpcode() == AArch64::LOADgotAUTH)
+    NewOpcode = AArch64::LOADgotPAC;
+  else if (AddrDefInstr->getOpcode() == AArch64::MOVaddr)
+    NewOpcode = AArch64::MOVaddrPAC;
+  else
+    return BB; // Unknown opcode.
+
+  const MachineOperand &AddrOp = AddrDefInstr->getOperand(1);
+  unsigned TargetFlags = AddrOp.getTargetFlags() & ~AArch64II::MO_PAGE;
+  const GlobalValue *GV = AddrOp.getGlobal();
+  AddrOffset += AddrOp.getOffset();
+
+  BuildMI(*BB, MI, DL, TII->get(NewOpcode))
+      .addGlobalAddress(GV, AddrOffset, TargetFlags)
+      .addImm(Key)
+      .addReg(AddrDisc)
+      .addImm(IntDisc);
+
+  BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), MI.getOperand(0).getReg())
+      .addReg(AArch64::X16);
+
+  MI.removeFromParent();
+  return BB;
 }
 
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
@@ -3288,7 +3357,7 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::PAC:
     fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),
                               &AArch64::GPR64noipRegClass);
-    return BB;
+    return tryRewritingPAC(MI, BB);
   case AArch64::AUTPAC:
     fixupPtrauthDiscriminator(MI, BB, MI.getOperand(1), MI.getOperand(2),
                               &AArch64::GPR64noipRegClass);

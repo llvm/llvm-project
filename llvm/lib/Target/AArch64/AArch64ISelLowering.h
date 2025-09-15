@@ -189,6 +189,9 @@ public:
                                  MachineOperand &AddrDiscOp,
                                  const TargetRegisterClass *AddrDiscRC) const;
 
+  MachineBasicBlock *tryRewritingPAC(MachineInstr &MI,
+                                     MachineBasicBlock *BB) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
