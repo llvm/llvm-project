@@ -30,6 +30,7 @@ class LLVM_Attr<string name, string attrMnemonic,
 
 def LLVM_AddressSpaceAttr :
     LLVM_Attr<"AddressSpace", "address_space", [
+    LLVM_LLVMAddrSpaceAttrInterface,
     DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
   ]> {
   let summary = "LLVM address space";

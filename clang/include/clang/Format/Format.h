@@ -3006,7 +3006,19 @@ struct FormatStyle {
     ///      #endif
     ///    #endif
     /// \endcode
-    PPDIS_BeforeHash
+    PPDIS_BeforeHash,
+    /// Leaves indentation of directives as-is.
+    /// \note
+    ///  Ignores ``PPIndentWidth``.
+    /// \endnote
+    /// \code
+    ///   #if FOO
+    ///     #if BAR
+    ///   #include <foo>
+    ///     #endif
+    ///   #endif
+    /// \endcode
+    PPDIS_Leave
   };
 
   /// The preprocessor directive indenting style to use.

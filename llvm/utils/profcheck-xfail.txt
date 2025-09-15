@@ -1302,6 +1302,7 @@ Transforms/LoopVectorize/explicit_outer_uniform_diverg_branch.ll
 Transforms/LoopVectorize/first-order-recurrence-complex.ll
 Transforms/LoopVectorize/first-order-recurrence.ll
 Transforms/LoopVectorize/first-order-recurrence-sink-replicate-region.ll
+Transforms/LoopVectorize/first-order-recurrence-with-uniform-ops.ll
 Transforms/LoopVectorize/float-induction.ll
 Transforms/LoopVectorize/float-minmax-instruction-flag.ll
 Transforms/LoopVectorize/fmax-without-fast-math-flags-interleave.ll

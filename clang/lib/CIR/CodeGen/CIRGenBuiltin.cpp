@@ -200,6 +200,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createBitcast(allocaAddr, builder.getVoidPtrTy()));
   }
 
+  case Builtin::BIcos:
+  case Builtin::BIcosf:
+  case Builtin::BIcosl:
+  case Builtin::BI__builtin_cos:
+  case Builtin::BI__builtin_cosf:
+  case Builtin::BI__builtin_cosf16:
+  case Builtin::BI__builtin_cosl:
+  case Builtin::BI__builtin_cosf128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CosOp>(*this, *e);
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -415,6 +426,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitUnaryFPBuiltin<cir::ASinOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan:
     return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_cos:
+    return emitUnaryFPBuiltin<cir::CosOp>(*this, *e);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

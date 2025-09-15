@@ -285,6 +285,9 @@ Improvements to Clang's diagnostics
 
 - Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
 
+- Fixed a bug where the source location was missing when diagnosing ill-formed
+  placeholder constraints.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -473,6 +476,7 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyIfAttached`` for LLVM style.
+- Add ``Leave`` suboption to ``IndentPPDirectives``.
 
 libclang
 --------

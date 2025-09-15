@@ -152,8 +152,9 @@ private:
 
   /// Translates the given ptr type.
   llvm::Type *translate(PtrLikeTypeInterface type) {
-    auto memSpace = dyn_cast<LLVM::AddressSpaceAttr>(type.getMemorySpace());
-    assert(memSpace && "expected pointer with the LLVM address space");
+    auto memSpace =
+        dyn_cast<LLVM::LLVMAddrSpaceAttrInterface>(type.getMemorySpace());
+    assert(memSpace && "expected pointer with an LLVM address space");
     assert(!type.hasPtrMetadata() && "expected pointer without metadata");
     return llvm::PointerType::get(context, memSpace.getAddressSpace());
   }
