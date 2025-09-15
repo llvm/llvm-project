@@ -3377,10 +3377,10 @@ func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
 
 // -----
 
-// CHECK-LABEL: @from_elements_poison
+// CHECK-LABEL: @negative_from_elements_poison
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xf32>
 //       CHECK:   return %[[VAL]] : vector<2xf32>
-func.func @from_elements_poison() -> vector<2xf32> {
+func.func @negative_from_elements_poison() -> vector<2xf32> {
   %0 = ub.poison : f32
   %1 = vector.from_elements %0, %0 : vector<2xf32>
   return %1 : vector<2xf32>
