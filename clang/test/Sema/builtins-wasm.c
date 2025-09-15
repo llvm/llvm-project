@@ -87,3 +87,19 @@ void test_function_pointer_signature() {
   (void)__builtin_wasm_test_function_pointer_signature((F4)0);
 #endif
 }
+
+void test_js_catch() {
+  // Test argument count validation
+  __builtin_wasm_js_catch(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+  __builtin_wasm_js_catch(0, 0); // expected-error {{too many arguments to function call, expected 1, have 2}}
+
+  // // Test argument type validation - should require pointer to int
+  __builtin_wasm_js_catch((void*)0); // expected-error {{1st argument must be a pointer to an integer}}
+  __builtin_wasm_js_catch(((int)0));   // expected-error {{1st argument must be a pointer to an integer}}
+
+  int res;
+  __externref_t exception = __builtin_wasm_js_catch(&res);
+
+  // Test return type
+  _Static_assert(EXPR_HAS_TYPE(__builtin_wasm_js_catch(&res), __externref_t), "");
+}

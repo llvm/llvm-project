@@ -39,6 +39,7 @@ public:
   bool BuiltinWasmTableCopy(CallExpr *TheCall);
   bool BuiltinWasmTestFunctionPointerSignature(const TargetInfo &TI,
                                                CallExpr *TheCall);
+  bool BuiltinWasmJsCatch(CallExpr *TheCall);
 
   WebAssemblyImportNameAttr *
   mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);
