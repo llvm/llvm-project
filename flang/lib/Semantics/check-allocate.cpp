@@ -548,7 +548,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     }
   }
   // Shape related checks
-  if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
+  if (ultimate_ && IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
         "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;

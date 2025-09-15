@@ -26,7 +26,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl1(<vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 1)
@@ -57,7 +57,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2(<vsc
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 2)
@@ -90,7 +90,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl3(<vsc
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 3)
@@ -123,7 +123,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl8(<vsc
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 8)
@@ -158,7 +158,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl9(<vsc
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 9)
@@ -193,7 +193,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl15(<vs
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 15)
@@ -226,7 +226,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl16(<vs
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 16)
@@ -260,7 +260,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2047(<
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 2047)
@@ -291,7 +291,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64_vl2048(<
 ; CHECK-64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %0,
     i64 %1,
     i32 2048)

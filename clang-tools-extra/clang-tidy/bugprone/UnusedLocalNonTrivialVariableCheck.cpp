@@ -1,4 +1,4 @@
-//===--- UnusedLocalNonTrivialVariableCheck.cpp - clang-tidy --------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,7 @@ AST_MATCHER(VarDecl, isReferenced) { return Node.isReferenced(); }
 AST_MATCHER(VarDecl, explicitMarkUnused) {
   // Implementations should not emit a warning that a name-independent
   // declaration is used or unused.
-  LangOptions const &LangOpts = Finder->getASTContext().getLangOpts();
+  const LangOptions &LangOpts = Finder->getASTContext().getLangOpts();
   return Node.hasAttr<UnusedAttr>() ||
          (LangOpts.CPlusPlus26 && Node.isPlaceholderVar(LangOpts));
 }
