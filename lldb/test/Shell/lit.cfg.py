@@ -170,6 +170,9 @@ if config.objc_gnustep_dir:
             )
         )
 
+if config.have_dia_sdk:
+    config.available_features.add("diasdk")
+
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled
 can_set_dbregs = True
