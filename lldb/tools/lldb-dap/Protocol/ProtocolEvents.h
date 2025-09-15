@@ -21,6 +21,7 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_EVENTS_H
 
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -106,13 +107,13 @@ llvm::json::Value toJSON(const InvalidatedEventBody &);
 /// many events.
 struct MemoryEventBody {
   /// Memory reference of a memory range that has been updated.
-  lldb::addr_t memoryReference;
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
 
   /// Starting offset in bytes where memory has been updated. Can be negative.
   int64_t offset = 0;
 
   /// Number of bytes updated.
-  uint64_t count;
+  uint64_t count = 0;
 };
 llvm::json::Value toJSON(const MemoryEventBody &);
 
