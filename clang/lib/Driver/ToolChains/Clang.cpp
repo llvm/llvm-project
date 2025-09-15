@@ -1614,9 +1614,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  // Enable/disable return address signing and indirect branch targets.
-  CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
-
   // Handle -msve_vector_bits=<bits>
   auto HandleVectorBits = [&](Arg *A, StringRef VScaleMin,
                               StringRef VScaleMax) {
