@@ -191,7 +191,7 @@ void SubtargetFeatureInfo::emitMCPredicateCheck(
   for (const Record *R : MCPredicates) {
     OS << LS;
     if (emitFeaturesAux(TargetName, *R->getValueAsDag("AssemblerCondDag"),
-                    ParenIfBinOp, OS))
+                        ParenIfBinOp, OS))
       PrintFatalError(R, "Invalid AssemblerCondDag!");
   }
 }
@@ -212,7 +212,7 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
 
     OS << "  if (";
     if (emitFeaturesAux(TargetName, *Def->getValueAsDag("AssemblerCondDag"),
-                    /*ParenIfBinOp=*/false, OS))
+                        /*ParenIfBinOp=*/false, OS))
       PrintFatalError(Def, "Invalid AssemblerCondDag!");
 
     OS << ")\n";
