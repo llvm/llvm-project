@@ -14,7 +14,6 @@
 
 using namespace llvm;
 
-/// If this is explictly set value, return true for second.
 std::pair<std::string, bool>
 InstructionEncoding::findOperandDecoderMethod(const CodeGenTarget &Target,
                                               const Record *Record) {
