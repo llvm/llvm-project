@@ -280,7 +280,8 @@ static void validateRootSignature(Module &M,
     const auto *ParamInfo =
         static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
-    const bool IsRootSRVOrUAV = RC == ResourceClass::SRV || RC == ResourceClass::UAV;
+    const bool IsRootSRVOrUAV =
+        RC == ResourceClass::SRV || RC == ResourceClass::UAV;
     const bool IsDescriptorTable =
         ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
     const bool IsRawOrStructuredBuffer =
