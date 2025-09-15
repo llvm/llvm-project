@@ -947,7 +947,7 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  int64_t MulImm = 1 << cast<ConstantSDNode>(N)->getSExtValue();
+  int64_t MulImm = 1LL << cast<ConstantSDNode>(N)->getSExtValue();
   if (MulImm >= Low && MulImm <= High) {
     Imm = CurDAG->getSignedTargetConstant(MulImm, SDLoc(N), MVT::i32);
     return true;

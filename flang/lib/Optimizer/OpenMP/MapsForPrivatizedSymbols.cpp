@@ -29,6 +29,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/OpenMP/Utils.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -106,8 +107,8 @@ class MapsForPrivatizedSymbolsPass
     // Figure out the bounds because knowing the bounds will help the subsequent
     // MapInfoFinalizationPass map the underlying data of the descriptor.
     llvm::SmallVector<mlir::Value> boundsOps;
-    if (needsBoundsOps(varPtr))
-      genBoundsOps(builder, varPtr, boundsOps);
+    if (flangomp::needsBoundsOps(varPtr))
+      boundsOps = flangomp::genBoundsOps(builder, varPtr);
 
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
@@ -193,39 +194,6 @@ class MapsForPrivatizedSymbolsPass
         addMapInfoOps(static_cast<omp::TargetOp>(targetOp), mapInfoOps);
       }
     }
-  }
-  // As the name suggests, this function examines var to determine if
-  // it has dynamic size. If true, this pass'll have to extract these
-  // bounds from descriptor of var and add the bounds to the resultant
-  // MapInfoOp.
-  bool needsBoundsOps(mlir::Value var) {
-    assert(mlir::isa<omp::PointerLikeType>(var.getType()) &&
-           "needsBoundsOps can deal only with pointer types");
-    mlir::Type t = fir::unwrapRefType(var.getType());
-    // t could be a box, so look inside the box
-    auto innerType = fir::dyn_cast_ptrOrBoxEleTy(t);
-    if (innerType)
-      return fir::hasDynamicSize(innerType);
-    return fir::hasDynamicSize(t);
-  }
-
-  void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
-                    llvm::SmallVector<mlir::Value> &boundsOps) {
-    mlir::Location loc = var.getLoc();
-    fir::factory::AddrAndBoundsInfo info =
-        fir::factory::getDataOperandBaseAddr(builder, var,
-                                             /*isOptional=*/false, loc);
-    fir::ExtendedValue extendedValue =
-        hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
-                                        /*continguousHint=*/true)
-            .first;
-    llvm::SmallVector<mlir::Value> boundsOpsVec =
-        fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                           mlir::omp::MapBoundsType>(
-            builder, info, extendedValue,
-            /*dataExvIsAssumedSize=*/false, loc);
-    for (auto bounds : boundsOpsVec)
-      boundsOps.push_back(bounds);
   }
 };
 } // namespace
