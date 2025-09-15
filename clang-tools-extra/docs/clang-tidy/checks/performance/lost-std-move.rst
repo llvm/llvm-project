@@ -15,8 +15,8 @@ It honours cycles, lambdas, and unspecified call order in compound expressions.
    }
 
 It finds the last local variable usage, and if it is a copy, emits a warning.
-The check is based on pure AST matching and doesn't take into account any data flow information.
-Thus, it doesn't catch assign-after-copy cases.
+The check is based on pure AST matching and doesn't take into account any
+data flow information. Thus, it doesn't catch assign-after-copy cases.
 Also it doesn't notice variable references "behind the scenes":
 
 .. code-block:: c++
