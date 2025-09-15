@@ -509,7 +509,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
       // from the page cache that are not properly filled with trailing zeroes,
       // if some prior user of the page wrote non-zero bytes. Detect this and
       // don't use mmap in that case.
-      if (!IsText || !RequiresNullTerminator || *Result->getBufferEnd() == '\0')
+      if (!IsText || *Result->getBufferEnd() == '\0')
         return std::move(Result);
     }
   }
