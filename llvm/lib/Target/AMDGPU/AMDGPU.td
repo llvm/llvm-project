@@ -2580,7 +2580,7 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
 
 def Has16bitD16HWBug: Predicate<"Subtarget->has16bitD16HWBug()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, Feature16bitD16HWBug)>;
-def NotHas16bitD16HWBug: Predicate<"Subtarget->useRealTrue16Insts() && "
+def NotHas16bitD16HWBug: Predicate<"!Subtarget->has16bitD16HWBug()"
                                                "!Subtarget->has16bitD16HWBug()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not Feature16bitD16HWBug))>;
 
