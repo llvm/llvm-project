@@ -30,8 +30,8 @@
 #include "llvm/Support/WithColor.h"
 #include <chrono>
 #include <cstdlib>
-#include <future>
 #include <memory>
+#include <thread>
 
 #if defined(_WIN32)
 #include <fcntl.h>
@@ -71,6 +71,7 @@ FileSpec driverPath() {
   if (fs.Exists(lldb_exe_path)) {
     return FileSpec(lldb_exe_path);
   }
+
   FileSpec lldb_exec_spec = lldb_private::HostInfo::GetProgramFileSpec();
   lldb_exec_spec.SetFilename("lldb");
   return lldb_exec_spec;
@@ -83,22 +84,18 @@ llvm::Error launch() {
                          /*add_exe_file_as_first_arg=*/true);
   info.GetArguments().AppendArgument("-O");
   info.GetArguments().AppendArgument("protocol start MCP");
-  std::promise<int> exit_status;
-  info.SetMonitorProcessCallback([&](lldb::pid_t pid, int signal, int status) {
-    exit_status.set_value(status);
-  });
-
   return Host::LaunchProcess(info).takeError();
 }
 
 Expected<ServerInfo> loadOrStart(
+    // FIXME: This should become a CLI arg.
     lldb_private::Timeout<std::micro> timeout = std::chrono::seconds(30)) {
   using namespace std::chrono;
   bool started = false;
 
-  auto deadline = steady_clock::now() + *timeout;
+  const auto deadline = steady_clock::now() + *timeout;
   while (steady_clock::now() < deadline) {
-    auto servers = ServerInfo::Load();
+    Expected<std::vector<ServerInfo>> servers = ServerInfo::Load();
     if (!servers)
       return servers.takeError();
 
@@ -108,10 +105,13 @@ Expected<ServerInfo> loadOrStart(
         if (llvm::Error err = launch())
           return std::move(err);
       }
-      std::this_thread::sleep_for(std::chrono::microseconds(250));
+
+      // FIXME: Can we use MainLoop to watch the directory?
+      std::this_thread::sleep_for(microseconds(250));
       continue;
     }
 
+    // FIXME: Support selecting / multiplexing a specific lldb instance.
     if (servers->size() > 1)
       return createStringError("To many MCP servers running, picking a "
                                "specific one is not yet implemented");
