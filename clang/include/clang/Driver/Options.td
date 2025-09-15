@@ -1435,6 +1435,8 @@ def openacc_macro_override_EQ
 
 // End Clang specific/exclusive options for OpenACC.
 
+def libclc_lib : Joined<["--"], "libclc-lib">, Group<opencl_Group>,
+  HelpText<"Link with the libclc OpenCL bitcode library">;
 def libclc_lib_EQ : Joined<["--"], "libclc-lib=">, Group<opencl_Group>,
   HelpText<"Namespec of libclc OpenCL bitcode library to link">;
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,

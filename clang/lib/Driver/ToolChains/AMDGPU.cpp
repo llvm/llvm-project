@@ -858,8 +858,19 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  if (DeviceOffloadingKind == Action::OFK_None)
-    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
+  if (DeviceOffloadingKind == Action::OFK_None) {
+    auto GpuArch = getGPUArch(DriverArgs);
+    auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
+    const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
+    SmallString<128> InferredLibclcLibName(CanonArch);
+    if (getTriple().getOS() != llvm::Triple::Mesa3D)
+      InferredLibclcLibName += "-amdgcn--";
+    else
+      InferredLibclcLibName += "-amdgcn-mesa-mesa3d";
+    InferredLibclcLibName += ".bc";
+    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args,
+                         InferredLibclcLibName);
+  }
 }
 
 void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
