@@ -1,5 +1,3 @@
-
-// LLVM_EXECUTIONENGINE_ORC_EXECUTORRESOLUTIONGENERATOR_H
 //===----- ExecutorResolver.h - Resolve symbols in executor -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
