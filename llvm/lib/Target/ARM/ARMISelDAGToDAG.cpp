@@ -542,7 +542,7 @@ bool ARMDAGToDAGISel::isShifterOpProfitable(const SDValue &Shift,
                                             unsigned ShAmt) {
   if (!Subtarget->isLikeA9() && !Subtarget->isSwift())
     return true;
-  if (Shift.hasOneUse())
+  if (Shift.hasOneUse() || CurDAG->shouldOptForSize())
     return true;
   // R << 2 is free.
   return ShOpcVal == ARM_AM::lsl &&
