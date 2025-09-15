@@ -285,6 +285,9 @@ Improvements to Clang's diagnostics
 
 - Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
 
+- Fixed a bug where the source location was missing when diagnosing ill-formed
+  placeholder constraints.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -313,6 +316,11 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fixed inconsistent shadow warnings for lambda capture of structured bindings.
+  Previously, ``[val = val]`` (regular parameter) produced no warnings with ``-Wshadow``
+  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``) 
+  incorrectly produced warnings. Both cases now consistently show no warnings with 
+  ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
 
@@ -458,7 +466,9 @@ AST Matchers
   following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
-
+- Remove the ``dependentTemplateSpecializationType`` matcher, as the
+  corresponding AST node was removed. This matcher was never very useful, since
+  there was no way to match on its template name.
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
 
@@ -470,6 +480,7 @@ clang-format
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
+- Add ``Leave`` suboption to ``IndentPPDirectives``.
 
 libclang
 --------
@@ -515,6 +526,7 @@ OpenMP Support
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
+- Added support for ``variable-category`` modifier in ``default clause``.
 
 Improvements
 ^^^^^^^^^^^^
