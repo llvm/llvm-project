@@ -266,18 +266,17 @@ private:
       }
     }
 
-    // Try merging record blocks that have had their left brace wrapped.
+    // Try merging record blocks that have had their left brace wrapped into
+    // a single line.
     if (NextLine.First->isOneOf(TT_ClassLBrace, TT_StructLBrace,
-                                TT_UnionLBrace) &&
-        NextLine.First == NextLine.Last && I + 2 != E &&
-        I[2]->First->isNot(tok::r_brace) &&
-        Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
-      if (unsigned MergedLines = tryMergeSimpleBlock(I, E, Limit))
+                                TT_UnionLBrace)) {
+      if (unsigned MergedLines = tryMergeRecord(I, E, Limit))
         return MergedLines;
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
-    // Handle empty record blocks where the brace has already been wrapped.
+
+    // Handle blocks where the brace has already been wrapped.
     if (PreviousLine && TheLine->Last->is(tok::l_brace) &&
         TheLine->First == TheLine->Last) {
       const bool EmptyBlock = NextLine.First->is(tok::r_brace);
@@ -293,11 +292,11 @@ private:
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
 
-      if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
-                              tok::kw_extern, Keywords.kw_interface)) {
-        return (EmptyBlock && !Style.BraceWrapping.SplitEmptyRecord) ||
-                       (!EmptyBlock && Style.AllowShortBlocksOnASingleLine ==
-                                           FormatStyle::SBS_Always)
+      if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union))
+        return tryMergeRecord(I, E, Limit);
+
+      if (Tok && Tok->isOneOf(tok::kw_extern, Keywords.kw_interface)) {
+        return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
       }
@@ -502,18 +501,6 @@ private:
                  : 0;
     }
 
-    auto TryMergeShortRecord = [&] {
-      switch (Style.AllowShortRecordOnASingleLine) {
-      case FormatStyle::SRS_Never:
-        return false;
-      case FormatStyle::SRS_EmptyIfAttached:
-      case FormatStyle::SRS_Empty:
-        return NextLine.First->is(tok::r_brace);
-      case FormatStyle::SRS_Always:
-        return true;
-      }
-    };
-
     if (TheLine->Last->is(tok::l_brace)) {
       bool ShouldMerge = false;
       // Try to merge records.
@@ -523,14 +510,7 @@ private:
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
                                         TT_UnionLBrace)) {
-        if (Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never) {
-          // NOTE: We use AfterClass (whereas AfterStruct exists) for both
-          // classes and structs, but it seems that wrapping is still handled
-          // correctly elsewhere.
-          ShouldMerge =
-              !Style.BraceWrapping.AfterClass ||
-              (!Style.BraceWrapping.SplitEmptyRecord && TryMergeShortRecord());
-        }
+        return tryMergeRecord(I, E, Limit);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct, Keywords.kw_record)) {
@@ -597,6 +577,73 @@ private:
         (TheLine->First->HasUnescapedNewline || TheLine->First->IsFirst)) {
       return tryMergeSimplePPDirective(I, E, Limit);
     }
+    return 0;
+  }
+
+  unsigned tryMergeRecord(ArrayRef<AnnotatedLine *>::const_iterator I,
+                          ArrayRef<AnnotatedLine *>::const_iterator E,
+                          unsigned Limit) {
+    const auto *Line = I[0];
+    const auto *NextLine = I[1];
+
+    auto GetRelevantAfterOption = [&](const FormatToken *tok) {
+      switch (tok->getType()) {
+      case TT_StructLBrace:
+        return Style.BraceWrapping.AfterStruct;
+      case TT_ClassLBrace:
+        return Style.BraceWrapping.AfterClass;
+      case TT_UnionLBrace:
+        return Style.BraceWrapping.AfterUnion;
+      };
+    };
+
+    // Current line begins both record and block, brace was not wrapped.
+    if (Line->Last->isOneOf(TT_StructLBrace, TT_ClassLBrace, TT_UnionLBrace)) {
+      auto TryMergeShortRecord = [&] {
+        switch (Style.AllowShortRecordOnASingleLine) {
+        case FormatStyle::SRS_EmptyIfAttached:
+        case FormatStyle::SRS_Empty:
+          return NextLine->First->is(tok::r_brace);
+        case FormatStyle::SRS_Always:
+          return true;
+        }
+      };
+
+      if (Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never &&
+          (!GetRelevantAfterOption(Line->Last) ||
+           (!Style.BraceWrapping.SplitEmptyRecord && TryMergeShortRecord()))) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
+    }
+
+    // Cases where the l_brace was wrapped.
+    // Current line begins record, next line block.
+    if (NextLine->First->isOneOf(TT_StructLBrace, TT_ClassLBrace,
+                                 TT_UnionLBrace)) {
+      if (NextLine->First == NextLine->Last && I + 2 != E &&
+          I[2]->First->isNot(tok::r_brace) &&
+          Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
+    }
+
+    if (I == AnnotatedLines.begin())
+      return 0;
+
+    const auto *PreviousLine = I[-1];
+
+    // Previous line begins record, current line block.
+    if (PreviousLine->First->isOneOf(tok::kw_struct, tok::kw_class,
+                                     tok::kw_union)) {
+      const bool IsEmptyBlock =
+          Line->Last->is(tok::l_brace) && NextLine->First->is(tok::r_brace);
+
+      if (IsEmptyBlock && !Style.BraceWrapping.SplitEmptyRecord ||
+          Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
+    }
+
     return 0;
   }
 
