@@ -151,8 +151,7 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 /// Count the number of set bits in a value.
 /// Ex. popcount(0xF000F000) = 8
 /// Returns 0 if Value is zero.
-template <typename T>
-[[nodiscard]] inline int popcount(T Value) noexcept {
+template <typename T> [[nodiscard]] inline int popcount(T Value) noexcept {
   static_assert(std::is_unsigned_v<T>, "T must be an unsigned integer type");
   static_assert(sizeof(T) <= 8, "T must be 8 bytes or less");
 
