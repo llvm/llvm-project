@@ -18,7 +18,7 @@ static_assert(std::__has_default_three_way_comparator<long, int>::value);
 static_assert(std::__has_default_three_way_comparator<long, long>::value);
 static_assert(std::__has_default_three_way_comparator<std::string, std::string>::value);
 
-#if __has_builtin(__builtin_lt_synthesises_from_spaceship)
+#if __has_builtin(__builtin_lt_synthesizes_from_spaceship)
 static_assert(std::__has_default_three_way_comparator<const std::string&, const std::string&>::value);
 static_assert(std::__has_default_three_way_comparator<const std::string&, const std::string_view&>::value);
 static_assert(std::__has_default_three_way_comparator<std::string, std::string_view>::value);
