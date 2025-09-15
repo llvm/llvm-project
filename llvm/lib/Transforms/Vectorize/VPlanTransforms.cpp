@@ -2484,7 +2484,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         VPValue *NewAddr = GetNewAddr(S->getAddr());
-        // Convert general reverse operations on stored value into vp.reverse,
+        // Convert general reverse operations on stored values into vp.reverse,
         // when the VPVectorEndPointerRecipe adjusting the access address uses
         // EVL instead of VF.
         if (match(NewAddr, m_VectorEndPointer(m_VPValue(), m_Specific(&EVL)))) {
@@ -2649,8 +2649,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
     ToErase.push_back(CurRecipe);
 
-    // Convert general reverse operations on loaded result into vp.reverse, when
-    // the VPVectorEndPointerRecipe adjusting the access address uses EVL
+    // Convert general reverse operations on loaded results into vp.reverse,
+    // when the VPVectorEndPointerRecipe adjusting the access address uses EVL
     // instead of VF.
     if (auto *LoadR = dyn_cast<VPWidenLoadEVLRecipe>(EVLRecipe)) {
       if (!match(LoadR->getAddr(),
