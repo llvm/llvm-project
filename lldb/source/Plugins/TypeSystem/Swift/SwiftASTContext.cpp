@@ -3973,12 +3973,15 @@ SwiftASTContext::GetModuleImportProgressRAII(std::string category) {
                                                                      category);
 }
 
+static constexpr llvm::StringLiteral g_invalid_context =
+    "could not initialize Swift compiler, run swift-healthcheck for more info";
+
 llvm::Expected<swift::ModuleDecl &>
 SwiftASTContext::GetModule(const SourceModule &module, bool *cached) {
   if (cached)
     *cached = false;
 
-  VALID_OR_RETURN(llvm::createStringError("invalid context"));
+  VALID_OR_RETURN(llvm::createStringError(g_invalid_context));
   std::string module_name = llvm::join(module.path, ".");
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\")", module_name.c_str());
@@ -6639,7 +6642,7 @@ bool SwiftASTContext::IsFixedSize(CompilerType compiler_type) {
 llvm::Expected<uint64_t>
 SwiftASTContext::GetBitSize(opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {
-  VALID_OR_RETURN_CHECK_TYPE(type, llvm::createStringError("invalid context"));
+  VALID_OR_RETURN_CHECK_TYPE(type, llvm::createStringError(g_invalid_context));
 
   // If the type has type parameters, bind them first.
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
@@ -6886,7 +6889,7 @@ llvm::Expected<uint32_t>
 SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
                                 bool omit_empty_base_classes,
                                 const ExecutionContext *exe_ctx) {
-  VALID_OR_RETURN_CHECK_TYPE(type, llvm::createStringError("invalid type"));
+  VALID_OR_RETURN_CHECK_TYPE(type, llvm::createStringError(g_invalid_context));
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
 
