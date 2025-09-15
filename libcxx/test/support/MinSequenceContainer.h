@@ -29,6 +29,12 @@ struct MinSequenceContainer {
   template <class It>
   explicit TEST_CONSTEXPR_CXX20 MinSequenceContainer(It first, It last) : data_(first, last) {}
   TEST_CONSTEXPR_CXX20 MinSequenceContainer(std::initializer_list<T> il) : data_(il) {}
+  template <class Range>
+  TEST_CONSTEXPR_CXX20 MinSequenceContainer(std::from_range_t, Range&& rg)
+      : data_(std::from_range, std::forward<Range>(rg)) {}
+  TEST_CONSTEXPR_CXX20 MinSequenceContainer(size_type n, T value) : data_(n, value) {}
+
+  MinSequenceContainer& operator=(std::initializer_list<T> il) { data_ = il; }
 
   template <class It>
   TEST_CONSTEXPR_CXX20 void assign(It first, It last) {
@@ -36,6 +42,10 @@ struct MinSequenceContainer {
   }
   TEST_CONSTEXPR_CXX20 void assign(std::initializer_list<T> il) { data_.assign(il); }
   TEST_CONSTEXPR_CXX20 void assign(size_type n, value_type t) { data_.assign(n, t); }
+  template <class Range>
+  TEST_CONSTEXPR_CXX20 void assign_range(Range&& rg) {
+    data_.assign_range(std::forward<Range>(rg));
+  }
   TEST_CONSTEXPR_CXX20 iterator begin() { return iterator(data_.data()); }
   TEST_CONSTEXPR_CXX20 const_iterator begin() const { return const_iterator(data_.data()); }
   TEST_CONSTEXPR_CXX20 const_iterator cbegin() const { return const_iterator(data_.data()); }
@@ -53,6 +63,14 @@ struct MinSequenceContainer {
 
   TEST_CONSTEXPR_CXX20 iterator insert(const_iterator p, T value) {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), std::move(value)));
+  }
+
+  TEST_CONSTEXPR_CXX20 iterator insert(const_iterator p, size_type n, T value) {
+    return from_vector_iterator(data_.insert(to_vector_iterator(p), n, value));
+  }
+
+  TEST_CONSTEXPR_CXX20 iterator insert(const_iterator p, std::initializer_list<T> il) {
+    return from_vector_iterator(data_.insert(to_vector_iterator(p), il));
   }
 
   template <class Range>
