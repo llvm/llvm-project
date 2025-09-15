@@ -2268,15 +2268,6 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     // We're rewriting the template parameter as a reference to another
     // template parameter.
     Arg = getTemplateArgumentPackPatternForRewrite(Arg);
-    if (Arg.getKind() != TemplateArgument::Expression) {
-      assert(SemaRef.inParameterMappingSubstitution() ||
-             SemaRef.inConstraintSubstitution());
-      ExprResult Expr = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
-          Arg, E->getLocation());
-      if (Expr.isInvalid())
-        return E;
-      Arg = TemplateArgument(Expr.get(), /*IsCanonical=*/false);
-    }
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
     // FIXME: This can lead to the same subexpression appearing multiple times
@@ -2498,11 +2489,21 @@ ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                           SubstNonTypeTemplateParmExpr *E) {
   ExprResult SubstReplacement = E->getReplacement();
+  QualType ParamType = E->getParameterType(getSema().Context);
+  bool WasDependentLambda = false;
+  if (auto *RT = dyn_cast<RecordType>(ParamType);
+      RT && RT->getAsCXXRecordDecl())
+    WasDependentLambda = RT->getAsCXXRecordDecl()->isDependentLambda();
   if (!isa<ConstantExpr>(SubstReplacement.get()))
     SubstReplacement = TransformExpr(E->getReplacement());
   if (SubstReplacement.isInvalid())
     return true;
-  QualType SubstType = TransformType(E->getParameterType(getSema().Context));
+  // FIXME: This transform cannot find the instantiated lambda declaration
+  // because lambdas are instantiated in a unique scope.
+  QualType SubstType =
+      WasDependentLambda
+          ? SubstReplacement.get()->getType().getUnqualifiedType()
+          : TransformType(ParamType);
   if (SubstType.isNull())
     return true;
   // The type may have been previously dependent and not now, which means we

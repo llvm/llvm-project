@@ -1308,4 +1308,12 @@ struct __completion_domain_or_none_ : __mdefer_<__mtransform<>> {};
 
 }
 
+namespace case2 {
+
+template<auto& Q, class P> concept C = Q.template operator()<P>();
+template<class P> concept E = C<[]<class Ty>{ return false; }, P>;
+static_assert(!E<int>);
+
+}
+
 }
