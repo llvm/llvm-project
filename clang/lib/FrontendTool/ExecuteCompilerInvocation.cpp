@@ -214,6 +214,8 @@ CreateFrontendAction(CompilerInstance &CI) {
 }
 
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
+  unsigned NumErrorsBefore = Clang->getDiagnostics().getNumErrors();
+
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     driver::getDriverOptTable().printHelp(
@@ -309,9 +311,12 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 #endif
 
-  // If there were errors in processing arguments, don't do anything else.
-  if (Clang->getDiagnostics().hasErrorOccurred())
+  // If there were errors in the above, don't do anything else.
+  // This intentionally ignores errors emitted before this function to
+  // accommodate lenient callers that decided to make progress despite errors.
+  if (Clang->getDiagnostics().getNumErrors() != NumErrorsBefore)
     return false;
+
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
