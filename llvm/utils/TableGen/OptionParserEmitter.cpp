@@ -283,6 +283,21 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   typedef SmallVector<StringRef, 2> CommandKeyT;
   typedef std::map<CommandKeyT, unsigned> CommandIDsT;
   CommandIDsT CommandIDs;
+
+  auto PrintCommandIdsOffset = [&CommandIDs, &OS](const Record &R) {
+    if (R.getValue("CommandGroup") != nullptr) {
+      std::vector<const Record *> CommandGroup =
+          R.getValueAsListOfDefs("CommandGroup");
+      CommandKeyT CommandKey;
+      for (const auto &Command : CommandGroup)
+        CommandKey.push_back(Command->getName());
+      OS << CommandIDs[CommandKey];
+    } else {
+      // The option CommandIDsOffset (for default top level toolname is 0).
+      OS << " 0";
+    }
+  };
+
   CommandIDs.try_emplace(CommandKeyT(), 0);
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     std::vector<const Record *> RCommands =
@@ -459,17 +474,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
     // The option CommandIDsOffset.
     OS << ", ";
-    if (R.getValue("CommandGroup") != nullptr) {
-      std::vector<const Record *> CommandGroup =
-          R.getValueAsListOfDefs("CommandGroup");
-      CommandKeyT CommandKey;
-      for (const auto &Command : CommandGroup)
-        CommandKey.push_back(Command->getName());
-      OS << CommandIDs[CommandKey];
-    } else {
-      // The option CommandIDsOffset (for default top level toolname is 0).
-      OS << " 0";
-    }
+    PrintCommandIdsOffset(R);
     OS << ")\n";
   }
   OS << "\n";
@@ -600,17 +605,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
     // The option CommandIDsOffset.
     OS << ", ";
-    if (R.getValue("CommandGroup") != nullptr) {
-      std::vector<const Record *> CommandGroup =
-          R.getValueAsListOfDefs("CommandGroup");
-      CommandKeyT CommandKey;
-      for (const auto &Command : CommandGroup)
-        CommandKey.push_back(Command->getName());
-      OS << CommandIDs[CommandKey];
-    } else {
-      // The option CommandIDsOffset (for default top level toolname is 0).
-      OS << " 0";
-    }
+    PrintCommandIdsOffset(R);
   };
 
   auto IsMarshallingOption = [](const Record &R) {

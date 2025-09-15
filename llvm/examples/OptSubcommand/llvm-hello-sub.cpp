@@ -54,23 +54,21 @@ int main(int argc, char **argv) {
   HelloSubOptTable T;
   unsigned MissingArgIndex, MissingArgCount;
 
-  auto HandleMultipleSubcommands = [](const ArrayRef<StringRef> SubCommands) {
+  auto HandleMultipleSubcommands = [](ArrayRef<StringRef> SubCommands) {
     assert(SubCommands.size() > 1);
     llvm::errs() << "error: more than one subcommand passed [\n";
-    for (auto SC : SubCommands) {
+    for (auto SC : SubCommands)
       llvm::errs() << " `" << SC << "`\n";
-    }
     llvm::errs() << "]\n";
     llvm::errs() << "See --help.\n";
     exit(1);
   };
 
-  auto HandleOtherPositionals = [](const ArrayRef<StringRef> Positionals) {
+  auto HandleOtherPositionals = [](ArrayRef<StringRef> Positionals) {
     assert(!Positionals.empty());
     llvm::errs() << "error: unknown positional argument(s) [\n";
-    for (auto SC : Positionals) {
+    for (auto SC : Positionals)
       llvm::errs() << " `" << SC << "`\n";
-    }
     llvm::errs() << "]\n";
     llvm::errs() << "See --help.\n";
     exit(1);

@@ -197,11 +197,9 @@ protected:
   /// manually call \c buildPrefixChars once they are fully constructed.
   OptTable(const StringTable &StrTable,
            ArrayRef<StringTable::Offset> PrefixesTable,
-           ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
-  OptTable(const StringTable &StrTable,
-           ArrayRef<StringTable::Offset> PrefixesTable,
-           ArrayRef<Info> OptionInfos, ArrayRef<Command> Commands,
-           ArrayRef<unsigned> CommandIDsTable, bool IgnoreCase = false);
+           ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
+           ArrayRef<Command> Commands = {},
+           ArrayRef<unsigned> CommandIDsTable = {});
 
   /// Build (or rebuild) the PrefixChars member.
   void buildPrefixChars();
@@ -466,38 +464,25 @@ class GenericOptTable : public OptTable {
 protected:
   LLVM_ABI GenericOptTable(const StringTable &StrTable,
                            ArrayRef<StringTable::Offset> PrefixesTable,
-                           ArrayRef<Info> OptionInfos, bool IgnoreCase = false)
-      : GenericOptTable(StrTable, PrefixesTable, OptionInfos, {}, {},
-                        IgnoreCase) {}
-  LLVM_ABI GenericOptTable(const StringTable &StrTable,
-                           ArrayRef<StringTable::Offset> PrefixesTable,
-                           ArrayRef<Info> OptionInfos,
-                           ArrayRef<Command> Commands,
-                           ArrayRef<unsigned> CommandIDsTable,
-                           bool IgnoreCase = false);
+                           ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
+                           ArrayRef<Command> Commands = {},
+                           ArrayRef<unsigned> CommandIDsTable = {});
 };
 
 class PrecomputedOptTable : public OptTable {
 protected:
   PrecomputedOptTable(const StringTable &StrTable,
                       ArrayRef<StringTable::Offset> PrefixesTable,
-                      ArrayRef<Info> OptionInfos, ArrayRef<Command> Commands,
-                      ArrayRef<unsigned> CommandIDsTable,
+                      ArrayRef<Info> OptionInfos,
                       ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
-                      bool IgnoreCase = false)
-      : OptTable(StrTable, PrefixesTable, OptionInfos, Commands,
-                 CommandIDsTable, IgnoreCase) {
+                      bool IgnoreCase = false, ArrayRef<Command> Commands = {},
+                      ArrayRef<unsigned> CommandIDsTable = {})
+      : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, Commands,
+                 CommandIDsTable) {
     for (auto PrefixOffset : PrefixesUnionOffsets)
       PrefixesUnion.push_back(StrTable[PrefixOffset]);
     buildPrefixChars();
   }
-  PrecomputedOptTable(const StringTable &StrTable,
-                      ArrayRef<StringTable::Offset> PrefixesTable,
-                      ArrayRef<Info> OptionInfos,
-                      ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
-                      bool IgnoreCase = false)
-      : PrecomputedOptTable(StrTable, PrefixesTable, OptionInfos, {}, {},
-                            PrefixesUnionOffsets, IgnoreCase) {}
 };
 
 } // end namespace opt

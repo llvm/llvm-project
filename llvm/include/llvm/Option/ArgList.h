@@ -283,7 +283,7 @@ public:
 
   /// getSubcommand - Return the active subcommand, if one exists.
   LLVM_ABI StringRef getSubcommand(
-      const ArrayRef<OptTable::Command> Commands,
+      ArrayRef<OptTable::Command> Commands,
       std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
       std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
 

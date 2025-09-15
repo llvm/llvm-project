@@ -79,13 +79,9 @@ OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
 OptTable::OptTable(const StringTable &StrTable,
                    ArrayRef<StringTable::Offset> PrefixesTable,
-                   ArrayRef<Info> OptionInfos, bool IgnoreCase)
-    : OptTable(StrTable, PrefixesTable, OptionInfos, {}, {}, IgnoreCase) {}
-
-OptTable::OptTable(const StringTable &StrTable,
-                   ArrayRef<StringTable::Offset> PrefixesTable,
-                   ArrayRef<Info> OptionInfos, ArrayRef<Command> Commands,
-                   ArrayRef<unsigned> CommandIDsTable, bool IgnoreCase)
+                   ArrayRef<Info> OptionInfos, bool IgnoreCase,
+                   ArrayRef<Command> Commands,
+                   ArrayRef<unsigned> CommandIDsTable)
     : StrTable(&StrTable), PrefixesTable(PrefixesTable),
       OptionInfos(OptionInfos), Commands(Commands),
       CommandIDsTable(CommandIDsTable), IgnoreCase(IgnoreCase) {
@@ -877,12 +873,11 @@ void OptTable::internalPrintHelp(
 
 GenericOptTable::GenericOptTable(const StringTable &StrTable,
                                  ArrayRef<StringTable::Offset> PrefixesTable,
-                                 ArrayRef<Info> OptionInfos,
+                                 ArrayRef<Info> OptionInfos, bool IgnoreCase,
                                  ArrayRef<Command> Commands,
-                                 ArrayRef<unsigned> CommandIDsTable,
-                                 bool IgnoreCase)
-    : OptTable(StrTable, PrefixesTable, OptionInfos, Commands, CommandIDsTable,
-               IgnoreCase) {
+                                 ArrayRef<unsigned> CommandIDsTable)
+    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, Commands,
+               CommandIDsTable) {
 
   std::set<StringRef> TmpPrefixesUnion;
   for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))

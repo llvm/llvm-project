@@ -105,7 +105,7 @@ class Command<string name> { string Name = name; }
 class Subcommand<string name, string helpText, string usage = "">
     : Command<name> {
   string HelpText = helpText;
-  string Usage = usage; //TODO(prabhuk): This could be part of another subclass of subcommand to make passing usage string optional.
+  string Usage = usage;
 }
 
 // Compile time representation for top level command (aka toolname).
