@@ -7798,28 +7798,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
-  case Intrinsic::amdgcn_smed3: {
-    GISelChangeObserver &Observer = Helper.Observer;
-
-    // FIXME: This is to workaround the inability of tablegen match combiners to
-    // match intrinsics in patterns.
-    Observer.changingInstr(MI);
-    MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_SMED3));
-    MI.removeOperand(1);
-    Observer.changedInstr(MI);
-    return true;
-  }
-  case Intrinsic::amdgcn_umed3: {
-    GISelChangeObserver &Observer = Helper.Observer;
-
-    // FIXME: This is to workaround the inability of tablegen match combiners to
-    // match intrinsics in patterns.
-    Observer.changingInstr(MI);
-    MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_UMED3));
-    MI.removeOperand(1);
-    Observer.changedInstr(MI);
-    return true;
-  }
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_writelane:
   case Intrinsic::amdgcn_readfirstlane:
