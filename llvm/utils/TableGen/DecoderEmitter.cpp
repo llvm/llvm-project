@@ -903,8 +903,6 @@ void DecoderEmitter::emitRegClassByHwModeDecoders(
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
                                          const DecoderSet &Decoders,
                                          unsigned BucketBitWidth) const {
-  emitRegClassByHwModeDecoders(OS);
-
   // The decoder function is just a big switch statement or a table of function
   // pointers based on the input decoder index.
 
@@ -1952,6 +1950,8 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
     // M68k's disassembler.
     emitInstrLenTable(OS, InstrLen);
   }
+
+  emitRegClassByHwModeDecoders(OS);
 
   // Map of (bitwidth, namespace, hwmode) tuple to encoding IDs.
   // Its organized as a nested map, with the (namespace, hwmode) as the key for
