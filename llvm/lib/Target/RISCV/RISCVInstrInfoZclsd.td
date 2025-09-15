@@ -41,7 +41,8 @@ def GPRPairCRV32 : RegisterOperand<GPRPairC> {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZclsd, IsRV32], DecoderNamespace = "ZcOverlap" in {
+let Predicates = [HasStdExtZclsd, IsRV32],
+    DecodeOrder = DecodeOrderZcOverlap in {
 def C_LDSP_RV32 : CStackLoad<0b011, "c.ldsp", GPRPairNoX0RV32, uimm9_lsb000>,
                   Sched<[WriteLDD, ReadMemBase]> {
   let Inst{4-2} = imm{8-6};
@@ -65,7 +66,7 @@ def C_SD_RV32 : CStore_rri<0b111, "c.sd", GPRPairCRV32, uimm8_lsb000>,
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
 }
-}// Predicates = [HasStdExtZclsd, IsRV32], DecoderNamespace = "ZcOverlap"
+}// Predicates = [HasStdExtZclsd, IsRV32], DecodeOrder = DecodeOrderZcOverlap
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions

@@ -117,6 +117,11 @@ static cl::opt<bool> IgnoreFullyDefinedOperands(
         "Do not automatically decode operands with no '?' in their encoding."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
+static cl::opt<bool> ResolveConflictsTryAll(
+    "resolve-conflicts-try-all",
+    cl::desc("Resolve conflicts by attempting to decode all candidates."),
+    cl::init(false), cl::cat(DisassemblerEmitterCat));
+
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -187,6 +192,9 @@ class InstructionEncoding {
   /// The namespace in which this encoding exists.
   StringRef DecoderNamespace;
 
+  /// The decode order.
+  int64_t DecodeOrder;
+
   /// Known bits of this encoding. This is the value of the `Inst` field
   /// with any variable references replaced with '?'.
   KnownBits InstBits;
@@ -222,6 +230,9 @@ public:
 
   /// Returns the namespace in which this encoding exists.
   StringRef getDecoderNamespace() const { return DecoderNamespace; }
+
+  /// Returns the decode order for this encoding.
+  int64_t getDecodeOrder() const { return DecodeOrder; }
 
   /// Returns the size of this encoding, in bits.
   unsigned getBitWidth() const { return InstBits.getBitWidth(); }
@@ -262,16 +273,20 @@ private:
   void parseFixedLenOperands(const BitsInit &Bits);
 };
 
-/// Sorting predicate to sort encoding IDs by encoding width.
-class LessEncodingIDByWidth {
+/// Sorting predicate to sort encoding IDs by encoding width. Within the same
+/// width, sort them by their decode order.
+class LessEncodingID {
   ArrayRef<InstructionEncoding> Encodings;
 
 public:
-  explicit LessEncodingIDByWidth(ArrayRef<InstructionEncoding> Encodings)
+  explicit LessEncodingID(ArrayRef<InstructionEncoding> Encodings)
       : Encodings(Encodings) {}
 
   bool operator()(unsigned ID1, unsigned ID2) const {
-    return Encodings[ID1].getBitWidth() < Encodings[ID2].getBitWidth();
+    const InstructionEncoding &E1 = Encodings[ID1];
+    const InstructionEncoding &E2 = Encodings[ID2];
+    return std::tuple(E1.getBitWidth(), E1.getDecodeOrder()) <
+           std::tuple(E2.getBitWidth(), E2.getDecodeOrder());
   }
 };
 
@@ -516,6 +531,13 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  /// Per decode order filter choosers. Applicable when the set of candidates
+  /// have more than 1 decode orders.
+  SmallVector<std::unique_ptr<const FilterChooser>> PerDecodeOrderChoosers;
+
+  /// Handle this chooser by attempting to decode all endodings.
+  bool AttemptAll = false;
+
   /// Set to true if decoding conflict was encountered.
   bool HasConflict = false;
 
@@ -531,7 +553,7 @@ public:
                 ArrayRef<unsigned> EncodingIDs)
       : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(nullptr) {
     // Sort encoding IDs once.
-    stable_sort(this->EncodingIDs, LessEncodingIDByWidth(Encodings));
+    stable_sort(this->EncodingIDs, LessEncodingID(Encodings));
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[this->EncodingIDs.front()].getBitWidth();
     FilterBits = KnownBits(FilterWidth);
@@ -544,7 +566,7 @@ public:
                 const FilterChooser &Parent)
       : Encodings(Encodings), EncodingIDs(EncodingIDs), Parent(&Parent) {
     // Inferior filter choosers are created from sorted array of encoding IDs.
-    assert(is_sorted(EncodingIDs, LessEncodingIDByWidth(Encodings)));
+    assert(is_sorted(EncodingIDs, LessEncodingID(Encodings)));
     assert(!FilterBits.hasConflict() && "Broken filter");
     // Filter width is the width of the smallest encoding.
     unsigned FilterWidth = Encodings[EncodingIDs.front()].getBitWidth();
@@ -582,6 +604,18 @@ private:
   // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
   // decoded bits in order to verify that the instruction matches the Opcode.
   std::vector<Island> getIslands(const KnownBits &EncodingBits) const;
+
+  // Returns the decode order for the given encoding ID.
+  int64_t getDecodeOrder(unsigned ID) const {
+    return Encodings[ID].getDecodeOrder();
+  }
+
+  /// Returns true if the set of encoding IDs have more than one decode order.
+  bool hasMultipleDecodeOrders() const;
+
+  // Split the set of candidate encodings into one bucket per decode order and
+  // create inferior FilterChoosers per bucket.
+  void splitByDecodeOrder();
 
   /// Scans the well-known encoding bits of the encodings and, builds up a list
   /// of candidate filters, and then returns the best one, if any.
@@ -684,6 +718,51 @@ void FilterChooser::applyFilter(const Filter &F) {
   NumBits = F.NumBits;
   assert(FilterBits.extractBits(NumBits, StartBit).isUnknown());
 
+  // When a filter has both fixed and variable encodings, we give priority to
+  // the fixed encoding (FilteredIDs) and if that fails, we attempt the variable
+  // encodings. See DecoderTableBuilder::emitTableEntries. This order may not be
+  // the right order for certain targets. To control this, they can use the
+  // DecodeOrder. If we have multiple decode orders, the filter chooser will
+  // effectively attempt the fixed-then-variable encoding per decode order. This
+  // allows targets to prioritize certain variable encoding over fixed ones by
+  // assigning the fixed ones a larger decode order.
+
+  // If we always split per decode order, we get the following attempt order
+  //   f[0] -> v[0] -> f[1] -> v[1]
+  //
+  // However, instead of always splitting a chooser with multiple decode orders
+  // we can split only when necessary and only the smallest number of splits
+  // as long as we effectively get the same attempt order as above. As an
+  // example, if the max decode order among the fixed encoding is <= min
+  // decode order among varying encoding, then even if we do not split, we get
+  // the same effective attempt order. This simple criteria is implemented
+  // below (i.e, we fully split when this criteria is not met). There may be
+  // more refined ways to do the decode order splitting. For example, not
+  // splitting all the decode orders fully put doing partial splits. This can
+  // be implemented in future as an optimization if desired.
+  if (hasMultipleDecodeOrders() && !F.VariableIDs.empty() &&
+      !F.FilteredIDs.empty()) {
+    auto LessDecodeOrder = [&](unsigned A, unsigned B) {
+      return getDecodeOrder(A) < getDecodeOrder(B);
+    };
+
+    int64_t MaxFixedOrder = std::numeric_limits<int64_t>::min();
+    for (ArrayRef<unsigned> InferiorEncodingIDs :
+         make_second_range(F.FilteredIDs)) {
+      auto MaxIt = llvm::max_element(InferiorEncodingIDs, LessDecodeOrder);
+      int64_t CurrentMax = getDecodeOrder(*MaxIt);
+      MaxFixedOrder = std::max(MaxFixedOrder, CurrentMax);
+    }
+
+    auto MinIt = llvm::min_element(F.VariableIDs, LessDecodeOrder);
+    int64_t MinVariableOrder = getDecodeOrder(*MinIt);
+
+    if (MaxFixedOrder > MinVariableOrder) {
+      splitByDecodeOrder();
+      return;
+    }
+  }
+
   if (!F.VariableIDs.empty()) {
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
@@ -720,6 +799,26 @@ unsigned Filter::usefulness() const {
 // Filterchooser Implementation //
 //                              //
 //////////////////////////////////
+
+static StringRef getDecoderOpName(uint8_t Op) {
+  // clang-format off
+  static constexpr StringLiteral Names[] = {
+    "OPC_Scope",
+    "OPC_ScopeNoFail",
+    "OPC_ExtractField",
+    "OPC_FilterValueOrSkip",
+    "OPC_FilterValue",
+    "OPC_CheckField",
+    "OPC_CheckPredicate",
+    "OPC_Decode",
+    "OPC_TryDecode",
+    "OPC_SoftFail",
+  };
+  // clang-format on
+  if (Op >= MCD::OPC_Scope && Op <= MCD::OPC_SoftFail)
+    return Names[Op - MCD::OPC_Scope];
+  llvm_unreachable("Unknown decoder op");
+}
 
 // Emit the decoder state machine table. Returns a mask of MCD decoder ops
 // that were emitted.
@@ -800,20 +899,19 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
 
     const uint8_t DecoderOp = *I++;
     OpcodeMask |= (1 << DecoderOp);
+    OS << "  MCD::" << getDecoderOpName(DecoderOp) << ", ";
     switch (DecoderOp) {
     default:
       PrintFatalError("Invalid decode table opcode: " + Twine((int)DecoderOp) +
                       " at index " + Twine(Pos));
-    case MCD::OPC_Scope: {
-      OS << "  MCD::OPC_Scope, ";
+    case MCD::OPC_Scope:
+    case MCD::OPC_ScopeNoFail: {
       uint32_t NumToSkip = emitNumToSkip(I, OS);
       emitNumToSkipComment(NumToSkip);
       OS << '\n';
       break;
     }
     case MCD::OPC_ExtractField: {
-      OS << "  MCD::OPC_ExtractField, ";
-
       // ULEB128 encoded start value.
       const char *ErrMsg = nullptr;
       unsigned Start = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
@@ -828,7 +926,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_FilterValueOrSkip: {
-      OS << "  MCD::OPC_FilterValueOrSkip, ";
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
       uint32_t NumToSkip = emitNumToSkip(I, OS);
@@ -837,14 +934,12 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_FilterValue: {
-      OS << "  MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
       emitULEB128(I, OS);
       OS << '\n';
       break;
     }
     case MCD::OPC_CheckField: {
-      OS << "  MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
       emitULEB128(I, OS);
       // 8-bit length.
@@ -856,7 +951,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_CheckPredicate: {
-      OS << "  MCD::OPC_CheckPredicate, ";
       emitULEB128(I, OS);
       OS << '\n';
       break;
@@ -869,7 +963,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       unsigned Opc = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
-      OS << "  MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
       emitULEB128(I, OS);
 
       // Decoder index.
@@ -890,7 +983,6 @@ unsigned DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       break;
     }
     case MCD::OPC_SoftFail: {
-      OS << "  MCD::OPC_SoftFail, ";
       // Decode the positive mask.
       const char *ErrMsg = nullptr;
       uint64_t PositiveMask = decodeULEB128(&*I, nullptr, EndPtr, &ErrMsg);
@@ -1577,6 +1669,42 @@ std::unique_ptr<Filter> FilterChooser::findBestFilter() const {
   return nullptr;
 }
 
+bool FilterChooser::hasMultipleDecodeOrders() const {
+  if (EncodingIDs.size() <= 1)
+    return false;
+  // Encodings are sorted by decode order, so there are multiple decode orders
+  // if the first and last decode order do not match.
+  return getDecodeOrder(EncodingIDs.front()) !=
+         getDecodeOrder(EncodingIDs.back());
+}
+
+void FilterChooser::splitByDecodeOrder() {
+  if (!hasMultipleDecodeOrders())
+    PrintFatalError("Cannot split by decode orders for a single decode order");
+
+  // Create one inferior FilterChooser per decode order span.
+  ArrayRef<unsigned> IDs = ArrayRef(EncodingIDs);
+  int64_t LastOrder = getDecodeOrder(IDs.front());
+  size_t LastIndex = 0;
+  // Note: first iteration here is redundant, but this allows us to keep Idx
+  // value correct (as opposed to using Idx + 1).
+  for (const auto &[Idx, ID] : enumerate(IDs)) {
+    int64_t CurrentOrder = getDecodeOrder(ID);
+    if (CurrentOrder != LastOrder) {
+      ArrayRef<unsigned> SubIDs = IDs.slice(LastIndex, Idx - LastIndex);
+      PerDecodeOrderChoosers.push_back(std::make_unique<FilterChooser>(
+          Encodings, SubIDs, FilterBits, *this));
+      LastOrder = CurrentOrder;
+      LastIndex = Idx;
+    }
+  }
+
+  // Finish the last span.
+  ArrayRef<unsigned> SubIDs = IDs.slice(LastIndex, IDs.size() - LastIndex);
+  PerDecodeOrderChoosers.push_back(
+      std::make_unique<FilterChooser>(Encodings, SubIDs, FilterBits, *this));
+}
+
 // Decides on the best configuration of filter(s) to use in order to decode
 // the instructions.  A conflict of instructions may occur, in which case we
 // dump the conflict set to the standard error.
@@ -1595,6 +1723,19 @@ void FilterChooser::doFilter() {
     return;
   }
 
+  // If we were unable to find a useful filter and there are multiple decode
+  // orders involved, split the candidates by decode order and create per decode
+  // order choosers.
+  if (hasMultipleDecodeOrders()) {
+    splitByDecodeOrder();
+    return;
+  }
+
+  if (ResolveConflictsTryAll) {
+    AttemptAll = true;
+    return;
+  }
+
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
   dump();
@@ -1609,12 +1750,17 @@ void FilterChooser::dump() const {
   // Dump filter stack.
   dumpStack(errs(), Indent, PadToWidth);
 
+  bool PrintDecoderOrder = hasMultipleDecodeOrders();
+
   // Dump encodings.
   for (unsigned EncodingID : EncodingIDs) {
     const InstructionEncoding &Encoding = Encodings[EncodingID];
     errs() << Indent << indent(PadToWidth - Encoding.getBitWidth());
     printKnownBits(errs(), Encoding.getMandatoryBits(), '_');
-    errs() << "  " << Encoding.getName() << '\n';
+    errs() << "  " << Encoding.getName();
+    if (PrintDecoderOrder)
+      errs() << " (" << Encoding.getDecodeOrder() << ")";
+    errs() << '\n';
   }
 }
 
@@ -1623,10 +1769,10 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
   // If there are other encodings that could match if those with all bits
   // known don't, enter a scope so that they have a chance.
-  size_t FixupLoc = 0;
+  size_t VarScopeFixupLoc = 0;
   if (FC.VariableFC) {
     Table.insertOpcode(MCD::OPC_Scope);
-    FixupLoc = Table.insertNumToSkip();
+    VarScopeFixupLoc = Table.insertNumToSkip();
   }
 
   if (FC.SingletonEncodingID) {
@@ -1646,7 +1792,7 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
     // Emit table entries for the only case.
     emitTableEntries(*Delegate);
-  } else {
+  } else if (FC.FilterChooserMap.size() > 1) {
     // The general case: emit a switch over the field value.
     Table.insertOpcode(MCD::OPC_ExtractField);
     Table.insertULEB128(FC.StartBit);
@@ -1673,10 +1819,37 @@ void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
 
     // Emit table entries for the last case.
     emitTableEntries(*Delegate);
+  } else if (FC.PerDecodeOrderChoosers.size() > 1) {
+    // Attempt to decode all inferior choosers and allow them to fail, except
+    // the last one. Note that `PerDecodeOrderChoosers` when preset is expected
+    // to have atleast 2 entries, hence the size() > 1 check above.
+    for (const auto &Delegate : drop_end(FC.PerDecodeOrderChoosers)) {
+      Table.insertOpcode(MCD::OPC_ScopeNoFail);
+      unsigned FixupLoc = Table.insertNumToSkip();
+      emitTableEntries(*Delegate);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+    emitTableEntries(*FC.PerDecodeOrderChoosers.back());
+  } else if (FC.AttemptAll) {
+    // Attempt all encoding and allow them to fail, except the last one.
+    // We expect here to have > 1 EncodingIDs, else we could have created a
+    // singleton chooser.
+    for (const auto ID : drop_end(FC.EncodingIDs)) {
+      Table.insertOpcode(MCD::OPC_ScopeNoFail);
+      unsigned FixupLoc = Table.insertNumToSkip();
+      FilterChooser SingletonFC(FC.Encodings, ID, FC.FilterBits, *FC.Parent);
+      emitSingletonTableEntry(SingletonFC);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+    FilterChooser LastSingletonFC(FC.Encodings, FC.EncodingIDs.back(),
+                                  FC.FilterBits, *FC.Parent);
+    emitSingletonTableEntry(LastSingletonFC);
+  } else {
+    llvm_unreachable("FilterChooser not setup to do any filtering");
   }
 
   if (FC.VariableFC) {
-    Table.patchNumToSkip(FixupLoc, Table.size());
+    Table.patchNumToSkip(VarScopeFixupLoc, Table.size());
     emitTableEntries(*FC.VariableFC);
   }
 }
@@ -2067,6 +2240,7 @@ InstructionEncoding::InstructionEncoding(const Record *EncodingDef,
   Name.append(InstDef->getName());
 
   DecoderNamespace = EncodingDef->getValueAsString("DecoderNamespace");
+  DecodeOrder = EncodingDef->getValueAsInt("DecodeOrder");
   DecoderMethod = EncodingDef->getValueAsString("DecoderMethod");
   if (!DecoderMethod.empty())
     HasCompleteDecoder = EncodingDef->getValueAsBit("hasCompleteDecoder");
@@ -2140,10 +2314,41 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 )";
   }
 
+  // We maintain 2 scope stacks. One is ScopeStack which is used in conjunction
+  // with OPC_Scope and it encodes the "regular" forward traversal through the
+  // decoder table in response to Field or Predicate check failures.
+  //
+  // Other is NoFailScopeStack and is used in conjunction with OPC_ScopeNoFail
+  // and it essentially encodes nested checks that in any failure mode continue
+  // further checks and never return from the decode function with a failure.
+  // This is used when we need to attempt multiple decoding possibilities and
+  // a failure anywhere is not a signal to return from the decode function but
+  // to reset some state and continue.
+  //
+  // ScopeStack can be thought of as nested within the NoFailScopeStack. A
+  // "failure" will result in clearing the ScopeStack and continuing execution
+  // at the top of the NoFailScopeStack, if its not empty, else returning from
+  // the decode function with a failure.
+
   OS << R"(
-  SmallVector<const uint8_t *, 8> ScopeStack;
+  SmallVector<const uint8_t *> ScopeStack;
+  SmallVector<const uint8_t *> NoFailScopeStack;
+
   uint64_t CurFieldValue = 0;
   DecodeStatus S = MCDisassembler::Success;
+
+  // Handle a return with failure. Returns true if we can actually return from
+  // the decode function, else adjust the state and return the continuation
+  // point.
+  auto PopScope = [&](bool CheckScopeStack) -> std::pair<bool, const uint8_t*> {
+    if (CheckScopeStack && !ScopeStack.empty())
+      return {false, ScopeStack.pop_back_val()};
+    ScopeStack.resize(0);
+    if (!NoFailScopeStack.empty())
+      return {false, NoFailScopeStack.pop_back_val()};
+    return {true, nullptr};
+  };
+
   while (true) {
     ptrdiff_t Loc = Ptr - DecodeTable;
     const uint8_t DecoderOp = *Ptr++;
@@ -2152,12 +2357,16 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       errs() << Loc << ": Unexpected decode table opcode: "
              << (int)DecoderOp << '\n';
       return MCDisassembler::Fail;
-    case MCD::OPC_Scope: {
+    case MCD::OPC_Scope:
+    case MCD::OPC_ScopeNoFail: {
       unsigned NumToSkip = decodeNumToSkip(Ptr);
       const uint8_t *SkipTo = Ptr + NumToSkip;
-      ScopeStack.push_back(SkipTo);
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_Scope(" << SkipTo - DecodeTable
-                        << ")\n");
+      SmallVector<const uint8_t *> &Stack = DecoderOp == MCD::OPC_ScopeNoFail ? NoFailScopeStack : ScopeStack;
+      Stack.push_back(SkipTo);
+      LLVM_DEBUG({
+        const char *OpName = DecoderOp == MCD::OPC_Scope ? "OPC_Scope" : "OPC_ScopeNoFail";
+        dbgs() << Loc << ": " << OpName << "(" << SkipTo - DecodeTable << ")\n";
+      });
       break;
     }
     case MCD::OPC_ExtractField: {
@@ -2198,11 +2407,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << (Failed ? "FAIL, " : "PASS\n"));
 
       if (Failed) {
-        if (ScopeStack.empty()) {
+        auto Ret = PopScope(/*CheckScopeStack=*/true);
+        if (Ret.first) {
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val();
+        Ptr = Ret.second;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2226,11 +2436,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << FieldValue << ", ExpectedValue = " << ExpectedValue
                         << ": " << (Failed ? "FAIL, " : "PASS\n"););
       if (Failed) {
-        if (ScopeStack.empty()) {
+        auto Ret = PopScope(/*CheckScopeStack=*/true);
+        if (Ret.first) {
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val();
+        Ptr = Ret.second;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2247,11 +2458,12 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << (Failed ? "FAIL, " : "PASS\n"););
 
       if (Failed) {
-        if (ScopeStack.empty()) {
+        auto Ret = PopScope(/*CheckScopeStack=*/true);
+        if (Ret.first) {
           LLVM_DEBUG(dbgs() << "returning Fail\n");
           return MCDisassembler::Fail;
         }
-        Ptr = ScopeStack.pop_back_val();
+        Ptr = Ret.second;
         LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       }
       break;
@@ -2276,8 +2488,23 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": "
-                   << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
-      return S;
+                   << (S != MCDisassembler::Fail ? "PASS" : "FAIL"));
+      if (S != MCDisassembler::Fail) {
+        LLVM_DEBUG(dbgs() << ", Returning\n");
+        return S;
+      }
+      // We ignore the scope stack and just check NoFail stack here.
+      auto Ret = PopScope(/*CheckScopeStack=*/false);
+      if (Ret.first) {
+        LLVM_DEBUG(dbgs() << "returning Fail\n");
+        return MCDisassembler::Fail;
+      }
+      // Reset the decode status.
+      MI.clear();
+      S = MCDisassembler::Success;
+      Ptr = Ret.second;
+      LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
+      break;
     })";
   if (HasTryDecode) {
     OS << R"(
@@ -2296,20 +2523,26 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 
       if (DecodeComplete) {
         // Decoding complete.
-        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
-        MI = TmpMI;
-        return S;
+        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS" : "FAIL"));
+        if (S != MCDisassembler::Fail) {
+          MI = TmpMI;
+          LLVM_DEBUG(dbgs() << ", Returning\n");
+          return S;
+        }
       }
-      assert(S == MCDisassembler::Fail);
-      if (ScopeStack.empty()) {
+      // If decoding was complete, we only check the NoFail stack, else we
+      // check both stacks when popping the scope.
+      auto Ret = PopScope(/*CheckScopeStack=*/!DecodeComplete);
+
+      if (Ret.first) {
         LLVM_DEBUG(dbgs() << "FAIL, returning FAIL\n");
         return MCDisassembler::Fail;
       }
-      Ptr = ScopeStack.pop_back_val();
-      LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
       // Reset decode status. This also drops a SoftFail status that could be
       // set before the decode attempt.
       S = MCDisassembler::Success;
+      Ptr = Ret.second;
+      LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
       break;
     })";
   }
