@@ -934,6 +934,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
+    if (getVGPREncodingMSBs(OpXRegs[CompOprIdx], MRI) !=
+        getVGPREncodingMSBs(OpYRegs[CompOprIdx], MRI))
+      return CompOprIdx;
+
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;
 
@@ -1395,13 +1399,16 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   return IsWave32 ? 1024 : 512;
 }
 
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) {
+  const auto &Features = STI->getFeatureBits();
+  if (Features.test(Feature1024AddressableVGPRs))
+    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
+  return 256;
+}
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
                                 unsigned DynamicVGPRBlockSize) {
   const auto &Features = STI->getFeatureBits();
-  if (Features.test(FeatureGFX1250Insts))
-    return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
@@ -3524,6 +3531,54 @@ bool isPackedFP32Inst(unsigned Opc) {
   default:
     return false;
   }
+}
+
+const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {
+  assert(isFixedDims() && "expect kind to be FixedDims");
+  return Dims;
+}
+
+std::string ClusterDimsAttr::to_string() const {
+  SmallString<10> Buffer;
+  raw_svector_ostream OS(Buffer);
+
+  switch (getKind()) {
+  case Kind::Unknown:
+    return "";
+  case Kind::NoCluster: {
+    OS << EncoNoCluster << ',' << EncoNoCluster << ',' << EncoNoCluster;
+    return Buffer.c_str();
+  }
+  case Kind::VariableDims: {
+    OS << EncoVariableDims << ',' << EncoVariableDims << ','
+       << EncoVariableDims;
+    return Buffer.c_str();
+  }
+  case Kind::FixedDims: {
+    OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
+    return Buffer.c_str();
+  }
+  }
+  llvm_unreachable("Unknown ClusterDimsAttr kind");
+}
+
+ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
+  std::optional<SmallVector<unsigned>> Attr =
+      getIntegerVecAttribute(F, "amdgpu-cluster-dims", /*Size=*/3);
+  ClusterDimsAttr::Kind AttrKind = Kind::FixedDims;
+
+  if (!Attr.has_value())
+    AttrKind = Kind::Unknown;
+  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+    AttrKind = Kind::NoCluster;
+  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+    AttrKind = Kind::VariableDims;
+
+  ClusterDimsAttr A(AttrKind);
+  if (AttrKind == Kind::FixedDims)
+    A.Dims = {(*Attr)[0], (*Attr)[1], (*Attr)[2]};
+
+  return A;
 }
 
 } // namespace AMDGPU

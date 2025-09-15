@@ -113,34 +113,13 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   std::string address =
       llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
-  FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
-
-  Status error(llvm::sys::fs::create_directory(user_lldb_dir.GetPath()));
-  if (error.Fail())
-    return error.takeError();
-
-  m_mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
-      formatv("lldb-mcp-{0}.json", getpid()).str());
-
-  ServerInfo info;
-  info.connection_uri = listening_uris[0];
-  info.pid = getpid();
-
-  std::string buf = formatv("{0}", toJSON(info)).str();
-  size_t num_bytes = buf.size();
-
-  const File::OpenOptions flags = File::eOpenOptionWriteOnly |
-                                  File::eOpenOptionCanCreate |
-                                  File::eOpenOptionTruncate;
-  llvm::Expected<lldb::FileUP> file =
-      FileSystem::Instance().Open(m_mcp_registry_entry_path, flags,
-                                  lldb::eFilePermissionsFileDefault, false);
-  if (!file)
-    return file.takeError();
-  if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
-    return error;
+  ServerInfo info{listening_uris[0]};
+  llvm::Expected<ServerInfoHandle> handle = ServerInfo::Write(info);
+  if (!handle)
+    return handle.takeError();
 
   m_running = true;
+  m_server_info_handle = std::move(*handle);
   m_listen_handlers = std::move(*handles);
   m_loop_thread = std::thread([=] {
     llvm::set_thread_name("protocol-server.mcp");
@@ -158,10 +137,6 @@ llvm::Error ProtocolServerMCP::Stop() {
     m_running = false;
   }
 
-  if (!m_mcp_registry_entry_path.GetPath().empty())
-    FileSystem::Instance().RemoveFile(m_mcp_registry_entry_path);
-  m_mcp_registry_entry_path.Clear();
-
   // Stop the main loop.
   m_loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
@@ -169,6 +144,10 @@ llvm::Error ProtocolServerMCP::Stop() {
   // Wait for the main loop to exit.
   if (m_loop_thread.joinable())
     m_loop_thread.join();
+
+  m_listen_handlers.clear();
+  m_server_info_handle = ServerInfoHandle();
+  m_instances.clear();
 
   return llvm::Error::success();
 }

@@ -170,10 +170,10 @@ private:
   bool recognizeFindFirstByte();
 
   Value *expandFindFirstByte(IRBuilder<> &Builder, DomTreeUpdater &DTU,
-                             unsigned VF, Type *CharTy, BasicBlock *ExitSucc,
-                             BasicBlock *ExitFail, Value *SearchStart,
-                             Value *SearchEnd, Value *NeedleStart,
-                             Value *NeedleEnd);
+                             unsigned VF, Type *CharTy, Value *IndPhi,
+                             BasicBlock *ExitSucc, BasicBlock *ExitFail,
+                             Value *SearchStart, Value *SearchEnd,
+                             Value *NeedleStart, Value *NeedleEnd);
 
   void transformFindFirstByte(PHINode *IndPhi, unsigned VF, Type *CharTy,
                               BasicBlock *ExitSucc, BasicBlock *ExitFail,
@@ -240,6 +240,37 @@ bool LoopIdiomVectorize::run(Loop *L) {
     return true;
 
   return false;
+}
+
+static void fixSuccessorPhis(Loop *L, Value *ScalarRes, Value *VectorRes,
+                             BasicBlock *SuccBB, BasicBlock *IncBB) {
+  for (PHINode &PN : SuccBB->phis()) {
+    // Look through the incoming values to find ScalarRes, meaning this is a
+    // PHI collecting the results of the transformation.
+    bool ResPhi = false;
+    for (Value *Op : PN.incoming_values())
+      if (Op == ScalarRes) {
+        ResPhi = true;
+        break;
+      }
+
+    // Any PHI that depended upon the result of the transformation needs a new
+    // incoming value from IncBB.
+    if (ResPhi)
+      PN.addIncoming(VectorRes, IncBB);
+    else {
+      // There should be no other outside uses of other values in the
+      // original loop. Any incoming values should either:
+      //   1. Be for blocks outside the loop, which aren't interesting. Or ..
+      //   2. These are from blocks in the loop with values defined outside
+      //      the loop. We should a similar incoming value from CmpBB.
+      for (BasicBlock *BB : PN.blocks())
+        if (L->contains(BB)) {
+          PN.addIncoming(PN.getIncomingValueForBlock(BB), IncBB);
+          break;
+        }
+    }
+  }
 }
 
 bool LoopIdiomVectorize::recognizeByteCompare() {
@@ -935,42 +966,10 @@ void LoopIdiomVectorize::transformByteCompare(GetElementPtrInst *GEPA,
     DTU.applyUpdates({{DominatorTree::Insert, CmpBB, FoundBB}});
   }
 
-  auto fixSuccessorPhis = [&](BasicBlock *SuccBB) {
-    for (PHINode &PN : SuccBB->phis()) {
-      // At this point we've already replaced all uses of the result from the
-      // loop with ByteCmp. Look through the incoming values to find ByteCmp,
-      // meaning this is a Phi collecting the results of the byte compare.
-      bool ResPhi = false;
-      for (Value *Op : PN.incoming_values())
-        if (Op == ByteCmpRes) {
-          ResPhi = true;
-          break;
-        }
-
-      // Any PHI that depended upon the result of the byte compare needs a new
-      // incoming value from CmpBB. This is because the original loop will get
-      // deleted.
-      if (ResPhi)
-        PN.addIncoming(ByteCmpRes, CmpBB);
-      else {
-        // There should be no other outside uses of other values in the
-        // original loop. Any incoming values should either:
-        //   1. Be for blocks outside the loop, which aren't interesting. Or ..
-        //   2. These are from blocks in the loop with values defined outside
-        //      the loop. We should a similar incoming value from CmpBB.
-        for (BasicBlock *BB : PN.blocks())
-          if (CurLoop->contains(BB)) {
-            PN.addIncoming(PN.getIncomingValueForBlock(BB), CmpBB);
-            break;
-          }
-      }
-    }
-  };
-
   // Ensure all Phis in the successors of CmpBB have an incoming value from it.
-  fixSuccessorPhis(EndBB);
+  fixSuccessorPhis(CurLoop, ByteCmpRes, ByteCmpRes, EndBB, CmpBB);
   if (EndBB != FoundBB)
-    fixSuccessorPhis(FoundBB);
+    fixSuccessorPhis(CurLoop, ByteCmpRes, ByteCmpRes, FoundBB, CmpBB);
 
   // The new CmpBB block isn't part of the loop, but will need to be added to
   // the outer loop if there is one.
@@ -1168,8 +1167,9 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
 
 Value *LoopIdiomVectorize::expandFindFirstByte(
     IRBuilder<> &Builder, DomTreeUpdater &DTU, unsigned VF, Type *CharTy,
-    BasicBlock *ExitSucc, BasicBlock *ExitFail, Value *SearchStart,
-    Value *SearchEnd, Value *NeedleStart, Value *NeedleEnd) {
+    Value *IndPhi, BasicBlock *ExitSucc, BasicBlock *ExitFail,
+    Value *SearchStart, Value *SearchEnd, Value *NeedleStart,
+    Value *NeedleEnd) {
   // Set up some types and constants that we intend to reuse.
   auto *PtrTy = Builder.getPtrTy();
   auto *I64Ty = Builder.getInt64Ty();
@@ -1369,6 +1369,12 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   MatchLCSSA->addIncoming(Search, BB2);
   MatchPredLCSSA->addIncoming(MatchPred, BB2);
 
+  // Ensure all Phis in the successors of BB3/BB5 have an incoming value from
+  // them.
+  fixSuccessorPhis(CurLoop, IndPhi, MatchVal, ExitSucc, BB3);
+  if (ExitSucc != ExitFail)
+    fixSuccessorPhis(CurLoop, IndPhi, MatchVal, ExitFail, BB5);
+
   if (VerifyLoops) {
     OuterLoop->verifyLoop();
     InnerLoop->verifyLoop();
@@ -1390,20 +1396,11 @@ void LoopIdiomVectorize::transformFindFirstByte(
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 
-  Value *MatchVal =
-      expandFindFirstByte(Builder, DTU, VF, CharTy, ExitSucc, ExitFail,
-                          SearchStart, SearchEnd, NeedleStart, NeedleEnd);
+  expandFindFirstByte(Builder, DTU, VF, CharTy, IndPhi, ExitSucc, ExitFail,
+                      SearchStart, SearchEnd, NeedleStart, NeedleEnd);
 
   assert(PHBranch->isUnconditional() &&
          "Expected preheader to terminate with an unconditional branch.");
-
-  // Add new incoming values with the result of the transformation to PHINodes
-  // of ExitSucc that use IndPhi.
-  for (auto *U : llvm::make_early_inc_range(IndPhi->users())) {
-    auto *PN = dyn_cast<PHINode>(U);
-    if (PN && PN->getParent() == ExitSucc)
-      PN->addIncoming(MatchVal, cast<Instruction>(MatchVal)->getParent());
-  }
 
   if (VerifyLoops && CurLoop->getParentLoop()) {
     CurLoop->getParentLoop()->verifyLoop();

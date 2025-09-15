@@ -59,8 +59,8 @@ static uint64_t allOnes(unsigned int Count) {
 // Pin the vtable to this file.
 void SystemZInstrInfo::anchor() {}
 
-SystemZInstrInfo::SystemZInstrInfo(SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(-1, -1),
+SystemZInstrInfo::SystemZInstrInfo(const SystemZSubtarget &sti)
+    : SystemZGenInstrInfo(sti, -1, -1),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister(),
          sti.getHwMode()),
       STI(sti) {}
