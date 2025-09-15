@@ -39,6 +39,20 @@ struct SFrameFRE {
 
   SFrameFRE(const MCSymbol *Start) : Label(Start) {}
 
+  void emitOffset(MCObjectStreamer &S, FREOffset OffsetSize, size_t Offset) {
+    switch (OffsetSize) {
+    case (FREOffset::B1):
+      S.emitInt8(Offset);
+      return;
+    case (FREOffset::B2):
+      S.emitInt16(Offset);
+      return;
+    case (FREOffset::B4):
+      S.emitInt32(Offset);
+      return;
+    }
+  }
+
   void emit(MCObjectStreamer &S, const MCSymbol *FuncBegin,
             MCFragment *FDEFrag) {
     S.emitSFrameCalculateFuncOffset(FuncBegin, Label, FDEFrag, SMLoc());
@@ -72,44 +86,14 @@ struct SFrameFRE {
 
     // FRE Offsets
     [[maybe_unused]] unsigned OffsetsEmitted = 1;
-    switch (Info.getOffsetSize()) {
-    case (FREOffset::B1):
-      S.emitInt8(CFAOffset);
-      break;
-    case (FREOffset::B2):
-      S.emitInt16(CFAOffset);
-      break;
-    case (FREOffset::B4):
-      S.emitInt32(CFAOffset);
-      break;
-    }
+    emitOffset(S, Info.getOffsetSize(), CFAOffset);
     if (FPOffset) {
       OffsetsEmitted++;
-      switch (Info.getOffsetSize()) {
-      case (FREOffset::B1):
-        S.emitInt8(FPOffset);
-        break;
-      case (FREOffset::B2):
-        S.emitInt16(FPOffset);
-        break;
-      case (FREOffset::B4):
-        S.emitInt32(FPOffset);
-        break;
-      }
+      emitOffset(S, Info.getOffsetSize(), FPOffset);
     }
     if (RAOffset) {
       OffsetsEmitted++;
-      switch (Info.getOffsetSize()) {
-      case (FREOffset::B1):
-        S.emitInt8(RAOffset);
-        break;
-      case (FREOffset::B2):
-        S.emitInt16(RAOffset);
-        break;
-      case (FREOffset::B4):
-        S.emitInt32(RAOffset);
-        break;
-      }
+      emitOffset(S, Info.getOffsetSize(), RAOffset);
     }
     assert(OffsetsEmitted == RegsTracked &&
            "Didn't emit the right number of offsets");
@@ -467,7 +451,7 @@ void MCSFrameEmitter::emit(MCObjectStreamer &Streamer) {
 void MCSFrameEmitter::encodeFuncOffset(MCContext &C, uint64_t Offset,
                                        SmallVectorImpl<char> &Out,
                                        MCFragment *FDEFrag) {
-  // If encoding into the FDE Frag itself, generate the sfde_info_word.
+  // If encoding into the FDE Frag itself, generate the sfde_func_info.
   if (FDEFrag == nullptr) {
     // sfde_func_info
 
