@@ -26,9 +26,9 @@ void fb(CustomResource a) {
     CustomResource b = a;
 }
 
-// CHECK: define hidden void @_Z2fcN4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 4 %a)
-// CHECK: call void @_Z4foo2N4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 4 %agg.tmp)
-// CHECK: declare hidden void @_Z4foo2N4hlsl8RWBufferIDv4_fEE(ptr noundef byval(%"class.hlsl::RWBuffer") align 4)
+// CHECK: define hidden void @_Z2fcN4hlsl8RWBufferIDv4_fEE(ptr dead_on_return noundef %a)
+// CHECK: call void @_Z4foo2N4hlsl8RWBufferIDv4_fEE(ptr dead_on_return noundef %{{.*}})
+// CHECK: declare hidden void @_Z4foo2N4hlsl8RWBufferIDv4_fEE(ptr dead_on_return noundef)
 void foo2(RWBuffer<float4> buf);
 
 void fc(RWBuffer<float4> a) {
@@ -44,9 +44,9 @@ struct MyStruct {
   int2 i;
 };
 
-// CHECK: define hidden void @_Z2feN4hlsl16StructuredBufferI8MyStructEE(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 4 %a)
-// CHECK: call void @_Z4foo3N4hlsl16StructuredBufferI8MyStructEE(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 4 %agg.tmp)
-// CHECK: declare hidden void @_Z4foo3N4hlsl16StructuredBufferI8MyStructEE(ptr noundef byval(%"class.hlsl::StructuredBuffer") align 4)
+// CHECK: define hidden void @_Z2feN4hlsl16StructuredBufferI8MyStructEE(ptr dead_on_return noundef %a)
+// CHECK: call void @_Z4foo3N4hlsl16StructuredBufferI8MyStructEE(ptr dead_on_return noundef %{{.*}})
+// CHECK: declare hidden void @_Z4foo3N4hlsl16StructuredBufferI8MyStructEE(ptr dead_on_return noundef)
 void foo3(StructuredBuffer<MyStruct> buf);
 
 void fe(StructuredBuffer<MyStruct> a) {
