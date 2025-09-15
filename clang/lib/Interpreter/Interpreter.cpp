@@ -355,7 +355,8 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   if (!Config.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = IncrementalExecutor::launchExecutor(
-        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize);
+        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize,
+        Config.CustomizeFork);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
@@ -647,6 +648,8 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
     auto JTMB = createJITTargetMachineBuilder(TT);
     if (!JTMB)
       return JTMB.takeError();
+    if (Config.CM)
+      JTMB->setCodeModel(Config.CM);
     auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
     if (!JB)
       return JB.takeError();

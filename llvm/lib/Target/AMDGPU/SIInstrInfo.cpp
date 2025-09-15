@@ -5590,7 +5590,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       Data = nullptr;
 
     if (ST.hasGFX90AInsts()) {
-      if (Dst && Data &&
+      if (Dst && Data && !Dst->isTied() && !Data->isTied() &&
           (RI.isAGPR(MRI, Dst->getReg()) != RI.isAGPR(MRI, Data->getReg()))) {
         ErrInfo = "Invalid register class: "
                   "vdata and vdst should be both VGPR or AGPR";

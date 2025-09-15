@@ -928,7 +928,8 @@ public:
     return Opcode == AMDGPU::S_CMPK_EQ_U32 || Opcode == AMDGPU::S_CMPK_LG_U32 ||
            Opcode == AMDGPU::S_CMPK_GT_U32 || Opcode == AMDGPU::S_CMPK_GE_U32 ||
            Opcode == AMDGPU::S_CMPK_LT_U32 || Opcode == AMDGPU::S_CMPK_LE_U32 ||
-           Opcode == AMDGPU::S_GETREG_B32;
+           Opcode == AMDGPU::S_GETREG_B32 ||
+           Opcode == AMDGPU::S_GETREG_B32_const;
   }
 
   /// \returns true if this is an s_store_dword* instruction. This is more
