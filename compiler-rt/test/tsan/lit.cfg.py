@@ -56,6 +56,16 @@ clang_tsan_cflags = (
     + extra_cflags
     + ["-I%s" % tsan_incdir]
 )
+
+# Setup dominance-based elimination if enabled
+tsan_enable_dominance = (
+    getattr(config, "tsan_enable_dominance_analysis", "False") == "True"
+)
+if tsan_enable_dominance:
+    config.name += " (dominance-analysis)"
+    dom_flags = ["-mllvm", "-tsan-use-dominance-analysis"]
+    clang_tsan_cflags += dom_flags
+
 clang_tsan_cxxflags = (
     config.cxx_mode_flags + clang_tsan_cflags + ["-std=c++11"] + ["-I%s" % tsan_incdir]
 )
