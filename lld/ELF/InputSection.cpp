@@ -491,6 +491,33 @@ void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf,
     p->setSymbolAndType(ctx.in.symTab->getSymbolIndex(sym), type,
                         ctx.arg.isMips64EL);
 
+    // Discard the invalid pieces among those named "DW.ref.__gxx_personality_v0".
+    StringRef symName = sym.getName();
+    if (symName == "DW.ref.__gxx_personality_v0") {
+      if (auto *es = dyn_cast<EhInputSection>(sec)) {
+        auto it = partition_point(es->fdes, [=](EhSectionPiece p) {
+          return p.inputOff <= rel.offset;
+        });
+
+        if (it == es->fdes.begin() ||
+            it[-1].inputOff + it[-1].size <= rel.offset) {
+          it = partition_point(es->cies, [=](EhSectionPiece p) {
+            return p.inputOff <= rel.offset;
+          });
+          if (it == es->cies.begin()) {
+            // invalid piece
+            p->setSymbolAndType(0, 0, false);
+            continue;
+          }
+        }
+
+        if (it[-1].outputOff == -1) {
+          p->setSymbolAndType(0, 0, false);
+          continue;
+        }
+      }
+    }
+    
     if (sym.type == STT_SECTION) {
       // We combine multiple section symbols into only one per
       // section. This means we have to update the addend. That is
