@@ -46,7 +46,7 @@ define float @sqrt_ieee_ninf(float %f) #0 {
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fr32 = COPY killed [[VPANDNrr]]
   ; CHECK-NEXT:   $xmm0 = COPY [[COPY5]]
   ; CHECK-NEXT:   RET 0, $xmm0
-  %call = tail call contract ninf afn contract float @llvm.sqrt.f32(float %f)
+  %call = tail call contract ninf afn float @llvm.sqrt.f32(float %f)
   ret float %call
 }
 

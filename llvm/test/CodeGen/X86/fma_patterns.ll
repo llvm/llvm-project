@@ -1582,9 +1582,9 @@ define <4 x float> @test_v4f32_fneg_fmadd(<4 x float> %a0, <4 x float> %a1, <4 x
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %mul = fmul contract contract nsz <4 x float> %a0, %a1
-  %add = fadd contract contract nsz <4 x float> %mul, %a2
-  %neg = fsub contract contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
+  %mul = fmul contract nsz <4 x float> %a0, %a1
+  %add = fadd contract nsz <4 x float> %mul, %a2
+  %neg = fsub contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
   ret <4 x float> %neg
 }
 
@@ -1624,10 +1624,10 @@ define <4 x float> @test_v4f32_fneg_fnmadd(<4 x float> %a0, <4 x float> %a1, <4 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %mul = fmul contract contract nsz <4 x float> %a0, %a1
-  %neg0 = fsub contract contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %mul
-  %add = fadd contract contract nsz <4 x float> %neg0, %a2
-  %neg1 = fsub contract contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
+  %mul = fmul contract nsz <4 x float> %a0, %a1
+  %neg0 = fsub contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %mul
+  %add = fadd contract nsz <4 x float> %neg0, %a2
+  %neg1 = fsub contract nsz <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %add
   ret <4 x float> %neg1
 }
 
@@ -1646,10 +1646,10 @@ define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; AVX512-NEXT:    retq
-  %mul = fmul contract contract nsz  <4 x double> %a0, %a1
-  %neg0 = fsub contract contract nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %mul
-  %sub = fsub contract contract nsz <4 x double> %neg0, %a2
-  %neg1 = fsub contract contract nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
+  %mul = fmul contract nsz  <4 x double> %a0, %a1
+  %neg0 = fsub contract nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %mul
+  %sub = fsub contract nsz <4 x double> %neg0, %a2
+  %neg1 = fsub contract nsz <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %sub
   ret <4 x double> %neg1
 }
 
@@ -1672,9 +1672,9 @@ define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %m0 = fmul contract contract reassoc <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
-  %m1 = fmul contract contract reassoc <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
-  %a  = fadd contract contract reassoc <4 x float> %m0, %m1
+  %m0 = fmul contract reassoc <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
+  %m1 = fmul contract reassoc <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
+  %a  = fadd contract reassoc <4 x float> %m0, %m1
   ret <4 x float> %a
 }
 
@@ -1697,9 +1697,9 @@ define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
 ; AVX512-NEXT:    retq
-  %m0 = fmul contract contract reassoc <4 x float> %x,  <float 1.0, float 2.0, float 3.0, float 4.0>
-  %m1 = fmul contract contract reassoc <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
-  %a  = fadd contract contract reassoc <4 x float> %m1, %y
+  %m0 = fmul contract reassoc <4 x float> %x,  <float 1.0, float 2.0, float 3.0, float 4.0>
+  %m1 = fmul contract reassoc <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
+  %a  = fadd contract reassoc <4 x float> %m1, %y
   ret <4 x float> %a
 }
 
@@ -1723,8 +1723,8 @@ define double @test_f64_fneg_fmul(double %x, double %y) {
 ; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %m = fmul contract contract nsz double %x, %y
-  %n = fsub contract contract double -0.0, %m
+  %m = fmul contract nsz double %x, %y
+  %n = fsub contract double -0.0, %m
   ret double %n
 }
 
@@ -1746,8 +1746,8 @@ define <4 x float> @test_v4f32_fneg_fmul(<4 x float> %x, <4 x float> %y) {
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; AVX512-NEXT:    retq
-  %m = fmul contract contract nsz <4 x float> %x, %y
-  %n = fsub contract contract <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %m
+  %m = fmul contract nsz <4 x float> %x, %y
+  %n = fsub contract <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %m
   ret <4 x float> %n
 }
 
@@ -1769,8 +1769,8 @@ define <4 x double> @test_v4f64_fneg_fmul(<4 x double> %x, <4 x double> %y) {
 ; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - ymm2
 ; AVX512-NEXT:    retq
-  %m = fmul contract contract nsz <4 x double> %x, %y
-  %n = fsub contract contract <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  %m = fmul contract nsz <4 x double> %x, %y
+  %n = fsub contract <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %n
 }
 
@@ -1792,8 +1792,8 @@ define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %
 ; AVX512-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %m = fmul contract contract <4 x double> %x, %y
-  %n = fsub contract contract <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  %m = fmul contract <4 x double> %x, %y
+  %n = fsub contract <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %n
 }
 
@@ -1848,7 +1848,7 @@ define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n
 ; AVX512-NEXT:    retq
   %m1 = fmul contract float %a, %b
   %m2 = fmul contract float %c, %d
-  %a1 = fadd contract contract float %m1, %m2
+  %a1 = fadd contract float %m1, %m2
   %a2 = fadd contract reassoc float %n0, %a1
   ret float %a2
 }
@@ -1878,8 +1878,8 @@ define float @fadd_fma_fmul_2(float %a, float %b, float %c, float %d, float %n0)
 ; AVX512-NEXT:    retq
   %m1 = fmul contract float %a, %b
   %m2 = fmul contract float %c, %d
-  %a1 = fadd contract contract float %m1, %m2
-  %a2 = fadd contract contract float %n0, %a1
+  %a1 = fadd contract float %m1, %m2
+  %a2 = fadd contract float %n0, %a1
   ret float %a2
 }
 
