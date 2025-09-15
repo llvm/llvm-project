@@ -156,13 +156,14 @@ private:
   /// The option information table.
   ArrayRef<Info> OptionInfos;
 
+  bool IgnoreCase;
+
   /// The command information table.
   ArrayRef<Command> Commands;
 
   /// The command IDs table.
   ArrayRef<unsigned> CommandIDsTable;
 
-  bool IgnoreCase;
   bool GroupedShortOptions = false;
   bool DashDashParsing = false;
   const char *EnvVar = nullptr;

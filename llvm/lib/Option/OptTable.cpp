@@ -83,8 +83,8 @@ OptTable::OptTable(const StringTable &StrTable,
                    ArrayRef<Command> Commands,
                    ArrayRef<unsigned> CommandIDsTable)
     : StrTable(&StrTable), PrefixesTable(PrefixesTable),
-      OptionInfos(OptionInfos), Commands(Commands),
-      CommandIDsTable(CommandIDsTable), IgnoreCase(IgnoreCase) {
+      OptionInfos(OptionInfos), IgnoreCase(IgnoreCase), Commands(Commands),
+      CommandIDsTable(CommandIDsTable) {
   // Explicitly zero initialize the error to work around a bug in array
   // value-initialization on MinGW with gcc 4.3.5.
 
