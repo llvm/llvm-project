@@ -426,7 +426,7 @@ def Ptr_PtrDiffOp : Pointer_Op<"ptr_diff", [
   let description = [{
     The `ptr_diff` operation computes the difference between two pointers,
     returning an integer or index value representing the number of bytes
-    between them. This difference is always computed using signed arithmetic.
+    between them.
 
     The operation supports both scalar and shaped types with value semantics:
     - When both operands are scalar: produces a single difference value
