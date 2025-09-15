@@ -758,41 +758,45 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
 }
 
 addr_t ABIMacOSX_arm64::FixCodeAddress(addr_t pc) {
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  addr_t mask = 0;
+  ProcessSP process_sp = GetProcessSP();
+  if (!process_sp)
+    return pc;
 
-  if (ProcessSP process_sp = GetProcessSP()) {
-    mask = process_sp->GetCodeAddressMask();
-    if (pc & pac_sign_extension) {
-      addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
-      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-        mask = highmem_mask;
-    }
-  }
+  addr_t mask = process_sp->GetCodeAddressMask();
+  addr_t tbi_mask = 0xff80000000000000ULL;
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
-  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+  addr_t pac_sign_extension = 0x0080000000000000ULL;
+  if (pc & pac_sign_extension) {
+    addr_t highmem_mask = process_sp->GetHighmemCodeAddressMask();
+    if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
+      return pc | highmem_mask;
+    return pc | mask;
+  }
+
+  return pc & (~mask);
 }
 
 addr_t ABIMacOSX_arm64::FixDataAddress(addr_t pc) {
-  addr_t pac_sign_extension = 0x0080000000000000ULL;
-  addr_t tbi_mask = 0xff80000000000000ULL;
-  addr_t mask = 0;
+  ProcessSP process_sp = GetProcessSP();
+  if (!process_sp)
+    return pc;
 
-  if (ProcessSP process_sp = GetProcessSP()) {
-    mask = process_sp->GetDataAddressMask();
-    if (pc & pac_sign_extension) {
-      addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
-      if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
-        mask = highmem_mask;
-    }
-  }
+  addr_t mask = process_sp->GetDataAddressMask();
+  addr_t tbi_mask = 0xff80000000000000ULL;
   if (mask == LLDB_INVALID_ADDRESS_MASK)
     mask = tbi_mask;
 
-  return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
+  addr_t pac_sign_extension = 0x0080000000000000ULL;
+  if (pc & pac_sign_extension) {
+    addr_t highmem_mask = process_sp->GetHighmemDataAddressMask();
+    if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
+      return pc | highmem_mask;
+    return pc | mask;
+  }
+
+  return pc & (~mask);
 }
 
 void ABIMacOSX_arm64::Initialize() {
