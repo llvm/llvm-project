@@ -78,6 +78,8 @@ include "llvm/Target/Target.td"
 // ASMMATCHER: if (Operand.isReg()) {
 
 // ASMMATCHER: static const MatchEntry MatchTable0[] = {
+// ASMMATCHER: /* also_my_load_1 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__Imm1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_Imm }, },
+// ASMMATCHER: /* also_my_load_2 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__Imm1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_Imm }, },
 // ASMMATCHER: /* always_all */, MyTarget::ALWAYS_ALL, Convert__Reg1_0, AMFBS_None, { MCK_XRegs }, },
 // ASMMATCHER: /* always_even */, MyTarget::ALWAYS_EVEN, Convert__Reg1_0, AMFBS_None, { MCK_XRegs_Even }, },
 // ASMMATCHER: /* custom_decode */, MyTarget::CUSTOM_DECODE, Convert__RegByHwMode_YRegs_EvenIfRequired1_0, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired }, },
@@ -412,6 +414,13 @@ def MY_LOAD : TestInstruction {
   let opcode = 6;
 }
 
+// Direct RegClassByHwMode reference
+def MY_LOAD_ALIAS1 : InstAlias<"also_my_load_1 $dst, $src",
+    (MY_LOAD XRegs_EvenIfRequired:$dst, MyPtrRC:$src)>;
+
+// RegClassByHwMode wrapped in RegisterOperand
+def MY_LOAD_ALIAS2 : InstAlias<"also_my_load_2 $dst, $src",
+    (MY_LOAD RegisterOperand<XRegs_EvenIfRequired>:$dst, PtrRegOperand:$src)>;
 
 // Direct RegClassByHwMode usage
 def : Pat<
