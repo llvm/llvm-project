@@ -26,7 +26,7 @@
 #endif
 
 #define __OMP_TYPE(VarName) OMP_TYPE(VarName, Type::get##VarName##Ty(Ctx))
-#define __OMP_PTR_TYPE(VarName) OMP_TYPE(VarName, PointerType::get(Ctx, 0))
+#define __OMP_PTR_TYPE(VarName) OMP_TYPE(VarName, PointerType::get(Ctx, DefaultTargetAS))
 
 __OMP_TYPE(Void)
 __OMP_TYPE(Int1)
