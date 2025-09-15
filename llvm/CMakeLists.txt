@@ -878,7 +878,13 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
-option (LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ON)
+
+set(LLVM_ENABLE_ONDISK_CAS_default OFF)
+if(CMAKE_SIZEOF_VOID_P GREATER_EQUAL 8)
+  # Build OnDiskCAS by default only on 64 bit machine.
+  set(LLVM_ENABLE_ONDISK_CAS_default ON)
+endif()
+option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
