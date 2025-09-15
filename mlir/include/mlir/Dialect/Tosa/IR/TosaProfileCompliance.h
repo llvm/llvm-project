@@ -79,7 +79,7 @@ private:
 
   LogicalResult populatationDispatch(Operation *op);
 
-  LogicalResult populateProfileInfo(ValueRange operands, Value output);
+  LogicalResult populateProfileInfo(ValueRange operands, ValueRange output);
 
   // Base
   template <typename T>

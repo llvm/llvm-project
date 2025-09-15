@@ -635,6 +635,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Transpose);
   // Type Conversion
   CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
+  CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
