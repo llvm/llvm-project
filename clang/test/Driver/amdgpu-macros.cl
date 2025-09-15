@@ -153,9 +153,25 @@
 // ARCH-GCN-DAG: #define __[[CPU]]__ 1
 // ARCH-GCN-DAG: #define __[[FAMILY]]__ 1
 // ARCH-GCN-DAG: #define __amdgcn_processor__ "[[CPU]]"
+// ARCH-GCN-DAG: #define __AMDGCN_WAVEFRONT_SIZE [[WAVEFRONT_SIZE]]
 // ARCH-GCN-DAG: #define __GCC_DESTRUCTIVE_SIZE 128
 // ARCH-GCN-DAG: #define __GCC_CONSTRUCTIVE_SIZE 128
 // UNSAFEFPATOMIC-DAG: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
+
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
+// RUN:   -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 \
+// RUN:   -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE32 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mno-wavefrontsize64 \
+// RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mno-wavefrontsize64 \
+// RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
+// WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s

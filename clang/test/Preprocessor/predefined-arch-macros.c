@@ -4410,6 +4410,7 @@
 // CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
 // CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
 // CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
+// CHECK_AMDGCN_NONE-NOT: #define __AMDGCN_WAVEFRONT_SIZE__
 
 // Begin r600 tests ----------------
 
@@ -4430,6 +4431,7 @@
 // RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only -nogpulib \
 // RUN:     -nogpuinc --offload-arch=gfx803 -target x86_64-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_HIP_HOST
+// CHECK_HIP_HOST: #define __AMDGCN_WAVEFRONT_SIZE__ 64
 // CHECK_HIP_HOST: #define __AMDGPU__ 1
 // CHECK_HIP_HOST: #define __AMD__ 1
 
