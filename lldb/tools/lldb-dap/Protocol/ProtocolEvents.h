@@ -109,7 +109,7 @@ struct MemoryEventBody {
   lldb::addr_t memoryReference;
 
   /// Starting offset in bytes where memory has been updated. Can be negative.
-  int64_t offset;
+  int64_t offset = 0;
 
   /// Number of bytes updated.
   uint64_t count;

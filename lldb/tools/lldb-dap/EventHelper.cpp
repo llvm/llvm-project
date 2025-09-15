@@ -292,7 +292,6 @@ void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
     return;
   protocol::MemoryEventBody body;
   body.memoryReference = addr;
-  body.offset = 0;
   body.count = variable.GetByteSize();
   dap.Send(protocol::Event{"memory", std::move(body)});
 }
