@@ -74,7 +74,7 @@ def add_debugger_tool_base_arguments(parser, defaults):
         type=str,
         metavar="<filepath>",
         default=None,
-        help="log file for messages between Dexter and the debug adapter; set to '-' to log to stdout",
+        help="log file for messages between Dexter and the debug adapter; set to '-' to log to stdout, '-e' to log to stderr",
     )
     dap_group.add_argument(
         "--colorize-dap-log",
