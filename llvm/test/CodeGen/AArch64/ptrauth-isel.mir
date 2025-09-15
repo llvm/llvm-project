@@ -44,6 +44,12 @@
   entry:
     ret i64 0
   }
+
+  define i64 @blended_stack_address(i64 %a) {
+  entry:
+    %local_var = alloca ptr, align 8
+    ret i64 0
+  }
 ...
 ---
 name:            movk_correct_blend
@@ -201,5 +207,37 @@ body:             |
     %2:gpr64noip = SUBREG_TO_REG 0, killed %1, %subreg.sub_32
     %3:gpr64 = PAC %0, 2, 0, killed %2, implicit-def dead $x16, implicit-def dead $x17
     $x0 = COPY %3
+    RET_ReallyLR implicit $x0
+...
+
+# Make sure non-register operands are handled correctly.
+---
+name:            blended_stack_address
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: local_var, type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: blended_stack_address
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: LIFETIME_START %stack.0.local_var
+    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common_and_gpr64noip = ADDXri %stack.0.local_var, 0, 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64noip = COPY [[ADDXri]]
+    ; CHECK-NEXT: [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY]], 2, 0, killed [[COPY1]], implicit-def dead $x16, implicit-def dead $x17
+    ; CHECK-NEXT: LIFETIME_END %stack.0.local_var
+    ; CHECK-NEXT: $x0 = COPY [[PAC]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:gpr64 = COPY $x0
+    LIFETIME_START %stack.0.local_var
+    %1:gpr64common_and_gpr64noip = ADDXri %stack.0.local_var, 0, 0
+    %2:gpr64 = PAC %0, 2, 0, killed %1, implicit-def dead $x16, implicit-def dead $x17
+    LIFETIME_END %stack.0.local_var
+    $x0 = COPY %2
     RET_ReallyLR implicit $x0
 ...

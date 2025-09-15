@@ -3128,6 +3128,9 @@ stripAndAccumulateOffset(const MachineRegisterInfo &MRI, Register Reg,
     // If this is neither a copy, nor inc/dec instruction, we are done.
     if (Opcode != AArch64::ADDXri && Opcode != AArch64::SUBXri)
       return DefMI;
+    // Handle cases like `ADDXri %stack.0.local_var, 0, 0`.
+    if (!DefMI->getOperand(1).isReg())
+      return DefMI;
     // Inc/dec with shifted immediates are not handled.
     if (DefMI->getOperand(3).getImm() != 0)
       return DefMI;
