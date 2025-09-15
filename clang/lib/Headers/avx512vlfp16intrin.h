@@ -1995,14 +1995,13 @@ _mm256_maskz_fmadd_pch(__mmask8 __U, __m256h __A, __m256h __B, __m256h __C) {
                                                     (__v8sf)__C, (__mmask8)__U);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_blend_ph(__mmask8 __U,
-                                                                  __m128h __A,
-                                                                  __m128h __W) {
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_mask_blend_ph(__mmask8 __U, __m128h __A, __m128h __W) {
   return (__m128h)__builtin_ia32_selectph_128((__mmask8)__U, (__v8hf)__W,
                                               (__v8hf)__A);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_blend_ph(__mmask16 __U, __m256h __A, __m256h __W) {
   return (__m256h)__builtin_ia32_selectph_256((__mmask16)__U, (__v16hf)__W,
                                               (__v16hf)__A);
