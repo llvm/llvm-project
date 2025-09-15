@@ -10,6 +10,7 @@
 #include "FormatToken.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 
@@ -586,8 +587,8 @@ private:
     const auto *Line = I[0];
     const auto *NextLine = I[1];
 
-    auto GetRelevantAfterOption = [&](const FormatToken *tok) {
-      switch (tok->getType()) {
+    auto GetRelevantAfterOption = [&](const FormatToken *Tok) {
+      switch (Tok->getType()) {
       case TT_StructLBrace:
         return Style.BraceWrapping.AfterStruct;
       case TT_ClassLBrace:
@@ -620,8 +621,12 @@ private:
     // Current line begins record, next line block.
     if (NextLine->First->isOneOf(TT_StructLBrace, TT_ClassLBrace,
                                  TT_UnionLBrace)) {
-      if (NextLine->First == NextLine->Last && I + 2 != E &&
-          I[2]->First->isNot(tok::r_brace) &&
+      if (I + 2 == E)
+        return 0;
+
+      const bool IsEmptyBlock = I[2]->First->is(tok::r_brace);
+
+      if (!IsEmptyBlock &&
           Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
         return tryMergeSimpleBlock(I, E, Limit);
       }
