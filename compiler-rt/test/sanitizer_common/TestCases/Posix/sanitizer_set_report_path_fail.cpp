@@ -2,11 +2,11 @@
 
 // Case 1: Try setting a path that is an invalid/inaccessible directory.
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=ERROR1
-// RUN: %env_tool_opts=log_fallback_to_stderr=1 %run %t 2>&1 | FileCheck %s --check-prefixes=ERROR1,FALLBACK
+// RUN: %env_tool_opts=log_fallback_to_stderr=true %run %t 2>&1 | FileCheck %s --check-prefixes=ERROR1,FALLBACK
 
 // Case 2: Try setting a path that is too large.
 // RUN: not %run %t A 2>&1 | FileCheck %s --check-prefix=ERROR2
-// RUN: %env_tool_opts=log_fallback_to_stderr=1 %run %t A 2>&1 | FileCheck %s --check-prefixes=ERROR2,FALLBACK
+// RUN: %env_tool_opts=log_fallback_to_stderr=true %run %t A 2>&1 | FileCheck %s --check-prefixes=ERROR2,FALLBACK
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
