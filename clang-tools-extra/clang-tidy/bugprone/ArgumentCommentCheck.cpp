@@ -1,4 +1,4 @@
-//===--- ArgumentCommentCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,7 +32,7 @@ AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
 ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       IgnoreSingleArgument(Options.get("IgnoreSingleArgument", false)),
       CommentBoolLiterals(Options.get("CommentBoolLiterals", false)),
       CommentIntegerLiterals(Options.get("CommentIntegerLiterals", false)),

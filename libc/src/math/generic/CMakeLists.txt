@@ -3255,7 +3255,21 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.sqrt
-  )
+)
+
+add_entrypoint_object(
+  sqrtbf16
+  SRCS
+    sqrtbf16.cpp
+  HDRS
+    ../sqrtbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
 
 add_entrypoint_object(
   remquof
@@ -4012,6 +4026,20 @@ add_entrypoint_object(
     ../fmodf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.fmod
+)
+
+add_entrypoint_object(
+  fmodbf16
+  SRCS
+    fmodbf16.cpp
+  HDRS
+    ../fmodbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.fmod
 )
 

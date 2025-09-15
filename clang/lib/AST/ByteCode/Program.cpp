@@ -111,7 +111,7 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
   return Pointer(Globals[Idx]->block());
 }
 
-std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
+UnsignedOrNone Program::getGlobal(const ValueDecl *VD) {
   if (auto It = GlobalIndices.find(VD); It != GlobalIndices.end())
     return It->second;
 
@@ -131,14 +131,14 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getGlobal(const Expr *E) {
+UnsignedOrNone Program::getGlobal(const Expr *E) {
   if (auto It = GlobalIndices.find(E); It != GlobalIndices.end())
     return It->second;
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
-                                                   const Expr *Init) {
+UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
+                                          const Expr *Init) {
   if (auto Idx = getGlobal(VD))
     return Idx;
 
@@ -195,8 +195,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   return I;
 }
 
-std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
-                                              const Expr *Init) {
+UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
   bool IsStatic, IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
@@ -213,7 +212,7 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
 
   // Register all previous declarations as well. For extern blocks, just replace
   // the index with the new variable.
-  std::optional<unsigned> Idx =
+  UnsignedOrNone Idx =
       createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init);
   if (!Idx)
     return std::nullopt;
@@ -240,7 +239,7 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   return *Idx;
 }
 
-std::optional<unsigned> Program::createGlobal(const Expr *E) {
+UnsignedOrNone Program::createGlobal(const Expr *E) {
   if (auto Idx = getGlobal(E))
     return Idx;
   if (auto Idx = createGlobal(E, E->getType(), /*isStatic=*/true,
@@ -251,9 +250,9 @@ std::optional<unsigned> Program::createGlobal(const Expr *E) {
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
-                                              bool IsStatic, bool IsExtern,
-                                              bool IsWeak, const Expr *Init) {
+UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
+                                     bool IsStatic, bool IsExtern, bool IsWeak,
+                                     const Expr *Init) {
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();

@@ -58,6 +58,9 @@ C/C++ Language Potentially Breaking Changes
 
 - The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
 
+- The ``-Wincompatible-pointer-types`` diagnostic now defaults to an error;
+  it can still be downgraded to a warning by passing ``-Wno-error=incompatible-pointer-types``. (#GH74605)
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
@@ -83,6 +86,9 @@ C++ Specific Potentially Breaking Changes
     static_assert((a.*mp)() == 1); // continues to be rejected
     static_assert((b.*mp)() == 1); // newly rejected
     static_assert((c.*mp)() == 1); // accepted
+
+- ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
+  returns ``nullptr`` for implicitly instantiated declarations.
 
 ABI Changes in This Version
 ---------------------------
@@ -203,6 +209,7 @@ Non-comprehensive list of changes in this release
   Currently, the use of ``__builtin_dedup_pack`` is limited to template arguments and base
   specifiers, it also must be used within a template context.
 
+- ``__builtin_assume_dereferenceable`` now accepts non-constant size operands.
 
 New Compiler Flags
 ------------------
@@ -219,6 +226,7 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- The `-gkey-instructions` compiler flag is now enabled by default when DWARF is emitted for plain C/C++ and optimizations are enabled. (#GH149509)
 
 Removed Compiler Flags
 -------------------------
@@ -274,6 +282,14 @@ Improvements to Clang's diagnostics
 - The :doc:`ThreadSafetyAnalysis` attributes ``ACQUIRED_BEFORE(...)`` and
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
+- The :doc:`ThreadSafetyAnalysis` gains basic alias-analysis of capability
+  pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
+  both false positives but also false negatives through more precise analysis.
+
+- Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
+
+- Fixed a bug where the source location was missing when diagnosing ill-formed
+  placeholder constraints.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -303,6 +319,13 @@ Bug Fixes in This Version
 - Builtin elementwise operators now accept vector arguments that have different
   qualifiers on their elements. For example, vector of 4 ``const float`` values
   and vector of 4 ``float`` values. (#GH155405)
+- Fixed inconsistent shadow warnings for lambda capture of structured bindings.
+  Previously, ``[val = val]`` (regular parameter) produced no warnings with ``-Wshadow``
+  while ``[a = a]`` (where ``a`` is from ``auto [a, b] = std::make_pair(1, 2)``) 
+  incorrectly produced warnings. Both cases now consistently show no warnings with 
+  ``-Wshadow`` and show uncaptured-local warnings with ``-Wshadow-all``. (#GH68605)
+- Fixed a failed assertion with a negative limit parameter value inside of
+  ``__has_embed``. (#GH157842)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -319,6 +342,7 @@ Bug Fixes to Attribute Support
   is skipped, such as error recovery and code completion. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
+- Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -337,6 +361,20 @@ Bug Fixes to C++ Support
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 - Fixed a bug that caused ``this`` captured by value in a lambda with a dependent explicit object parameter to not be
   instantiated properly. (#GH154054)
+- Fixed a bug where our ``member-like constrained friend`` checking caused an incorrect analysis of lambda captures. (#GH156225)
+- Fixed a crash when implicit conversions from initialize list to arrays of
+  unknown bound during constant evaluation. (#GH151716)
+- Support the dynamic_cast to final class optimization with pointer
+  authentication enabled. (#GH152601)
+- Fix the check for narrowing int-to-float conversions, so that they are detected in
+  cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Stop rejecting C++11-style attributes on the first argument of constructors in older
+  standards. (#GH156809).
+- Fix a crash when applying binary or ternary operators to two same function types with different spellings,
+  where at least one of the function parameters has an attribute which affects
+  the function type.
+- Fix an assertion failure when a ``constexpr`` variable is only referenced through
+  ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -373,6 +411,10 @@ X86 Support
 - NOTE: Please avoid use of the __builtin_ia32_* intrinsics - these are not
   guaranteed to exist in future releases, or match behaviour with previous
   releases of clang or other compilers.
+- Remove `m[no-]avx10.x-[256,512]` and `m[no-]evex512` options from Clang
+  driver.
+- Remove `[no-]evex512` feature request from intrinsics and builtins.
+- Change features `avx10.x-[256,512]` to `avx10.x`.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -385,6 +427,7 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- Enable linker relaxation by default for loongarch64.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -428,7 +471,9 @@ AST Matchers
   following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
-
+- Remove the ``dependentTemplateSpecializationType`` matcher, as the
+  corresponding AST node was removed. This matcher was never very useful, since
+  there was no way to match on its template name.
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
 
@@ -438,6 +483,9 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
+- Add ``NumericLiteralCase`` option for enforcing character case in numeric
+  literals.
+- Add ``Leave`` suboption to ``IndentPPDirectives``.
 
 libclang
 --------
@@ -482,6 +530,9 @@ OpenMP Support
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
+- Properly handle array section/assumed-size array privatization in C/C++.
+- Added support for ``variable-category`` modifier in ``default clause``.
+- Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 
 Improvements
 ^^^^^^^^^^^^
