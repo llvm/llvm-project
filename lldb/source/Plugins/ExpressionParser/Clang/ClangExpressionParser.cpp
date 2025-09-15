@@ -720,7 +720,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_compiler = std::make_unique<CompilerInstance>();
 
   // Make sure clang uses the same VFS as LLDB.
-  m_compiler->createVirtualFileSystem(
+  m_compiler->setVirtualFileSystem(
       FileSystem::Instance().GetVirtualFileSystem());
   m_compiler->createFileManager();
 
