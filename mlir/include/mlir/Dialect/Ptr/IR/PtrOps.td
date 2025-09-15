@@ -435,8 +435,8 @@ def Ptr_PtrDiffOp : Pointer_Op<"ptr_diff", [
 
     The operation also supports the following flags:
     - `none`: No flags are set.
-    - `nuw`: No Unsigned Wrap, if the subtraction causes an unsigned overflow,
-      the result is a poison value.
+    - `nuw`: No Unsigned Wrap, if the subtraction causes an unsigned overflow
+      (that is: the result would be negative), the result is a poison value.
     - `nsw`: No Signed Wrap, if the subtraction causes a signed overflow, the
       result is a poison value.
 
