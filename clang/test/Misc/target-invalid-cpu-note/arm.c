@@ -84,6 +84,7 @@
 // CHECK-SAME: {{^}}, cortex-a78
 // CHECK-SAME: {{^}}, cortex-a78ae
 // CHECK-SAME: {{^}}, cortex-a78c
+// CHECK-SAME: {{^}}, cortex-a510
 // CHECK-SAME: {{^}}, cortex-a710
 // CHECK-SAME: {{^}}, cortex-x1
 // CHECK-SAME: {{^}}, cortex-x1c

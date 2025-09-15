@@ -10,7 +10,7 @@
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: libcpp-has-no-unicode
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=9000000
 
 // <print>
 

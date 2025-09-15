@@ -26,9 +26,9 @@ namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
-  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
-                                          IsExact | Disjoint | NonNeg |
-                                          FmNoNans | FmNoInfs;
+  constexpr static unsigned PoisonFlags =
+      NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
+      FmNoInfs | SameSign | InBounds;
 
 public:
   GenericMachineInstr() = delete;
@@ -66,6 +66,9 @@ public:
   /// memory operations can't be reordered.
   bool isUnordered() const { return getMMO().isUnordered(); }
 
+  /// Return the minimum known alignment in bytes of the actual memory
+  /// reference.
+  Align getAlign() const { return getMMO().getAlign(); }
   /// Returns the size in bytes of the memory access.
   LocationSize getMemSize() const { return getMMO().getSize(); }
   /// Returns the size in bits of the memory access.
@@ -486,6 +489,23 @@ public:
   }
 };
 
+/// Represents overflowing sub operations.
+/// G_USUBO, G_SSUBO
+class GSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SSUBO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
 /// Represents overflowing add/sub operations that also consume a carry-in.
 /// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
 class GAddSubCarryInOut : public GAddSubCarryOut {
@@ -854,6 +874,9 @@ public:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_SITOFP:
     case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_TRUNC_SSAT_S:
+    case TargetOpcode::G_TRUNC_SSAT_U:
+    case TargetOpcode::G_TRUNC_USAT_U:
     case TargetOpcode::G_UITOFP:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
@@ -903,6 +926,18 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents a step vector.
+class GStepVector : public GenericMachineInstr {
+public:
+  uint64_t getStep() const {
+    return getOperand(1).getCImm()->getValue().getZExtValue();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
   };
 };
 

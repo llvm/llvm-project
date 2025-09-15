@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mcpu=v4 < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 < %s | FileCheck %s
 
 ; Make sure that CO-RE relocations had been generated correctly for
 ; BPF_ST (store immediate) instructions and that

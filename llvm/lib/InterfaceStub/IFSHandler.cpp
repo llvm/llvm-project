@@ -304,19 +304,10 @@ Error ifs::validateIFSTarget(IFSStub &Stub, bool ParseTriple) {
 IFSTarget ifs::parseTriple(StringRef TripleStr) {
   Triple IFSTriple(TripleStr);
   IFSTarget RetTarget;
-  // TODO: Implement a Triple Arch enum to e_machine map.
-  switch (IFSTriple.getArch()) {
-  case Triple::ArchType::aarch64:
-    RetTarget.Arch = (IFSArch)ELF::EM_AARCH64;
-    break;
-  case Triple::ArchType::x86_64:
-    RetTarget.Arch = (IFSArch)ELF::EM_X86_64;
-    break;
-  case Triple::ArchType::riscv64:
-    RetTarget.Arch = (IFSArch)ELF::EM_RISCV;
-    break;
-  default:
-    RetTarget.Arch = (IFSArch)ELF::EM_NONE;
+  IFSArch TripleArch =
+      ELF::convertTripleArchTypeToEMachine(IFSTriple.getArch());
+  if (TripleArch != ELF::EM_NONE) {
+    RetTarget.Arch = TripleArch;
   }
   RetTarget.Endianness = IFSTriple.isLittleEndian() ? IFSEndiannessType::Little
                                                     : IFSEndiannessType::Big;

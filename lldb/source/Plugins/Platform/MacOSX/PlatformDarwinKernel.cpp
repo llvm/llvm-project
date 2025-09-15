@@ -126,8 +126,10 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
       case llvm::Triple::MacOSX:
       case llvm::Triple::IOS:
       case llvm::Triple::WatchOS:
+      case llvm::Triple::XROS:
       case llvm::Triple::TvOS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
         break;
       // Only accept "vendor" for vendor if the host is Apple and it "unknown"
       // wasn't specified (it was just returned because it was NOT specified)
@@ -329,6 +331,8 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
                                "/Platforms/AppleTVOS.platform/Developer/SDKs");
     AddSDKSubdirsToSearchPaths(developer_dir +
                                "/Platforms/WatchOS.platform/Developer/SDKs");
+    AddSDKSubdirsToSearchPaths(developer_dir +
+                               "/Platforms/XROS.platform/Developer/SDKs");
     AddSDKSubdirsToSearchPaths(developer_dir +
                                "/Platforms/BridgeOS.platform/Developer/SDKs");
   }
@@ -801,7 +805,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
     if (FileSystem::Instance().Exists(possible_kernel)) {
       ModuleSpec kern_spec(possible_kernel);
       kern_spec.GetUUID() = module_spec.GetUUID();
-      module_sp.reset(new Module(kern_spec));
+      module_sp = std::make_shared<Module>(kern_spec);
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(kern_spec)) {
         // The dSYM is next to the binary (that's the only
@@ -810,8 +814,8 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
         // append ".dSYM" to the filename for the SymbolFile.
         FileSpecList search_paths =
             process->GetTarget().GetDebugFileSearchPaths();
-        FileSpec dsym_fspec =
-            PluginManager::LocateExecutableSymbolFile(kern_spec, search_paths);
+        FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+            kern_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
         if (FileSystem::Instance().Exists(dsym_fspec))
           module_sp->SetSymbolFileFileSpec(dsym_fspec);
         if (did_create_ptr)
@@ -831,7 +835,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
       kern_spec.GetUUID() = module_spec.GetUUID();
       kern_spec.GetSymbolFileSpec() = possible_kernel_dsym;
 
-      module_sp.reset(new Module(kern_spec));
+      module_sp = std::make_shared<Module>(kern_spec);
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(kern_spec)) {
         if (did_create_ptr)

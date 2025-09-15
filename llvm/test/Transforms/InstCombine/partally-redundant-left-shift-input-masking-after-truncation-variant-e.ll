@@ -50,13 +50,13 @@ define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
 ; CHECK-NEXT:    [[T1:%.*]] = shl <8 x i64> [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], <i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33, i32 -33>
+; CHECK-NEXT:    [[T2:%.*]] = add <8 x i32> [[NBITS]], splat (i32 -33)
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[X]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[TMP1]], [[T2]]
-; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP2]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP2]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>

@@ -386,7 +386,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   PHINode *PHI = nullptr;
   if (!MemOpTy->isVoidTy()) {
     // Insert a phi for the return values at the merge block.
-    IRBuilder<> IRBM(MergeBB->getFirstNonPHI());
+    IRBuilder<> IRBM(MergeBB, MergeBB->getFirstNonPHIIt());
     PHI = IRBM.CreatePHI(MemOpTy, SizeIds.size() + 1, "MemOP.RVMerge");
     MO.I->replaceAllUsesWith(PHI);
     PHI->addIncoming(MO.I, DefaultBB);
@@ -432,7 +432,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   Updates.clear();
 
   if (MaxCount)
-    setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
+    setProfMetadata(SI, CaseCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << *BB << "\n");
   LLVM_DEBUG(dbgs() << *DefaultBB << "\n");
@@ -456,7 +456,7 @@ static bool PGOMemOPSizeOptImpl(Function &F, BlockFrequencyInfo &BFI,
   if (DisableMemOPOPT)
     return false;
 
-  if (F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.hasOptSize())
     return false;
   MemOPSizeOpt MemOPSizeOpt(F, BFI, ORE, DT, TLI);
   MemOPSizeOpt.perform();

@@ -154,10 +154,10 @@ v_ceil_f64_dpp v[0:1], v[2:3] row_share:1 row_mask:0xf bank_mask:0xf
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 flat_atomic_add v2, v[2:3], a2 glc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 flat_atomic_add a2, v[2:3], v2 glc
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 tbuffer_store_format_xyzw v[0:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 tfe
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -166,13 +166,13 @@ buffer_store_dwordx4 v[0:3], off, s[12:15], s4 offset:4095 glc tfe
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 ds_write2_b64 v1, a[4:5], v[2:3] offset1:255
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 ds_write2_b64 v1, v[4:5], a[2:3] offset1:255
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 ds_wrxchg2st64_rtn_b32 v[6:7], v1, a2, a3 offset0:127
-// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: data and dst should be all VGPR or AGPR
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 image_load v[0:4], v2, s[0:7] dmask:0xf unorm tfe
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
@@ -239,3 +239,438 @@ scratch_load_lds_dword v2, off
 
 ds_read_b32 v0, v1 gds
 // GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU
+
+// op_sel not allowed in dot opcodes with 4- or 8-bit packed data
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4_u32_u8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot4c_i32_i8 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[0,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,0] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[0,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+v_dot8c_i32_i4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
+// GFX90A: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+

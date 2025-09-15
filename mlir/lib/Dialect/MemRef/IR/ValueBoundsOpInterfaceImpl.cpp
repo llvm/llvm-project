@@ -51,6 +51,7 @@ struct DimOpInterface
     auto dimOp = cast<DimOp>(op);
     assert(value == dimOp.getResult() && "invalid value");
 
+    cstr.bound(value) >= 0;
     auto constIndex = dimOp.getConstantIndex();
     if (!constIndex.has_value())
       return;

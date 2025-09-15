@@ -27,12 +27,11 @@ namespace llvm {
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-      if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() != Intrinsic::ssa_copy)
-          continue;
-        Inst.replaceAllUsesWith(II->getOperand(0));
-        Inst.eraseFromParent();
-      }
+      auto *BC = dyn_cast<BitCastInst>(&Inst);
+      if (!BC || BC->getType() != BC->getOperand(0)->getType())
+        continue;
+      Inst.replaceAllUsesWith(BC->getOperand(0));
+      Inst.eraseFromParent();
     }
   }
 }
@@ -469,3 +468,38 @@ TEST_F(FunctionSpecializationTest, PhiNode) {
   EXPECT_TRUE(Test > 0);
 }
 
+TEST_F(FunctionSpecializationTest, BinOp) {
+  // Verify that we can handle binary operators even when only one operand is
+  // constant.
+  const char *ModuleString = R"(
+    define i32 @foo(i1 %a, i1 %b) {
+      %and1 = and i1 %a, %b
+      %and2 = and i1 %b, %and1
+      %sel = select i1 %and2, i32 1, i32 0
+      ret i32 %sel
+    }
+  )";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("foo");
+  FunctionSpecializer Specializer = getSpecializerFor(F);
+  InstCostVisitor Visitor = Specializer.getInstCostVisitorFor(F);
+
+  Constant *False = ConstantInt::getFalse(M.getContext());
+  BasicBlock &BB = F->front();
+  Instruction &And1 = BB.front();
+  Instruction &And2 = *++BB.begin();
+  Instruction &Select = *++BB.begin();
+
+  Cost RefCodeSize = getCodeSizeSavings(And1) + getCodeSizeSavings(And2) +
+                     getCodeSizeSavings(Select);
+  Cost RefLatency = getLatencySavings(F);
+
+  Cost TestCodeSize = Visitor.getCodeSizeSavingsForArg(F->getArg(0), False);
+  Cost TestLatency = Visitor.getLatencySavingsForKnownConstants();
+
+  EXPECT_EQ(TestCodeSize, RefCodeSize);
+  EXPECT_TRUE(TestCodeSize > 0);
+  EXPECT_EQ(TestLatency, RefLatency);
+  EXPECT_TRUE(TestLatency > 0);
+}

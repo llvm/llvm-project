@@ -18,8 +18,8 @@
 
 #ifndef FORTRAN_COMMON_RESTORER_H_
 #define FORTRAN_COMMON_RESTORER_H_
+#include "api-attrs.h"
 #include "idioms.h"
-#include "flang/Common/api-attrs.h"
 namespace Fortran::common {
 template <typename A> class Restorer {
 public:

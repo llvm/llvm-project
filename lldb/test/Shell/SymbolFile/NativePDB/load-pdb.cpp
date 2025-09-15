@@ -10,7 +10,7 @@
 // RUN:     -out:%t/executable/foo.exe -pdb:%t/executable/foo.pdb
 // Rename the PDB file so that the name is different from the name inside the executable (foo.exe).
 // RUN: mv %t/executable/foo.pdb %t/executable/bar.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb %t/executable/foo.exe \
+// RUN: %lldb %t/executable/foo.exe \
 // RUN: -o "target symbols add %t/executable/bar.pdb" \
 // RUN: -o "b main" \
 // RUN: -o "image dump symfile" -o "quit" | FileCheck %s

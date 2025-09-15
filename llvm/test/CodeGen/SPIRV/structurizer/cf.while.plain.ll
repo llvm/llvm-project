@@ -43,23 +43,26 @@
 ; CHECK:    %[[#bb20:]] = OpLabel
 ; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
+
 ; CHECK: %[[#func_12:]] = OpFunction %[[#void:]] DontInline %[[#]]
 ; CHECK:    %[[#bb21:]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb22:]]
-; CHECK:    %[[#bb22:]] = OpLabel
+; CHECK:     %[[#bb22]] = OpLabel
 ; CHECK:                  OpLoopMerge %[[#bb23:]] %[[#bb24:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb24:]] %[[#bb23:]]
-; CHECK:    %[[#bb24:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb22:]]
-; CHECK:    %[[#bb23:]] = OpLabel
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb24]] %[[#bb23]]
+; CHECK:     %[[#bb23]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb25:]]
-; CHECK:    %[[#bb25:]] = OpLabel
+; CHECK:     %[[#bb25]] = OpLabel
 ; CHECK:                  OpLoopMerge %[[#bb26:]] %[[#bb27:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb26:]] %[[#bb27:]]
-; CHECK:    %[[#bb27:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb25:]]
-; CHECK:    %[[#bb26:]] = OpLabel
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb26]] %[[#bb27]]
+; CHECK:     %[[#bb27]] = OpLabel
+; CHECK:                  OpBranch %[[#bb25]]
+; CHECK:     %[[#bb26]] = OpLabel
+; CHECK-NEXT:             OpUnreachable
+; CHECK:     %[[#bb24]] = OpLabel
+; CHECK:                  OpBranch %[[#bb22]]
 ; CHECK:                  OpFunctionEnd
+
 ; CHECK: %[[#func_18:]] = OpFunction %[[#void:]] None %[[#]]
 ; CHECK:    %[[#bb28:]] = OpLabel
 ; CHECK:                  OpReturn

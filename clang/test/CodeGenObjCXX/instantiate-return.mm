@@ -18,5 +18,6 @@ struct S0;
 
 @implementation C1
 - (TemplateClass<S0>)m1 {
+    __builtin_unreachable();
 }
 @end

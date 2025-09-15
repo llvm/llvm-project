@@ -74,8 +74,8 @@ define i8 @t3_commutative(i8 %x) {
 ; Basic splat vector test
 define <2 x i8> @t4_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @t4_splat(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], splat (i8 -16)
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 15>
@@ -89,8 +89,8 @@ define <2 x i8> @t4_splat(<2 x i8> %x) {
 ; Splat-with-poison
 define <2 x i8> @t5_splat_poison_0b0001(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_splat_poison_0b0001(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], splat (i8 -16)
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 15>
@@ -102,8 +102,8 @@ define <2 x i8> @t5_splat_poison_0b0001(<2 x i8> %x) {
 }
 define <2 x i8> @t5_splat_poison_0b0010(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_splat_poison_0b0010(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], splat (i8 -16)
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 15>
@@ -115,8 +115,8 @@ define <2 x i8> @t5_splat_poison_0b0010(<2 x i8> %x) {
 }
 define <2 x i8> @t5_splat_poison_0b0100(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_splat_poison_0b0100(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], splat (i8 -16)
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 15>
@@ -128,8 +128,8 @@ define <2 x i8> @t5_splat_poison_0b0100(<2 x i8> %x) {
 }
 define <2 x i8> @t5_splat_poison_0b1000(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_splat_poison_0b1000(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], splat (i8 -16)
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 poison>
@@ -161,10 +161,10 @@ define <2 x i8> @t6_nonsplat(<2 x i8> %x) {
 ; Even if the alignment (and masks) are splat, the bias could be non-splat
 define <2 x i8> @t7_nonsplat_bias(<2 x i8> %x) {
 ; CHECK-LABEL: @t7_nonsplat_bias(
-; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i8> [[X:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 15)
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq <2 x i8> [[X_LOWBITS]], zeroinitializer
 ; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X]], <i8 15, i8 16>
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i8> [[X_BIASED]], splat (i8 -16)
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select <2 x i1> [[X_LOWBITS_ARE_ZERO]], <2 x i8> [[X]], <2 x i8> [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
@@ -441,9 +441,9 @@ define i8 @t17_oneuse(i8 %x) {
 ; more poisonous.
 define <2 x i4> @t18_replacement_0b0001(<2 x i4> %x) {
 ; CHECK-LABEL: @t18_replacement_0b0001(
-; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 3>
+; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i4> [[X:%.*]], splat (i4 3)
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq <2 x i4> [[X_LOWBITS]], zeroinitializer
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X]], <i4 3, i4 3>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X]], splat (i4 3)
 ; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], <i4 -4, i4 poison>
 ; CHECK-NEXT:    call void @use.v2i4(<2 x i4> [[X_BIASED_HIGHBITS]])
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select <2 x i1> [[X_LOWBITS_ARE_ZERO]], <2 x i4> [[X]], <2 x i4> [[X_BIASED_HIGHBITS]]
@@ -461,10 +461,10 @@ define <2 x i4> @t18_replacement_0b0001(<2 x i4> %x) {
 ; more poisonous.
 define <2 x i4> @t18_replacement_0b0010(<2 x i4> %x) {
 ; CHECK-LABEL: @t18_replacement_0b0010(
-; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 3>
+; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i4> [[X:%.*]], splat (i4 3)
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq <2 x i4> [[X_LOWBITS]], zeroinitializer
 ; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X]], <i4 3, i4 poison>
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], <i4 -4, i4 -4>
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], splat (i4 -4)
 ; CHECK-NEXT:    call void @use.v2i4(<2 x i4> [[X_BIASED_HIGHBITS]])
 ; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select <2 x i1> [[X_LOWBITS_ARE_ZERO]], <2 x i4> [[X]], <2 x i4> [[X_BIASED_HIGHBITS]]
 ; CHECK-NEXT:    ret <2 x i4> [[X_ROUNDEDUP]]
@@ -479,8 +479,8 @@ define <2 x i4> @t18_replacement_0b0010(<2 x i4> %x) {
 }
 define <2 x i4> @t18_replacement_0b0100(<2 x i4> %x) {
 ; CHECK-LABEL: @t18_replacement_0b0100(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X:%.*]], <i4 3, i4 3>
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], <i4 -4, i4 -4>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X:%.*]], splat (i4 3)
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], splat (i4 -4)
 ; CHECK-NEXT:    call void @use.v2i4(<2 x i4> [[X_BIASED_HIGHBITS]])
 ; CHECK-NEXT:    ret <2 x i4> [[X_BIASED_HIGHBITS]]
 ;
@@ -494,8 +494,8 @@ define <2 x i4> @t18_replacement_0b0100(<2 x i4> %x) {
 }
 define <2 x i4> @t18_replacement_0b1000(<2 x i4> %x) {
 ; CHECK-LABEL: @t18_replacement_0b1000(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X:%.*]], <i4 3, i4 3>
-; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], <i4 -4, i4 -4>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X:%.*]], splat (i4 3)
+; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], splat (i4 -4)
 ; CHECK-NEXT:    call void @use.v2i4(<2 x i4> [[X_BIASED_HIGHBITS]])
 ; CHECK-NEXT:    ret <2 x i4> [[X_BIASED_HIGHBITS]]
 ;

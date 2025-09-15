@@ -234,6 +234,22 @@ define void @test14(ptr %a, ptr %b) {
   ret void
 }
 
+define void @test15(ptr %x) {
+; CHECK-LABEL: define void @test15(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds ptr, ptr [[X]], i32 0
+; CHECK-NEXT:    [[V0:%.*]] = call ptr @llvm.objc.retain(ptr [[Y]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @use_pointer(ptr [[V0]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[V0]])
+; CHECK-NEXT:    ret void
+;
+  %y = getelementptr inbounds ptr, ptr %x, i32 0
+  %v0 = call ptr @llvm.objc.retain(ptr %y) nounwind
+  call void @use_pointer(ptr %x)
+  call void @use_pointer(ptr %y)
+  ret void
+}
+
 declare void @llvm.objc.clang.arc.use(...) nounwind
 declare void @llvm.objc.clang.arc.noop.use(...) nounwind
 

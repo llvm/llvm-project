@@ -8,8 +8,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-NOT: ; Function Attrs:
-; CHECK: define i32 @indirect(ptr nocapture %0) {
-define i32 @indirect(ptr nocapture) {
+; CHECK: define i32 @indirect(ptr captures(none) %0) {
+define i32 @indirect(ptr captures(none)) {
   %2 = tail call i32 %0()
   ret i32 %2
 }

@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 %s -triple x86_64-scei-ps4 -fms-extensions -emit-llvm -o - | FileCheck -check-prefix ELF %s --implicit-check-not llvm.linker.options
 // RUN: %clang_cc1 %s -triple x86_64-sie-ps5 -fms-extensions -emit-llvm -o - | FileCheck -check-prefix ELF %s --implicit-check-not llvm.linker.options
 // RUN: %clang_cc1 %s -triple aarch64-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple mipsel-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
 
 #pragma comment(lib, "msvcrt.lib")
 #pragma comment(lib, "kernel32")
@@ -31,3 +32,6 @@
 // ELF: ![[space]] = !{!"with space"}
 // ELF-NOT: bar
 // ELF-NOT: foo
+// This following match prevents the clang version metadata from matching the forbidden 'foo' and 'bar' tokens.
+// This can happen if the clang version string contains a Git repo URL that includes one of those substrings.
+// ELF-LABEL: {{\!\".*clang version}}

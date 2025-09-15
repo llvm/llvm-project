@@ -9,6 +9,8 @@
 #include "lldb/API/SBError.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/VASPrintf.h"
@@ -95,6 +97,18 @@ uint32_t SBError::GetError() const {
 
 
   return err;
+}
+
+SBStructuredData SBError::GetErrorData() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData sb_data;
+  if (!m_opaque_up)
+    return sb_data;
+
+  StructuredData::ObjectSP data(m_opaque_up->GetAsStructuredData());
+  sb_data.m_impl_up->SetObjectSP(data);
+  return sb_data;
 }
 
 ErrorType SBError::GetType() const {

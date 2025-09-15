@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
+#include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
@@ -15,39 +16,47 @@
 
 #define DEBUG_TYPE "perf-reader"
 
+namespace llvm {
+
 cl::opt<bool> SkipSymbolization("skip-symbolization",
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
-                                         "output for CS profile generation."));
+                                         "output for CS profile generation."),
+                                cl::cat(ProfGenCategory));
 
 static cl::opt<bool> ShowMmapEvents("show-mmap-events",
-                                    cl::desc("Print binary load events."));
+                                    cl::desc("Print binary load events."),
+                                    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     UseOffset("use-offset", cl::init(true),
               cl::desc("Work with `--skip-symbolization` or "
                        "`--unsymbolized-profile` to write/read the "
-                       "offset instead of virtual address."));
+                       "offset instead of virtual address."),
+              cl::cat(ProfGenCategory));
 
 static cl::opt<bool> UseLoadableSegmentAsBase(
     "use-first-loadable-segment-as-base",
     cl::desc("Use first loadable segment address as base address "
              "for offsets in unsymbolized profile. By default "
-             "first executable segment address is used"));
+             "first executable segment address is used"),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     IgnoreStackSamples("ignore-stack-samples",
                        cl::desc("Ignore call stack samples for hybrid samples "
-                                "and produce context-insensitive profile."));
+                                "and produce context-insensitive profile."),
+                       cl::cat(ProfGenCategory));
 cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
-                                  cl::desc("Show detailed warning message."));
+                                  cl::desc("Show detailed warning message."),
+                                  cl::cat(ProfGenCategory));
 
-extern cl::opt<std::string> PerfTraceFilename;
-extern cl::opt<bool> ShowDisassemblyOnly;
-extern cl::opt<bool> ShowSourceLocations;
-extern cl::opt<std::string> OutputFilename;
+static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
+    "csprof-max-unsymbolized-context-depth", cl::init(-1),
+    cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
+             "means no depth limit."),
+    cl::cat(ProfGenCategory));
 
-namespace llvm {
 namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {
@@ -172,7 +181,19 @@ std::shared_ptr<AddrBasedCtxKey> AddressStack::getContextKey() {
   std::shared_ptr<AddrBasedCtxKey> KeyStr = std::make_shared<AddrBasedCtxKey>();
   KeyStr->Context = Stack;
   CSProfileGenerator::compressRecursionContext<uint64_t>(KeyStr->Context);
-  CSProfileGenerator::trimContext<uint64_t>(KeyStr->Context);
+  // MaxContextDepth(--csprof-max-context-depth) is used to trim both symbolized
+  // and unsymbolized profile context. Sometimes we want to at least preserve
+  // the inlinings for the leaf frame(the profiled binary inlining),
+  // --csprof-max-context-depth may not be flexible enough, in this case,
+  // --csprof-max-unsymbolized-context-depth is used to limit the context for
+  // unsymbolized profile. If both are set, use the minimum of them.
+  int Depth = CSProfileGenerator::MaxContextDepth != -1
+                  ? CSProfileGenerator::MaxContextDepth
+                  : KeyStr->Context.size();
+  Depth = CSProfMaxUnsymbolizedCtxDepth != -1
+              ? std::min(static_cast<int>(CSProfMaxUnsymbolizedCtxDepth), Depth)
+              : Depth;
+  CSProfileGenerator::trimContext<uint64_t>(KeyStr->Context, Depth);
   return KeyStr;
 }
 

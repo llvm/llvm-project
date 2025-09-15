@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that the hardware loop pass does not alter the comparison
 ; to use the result from the induction expression instead of

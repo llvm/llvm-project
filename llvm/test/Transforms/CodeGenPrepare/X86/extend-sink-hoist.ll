@@ -45,11 +45,11 @@ block2:
 
 ; Make sure the cast sink logic and OptimizeExtUses don't end up in an infinite
 ; loop.
-define i128 @use_ext_source() {
+define i128 @use_ext_source(i1 %arg) {
 block1:
   %v1 = or i64 undef, undef
   %v2 = zext i64 %v1 to i128
-  br i1 undef, label %block2, label %block3
+  br i1 %arg, label %block2, label %block3
 
 block2:
   %v3 = add i64 %v1, 1

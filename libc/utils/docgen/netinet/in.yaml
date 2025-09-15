@@ -1,0 +1,59 @@
+macros:
+  IPPROTO_IP:
+    in-latest-posix: ''
+  IPPROTO_IPV6:
+    in-latest-posix: ''
+  IPPROTO_ICMP:
+    in-latest-posix: ''
+  IPPROTO_RAW:
+    in-latest-posix: ''
+  IPPROTO_TCP:
+    in-latest-posix: ''
+  IPPROTO_UDP:
+    in-latest-posix: ''
+  INADDR_ANY:
+    in-latest-posix: ''
+  INET6_ADDRSTRLEN:
+    in-latest-posix: ''
+  INADDR_BROADCAST:
+    in-latest-posix: ''
+  INET_ADDRSTRLEN:
+    in-latest-posix: ''
+  IPV6_JOIN_GROUP:
+    in-latest-posix: ''
+  IPV6_LEAVE_GROUP:
+    in-latest-posix: ''
+  IPV6_MULTICAST_HOPS:
+    in-latest-posix: ''
+  IPV6_MULTICAST_IF:
+    in-latest-posix: ''
+  IPV6_MULTICAST_LOOP:
+    in-latest-posix: ''
+  IPV6_UNICAST_HOPS:
+    in-latest-posix: ''
+  IPV6_V6ONLY:
+    in-latest-posix: ''
+  IN6_IS_ADDR_UNSPECIFIED:
+    in-latest-posix: ''
+  IN6_IS_ADDR_LOOPBACK:
+    in-latest-posix: ''
+  IN6_IS_ADDR_MULTICAST:
+    in-latest-posix: ''
+  IN6_IS_ADDR_LINKLOCAL:
+    in-latest-posix: ''
+  IN6_IS_ADDR_SITELOCAL:
+    in-latest-posix: ''
+  IN6_IS_ADDR_V4MAPPED:
+    in-latest-posix: ''
+  IN6_IS_ADDR_V4COMPAT:
+    in-latest-posix: ''
+  IN6_IS_ADDR_MC_NODELOCAL:
+    in-latest-posix: ''
+  IN6_IS_ADDR_MC_LINKLOCAL:
+    in-latest-posix: ''
+  IN6_IS_ADDR_MC_SITELOCAL:
+    in-latest-posix: ''
+  IN6_IS_ADDR_MC_ORGLOCAL:
+    in-latest-posix: ''
+  IN6_IS_ADDR_MC_GLOBAL:
+    in-latest-posix: ''

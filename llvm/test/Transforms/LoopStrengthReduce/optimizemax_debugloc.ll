@@ -1,8 +1,18 @@
 ; RUN: opt < %s -loop-reduce -S 2>&1 | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -loop-reduce -S 2>&1 | FileCheck %s
+
 ;; This test case checks that whether the new icmp instruction preserves
 ;; the debug location of the original instruction for %exitcond
-; CHECK: icmp uge i32 %indvar.next, %n, !dbg ![[DBGLOC:[0-9]+]]
+
+;; This test case also checks that the debug value of the dead icmp
+;; instruction is salvaged.
+
+; CHECK-LABEL: bb.nph:
+; CHECK:           #dbg_value(i32 %n, ![[META1:[0-9]+]], !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value), ![[META2:[0-9]+]])
+; CHECK-LABEL: bb:
+; CHECK:         icmp uge i32 %indvar.next, %n, !dbg ![[DBGLOC:[0-9]+]]
+
+; CHECK: ![[META1]] = !DILocalVariable(name: "1",
+; CHECK: ![[META2]] = !DILocation(line: 1, column: 1,
 ; CHECK: ![[DBGLOC]] = !DILocation(line: 6, column: 1, scope
 
 ; ModuleID = 'simplified-dbg.bc'

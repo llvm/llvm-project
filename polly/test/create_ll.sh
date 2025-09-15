@@ -12,7 +12,7 @@ opt -correlated-propagation -mem2reg -instcombine -loop-simplify -indvars \
 -instnamer ${LLFILE} -S -o ${LLFILE_TMP}
 
 # Insert a header into the new testcase containing a sample RUN line a FIXME and
-# an XFAIL. Then insert the formated C code and finally the LLVM-IR without
+# an XFAIL. Then insert the formatted C code and finally the LLVM-IR without
 # attributes, the module ID or the target triple.
 echo '; RUN: opt %loadPolly -S < %s | FileCheck %s' > ${LLFILE}
 echo ';' >> ${LLFILE}

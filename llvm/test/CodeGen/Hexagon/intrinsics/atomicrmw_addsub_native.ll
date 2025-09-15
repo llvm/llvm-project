@@ -1,13 +1,13 @@
-; RUN: sed -e "s/ORDER/monotonic/" -e "s/BINARY_OP/add/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acquire/"   -e "s/BINARY_OP/add/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/release/"   -e "s/BINARY_OP/add/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acq_rel/"   -e "s/BINARY_OP/add/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/seq_cst/"   -e "s/BINARY_OP/add/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/monotonic/" -e "s/BINARY_OP/sub/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acquire/"   -e "s/BINARY_OP/sub/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/release/"   -e "s/BINARY_OP/sub/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/acq_rel/"   -e "s/BINARY_OP/sub/" %s | llc -march=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/seq_cst/"   -e "s/BINARY_OP/sub/" %s | llc -march=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/monotonic/" -e "s/BINARY_OP/add/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acquire/" -e "s/BINARY_OP/add/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/release/" -e "s/BINARY_OP/add/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acq_rel/" -e "s/BINARY_OP/add/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/seq_cst/" -e "s/BINARY_OP/add/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/monotonic/" -e "s/BINARY_OP/sub/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acquire/" -e "s/BINARY_OP/sub/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/release/" -e "s/BINARY_OP/sub/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/acq_rel/" -e "s/BINARY_OP/sub/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/seq_cst/" -e "s/BINARY_OP/sub/" %s | llc -mtriple=hexagon | FileCheck %s
 
 %struct.Obj = type { [100 x i32] }
 

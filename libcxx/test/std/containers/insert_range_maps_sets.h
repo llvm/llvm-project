@@ -31,9 +31,7 @@
 #include "type_algorithms.h"
 
 template <class Container, class Range>
-concept HasInsertRange = requires (Container& c, Range&& range) {
-  c.insert_range(range);
-};
+concept HasInsertRange = requires(Container& c, Range&& range) { c.insert_range(range); };
 
 template <template <class...> class Container, class T, class U>
 constexpr bool test_set_constraints_insert_range() {
@@ -79,141 +77,127 @@ struct TestCaseMapSet {
 // Empty container.
 
 template <class T>
-TestCaseMapSet<T> constexpr EmptyContainer_EmptyRange {
-  .initial = {}, .input = {}, .expected = {}
-};
+TestCaseMapSet<T> constexpr EmptyContainer_EmptyRange{.initial = {}, .input = {}, .expected = {}};
 
 template <class T>
-TestCaseMapSet<T> constexpr EmptyContainer_OneElementRange {
-  .initial = {}, .input = {1}, .expected = {1}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr EmptyContainer_OneElementRange<std::pair<K, V>> {
-  .initial = {}, .input = {{1, 'a'}}, .expected = {{1, 'a'}}
-};
+TestCaseMapSet<T> constexpr EmptyContainer_OneElementRange{.initial = {}, .input = {1}, .expected = {1}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr EmptyContainer_OneElementRange<std::pair<K, V>>{
+    .initial = {}, .input = {{1, 'a'}}, .expected = {{1, 'a'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr EmptyContainer_RangeNoDuplicates {
-  .initial = {}, .input = {5, 1, 3, 8, 6}, .expected = {5, 1, 3, 8, 6}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr EmptyContainer_RangeNoDuplicates<std::pair<K, V>> {
-  .initial = {}, .input = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}},
-  .expected = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}}
-};
+TestCaseMapSet<T> constexpr EmptyContainer_RangeNoDuplicates{
+    .initial = {}, .input = {5, 1, 3, 8, 6}, .expected = {5, 1, 3, 8, 6}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr EmptyContainer_RangeNoDuplicates<std::pair<K, V>>{
+    .initial  = {},
+    .input    = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}},
+    .expected = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr EmptyContainer_RangeWithDuplicates {
-  .initial = {},
-  .input = {5, 1, 1, 3, 5, 8, 5, 6, 10},
-  .expected = {5, 1, 3, 8, 6, 10},
-  .expected_multi = {5, 1, 1, 3, 5, 8, 5, 6, 10}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr EmptyContainer_RangeWithDuplicates<std::pair<K, V>> {
-  .initial = {},
-  .input = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}},
-  .expected = {{5, 'a'}, {1, 'a'}, {3, 'a'}, {8, 'a'}, {6, 'a'}, {10, 'b'}},
-  .expected_multi = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}}
-};
+TestCaseMapSet<T> constexpr EmptyContainer_RangeWithDuplicates{
+    .initial        = {},
+    .input          = {5, 1, 1, 3, 5, 8, 5, 6, 10},
+    .expected       = {5, 1, 3, 8, 6, 10},
+    .expected_multi = {5, 1, 1, 3, 5, 8, 5, 6, 10}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr EmptyContainer_RangeWithDuplicates<std::pair<K, V>>{
+    .initial        = {},
+    .input          = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}},
+    .expected       = {{5, 'a'}, {1, 'a'}, {3, 'a'}, {8, 'a'}, {6, 'a'}, {10, 'b'}},
+    .expected_multi = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}}};
 
 // One-element container.
 
 template <class T>
-TestCaseMapSet<T> constexpr OneElementContainer_EmptyRange {
-  .initial = {10}, .input = {}, .expected = {10}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr OneElementContainer_EmptyRange<std::pair<K, V>> {
-  .initial = {{10, 'A'}}, .input = {}, .expected = {{10, 'A'}}
-};
+TestCaseMapSet<T> constexpr OneElementContainer_EmptyRange{.initial = {10}, .input = {}, .expected = {10}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr OneElementContainer_EmptyRange<std::pair<K, V>>{
+    .initial = {{10, 'A'}}, .input = {}, .expected = {{10, 'A'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr OneElementContainer_OneElementRange {
-  .initial = {10}, .input = {1}, .expected = {1, 10}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr OneElementContainer_OneElementRange<std::pair<K, V>> {
-  .initial = {{10, 'A'}}, .input = {{1, 'a'}}, .expected = {{1, 'a'}, {10, 'A'}}
-};
+TestCaseMapSet<T> constexpr OneElementContainer_OneElementRange{.initial = {10}, .input = {1}, .expected = {1, 10}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr OneElementContainer_OneElementRange<std::pair<K, V>>{
+    .initial = {{10, 'A'}}, .input = {{1, 'a'}}, .expected = {{1, 'a'}, {10, 'A'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr OneElementContainer_RangeNoDuplicates {
-  .initial = {10}, .input = {5, 1, 3, 8, 6}, .expected = {5, 1, 3, 8, 6, 10}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr OneElementContainer_RangeNoDuplicates<std::pair<K, V>> {
-  .initial = {{10, 'A'}}, .input = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}},
-  .expected = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}, {10, 'A'}}
-};
+TestCaseMapSet<T> constexpr OneElementContainer_RangeNoDuplicates{
+    .initial = {10}, .input = {5, 1, 3, 8, 6}, .expected = {5, 1, 3, 8, 6, 10}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr OneElementContainer_RangeNoDuplicates<std::pair<K, V>>{
+    .initial  = {{10, 'A'}},
+    .input    = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}},
+    .expected = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}, {10, 'A'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr OneElementContainer_RangeWithDuplicates {
-  .initial = {10},
-  .input = {5, 1, 1, 3, 5, 8, 5, 6, 10},
-  .expected = {5, 1, 3, 8, 6, 10},
-  .expected_multi = {5, 1, 1, 3, 5, 8, 5, 6, 10, 10}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr OneElementContainer_RangeWithDuplicates<std::pair<K, V>> {
-  .initial = {{10, 'A'}},
-  .input = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}},
-  .expected = {{5, 'a'}, {1, 'a'}, {3, 'a'}, {8, 'a'}, {6, 'a'}, {10, 'A'}},
-  .expected_multi = {
-    {5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'A'}, {10, 'b'}
-  }
-};
+TestCaseMapSet<T> constexpr OneElementContainer_RangeWithDuplicates{
+    .initial        = {10},
+    .input          = {5, 1, 1, 3, 5, 8, 5, 6, 10},
+    .expected       = {5, 1, 3, 8, 6, 10},
+    .expected_multi = {5, 1, 1, 3, 5, 8, 5, 6, 10, 10}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr OneElementContainer_RangeWithDuplicates<std::pair<K, V>>{
+    .initial        = {{10, 'A'}},
+    .input          = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}},
+    .expected       = {{5, 'a'}, {1, 'a'}, {3, 'a'}, {8, 'a'}, {6, 'a'}, {10, 'A'}},
+    .expected_multi = {
+        {5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'A'}, {10, 'b'}}};
 
 // N-elements container.
 
 template <class T>
-TestCaseMapSet<T> constexpr NElementsContainer_EmptyRange {
-  .initial = {10, 15, 19, 16}, .input = {}, .expected = {10, 15, 19, 16}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr NElementsContainer_EmptyRange<std::pair<K, V>> {
-  .initial = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}, .input = {},
-  .expected = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}
-};
+TestCaseMapSet<T> constexpr NElementsContainer_EmptyRange{
+    .initial = {10, 15, 19, 16}, .input = {}, .expected = {10, 15, 19, 16}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr NElementsContainer_EmptyRange<std::pair<K, V>>{
+    .initial  = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
+    .input    = {},
+    .expected = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr NElementsContainer_OneElementRange {
-  .initial = {10, 15, 19, 16}, .input = {1}, .expected = {1, 10, 15, 19, 16}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr NElementsContainer_OneElementRange<std::pair<K, V>> {
-  .initial = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}, .input = {{1, 'a'}},
-  .expected = {{1, 'a'}, {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}
-};
+TestCaseMapSet<T> constexpr NElementsContainer_OneElementRange{
+    .initial = {10, 15, 19, 16}, .input = {1}, .expected = {1, 10, 15, 19, 16}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr NElementsContainer_OneElementRange<std::pair<K, V>>{
+    .initial  = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
+    .input    = {{1, 'a'}},
+    .expected = {{1, 'a'}, {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr NElementsContainer_RangeNoDuplicates {
-  .initial = {10, 15, 19, 16}, .input = {5, 1, 3, 8, 6}, .expected = {5, 1, 3, 8, 6, 10, 15, 19, 16}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr NElementsContainer_RangeNoDuplicates<std::pair<K, V>> {
-  .initial = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
-  .input = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}},
-  .expected = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}, {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}
-};
+TestCaseMapSet<T> constexpr NElementsContainer_RangeNoDuplicates{
+    .initial = {10, 15, 19, 16}, .input = {5, 1, 3, 8, 6}, .expected = {5, 1, 3, 8, 6, 10, 15, 19, 16}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr NElementsContainer_RangeNoDuplicates<std::pair<K, V>>{
+    .initial  = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
+    .input    = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}},
+    .expected = {{5, 'a'}, {1, 'e'}, {3, 'i'}, {8, 'o'}, {6, 'u'}, {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}}};
 
 template <class T>
-TestCaseMapSet<T> constexpr NElementsContainer_RangeWithDuplicates {
-  .initial = {10, 15, 19, 16},
-  .input = {5, 1, 1, 3, 5, 8, 5, 6, 10},
-  .expected = {5, 1, 3, 8, 6, 10, 15, 19, 16},
-  .expected_multi = {5, 1, 1, 3, 5, 8, 5, 6, 10, 10, 15, 19, 16}
-};
-template <class K, class V> TestCaseMapSet<std::pair<K, V>>
-constexpr NElementsContainer_RangeWithDuplicates<std::pair<K, V>> {
-  .initial = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
-  .input = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}},
-  .expected = {{5, 'a'}, {1, 'a'}, {3, 'a'}, {8, 'a'}, {6, 'a'}, {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
-  .expected_multi = {
-    {5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'},
-    {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}
-  }
-};
+TestCaseMapSet<T> constexpr NElementsContainer_RangeWithDuplicates{
+    .initial        = {10, 15, 19, 16},
+    .input          = {5, 1, 1, 3, 5, 8, 5, 6, 10},
+    .expected       = {5, 1, 3, 8, 6, 10, 15, 19, 16},
+    .expected_multi = {5, 1, 1, 3, 5, 8, 5, 6, 10, 10, 15, 19, 16}};
+template <class K, class V>
+TestCaseMapSet<std::pair<K, V>> constexpr NElementsContainer_RangeWithDuplicates<std::pair<K, V>>{
+    .initial        = {{10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
+    .input          = {{5, 'a'}, {1, 'a'}, {1, 'b'}, {3, 'a'}, {5, 'b'}, {8, 'a'}, {5, 'c'}, {6, 'a'}, {10, 'b'}},
+    .expected       = {{5, 'a'}, {1, 'a'}, {3, 'a'}, {8, 'a'}, {6, 'a'}, {10, 'A'}, {15, 'B'}, {19, 'C'}, {16, 'D'}},
+    .expected_multi = {
+        {5, 'a'},
+        {1, 'a'},
+        {1, 'b'},
+        {3, 'a'},
+        {5, 'b'},
+        {8, 'a'},
+        {5, 'c'},
+        {6, 'a'},
+        {10, 'b'},
+        {10, 'A'},
+        {15, 'B'},
+        {19, 'C'},
+        {16, 'D'}}};
 
 template <class Container, class T, class Iter, class Sent>
 void test_map_set_insert_range(bool allow_duplicates = false) {
@@ -265,7 +249,7 @@ void test_map_set_insert_range(bool allow_duplicates = false) {
 
 // Move-only types.
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_set_insert_range_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
@@ -274,7 +258,7 @@ void test_set_insert_range_move_only() {
   c.insert_range(in);
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_map_insert_range_move_only() {
   using Value = std::pair<const int, MoveOnly>;
   Value input[5];
@@ -286,7 +270,7 @@ void test_map_insert_range_move_only() {
 
 // Exception safety.
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_set_insert_range_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using T = ThrowingCopy<3>;
@@ -305,17 +289,15 @@ void test_set_insert_range_exception_safety_throwing_copy() {
 #endif
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_map_insert_range_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using K = int;
   using V = ThrowingCopy<3>;
 
-  V::throwing_enabled = false;
-  std::pair<const K, V> in[5] = {
-    {1, {}}, {2, {}}, {3, {}}, {4, {}}, {5, {}}
-  };
-  V::throwing_enabled = true;
+  V::throwing_enabled         = false;
+  std::pair<const K, V> in[5] = {{1, {}}, {2, {}}, {3, {}}, {4, {}}, {5, {}}};
+  V::throwing_enabled         = true;
   V::reset();
 
   try {
@@ -330,7 +312,7 @@ void test_map_insert_range_exception_safety_throwing_copy() {
 #endif
 }
 
-template <template <class ...> class Container, class T>
+template <template <class...> class Container, class T>
 void test_assoc_set_insert_range_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   T in[] = {1, 2};
@@ -349,7 +331,7 @@ void test_assoc_set_insert_range_exception_safety_throwing_allocator() {
 #endif
 }
 
-template <template <class ...> class Container, class T>
+template <template <class...> class Container, class T>
 void test_unord_set_insert_range_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   T in[] = {1, 2};
@@ -368,13 +350,11 @@ void test_unord_set_insert_range_exception_safety_throwing_allocator() {
 #endif
 }
 
-template <template <class ...> class Container, class K, class V>
+template <template <class...> class Container, class K, class V>
 void test_assoc_map_insert_range_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using ValueType = std::pair<const K, V>;
-  ValueType in[] = {
-    ValueType{K{1}, V{1}}
-  };
+  ValueType in[]  = {ValueType{K{1}, V{1}}};
 
   try {
     ThrowingAllocator<ValueType> alloc;
@@ -390,13 +370,11 @@ void test_assoc_map_insert_range_exception_safety_throwing_allocator() {
 #endif
 }
 
-template <template <class ...> class Container, class K, class V>
+template <template <class...> class Container, class K, class V>
 void test_unord_map_insert_range_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using ValueType = std::pair<const K, V>;
-  ValueType in[] = {
-    ValueType{K{1}, V{1}}
-  };
+  ValueType in[]  = {ValueType{K{1}, V{1}}};
 
   try {
     ThrowingAllocator<ValueType> alloc;

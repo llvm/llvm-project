@@ -1,6 +1,6 @@
 ; Test to make sure that the 'private' is used correctly.
 ;
-; RUN: llc -march=mips -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mips -relocation-model=pic < %s | FileCheck %s
 
 define private void @foo() {
 ; CHECK-LABEL: foo:

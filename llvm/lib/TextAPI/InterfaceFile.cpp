@@ -13,8 +13,6 @@
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
-#include <iomanip>
-#include <sstream>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -59,14 +57,11 @@ void InterfaceFile::addRPath(StringRef RPath, const Target &InputTarget) {
     return;
   using RPathEntryT = const std::pair<Target, std::string>;
   RPathEntryT Entry(InputTarget, RPath);
-  auto Iter =
-      lower_bound(RPaths, Entry,
-                  [](RPathEntryT &LHS, RPathEntryT &RHS) { return LHS < RHS; });
 
-  if ((Iter != RPaths.end()) && (*Iter == Entry))
+  if (is_contained(RPaths, Entry))
     return;
 
-  RPaths.emplace(Iter, Entry);
+  RPaths.emplace_back(Entry);
 }
 
 void InterfaceFile::addTarget(const Target &Target) {
@@ -105,8 +100,7 @@ void InterfaceFile::inlineLibrary(std::shared_ptr<InterfaceFile> Library,
 
     if (Overwrite && It != Documents.end() &&
         Reexport->getInstallName() == (*It)->getInstallName()) {
-      std::replace(Documents.begin(), Documents.end(), *It,
-                   std::move(Reexport));
+      llvm::replace(Documents, *It, std::move(Reexport));
       return;
     }
 
@@ -172,6 +166,7 @@ InterfaceFile::merge(const InterfaceFile *O) const {
 
   IF->setTwoLevelNamespace(isTwoLevelNamespace());
   IF->setApplicationExtensionSafe(isApplicationExtensionSafe());
+  IF->setOSLibNotForSharedCache(isOSLibNotForSharedCache());
 
   for (const auto &It : umbrellas()) {
     if (!It.second.empty())
@@ -238,6 +233,8 @@ InterfaceFile::remove(Architecture Arch) const {
       return make_error<TextAPIError>(TextAPIErrorCode::NoSuchArchitecture);
   }
 
+  // FIXME: Figure out how to keep these attributes in sync when new ones are
+  // added.
   std::unique_ptr<InterfaceFile> IF(new InterfaceFile());
   IF->setFileType(getFileType());
   IF->setPath(getPath());
@@ -248,6 +245,7 @@ InterfaceFile::remove(Architecture Arch) const {
   IF->setSwiftABIVersion(getSwiftABIVersion());
   IF->setTwoLevelNamespace(isTwoLevelNamespace());
   IF->setApplicationExtensionSafe(isApplicationExtensionSafe());
+  IF->setOSLibNotForSharedCache(isOSLibNotForSharedCache());
   for (const auto &It : umbrellas())
     if (It.first.Arch != Arch)
       IF->addParentUmbrella(It.first, It.second);
@@ -316,6 +314,7 @@ InterfaceFile::extract(Architecture Arch) const {
   IF->setSwiftABIVersion(getSwiftABIVersion());
   IF->setTwoLevelNamespace(isTwoLevelNamespace());
   IF->setApplicationExtensionSafe(isApplicationExtensionSafe());
+  IF->setOSLibNotForSharedCache(isOSLibNotForSharedCache());
   for (const auto &It : umbrellas())
     if (It.first.Arch == Arch)
       IF->addParentUmbrella(It.first, It.second);

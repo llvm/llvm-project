@@ -1,10 +1,19 @@
-static_library("Basic") {
+source_set("Basic") {
   deps = [
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
   ]
   sources = [
+    "ARMTargetDefEmitter.cpp",
+    "Attributes.cpp",
     "CodeGenIntrinsics.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "RuntimeLibcallsEmitter.cpp",
     "SDNodeProperties.cpp",
+    "TableGen.cpp",
+    "TargetFeaturesEmitter.cpp",
+    "VTEmitter.cpp",
   ]
 }

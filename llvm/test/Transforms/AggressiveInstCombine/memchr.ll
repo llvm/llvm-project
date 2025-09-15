@@ -161,3 +161,16 @@ entry:
   %memchr = call ptr @memchr(ptr @str_long, i32 %x, i64 8)
   ret ptr %memchr
 }
+
+; We want to check that the compiler still calls memchr if the length is non-constant:
+define ptr @test_memchr_non_constant_length2(i32 %x, i64 %len) {
+; CHECK-LABEL: define ptr @test_memchr_non_constant_length2(
+; CHECK-SAME: i32 [[X:%.*]], i64 [[LEN:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 [[X]], i64 [[LEN]])
+; CHECK-NEXT:    ret ptr [[MEMCHR]]
+;
+entry:
+  %memchr = call ptr @memchr(ptr @str, i32 %x, i64 %len)
+  ret ptr %memchr
+}

@@ -62,7 +62,8 @@ class TypeSourceInfo;
   class ASTImporter {
     friend class ASTNodeImporter;
   public:
-    using NonEquivalentDeclSet = llvm::DenseSet<std::pair<Decl *, Decl *>>;
+    using NonEquivalentDeclSet =
+        llvm::DenseSet<std::tuple<Decl *, Decl *, int>>;
     using ImportedCXXBaseSpecifierMap =
         llvm::DenseMap<const CXXBaseSpecifier *, CXXBaseSpecifier *>;
 
@@ -403,7 +404,7 @@ class TypeSourceInfo;
     ///
     /// \returns The equivalent nested-name-specifier in the "to"
     /// context, or the import error.
-    llvm::Expected<NestedNameSpecifier *> Import(NestedNameSpecifier *FromNNS);
+    llvm::Expected<NestedNameSpecifier> Import(NestedNameSpecifier FromNNS);
 
     /// Import the given nested-name-specifier-loc from the "from"
     /// context into the "to" context.
@@ -444,6 +445,14 @@ class TypeSourceInfo;
     /// \returns The equivalent identifier in the "to" context. Note: It
     /// returns nullptr only if the FromId was nullptr.
     IdentifierInfo *Import(const IdentifierInfo *FromId);
+
+    /// Import the given identifier or overloaded operator from the "from"
+    /// context into the "to" context.
+    ///
+    /// \returns The equivalent identifier or overloaded operator in the "to"
+    /// context.
+    IdentifierOrOverloadedOperator
+    Import(IdentifierOrOverloadedOperator FromIO);
 
     /// Import the given Objective-C selector from the "from"
     /// context into the "to" context.
@@ -583,7 +592,7 @@ class TypeSourceInfo;
     /// F should be a field (or indirect field) declaration.
     /// \returns The index of the field in its parent context (starting from 0).
     /// On error `std::nullopt` is returned (parent context is non-record).
-    static std::optional<unsigned> getFieldIndex(Decl *F);
+    static UnsignedOrNone getFieldIndex(Decl *F);
   };
 
 } // namespace clang

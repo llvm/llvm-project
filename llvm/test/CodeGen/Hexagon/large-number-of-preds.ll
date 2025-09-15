@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s
+; RUN: llc -O3 -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon-unknown--elf"

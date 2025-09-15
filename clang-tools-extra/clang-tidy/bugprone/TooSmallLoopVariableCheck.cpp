@@ -1,4 +1,4 @@
-//===--- TooSmallLoopVariableCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -124,7 +124,7 @@ static MagnitudeBits calcMagnitudeBits(const ASTContext &Context,
   unsigned SignedBits = IntExprType->isUnsignedIntegerType() ? 0U : 1U;
 
   if (const auto *BitField = IntExpr->getSourceBitField()) {
-    unsigned BitFieldWidth = BitField->getBitWidthValue(Context);
+    unsigned BitFieldWidth = BitField->getBitWidthValue();
     return {BitFieldWidth - SignedBits, BitFieldWidth};
   }
 

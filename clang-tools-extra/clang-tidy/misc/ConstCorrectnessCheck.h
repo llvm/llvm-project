@@ -1,4 +1,4 @@
-//===--- ConstCorrectnessCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,13 +38,19 @@ private:
   llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
 
-  const bool AnalyzeValues;
+  const bool AnalyzePointers;
   const bool AnalyzeReferences;
+  const bool AnalyzeValues;
+
+  const bool WarnPointersAsPointers;
   const bool WarnPointersAsValues;
 
-  const bool TransformValues;
-  const bool TransformReferences;
+  const bool TransformPointersAsPointers;
   const bool TransformPointersAsValues;
+  const bool TransformReferences;
+  const bool TransformValues;
+
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace clang::tidy::misc

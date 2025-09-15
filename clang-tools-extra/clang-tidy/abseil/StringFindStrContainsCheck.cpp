@@ -1,4 +1,4 @@
-//===--- StringFindStrContainsCheck.cc - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 
@@ -30,7 +29,9 @@ using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
 using ::clang::transformer::RewriteRuleWith;
 
+namespace {
 AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
+} // namespace
 
 static const char DefaultStringLikeClasses[] = "::std::basic_string;"
                                                "::std::basic_string_view;"

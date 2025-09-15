@@ -14,6 +14,13 @@ tablegen("AArch64TargetParserDef") {
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
+tablegen("PPCGenTargetFeatures") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-target-features" ]
+  td_file = "//llvm/lib/Target/PowerPC/PPC.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
 tablegen("RISCVTargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-riscv-target-def" ]
@@ -25,6 +32,7 @@ group("gen") {
   deps = [
     ":AArch64TargetParserDef",
     ":ARMTargetParserDef",
+    ":PPCGenTargetFeatures",
     ":RISCVTargetParserDef",
   ]
 }

@@ -1,4 +1,4 @@
-; RUN: not --crash llc -O0 < %s -march=avr 2>&1 | FileCheck %s
+; RUN: not --crash llc -O0 < %s -mtriple=avr 2>&1 | FileCheck %s
 
 define void @foo() {
 entry:

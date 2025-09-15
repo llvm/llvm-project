@@ -1,4 +1,4 @@
-; RUN: llc -march=avr -filetype=asm -O1 < %s | FileCheck %s
+; RUN: llc -mtriple=avr -filetype=asm -O1 < %s | FileCheck %s
 
 define void @check60(ptr %1) {
 ; CHECK-LABEL: check60:

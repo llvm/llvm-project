@@ -156,6 +156,11 @@ int main() {
                    UINT64_C(0x0001000000000000), UINT64_C(0)))
     return 1;
 
+  // test 1 / (1 - eps(0.5)) = 1 + eps(1).
+  if (test__divtf3(1.0L, TF_C(0x1.ffffffffffffffffffffffffffffp-1),
+                   UINT64_C(0x3FFF000000000000), UINT64_C(1)))
+    return 1;
+
 #else
   printf("skipped\n");
 

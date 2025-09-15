@@ -19,9 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -159,8 +157,7 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
 
     // If the operation can be freely truncated and has enough sign bits we
     // can shrink.
-    if (IsFreeTruncation(Op) &&
-        ComputeNumSignBits(Op, *DL, 0, nullptr, Mul) > 16)
+    if (IsFreeTruncation(Op) && ComputeNumSignBits(Op, *DL, nullptr, Mul) > 16)
       return true;
 
     // SelectionDAG has limited support for truncating through an add or sub if
@@ -169,7 +166,7 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
       if (BO->getParent() == Mul->getParent() &&
           IsFreeTruncation(BO->getOperand(0)) &&
           IsFreeTruncation(BO->getOperand(1)) &&
-          ComputeNumSignBits(Op, *DL, 0, nullptr, Mul) > 16)
+          ComputeNumSignBits(Op, *DL, nullptr, Mul) > 16)
         return true;
     }
 

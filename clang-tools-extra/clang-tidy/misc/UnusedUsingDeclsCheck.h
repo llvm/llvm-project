@@ -1,4 +1,4 @@
-//===--- UnusedUsingDeclsCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,7 +51,6 @@ private:
   std::vector<UsingDeclContext> Contexts;
   llvm::SmallPtrSet<const Decl *, 32> UsingTargetDeclsCache;
 
-  StringRef RawStringHeaderFileExtensions;
   FileExtensionsSet HeaderFileExtensions;
 };
 

@@ -59,12 +59,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +75,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class ReadobjOptTable : public opt::GenericOptTable {
 public:
-  ReadobjOptTable() : opt::GenericOptTable(InfoTable) {
+  ReadobjOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -135,6 +137,7 @@ static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
 static bool SectionGroups;
+static std::vector<std::string> SFrame;
 static bool VersionInfo;
 
 // Mach-O specific options.
@@ -151,6 +154,7 @@ static bool CodeViewEnableGHash;
 static bool CodeViewMergedTypes;
 bool CodeViewSubsectionBytes;
 static bool COFFBaseRelocs;
+static bool COFFPseudoRelocs;
 static bool COFFDebugDirectory;
 static bool COFFDirectives;
 static bool COFFExports;
@@ -273,8 +277,8 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
+  opts::SFrame = Args.getAllArgValues(OPT_sframe_EQ);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
-    std::string SortKeysString = A->getValue();
     for (StringRef KeyStr : llvm::split(A->getValue(), ",")) {
       SortSymbolKeyTy KeyType = StringSwitch<SortSymbolKeyTy>(KeyStr)
                                     .Case("name", SortSymbolKeyTy::NAME)
@@ -302,6 +306,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::CodeViewMergedTypes = Args.hasArg(OPT_codeview_merged_types);
   opts::CodeViewSubsectionBytes = Args.hasArg(OPT_codeview_subsection_bytes);
   opts::COFFBaseRelocs = Args.hasArg(OPT_coff_basereloc);
+  opts::COFFPseudoRelocs = Args.hasArg(OPT_coff_pseudoreloc);
   opts::COFFDebugDirectory = Args.hasArg(OPT_coff_debug_directory);
   opts::COFFDirectives = Args.hasArg(OPT_coff_directives);
   opts::COFFExports = Args.hasArg(OPT_coff_exports);
@@ -477,6 +482,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printNotes();
     if (opts::Memtag)
       Dumper->printMemtag();
+    if (!opts::SFrame.empty())
+      Dumper->printSectionsAsSFrame(opts::SFrame);
   }
   if (Obj.isCOFF()) {
     if (opts::COFFImports)
@@ -487,6 +494,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printCOFFDirectives();
     if (opts::COFFBaseRelocs)
       Dumper->printCOFFBaseReloc();
+    if (opts::COFFPseudoRelocs)
+      Dumper->printCOFFPseudoReloc();
     if (opts::COFFDebugDirectory)
       Dumper->printCOFFDebugDirectory();
     if (opts::COFFTLSDirectory)

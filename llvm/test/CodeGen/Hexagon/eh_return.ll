@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon < %s | FileCheck %s
 ; Make sure we generate an exception handling return.
 
 ; CHECK:         deallocframe

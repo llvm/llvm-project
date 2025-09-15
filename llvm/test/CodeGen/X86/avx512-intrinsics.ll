@@ -5008,7 +5008,7 @@ declare <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32>, <16 x i32>, <16 x
 define <16 x i32>@test_int_x86_avx512_pternlog_d_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_pternlog_d_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = ~(zmm1 | (zmm0 ^ zmm2))
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   ret <16 x i32> %1
@@ -5018,13 +5018,13 @@ define <16 x i32>@test_int_x86_avx512_mask_pternlog_d_512(<16 x i32> %x0, <16 x 
 ; X64-LABEL: test_int_x86_avx512_mask_pternlog_d_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_pternlog_d_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X86-NEXT:    retl
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   %2 = bitcast i16 %x4 to <16 x i1>
@@ -5036,13 +5036,13 @@ define <16 x i32>@test_int_x86_avx512_maskz_pternlog_d_512(<16 x i32> %x0, <16 x
 ; X64-LABEL: test_int_x86_avx512_maskz_pternlog_d_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_maskz_pternlog_d_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpternlogd $33, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X86-NEXT:    retl
   %1 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
   %2 = bitcast i16 %x4 to <16 x i1>
@@ -5055,7 +5055,7 @@ declare <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64>, <8 x i64>, <8 x i64
 define <8 x i64>@test_int_x86_avx512_pternlog_q_512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_pternlog_q_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm1 | (zmm0 ^ zmm2))
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
   ret <8 x i64> %1
@@ -5065,14 +5065,14 @@ define <8 x i64>@test_int_x86_avx512_mask_pternlog_q_512(<8 x i64> %x0, <8 x i64
 ; X64-LABEL: test_int_x86_avx512_mask_pternlog_q_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_mask_pternlog_q_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X86-NEXT:    retl
   %1 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
   %2 = bitcast i8 %x4 to <8 x i1>
@@ -5084,14 +5084,14 @@ define <8 x i64>@test_int_x86_avx512_maskz_pternlog_q_512(<8 x i64> %x0, <8 x i6
 ; X64-LABEL: test_int_x86_avx512_maskz_pternlog_q_512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int_x86_avx512_maskz_pternlog_q_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpternlogq $33, %zmm2, %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = ~(zmm1 | (zmm0 ^ zmm2))
 ; X86-NEXT:    retl
   %1 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)
   %2 = bitcast i8 %x4 to <8 x i1>
@@ -6505,7 +6505,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vfmadd_ss_rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %q = load float, ptr %ptr_b
   %vecinit.i = insertelement <4 x float> undef, float %q, i32 0

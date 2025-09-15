@@ -36,7 +36,7 @@ static std::string AArch64InstPrinterTestPrintAlignedLabel(uint64_t value) {
   MCAsmInfo MAI;
   MCInstrInfo MII;
   MCRegisterInfo MRI;
-  MCSubtargetInfo STI(Triple(""), "", "", "",
+  MCSubtargetInfo STI(Triple(""), "", "", "", {},
                       ArrayRef((SubtargetFeatureKV *)NULL, (size_t)0),
                       ArrayRef((SubtargetSubTypeKV *)NULL, (size_t)0), NULL,
                       NULL, NULL, NULL, NULL, NULL);

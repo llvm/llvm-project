@@ -50,7 +50,7 @@ target triple = "x86_64--linux"
 
 @global_data = dso_local global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0], align 16
 @static_data = internal global [10 x i32] zeroinitializer, align 16
-@static_data_alias = internal constant ptr getelementptr inbounds ([10 x i32], ptr @static_data, i64 0, i64 2), align 8
+@static_data_relro = internal constant ptr getelementptr inbounds ([10 x i32], ptr @static_data, i64 0, i64 2), align 8
 @extern_data = external global [10 x i32], align 16
 @thread_data = external thread_local global i32, align 4
 @unknown_size_data = dso_local global [0 x i32] zeroinitializer, align 16
@@ -117,59 +117,57 @@ define dso_local ptr @lea_static_data() #0 {
   ret ptr @static_data
 }
 
-define dso_local ptr @lea_static_data_alias() #0 {
-; SMALL-STATIC-LABEL: lea_static_data_alias:
+define dso_local ptr @lea_static_data_relro() #0 {
+; SMALL-STATIC-LABEL: lea_static_data_relro:
 ; SMALL-STATIC:       # %bb.0:
-; SMALL-STATIC-NEXT:    movl $static_data_alias, %eax
+; SMALL-STATIC-NEXT:    movl $static_data_relro, %eax
 ; SMALL-STATIC-NEXT:    retq
 ;
-; MEDIUM-STATIC-LABEL: lea_static_data_alias:
+; MEDIUM-STATIC-LABEL: lea_static_data_relro:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movabsq $static_data_alias, %rax
+; MEDIUM-STATIC-NEXT:    movabsq $static_data_relro, %rax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
-; LARGE-STATIC-LABEL: lea_static_data_alias:
+; LARGE-STATIC-LABEL: lea_static_data_relro:
 ; LARGE-STATIC:       # %bb.0:
-; LARGE-STATIC-NEXT:    movabsq $static_data_alias, %rax
+; LARGE-STATIC-NEXT:    movabsq $static_data_relro, %rax
 ; LARGE-STATIC-NEXT:    retq
 ;
-; SMALL-PIC-LABEL: lea_static_data_alias:
+; SMALL-PIC-LABEL: lea_static_data_relro:
 ; SMALL-PIC:       # %bb.0:
-; SMALL-PIC-NEXT:    leaq static_data_alias(%rip), %rax
+; SMALL-PIC-NEXT:    leaq static_data_relro(%rip), %rax
 ; SMALL-PIC-NEXT:    retq
 ;
-; MEDIUM-SMALL-DATA-PIC-LABEL: lea_static_data_alias:
+; MEDIUM-SMALL-DATA-PIC-LABEL: lea_static_data_relro:
 ; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
-; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq static_data_alias(%rip), %rax
+; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq static_data_relro(%rip), %rax
 ; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
 ;
-; MEDIUM-PIC-LABEL: lea_static_data_alias:
+; MEDIUM-PIC-LABEL: lea_static_data_relro:
 ; MEDIUM-PIC:       # %bb.0:
-; MEDIUM-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rcx
-; MEDIUM-PIC-NEXT:    movabsq $static_data_alias@GOTOFF, %rax
-; MEDIUM-PIC-NEXT:    addq %rcx, %rax
+; MEDIUM-PIC-NEXT:    leaq static_data_relro(%rip), %rax
 ; MEDIUM-PIC-NEXT:    retq
 ;
-; LARGE-PIC-LABEL: lea_static_data_alias:
+; LARGE-PIC-LABEL: lea_static_data_relro:
 ; LARGE-PIC:       # %bb.0:
 ; LARGE-PIC-NEXT:  .L1$pb:
 ; LARGE-PIC-NEXT:    leaq .L1$pb(%rip), %rax
 ; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L1$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
-; LARGE-PIC-NEXT:    movabsq $static_data_alias@GOTOFF, %rax
+; LARGE-PIC-NEXT:    movabsq $static_data_relro@GOTOFF, %rax
 ; LARGE-PIC-NEXT:    addq %rcx, %rax
 ; LARGE-PIC-NEXT:    retq
 ;
-; LARGE-SMALL-DATA-PIC-LABEL: lea_static_data_alias:
+; LARGE-SMALL-DATA-PIC-LABEL: lea_static_data_relro:
 ; LARGE-SMALL-DATA-PIC:       # %bb.0:
 ; LARGE-SMALL-DATA-PIC-NEXT:  .L1$pb:
 ; LARGE-SMALL-DATA-PIC-NEXT:    leaq .L1$pb(%rip), %rax
 ; LARGE-SMALL-DATA-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L1$pb, %rcx
 ; LARGE-SMALL-DATA-PIC-NEXT:    addq %rax, %rcx
-; LARGE-SMALL-DATA-PIC-NEXT:    movabsq $static_data_alias@GOTOFF, %rax
+; LARGE-SMALL-DATA-PIC-NEXT:    movabsq $static_data_relro@GOTOFF, %rax
 ; LARGE-SMALL-DATA-PIC-NEXT:    addq %rcx, %rax
 ; LARGE-SMALL-DATA-PIC-NEXT:    retq
-  ret ptr @static_data_alias
+  ret ptr @static_data_relro
 }
 
 define dso_local ptr @lea_global_data() #0 {

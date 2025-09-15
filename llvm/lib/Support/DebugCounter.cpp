@@ -172,6 +172,11 @@ DebugCounter &DebugCounter::instance() {
 void DebugCounter::push_back(const std::string &Val) {
   if (Val.empty())
     return;
+#ifdef NDEBUG
+  // isCountingEnabled is hardcoded to false in NDEBUG.
+  errs() << "Requested --debug-counter in LLVM build without assertions. This "
+            "is a no-op.\n";
+#endif
 
   // The strings should come in as counter=chunk_list
   auto CounterPair = StringRef(Val).split('=');
@@ -208,9 +213,10 @@ void DebugCounter::print(raw_ostream &OS) const {
   OS << "Counters and values:\n";
   for (auto &CounterName : CounterNames) {
     unsigned CounterID = getCounterId(std::string(CounterName));
-    OS << left_justify(RegisteredCounters[CounterID], 32) << ": {"
-       << Us.Counters[CounterID].Count << ",";
-    printChunks(OS, Us.Counters[CounterID].Chunks);
+    const CounterInfo &C = Us.Counters[CounterID];
+    OS << left_justify(RegisteredCounters[CounterID], 32) << ": {" << C.Count
+       << ",";
+    printChunks(OS, C.Chunks);
     OS << "}\n";
   }
 }
@@ -247,6 +253,8 @@ bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugCounter::dump() const {
   print(dbgs());
 }
+#endif

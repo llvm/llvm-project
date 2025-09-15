@@ -1,5 +1,5 @@
-;RUN: llc -march=sparc < %s -verify-machineinstrs | FileCheck %s
-;RUN: llc -march=sparc -O0 < %s -verify-machineinstrs | FileCheck %s -check-prefix=UNOPT
+;RUN: llc -mtriple=sparc < %s -verify-machineinstrs | FileCheck %s
+;RUN: llc -mtriple=sparc -O0 < %s -verify-machineinstrs | FileCheck %s -check-prefix=UNOPT
 
 target triple = "sparc-unknown-linux-gnu"
 
@@ -60,7 +60,7 @@ entry:
 ;CHECK:      sethi
 ;CHECK:      !NO_APP
 ;CHECK-NEXT: ble
-;CHECK-NEXT: mov
+;CHECK-NEXT: nop
   tail call void asm sideeffect "sethi 0, %g0", ""() nounwind
   %0 = icmp slt i32 %a, 0
   br i1 %0, label %bb, label %bb1

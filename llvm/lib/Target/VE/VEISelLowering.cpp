@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEISelLowering.h"
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "VECustomDAG.h"
 #include "VEInstrBuilder.h"
 #include "VEMachineFunctionInfo.h"
@@ -33,7 +33,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/KnownBits.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "ve-lower"
@@ -66,7 +65,8 @@ CCAssignFn *getParamCC(CallingConv::ID CallConv, bool IsVarArg) {
 
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   CCAssignFn *RetCC = getReturnCC(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
@@ -298,8 +298,6 @@ void VETargetLowering::initSPUActions() {
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (TM.Options.ExceptionModel == ExceptionHandling::SjLj)
-    setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
   /// } SJLJ instructions
 
   // Intrinsic instructions
@@ -565,12 +563,8 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("info", VE::SX17)  // Info area register
                      .Case("got", VE::SX15)   // Global offset table register
                      .Case("plt", VE::SX16) // Procedure linkage table register
-                     .Default(0);
-
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+                     .Default(Register());
+  return Reg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -664,8 +658,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, 0);
       Callee = DAG.getNode(VEISD::GETFUNPLT, DL, PtrVT, Callee);
     } else {
-      Callee =
-          makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+      Callee = makeHiLoPair(Callee, VE::S_HI32, VE::S_LO32, DAG);
     }
   } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     if (IsPICCall) {
@@ -674,8 +667,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
       Callee = DAG.getNode(VEISD::GETFUNPLT, DL, PtrVT, Callee);
     } else {
-      Callee =
-          makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+      Callee = makeHiLoPair(Callee, VE::S_HI32, VE::S_LO32, DAG);
     }
   }
 
@@ -746,18 +738,16 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // necessary since all emitted instructions must be stuck together in order
   // to pass the live physical registers.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[i].first,
-                             RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
   // Build the operands for the call instruction itself.
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const VERegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -1022,8 +1012,8 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
       //     lea %reg, label@gotoff_lo
       //     and %reg, %reg, (32)0
       //     lea.sl %reg, label@gotoff_hi(%reg, %got)
-      SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
-                                  VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
+      SDValue HiLo =
+          makeHiLoPair(Op, VE::S_GOTOFF_HI32, VE::S_GOTOFF_LO32, DAG);
       SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
       return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
     }
@@ -1032,8 +1022,7 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
     //     and %reg, %reg, (32)0
     //     lea.sl %reg, label@got_hi(%reg)
     //     ld %reg, (%reg, %got)
-    SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOT_HI32,
-                                VEMCExpr::VK_VE_GOT_LO32, DAG);
+    SDValue HiLo = makeHiLoPair(Op, VE::S_GOT_HI32, VE::S_GOT_LO32, DAG);
     SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrVT);
     SDValue AbsAddr = DAG.getNode(ISD::ADD, DL, PtrVT, GlobalBase, HiLo);
     return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), AbsAddr,
@@ -1048,7 +1037,7 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
   case CodeModel::Medium:
   case CodeModel::Large:
     // abs64.
-    return makeHiLoPair(Op, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+    return makeHiLoPair(Op, VE::S_HI32, VE::S_LO32, DAG);
   }
 }
 
@@ -1216,8 +1205,9 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue NewVal = prepareTS1AM(Op, DAG, Flag, Bits);
 
     SDValue Ptr = N->getOperand(1);
-    SDValue Aligned = DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
-                                  {Ptr, DAG.getConstant(-4, DL, MVT::i64)});
+    SDValue Aligned =
+        DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
+                    {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
     SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
                                   DAG.getVTList(Op.getNode()->getValueType(0),
                                                 Op.getNode()->getValueType(1)),
@@ -1235,8 +1225,9 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue NewVal = prepareTS1AM(Op, DAG, Flag, Bits);
 
     SDValue Ptr = N->getOperand(1);
-    SDValue Aligned = DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
-                                  {Ptr, DAG.getConstant(-4, DL, MVT::i64)});
+    SDValue Aligned =
+        DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
+                    {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
     SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
                                   DAG.getVTList(Op.getNode()->getValueType(0),
                                                 Op.getNode()->getValueType(1)),
@@ -1601,7 +1592,7 @@ SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
     VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
                          DAG.getConstant(Align - 1, DL, PtrVT));
     VAList = DAG.getNode(ISD::AND, DL, PtrVT, VAList,
-                         DAG.getConstant(-Align, DL, PtrVT));
+                         DAG.getSignedConstant(-Align, DL, PtrVT));
     // Increment the pointer, VAList, by 16 to the next vaarg.
     NextPtr =
         DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(16, DL));
@@ -1658,14 +1649,11 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
 
   // Prepare arguments
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Node = Size;
-  Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-  Args.push_back(Entry);
+  Args.emplace_back(Size, Size.getValueType().getTypeForEVT(*DAG.getContext()));
   if (NeedsAlign) {
-    Entry.Node = DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT);
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
-    Args.push_back(Entry);
+    SDValue Align = DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT);
+    Args.emplace_back(Align,
+                      Align.getValueType().getTypeForEVT(*DAG.getContext()));
   }
   Type *RetTy = Type::getVoidTy(*DAG.getContext());
 
@@ -1748,9 +1736,6 @@ static SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (TLI.verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   SDValue FrameAddr = lowerFRAMEADDR(Op, DAG, TLI, Subtarget);
 
   SDLoc DL(Op);
@@ -1782,12 +1767,11 @@ SDValue VETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Addr =
         DAG.getTargetExternalSymbol(TM->getStrList()->back().c_str(), VT, 0);
     if (isPositionIndependent()) {
-      Addr = makeHiLoPair(Addr, VEMCExpr::VK_VE_GOTOFF_HI32,
-                          VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
+      Addr = makeHiLoPair(Addr, VE::S_GOTOFF_HI32, VE::S_GOTOFF_LO32, DAG);
       SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, VT);
       return DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Addr);
     }
-    return makeHiLoPair(Addr, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+    return makeHiLoPair(Addr, VE::S_HI32, VE::S_LO32, DAG);
   }
   }
 }
@@ -2011,8 +1995,7 @@ SDValue VETargetLowering::getPICJumpTableRelocBase(SDValue Table,
   // In order to do so, we need to genarate correctly marked DAG node using
   // makeHiLoPair.
   SDValue Op = DAG.getGlobalAddress(Function, DL, PtrTy);
-  SDValue HiLo = makeHiLoPair(Op, VEMCExpr::VK_VE_GOTOFF_HI32,
-                              VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
+  SDValue HiLo = makeHiLoPair(Op, VE::S_GOTOFF_HI32, VE::S_GOTOFF_LO32, DAG);
   SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, PtrTy);
   return DAG.getNode(ISD::ADD, DL, PtrTy, GlobalBase, HiLo);
 }
@@ -2038,14 +2021,14 @@ Register VETargetLowering::prepareMBB(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(VE::LEAzii), Tmp1)
         .addImm(0)
         .addImm(0)
-        .addMBB(TargetBB, VEMCExpr::VK_VE_GOTOFF_LO32);
+        .addMBB(TargetBB, VE::S_GOTOFF_LO32);
     BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
         .addReg(Tmp1, getKillRegState(true))
         .addImm(M0(32));
     BuildMI(MBB, I, DL, TII->get(VE::LEASLrri), Result)
         .addReg(VE::SX15)
         .addReg(Tmp2, getKillRegState(true))
-        .addMBB(TargetBB, VEMCExpr::VK_VE_GOTOFF_HI32);
+        .addMBB(TargetBB, VE::S_GOTOFF_HI32);
   } else {
     // Create following instructions for non-PIC code.
     //     lea     %Tmp1, TargetBB@lo
@@ -2054,14 +2037,14 @@ Register VETargetLowering::prepareMBB(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(VE::LEAzii), Tmp1)
         .addImm(0)
         .addImm(0)
-        .addMBB(TargetBB, VEMCExpr::VK_VE_LO32);
+        .addMBB(TargetBB, VE::S_LO32);
     BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
         .addReg(Tmp1, getKillRegState(true))
         .addImm(M0(32));
     BuildMI(MBB, I, DL, TII->get(VE::LEASLrii), Result)
         .addReg(Tmp2, getKillRegState(true))
         .addImm(0)
-        .addMBB(TargetBB, VEMCExpr::VK_VE_HI32);
+        .addMBB(TargetBB, VE::S_HI32);
   }
   return Result;
 }
@@ -2099,14 +2082,14 @@ Register VETargetLowering::prepareSymbol(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, TII->get(VE::LEAzii), Tmp1)
           .addImm(0)
           .addImm(0)
-          .addExternalSymbol(Symbol.data(), VEMCExpr::VK_VE_GOTOFF_LO32);
+          .addExternalSymbol(Symbol.data(), VE::S_GOTOFF_LO32);
       BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
           .addReg(Tmp1, getKillRegState(true))
           .addImm(M0(32));
       BuildMI(MBB, I, DL, TII->get(VE::LEASLrri), Result)
           .addReg(VE::SX15)
           .addReg(Tmp2, getKillRegState(true))
-          .addExternalSymbol(Symbol.data(), VEMCExpr::VK_VE_GOTOFF_HI32);
+          .addExternalSymbol(Symbol.data(), VE::S_GOTOFF_HI32);
     } else {
       Register Tmp1 = MRI.createVirtualRegister(RC);
       Register Tmp2 = MRI.createVirtualRegister(RC);
@@ -2119,14 +2102,14 @@ Register VETargetLowering::prepareSymbol(MachineBasicBlock &MBB,
       BuildMI(MBB, I, DL, TII->get(VE::LEAzii), Tmp1)
           .addImm(0)
           .addImm(0)
-          .addExternalSymbol(Symbol.data(), VEMCExpr::VK_VE_GOT_LO32);
+          .addExternalSymbol(Symbol.data(), VE::S_GOT_LO32);
       BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
           .addReg(Tmp1, getKillRegState(true))
           .addImm(M0(32));
       BuildMI(MBB, I, DL, TII->get(VE::LEASLrri), Tmp3)
           .addReg(VE::SX15)
           .addReg(Tmp2, getKillRegState(true))
-          .addExternalSymbol(Symbol.data(), VEMCExpr::VK_VE_GOT_HI32);
+          .addExternalSymbol(Symbol.data(), VE::S_GOT_HI32);
       BuildMI(MBB, I, DL, TII->get(VE::LDrii), Result)
           .addReg(Tmp3, getKillRegState(true))
           .addImm(0)
@@ -2142,14 +2125,14 @@ Register VETargetLowering::prepareSymbol(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(VE::LEAzii), Tmp1)
         .addImm(0)
         .addImm(0)
-        .addExternalSymbol(Symbol.data(), VEMCExpr::VK_VE_LO32);
+        .addExternalSymbol(Symbol.data(), VE::S_LO32);
     BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
         .addReg(Tmp1, getKillRegState(true))
         .addImm(M0(32));
     BuildMI(MBB, I, DL, TII->get(VE::LEASLrii), Result)
         .addReg(Tmp2, getKillRegState(true))
         .addImm(0)
-        .addExternalSymbol(Symbol.data(), VEMCExpr::VK_VE_HI32);
+        .addExternalSymbol(Symbol.data(), VE::S_HI32);
   }
   return Result;
 }
@@ -2412,7 +2395,7 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
   for (unsigned CSI = 1; CSI <= MaxCSNum; ++CSI) {
     for (auto &LP : CallSiteNumToLPad[CSI]) {
       LPadList.push_back(LP);
-      InvokeBBs.insert(LP->pred_begin(), LP->pred_end());
+      InvokeBBs.insert_range(LP->predecessors());
     }
   }
 
@@ -2528,14 +2511,14 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
     BuildMI(DispContBB, DL, TII->get(VE::LEAzii), Tmp1)
         .addImm(0)
         .addImm(0)
-        .addJumpTableIndex(MJTI, VEMCExpr::VK_VE_GOTOFF_LO32);
+        .addJumpTableIndex(MJTI, VE::S_GOTOFF_LO32);
     BuildMI(DispContBB, DL, TII->get(VE::ANDrm), Tmp2)
         .addReg(Tmp1, getKillRegState(true))
         .addImm(M0(32));
     BuildMI(DispContBB, DL, TII->get(VE::LEASLrri), BReg)
         .addReg(VE::SX15)
         .addReg(Tmp2, getKillRegState(true))
-        .addJumpTableIndex(MJTI, VEMCExpr::VK_VE_GOTOFF_HI32);
+        .addJumpTableIndex(MJTI, VE::S_GOTOFF_HI32);
   } else {
     // Create following instructions for non-PIC code.
     //     lea     %Tmp1, .LJTI0_0@lo
@@ -2544,14 +2527,14 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
     BuildMI(DispContBB, DL, TII->get(VE::LEAzii), Tmp1)
         .addImm(0)
         .addImm(0)
-        .addJumpTableIndex(MJTI, VEMCExpr::VK_VE_LO32);
+        .addJumpTableIndex(MJTI, VE::S_LO32);
     BuildMI(DispContBB, DL, TII->get(VE::ANDrm), Tmp2)
         .addReg(Tmp1, getKillRegState(true))
         .addImm(M0(32));
     BuildMI(DispContBB, DL, TII->get(VE::LEASLrii), BReg)
         .addReg(Tmp2, getKillRegState(true))
         .addImm(0)
-        .addJumpTableIndex(MJTI, VEMCExpr::VK_VE_HI32);
+        .addJumpTableIndex(MJTI, VE::S_HI32);
   }
 
   switch (JTE) {
@@ -2645,15 +2628,15 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
       if (!II.isCall())
         continue;
 
-      DenseMap<Register, bool> DefRegs;
+      DenseSet<Register> DefRegs;
       for (auto &MOp : II.operands())
         if (MOp.isReg())
-          DefRegs[MOp.getReg()] = true;
+          DefRegs.insert(MOp.getReg());
 
       MachineInstrBuilder MIB(*MF, &II);
       for (unsigned RI = 0; SavedRegs[RI]; ++RI) {
         Register Reg = SavedRegs[RI];
-        if (!DefRegs[Reg])
+        if (!DefRegs.contains(Reg))
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
 
@@ -2952,7 +2935,7 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
 static bool isI32InsnAllUses(const SDNode *User, const SDNode *N) {
   // Check all use of User node.  If all of them are safe, optimize
   // truncate to extract_subreg.
-  for (const SDNode *U : User->uses()) {
+  for (const SDNode *U : User->users()) {
     switch (U->getOpcode()) {
     default:
       // If the use is an instruction which treats the source operand as i32,
@@ -3003,7 +2986,7 @@ SDValue VETargetLowering::combineTRUNCATE(SDNode *N,
     return SDValue();
 
   // Check all use of this TRUNCATE.
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     // Make sure that we're not going to replace TRUNCATE for non i32
     // instructions.
     //

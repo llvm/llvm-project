@@ -30,13 +30,11 @@
 
 #include "lldb/Host/Config.h"
 
-#if LLDB_EDITLINE_USE_WCHAR
-#include <codecvt>
-#endif
 #include <locale>
 #include <sstream>
 #include <vector>
 
+#include "lldb/Host/StreamFile.h"
 #include "lldb/lldb-private.h"
 
 #if !defined(_WIN32) && !defined(__ANDROID__)
@@ -56,23 +54,6 @@
 #include "lldb/Utility/StringList.h"
 
 #include "llvm/ADT/FunctionExtras.h"
-
-#if defined(__clang__) && defined(__has_warning)
-#if __has_warning("-Wdeprecated-declarations")
-#define LLDB_DEPRECATED_WARNING_DISABLE                                        \
-  _Pragma("clang diagnostic push")                                             \
-      _Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
-#define LLDB_DEPRECATED_WARNING_RESTORE _Pragma("clang diagnostic pop")
-#endif
-#elif defined(__GNUC__) && __GNUC__ > 6
-#define LLDB_DEPRECATED_WARNING_DISABLE                                        \
-  _Pragma("GCC diagnostic push")                                               \
-      _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#define LLDB_DEPRECATED_WARNING_RESTORE _Pragma("GCC diagnostic pop")
-#else
-#define LLDB_DEPRECATED_WARNING_DISABLE
-#define LLDB_DEPRECATED_WARNING_RESTORE
-#endif
 
 namespace lldb_private {
 namespace line_editor {
@@ -120,6 +101,8 @@ using SuggestionCallbackType =
     llvm::unique_function<std::optional<std::string>(llvm::StringRef)>;
 
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
+
+using RedrawCallbackType = llvm::unique_function<void()>;
 
 /// Status used to decide when and how to start editing another line in
 /// multi-line sessions.
@@ -171,8 +154,9 @@ using namespace line_editor;
 /// facility.  Both single- and multi-line editing are supported.
 class Editline {
 public:
-  Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, std::recursive_mutex &output_mutex);
+  Editline(const char *editor_name, FILE *input_file,
+           lldb::LockableStreamFileSP output_stream_sp,
+           lldb::LockableStreamFileSP error_stream_sp, bool color);
 
   ~Editline();
 
@@ -183,6 +167,9 @@ public:
   static void
   DisplayCompletions(Editline &editline,
                      llvm::ArrayRef<CompletionResult::Completion> results);
+
+  /// Sets if editline should use color.
+  void UseColor(bool use_color);
 
   /// Sets a string to be used as a prompt, or combined with a line number to
   /// form a prompt.
@@ -212,6 +199,11 @@ public:
     m_suggestion_callback = std::move(callback);
   }
 
+  /// Register a callback for redrawing the statusline.
+  void SetRedrawCallback(RedrawCallbackType callback) {
+    m_redraw_callback = std::move(callback);
+  }
+
   /// Register a callback for the tab key
   void SetAutoCompleteCallback(CompleteCallbackType callback) {
     m_completion_callback = std::move(callback);
@@ -232,19 +224,31 @@ public:
   }
 
   void SetPromptAnsiPrefix(std::string prefix) {
-    m_prompt_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_prompt_ansi_prefix = std::move(prefix);
+    else
+      m_prompt_ansi_prefix.clear();
   }
 
   void SetPromptAnsiSuffix(std::string suffix) {
-    m_prompt_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_prompt_ansi_suffix = std::move(suffix);
+    else
+      m_prompt_ansi_suffix.clear();
   }
 
   void SetSuggestionAnsiPrefix(std::string prefix) {
-    m_suggestion_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_suggestion_ansi_prefix = std::move(prefix);
+    else
+      m_suggestion_ansi_prefix.clear();
   }
 
   void SetSuggestionAnsiSuffix(std::string suffix) {
-    m_suggestion_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_suggestion_ansi_suffix = std::move(suffix);
+    else
+      m_suggestion_ansi_suffix.clear();
   }
 
   /// Prompts for and reads a single line of user input.
@@ -253,10 +257,17 @@ public:
   /// Prompts for and reads a multi-line batch of user input.
   bool GetLines(int first_line_number, StringList &lines, bool &interrupted);
 
-  void PrintAsync(Stream *stream, const char *s, size_t len);
+  void PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
+                  size_t len);
 
   /// Convert the current input lines into a UTF8 StringList
   StringList GetInputAsStringList(int line_count = UINT32_MAX);
+
+  size_t GetTerminalWidth() { return m_terminal_width; }
+
+  size_t GetTerminalHeight() { return m_terminal_height; }
+
+  void Refresh();
 
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
@@ -383,11 +394,6 @@ private:
   void SetEditLinePromptCallback(EditlinePromptCallbackType callbackFn);
   void SetGetCharacterFunction(EditlineGetCharCallbackType callbackFn);
 
-#if LLDB_EDITLINE_USE_WCHAR
-  LLDB_DEPRECATED_WARNING_DISABLE
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> m_utf8conv;
-  LLDB_DEPRECATED_WARNING_RESTORE
-#endif
   ::EditLine *m_editline = nullptr;
   EditlineHistorySP m_history_sp;
   bool m_in_history = false;
@@ -396,6 +402,7 @@ private:
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
   int m_terminal_width = 0;
+  int m_terminal_height = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
   int m_current_line_rows = -1;
@@ -408,8 +415,11 @@ private:
   volatile std::sig_atomic_t m_terminal_size_has_changed = 0;
   std::string m_editor_name;
   FILE *m_input_file;
-  FILE *m_output_file;
-  FILE *m_error_file;
+  lldb::LockableStreamFileSP m_output_stream_sp;
+  lldb::LockableStreamFileSP m_error_stream_sp;
+
+  std::optional<LockedStreamFile> m_locked_output;
+
   ConnectionFileDescriptor m_input_connection;
 
   IsInputCompleteCallbackType m_is_input_complete_callback;
@@ -419,14 +429,15 @@ private:
 
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
+  RedrawCallbackType m_redraw_callback;
 
+  bool m_color;
   std::string m_prompt_ansi_prefix;
   std::string m_prompt_ansi_suffix;
   std::string m_suggestion_ansi_prefix;
   std::string m_suggestion_ansi_suffix;
 
   std::size_t m_previous_autosuggestion_size = 0;
-  std::recursive_mutex &m_output_mutex;
 };
 }
 

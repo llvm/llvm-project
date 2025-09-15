@@ -116,6 +116,26 @@ int funclike_1;
 int funclike_2;
 #endif
 // CHECK: int funclike_2;
+
+#if __has_cpp_attribute(CF\
+)
+int has_clang_falthrough_5;
+#endif
+// CHECK: int has_clang_falthrough_5;
+
+#define CF_2 clang::\
+fallthrough
+
+#if __has_cpp_attribute(CF_2)
+int has_clang_falthrough_6;
+#endif
+// CHECK: int has_clang_falthrough_6;
+
+#if __has_cpp_attribute(CF_2\
+)
+int has_clang_falthrough_7;
+#endif
+// CHECK: int has_clang_falthrough_7;
 }
 
 // Test for Microsoft __declspec attributes

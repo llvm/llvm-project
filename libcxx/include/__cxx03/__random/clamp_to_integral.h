@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
-#define _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
+#ifndef _LIBCPP___CXX03___RANDOM_CLAMP_TO_INTEGRAL_H
+#define _LIBCPP___CXX03___RANDOM_CLAMP_TO_INTEGRAL_H
 
-#include <__config>
-#include <cmath>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/cmath>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -26,7 +26,7 @@ template <class _IntT,
           class _FloatT,
           bool _FloatBigger = (numeric_limits<_FloatT>::digits > numeric_limits<_IntT>::digits),
           int _Bits         = (numeric_limits<_IntT>::digits - numeric_limits<_FloatT>::digits)>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _IntT __max_representable_int_for_float() _NOEXCEPT {
   static_assert(is_floating_point<_FloatT>::value, "must be a floating point type");
   static_assert(is_integral<_IntT>::value, "must be an integral type");
   static_assert(numeric_limits<_FloatT>::radix == 2, "FloatT has incorrect radix");
@@ -56,4 +56,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
+#endif // _LIBCPP___CXX03___RANDOM_CLAMP_TO_INTEGRAL_H

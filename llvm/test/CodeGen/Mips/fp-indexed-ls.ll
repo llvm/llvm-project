@@ -1,13 +1,10 @@
-; RUN: llc -march=mipsel   -mcpu=mips32   -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R1
-; RUN: llc -march=mipsel   -mcpu=mips32r2 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R2
-; RUN: llc -march=mipsel   -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R6
-; RUN: llc -march=mips64el -mcpu=mips4    -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
-; RUN: llc -march=mips64el -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
-; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS64R6
-
-; Check that [ls][dwu]xc1 are not emitted for nacl.
-; RUN: llc -mtriple=mipsel-none-nacl-gnu -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=CHECK-NACL
+; RUN: llc -mtriple=mipsel   -mcpu=mips32   -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R1
+; RUN: llc -mtriple=mipsel   -mcpu=mips32r2 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R2
+; RUN: llc -mtriple=mipsel   -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS32R6
+; RUN: llc -mtriple=mips64el -mcpu=mips4    -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
+; RUN: llc -mtriple=mips64el -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS4
+; RUN: llc -mtriple=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,MIPS64R6
 
 %struct.S = type <{ [4 x float] }>
 %struct.S2 = type <{ [4 x double] }>
@@ -43,8 +40,6 @@ entry:
 ; MIPS64R6:      daddu $[[T3:[0-9]+]], $4, $[[T1]]
 ; MIPS64R6:      lwc1 $f0, 0($[[T3]])
 
-; CHECK-NACL-NOT: lwxc1
-
   %arrayidx = getelementptr inbounds float, ptr %b, i32 %o
   %0 = load float, ptr %arrayidx, align 4
   ret float %0
@@ -73,8 +68,6 @@ entry:
 ; MIPS64R6:      dsll $[[T1:[0-9]+]], $[[T0]], 3
 ; MIPS64R6:      daddu $[[T3:[0-9]+]], $4, $[[T1]]
 ; MIPS64R6:      ldc1 $f0, 0($[[T3]])
-
-; CHECK-NACL-NOT: ldxc1
 
   %arrayidx = getelementptr inbounds double, ptr %b, i32 %o
   %0 = load double, ptr %arrayidx, align 8
@@ -127,8 +120,6 @@ entry:
 ; MIPS64R6-DAG:  daddu $[[T1:[0-9]+]], $4, ${{[0-9]+}}
 ; MIPS64R6-DAG:  swc1 $[[T0]], 0($[[T1]])
 
-; CHECK-NACL-NOT: swxc1
-
   %0 = load float, ptr @gf, align 4
   %arrayidx = getelementptr inbounds float, ptr %b, i32 %o
   store float %0, ptr %arrayidx, align 4
@@ -156,8 +147,6 @@ entry:
 ; MIPS64R6-DAG:  ldc1 $[[T0:f0]], 0(${{[0-9]+}})
 ; MIPS64R6-DAG:  daddu $[[T1:[0-9]+]], $4, ${{[0-9]+}}
 ; MIPS64R6-DAG:  sdc1 $[[T0]], 0($[[T1]])
-
-; CHECK-NACL-NOT: sdxc1
 
   %0 = load double, ptr @gd, align 8
   %arrayidx = getelementptr inbounds double, ptr %b, i32 %o

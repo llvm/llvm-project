@@ -75,11 +75,16 @@ public:
   }
 };
 
+class BogusTargetInstrInfo : public TargetInstrInfo {
+public:
+  BogusTargetInstrInfo() : TargetInstrInfo() {}
+};
+
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, nullptr),
+      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr),
         FL(), TL(TM) {}
   ~BogusSubtarget() override {}
 
@@ -95,7 +100,7 @@ private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;
   BogusTargetLowering TL;
-  TargetInstrInfo TII;
+  BogusTargetInstrInfo TII;
 };
 
 static TargetOptions getTargetOptionsForBogusMachine() {
@@ -104,12 +109,12 @@ static TargetOptions getTargetOptionsForBogusMachine() {
   return Opts;
 }
 
-class BogusTargetMachine : public LLVMTargetMachine {
+class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
-      : LLVMTargetMachine(Target(), "", Triple(""), "", "",
-                          getTargetOptionsForBogusMachine(), Reloc::Static,
-                          CodeModel::Small, CodeGenOptLevel::Default),
+      : CodeGenTargetMachineImpl(
+            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
   ~BogusTargetMachine() override {}

@@ -43,7 +43,7 @@ define <vscale x 2 x i64> @sdiv_i64_neg(<vscale x 2 x i64> %a, <vscale x 2 x i1>
 
 define <vscale x 4 x i32> @sdiv_i32_not_base2(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: @sdiv_i32_not_base2(
-; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 8388607, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> splat (i32 8388607))
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUT]]
 ;
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 8388607))
@@ -52,7 +52,7 @@ define <vscale x 4 x i32> @sdiv_i32_not_base2(<vscale x 4 x i32> %a, <vscale x 4
 
 define <vscale x 4 x i32> @sdiv_i32_not_base2_neg(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: @sdiv_i32_not_base2_neg(
-; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -8388607, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> splat (i32 -8388607))
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUT]]
 ;
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 -8388607))
@@ -83,7 +83,7 @@ define <vscale x 2 x i64> @divide_by_1(<vscale x 16 x i1> %p, <vscale x 2 x i64>
 define <vscale x 2 x i64> @divide_by_m1(<vscale x 16 x i1> %p, <vscale x 2 x i64> %a) #0 {
 ; CHECK-LABEL: @divide_by_m1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[P:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> [[TMP1]], <vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.sdiv.nxv2i64(<vscale x 2 x i1> [[TMP1]], <vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> splat (i64 -1))
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 ;
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 -1)

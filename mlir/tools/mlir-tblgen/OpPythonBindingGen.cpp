@@ -37,11 +37,11 @@ from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
-    get_op_result_or_value as _get_op_result_or_value,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
 )
 _ods_ir = _ods_cext.ir
+_ods_cext.globals.register_traceback_file_exclusion(__file__)
 
 import builtins
 from typing import Sequence as _Sequence, Union as _Union
@@ -272,6 +272,11 @@ constexpr const char *regionAccessorTemplate = R"Py(
 
 constexpr const char *valueBuilderTemplate = R"Py(
 def {0}({2}) -> {4}:
+  return {1}({3}){5}
+)Py";
+
+constexpr const char *valueBuilderVariadicTemplate = R"Py(
+def {0}({2}) -> {4}:
   return _get_op_result_or_op_results({1}({3}))
 )Py";
 
@@ -487,26 +492,23 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
 constexpr const char *initTemplate = R"Py(
   def __init__(self, {0}):
     operands = []
-    results = []
     attributes = {{}
     regions = None
     {1}
-    super().__init__(self.build_generic({2}))
+    super().__init__({2})
 )Py";
 
 /// Template for appending a single element to the operand/result list.
 ///   {0} is the field name.
-constexpr const char *singleOperandAppendTemplate =
-    "operands.append(_get_op_result_or_value({0}))";
+constexpr const char *singleOperandAppendTemplate = "operands.append({0})";
 constexpr const char *singleResultAppendTemplate = "results.append({0})";
 
 /// Template for appending an optional element to the operand/result list.
 ///   {0} is the field name.
 constexpr const char *optionalAppendOperandTemplate =
-    "if {0} is not None: operands.append(_get_op_result_or_value({0}))";
+    "if {0} is not None: operands.append({0})";
 constexpr const char *optionalAppendAttrSizedOperandsTemplate =
-    "operands.append(_get_op_result_or_value({0}) if {0} is not None else "
-    "None)";
+    "operands.append({0})";
 constexpr const char *optionalAppendResultTemplate =
     "if {0} is not None: results.append({0})";
 
@@ -623,7 +625,7 @@ static void populateBuilderArgs(const Operator &op,
       name = formatv("_gen_arg_{0}", i);
     name = sanitizeName(name);
     builderArgs.push_back(name);
-    if (!op.getArg(i).is<NamedAttribute *>())
+    if (!isa<NamedAttribute *>(op.getArg(i)))
       operandNames.push_back(name);
   }
 }
@@ -735,18 +737,24 @@ populateBuilderLinesOperand(const Operator &op, ArrayRef<std::string> names,
   }
 }
 
-/// Python code template for deriving the operation result types from its
-/// attribute:
+/// Python code template of generating result types for
+/// FirstAttrDerivedResultType trait
 ///   - {0} is the name of the attribute from which to derive the types.
-constexpr const char *deriveTypeFromAttrTemplate =
-    R"Py(_ods_result_type_source_attr = attributes["{0}"]
-_ods_derived_result_type = (
+///   - {1} is the number of results.
+constexpr const char *firstAttrDerivedResultTypeTemplate =
+    R"Py(if results is None:
+  _ods_result_type_source_attr = attributes["{0}"]
+  _ods_derived_result_type = (
     _ods_ir.TypeAttr(_ods_result_type_source_attr).value
     if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
-    _ods_result_type_source_attr.type))Py";
+    _ods_result_type_source_attr.type)
+  results = [_ods_derived_result_type] * {1})Py";
 
-/// Python code template appending {0} type {1} times to the results list.
-constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
+/// Python code template of generating result types for
+/// SameOperandsAndResultType trait
+///   - {0} is the number of results.
+constexpr const char *sameOperandsAndResultTypeTemplate =
+    R"Py(if results is None: results = [operands[0].type] * {0})Py";
 
 /// Appends the given multiline string as individual strings into
 /// `builderLines`.
@@ -765,11 +773,10 @@ static void appendLineByLine(StringRef string,
 static void
 populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
                            SmallVectorImpl<std::string> &builderLines) {
-  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
-
   if (hasSameArgumentAndResultTypes(op)) {
-    builderLines.push_back(formatv(appendSameResultsTemplate,
-                                   "operands[0].type", op.getNumResults()));
+    appendLineByLine(
+        formatv(sameOperandsAndResultTypeTemplate, op.getNumResults()).str(),
+        builderLines);
     return;
   }
 
@@ -777,16 +784,18 @@ populateBuilderLinesResult(const Operator &op, ArrayRef<std::string> names,
     const NamedAttribute &firstAttr = op.getAttribute(0);
     assert(!firstAttr.name.empty() && "unexpected empty name for the attribute "
                                       "from which the type is derived");
-    appendLineByLine(formatv(deriveTypeFromAttrTemplate, firstAttr.name).str(),
+    appendLineByLine(formatv(firstAttrDerivedResultTypeTemplate, firstAttr.name,
+                             op.getNumResults())
+                         .str(),
                      builderLines);
-    builderLines.push_back(formatv(appendSameResultsTemplate,
-                                   "_ods_derived_result_type",
-                                   op.getNumResults()));
     return;
   }
 
   if (hasInferTypeInterface(op))
     return;
+
+  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
+  builderLines.push_back("results = []");
 
   // For each element, find or generate a name.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
@@ -906,13 +915,19 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
       functionArgs.push_back(builderArgs[i]);
     }
   }
+  if (canInferType(op)) {
+    functionArgs.push_back("results=None");
+  }
   functionArgs.push_back("loc=None");
   functionArgs.push_back("ip=None");
 
   SmallVector<std::string> initArgs;
+  initArgs.push_back("self.OPERATION_NAME");
+  initArgs.push_back("self._ODS_REGIONS");
+  initArgs.push_back("self._ODS_OPERAND_SEGMENTS");
+  initArgs.push_back("self._ODS_RESULT_SEGMENTS");
   initArgs.push_back("attributes=attributes");
-  if (!hasInferTypeInterface(op))
-    initArgs.push_back("results=results");
+  initArgs.push_back("results=results");
   initArgs.push_back("operands=operands");
   initArgs.push_back("successors=_ods_successors");
   initArgs.push_back("regions=regions");
@@ -992,15 +1007,31 @@ static void emitValueBuilder(const Operator &op,
         auto lhs = *llvm::split(arg, "=").begin();
         return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
       });
-  std::string nameWithoutDialect =
-      op.getOperationName().substr(op.getOperationName().find('.') + 1);
-  os << formatv(
-      valueBuilderTemplate, sanitizeName(nameWithoutDialect),
-      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
-      llvm::join(opBuilderArgs, ", "),
+  std::string nameWithoutDialect = sanitizeName(
+      op.getOperationName().substr(op.getOperationName().find('.') + 1));
+  if (nameWithoutDialect == op.getCppClassName())
+    nameWithoutDialect += "_";
+  std::string params = llvm::join(valueBuilderParams, ", ");
+  std::string args = llvm::join(opBuilderArgs, ", ");
+  const char *type =
       (op.getNumResults() > 1
            ? "_Sequence[_ods_ir.Value]"
-           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation")));
+           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation"));
+  if (op.getNumVariableLengthResults() > 0) {
+    os << formatv(valueBuilderVariadicTemplate, nameWithoutDialect,
+                  op.getCppClassName(), params, args, type);
+  } else {
+    const char *results;
+    if (op.getNumResults() == 0) {
+      results = "";
+    } else if (op.getNumResults() == 1) {
+      results = ".result";
+    } else {
+      results = ".results";
+    }
+    os << formatv(valueBuilderTemplate, nameWithoutDialect,
+                  op.getCppClassName(), params, args, type, results);
+  }
 }
 
 /// Emits bindings for a specific Op to the given output stream.

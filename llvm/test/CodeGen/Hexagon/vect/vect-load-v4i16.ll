@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 -hexagon-align-loads=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 -hexagon-align-loads=0 < %s | FileCheck %s
 
 ; CHECK-LABEL: danny:
 ; CHECK:     r1 = r0

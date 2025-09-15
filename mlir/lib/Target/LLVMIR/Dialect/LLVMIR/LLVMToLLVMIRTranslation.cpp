@@ -13,14 +13,19 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
-#include "llvm/IR/Operator.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -201,6 +206,10 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
       fn, moduleTranslation.lookupValues(op.getArgs()),
       convertOperandBundles(op.getOpBundleOperands(), op.getOpBundleTags(),
                             moduleTranslation));
+
+  if (failed(moduleTranslation.convertArgAndResultAttrs(op, inst)))
+    return failure();
+
   if (op.getNumResults() == 1)
     moduleTranslation.mapValue(op->getResults().front()) = inst;
   return success();
@@ -222,6 +231,145 @@ static void convertLinkerOptionsOp(ArrayAttr options,
 
   auto *listMDNode = llvm::MDTuple::get(context, MDNodes);
   linkerMDNode->addOperand(listMDNode);
+}
+
+static llvm::Metadata *
+convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
+                       llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &context = builder.getContext();
+  llvm::MDBuilder mdb(context);
+  SmallVector<llvm::Metadata *> nodes;
+
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
+      llvm::Metadata *fromMetadata =
+          entry.getFrom()
+              ? llvm::ValueAsMetadata::get(moduleTranslation.lookupFunction(
+                    entry.getFrom().getValue()))
+              : nullptr;
+      llvm::Metadata *toMetadata =
+          entry.getTo()
+              ? llvm::ValueAsMetadata::get(
+                    moduleTranslation.lookupFunction(entry.getTo().getValue()))
+              : nullptr;
+
+      llvm::Metadata *vals[] = {
+          fromMetadata, toMetadata,
+          mdb.createConstant(llvm::ConstantInt::get(
+              llvm::Type::getInt64Ty(context), entry.getCount()))};
+      nodes.push_back(llvm::MDNode::get(context, vals));
+    }
+    return llvm::MDTuple::getDistinct(context, nodes);
+  }
+  return nullptr;
+}
+
+static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
+    StringRef key, ModuleFlagProfileSummaryAttr summaryAttr,
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &context = builder.getContext();
+  llvm::MDBuilder mdb(context);
+
+  auto getIntTuple = [&](StringRef key, uint64_t val) -> llvm::MDTuple * {
+    SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createString(key), mdb.createConstant(llvm::ConstantInt::get(
+                                   llvm::Type::getInt64Ty(context), val))};
+    return llvm::MDTuple::get(context, tupleNodes);
+  };
+
+  SmallVector<llvm::Metadata *> fmtNode{
+      mdb.createString("ProfileFormat"),
+      mdb.createString(
+          stringifyProfileSummaryFormatKind(summaryAttr.getFormat()))};
+
+  SmallVector<llvm::Metadata *> vals = {
+      llvm::MDTuple::get(context, fmtNode),
+      getIntTuple("TotalCount", summaryAttr.getTotalCount()),
+      getIntTuple("MaxCount", summaryAttr.getMaxCount()),
+      getIntTuple("MaxInternalCount", summaryAttr.getMaxInternalCount()),
+      getIntTuple("MaxFunctionCount", summaryAttr.getMaxFunctionCount()),
+      getIntTuple("NumCounts", summaryAttr.getNumCounts()),
+      getIntTuple("NumFunctions", summaryAttr.getNumFunctions()),
+  };
+
+  if (summaryAttr.getIsPartialProfile())
+    vals.push_back(
+        getIntTuple("IsPartialProfile", *summaryAttr.getIsPartialProfile()));
+
+  if (summaryAttr.getPartialProfileRatio()) {
+    SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createString("PartialProfileRatio"),
+        mdb.createConstant(llvm::ConstantFP::get(
+            llvm::Type::getDoubleTy(context),
+            summaryAttr.getPartialProfileRatio().getValue()))};
+    vals.push_back(llvm::MDTuple::get(context, tupleNodes));
+  }
+
+  SmallVector<llvm::Metadata *> detailedEntries;
+  llvm::Type *llvmInt64Type = llvm::Type::getInt64Ty(context);
+  for (ModuleFlagProfileSummaryDetailedAttr detailedEntry :
+       summaryAttr.getDetailedSummary()) {
+    SmallVector<llvm::Metadata *> tupleNodes{
+        mdb.createConstant(
+            llvm::ConstantInt::get(llvmInt64Type, detailedEntry.getCutOff())),
+        mdb.createConstant(
+            llvm::ConstantInt::get(llvmInt64Type, detailedEntry.getMinCount())),
+        mdb.createConstant(llvm::ConstantInt::get(
+            llvmInt64Type, detailedEntry.getNumCounts()))};
+    detailedEntries.push_back(llvm::MDTuple::get(context, tupleNodes));
+  }
+  SmallVector<llvm::Metadata *> detailedSummary{
+      mdb.createString("DetailedSummary"),
+      llvm::MDTuple::get(context, detailedEntries)};
+  vals.push_back(llvm::MDTuple::get(context, detailedSummary));
+
+  return llvm::MDNode::get(context, vals);
+}
+
+static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
+                                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
+    llvm::Metadata *valueMetadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
+            .Case<StringAttr>([&](auto strAttr) {
+              return llvm::MDString::get(builder.getContext(),
+                                         strAttr.getValue());
+            })
+            .Case<IntegerAttr>([&](auto intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                  llvm::Type::getInt32Ty(builder.getContext()),
+                  intAttr.getInt()));
+            })
+            .Case<ArrayAttr>([&](auto arrayAttr) {
+              return convertModuleFlagValue(flagAttr.getKey().getValue(),
+                                            arrayAttr, builder,
+                                            moduleTranslation);
+            })
+            .Case([&](ModuleFlagProfileSummaryAttr summaryAttr) {
+              return convertModuleFlagProfileSummaryAttr(
+                  flagAttr.getKey().getValue(), summaryAttr, builder,
+                  moduleTranslation);
+            })
+            .Default([](auto) { return nullptr; });
+
+    assert(valueMetadata && "expected valid metadata");
+    llvmModule->addModuleFlag(
+        convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
+        flagAttr.getKey().getValue(), valueMetadata);
+  }
+}
+
+static llvm::DILocalScope *
+getLocalScopeFromLoc(llvm::IRBuilderBase &builder, Location loc,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  if (auto scopeLoc =
+          loc->findInstanceOf<FusedLocWith<LLVM::DILocalScopeAttr>>())
+    if (auto *localScope = llvm::dyn_cast<llvm::DILocalScope>(
+            moduleTranslation.translateDebugInfo(scopeLoc.getMetadata())))
+      return localScope;
+  return builder.GetInsertBlock()->getParent()->getSubprogram();
 }
 
 static LogicalResult
@@ -247,9 +395,18 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::CallInst *call;
     if (auto attr = callOp.getCalleeAttr()) {
-      call =
-          builder.CreateCall(moduleTranslation.lookupFunction(attr.getValue()),
-                             operandsRef, opBundles);
+      if (llvm::Function *function =
+              moduleTranslation.lookupFunction(attr.getValue())) {
+        call = builder.CreateCall(function, operandsRef, opBundles);
+      } else {
+        Operation *moduleOp = parentLLVMModule(&opInst);
+        Operation *ifuncOp =
+            moduleTranslation.symbolTable().lookupSymbolIn(moduleOp, attr);
+        llvm::GlobalValue *ifunc = moduleTranslation.lookupIFunc(ifuncOp);
+        llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
+            moduleTranslation.convertType(callOp.getCalleeFunctionType()));
+        call = builder.CreateCall(calleeType, ifunc, operandsRef, opBundles);
+      }
     } else {
       llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
           moduleTranslation.convertType(callOp.getCalleeFunctionType()));
@@ -264,6 +421,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoUnwind);
     if (callOp.getWillReturnAttr())
       call->addFnAttr(llvm::Attribute::WillReturn);
+    if (callOp.getNoInlineAttr())
+      call->addFnAttr(llvm::Attribute::NoInline);
+    if (callOp.getAlwaysInlineAttr())
+      call->addFnAttr(llvm::Attribute::AlwaysInline);
+    if (callOp.getInlineHintAttr())
+      call->addFnAttr(llvm::Attribute::InlineHint);
+
+    if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
+      return failure();
 
     if (MemoryEffectsAttr memAttr = callOp.getMemoryEffectsAttr()) {
       llvm::MemoryEffects memEffects =
@@ -323,6 +489,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::CallInst *inst = builder.CreateCall(
         inlineAsmInst,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
+    inst->setTailCallKind(convertTailCallKindToLLVM(
+        inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
       llvm::AttributeList attrList;
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
@@ -330,6 +498,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         if (!attr)
           continue;
         DictionaryAttr dAttr = cast<DictionaryAttr>(attr);
+        if (dAttr.empty())
+          continue;
         TypeAttr tAttr =
             cast<TypeAttr>(dAttr.get(InlineAsmOp::getElementTypeAttrName()));
         llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
@@ -372,6 +542,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    if (failed(moduleTranslation.convertArgAndResultAttrs(invOp, result)))
+      return failure();
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
     if (invOp->getNumResults() != 0) {
@@ -438,6 +610,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     moduleTranslation.mapBranch(&opInst, switchInst);
     return success();
   }
+  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(opInst)) {
+    llvm::IndirectBrInst *indBr = builder.CreateIndirectBr(
+        moduleTranslation.lookupValue(indBrOp.getAddr()),
+        indBrOp->getNumSuccessors());
+    for (auto *succ : indBrOp.getSuccessors())
+      indBr->addDestination(moduleTranslation.lookupBlock(succ));
+    moduleTranslation.mapBranch(&opInst, indBr);
+    return success();
+  }
 
   // Emit addressof.  We need to look up the global value referenced by the
   // operation and store it in the MLIR-to-LLVM value mapping.  This does not
@@ -447,19 +628,135 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         addressOfOp.getGlobal(moduleTranslation.symbolTable());
     LLVM::LLVMFuncOp function =
         addressOfOp.getFunction(moduleTranslation.symbolTable());
+    LLVM::AliasOp alias = addressOfOp.getAlias(moduleTranslation.symbolTable());
+    LLVM::IFuncOp ifunc = addressOfOp.getIFunc(moduleTranslation.symbolTable());
 
     // The verifier should not have allowed this.
-    assert((global || function) &&
-           "referencing an undefined global or function");
+    assert((global || function || alias || ifunc) &&
+           "referencing an undefined global, function, alias, or ifunc");
+
+    llvm::Value *llvmValue = nullptr;
+    if (global)
+      llvmValue = moduleTranslation.lookupGlobal(global);
+    else if (alias)
+      llvmValue = moduleTranslation.lookupAlias(alias);
+    else if (function)
+      llvmValue = moduleTranslation.lookupFunction(function.getName());
+    else
+      llvmValue = moduleTranslation.lookupIFunc(ifunc);
+
+    moduleTranslation.mapValue(addressOfOp.getResult(), llvmValue);
+    return success();
+  }
+
+  // Emit dso_local_equivalent. We need to look up the global value referenced
+  // by the operation and store it in the MLIR-to-LLVM value mapping.
+  if (auto dsoLocalEquivalentOp =
+          dyn_cast<LLVM::DSOLocalEquivalentOp>(opInst)) {
+    LLVM::LLVMFuncOp function =
+        dsoLocalEquivalentOp.getFunction(moduleTranslation.symbolTable());
+    LLVM::AliasOp alias =
+        dsoLocalEquivalentOp.getAlias(moduleTranslation.symbolTable());
+
+    // The verifier should not have allowed this.
+    assert((function || alias) &&
+           "referencing an undefined function, or alias");
+
+    llvm::Value *llvmValue = nullptr;
+    if (alias)
+      llvmValue = moduleTranslation.lookupAlias(alias);
+    else
+      llvmValue = moduleTranslation.lookupFunction(function.getName());
 
     moduleTranslation.mapValue(
-        addressOfOp.getResult(),
-        global ? moduleTranslation.lookupGlobal(global)
-               : moduleTranslation.lookupFunction(function.getName()));
+        dsoLocalEquivalentOp.getResult(),
+        llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(llvmValue)));
+    return success();
+  }
+
+  // Emit blockaddress. We first need to find the LLVM block referenced by this
+  // operation and then create a LLVM block address for it.
+  if (auto blockAddressOp = dyn_cast<LLVM::BlockAddressOp>(opInst)) {
+    BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
+    llvm::BasicBlock *llvmBlock =
+        moduleTranslation.lookupBlockAddress(blockAddressAttr);
+
+    llvm::Value *llvmValue = nullptr;
+    StringRef fnName = blockAddressAttr.getFunction().getValue();
+    if (llvmBlock) {
+      llvm::Function *llvmFn = moduleTranslation.lookupFunction(fnName);
+      llvmValue = llvm::BlockAddress::get(llvmFn, llvmBlock);
+    } else {
+      // The matching LLVM block is not yet emitted, a placeholder is created
+      // in its place. When the LLVM block is emitted later in translation,
+      // the llvmValue is replaced with the actual llvm::BlockAddress.
+      // A GlobalVariable is chosen as placeholder because in general LLVM
+      // constants are uniqued and are not proper for RAUW, since that could
+      // harm unrelated uses of the constant.
+      llvmValue = new llvm::GlobalVariable(
+          *moduleTranslation.getLLVMModule(),
+          llvm::PointerType::getUnqual(moduleTranslation.getLLVMContext()),
+          /*isConstant=*/true, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
+          /*Initializer=*/nullptr,
+          Twine("__mlir_block_address_")
+              .concat(Twine(fnName))
+              .concat(Twine((uint64_t)blockAddressOp.getOperation())));
+      moduleTranslation.mapUnresolvedBlockAddress(blockAddressOp, llvmValue);
+    }
+
+    moduleTranslation.mapValue(blockAddressOp.getResult(), llvmValue);
+    return success();
+  }
+
+  // Emit block label. If this label is seen before BlockAddressOp is
+  // translated, go ahead and already map it.
+  if (auto blockTagOp = dyn_cast<LLVM::BlockTagOp>(opInst)) {
+    auto funcOp = blockTagOp->getParentOfType<LLVMFuncOp>();
+    BlockAddressAttr blockAddressAttr = BlockAddressAttr::get(
+        &moduleTranslation.getContext(),
+        FlatSymbolRefAttr::get(&moduleTranslation.getContext(),
+                               funcOp.getName()),
+        blockTagOp.getTag());
+    moduleTranslation.mapBlockAddress(blockAddressAttr,
+                                      builder.GetInsertBlock());
     return success();
   }
 
   return failure();
+}
+
+static LogicalResult
+amendOperationImpl(Operation &op, ArrayRef<llvm::Instruction *> instructions,
+                   NamedAttribute attribute,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  StringRef name = attribute.getName();
+  if (name == LLVMDialect::getMmraAttrName()) {
+    SmallVector<llvm::MMRAMetadata::TagT> tags;
+    if (auto oneTag = dyn_cast<LLVM::MMRATagAttr>(attribute.getValue())) {
+      tags.emplace_back(oneTag.getPrefix(), oneTag.getSuffix());
+    } else if (auto manyTags = dyn_cast<ArrayAttr>(attribute.getValue())) {
+      for (Attribute attr : manyTags) {
+        auto tag = dyn_cast<MMRATagAttr>(attr);
+        if (!tag)
+          return op.emitOpError(
+              "MMRA annotations array contains value that isn't an MMRA tag");
+        tags.emplace_back(tag.getPrefix(), tag.getSuffix());
+      }
+    } else {
+      return op.emitOpError(
+          "llvm.mmra is something other than an MMRA tag or an array of them");
+    }
+    llvm::MDTuple *mmraMd =
+        llvm::MMRAMetadata::getMD(moduleTranslation.getLLVMContext(), tags);
+    if (!mmraMd) {
+      // Empty list, canonicalizes to nothing
+      return success();
+    }
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata(llvm::LLVMContext::MD_mmra, mmraMd);
+    return success();
+  }
+  return success();
 }
 
 namespace {
@@ -476,6 +773,14 @@ public:
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
     return convertOperationImpl(*op, builder, moduleTranslation);
+  }
+
+  /// Handle some metadata that is represented as a discardable attribute.
+  LogicalResult
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final {
+    return amendOperationImpl(*op, instructions, attribute, moduleTranslation);
   }
 };
 } // namespace

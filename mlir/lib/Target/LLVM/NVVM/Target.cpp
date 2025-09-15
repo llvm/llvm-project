@@ -13,15 +13,22 @@
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
 
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/Support/InterleavedRange.h"
 
-#include "llvm/Config/llvm-config.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/Targets.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -30,9 +37,12 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <cstdlib>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::NVVM;
@@ -40,6 +50,9 @@ using namespace mlir::NVVM;
 #ifndef __DEFAULT_CUDATOOLKIT_PATH__
 #define __DEFAULT_CUDATOOLKIT_PATH__ ""
 #endif
+
+extern "C" const unsigned char _mlir_embedded_libdevice[];
+extern "C" const unsigned _mlir_embedded_libdevice_size;
 
 namespace {
 // Implementation of the `TargetAttrInterface` model.
@@ -86,19 +99,21 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, NVVMTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO()),
+                     target.getFeatures(), target.getO(),
+                     targetOptions.getInitialLlvmIRCallback(),
+                     targetOptions.getLinkedLlvmIRCallback(),
+                     targetOptions.getOptimizedLlvmIRCallback(),
+                     targetOptions.getISACallback()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
-      fileList(targetOptions.getLinkFiles()) {
+      librariesToLink(targetOptions.getLibrariesToLink()) {
 
   // If `targetOptions` have an empty toolkitPath use `getCUDAToolkitPath`
   if (toolkitPath.empty())
     toolkitPath = getCUDAToolkitPath();
 
   // Append the files in the target attribute.
-  if (ArrayAttr files = target.getLink())
-    for (Attribute attr : files.getValue())
-      if (auto file = dyn_cast<StringAttr>(attr))
-        fileList.push_back(file.str());
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 
   // Append libdevice to the files to be loaded.
   (void)appendStandardLibs();
@@ -121,12 +136,40 @@ NVVMTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
 
 StringRef SerializeGPUModuleBase::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
-  return fileList;
+ArrayRef<Attribute> SerializeGPUModuleBase::getLibrariesToLink() const {
+  return librariesToLink;
 }
 
 // Try to append `libdevice` from a CUDA toolkit installation.
 LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
+#if MLIR_NVVM_EMBED_LIBDEVICE
+  // If libdevice is embedded in the binary, we don't look it up on the
+  // filesystem.
+  MLIRContext *ctx = target.getContext();
+  auto type =
+      RankedTensorType::get(ArrayRef<int64_t>{_mlir_embedded_libdevice_size},
+                            IntegerType::get(ctx, 8));
+  auto resourceManager = DenseResourceElementsHandle::getManagerInterface(ctx);
+
+  // Lookup if we already loaded the resource, otherwise create it.
+  DialectResourceBlobManager::BlobEntry *blob =
+      resourceManager.getBlobManager().lookup("_mlir_embedded_libdevice");
+  if (blob) {
+    librariesToLink.push_back(DenseResourceElementsAttr::get(
+        type, DenseResourceElementsHandle(
+                  blob, ctx->getLoadedDialect<BuiltinDialect>())));
+    return success();
+  }
+
+  // Allocate a resource using one of the UnManagedResourceBlob method to wrap
+  // the embedded data.
+  auto unmanagedBlob = UnmanagedAsmResourceBlob::allocateInferAlign(
+      ArrayRef<char>{(const char *)_mlir_embedded_libdevice,
+                     _mlir_embedded_libdevice_size});
+  librariesToLink.push_back(DenseResourceElementsAttr::get(
+      type, resourceManager.insert("_mlir_embedded_libdevice",
+                                   std::move(unmanagedBlob))));
+#else
   StringRef pathRef = getToolkitPath();
   if (!pathRef.empty()) {
     SmallVector<char, 256> path;
@@ -144,16 +187,17 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs() {
                                  << " does not exist or is not a file.\n";
       return failure();
     }
-    fileList.push_back(pathRef.str());
+    librariesToLink.push_back(StringAttr::get(target.getContext(), pathRef));
   }
+#endif
   return success();
 }
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
-                                      true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), librariesToLink,
+                                      bcFiles, true)))
     return std::nullopt;
   return std::move(bcFiles);
 }
@@ -180,6 +224,16 @@ public:
   std::optional<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
 
+  /// Get LLVMIR->ISA performance result.
+  /// Return nullopt if moduleToObject has not been called or the target format
+  /// is LLVMIR.
+  std::optional<int64_t> getLLVMIRToISATimeInMs();
+
+  /// Get ISA->Binary performance result.
+  /// Return nullopt if moduleToObject has not been called or the target format
+  /// is LLVMIR or ISA.
+  std::optional<int64_t> getISAToBinaryTimeInMs();
+
 private:
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
 
@@ -195,17 +249,26 @@ private:
 
   /// Target options.
   gpu::TargetOptions targetOptions;
+
+  /// LLVMIR->ISA perf result.
+  std::optional<int64_t> llvmToISATimeInMs;
+
+  /// ISA->Binary perf result.
+  std::optional<int64_t> isaToBinaryTimeInMs;
 };
 } // namespace
 
 NVPTXSerializer::NVPTXSerializer(Operation &module, NVVMTargetAttr target,
                                  const gpu::TargetOptions &targetOptions)
     : SerializeGPUModuleBase(module, target, targetOptions),
-      targetOptions(targetOptions) {}
+      targetOptions(targetOptions), llvmToISATimeInMs(std::nullopt),
+      isaToBinaryTimeInMs(std::nullopt) {}
 
 std::optional<NVPTXSerializer::TmpFile>
 NVPTXSerializer::createTemp(StringRef name, StringRef suffix) {
   llvm::SmallString<128> filename;
+  if (name.size() > 80)
+    name = name.substr(0, 80);
   std::error_code ec =
       llvm::sys::fs::createTemporaryFile(name, suffix, filename);
   if (ec) {
@@ -214,6 +277,14 @@ NVPTXSerializer::createTemp(StringRef name, StringRef suffix) {
     return std::nullopt;
   }
   return TmpFile(filename, llvm::FileRemover(filename.c_str()));
+}
+
+std::optional<int64_t> NVPTXSerializer::getLLVMIRToISATimeInMs() {
+  return llvmToISATimeInMs;
+}
+
+std::optional<int64_t> NVPTXSerializer::getISAToBinaryTimeInMs() {
+  return isaToBinaryTimeInMs;
 }
 
 gpu::GPUModuleOp NVPTXSerializer::getOperation() {
@@ -254,6 +325,25 @@ std::optional<std::string> NVPTXSerializer::findTool(StringRef tool) {
   return std::nullopt;
 }
 
+/// Adds optional command-line arguments to existing arguments.
+template <typename T>
+static void setOptionalCommandlineArguments(NVVMTargetAttr target,
+                                            SmallVectorImpl<T> &ptxasArgs) {
+  if (!target.hasCmdOptions())
+    return;
+
+  std::optional<mlir::NamedAttribute> cmdOptions = target.getCmdOptions();
+  for (Attribute attr : cast<ArrayAttr>(cmdOptions->getValue())) {
+    if (auto strAttr = dyn_cast<StringAttr>(attr)) {
+      if constexpr (std::is_same_v<T, StringRef>) {
+        ptxasArgs.push_back(strAttr.getValue());
+      } else if constexpr (std::is_same_v<T, const char *>) {
+        ptxasArgs.push_back(strAttr.getValue().data());
+      }
+    }
+  }
+}
+
 // TODO: clean this method & have a generic tool driver or never emit binaries
 // with this mechanism and let another stage take care of it.
 std::optional<SmallVector<char, 0>>
@@ -292,8 +382,8 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     return std::nullopt;
   TmpFile cubinFile;
   if (createFatbin) {
-    Twine cubinFilename = ptxFile->first + ".cubin";
-    cubinFile = TmpFile(cubinFilename.str(), llvm::FileRemover(cubinFilename));
+    std::string cubinFilename = (ptxFile->first + ".cubin").str();
+    cubinFile = TmpFile(cubinFilename, llvm::FileRemover(cubinFilename));
   } else {
     cubinFile.first = binaryFile->first;
   }
@@ -345,6 +435,9 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
       useFatbin32 = true;
   }
 
+  // Set optional command line arguments
+  setOptionalCommandlineArguments(getTarget(), ptxasArgs);
+
   // Create the `fatbinary` args.
   StringRef chip = getTarget().getChip();
   // Remove the arch prefix to obtain the compute capability.
@@ -363,16 +456,11 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
 
   // Dump tool invocation commands.
 #define DEBUG_TYPE "serialize-to-binary"
-  LLVM_DEBUG({
-    llvm::dbgs() << "Tool invocation for module: "
-                 << getOperation().getNameAttr() << "\n";
-    llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
-    llvm::dbgs() << "\n";
-    if (createFatbin) {
-      llvm::interleave(fatbinArgs, llvm::dbgs(), " ");
-      llvm::dbgs() << "\n";
-    }
-  });
+  LDBG() << "Tool invocation for module: " << getOperation().getNameAttr()
+         << "\nptxas executable:" << ptxasCompiler.value()
+         << "\nptxas args: " << llvm::interleaved(ptxasArgs, " ");
+  if (createFatbin)
+    LDBG() << "fatbin args: " << llvm::interleaved(fatbinArgs, " ");
 #undef DEBUG_TYPE
 
   // Helper function for printing tool error logs.
@@ -417,7 +505,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
     if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
-      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
       llvm::dbgs().flush();
     }
   });
@@ -439,7 +527,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
     if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
-      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
       llvm::dbgs().flush();
     }
   });
@@ -469,6 +557,18 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     }                                                                          \
   } while (false)
 
+#include "nvFatbin.h"
+
+#define RETURN_ON_NVFATBIN_ERROR(expr)                                         \
+  do {                                                                         \
+    auto result = (expr);                                                      \
+    if (result != nvFatbinResult::NVFATBIN_SUCCESS) {                          \
+      emitError(loc) << llvm::Twine(#expr).concat(" failed with error: ")      \
+                     << nvFatbinGetErrorString(result);                        \
+      return std::nullopt;                                                     \
+    }                                                                          \
+  } while (false)
+
 std::optional<SmallVector<char, 0>>
 NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   Location loc = getOperation().getLoc();
@@ -483,6 +583,8 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
   cmdOpts.second.append(
       {"-arch", getTarget().getChip().data(), "--opt-level", optLevel.c_str()});
 
+  // Set optional command line arguments
+  setOptionalCommandlineArguments(getTarget(), cmdOpts.second);
   // Create the compiler handle.
   RETURN_ON_NVPTXCOMPILER_ERROR(
       nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.c_str()));
@@ -501,9 +603,10 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
           nvPTXCompilerGetErrorLog(compiler, log.data()));
       emitError(loc) << "NVPTX compiler invocation failed, error log: "
                      << log.data();
-    } else
+    } else {
       emitError(loc) << "NVPTX compiler invocation failed with error code: "
                      << status;
+    }
     return std::nullopt;
   }
 
@@ -524,29 +627,56 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
       SmallVector<char> log(logSize + 1, 0);
       RETURN_ON_NVPTXCOMPILER_ERROR(
           nvPTXCompilerGetInfoLog(compiler, log.data()));
-      llvm::dbgs() << "NVPTX compiler invocation for module: "
-                   << getOperation().getNameAttr() << "\n";
-      llvm::dbgs() << "Arguments: ";
-      llvm::interleave(cmdOpts.second, llvm::dbgs(), " ");
-      llvm::dbgs() << "\nOutput\n" << log.data() << "\n";
-      llvm::dbgs().flush();
+      LDBG() << "NVPTX compiler invocation for module: "
+             << getOperation().getNameAttr()
+             << "\nArguments: " << llvm::interleaved(cmdOpts.second, " ")
+             << "\nOutput\n"
+             << log.data();
     }
   });
 #undef DEBUG_TYPE
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
+
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Fatbin) {
+    bool useFatbin32 = llvm::any_of(cmdOpts.second, [](const char *option) {
+      return llvm::StringRef(option) == "-32";
+    });
+
+    const char *cubinOpts[1] = {useFatbin32 ? "-32" : "-64"};
+    nvFatbinHandle handle;
+
+    auto chip = getTarget().getChip();
+    chip.consume_front("sm_");
+
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinCreate(&handle, cubinOpts, 1));
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinAddCubin(
+        handle, binary.data(), binary.size(), chip.data(), nullptr));
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinAddPTX(
+        handle, ptxCode.data(), ptxCode.size(), chip.data(), nullptr, nullptr));
+
+    size_t fatbinSize;
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinSize(handle, &fatbinSize));
+    SmallVector<char, 0> fatbin(fatbinSize, 0);
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinGet(handle, (void *)fatbin.data()));
+    RETURN_ON_NVFATBIN_ERROR(nvFatbinDestroy(&handle));
+    return fatbin;
+  }
+
   return binary;
 }
 #endif // MLIR_ENABLE_NVPTXCOMPILER
 
 std::optional<SmallVector<char, 0>>
 NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
+  llvm::Timer moduleToObjectTimer(
+      "moduleToObjectTimer",
+      "Timer for perf llvm-ir -> isa and isa -> binary.");
+  auto clear = llvm::make_scope_exit([&]() { moduleToObjectTimer.clear(); });
   // Return LLVM IR if the compilation target is `offload`.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
-    llvm::dbgs() << "LLVM IR for module: " << getOperation().getNameAttr()
-                 << "\n";
-    llvm::dbgs() << llvmModule << "\n";
-    llvm::dbgs().flush();
+    LDBG() << "LLVM IR for module: " << getOperation().getNameAttr();
+    LDBG() << llvmModule;
   });
 #undef DEBUG_TYPE
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
@@ -566,39 +696,48 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
                                << triple << ", can't optimize with LLVM\n";
     return std::nullopt;
   }
+  moduleToObjectTimer.startTimer();
   std::optional<std::string> serializedISA =
       translateToISA(llvmModule, **targetMachine);
+  moduleToObjectTimer.stopTimer();
+  llvmToISATimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
+  moduleToObjectTimer.clear();
   if (!serializedISA) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
   }
+
+  if (isaCallback)
+    isaCallback(serializedISA.value());
+
 #define DEBUG_TYPE "serialize-to-isa"
-  LLVM_DEBUG({
-    llvm::dbgs() << "PTX for module: " << getOperation().getNameAttr() << "\n";
-    llvm::dbgs() << *serializedISA << "\n";
-    llvm::dbgs().flush();
-  });
+  LDBG() << "PTX for module: " << getOperation().getNameAttr() << "\n"
+         << *serializedISA;
 #undef DEBUG_TYPE
 
   // Return PTX if the compilation target is `assembly`.
-  if (targetOptions.getCompilationTarget() ==
-      gpu::CompilationTarget::Assembly) {
-    // Make sure to include the null terminator.
-    StringRef bin(serializedISA->c_str(), serializedISA->size() + 1);
-    return SmallVector<char, 0>(bin.begin(), bin.end());
-  }
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
+    return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
 
+  std::optional<SmallVector<char, 0>> result;
+  moduleToObjectTimer.startTimer();
   // Compile to binary.
 #if MLIR_ENABLE_NVPTXCOMPILER
-  return compileToBinaryNVPTX(*serializedISA);
+  result = compileToBinaryNVPTX(*serializedISA);
 #else
-  return compileToBinary(*serializedISA);
+  result = compileToBinary(*serializedISA);
 #endif // MLIR_ENABLE_NVPTXCOMPILER
+
+  moduleToObjectTimer.stopTimer();
+  isaToBinaryTimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
+  moduleToObjectTimer.clear();
+  return result;
 }
 
 std::optional<SmallVector<char, 0>>
 NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                                       const gpu::TargetOptions &options) const {
+  Builder builder(attribute.getContext());
   assert(module && "The module must be non null.");
   if (!module)
     return std::nullopt;
@@ -608,7 +747,16 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   }
   NVPTXSerializer serializer(*module, cast<NVVMTargetAttr>(attribute), options);
   serializer.init();
-  return serializer.run();
+  std::optional<SmallVector<char, 0>> result = serializer.run();
+  auto llvmToISATimeInMs = serializer.getLLVMIRToISATimeInMs();
+  if (llvmToISATimeInMs.has_value())
+    module->setAttr("LLVMIRToISATimeInMs",
+                    builder.getI64IntegerAttr(*llvmToISATimeInMs));
+  auto isaToBinaryTimeInMs = serializer.getISAToBinaryTimeInMs();
+  if (isaToBinaryTimeInMs.has_value())
+    module->setAttr("ISAToBinaryTimeInMs",
+                    builder.getI64IntegerAttr(*isaToBinaryTimeInMs));
+  return result;
 }
 
 Attribute
@@ -619,9 +767,26 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
+  SmallVector<NamedAttribute, 4> properties;
   if (format == gpu::CompilationTarget::Assembly)
-    objectProps = builder.getDictionaryAttr(
-        {builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO()))});
+    properties.push_back(
+        builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
+
+  if (StringRef section = options.getELFSection(); !section.empty())
+    properties.push_back(builder.getNamedAttr(gpu::elfSectionName,
+                                              builder.getStringAttr(section)));
+
+  for (const auto *perfName : {"LLVMIRToISATimeInMs", "ISAToBinaryTimeInMs"}) {
+    if (module->hasAttr(perfName)) {
+      IntegerAttr attr = llvm::dyn_cast<IntegerAttr>(module->getAttr(perfName));
+      properties.push_back(builder.getNamedAttr(
+          perfName, builder.getI64IntegerAttr(attr.getInt())));
+    }
+  }
+
+  if (!properties.empty())
+    objectProps = builder.getDictionaryAttr(properties);
+
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),

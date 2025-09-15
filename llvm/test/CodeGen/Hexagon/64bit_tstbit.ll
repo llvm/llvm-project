@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This test checks that S2_tstbit_i instruction is generated
 ; and it does not assert.
@@ -14,9 +14,9 @@ target triple = "hexagon-unknown-unknown-elf"
 
 declare dso_local void @panic(ptr, ...) local_unnamed_addr
 
-define dso_local fastcc void @elv_rqhash_find() unnamed_addr {
+define dso_local fastcc void @elv_rqhash_find(ptr %p) unnamed_addr {
 entry:
-  %cmd_flags = getelementptr inbounds %struct.hlist_node.45.966.3115.3729.4036.4650.4957.6492.6799.7413.7720.9562.10790.11097.11404.11711.14474.17192, ptr null, i32 -5
+  %cmd_flags = getelementptr inbounds %struct.hlist_node.45.966.3115.3729.4036.4650.4957.6492.6799.7413.7720.9562.10790.11097.11404.11711.14474.17192, ptr %p, i32 -5
   %0 = load i64, ptr %cmd_flags, align 8
   %1 = and i64 %0, 4294967296
   %tobool10 = icmp eq i64 %1, 0

@@ -21,12 +21,13 @@ int bar() {
 }
 #else
 extern int y;
-int __attribute__((visibility("hidden"))) x = 999;
+extern int x;
 int baz() { return y + x; }
 #endif
 
 // Create various inputs to test basic linking and LTO capabilities. Creating a
 // CUDA binary requires access to the `ptxas` executable, so we just use x64.
+// RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -o %t.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DX -o %t-x.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DY -o %t-y.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -DZ -o %t-z.o
@@ -36,6 +37,7 @@ int baz() { return y + x; }
 // RUN: llvm-ar rcs %t-y.a %t-y.o
 // RUN: llvm-ar rcs %t-z.a %t-z.o
 // RUN: llvm-ar rcs %t-w.a %t-w.o
+// RUN: llvm-ar rcs %t-u.a %t-u.o
 
 //
 // Check that we forward any unrecognized argument to 'nvlink'.
@@ -49,11 +51,16 @@ int baz() { return y + x; }
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.
 //
-// RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.o %t-y.a %t-z.a %t-w.a \
+// RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
 // LINK: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin
 
-// RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -o %t.o
+//
+// Same as above but we use '--undefined' to forcibly extract 'libz.a'
+//
+// RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
+// RUN:   -u z -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
+// UNDEFINED: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin{{.*}}-z-{{.*}}.cubin
 
 //
 // Check that the LTO interface works and properly preserves symbols used in a

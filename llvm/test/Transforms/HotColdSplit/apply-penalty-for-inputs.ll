@@ -5,9 +5,9 @@ declare void @sink(ptr, i32, i32) cold
 
 @g = global i32 0
 
-define void @foo(i32 %arg) {
+define void @foo(i32 %arg, i1 %arg2) {
   %local = load i32, ptr @g
-  br i1 undef, label %cold, label %exit
+  br i1 %arg2, label %cold, label %exit
 
 cold:
   ; CHECK: Applying penalty for splitting: 2
@@ -21,8 +21,8 @@ exit:
   ret void
 }
 
-define void @bar(ptr %p1, i32 %p2, i32 %p3) {
-  br i1 undef, label %cold, label %exit
+define void @bar(ptr %p1, i32 %p2, i32 %p3, i1 %arg) {
+  br i1 %arg, label %cold, label %exit
 
 cold:
   ; CHECK: Applying penalty for splitting: 2

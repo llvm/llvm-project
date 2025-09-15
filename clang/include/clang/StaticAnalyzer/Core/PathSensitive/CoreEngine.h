@@ -126,6 +126,14 @@ private:
   ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
                                           const ReturnStmt *RS);
 
+  /// Helper function called by `HandleBranch()`. If the currently handled
+  /// branch corresponds to a loop, this returns the number of already
+  /// completed iterations in that loop, otherwise the return value is
+  /// `std::nullopt`. Note that this counts _all_ earlier iterations, including
+  /// ones that were performed within an earlier iteration of an outer loop.
+  std::optional<unsigned> getCompletedIterationCount(const CFGBlock *B,
+                                                     ExplodedNode *Pred) const;
+
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
   CoreEngine(ExprEngine &exprengine,
@@ -148,7 +156,7 @@ public:
   void dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
                         const WorkListUnit& WU);
 
-  // Functions for external checking of whether we have unfinished work
+  // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
   bool hasWorkRemaining() const { return wasBlocksExhausted() ||
@@ -429,47 +437,27 @@ class BranchNodeBuilder: public NodeBuilder {
   const CFGBlock *DstT;
   const CFGBlock *DstF;
 
-  bool InFeasibleTrue;
-  bool InFeasibleFalse;
-
   void anchor() override;
 
 public:
   BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C,
-                    const CFGBlock *dstT, const CFGBlock *dstF)
-      : NodeBuilder(SrcNode, DstSet, C), DstT(dstT), DstF(dstF),
-        InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
+                    const NodeBuilderContext &C, const CFGBlock *DT,
+                    const CFGBlock *DF)
+      : NodeBuilder(SrcNode, DstSet, C), DstT(DT), DstF(DF) {
     // The branch node builder does not generate autotransitions.
     // If there are no successors it means that both branches are infeasible.
     takeNodes(SrcNode);
   }
 
   BranchNodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C,
-                    const CFGBlock *dstT, const CFGBlock *dstF)
-      : NodeBuilder(SrcSet, DstSet, C), DstT(dstT), DstF(dstF),
-        InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
+                    const NodeBuilderContext &C, const CFGBlock *DT,
+                    const CFGBlock *DF)
+      : NodeBuilder(SrcSet, DstSet, C), DstT(DT), DstF(DF) {
     takeNodes(SrcSet);
   }
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
-
-  const CFGBlock *getTargetBlock(bool branch) const {
-    return branch ? DstT : DstF;
-  }
-
-  void markInfeasible(bool branch) {
-    if (branch)
-      InFeasibleTrue = true;
-    else
-      InFeasibleFalse = true;
-  }
-
-  bool isFeasible(bool branch) {
-    return branch ? !InFeasibleTrue : !InFeasibleFalse;
-  }
 };
 
 class IndirectGotoNodeBuilder {

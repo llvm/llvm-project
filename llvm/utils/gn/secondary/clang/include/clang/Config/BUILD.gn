@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -26,17 +25,11 @@ write_cmake_config("Config") {
     "GCC_INSTALL_PREFIX=",
     "ENABLE_LINKER_BUILD_ID=",
     "ENABLE_X86_RELAX_RELOCATIONS=1",
-    "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_ENABLE_OBJC_REWRITER=",
     "CLANG_ENABLE_CIR=",
     "CLANG_SYSTEMZ_DEFAULT_ARCH=z10",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=",
   ]
-
-  if (clang_enable_arcmt) {
-    values += [ "CLANG_ENABLE_ARCMT=1" ]
-  } else {
-    values += [ "CLANG_ENABLE_ARCMT=" ]
-  }
 
   if (clang_enable_static_analyzer) {
     values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]

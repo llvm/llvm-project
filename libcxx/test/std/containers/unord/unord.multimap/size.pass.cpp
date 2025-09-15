@@ -18,9 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::unordered_multimap<int, double> M;
     M m;
     ASSERT_NOEXCEPT(m.size());
@@ -37,10 +36,12 @@ int main(int, char**)
     assert(m.size() == 1);
     m.erase(m.begin());
     assert(m.size() == 0);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
-    typedef std::unordered_multimap<int, double, std::hash<int>, std::equal_to<int>, min_allocator<std::pair<const int, double>>> M;
+  {
+    typedef std::
+        unordered_multimap<int, double, std::hash<int>, std::equal_to<int>, min_allocator<std::pair<const int, double>>>
+            M;
     M m;
     ASSERT_NOEXCEPT(m.size());
     assert(m.size() == 0);
@@ -56,7 +57,7 @@ int main(int, char**)
     assert(m.size() == 1);
     m.erase(m.begin());
     assert(m.size() == 0);
-    }
+  }
 #endif
 
   return 0;

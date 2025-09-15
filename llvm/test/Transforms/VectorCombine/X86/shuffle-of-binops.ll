@@ -220,7 +220,7 @@ define <4 x i32> @shuf_srem_v4i32_poison(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: define <4 x i32> @shuf_srem_v4i32_poison(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SREM0:%.*]] = srem <4 x i32> [[A1]], [[A0]]
-; CHECK-NEXT:    [[SREM1:%.*]] = srem <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[A0]]
+; CHECK-NEXT:    [[SREM1:%.*]] = srem <4 x i32> splat (i32 1), [[A0]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[SREM0]], <4 x i32> [[SREM1]], <4 x i32> <i32 0, i32 poison, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;

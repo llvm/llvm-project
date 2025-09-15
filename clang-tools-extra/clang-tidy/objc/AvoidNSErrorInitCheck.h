@@ -1,4 +1,4 @@
-//===--- AvoidNSErrorInitCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::objc {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/objc/avoid-nserror-init.html
 class AvoidNSErrorInitCheck : public ClangTidyCheck {
- public:
+public:
   AvoidNSErrorInitCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -31,4 +31,4 @@ class AvoidNSErrorInitCheck : public ClangTidyCheck {
 
 } // namespace clang::tidy::objc
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_AVOIDNSERRORINITCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_AVOIDNSERRORINITCHECK_H

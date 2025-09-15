@@ -9,7 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define { ptr, i64 } @switch_to_lookup_bitcast(i8 %0) unnamed_addr {
 ; CHECK-LABEL: @switch_to_lookup_bitcast(
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x ptr], ptr @switch.table.switch_to_lookup_bitcast, i32 0, i8 [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i8 [[TMP0:%.*]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x ptr], ptr @switch.table.switch_to_lookup_bitcast, i64 0, i64 [[TMP3]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i64 } undef, ptr [[SWITCH_LOAD]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i64 } [[TMP1]], i64 1, 1

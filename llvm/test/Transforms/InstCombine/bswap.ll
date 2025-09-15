@@ -110,10 +110,10 @@ define <2 x i32> @test2_vector(<2 x i32> %arg) {
 define <2 x i32> @test2_vector_poison(<2 x i32> %arg) {
 ; CHECK-LABEL: @test2_vector_poison(
 ; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[ARG:%.*]], <i32 24, i32 poison>
-; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> [[ARG]], <i32 8, i32 8>
+; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> [[ARG]], splat (i32 8)
 ; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 16711680, i32 poison>
 ; CHECK-NEXT:    [[T6:%.*]] = or disjoint <2 x i32> [[T2]], [[T5]]
-; CHECK-NEXT:    [[T8:%.*]] = lshr <2 x i32> [[ARG]], <i32 8, i32 8>
+; CHECK-NEXT:    [[T8:%.*]] = lshr <2 x i32> [[ARG]], splat (i32 8)
 ; CHECK-NEXT:    [[T9:%.*]] = and <2 x i32> [[T8]], <i32 65280, i32 poison>
 ; CHECK-NEXT:    [[T10:%.*]] = or disjoint <2 x i32> [[T6]], [[T9]]
 ; CHECK-NEXT:    [[T12:%.*]] = lshr <2 x i32> [[ARG]], <i32 24, i32 poison>

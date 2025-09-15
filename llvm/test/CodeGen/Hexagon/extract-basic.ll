@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-DAG: extractu(r{{[0-9]*}},#3,#4)
 ; CHECK-DAG: extractu(r{{[0-9]*}},#8,#7)

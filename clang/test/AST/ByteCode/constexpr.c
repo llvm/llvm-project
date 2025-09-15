@@ -309,8 +309,8 @@ constexpr const int *V81 = &V80;
 constexpr int *V82 = 0;
 constexpr int *V83 = V82;
 constexpr int *V84 = 42;
-// ref-error@-1 {{constexpr variable 'V84' must be initialized by a constant expression}}
-// ref-note@-2 {{this conversion is not allowed in a constant expression}}
+// both-error@-1 {{constexpr variable 'V84' must be initialized by a constant expression}}
+// both-note@-2 {{this conversion is not allowed in a constant expression}}
 // both-error@-3 {{constexpr pointer initializer is not null}}
 constexpr int *V85 = nullptr;
 

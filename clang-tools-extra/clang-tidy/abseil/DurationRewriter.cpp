@@ -1,4 +1,4 @@
-//===--- DurationRewriter.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -244,7 +244,7 @@ std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
        {"ToDoubleNanoseconds", DurationScale::Nanoseconds},
        {"ToInt64Nanoseconds", DurationScale::Nanoseconds}});
 
-  auto ScaleIter = ScaleMap.find(std::string(Name));
+  auto ScaleIter = ScaleMap.find(Name);
   if (ScaleIter == ScaleMap.end())
     return std::nullopt;
 
@@ -260,7 +260,7 @@ std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
        {"ToUnixMicros", DurationScale::Microseconds},
        {"ToUnixNanos", DurationScale::Nanoseconds}});
 
-  auto ScaleIter = ScaleMap.find(std::string(Name));
+  auto ScaleIter = ScaleMap.find(Name);
   if (ScaleIter == ScaleMap.end())
     return std::nullopt;
 

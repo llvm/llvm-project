@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fobjc-exceptions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fobjc-exceptions -Werror=return-type %s
 typedef signed char BOOL;
 typedef struct _NSZone NSZone;
 
@@ -34,7 +34,7 @@ typedef struct _NSZone NSZone;
     @try {}
     // the exception name is optional (weird)
     @catch (NSException *) {}
-} // expected-warning {{non-void function does not return a value}}
+} // expected-error {{non-void function does not return a value}}
 
 - (NSDictionary *)anotherFunction {
     @try {}

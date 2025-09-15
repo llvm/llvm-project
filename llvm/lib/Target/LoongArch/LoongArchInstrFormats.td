@@ -20,11 +20,6 @@ class LAInst<dag outs, dag ins, string opcstr, string opnstr,
              list<dag> pattern = []>
     : Instruction {
   field bits<32> Inst;
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
 
   let Namespace = "LoongArch";
   let Size = 4;
@@ -32,6 +27,14 @@ class LAInst<dag outs, dag ins, string opcstr, string opnstr,
   let InOperandList = ins;
   let AsmString = opcstr # "\t" # opnstr;
   let Pattern = pattern;
+
+  // Target-specific instruction info and defaults
+
+  bit IsSubjectToAMORdConstraint = 0;
+  let TSFlags{0} = IsSubjectToAMORdConstraint;
+
+  bit IsAMCAS = 0;
+  let TSFlags{1} = IsAMCAS;
 }
 
 // Pseudo instructions

@@ -321,6 +321,18 @@ define i16 @mul_add_to_mul_9(i16 %a) {
   ret i16 %add
 }
 
+@g = external global i8
+
+define i32 @shl_add_to_shl_constexpr() {
+; CHECK-LABEL: @shl_add_to_shl_constexpr(
+; CHECK-NEXT:    [[ADD:%.*]] = shl i32 ptrtoint (ptr @g to i32), 2
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %shl = shl i32 ptrtoint (ptr @g to i32), 1
+  %add = add i32 %shl, %shl
+  ret i32 %add
+}
+
 ; This test and the next test verify that when a range metadata is attached to
 ; llvm.cttz, ValueTracking correctly intersects the range specified by the
 ; metadata and the range implied by the intrinsic.

@@ -13,9 +13,11 @@
 
 #include "omptarget.h"
 
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+
 #include <cstdint>
 #include <cstdlib>
 
@@ -72,7 +74,7 @@ int main(int argc, char **argv) {
   unsigned NumThreads =
       (NumThreadsOpt > 0 ? NumThreadsOpt : NumThreadsJson.value());
   // TODO: Print a warning if number of teams/threads is explicitly set in the
-  // kernel info but overriden through command line options.
+  // kernel info but overridden through command line options.
   auto LoopTripCount =
       JsonKernelInfo->getAsObject()->getInteger("LoopTripCount");
   auto KernelFunc = JsonKernelInfo->getAsObject()->getString("Name");
@@ -91,11 +93,12 @@ int main(int argc, char **argv) {
   void *BAllocStart = reinterpret_cast<void *>(
       JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
 
-  __tgt_offload_entry KernelEntry = {nullptr, nullptr, 0, 0, 0};
+  llvm::offloading::EntryTy KernelEntry = {~0U,     0, 0, 0,      nullptr,
+                                           nullptr, 0, 0, nullptr};
   std::string KernelEntryName = KernelFunc.value().str();
-  KernelEntry.name = const_cast<char *>(KernelEntryName.c_str());
+  KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
   // Anything non-zero works to uniquely identify the kernel.
-  KernelEntry.addr = (void *)0x1;
+  KernelEntry.Address = (void *)0x1;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> ImageMB =
       MemoryBuffer::getFile(KernelEntryName + ".image", /*isText=*/false,
@@ -164,7 +167,7 @@ int main(int argc, char **argv) {
   }
 
   __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,
+      /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)recored_data,
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       LoopTripCount.value());

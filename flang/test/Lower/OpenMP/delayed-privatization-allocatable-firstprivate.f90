@@ -2,9 +2,9 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/test_ir.f90 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/test_ir.f90 2>&1 |\
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %t/test_ir.f90 2>&1 |\
 ! RUN:   FileCheck %s
 
 !--- test_ir.f90
@@ -18,9 +18,9 @@ subroutine delayed_privatization_allocatable
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = firstprivate}
-! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]] alloc {
+! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.heap<i32>>]] init {
 
-! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
+! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]], %[[PRIV_ALLOC:.*]]: [[TYPE]]):
 
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
@@ -38,7 +38,7 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[ORIG_BASE_LD]] to %[[PRIV_PRIV_ARG]] realloc
 ! CHECK-NEXT:  }
 
-! RUN: %flang -c -emit-llvm -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang -c -emit-llvm -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/test_compilation_to_obj.f90 | \
 ! RUN:   llvm-dis 2>&1 |\
 ! RUN:   FileCheck %s -check-prefix=LLVM
@@ -57,5 +57,4 @@ end program compilation_to_obj
 ! LLVM: @[[GLOB_VAR:[^[:space:]]+]]t = internal global
 
 ! LLVM: define internal void @_QQmain..omp_par
-! LLVM:      %[[GLOB_VAL:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @[[GLOB_VAR]]t, align 8
-! LLVM-NEXT: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[GLOB_VAL]], ptr %{{.*}}, align 8
+! LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %{{.+}}, ptr @[[GLOB_VAR]]t, i32 48, i1 false)

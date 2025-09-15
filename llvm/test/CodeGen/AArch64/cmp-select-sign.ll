@@ -197,11 +197,9 @@ define <4 x i32> @not_sign_4xi32(<4 x i32> %a) {
 ; CHECK-LABEL: not_sign_4xi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI16_0
-; CHECK-NEXT:    movi v2.4s, #1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
-; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    and v1.16b, v0.16b, v2.16b
-; CHECK-NEXT:    orn v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    cmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.4s, #1
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 1, i32 -1, i32 -1, i32 -1>
   %res = select <4 x i1> %c, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>

@@ -264,8 +264,8 @@ struct S6 {
 };
 #else
 S6 s6;
-// expected-error@second.h:* {{'Field::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x'}}
-// expected-note@first.h:* {{but in 'FirstModule' found non-bitfield 'x'}}
+// expected-error@second.h:* {{'Field::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found bit-field 'x'}}
+// expected-note@first.h:* {{but in 'FirstModule' found non-bit-field 'x'}}
 #endif
 
 #if defined(FIRST)
@@ -278,8 +278,8 @@ struct S7 {
 };
 #else
 S7 s7;
-// expected-error@second.h:* {{'Field::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x' with one width expression}}
-// expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
+// expected-error@second.h:* {{'Field::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found bit-field 'x' with one width expression}}
+// expected-note@first.h:* {{but in 'FirstModule' found bit-field 'x' with different width expression}}
 #endif
 
 #if defined(FIRST)
@@ -292,8 +292,8 @@ struct S8 {
 };
 #else
 S8 s8;
-// expected-error@second.h:* {{'Field::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x' with one width expression}}
-// expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
+// expected-error@second.h:* {{'Field::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found bit-field 'x' with one width expression}}
+// expected-note@first.h:* {{but in 'FirstModule' found bit-field 'x' with different width expression}}
 #endif
 
 #if defined(FIRST)
@@ -1314,7 +1314,7 @@ class S1 {
 #else
 template<class T>
 using U1 = S1<T>;
-// expected-error@first.h:* {{'DependentType::S1::x' from module 'FirstModule' is not present in definition of 'S1<T>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'DependentType::S1::x' from module 'FirstModule' is not present in definition of 'DependentType::S1<T>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
@@ -2343,7 +2343,7 @@ struct S1 {
 };
 #else
 using TemplateTypeParmType::S1;
-// expected-error@first.h:* {{'TemplateTypeParmType::S1::x' from module 'FirstModule' is not present in definition of 'S1<T1, T2>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S1::x' from module 'FirstModule' is not present in definition of 'TemplateTypeParmType::S1<T1, T2>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
@@ -2365,9 +2365,9 @@ class S2 {
 };
 #else
 using TemplateTypeParmType::S2;
-// expected-error@first.h:* {{'TemplateTypeParmType::S2::x' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S2::x' from module 'FirstModule' is not present in definition of 'TemplateTypeParmType::S2<T, U>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
-// expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'TemplateTypeParmType::S2<T, U>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'type' does not match}}
 #endif
 
@@ -3084,8 +3084,8 @@ struct S5 {
 };
 #else
 S5 s5;
-// expected-error@second.h:* {{'PointersAndReferences::S5::x' from module 'SecondModule' is not present in definition of 'PointersAndReferences::S5' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+// expected-error@first.h:* {{'PointersAndReferences::S5::x' from module 'FirstModule' is not present in definition of 'PointersAndReferences::S5' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
 #if defined(FIRST)
@@ -3380,8 +3380,8 @@ struct S17 {
 };
 #else
 S17 s17;
-// expected-error@second.h:* {{'FunctionTemplate::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter with default argument 1 + 1}}
-// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter with default argument 2}}
+// expected-error@second.h:* {{'FunctionTemplate::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter with default argument '1 + 1'}}
+// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter with default argument '2'}}
 #endif
 
 #if defined(FIRST)
@@ -4020,7 +4020,7 @@ struct Valid {
 };
 #else
 Invalid::L2<1>::L3<1> invalid;
-// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<>' in module 'FirstModule'}}
+// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'Types::InjectedClassName::Invalid::L2::L3<value-parameter-1-0>' in module 'FirstModule'}}
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 Valid::L2<1>::L3<1> valid;
 #endif
@@ -4291,7 +4291,7 @@ struct Valid {
 };
 #else
 template <class T> using I = Invalid<T>;
-// expected-error@first.h:* {{'Types::UnresolvedUsing::Invalid::x' from module 'FirstModule' is not present in definition of 'Invalid<T>' in module 'SecondModule'}}
+// expected-error@first.h:* {{'Types::UnresolvedUsing::Invalid::x' from module 'FirstModule' is not present in definition of 'Types::UnresolvedUsing::Invalid<T>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 
 template <class T> using V = Valid<T>;
@@ -5163,6 +5163,29 @@ namespace A {
 #else
 A::X x;
 #endif
+
+namespace TemplateDecltypeOperator {
+
+#if defined(FIRST) || defined(SECOND)
+template <class T6>
+T6 func();
+#endif
+
+#if defined(SECOND)
+template <class UnrelatedT>
+using UnrelatedAlias = decltype(func<UnrelatedT>())();
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+class A {
+  template <class T6>
+  operator decltype(func<T6>()) () {}
+};
+#else
+A a;
+#endif
+
+}
 
 // Keep macros contained to one file.
 #ifdef FIRST

@@ -814,11 +814,7 @@ static_assert(invalid<int> also here ; // expected-error{{use of undeclared iden
 
 int foo() {
     bool b;
-    b = invalid<int> not just in declarations; // expected-error{{expected ';' after expression}}
-                                               // expected-error@-1{{use of undeclared identifier 'invalid'}}
-                                               // expected-error@-2{{expected ';' after expression}}
-                                               // expected-error@-3{{use of undeclared identifier 'just'}}
-                                               // expected-error@-4{{unknown type name 'in'}}
+    b = invalid<int> not just in declarations; // expected-error{{use of undeclared identifier 'invalid'}}
     return b;
 }
 } // namespace GH48182
@@ -1165,3 +1161,121 @@ concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}
 bool val2 = C<int>;
 
 } // namespace GH109780
+
+namespace GH121980 {
+
+template <class>
+concept has_member_difference_type; // expected-error {{expected '='}}
+
+template <has_member_difference_type> struct incrementable_traits; // expected-note {{declared here}}
+
+template <has_member_difference_type Tp>
+struct incrementable_traits<Tp>; // expected-error {{not more specialized than the primary}}
+
+}
+
+namespace InjectedClassNameType {
+
+template <class, class _Err> class expected {
+public:
+  template <class...>
+  expected(...);
+
+  template <class _T2, class _E2>
+  friend bool operator==(expected x, expected<_T2, _E2>)
+    requires requires {
+      { x };
+    }
+  {
+    return true;
+  }
+};
+
+bool test_val_types() {
+  return expected<void, int>() == 1;
+}
+
+}
+
+namespace CWG2369_Regression {
+
+enum class KindEnum {
+  Unknown = 0,
+  Foo = 1,
+};
+
+template <typename T>
+concept KnownKind = T::kind() != KindEnum::Unknown;
+
+template <KnownKind T> struct KnownType;
+
+struct Type {
+  KindEnum kind() const;
+
+  static Type f(Type t);
+
+  template <KnownKind T> static KnownType<T> f(T t);
+
+  static void g() {
+    Type t;
+    f(t);
+  }
+};
+
+template <KnownKind T> struct KnownType {
+  static constexpr KindEnum kind() { return KindEnum::Foo; }
+};
+
+}
+
+namespace CWG2369_Regression_2 {
+
+template <typename T>
+concept HasFastPropertyForAttribute =
+    requires(T element, int name) { element.propertyForAttribute(name); };
+
+template <typename OwnerType>
+struct SVGPropertyOwnerRegistry {
+  static int fastAnimatedPropertyLookup() {
+    static_assert (HasFastPropertyForAttribute<OwnerType>);
+    return 1;
+  }
+};
+
+class SVGCircleElement {
+  friend SVGPropertyOwnerRegistry<SVGCircleElement>;
+  void propertyForAttribute(int);
+};
+
+int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
+
+}
+
+namespace GH61824 {
+
+template<typename T, typename U = typename T::type> // #T_Type
+concept C = true;
+
+constexpr bool f(C auto) { // #GH61824_f
+  return true;
+}
+
+C auto x = 0;
+// expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
+// expected-note@-1 {{in instantiation of default argument}}
+
+// This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
+// Which makes us behave like GCC.
+static_assert(f(0));
+// expected-error@-1 {{no matching function for call}} \
+// expected-note@#GH61824_f {{constraints not satisfied}} \
+// expected-note@#T_Type {{type 'int' cannot be used prior to '::'}}
+
+}
+
+namespace GH149986 {
+template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
+([](auto) { return true; }) < PerfectSquare <class T>;
+// expected-error@-1 {{declaration of 'T' shadows template parameter}} \
+// expected-error@-1 {{a concept definition cannot refer to itself}}
+}

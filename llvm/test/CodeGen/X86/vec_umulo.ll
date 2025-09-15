@@ -394,8 +394,8 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = mem[0,0,0,0]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = mem[0,0,0,0]
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm6 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    pmuludq %xmm2, %xmm6
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[1,3,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[1,3,2,3]
@@ -444,8 +444,8 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = mem[0,0,0,0]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = mem[0,0,0,0]
+; SSSE3-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movd {{.*#+}} xmm6 = mem[0],zero,zero,zero
 ; SSSE3-NEXT:    pmuludq %xmm2, %xmm6
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[1,3,2,3]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[1,3,2,3]
@@ -492,9 +492,7 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    pcmpeqd %xmm6, %xmm6
 ; SSE41-NEXT:    pxor %xmm6, %xmm3
 ; SSE41-NEXT:    movd %edi, %xmm7
-; SSE41-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,0,0,0]
 ; SSE41-NEXT:    movd %r9d, %xmm8
-; SSE41-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,0,0,0]
 ; SSE41-NEXT:    pmuludq %xmm7, %xmm8
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm8[2,3],xmm1[4,5],xmm8[6,7]
@@ -2329,11 +2327,11 @@ define <64 x i32> @umulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vptestmb %zmm0, %zmm0, %k1
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k2
+; AVX512BW-NEXT:    kshiftrq $16, %k1, %k2
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k2} {z} = -1
-; AVX512BW-NEXT:    kshiftrq $32, %k1, %k1
-; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k1
+; AVX512BW-NEXT:    kshiftrq $32, %k1, %k2
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
+; AVX512BW-NEXT:    kshiftrq $48, %k1, %k1
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
 ; AVX512BW-NEXT:    vmovdqa64 %zmm4, (%rdi)
 ; AVX512BW-NEXT:    retq

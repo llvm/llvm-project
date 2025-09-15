@@ -1,0 +1,55 @@
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+
+# RUN: lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub64mz %t.obj
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK1 %s
+
+CHECK1: Magic: MZ
+CHECK1: UsedBytesInTheLastPage: 144
+CHECK1: FileSizeInPages: 3
+CHECK1: NumberOfRelocationItems: 0
+CHECK1: HeaderSizeInParagraphs: 4
+CHECK1: MinimumExtraParagraphs: 0
+CHECK1: MaximumExtraParagraphs: 65535
+CHECK1: InitialRelativeSS: 0
+CHECK1: InitialSP: 184
+CHECK1: Checksum: 0
+CHECK1: InitialIP: 0
+CHECK1: InitialRelativeCS: 0
+CHECK1: AddressOfRelocationTable: 64
+CHECK1: OverlayNumber: 0
+CHECK1: OEMid: 0
+CHECK1: OEMinfo: 0
+CHECK1: AddressOfNewExeHeader: 64
+
+## Invalid DOS signature (must be `MZ`)
+# RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub64zz %t.obj 2>&1 | FileCheck -check-prefix=CHECK2 %s
+
+CHECK2: lld-link: error: /stub: invalid DOS signature: {{.*}}
+
+## Unlike MS linker, we accept non-8byte-aligned stubs and we add paddings ourselves
+# RUN: lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub68mz %t.obj
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+CHECK3: Magic: MZ
+CHECK3: UsedBytesInTheLastPage: 144
+CHECK3: FileSizeInPages: 3
+CHECK3: NumberOfRelocationItems: 0
+CHECK3: HeaderSizeInParagraphs: 4
+CHECK3: MinimumExtraParagraphs: 0
+CHECK3: MaximumExtraParagraphs: 65535
+CHECK3: InitialRelativeSS: 0
+CHECK3: InitialSP: 184
+CHECK3: Checksum: 0
+CHECK3: InitialIP: 0
+CHECK3: InitialRelativeCS: 0
+CHECK3: AddressOfRelocationTable: 64
+CHECK3: OverlayNumber: 0
+CHECK3: OEMid: 0
+CHECK3: OEMinfo: 0
+## 68 is unaligned and rounded up to 72 by LLD
+CHECK3: AddressOfNewExeHeader: 72
+
+## Too-small stub (must be at least 64 bytes long) && Unaligned
+# RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub63mz %t.obj 2>&1 | FileCheck -check-prefix=CHECK4 %s
+
+CHECK4: lld-link: error: /stub: stub must be greater than or equal to 64 bytes: {{.*}}

@@ -21,8 +21,8 @@ define void @combine_masked_load_store_from_constant_array(ptr %ptr) {
 
 define void @combine_masked_expandload_compressstore_from_constant_array(ptr %ptr) {
 ; CHECK-LABEL: @combine_masked_expandload_compressstore_from_constant_array(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <10 x i64> @llvm.masked.expandload.v10i64(ptr nonnull @contant_int_array, <10 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <10 x i64> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.compressstore.v10i64(<10 x i64> [[TMP1]], ptr [[PTR:%.*]], <10 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <10 x i64> @llvm.masked.expandload.v10i64(ptr nonnull @contant_int_array, <10 x i1> splat (i1 true), <10 x i64> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.compressstore.v10i64(<10 x i64> [[TMP1]], ptr [[PTR:%.*]], <10 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [10 x i64]

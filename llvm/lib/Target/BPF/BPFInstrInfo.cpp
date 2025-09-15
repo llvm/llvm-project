@@ -12,6 +12,7 @@
 
 #include "BPFInstrInfo.h"
 #include "BPF.h"
+#include "BPFSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -25,13 +26,13 @@
 
 using namespace llvm;
 
-BPFInstrInfo::BPFInstrInfo()
-    : BPFGenInstrInfo(BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
+BPFInstrInfo::BPFInstrInfo(const BPFSubtarget &STI)
+    : BPFGenInstrInfo(STI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   if (BPF::GPRRegClass.contains(DestReg, SrcReg))
     BuildMI(MBB, I, DL, get(BPF::MOV_rr), DestReg)
@@ -127,7 +128,8 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        Register SrcReg, bool IsKill, int FI,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI,
-                                       Register VReg) const {
+                                       Register VReg,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -146,12 +148,10 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Can't store this register to stack slot");
 }
 
-void BPFInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator I,
-                                        Register DestReg, int FI,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void BPFInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();

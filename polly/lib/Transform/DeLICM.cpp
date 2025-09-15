@@ -1290,7 +1290,7 @@ public:
           continue;
         }
 
-        // Check for more than one element acces per statement instance.
+        // Check for more than one element access per statement instance.
         // Currently we expect write accesses to be functional, eg. disallow
         //
         //   { Stmt[0] -> [i] : 0 <= i < 2 }

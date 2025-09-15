@@ -1,0 +1,13 @@
+RUN: rm -f %t.lib
+
+RUN: llvm-lib /out:%t.lib /machine:i386 2>&1 | FileCheck --check-prefix=EMPTYWARN %s
+RUN: llvm-lib /out:%t.lib /machine:amd64 2>&1 | FileCheck --check-prefix=EMPTYWARN %s
+
+RUN: llvm-lib /out:%t.lib /machine:mips 2>&1 | FileCheck --check-prefix=EMPTYWARN %s
+
+RUN: llvm-lib /out:%t.lib /machine:arm 2>&1 | FileCheck --check-prefix=EMPTYWARN %s
+RUN: llvm-lib /out:%t.lib /machine:arm64 2>&1 | FileCheck --check-prefix=EMPTYWARN %s
+RUN: llvm-lib /out:%t.lib /machine:arm64x 2>&1 | FileCheck --check-prefix=EMPTYWARN %s
+
+EMPTYWARN: warning: no input files, not writing output file
+

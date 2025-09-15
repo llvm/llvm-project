@@ -156,6 +156,16 @@ def use_lldb_substitutions(config):
             extra_args=["platform"],
             unresolved="ignore",
         ),
+        ToolSubst(
+            "%lldb-rpc-gen",
+            command=FindTool("lldb-rpc-gen"),
+            # We need the LLDB build directory root to pass into the tool, not the test build root.
+            extra_args=[
+                "-p " + config.lldb_build_directory + "/..",
+                '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
+            ],
+            unresolved="ignore",
+        ),
         "lldb-test",
         "lldb-dap",
         ToolSubst(
@@ -283,20 +293,3 @@ def use_support_substitutions(config):
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)
 
     _disallow(config, "clang")
-
-
-def use_lldb_repro_substitutions(config, mode):
-    lldb_init = _get_lldb_init_path(config)
-    substitutions = [
-        ToolSubst(
-            "%lldb",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "--no-lldbinit", "-S", lldb_init],
-        ),
-        ToolSubst(
-            "%lldb-init",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "-S", lldb_init],
-        ),
-    ]
-    llvm_config.add_tool_substitutions(substitutions, [config.lldb_tools_dir])

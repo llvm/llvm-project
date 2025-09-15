@@ -10,16 +10,15 @@
 
 // <list>
 
-// list& operator=(initializer_list<value_type> il);
+// list& operator=(initializer_list<value_type> il); // constexpr since C++26
 
 #include <list>
 #include <cassert>
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
     std::list<int> d;
     d = {3, 4, 5, 6};
     assert(d.size() == 4);
@@ -28,8 +27,8 @@ int main(int, char**)
     assert(*i++ == 4);
     assert(*i++ == 5);
     assert(*i++ == 6);
-    }
-    {
+  }
+  {
     std::list<int, min_allocator<int>> d;
     d = {3, 4, 5, 6};
     assert(d.size() == 4);
@@ -38,7 +37,16 @@ int main(int, char**)
     assert(*i++ == 4);
     assert(*i++ == 5);
     assert(*i++ == 6);
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

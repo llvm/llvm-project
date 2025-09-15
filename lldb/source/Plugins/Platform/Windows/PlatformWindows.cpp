@@ -798,13 +798,12 @@ extern "C" {
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
 
-  Status error;
   ExpressionResults result = UserExpression::Evaluate(
-      context, options, expression, kLoaderDecls, value, error);
+      context, options, expression, kLoaderDecls, value);
   if (result != eExpressionCompleted)
-    return error;
+    return value ? value->GetError().Clone() : Status("unknown error");
 
-  if (value->GetError().Fail())
+  if (value && value->GetError().Fail())
     return value->GetError().Clone();
 
   return Status();

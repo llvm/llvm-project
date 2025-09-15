@@ -153,47 +153,47 @@ RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -c
 
 ; SUMMARY:      Total functions: 4
 ; SUMMARY-NEXT: Maximum function count: 32
-; SUMMARY-NEXT: Maximum block count: 362830
+; SUMMARY-NEXT: Maximum internal block count: 0
 ; SUMMARY-NEXT: Total number of blocks: 16
 ; SUMMARY-NEXT: Total count: 772562
 ; SUMMARY-NEXT: Detailed summary:
-; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 1 percentage of the total counts.
-; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 10 percentage of the total counts.
-; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 20 percentage of the total counts.
-; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 30 percentage of the total counts.
-; SUMMARY-NEXT: 1 blocks with count >= 362830 account for 40 percentage of the total counts.
-; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 50 percentage of the total counts.
-; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 60 percentage of the total counts.
-; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 70 percentage of the total counts.
-; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 80 percentage of the total counts.
-; SUMMARY-NEXT: 2 blocks with count >= 362805 account for 90 percentage of the total counts.
-; SUMMARY-NEXT: 3 blocks with count >= 23327 account for 95 percentage of the total counts.
-; SUMMARY-NEXT: 4 blocks with count >= 23324 account for 99 percentage of the total counts.
-; SUMMARY-NEXT: 4 blocks with count >= 23324 account for 99.9 percentage of the total counts.
-; SUMMARY-NEXT: 11 blocks with count >= 24 account for 99.99 percentage of the total counts.
-; SUMMARY-NEXT: 16 blocks with count >= 10 account for 99.999 percentage of the total counts.
-; SUMMARY-NEXT: 16 blocks with count >= 10 account for 99.9999 percentage of the total counts.
+; SUMMARY-NEXT: 1 blocks (6.25%) with count >= 362830 account for 1% of the total counts.
+; SUMMARY-NEXT: 1 blocks (6.25%) with count >= 362830 account for 10% of the total counts.
+; SUMMARY-NEXT: 1 blocks (6.25%) with count >= 362830 account for 20% of the total counts.
+; SUMMARY-NEXT: 1 blocks (6.25%) with count >= 362830 account for 30% of the total counts.
+; SUMMARY-NEXT: 1 blocks (6.25%) with count >= 362830 account for 40% of the total counts.
+; SUMMARY-NEXT: 2 blocks (12.50%) with count >= 362805 account for 50% of the total counts.
+; SUMMARY-NEXT: 2 blocks (12.50%) with count >= 362805 account for 60% of the total counts.
+; SUMMARY-NEXT: 2 blocks (12.50%) with count >= 362805 account for 70% of the total counts.
+; SUMMARY-NEXT: 2 blocks (12.50%) with count >= 362805 account for 80% of the total counts.
+; SUMMARY-NEXT: 2 blocks (12.50%) with count >= 362805 account for 90% of the total counts.
+; SUMMARY-NEXT: 3 blocks (18.75%) with count >= 23327 account for 95% of the total counts.
+; SUMMARY-NEXT: 4 blocks (25.00%) with count >= 23324 account for 99% of the total counts.
+; SUMMARY-NEXT: 4 blocks (25.00%) with count >= 23324 account for 99.9% of the total counts.
+; SUMMARY-NEXT: 11 blocks (68.75%) with count >= 24 account for 99.99% of the total counts.
+; SUMMARY-NEXT: 16 blocks (100.00%) with count >= 10 account for 99.999% of the total counts.
+; SUMMARY-NEXT: 16 blocks (100.00%) with count >= 10 account for 99.9999% of the total counts.
 
 
 ; SUMMARY-NEST:      Total functions: 4
 ; SUMMARY-NEST-NEXT: Maximum function count: 32
-; SUMMARY-NEST-NEXT: Maximum block count: 362830
+; SUMMARY-NEST-NEXT: Maximum internal block count: 0
 ; SUMMARY-NEST-NEXT: Total number of blocks: 15
 ; SUMMARY-NEST-NEXT: Total count: 772504
 ; SUMMARY-NEST-NEXT: Detailed summary:
-; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 1 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 10 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 20 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 30 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 1 blocks with count >= 362830 account for 40 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 50 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 60 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 70 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 80 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 2 blocks with count >= 362805 account for 90 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 3 blocks with count >= 23327 account for 95 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 4 blocks with count >= 23324 account for 99 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 4 blocks with count >= 23324 account for 99.9 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 10 blocks with count >= 21 account for 99.99 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 15 blocks with count >= 10 account for 99.999 percentage of the total counts.
-; SUMMARY-NEST-NEXT: 15 blocks with count >= 10 account for 99.9999 percentage of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks (6.67%) with count >= 362830 account for 1% of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks (6.67%) with count >= 362830 account for 10% of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks (6.67%) with count >= 362830 account for 20% of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks (6.67%) with count >= 362830 account for 30% of the total counts.
+; SUMMARY-NEST-NEXT: 1 blocks (6.67%) with count >= 362830 account for 40% of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks (13.33%) with count >= 362805 account for 50% of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks (13.33%) with count >= 362805 account for 60% of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks (13.33%) with count >= 362805 account for 70% of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks (13.33%) with count >= 362805 account for 80% of the total counts.
+; SUMMARY-NEST-NEXT: 2 blocks (13.33%) with count >= 362805 account for 90% of the total counts.
+; SUMMARY-NEST-NEXT: 3 blocks (20.00%) with count >= 23327 account for 95% of the total counts.
+; SUMMARY-NEST-NEXT: 4 blocks (26.67%) with count >= 23324 account for 99% of the total counts.
+; SUMMARY-NEST-NEXT: 4 blocks (26.67%) with count >= 23324 account for 99.9% of the total counts.
+; SUMMARY-NEST-NEXT: 10 blocks (66.67%) with count >= 21 account for 99.99% of the total counts.
+; SUMMARY-NEST-NEXT: 15 blocks (100.00%) with count >= 10 account for 99.999% of the total counts.
+; SUMMARY-NEST-NEXT: 15 blocks (100.00%) with count >= 10 account for 99.9999% of the total counts.

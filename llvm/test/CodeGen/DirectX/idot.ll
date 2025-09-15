@@ -12,7 +12,7 @@ entry:
 ; CHECK: extractelement <2 x i16> %a, i64 1
 ; CHECK: extractelement <2 x i16> %b, i64 1
 ; EXPCHECK: call i16 @llvm.dx.imad.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
-; DOPCHECK: call i16 @dx.op.tertiary.i16(i32 48, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
+; DOPCHECK: call i16 @dx.op.tertiary.i16(i32 48, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}) #[[#ATTR:]]
   %dot = call i16 @llvm.dx.sdot.v3i16(<2 x i16> %a, <2 x i16> %b)
   ret i16 %dot
 }
@@ -26,15 +26,15 @@ entry:
 ; CHECK: extractelement <4 x i32> %a, i64 1
 ; CHECK: extractelement <4 x i32> %b, i64 1
 ; EXPCHECK: call i32 @llvm.dx.imad.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 48, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 48, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) #[[#ATTR]]
 ; CHECK: extractelement <4 x i32> %a, i64 2
 ; CHECK: extractelement <4 x i32> %b, i64 2
 ; EXPCHECK: call i32 @llvm.dx.imad.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 48, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 48, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) #[[#ATTR]]
 ; CHECK: extractelement <4 x i32> %a, i64 3
 ; CHECK: extractelement <4 x i32> %b, i64 3
 ; EXPCHECK: call i32 @llvm.dx.imad.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 48, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 48, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) #[[#ATTR]]
   %dot = call i32 @llvm.dx.sdot.v4i32(<4 x i32> %a, <4 x i32> %b)
   ret i32 %dot
 }
@@ -48,11 +48,11 @@ entry:
 ; CHECK: extractelement <3 x i16> %a, i64 1
 ; CHECK: extractelement <3 x i16> %b, i64 1
 ; EXPCHECK: call i16 @llvm.dx.umad.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
-; DOPCHECK: call i16 @dx.op.tertiary.i16(i32 49, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
+; DOPCHECK: call i16 @dx.op.tertiary.i16(i32 49, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}) #[[#ATTR]]
 ; CHECK: extractelement <3 x i16> %a, i64 2
 ; CHECK: extractelement <3 x i16> %b, i64 2
 ; EXPCHECK: call i16 @llvm.dx.umad.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
-; DOPCHECK: call i16 @dx.op.tertiary.i16(i32 49, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
+; DOPCHECK: call i16 @dx.op.tertiary.i16(i32 49, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}) #[[#ATTR]]
   %dot = call i16 @llvm.dx.udot.v3i16(<3 x i16> %a, <3 x i16> %b)
   ret i16 %dot
 }
@@ -66,15 +66,15 @@ entry:
 ; CHECK: extractelement <4 x i32> %a, i64 1
 ; CHECK: extractelement <4 x i32> %b, i64 1
 ; EXPCHECK: call i32 @llvm.dx.umad.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) #[[#ATTR]]
 ; CHECK: extractelement <4 x i32> %a, i64 2
 ; CHECK: extractelement <4 x i32> %b, i64 2
 ; EXPCHECK: call i32 @llvm.dx.umad.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) #[[#ATTR]]
 ; CHECK: extractelement <4 x i32> %a, i64 3
 ; CHECK: extractelement <4 x i32> %b, i64 3
 ; EXPCHECK: call i32 @llvm.dx.umad.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+; DOPCHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) #[[#ATTR]]
   %dot = call i32 @llvm.dx.udot.v4i32(<4 x i32> %a, <4 x i32> %b)
   ret i32 %dot
 }
@@ -88,10 +88,12 @@ entry:
 ; CHECK: extractelement <2 x i64> %a, i64 1
 ; CHECK: extractelement <2 x i64> %b, i64 1
 ; EXPCHECK: call i64 @llvm.dx.umad.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
-; DOPCHECK: call i64 @dx.op.tertiary.i64(i32 49, i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+; DOPCHECK: call i64 @dx.op.tertiary.i64(i32 49, i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}) #[[#ATTR]]
   %dot = call i64 @llvm.dx.udot.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret i64 %dot
 }
+
+; DOPCHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
 
 declare i16 @llvm.dx.sdot.v2i16(<2 x i16>, <2 x i16>)
 declare i32 @llvm.dx.sdot.v4i32(<4 x i32>, <4 x i32>)

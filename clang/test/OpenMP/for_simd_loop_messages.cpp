@@ -731,9 +731,12 @@ void test_ordered() {
   for (int i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 {{'ordered' clause with a parameter can not be specified in '#pragma omp for simd' directive}}
+// expected-error@+1 {{'ordered' clause with a parameter cannot be specified in '#pragma omp for simd' directive}}
 #pragma omp for simd ordered(1)
   for (int i = 0; i < 16; ++i)
+    ;
+#pragma omp for simd ordered (0xFFFFFFFFFFFFFFFF) // expected-error {{argument to 'ordered' clause requires a value that can be represented by a 64-bit}}
+  for (int i = 0; i < 10; i++)
     ;
 }
 

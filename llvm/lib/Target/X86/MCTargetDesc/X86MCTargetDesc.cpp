@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -25,7 +26,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
@@ -397,18 +397,6 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
-  size_t posNoEVEX512 = FS.rfind("-evex512");
-  // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F =
-      FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
-  size_t posEVEX512 = FS.rfind("+evex512");
-  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
-
-  if (posAVX512F != StringRef::npos &&
-      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-      ArchFS += ",+evex512";
-
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
@@ -445,15 +433,13 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // Force the use of an ELF container.
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
-             TheTriple.isWindowsCoreCLREnvironment()) {
+             TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm"))
       MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
     else
       MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
-  } else if (TheTriple.isUEFI()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
   } else {
     // The default is ELF.
@@ -515,7 +501,7 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override;
+                 const MCSubtargetInfo &STI) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
@@ -631,7 +617,8 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
 std::vector<std::pair<uint64_t, uint64_t>>
 X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
                                    ArrayRef<uint8_t> PltContents,
-                                   const Triple &TargetTriple) const {
+                                   const MCSubtargetInfo &STI) const {
+  const Triple &TargetTriple = STI.getTargetTriple();
   switch (TargetTriple.getArch()) {
   case Triple::x86:
     return findX86PltEntries(PltSectionVA, PltContents);
@@ -710,7 +697,7 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);

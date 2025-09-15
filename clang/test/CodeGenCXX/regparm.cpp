@@ -11,7 +11,7 @@ struct S1 {
 };
 
 void __attribute__((regparm(3))) foo2(S1 a, int b);
-// CHECK: declare void @_Z4foo22S1i(ptr inreg noundef, i32 inreg noundef)
+// CHECK: declare void @_Z4foo22S1i(ptr dead_on_return inreg noundef, i32 inreg noundef)
 void bar2(S1 a, int b) {
   foo2(a, b);
 }

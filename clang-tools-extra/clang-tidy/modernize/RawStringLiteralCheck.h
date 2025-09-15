@@ -1,4 +1,4 @@
-//===--- RawStringLiteralCheck.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,10 +33,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void replaceWithRawStringLiteral(
-      const ast_matchers::MatchFinder::MatchResult &Result,
-      const StringLiteral *Literal, StringRef Replacement);
-
   std::string DelimiterStem;
   CharsBitSet DisallowedChars;
   const bool ReplaceShorterLiterals;

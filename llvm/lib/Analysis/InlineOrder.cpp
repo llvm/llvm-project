@@ -283,7 +283,6 @@ private:
 } // namespace
 
 AnalysisKey llvm::PluginInlineOrderAnalysis::Key;
-bool llvm::PluginInlineOrderAnalysis::HasBeenRegistered;
 
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
 llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
@@ -313,7 +312,7 @@ llvm::getDefaultInlineOrder(FunctionAnalysisManager &FAM,
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
 llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params,
                      ModuleAnalysisManager &MAM, Module &M) {
-  if (llvm::PluginInlineOrderAnalysis::isRegistered()) {
+  if (MAM.isPassRegistered<PluginInlineOrderAnalysis>()) {
     LLVM_DEBUG(dbgs() << "    Current used priority: plugin ---- \n");
     return MAM.getResult<PluginInlineOrderAnalysis>(M).Factory(FAM, Params, MAM,
                                                                M);

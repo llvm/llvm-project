@@ -1,5 +1,5 @@
 ; pr23772 - [ARM] r226200 can emit illegal thumb2 instruction: "sub sp, r12, #80"
-; RUN: llc -march=thumb -mcpu=cortex-m3 -O3 -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -mcpu=cortex-m3 -O3 -filetype=asm -o - %s | FileCheck %s
 ; CHECK-NOT: sub{{.*}} sp, r{{.*}}, #
 ; CHECK:     .fnend
 ; TODO: Missed optimization. The three instructions generated to subtract SP can be converged to a single one

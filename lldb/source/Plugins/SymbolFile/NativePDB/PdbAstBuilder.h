@@ -87,7 +87,10 @@ public:
   TypeSystemClang &clang() { return m_clang; }
   ClangASTImporter &GetClangASTImporter() { return m_importer; }
 
-  void Dump(Stream &stream);
+  void Dump(Stream &stream, llvm::StringRef filter, bool show_color);
+
+  clang::NamespaceDecl *FindNamespaceDecl(const clang::DeclContext *parent,
+                                          llvm::StringRef name);
 
 private:
   clang::Decl *TryGetDecl(PdbSymUid uid) const;
@@ -150,7 +153,15 @@ private:
   llvm::DenseMap<lldb::opaque_compiler_type_t,
                  llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
       m_cxx_record_map;
-  llvm::DenseSet<clang::NamespaceDecl *> m_parsed_namespaces;
+
+  using NamespaceSet = llvm::DenseSet<clang::NamespaceDecl *>;
+
+  // These namespaces are fully parsed
+  NamespaceSet m_parsed_namespaces;
+
+  // We know about these namespaces, but they might not be completely parsed yet
+  NamespaceSet m_known_namespaces;
+  llvm::DenseMap<clang::DeclContext *, NamespaceSet> m_parent_to_namespaces;
 };
 
 } // namespace npdb

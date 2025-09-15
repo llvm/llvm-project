@@ -28,7 +28,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define internal i32 @callee(ptr %thread_local_ptr, ptr %shared_ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @gtl, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @gsh, align 4
@@ -45,12 +45,12 @@ entry:
 define dso_local void @caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@caller() {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @broker(ptr nocapture nofree nonnull readonly align 4 dereferenceable(4) undef, ptr noundef nonnull @callee, ptr nocapture nofree nonnull readonly align 4 dereferenceable(4) undef)
+; TUNIT-NEXT:    call void @broker(ptr nofree nonnull readonly align 4 captures(none) dereferenceable(4) undef, ptr noundef nonnull @callee, ptr nofree nonnull readonly align 4 captures(none) dereferenceable(4) undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @broker(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, ptr noundef nonnull @callee, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gsh)
+; CGSCC-NEXT:    call void @broker(ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) @gtl, ptr noundef nonnull @callee, ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) @gsh)
 ; CGSCC-NEXT:    ret void
 ;
 entry:

@@ -25,16 +25,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <numeric>
 
 using namespace llvm;
-
-static cl::opt<bool> EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
-  cl::desc("Use TargetSchedModel for latency lookup"));
-
-static cl::opt<bool> EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
-  cl::desc("Use InstrItineraryData for latency lookup"));
 
 static cl::opt<bool> ForceEnableIntervals(
     "sched-model-force-enable-intervals", cl::Hidden, cl::init(false),
@@ -48,11 +41,15 @@ bool TargetSchedModel::hasInstrItineraries() const {
   return EnableSchedItins && !InstrItins.isEmpty();
 }
 
-void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
+void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo,
+                            bool EnableSModel, bool EnableSItins) {
   STI = TSInfo;
   SchedModel = TSInfo->getSchedModel();
   TII = TSInfo->getInstrInfo();
   STI->initInstrItins(InstrItins);
+
+  EnableSchedModel = EnableSModel;
+  EnableSchedItins = EnableSItins;
 
   unsigned NumRes = SchedModel.getNumProcResourceKinds();
   ResourceFactors.resize(NumRes);

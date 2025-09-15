@@ -20,6 +20,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -63,7 +64,7 @@ public:
 
   /// getRegister - Return the specified register in the class.
   ///
-  unsigned getRegister(unsigned i) const {
+  MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
     return RegsBegin[i];
   }
@@ -129,6 +130,9 @@ struct MCRegisterDesc {
 
   // Is true for constant registers.
   bool IsConstant;
+
+  // Is true for artificial registers.
+  bool IsArtificial;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -143,7 +147,7 @@ struct MCRegisterDesc {
 /// TableGen generated physical register data. It must not be extended with
 /// virtual methods.
 ///
-class MCRegisterInfo {
+class LLVM_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 
@@ -396,6 +400,16 @@ public:
   /// Returns true if the given register is constant.
   bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
 
+  /// Returns true if the given register is artificial, which means it
+  /// represents a regunit that is not separately addressable but still needs to
+  /// be modelled, such as the top 16-bits of a 32-bit GPR.
+  bool isArtificial(MCRegister RegNo) const { return get(RegNo).IsArtificial; }
+
+  /// Returns true when the given register unit is considered artificial.
+  /// Register units are considered artificial when at least one of the
+  /// root registers is artificial.
+  bool isArtificialRegUnit(MCRegUnit Unit) const;
+
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
   unsigned getNumRegs() const {
@@ -517,7 +531,7 @@ public:
 
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -587,7 +601,7 @@ public:
 
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -633,8 +647,7 @@ public:
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-    assert(Reg && "Null register has no regunits");
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);

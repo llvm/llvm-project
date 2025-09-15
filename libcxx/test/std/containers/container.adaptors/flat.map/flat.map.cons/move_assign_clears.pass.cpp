@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 #include <compare>
+#include <deque>
 #include <flat_map>
 #include <functional>
 #include <utility>
@@ -27,9 +28,9 @@
 struct MoveNegates {
   int value_    = 0;
   MoveNegates() = default;
-  MoveNegates(int v) : value_(v) {}
-  MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
-  MoveNegates& operator=(MoveNegates&& rhs) {
+  constexpr MoveNegates(int v) : value_(v) {}
+  constexpr MoveNegates(MoveNegates&& rhs) : value_(rhs.value_) { rhs.value_ = -rhs.value_; }
+  constexpr MoveNegates& operator=(MoveNegates&& rhs) {
     value_     = rhs.value_;
     rhs.value_ = -rhs.value_;
     return *this;
@@ -41,9 +42,9 @@ struct MoveNegates {
 struct MoveClears {
   int value_   = 0;
   MoveClears() = default;
-  MoveClears(int v) : value_(v) {}
-  MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
-  MoveClears& operator=(MoveClears&& rhs) {
+  constexpr MoveClears(int v) : value_(v) {}
+  constexpr MoveClears(MoveClears&& rhs) : value_(rhs.value_) { rhs.value_ = 0; }
+  constexpr MoveClears& operator=(MoveClears&& rhs) {
     value_     = rhs.value_;
     rhs.value_ = 0;
     return *this;
@@ -52,11 +53,12 @@ struct MoveClears {
   auto operator<=>(const MoveClears&) const = default;
 };
 
-int main(int, char**) {
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test() {
   auto value_eq = [](auto&& p, auto&& q) { return p.first == q.first; };
   {
     const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
-    using M = std::flat_map<MoveNegates, int, std::less<MoveNegates>, std::vector<MoveNegates>>;
+    using M = std::flat_map<MoveNegates, int, std::less<MoveNegates>, KeyContainer<MoveNegates>, ValueContainer<int>>;
     M m     = M(expected, expected + 8);
     M m2    = M(expected, expected + 3);
 
@@ -73,7 +75,7 @@ int main(int, char**) {
   }
   {
     const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
-    using M = std::flat_map<MoveClears, int, std::less<MoveClears>, std::vector<MoveClears>>;
+    using M = std::flat_map<MoveClears, int, std::less<MoveClears>, KeyContainer<MoveClears>, ValueContainer<int>>;
     M m     = M(expected, expected + 8);
     M m2    = M(expected, expected + 3);
 
@@ -90,7 +92,7 @@ int main(int, char**) {
   }
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
-    using M = std::flat_map<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;
+    using M = std::flat_map<int, int, std::less<>, KeyContainer<int>, CopyOnlyVector<int>>;
     M m1    = M({1, 2, 3}, {1, 2, 3});
     M m2    = M({1, 2}, {1, 2});
     m2      = std::move(m1);
@@ -100,5 +102,26 @@ int main(int, char**) {
     LIBCPP_ASSERT(m1.keys().size() == 0);
     LIBCPP_ASSERT(m1.values().size() == 0);
   }
+}
+
+constexpr bool test() {
+  test<std::vector, std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque, std::deque>();
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

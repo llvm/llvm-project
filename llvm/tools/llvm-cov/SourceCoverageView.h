@@ -32,15 +32,9 @@ struct ExpansionView {
   std::unique_ptr<SourceCoverageView> View;
 
   ExpansionView(const CounterMappingRegion &Region,
-                std::unique_ptr<SourceCoverageView> View)
-      : Region(Region), View(std::move(View)) {}
-  ExpansionView(ExpansionView &&RHS)
-      : Region(std::move(RHS.Region)), View(std::move(RHS.View)) {}
-  ExpansionView &operator=(ExpansionView &&RHS) {
-    Region = std::move(RHS.Region);
-    View = std::move(RHS.View);
-    return *this;
-  }
+                std::unique_ptr<SourceCoverageView> View);
+  ExpansionView(ExpansionView &&RHS);
+  ExpansionView &operator=(ExpansionView &&RHS);
 
   unsigned getLine() const { return Region.LineStart; }
   unsigned getStartCol() const { return Region.ColumnStart; }
@@ -58,8 +52,7 @@ struct InstantiationView {
   std::unique_ptr<SourceCoverageView> View;
 
   InstantiationView(StringRef FunctionName, unsigned Line,
-                    std::unique_ptr<SourceCoverageView> View)
-      : FunctionName(FunctionName), Line(Line), View(std::move(View)) {}
+                    std::unique_ptr<SourceCoverageView> View);
 
   friend bool operator<(const InstantiationView &LHS,
                         const InstantiationView &RHS) {
@@ -180,6 +173,8 @@ class SourceCoverageView {
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
+  bool BinaryCounters;
+
   /// Get the first uncovered line number for the source file.
   unsigned getFirstUncoveredLineNo();
 
@@ -266,6 +261,14 @@ protected:
   /// digits.
   static std::string formatCount(uint64_t N);
 
+  uint64_t BinaryCount(uint64_t N) const {
+    return (N && BinaryCounters ? 1 : N);
+  }
+
+  std::string formatBinaryCount(uint64_t N) const {
+    return formatCount(BinaryCount(N));
+  }
+
   /// Check if region marker output is expected for a line.
   bool shouldRenderRegionMarkers(const LineCoverageStats &LCS) const;
 
@@ -276,7 +279,9 @@ protected:
                      const CoverageViewOptions &Options,
                      CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
-        CoverageInfo(std::move(CoverageInfo)) {}
+        CoverageInfo(std::move(CoverageInfo)),
+        BinaryCounters(Options.BinaryCounters ||
+                       CoverageInfo.getSingleByteCoverage()) {}
 
 public:
   static std::unique_ptr<SourceCoverageView>

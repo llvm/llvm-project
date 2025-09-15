@@ -1,4 +1,4 @@
-//===--- SpecialMemberFunctionsCheck.h - clang-tidy--------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,6 +69,7 @@ private:
   const bool AllowMissingMoveFunctionsWhenCopyIsDeleted;
   const bool AllowImplicitlyDeletedCopyOrMove;
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
+  const bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::cppcoreguidelines
@@ -84,13 +85,12 @@ struct DenseMapInfo<
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
   static inline ClassDefId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                      "EMPTY"};
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
   static inline ClassDefId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                      "TOMBSTONE"};
+            "TOMBSTONE"};
   }
 
   static unsigned getHashValue(ClassDefId Val) {

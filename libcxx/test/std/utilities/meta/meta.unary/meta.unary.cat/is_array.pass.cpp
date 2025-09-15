@@ -73,7 +73,15 @@ typedef void (*FunctionPtr)();
 int main(int, char**)
 {
     test_is_array<char[3]>();
+    // Android clang-r536225 identifies as clang-19.0, but it predates the
+    // LLVM 19.0.0 release. It lacks llvm.org/pr86652, which changed __is_array
+    // to return false for T[0]. llvm.org/pr93037 relies on that change for
+    // correct handling of std::is_array<T[0]>. This test will pass as long as
+    // Clang and libc++ come from the same LLVM commit, but we can't detect that
+    // here.
+#if !defined(__ANDROID__) || TEST_CLANG_VER != 1900
     test_is_not_array<char[0]>();
+#endif
     test_is_array<char[]>();
     test_is_array<Union[]>();
 
