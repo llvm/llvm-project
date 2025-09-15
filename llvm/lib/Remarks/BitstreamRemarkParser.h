@@ -33,13 +33,13 @@ class BitstreamBlockParserHelperBase {
 protected:
   BitstreamCursor &Stream;
 
-  unsigned BlockID;
   StringRef BlockName;
+  unsigned BlockID;
 
 public:
   BitstreamBlockParserHelperBase(BitstreamCursor &Stream, unsigned BlockID,
                                  StringRef BlockName)
-      : Stream(Stream), BlockID(BlockID), BlockName(BlockName) {}
+      : Stream(Stream), BlockName(BlockName), BlockID(BlockID) {}
 
   template <typename... Ts> Error error(char const *Fmt, const Ts &...Vals) {
     std::string Buffer;
@@ -104,6 +104,7 @@ public:
       case BitstreamEntry::Error:
         return error("Unexpected end of bitstream.");
       }
+      llvm_unreachable("Unexpected BitstreamEntry");
     }
   }
 };
@@ -139,9 +140,9 @@ class BitstreamRemarkParserHelper
   friend class BitstreamBlockParserHelper;
 
 protected:
-  unsigned RecordID;
   SmallVector<uint64_t, 5> Record;
   StringRef RecordBlob;
+  unsigned RecordID;
 
 public:
   struct RemarkLoc {

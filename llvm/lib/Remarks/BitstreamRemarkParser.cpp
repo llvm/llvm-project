@@ -61,6 +61,7 @@ static Expected<unsigned> expectSubBlock(BitstreamCursor &Stream) {
   case BitstreamEntry::Error:
     return error("Expected subblock, but got unexpected end of bitstream.");
   }
+  llvm_unreachable("Unexpected BitstreamEntry");
 }
 
 Error BitstreamBlockParserHelperBase::expectBlock() {
@@ -301,16 +302,14 @@ Error BitstreamRemarkParser::parseMeta() {
 
 Error BitstreamRemarkParser::processCommonMeta(
     BitstreamMetaParserHelper &Helper) {
-  if (auto Container = Helper.Container) {
-    ContainerVersion = Container->Version;
-    // Always >= BitstreamRemarkContainerType::First since it's unsigned.
-    if (Container->Type >
-        static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
-      return Helper.error("Invalid container type.");
-    ContainerType = static_cast<BitstreamRemarkContainerType>(Container->Type);
-  } else {
+  if (!Helper.Container)
     return Helper.error("Missing container info.");
-  }
+  auto &Container = *Helper.Container;
+  ContainerVersion = Container.Version;
+  // Always >= BitstreamRemarkContainerType::First since it's unsigned.
+  if (Container.Type > static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
+    return Helper.error("Invalid container type.");
+  ContainerType = static_cast<BitstreamRemarkContainerType>(Container.Type);
   return Error::success();
 }
 

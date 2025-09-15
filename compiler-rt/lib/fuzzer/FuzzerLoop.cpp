@@ -125,8 +125,8 @@ void FreeHook(const volatile void *ptr) {
 void Fuzzer::HandleMalloc(size_t Size) {
   if (!Options.MallocLimitMb || (Size >> 20) < (size_t)Options.MallocLimitMb)
     return;
-  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n",
-         (int)GetPid(), Size);
+  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
+         Size);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintStackTrace();
   DumpCurrentUnit("oom-");
@@ -568,7 +568,7 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 
 void Fuzzer::CrashOnOverwrittenData() {
   Printf("==%d== ERROR: libFuzzer: fuzz target overwrites its const input\n",
-         (int)GetPid());
+         GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: overwrites-const-input\n");
   DumpCurrentUnit("crash-");
