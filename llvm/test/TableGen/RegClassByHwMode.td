@@ -114,7 +114,7 @@ include "llvm/Target/Target.td"
 
 
 
-// DISASM: {{\[\[}}maybe_unused{{\]\]}}
+// DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeMyPtrRCRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
 // DISASM-NEXT:   switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
 // DISASM-NEXT:   case 0: // DefaultMode
@@ -126,7 +126,7 @@ include "llvm/Target/Target.td"
 // DISASM-NEXT:   }
 // DISASM-NEXT: }
 
-// DISASM: {{\[\[}}maybe_unused{{\]\]}}
+// DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeXRegs_EvenIfRequiredRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
 // DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
 // DISASM-NEXT:  case 0: // DefaultMode
@@ -140,7 +140,7 @@ include "llvm/Target/Target.td"
 // DISASM-NEXT:  }
 // DISASM-NEXT:}
 // DISASM-EMPTY:
-// DISASM: {{\[\[}}maybe_unused{{\]\]}}
+// DISASM{LITERAL}: [[maybe_unused]]
 // DISASM-NEXT: static DecodeStatus DecodeYRegs_EvenIfRequiredRegClassByHwMode(MCInst &Inst, unsigned Imm, uint64_t Addr, const MCDisassembler *Decoder) {
 // DISASM-NEXT:  switch (Decoder->getSubtargetInfo().getHwMode(MCSubtargetInfo::HwMode_RegClass)) {
 // DISASM-NEXT:  case 0: // DefaultMode
