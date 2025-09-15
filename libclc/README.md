@@ -31,8 +31,8 @@ more targets is welcome.
 
 For an in-tree build, Clang must also be built at the same time:
 ```
-$ cmake <path-to>/llvm-project/llvm/CMakeLists.txt -DLLVM_ENABLE_PROJECTS="libclc;clang" \
-    -DCMAKE_BUILD_TYPE=Release -G Ninja
+$ cmake <path-to>/llvm-project/llvm/CMakeLists.txt -DLLVM_ENABLE_PROJECTS="clang" \
+    -DLLVM_ENABLE_RUNTIMES="libclc" -DCMAKE_BUILD_TYPE=Release -G Ninja
 $ ninja
 ```
 Then install:
