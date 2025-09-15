@@ -33,12 +33,14 @@ jobs:
 
     runs-on: llvm-premerge-libcxx-next-runners # TODO: This should run on a dedicated set of machines
     steps:
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           python-version: '3.10'
 
       - name: Extract information from the PR
         id: vars
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
@@ -51,7 +53,7 @@ jobs:
           print(f"pr_base={pr.base.sha}")
           print(f"pr_head={pr.head.sha}")
           EOF
-          BENCHMARKS=$(echo "${{ github.event.comment.body }}" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
+          BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
           echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
 
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
