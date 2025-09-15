@@ -1,26 +1,18 @@
 // REQUIRES: omp_taskgraph_experimental
 // RUN: %libomp-cxx-compile-and-run
-// RUN: cat tdg_0.dot | FileCheck %s
-// RUN: rm -f tdg_0.dot
+// RUN: cat tdg_17353.dot | FileCheck %s
+// RUN: rm -f tdg_17353.dot
 
 #include <cstdlib>
 #include <cassert>
 
 // Compiler-generated code (emulation)
 typedef struct ident {
-    void* dummy;
+  void *dummy;
 } ident_t;
 
-#ifdef __cplusplus
-extern "C" {
-  int __kmpc_global_thread_num(ident_t *);
-  int __kmpc_start_record_task(ident_t *, int, int, int);
-  void __kmpc_end_record_task(ident_t *, int, int , int);
-}
-#endif
-
 void func(int *num_exec) {
-  #pragma omp atomic
+#pragma omp atomic
   (*num_exec)++;
 }
 
@@ -33,20 +25,17 @@ int main() {
 #pragma omp parallel
 #pragma omp single
   {
-    int gtid = __kmpc_global_thread_num(nullptr);
-    int res = __kmpc_start_record_task(nullptr, gtid, /* kmp_tdg_flags */ 0, /* tdg_id */ 0);
-    if (res) {
-      #pragma omp task depend(out : x)
+#pragma omp taskgraph
+    {
+#pragma omp task depend(out : x)
       func(&num_exec);
-      #pragma omp task depend(in : x) depend(out : y)
+#pragma omp task depend(in : x) depend(out : y)
       func(&num_exec);
-      #pragma omp task depend(in : y)
+#pragma omp task depend(in : y)
       func(&num_exec);
-      #pragma omp task depend(in : y)
+#pragma omp task depend(in : y)
       func(&num_exec);
     }
-
-    __kmpc_end_record_task(nullptr, gtid, /* kmp_tdg_flags */ 0, /* tdg_id */ 0);
   }
 
   assert(num_exec == 4);
@@ -57,7 +46,7 @@ int main() {
 // CHECK:      digraph TDG {
 // CHECK-NEXT:    compound=true
 // CHECK-NEXT:    subgraph cluster {
-// CHECK-NEXT:       label=TDG_0
+// CHECK-NEXT:       label=TDG_17353
 // CHECK-NEXT:       0[style=bold]
 // CHECK-NEXT:       1[style=bold]
 // CHECK-NEXT:       2[style=bold]
