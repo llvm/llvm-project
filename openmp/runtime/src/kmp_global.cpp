@@ -551,7 +551,7 @@ int __kmp_nesting_mode = 0;
 int __kmp_nesting_mode_nlevels = 1;
 int *__kmp_nesting_nth_level;
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
 // TDG record & replay
 int __kmp_tdg_dot = 0;
 kmp_int32 __kmp_max_tdgs = 100;
