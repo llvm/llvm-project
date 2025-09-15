@@ -41,18 +41,18 @@
 // CHECK:             fir.store %[[VAL_25]] to %[[VAL_14]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_26]] to %[[VAL_17]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_30]] to %[[VAL_20]] : !fir.ref<!fir.heap<index>>
-// CHECK:             omp.target map_entries(%[[VAL_7]] -> %[[VAL_31:.*]], %[[VAL_8]] -> %[[VAL_32:.*]], %[[VAL_9]] -> %[[VAL_33:.*]], %[[VAL_10]] -> %[[VAL_34:.*]], %[[VAL_13]] -> %[[VAL_35:.*]], %[[VAL_16]] -> %[[VAL_36:.*]], %[[VAL_19]] -> %[[VAL_37:.*]], %[[VAL_22]] -> %[[VAL_38:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
-// CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_35]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_40:.*]] = fir.load %[[VAL_36]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_37]] : !fir.llvm_ptr<index>
-// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.llvm_ptr<!fir.heap<index>>
-// CHECK:               %[[VAL_43:.*]] = arith.addi %[[VAL_40]], %[[VAL_40]] : index
+// CHECK:             omp.target host_eval(%[[VAL_24]] -> %[[VAL_31:.*]], %[[VAL_25]] -> %[[VAL_32:.*]], %[[VAL_26]] -> %[[VAL_33:.*]] : index, index, index) map_entries(%[[VAL_7]] -> %[[VAL_34:.*]], %[[VAL_8]] -> %[[VAL_35:.*]], %[[VAL_9]] -> %[[VAL_36:.*]], %[[VAL_10]] -> %[[VAL_37:.*]], %[[VAL_13]] -> %[[VAL_38:.*]], %[[VAL_16]] -> %[[VAL_39:.*]], %[[VAL_19]] -> %[[VAL_40:.*]], %[[VAL_22]] -> %[[VAL_41:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
+// CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.llvm_ptr<index>
+// CHECK:               %[[VAL_43:.*]] = fir.load %[[VAL_39]] : !fir.llvm_ptr<index>
+// CHECK:               %[[VAL_44:.*]] = fir.load %[[VAL_40]] : !fir.llvm_ptr<index>
+// CHECK:               %[[VAL_45:.*]] = fir.load %[[VAL_41]] : !fir.llvm_ptr<!fir.heap<index>>
+// CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_43]], %[[VAL_43]] : index
 // CHECK:               omp.teams {
 // CHECK:                 omp.parallel {
 // CHECK:                   omp.distribute {
 // CHECK:                     omp.wsloop {
-// CHECK:                       omp.loop_nest (%[[VAL_44:.*]]) : index = (%[[VAL_39]]) to (%[[VAL_40]]) inclusive step (%[[VAL_41]]) {
-// CHECK:                         fir.store %[[VAL_43]] to %[[VAL_42]] : !fir.heap<index>
+// CHECK:                       omp.loop_nest (%[[VAL_47:.*]]) : index = (%[[VAL_31]]) to (%[[VAL_32]]) inclusive step (%[[VAL_33]]) {
+// CHECK:                         fir.store %[[VAL_46]] to %[[VAL_45]] : !fir.heap<index>
 // CHECK:                         omp.yield
 // CHECK:                       }
 // CHECK:                     } {omp.composite}
@@ -63,21 +63,21 @@
 // CHECK:               }
 // CHECK:               omp.terminator
 // CHECK:             }
-// CHECK:             %[[VAL_45:.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK:             %[[VAL_46:.*]] = fir.load %[[VAL_11]] : !fir.ref<index>
-// CHECK:             %[[VAL_47:.*]] = fir.load %[[VAL_14]] : !fir.ref<index>
-// CHECK:             %[[VAL_48:.*]] = fir.load %[[VAL_17]] : !fir.ref<index>
-// CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.heap<index>>
-// CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_47]], %[[VAL_47]] : index
-// CHECK:             fir.store %[[VAL_46]] to %[[VAL_49]] : !fir.heap<index>
-// CHECK:             %[[VAL_51:.*]] = fir.convert %[[VAL_49]] : (!fir.heap<index>) -> i64
-// CHECK:             omp.target_freemem %[[VAL_45]], %[[VAL_51]] : i32, i64
+// CHECK:             %[[VAL_48:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_11]] : !fir.ref<index>
+// CHECK:             %[[VAL_50:.*]] = fir.load %[[VAL_14]] : !fir.ref<index>
+// CHECK:             %[[VAL_51:.*]] = fir.load %[[VAL_17]] : !fir.ref<index>
+// CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.heap<index>>
+// CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_50]], %[[VAL_50]] : index
+// CHECK:             fir.store %[[VAL_49]] to %[[VAL_52]] : !fir.heap<index>
+// CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_52]] : (!fir.heap<index>) -> i64
+// CHECK:             omp.target_freemem %[[VAL_48]], %[[VAL_54]] : i32, i64
 // CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
+module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu = false, omp.is_target_device = false} {
 func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   %lb_ref = fir.alloca index {bindc_name = "lb"}
   fir.store %lb to %lb_ref : !fir.ref<index>
