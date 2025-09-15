@@ -459,8 +459,7 @@ template <class T> struct has_FlowTraits<T, true> {
 // Test if SequenceTraits<T> is defined on type T
 template <typename T>
 struct has_SequenceTraits
-    : public std::integral_constant<bool, has_SequenceMethodTraits<T>::value> {
-};
+    : public std::bool_constant<has_SequenceMethodTraits<T>::value> {};
 
 // Test if DocumentListTraits<T> is defined on type T
 template <class T> struct has_DocumentListTraits {
@@ -669,29 +668,27 @@ inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
 
 template <typename T, typename Context>
 struct missingTraits
-    : public std::integral_constant<bool,
-                                    !has_ScalarEnumerationTraits<T>::value &&
-                                        !has_ScalarBitSetTraits<T>::value &&
-                                        !has_ScalarTraits<T>::value &&
-                                        !has_BlockScalarTraits<T>::value &&
-                                        !has_TaggedScalarTraits<T>::value &&
-                                        !has_MappingTraits<T, Context>::value &&
-                                        !has_SequenceTraits<T>::value &&
-                                        !has_CustomMappingTraits<T>::value &&
-                                        !has_DocumentListTraits<T>::value &&
-                                        !has_PolymorphicTraits<T>::value> {};
+    : public std::bool_constant<
+          !has_ScalarEnumerationTraits<T>::value &&
+          !has_ScalarBitSetTraits<T>::value && !has_ScalarTraits<T>::value &&
+          !has_BlockScalarTraits<T>::value &&
+          !has_TaggedScalarTraits<T>::value &&
+          !has_MappingTraits<T, Context>::value &&
+          !has_SequenceTraits<T>::value && !has_CustomMappingTraits<T>::value &&
+          !has_DocumentListTraits<T>::value &&
+          !has_PolymorphicTraits<T>::value> {};
 
 template <typename T, typename Context>
 struct validatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                has_MappingValidateTraits<T, Context>::value> {
+};
 
 template <typename T, typename Context>
 struct unvalidatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    !has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                !has_MappingValidateTraits<T, Context>::value> {
+};
 
 // Base class for Input and Output.
 class LLVM_ABI IO {
@@ -1850,39 +1847,29 @@ template <> struct IsFlowSequenceBase<true> {
   static const bool flow = true;
 };
 
-template <typename T, typename U = void>
-struct IsResizable : std::false_type {};
-
 template <typename T>
-struct IsResizable<T, std::void_t<decltype(std::declval<T>().resize(0))>>
-    : public std::true_type {};
+using check_resize_t = decltype(std::declval<T>().resize(0));
 
-template <typename T, bool B> struct IsResizableBase {
+template <typename T> struct IsResizableBase {
   using type = typename T::value_type;
 
   static type &element(IO &io, T &seq, size_t index) {
-    if (index >= seq.size())
-      seq.resize(index + 1);
-    return seq[index];
-  }
-};
-
-template <typename T> struct IsResizableBase<T, false> {
-  using type = typename T::value_type;
-
-  static type &element(IO &io, T &seq, size_t index) {
-    if (index >= seq.size()) {
-      io.setError(Twine("value sequence extends beyond static size (") +
-                  Twine(seq.size()) + ")");
-      return seq[0];
+    if constexpr (is_detected<check_resize_t, T>::value) {
+      if (index >= seq.size())
+        seq.resize(index + 1);
+    } else {
+      if (index >= seq.size()) {
+        io.setError(Twine("value sequence extends beyond static size (") +
+                    Twine(seq.size()) + ")");
+        return seq[0];
+      }
     }
     return seq[index];
   }
 };
 
 template <typename T, bool Flow>
-struct SequenceTraitsImpl : IsFlowSequenceBase<Flow>,
-                            IsResizableBase<T, IsResizable<T>::value> {
+struct SequenceTraitsImpl : IsFlowSequenceBase<Flow>, IsResizableBase<T> {
   static size_t size(IO &io, T &seq) { return seq.size(); }
 };
 
