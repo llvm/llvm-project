@@ -5894,11 +5894,12 @@ bool Sema::BuiltinConstantArg(CallExpr *TheCall, int ArgNum,
 
   if (Arg->isTypeDependent() || Arg->isValueDependent()) return false;
 
-  std::optional<llvm::APSInt> R;
-  if (!(R = Arg->getIntegerConstantExpr(Context)))
+  Expr::EvalResult evalRes;
+  if (!Arg->EvaluateAsInt(evalRes, Context)) {
     return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
            << FDecl->getDeclName() << Arg->getSourceRange();
-  Result = *R;
+  }
+  Result = evalRes.Val.getInt();
   return false;
 }
 
