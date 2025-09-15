@@ -510,12 +510,21 @@ func.func @extract_strided_fold_insert(%a: vector<2x8xf32>, %b: vector<1x4xf32>,
 // -----
 
 // CHECK-LABEL: transpose_3D_identity
-// CHECK-SAME: ([[ARG:%.*]]: vector<4x3x2xf32>)
+//  CHECK-SAME: ([[ARG:%.*]]: vector<4x3x2xf32>)
+//  CHECK-NEXT: return [[ARG]]
 func.func @transpose_3D_identity(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
-  // CHECK-NOT: transpose
   %0 = vector.transpose %arg, [0, 1, 2] : vector<4x3x2xf32> to vector<4x3x2xf32>
-  // CHECK-NEXT: return [[ARG]]
   return %0 : vector<4x3x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: transpose_0D_identity
+//  CHECK-SAME: ([[ARG:%.*]]: vector<i8>)
+//  CHECK-NEXT: return [[ARG]]
+func.func @transpose_0D_identity(%arg : vector<i8>) -> vector<i8> {
+  %0 = vector.transpose %arg, [] : vector<i8> to vector<i8>
+  return %0 : vector<i8>
 }
 
 // -----
@@ -812,9 +821,11 @@ func.func @fold_extract_broadcast_0dvec_input_scalar_output(%a : vector<f32>,
 
 // -----
 
+// This test is negative in the sense that the broadcast is not folded into the extract.
+// The extract is still converted into shape_cast, however.
 // CHECK-LABEL: negative_fold_extract_broadcast
 //       CHECK:   vector.broadcast %{{.*}} : vector<1x1xf32> to vector<1x1x4xf32>
-//       CHECK:   vector.extract %{{.*}}[0, 0] : vector<4xf32> from vector<1x1x4xf32>
+//       CHECK:   vector.shape_cast{{.*}} vector<1x1x4xf32> to vector<4xf32>
 func.func @negative_fold_extract_broadcast(%a : vector<1x1xf32>) -> vector<4xf32> {
   %b = vector.broadcast %a : vector<1x1xf32> to vector<1x1x4xf32>
   %r = vector.extract %b[0, 0] : vector<4xf32> from vector<1x1x4xf32>
@@ -929,9 +940,13 @@ func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>, %idx0 : inde
 
 // -----
 
+
+// One possible path this takes is
+// 1) Match on [ExtractOpFromBroadcast], which matches as the extract is broadcastlike.
+// 2) Match on [BroadcastToShapeCast], as the resulting broadcast just prepends a 1.
 // CHECK-LABEL: fold_extract_broadcastlike_shape_cast
 //  CHECK-SAME:   %[[A:.*]]: vector<1xf32>
-//       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<1x1xf32>
+//       CHECK:   %[[R:.*]] = vector.shape_cast %[[A]] : vector<1xf32> to vector<1x1xf32>
 //       CHECK:   return %[[R]] : vector<1x1xf32>
 func.func @fold_extract_broadcastlike_shape_cast(%a : vector<1xf32>, %idx0 : index)
   -> vector<1x1xf32> {
@@ -1014,18 +1029,6 @@ func.func @negative_fold_extract_shapecast(%arg0 : vector<16xf32>) -> vector<4x2
   %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<2x4x2xf32>
   %r = vector.extract %0[1] : vector<4x2xf32> from vector<2x4x2xf32>
   return %r : vector<4x2xf32>
-}
-
-// -----
-
-// CHECK-LABEL: fold_extract_shapecast_to_shapecast
-//  CHECK-SAME: (%[[ARG:.+]]: vector<3x4xf32>)
-//       CHECK:   %[[R:.+]] = vector.shape_cast %[[ARG]] : vector<3x4xf32> to vector<12xf32>
-//       CHECK:   return %[[R]]
-func.func @fold_extract_shapecast_to_shapecast(%arg0 : vector<3x4xf32>) -> vector<12xf32> {
-  %0 = vector.shape_cast %arg0 : vector<3x4xf32> to vector<1x12xf32>
-  %r = vector.extract %0[0] : vector<12xf32> from vector<1x12xf32>
-  return %r : vector<12xf32>
 }
 
 // -----
@@ -1140,30 +1143,6 @@ func.func @canonicalize_broadcast_shapecast_to_broadcast_scalar(%arg0: f32) -> v
   %0 = vector.broadcast %arg0 : f32 to vector<12xf32>
   %1 = vector.shape_cast %0 : vector<12xf32> to vector<3x4x1xf32>
   return %1 : vector<3x4x1xf32>
-}
-
-// -----
-
-// In this test, broadcast (2)->(1,2,1) is not legal, but shape_cast (2)->(1,2,1) is.
-// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapcast
-//   CHECK-NOT:   vector.broadcast
-//       CHECK:   vector.shape_cast {{.+}} : vector<2xf32> to vector<1x2x1xf32>
-func.func @canonicalize_broadcast_shapecast_to_shapcast(%arg0 : vector<2xf32>) -> vector<1x2x1xf32> {
-  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<1x2xf32>
-  %1 = vector.shape_cast %0 : vector<1x2xf32> to vector<1x2x1xf32>
-  return %1 : vector<1x2x1xf32>
-}
-
-// -----
-
-// In this test, broadcast (1)->(1,1) and shape_cast (1)->(1,1) are both legal. shape_cast is chosen.
-// CHECK-LABEL: func @canonicalize_broadcast_shapecast_both_possible
-//   CHECK-NOT:   vector.broadcast
-//       CHECK:   vector.shape_cast {{.+}} : vector<1xf32> to vector<1x1xf32>
-func.func @canonicalize_broadcast_shapecast_both_possible(%arg0: vector<1xf32>) -> vector<1x1xf32> {
-    %0 = vector.broadcast %arg0 : vector<1xf32> to vector<1x1x1xf32>
-    %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1x1xf32>
-    return %1 : vector<1x1xf32>
 }
 
 // -----
@@ -1561,7 +1540,7 @@ func.func @extract_strided_broadcast4(%arg0: f32) -> vector<1x4xf32> {
 
 // -----
 
-// Check the case where the same dimension is both broadcasted and sliced 
+// Check the case where the same dimension is both broadcasted and sliced
 // CHECK-LABEL: func @extract_strided_broadcast5
 //  CHECK-SAME: (%[[ARG:.+]]: vector<2x1xf32>)
 //       CHECK: %[[V:.+]] = vector.broadcast %[[ARG]] : vector<2x1xf32> to vector<2x4xf32>
@@ -2176,20 +2155,6 @@ func.func @extract_strided_splatlike(%arg0: f16) -> vector<2x4xf16> {
 
 // -----
 
-// CHECK-LABEL: func @insert_extract_to_broadcast
-//  CHECK-SAME: (%[[ARG0:.*]]: vector<1x1x4xf32>, %[[ARG1:.*]]: vector<4xf32>)
-//       CHECK:   %[[V0:.*]] = vector.extract %[[ARG0]][0, 0] : vector<4xf32> from vector<1x1x4xf32>
-//       CHECK:   %[[V1:.*]] = vector.broadcast %[[ARG1]] : vector<4xf32> to vector<1x1x4xf32>
-//       CHECK:   return %[[V0]], %[[V1]] : vector<4xf32>, vector<1x1x4xf32>
-func.func @insert_extract_to_broadcast(%arg0 : vector<1x1x4xf32>,
-  %arg1 : vector<4xf32>) -> (vector<4xf32>, vector<1x1x4xf32>) {
-  %0 = vector.extract %arg0[0, 0] : vector<4xf32> from vector<1x1x4xf32>
-  %1 = vector.insert %arg1, %arg0 [0, 0] : vector<4xf32> into vector<1x1x4xf32>
-  return %0, %1 : vector<4xf32>, vector<1x1x4xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func.func @extract_splat_constant
 //   CHECK-DAG:   %[[CST1:.*]] = arith.constant 1 : i32
 //   CHECK-DAG:   %[[CST0:.*]] = arith.constant dense<2.000000e+00> : vector<7xf32>
@@ -2544,9 +2509,10 @@ func.func @shuffle_1d_rhs_poison() -> vector<4xi32> {
 
 // -----
 
+// The shuffle becomes a broadcast, which is then canonicalized to a shapecast.
 // CHECK-LABEL: func @shuffle_canonicalize_0d
 func.func @shuffle_canonicalize_0d(%v0 : vector<i32>, %v1 : vector<i32>) -> vector<1xi32> {
-  // CHECK: vector.broadcast %{{.*}} : vector<i32> to vector<1xi32>
+  // CHECK: vector.shape_cast %{{.*}} : vector<i32> to vector<1xi32>
   %shuffle = vector.shuffle %v0, %v1 [0] : vector<i32>, vector<i32>
   return %shuffle : vector<1xi32>
 }
@@ -3024,16 +2990,6 @@ func.func @transfer_read_from_rank_reducing_extract_slice(%src: tensor<1x8x8x8xf
 
 // -----
 
-// CHECK-LABEL: func.func @extract_from_broadcast
-func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
-  %0 = vector.broadcast %src : vector<1x1x1xf32> to vector<1x1x32x1xf32>
-
-  //  CHECK-NEXT:   %0 = vector.extract {{.*}}[0, 0] : vector<1xf32> from vector<1x1x1xf32>
-  //  CHECK-NEXT:   return %0 : vector<1xf32>
-  %1 = vector.extract %0[0, 0, 31] : vector<1xf32> from vector<1x1x32x1xf32>
-  return %1: vector<1xf32>
-}
-
 // CHECK-LABEL: func.func @extract_from_stretch_broadcast
 func.func @extract_from_stretch_broadcast(%src: vector<3x1x2xf32>) -> f32 {
   //  CHECK-NEXT:  %0 = vector.extract {{.*}}[0, 0, 0] : f32 from vector<3x1x2xf32>
@@ -3044,6 +3000,7 @@ func.func @extract_from_stretch_broadcast(%src: vector<3x1x2xf32>) -> f32 {
 }
 
 // -----
+
 // CHECK-LABEL: func.func @extract_strided_slice_of_constant_mask
 func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
   //  CHECK-NEXT:   %[[RES:.*]] = vector.constant_mask [5, 4] : vector<5x7xi1>
