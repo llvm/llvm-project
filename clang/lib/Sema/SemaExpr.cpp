@@ -9385,11 +9385,21 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
     return AssignConvertType::Incompatible;
   }
 
-  // Allow scalar to ExtVector assignments, and assignments of an ExtVector type
-  // to the same ExtVector type.
-  if (LHSType->isExtVectorType()) {
-    if (RHSType->isExtVectorType())
+  // Allow scalar to ExtVector assignments, assignment to bool, and assignments
+  // of an ExtVector type to the same ExtVector type.
+  if (auto *LHSExtType = LHSType->getAs<ExtVectorType>()) {
+    if (auto *RHSExtType = RHSType->getAs<ExtVectorType>()) {
+      // Implicit conversions require the same number of elements.
+      if (LHSExtType->getNumElements() != RHSExtType->getNumElements())
+        return AssignConvertType::Incompatible;
+
+      if (LHSType->isExtVectorBoolType() &&
+          RHSExtType->getElementType()->isIntegerType()) {
+        Kind = CK_IntegralToBoolean;
+        return AssignConvertType::Compatible;
+      }
       return AssignConvertType::Incompatible;
+    }
     if (RHSType->isArithmeticType()) {
       // CK_VectorSplat does T -> vector T, so first cast to the element type.
       if (ConvertRHS)
