@@ -936,9 +936,12 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
       Op = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
                               I->getType()->getScalarType());
     Result = Builder.CreateInsertElement(Result, Op, Idx);
-    if (isa<Instruction>(Op))
-      Replace.push_back(cast<Instruction>(Op));
+    if (auto *ScalarizedI = dyn_cast<Instruction>(Op)) {
+      ScalarizedI->copyIRFlags(I, true);
+      Replace.push_back(ScalarizedI);
+    }
   }
+
   I->replaceAllUsesWith(Result);
   I->dropAllReferences();
   I->eraseFromParent();
