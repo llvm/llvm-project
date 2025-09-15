@@ -6605,10 +6605,9 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
   if (Opcode == AArch64::ADDSXri || Opcode == AArch64::ADDXri) {
     Offset += StackOffset::getFixed(NewMI->getOperand(ImmIdx).getImm());
-    emitFrameOffset(*NewMI->getParent(), *NewMI,
-                    NewMI->getDebugLoc(), NewMI->getOperand(0).getReg(),
-                    FrameReg, Offset, TII, MachineInstr::NoFlags,
-                    (Opcode == AArch64::ADDSXri));
+    emitFrameOffset(*NewMI->getParent(), *NewMI, NewMI->getDebugLoc(),
+                    NewMI->getOperand(0).getReg(), FrameReg, Offset, TII,
+                    MachineInstr::NoFlags, (Opcode == AArch64::ADDSXri));
     NewMI->eraseFromParent();
     Offset = StackOffset();
     return true;
