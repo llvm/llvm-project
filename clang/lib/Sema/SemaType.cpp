@@ -7936,7 +7936,8 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   }
 
   if (attr.getKind() == ParsedAttr::AT_AnyX86NoCfCheck) {
-    if (!S.getLangOpts().CFProtectionBranch) {
+    if (!S.getLangOpts().CFProtectionBranch &&
+        !S.getLangOpts().Sanitize.has(SanitizerKind::KCFI)) {
       S.Diag(attr.getLoc(), diag::warn_nocf_check_attribute_ignored);
       attr.setInvalid();
       return true;

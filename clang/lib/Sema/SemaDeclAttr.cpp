@@ -2028,7 +2028,8 @@ static void handleStandardNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &A) {
 }
 
 static void handleNoCfCheckAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
-  if (!S.getLangOpts().CFProtectionBranch)
+  if (!S.getLangOpts().CFProtectionBranch &&
+      !S.getLangOpts().Sanitize.has(SanitizerKind::KCFI))
     S.Diag(Attrs.getLoc(), diag::warn_nocf_check_attribute_ignored);
   else
     handleSimpleAttribute<AnyX86NoCfCheckAttr>(S, D, Attrs);
