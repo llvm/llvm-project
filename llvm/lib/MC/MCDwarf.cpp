@@ -181,7 +181,7 @@ void MCDwarfLineTable::emitOne(
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
   bool IsAtStartSeq;
-  MCSymbol *PrevLabel;
+  MCSymbol *LastLabel;
   auto init = [&]() {
     FileNum = 1;
     LastLine = 1;
@@ -189,31 +189,21 @@ void MCDwarfLineTable::emitOne(
     Flags = DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0;
     Isa = 0;
     Discriminator = 0;
-    PrevLabel = nullptr;
+    LastLabel = nullptr;
     IsAtStartSeq = true;
   };
   init();
 
   // Loop through each MCDwarfLineEntry and encode the dwarf line number table.
   bool EndEntryEmitted = false;
-  for (auto It = LineEntries.begin(); It != LineEntries.end(); ++It) {
-    auto LineEntry = *It;
-    MCSymbol *CurrLabel = LineEntry.getLabel();
+  for (const MCDwarfLineEntry &LineEntry : LineEntries) {
+    MCSymbol *Label = LineEntry.getLabel();
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
 
     if (LineEntry.LineStreamLabel) {
       if (!IsAtStartSeq) {
-        auto *Label = CurrLabel;
-        auto NextIt = It + 1;
-        // LineEntry with a null Label is probably a fake LineEntry we added
-        // when `-emit-func-debug-line-table-offsets` in order to terminate the
-        // sequence. Look for the next Label if possible, otherwise we will set
-        // the PC to the end of the section.
-        if (!Label && NextIt != LineEntries.end()) {
-          Label = NextIt->getLabel();
-        }
-        MCOS->emitDwarfLineEndEntry(Section, PrevLabel,
-                                    /*EndLabel =*/Label);
+        MCOS->emitDwarfLineEndEntry(Section, LastLabel,
+                                    /*EndLabel =*/LastLabel);
         init();
       }
       MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
@@ -221,7 +211,7 @@ void MCDwarfLineTable::emitOne(
     }
 
     if (LineEntry.IsEndEntry) {
-      MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, PrevLabel, CurrLabel,
+      MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
                                      asmInfo->getCodePointerSize());
       init();
       EndEntryEmitted = true;
@@ -268,12 +258,12 @@ void MCDwarfLineTable::emitOne(
     // At this point we want to emit/create the sequence to encode the delta in
     // line numbers and the increment of the address from the previous Label
     // and the current Label.
-    MCOS->emitDwarfAdvanceLineAddr(LineDelta, PrevLabel, CurrLabel,
+    MCOS->emitDwarfAdvanceLineAddr(LineDelta, LastLabel, Label,
                                    asmInfo->getCodePointerSize());
 
     Discriminator = 0;
     LastLine = LineEntry.getLine();
-    PrevLabel = CurrLabel;
+    LastLabel = Label;
     IsAtStartSeq = false;
   }
 
@@ -283,7 +273,7 @@ void MCDwarfLineTable::emitOne(
   // does not track ranges nor terminate the line table. In that case,
   // conservatively use the section end symbol to end the line table.
   if (!EndEntryEmitted && !IsAtStartSeq)
-    MCOS->emitDwarfLineEndEntry(Section, PrevLabel);
+    MCOS->emitDwarfLineEndEntry(Section, LastLabel);
 }
 
 void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
