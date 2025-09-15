@@ -36,6 +36,13 @@ list(APPEND compile_options -Wno-unknown-cuda-version)
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   list(APPEND compile_options --target=${LLVM_DEFAULT_TARGET_TRIPLE})
 endif()
+# Ensure that CPU-related parameters won't be brought in.
+string(REGEX REPLACE "-mcpu[^ \t\r\n]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-march[^ \t\r\n]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-mtune[^ \t\r\n]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-mbranch-protection[^ \t\r\n]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-fcf-protection[^ \t\r\n]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+list(APPEND compile_options -Wno-unused-command-line-argument)
 
 # We disable the slp vectorizer during the runtime optimization to avoid
 # vectorized accesses to the shared state. Generally, those are "good" but
