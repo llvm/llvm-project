@@ -615,6 +615,14 @@
                 "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
                 "default": "internalConsole"
               },
+              "stdio": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Destination for program stdio streams (0 - stdin, 1 - stdout, 2 - stderr, ...). Using null value means no redirection.",
+                "default": []
+              },
               "timeout": {
                 "type": "number",
                 "description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."

@@ -237,6 +237,7 @@ contain the following key/value pairs:
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
 | **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
 | **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
+| **stdio**                         | [string]    |     | Destination for program stdio streams (0 - stdin, 1 - stdout, 2 - stderr, ...). Using `null` value means no redirection. Supported from lldb-dap 22.0 version.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain

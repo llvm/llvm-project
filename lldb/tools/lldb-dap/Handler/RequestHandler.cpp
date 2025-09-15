@@ -177,6 +177,31 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     launch_info.SetEnvironment(env, true);
   }
 
+  if (!arguments.stdio.empty() && !arguments.disableSTDIO) {
+    size_t n = std::max(arguments.stdio.size(), static_cast<size_t>(3));
+    for (size_t i = 0; i < n; i++) {
+      std::optional<std::string> path;
+      if (arguments.stdio.size() < i)
+        path = arguments.stdio.back();
+      else
+        path = arguments.stdio[i];
+      if (!path)
+        continue;
+      switch (i) {
+      case 0:
+        launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+        break;
+      case 1:
+      case 2:
+        launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+        break;
+      default:
+        launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+        break;
+      }
+    }
+  }
+
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
