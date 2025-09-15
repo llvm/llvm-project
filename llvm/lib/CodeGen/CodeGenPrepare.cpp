@@ -6405,36 +6405,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   if (!TLI->shouldOptimizeMulOverflowIntrinsic())
     return false;
 
-  // Check if we had already optimized this intrinsic by detecting the pattern of the changes we had made:
-  // Check if we are testing the high bits of the operands:
-  if (BasicBlock *BrBB = I->getParent()->getSinglePredecessor()) {
-    if (BranchInst *Br = dyn_cast<BranchInst>(BrBB->getTerminator()); Br && Br->isConditional()) {
-      if (IsSigned) {
-        // Check: cmp(or(xor(trunc(lshr(x))), xor(trunc(lshr(x)))))
-        if (match(Br->getCondition(),
-                  m_Cmp(m_Or(m_Xor(m_Trunc(m_LShr(m_Specific(I->getOperand(0)), m_Value())), m_Value()),
-                             m_Xor(m_Trunc(m_LShr(m_Specific(I->getOperand(1)), m_Value())), m_Value())),
-                        m_Value()))) {
-          LLVM_DEBUG(dbgs() << "CGP: pattern detected - bail out\n");
-          // Pattern detected, bail out.
-          return false;
-        }
-      }
-      else
-      {
-        // Check: or(cmp(trunc(lshr(x)), cmp(trunc(lshr(y))))
-        if (match(Br->getCondition(),
-                  m_Or(m_Cmp(m_Trunc(m_LShr(m_Specific(I->getOperand(0)), m_Value())), m_Value()),
-                       m_Cmp(m_Trunc(m_LShr(m_Specific(I->getOperand(1)), m_Value())), m_Value())))) {
-          LLVM_DEBUG(dbgs() << "CGP: pattern detected - bail out\n");
-          // Pattern detected, bail out.
-          return false;
-        }
-      }
-
-    }
-  }
-
   if (TLI->getTypeAction(
           I->getContext(),
           TLI->getValueType(*DL, I->getType()->getContainedType(0))) !=
@@ -6459,6 +6429,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   if (!I->getType()->isStructTy() || I->getType()->getStructNumElements() != 2)
     return false;
 
+  // Keep track of the instruction to stop reoptimizing it again.
+  InsertedInsts.insert(I);
   // ----------------------------
 
   // For the simple case where IR just checks the overflow flag, new blocks
