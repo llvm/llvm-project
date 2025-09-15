@@ -60,6 +60,9 @@ cl::opt<bool> VerifyEachDebugInfoPreserve(
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
+                                      cl::Hidden,
+                                      cl::desc("Enable the LoopFuse Pass"));
 cl::opt<std::string>
     VerifyDIPreserveExport("verify-di-preserve-export",
                    cl::desc("Export debug info preservation failures into "
@@ -446,6 +449,7 @@ bool llvm::runPassPipeline(
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
+  PTO.LoopFusion = EnableLoopFusion;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
