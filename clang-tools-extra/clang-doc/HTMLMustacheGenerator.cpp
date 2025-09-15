@@ -46,7 +46,13 @@ public:
                            const ClangDocContext &CDCtx) override;
 };
 
-class MustacheTemplateFile : public Template {
+class MustacheTemplateFile {
+  BumpPtrAllocator Allocator;
+  StringSaver Saver;
+  MustacheContext Ctx;
+  Template T;
+  std::unique_ptr<MemoryBuffer> Buffer;
+
 public:
   static Expected<std::unique_ptr<MustacheTemplateFile>>
   createMustacheFile(StringRef FileName) {
@@ -54,10 +60,8 @@ public:
         MemoryBuffer::getFile(FileName);
     if (auto EC = BufferOrError.getError())
       return createFileOpenError(FileName, EC);
-
-    std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrError.get());
-    StringRef FileContent = Buffer->getBuffer();
-    return std::make_unique<MustacheTemplateFile>(FileContent);
+    return std::make_unique<MustacheTemplateFile>(
+        std::move(BufferOrError.get()));
   }
 
   Error registerPartialFile(StringRef Name, StringRef FileName) {
@@ -68,11 +72,15 @@ public:
 
     std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrError.get());
     StringRef FileContent = Buffer->getBuffer();
-    registerPartial(Name.str(), FileContent.str());
+    T.registerPartial(Name.str(), FileContent.str());
     return Error::success();
   }
 
-  MustacheTemplateFile(StringRef TemplateStr) : Template(TemplateStr) {}
+  void render(json::Value &V, raw_ostream &OS) { T.render(V, OS); }
+
+  MustacheTemplateFile(std::unique_ptr<MemoryBuffer> &&B)
+      : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
+        Buffer(std::move(B)) {}
 };
 
 static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
