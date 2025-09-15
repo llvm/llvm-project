@@ -62,9 +62,9 @@ protected:
       llvm::PointerUnion<const Expr *, const ConceptReference *>;
 
   struct AtomicConstraintBits {
-    LLVM_PREFERRED_TYPE(ConstraintKind)
     // Kind is the first member of all union members,
     // as we rely on their initial common sequence.
+    LLVM_PREFERRED_TYPE(ConstraintKind)
     unsigned Kind : 5;
     unsigned Placeholder : 1;
     unsigned PackSubstitutionIndex : 26;

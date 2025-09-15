@@ -45,7 +45,7 @@
  * template <typename U>
  * concept B = A<U> && __is_same(U, int);
  *
- * The normal form of b is is `__is_same(T, int) /T->U, inner most level/
+ * The normal form of b is is `__is_same(T, int) /T->U, innermost level/
  *                          && __is_same(U, int) {U->U} /T->U, outermost most
  * level/
  *                            `

@@ -287,7 +287,7 @@ public:
   }
 };
 
-/// Insertion operator for diagnostics.  This allows sending TemplateName's
+/// Insertion operator for diagnostics.  This allows sending ConceptReferences's
 /// into a diagnostic with <<.
 const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       const ConceptReference *C);
