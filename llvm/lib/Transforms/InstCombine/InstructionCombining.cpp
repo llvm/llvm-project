@@ -1363,7 +1363,9 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
-  SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+  SelectInst *SI = ProfcheckDisableMetadataFixes
+                       ? nullptr
+                       : cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
