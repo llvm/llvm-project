@@ -51,7 +51,7 @@ struct MixSizeInputShuffleOpRewrite final
     if (v1Type.getRank() != 1 || v2Type.getRank() != 1)
       return failure();
 
-    // No mix-size inputs.
+    // Bail out if inputs don't have mixed sized.
     int64_t v1OrigNumElems = v1Type.getNumElements();
     int64_t v2OrigNumElems = v2Type.getNumElements();
     if (v1OrigNumElems == v2OrigNumElems)
