@@ -978,11 +978,10 @@ static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
 }
 
 static void enqueueInstruction(Instruction &I,
-                               SmallVector<Instruction *, 4> &Replace,
-                               SmallVector<Instruction *, 4> &ReplaceVector) {
+                               SmallVector<Instruction *, 4> &Replace) {
 
   if (I.getOperand(0)->getType()->isVectorTy())
-    ReplaceVector.push_back(&I);
+    scalarize(&I, Replace);
   else
     Replace.push_back(&I);
 }
@@ -990,7 +989,6 @@ static void enqueueInstruction(Instruction &I,
 static bool runImpl(Function &F, const TargetLowering &TLI,
                     AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Replace;
-  SmallVector<Instruction *, 4> ReplaceVector;
   bool Modified = false;
 
   unsigned MaxLegalFpConvertBitWidth =
@@ -1001,7 +999,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS)
     return false;
 
-  for (auto &I : instructions(F)) {
+  for (auto It = inst_begin(&F), End = inst_end(F); It != End;) {
+    Instruction &I = *It++;
     Type *Ty = I.getType();
     // TODO: This pass doesn't handle scalable vectors.
     if (Ty->isScalableTy())
@@ -1011,7 +1010,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem:
       if (!targetSupportsFrem(TLI, Ty) &&
           FRemExpander::canExpandType(Ty->getScalarType())) {
-        enqueueInstruction(I, Replace, ReplaceVector);
+        enqueueInstruction(I, Replace);
         Modified = true;
       }
       break;
@@ -1021,7 +1020,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      enqueueInstruction(I, Replace, ReplaceVector);
+      enqueueInstruction(I, Replace);
       Modified = true;
       break;
     }
@@ -1032,21 +1031,13 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      enqueueInstruction(I, Replace, ReplaceVector);
+      enqueueInstruction(I, Replace);
       break;
     }
     default:
       break;
     }
   }
-
-  while (!ReplaceVector.empty()) {
-    Instruction *I = ReplaceVector.pop_back_val();
-    scalarize(I, Replace);
-  }
-
-  if (Replace.empty())
-    return false;
 
   while (!Replace.empty()) {
     Instruction *I = Replace.pop_back_val();
