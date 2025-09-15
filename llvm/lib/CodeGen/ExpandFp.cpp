@@ -917,7 +917,7 @@ static void expandIToFP(Instruction *IToFP) {
   IToFP->eraseFromParent();
 }
 
-static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
+static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Worklist) {
   VectorType *VTy = cast<FixedVectorType>(I->getType());
 
   IRBuilder<> Builder(I);
@@ -938,7 +938,7 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
     if (auto *ScalarizedI = dyn_cast<Instruction>(NewOp)) {
       ScalarizedI->copyIRFlags(I, true);
-      Replace.push_back(ScalarizedI);
+      Worklist.push_back(ScalarizedI);
     }
   }
 
