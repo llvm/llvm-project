@@ -185,6 +185,14 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCosOpLowering::matchAndRewrite(
+    cir::CosOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CosOp>(op, resTy, adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -595,6 +603,14 @@ mlir::LogicalResult CIRToLLVMACosOpLowering::matchAndRewrite(
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ACosOp>(op, resTy,
                                                   adaptor.getOperands()[0]);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMASinOpLowering::matchAndRewrite(
+    cir::ASinOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ASinOp>(op, resTy, adaptor.getSrc());
   return mlir::success();
 }
 
@@ -1092,6 +1108,14 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(baseClassOp, isNull,
                                                       derivedAddr, adjusted);
   }
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMATanOpLowering::matchAndRewrite(
+    cir::ATanOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ATanOp>(op, resTy, adaptor.getSrc());
   return mlir::success();
 }
 
@@ -2454,11 +2478,13 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<
       // clang-format off
                CIRToLLVMACosOpLowering,
+               CIRToLLVMASinOpLowering,
                CIRToLLVMAssumeOpLowering,
                CIRToLLVMAssumeAlignedOpLowering,
                CIRToLLVMAssumeSepStorageOpLowering,
                CIRToLLVMAtomicCmpXchgLowering,
                CIRToLLVMBaseClassAddrOpLowering,
+               CIRToLLVMATanOpLowering,
                CIRToLLVMBinOpLowering,
                CIRToLLVMBitClrsbOpLowering,
                CIRToLLVMBitClzOpLowering,
@@ -2480,6 +2506,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMComplexRealPtrOpLowering,
                CIRToLLVMComplexSubOpLowering,
                CIRToLLVMCopyOpLowering,
+               CIRToLLVMCosOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMExpectOpLowering,
                CIRToLLVMFAbsOpLowering,
