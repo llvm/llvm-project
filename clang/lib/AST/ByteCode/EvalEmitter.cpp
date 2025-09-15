@@ -49,14 +49,15 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   return std::move(this->EvalResult);
 }
 
-EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
+EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
   S.setEvalLocation(VD->getLocation());
   EvalResult.setSource(VD);
 
-  if (const Expr *Init = VD->getAnyInitializer()) {
+  // FIXME: I think Init is never null.
+  if (Init) {
     QualType T = VD->getType();
     this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
                                   !T->isObjCObjectPointerType();
@@ -65,7 +66,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
 
   EvalResult.setSource(VD);
 
-  if (!this->visitDeclAndReturn(VD, S.inConstantContext()))
+  if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
     EvalResult.setInvalid();
 
   S.EvaluatingDecl = nullptr;

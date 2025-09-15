@@ -12,12 +12,12 @@
 
 class RVC_SSInst<bits<5> rs1val, RegisterClass reg_class, string opcodestr> :
   RVInst16<(outs), (ins reg_class:$rs1), opcodestr, "$rs1", [], InstFormatOther> {
+  bits<0> rs1;
   let Inst{15-13} = 0b011;
   let Inst{12} = 0;
   let Inst{11-7} = rs1val;
   let Inst{6-2} = 0b00000;
   let Inst{1-0} = 0b01;
-  let DecoderMethod = "decodeCSSPushPopchk";
 }
 
 //===----------------------------------------------------------------------===//

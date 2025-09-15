@@ -3392,7 +3392,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      I.setDebugLoc(DebugLoc::getDropped());
+      I.dropLocation();
     }
     I.dropUBImplyingAttrsAndMetadata();
 

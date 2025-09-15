@@ -60,17 +60,18 @@ bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN) {
   SmallVector<PHINode *, 16> Stack;
   SmallPtrSet<PHINode *, 16> Visited;
   Stack.push_back(&PN);
+  Visited.insert(&PN);
   while (!Stack.empty()) {
     PHINode *Phi = Stack.pop_back_val();
-    if (!Visited.insert(Phi).second)
-      continue;
-    // Early stop if the set of PHIs is large
-    if (Visited.size() == 16)
-      return false;
     for (User *Use : Phi->users()) {
-      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
+      if (PHINode *PhiUse = dyn_cast<PHINode>(Use)) {
+        if (!Visited.insert(PhiUse).second)
+          continue;
+        // Early stop if the set of PHIs is large
+        if (Visited.size() >= 16)
+          return false;
         Stack.push_back(PhiUse);
-      else
+      } else
         return false;
     }
   }

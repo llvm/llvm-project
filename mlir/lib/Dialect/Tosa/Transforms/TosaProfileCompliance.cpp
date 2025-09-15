@@ -592,7 +592,8 @@ llvm::SmallString<7>
 TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
   if (typeInfo.typeID == mlir::IntegerType::getTypeID()) {
     return {"i" + llvm::utostr(typeInfo.bitWidth)};
-  } else if (typeInfo.typeID == mlir::Float16Type::getTypeID()) {
+  }
+  if (typeInfo.typeID == mlir::Float16Type::getTypeID()) {
     return {"f16"};
   } else if (typeInfo.typeID == mlir::Float32Type::getTypeID()) {
     return {"f32"};

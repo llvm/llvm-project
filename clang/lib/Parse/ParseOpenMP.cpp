@@ -3083,7 +3083,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     break;
   case OMPC_fail:
-  case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_atomic_default_mem_order:
   case OMPC_at:
@@ -3115,6 +3114,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_schedule:
   case OMPC_dist_schedule:
   case OMPC_defaultmap:
+  case OMPC_default:
   case OMPC_order:
     // OpenMP [2.7.1, Restrictions, p. 3]
     //  Only one schedule clause can appear on a loop directive.
@@ -3734,6 +3734,32 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       ConsumeAnyToken();
     if (Arg.back() == OMPC_DIST_SCHEDULE_static && Tok.is(tok::comma))
       DelimLoc = ConsumeAnyToken();
+  } else if (Kind == OMPC_default) {
+    // Get a default modifier
+    unsigned Modifier = getOpenMPSimpleClauseType(
+        Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+
+    Arg.push_back(Modifier);
+    KLoc.push_back(Tok.getLocation());
+    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+        Tok.isNot(tok::annot_pragma_openmp_end))
+      ConsumeAnyToken();
+    // Parse ':'
+    if (Tok.is(tok::colon) && getLangOpts().OpenMP >= 60) {
+      ConsumeAnyToken();
+      // Get a variable-category attribute for default clause modifier
+      OpenMPDefaultClauseVariableCategory VariableCategory =
+          getOpenMPDefaultVariableCategory(
+              Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+      Arg.push_back(VariableCategory);
+      KLoc.push_back(Tok.getLocation());
+      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+          Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+    } else {
+      Arg.push_back(OMPC_DEFAULT_VC_all);
+      KLoc.push_back(SourceLocation());
+    }
   } else if (Kind == OMPC_defaultmap) {
     // Get a defaultmap modifier
     unsigned Modifier = getOpenMPSimpleClauseType(
@@ -3931,6 +3957,18 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
 
   if (NeedAnExpression && Val.isInvalid())
     return nullptr;
+
+  if (Kind == OMPC_default && getLangOpts().OpenMP < 51 && Arg[0] &&
+      (static_cast<DefaultKind>(Arg[0]) == OMP_DEFAULT_private ||
+       static_cast<DefaultKind>(Arg[0]) == OMP_DEFAULT_firstprivate)) {
+    Diag(KLoc[0], diag::err_omp_invalid_dsa)
+        << getOpenMPClauseName(static_cast<DefaultKind>(Arg[0]) ==
+                                       OMP_DEFAULT_private
+                                   ? OMPC_private
+                                   : OMPC_firstprivate)
+        << getOpenMPClauseName(OMPC_default) << "5.1";
+    return nullptr;
+  }
 
   if (ParseOnly)
     return nullptr;

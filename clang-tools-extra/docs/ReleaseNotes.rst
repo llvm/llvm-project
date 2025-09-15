@@ -46,6 +46,21 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Renamed :program:`clang-tidy`'s option name of check
+  :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
+  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
+  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
+  correcting a spelling mistake.
+
 Improvements to clangd
 ----------------------
 

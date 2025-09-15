@@ -294,7 +294,7 @@ jobs:
         sparse-checkout-cone-mode: false
 
     - name: 'Download artifact'
-      uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
       with:
         pattern: '*-release-binary'
         merge-multiple: true

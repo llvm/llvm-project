@@ -11,7 +11,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -31,7 +30,13 @@ public:
   LifetimeTestRunner(llvm::StringRef Code) {
     std::string FullCode = R"(
       #define POINT(name) void("__lifetime_test_point_" #name)
+
       struct MyObj { ~MyObj() {} int i; };
+
+      struct [[gsl::Pointer()]] View { 
+        View(const MyObj&);
+        View();
+      };
     )";
     FullCode += Code.str();
 
@@ -739,6 +744,181 @@ TEST_F(LifetimeAnalysisTest, NoDuplicateLoansForImplicitCastToConst) {
     }
   )");
   EXPECT_THAT(Helper->getLoansForVar("a"), SizeIs(2));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerSimpleLoan) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = a;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConstructFromOwner) {
+  SetupTest(R"(
+    void target() {
+      MyObj al, bl, cl, dl, el, fl;
+      View a = View(al);
+      View b = View{bl};
+      View c = View(View(View(cl)));
+      View d = View{View(View(dl))};
+      View e = View{View{View{el}}};
+      View f = {fl};
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("a"), HasLoansTo({"al"}, "p1"));
+  EXPECT_THAT(Origin("b"), HasLoansTo({"bl"}, "p1"));
+  EXPECT_THAT(Origin("c"), HasLoansTo({"cl"}, "p1"));
+  EXPECT_THAT(Origin("d"), HasLoansTo({"dl"}, "p1"));
+  EXPECT_THAT(Origin("e"), HasLoansTo({"el"}, "p1"));
+  EXPECT_THAT(Origin("f"), HasLoansTo({"fl"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConstructFromView) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = View(a);
+      View y = View{x};
+      View z = View(View(View(y)));
+      View p = View{View(View(x))};
+      View q = {x};
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("q"), HasLoansTo({"a"}, "p1"));
+}
+
+// FIXME: Handle loans in ternary operator!
+TEST_F(LifetimeAnalysisTest, GslPointerInConditionalOperator) {
+  SetupTest(R"(
+    void target(bool cond) {
+      MyObj a, b;
+      View v = cond ? a : b;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+}
+
+// FIXME: Handle temporaries.
+TEST_F(LifetimeAnalysisTest, ViewFromTemporary) {
+  SetupTest(R"(
+    MyObj temporary();
+    void target() {
+      View v = temporary();
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v"), HasLoansTo({}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerWithConstAndAuto) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      const View v1 = a;
+      auto v2 = v1;
+      const auto& v3 = v2;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("v1"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v2"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("v3"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerPropagation) {
+  SetupTest(R"(
+    void target() {
+      MyObj a;
+      View x = a;
+      POINT(p1);
+
+      View y = x; // Propagation via copy-construction
+      POINT(p2);
+
+      View z;
+      z = x;       // Propagation via copy-assignment
+      POINT(p3);
+    }
+  )");
+
+  EXPECT_THAT(Origin("x"), HasLoansTo({"a"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"a"}, "p2"));
+  EXPECT_THAT(Origin("z"), HasLoansTo({"a"}, "p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerLoanExpiration) {
+  SetupTest(R"(
+    void target() {
+      View x;
+      {
+        MyObj a;
+        x = a;
+        POINT(before_expiry);
+      } // `a` is destroyed here.
+      POINT(after_expiry);
+    }
+  )");
+
+  EXPECT_THAT(NoLoans(), AreExpiredAt("before_expiry"));
+  EXPECT_THAT(LoansTo({"a"}), AreExpiredAt("after_expiry"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerReassignment) {
+  SetupTest(R"(
+    void target() {
+      MyObj safe;
+      View v;
+      v = safe;
+      POINT(p1);
+      {
+        MyObj unsafe;
+        v = unsafe;
+        POINT(p2);
+      } // `unsafe` expires here.
+      POINT(p3);
+    }
+  )");
+
+  EXPECT_THAT(Origin("v"), HasLoansTo({"safe"}, "p1"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p2"));
+  EXPECT_THAT(Origin("v"), HasLoansTo({"unsafe"}, "p3"));
+  EXPECT_THAT(LoansTo({"unsafe"}), AreExpiredAt("p3"));
+}
+
+TEST_F(LifetimeAnalysisTest, GslPointerConversionOperator) {
+  SetupTest(R"(
+    struct String;
+
+    struct [[gsl::Pointer()]] StringView {
+      StringView() = default;
+    };
+
+    struct String {
+      ~String() {}
+      operator StringView() const;
+    };
+
+    void target() {
+      String xl, yl;
+      StringView x = xl;
+      StringView y;
+      y = yl;
+      POINT(p1);
+    }
+  )");
+  EXPECT_THAT(Origin("x"), HasLoansTo({"xl"}, "p1"));
+  EXPECT_THAT(Origin("y"), HasLoansTo({"yl"}, "p1"));
 }
 
 } // anonymous namespace

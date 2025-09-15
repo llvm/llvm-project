@@ -459,8 +459,7 @@ template <class T> struct has_FlowTraits<T, true> {
 // Test if SequenceTraits<T> is defined on type T
 template <typename T>
 struct has_SequenceTraits
-    : public std::integral_constant<bool, has_SequenceMethodTraits<T>::value> {
-};
+    : public std::bool_constant<has_SequenceMethodTraits<T>::value> {};
 
 // Test if DocumentListTraits<T> is defined on type T
 template <class T> struct has_DocumentListTraits {
@@ -669,29 +668,27 @@ inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
 
 template <typename T, typename Context>
 struct missingTraits
-    : public std::integral_constant<bool,
-                                    !has_ScalarEnumerationTraits<T>::value &&
-                                        !has_ScalarBitSetTraits<T>::value &&
-                                        !has_ScalarTraits<T>::value &&
-                                        !has_BlockScalarTraits<T>::value &&
-                                        !has_TaggedScalarTraits<T>::value &&
-                                        !has_MappingTraits<T, Context>::value &&
-                                        !has_SequenceTraits<T>::value &&
-                                        !has_CustomMappingTraits<T>::value &&
-                                        !has_DocumentListTraits<T>::value &&
-                                        !has_PolymorphicTraits<T>::value> {};
+    : public std::bool_constant<
+          !has_ScalarEnumerationTraits<T>::value &&
+          !has_ScalarBitSetTraits<T>::value && !has_ScalarTraits<T>::value &&
+          !has_BlockScalarTraits<T>::value &&
+          !has_TaggedScalarTraits<T>::value &&
+          !has_MappingTraits<T, Context>::value &&
+          !has_SequenceTraits<T>::value && !has_CustomMappingTraits<T>::value &&
+          !has_DocumentListTraits<T>::value &&
+          !has_PolymorphicTraits<T>::value> {};
 
 template <typename T, typename Context>
 struct validatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                has_MappingValidateTraits<T, Context>::value> {
+};
 
 template <typename T, typename Context>
 struct unvalidatedMappingTraits
-    : public std::integral_constant<
-          bool, has_MappingTraits<T, Context>::value &&
-                    !has_MappingValidateTraits<T, Context>::value> {};
+    : public std::bool_constant<has_MappingTraits<T, Context>::value &&
+                                !has_MappingValidateTraits<T, Context>::value> {
+};
 
 // Base class for Input and Output.
 class LLVM_ABI IO {

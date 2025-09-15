@@ -21,6 +21,18 @@ include "mlir/IR/OpBase.td"
 def Ptr_Dialect : Dialect {
   let name = "ptr";
   let summary = "Pointer dialect";
+  let description = [{
+    The pointer dialect provides types and operations for representing and
+    interacting with pointer values in MLIR, such as loading and storing values
+    from/to memory addresses.
+
+    The dialect's main type is an opaque pointer (`ptr`) that can be
+    parameterized by a memory space. This type represents a handle to an object
+    in memory, or target-dependent values like `nullptr`. Further, the dialect
+    assumes that the minimum addressable unit by a pointer is a byte. However,
+    the dialect does not make assumptions about the size of a byte, which is
+    considered a target-specific property.
+  }];
   let cppNamespace = "::mlir::ptr";
   let useDefaultTypePrinterParser = 1;
   let useDefaultAttributePrinterParser = 1;
