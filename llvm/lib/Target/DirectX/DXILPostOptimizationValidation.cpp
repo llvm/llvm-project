@@ -172,6 +172,28 @@ static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
+static dxbc::RootFlags
+getEnvironmentDenyFlagMask(Triple::EnvironmentType ShaderProfile) {
+  switch (ShaderProfile) {
+  case Triple::Pixel:
+    return dxbc::RootFlags::DenyPixelShaderRootAccess;
+  case Triple::Vertex:
+    return dxbc::RootFlags::DenyVertexShaderRootAccess;
+  case Triple::Geometry:
+    return dxbc::RootFlags::DenyGeometryShaderRootAccess;
+  case Triple::Hull:
+    return dxbc::RootFlags::DenyHullShaderRootAccess;
+  case Triple::Domain:
+    return dxbc::RootFlags::DenyDomainShaderRootAccess;
+  case Triple::Mesh:
+    return dxbc::RootFlags::DenyMeshShaderRootAccess;
+  case Triple::Amplification:
+    return dxbc::RootFlags::DenyAmplificationShaderRootAccess;
+  default:
+    llvm_unreachable("Invalid triple to shader stage conversion");
+  }
+}
+
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
                                   dxil::ModuleMetadataInfo &MMI,
@@ -258,10 +280,10 @@ static void validateRootSignature(Module &M,
     const auto *ParamInfo =
         static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
-    bool IsRootSRVOrUAV = RC == ResourceClass::SRV || RC == ResourceClass::UAV;
-    bool IsDescriptorTable =
+    const bool IsRootSRVOrUAV = RC == ResourceClass::SRV || RC == ResourceClass::UAV;
+    const bool IsDescriptorTable =
         ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
-    bool IsRawOrStructuredBuffer =
+    const bool IsRawOrStructuredBuffer =
         RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer;
     if (IsRootSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer) {
       reportInvalidHandleTyError(M, RC, Binding);
@@ -272,39 +294,10 @@ static void validateRootSignature(Module &M,
   }
 
   if (HasBindings && MMI.ShaderProfile != Triple::Compute) {
-    dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
-    switch (MMI.ShaderProfile) {
-    case Triple::Pixel:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyPixelShaderRootAccess);
-      break;
-    case Triple::Vertex:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyVertexShaderRootAccess);
-      break;
-    case Triple::Geometry:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyGeometryShaderRootAccess);
-      break;
-    case Triple::Hull:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyHullShaderRootAccess);
-      break;
-    case Triple::Domain:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyDomainShaderRootAccess);
-      break;
-    case Triple::Mesh:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyMeshShaderRootAccess);
-      break;
-    case Triple::Amplification:
-      reportIfDeniedShaderStageAccess(
-          M, Flags, dxbc::RootFlags::DenyAmplificationShaderRootAccess);
-      break;
-    default:
-      llvm_unreachable("Invalid triple to shader stage conversion");
-    }
+    const dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
+    const dxbc::RootFlags Mask = getEnvironmentDenyFlagMask(MMI.ShaderProfile);
+
+    reportIfDeniedShaderStageAccess(M, Flags, Mask);
   }
 }
 
