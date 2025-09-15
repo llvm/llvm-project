@@ -5306,8 +5306,11 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   bool isInlineable = false;
   const auto *TII = ST.getInstrInfo();
 
-  if (!SDConstant && !SDFPConstant)
+  if (!ST.hasMovB64() || (!SDConstant && !SDFPConstant))
     return false;
+
+  if (ST.has64BitLiterals())
+    return true;
 
   uint64_t Val = 0;
   if (SDConstant) {
@@ -5320,8 +5323,7 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
     Val = APVal.bitcastToAPInt().getZExtValue();
   }
 
-  return ST.hasMovB64() &&
-         (ST.has64BitLiterals() || isUInt<32>(Val) || isInlineable);
+  return (isInlineable || isUInt<32>(Val));
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
