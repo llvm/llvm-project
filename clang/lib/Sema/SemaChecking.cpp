@@ -5562,7 +5562,7 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
   if (NumArgs < 2)
     return ExprError(Diag(TheCall->getEndLoc(),
                           diag::err_typecheck_call_too_few_args_at_least)
-                     << 0 /*function call*/ << 2 << TheCall->getNumArgs()
+                     << 0 /*function call*/ << 2 << NumArgs
                      << /*is non object*/ 0 << TheCall->getSourceRange());
 
   // Determine which of the following types of shufflevector we're checking:
@@ -5579,17 +5579,17 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     if (!LHSType->isVectorType() || !RHSType->isVectorType())
       return ExprError(
           Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
-          << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
+          << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ false
           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                          TheCall->getArg(1)->getEndLoc()));
 
     NumElements = LHSType->castAs<VectorType>()->getNumElements();
-    unsigned NumResElements = TheCall->getNumArgs() - 2;
+    unsigned NumResElements = NumArgs - 2;
 
     // Check to see if we have a call with 2 vector arguments, the unary shuffle
     // with mask.  If so, verify that RHS is an integer vector type with the
     // same number of elts as lhs.
-    if (TheCall->getNumArgs() == 2) {
+    if (NumArgs == 2) {
       if (!RHSType->hasIntegerRepresentation() ||
           RHSType->castAs<VectorType>()->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
@@ -5606,10 +5606,10 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
                        << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                                       TheCall->getArg(1)->getEndLoc()));
     } else if (NumElements != NumResElements) {
-      QualType eltType = LHSType->castAs<VectorType>()->getElementType();
+      QualType EltType = LHSType->castAs<VectorType>()->getElementType();
       ResType = ResType->isExtVectorType()
-                    ? Context.getExtVectorType(eltType, NumResElements)
-                    : Context.getVectorType(eltType, NumResElements,
+                    ? Context.getExtVectorType(EltType, NumResElements)
+                    : Context.getVectorType(EltType, NumResElements,
                                             VectorKind::Generic);
     }
   }
