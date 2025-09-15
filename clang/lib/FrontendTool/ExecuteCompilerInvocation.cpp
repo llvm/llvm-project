@@ -294,9 +294,12 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 #endif
 
-  // If there were errors in processing arguments, don't do anything else.
+  // If there were errors in the above, don't do anything else.
+  // This intentionally ignores errors emitted before this function to
+  // accommodate lenient callers that decided to make progress despite errors.
   if (Clang->getDiagnostics().getNumErrors() != NumErrorsBefore)
     return false;
+
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
