@@ -280,6 +280,9 @@ Improvements to Clang's diagnostics
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
 
+- Fixed a bug where the source location was missing when diagnosing ill-formed
+  placeholder constraints.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -448,7 +451,9 @@ AST Matchers
   following the corresponding changes in the clang AST.
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
-
+- Remove the ``dependentTemplateSpecializationType`` matcher, as the
+  corresponding AST node was removed. This matcher was never very useful, since
+  there was no way to match on its template name.
 - Add a boolean member ``IgnoreSystemHeaders`` to ``MatchFinderOptions``. This
   allows it to ignore nodes in system headers when traversing the AST.
 
@@ -458,6 +463,9 @@ AST Matchers
 clang-format
 ------------
 - Add ``SpaceInEmptyBraces`` option and set it to ``Always`` for WebKit style.
+- Add ``NumericLiteralCase`` option for enforcing character case in numeric
+  literals.
+- Add ``Leave`` suboption to ``IndentPPDirectives``.
 
 libclang
 --------
@@ -504,6 +512,7 @@ OpenMP Support
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support to handle new syntax of the ``uses_allocators`` clause.
+- Added support for ``variable-category`` modifier in ``default clause``.
 
 Improvements
 ^^^^^^^^^^^^
