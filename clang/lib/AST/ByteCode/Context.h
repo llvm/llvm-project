@@ -59,7 +59,8 @@ public:
                 ConstantExprKind Kind);
 
   /// Evaluates a toplevel initializer.
-  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
+  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
+                             APValue &Result);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);

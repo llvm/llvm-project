@@ -4714,7 +4714,8 @@ template <class Emitter>
 VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
                                               bool IsConstexprUnknown) {
 
-  auto R = this->visitVarDecl(VD, /*Toplevel=*/true, IsConstexprUnknown);
+  auto R = this->visitVarDecl(VD, VD->getInit(), /*Toplevel=*/true,
+                              IsConstexprUnknown);
 
   if (R.notCreated())
     return R;
@@ -4740,14 +4741,12 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
 /// We get here from evaluateAsInitializer().
 /// We need to evaluate the initializer and return its value.
 template <class Emitter>
-bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
+bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                            bool ConstantContext) {
-
   // We only create variables if we're evaluating in a constant context.
   // Otherwise, just evaluate the initializer and return it.
   if (!ConstantContext) {
     DeclScope<Emitter> LS(this, VD);
-    const Expr *Init = VD->getInit();
     if (!this->visit(Init))
       return false;
     return this->emitRet(classify(Init).value_or(PT_Ptr), VD) &&
@@ -4755,7 +4754,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
   }
 
   LocalScope<Emitter> VDScope(this, VD);
-  if (!this->visitVarDecl(VD, /*Toplevel=*/true))
+  if (!this->visitVarDecl(VD, Init, /*Toplevel=*/true))
     return false;
 
   OptPrimType VarT = classify(VD->getType());
@@ -4802,9 +4801,9 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
 }
 
 template <class Emitter>
-VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
-                                                 bool Toplevel,
-                                                 bool IsConstexprUnknown) {
+VarCreationState
+Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
+                                bool Toplevel, bool IsConstexprUnknown) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
@@ -4814,7 +4813,6 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
   if (!this->isActive())
     return VarCreationState::NotCreated();
 
-  const Expr *Init = VD->getInit();
   OptPrimType VarT = classify(VD->getType());
 
   if (Init && Init->isValueDependent())
@@ -5488,7 +5486,8 @@ template <class Emitter>
 bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
   if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
     for (auto *BD : DD->flat_bindings())
-      if (auto *KD = BD->getHoldingVar(); KD && !this->visitVarDecl(KD))
+      if (auto *KD = BD->getHoldingVar();
+          KD && !this->visitVarDecl(KD, KD->getInit()))
         return false;
   }
   return true;
@@ -5552,7 +5551,7 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
     const auto *VD = dyn_cast<VarDecl>(D);
     if (!VD)
       return false;
-    if (!this->visitVarDecl(VD))
+    if (!this->visitVarDecl(VD, VD->getInit()))
       return false;
 
     // Register decomposition decl holding vars.
