@@ -60,7 +60,7 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 namespace Fortran::runtime {
 
-// Common implementation that could be used for either SECNDS() or SECNDSD(),
+// Common implementation that could be used for either SECNDS() or DSECNDS(),
 // which are defined for float or double.
 template <typename T> T SecndsImpl(T *refTime) {
   static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
@@ -379,6 +379,17 @@ float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
   RUNTIME_CHECK(terminator, refTime != nullptr);
   return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
+}
+
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime) {
+  return SecndsImpl(refTime);
+}
+
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(dsecnds)(refTime);
 }
 
 // GNU extension function TIME()
