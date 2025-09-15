@@ -189,6 +189,12 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
     case AArch64::CommitZASavePseudo:
     case AArch64::SMEStateAllocPseudo:
     case AArch64::RequiresZASavePseudo:
+      // These instructions only depend on the ZA state, not the streaming mode,
+      // so if the pair of smstart/stop is only changing the streaming mode, we
+      // can permit these instructions.
+      if (Prev->getOperand(0).getImm() != AArch64SVCR::SVCRSM)
+        Prev = nullptr;
+      break;
     case AArch64::ADJCALLSTACKDOWN:
     case AArch64::ADJCALLSTACKUP:
     case AArch64::ANDXri:
