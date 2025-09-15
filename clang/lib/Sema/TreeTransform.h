@@ -744,10 +744,11 @@ public:
 
   StmtResult TransformSEHHandler(Stmt *Handler);
 
-  QualType TransformDependentTemplateSpecializationType(
-      TypeLocBuilder &TLB, DependentTemplateSpecializationTypeLoc TL,
-      QualType ObjectType, NamedDecl *UnqualLookup,
-      bool AllowInjectedClassName);
+  QualType TransformTemplateSpecializationType(TypeLocBuilder &TLB,
+                                               TemplateSpecializationTypeLoc TL,
+                                               QualType ObjectType,
+                                               NamedDecl *FirstQualifierInScope,
+                                               bool AllowInjectedClassName);
 
   QualType TransformTagType(TypeLocBuilder &TLB, TagTypeLoc TL);
 
@@ -1161,24 +1162,6 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildParenType(QualType InnerType) {
     return SemaRef.BuildParenType(InnerType);
-  }
-
-  /// Build a new typename type that refers to a template-id.
-  ///
-  /// By default, builds a new DependentNameType type from the
-  /// nested-name-specifier and the given type. Subclasses may override
-  /// this routine to provide different behavior.
-  QualType RebuildDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, SourceLocation TemplateKWLoc,
-      TemplateName Name, SourceLocation NameLoc, TemplateArgumentListInfo &Args,
-      bool AllowInjectedClassName) {
-    // If it's still dependent, make a dependent specialization.
-    if (const DependentTemplateStorage *S = Name.getAsDependentTemplateName())
-      return SemaRef.Context.getDependentTemplateSpecializationType(
-          Keyword, *S, Args.arguments());
-
-    return getDerived().RebuildTemplateSpecializationType(Keyword, Name,
-                                                          NameLoc, Args);
   }
 
   /// Build a new typename type that refers to an identifier.
@@ -5526,19 +5509,18 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformTypeInObjectScope(
     TypeLocBuilder &TLB, TypeLoc TL, QualType ObjectType,
-    NamedDecl *UnqualLookup) {
+    NamedDecl *FirstQualifierInScope) {
   assert(!getDerived().AlreadyTransformed(TL.getType()));
 
   switch (TL.getTypeLocClass()) {
-  case TypeLoc::DependentTemplateSpecialization:
-    return getDerived().TransformDependentTemplateSpecializationType(
-        TLB, TL.castAs<DependentTemplateSpecializationTypeLoc>(), ObjectType,
-        UnqualLookup, /*AllowInjectedClassName=*/true);
-  case TypeLoc::DependentName: {
+  case TypeLoc::TemplateSpecialization:
+    return getDerived().TransformTemplateSpecializationType(
+        TLB, TL.castAs<TemplateSpecializationTypeLoc>(), ObjectType,
+        FirstQualifierInScope, /*AllowInjectedClassName=*/true);
+  case TypeLoc::DependentName:
     return getDerived().TransformDependentNameType(
         TLB, TL.castAs<DependentNameTypeLoc>(), /*DeducedTSTContext=*/false,
-        ObjectType, UnqualLookup);
-  }
+        ObjectType, FirstQualifierInScope);
   default:
     // Any dependent canonical type can appear here, through type alias
     // templates.
@@ -7504,12 +7486,22 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
     TypeLocBuilder &TLB, TemplateSpecializationTypeLoc TL) {
+  return getDerived().TransformTemplateSpecializationType(
+      TLB, TL, /*ObjectType=*/QualType(), /*FirstQualifierInScope=*/nullptr,
+      /*AllowInjectedClassName=*/false);
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
+    TypeLocBuilder &TLB, TemplateSpecializationTypeLoc TL, QualType ObjectType,
+    NamedDecl *FirstQualifierInScope, bool AllowInjectedClassName) {
   const TemplateSpecializationType *T = TL.getTypePtr();
 
   NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
   TemplateName Template = getDerived().TransformTemplateName(
       QualifierLoc, TL.getTemplateKeywordLoc(), T->getTemplateName(),
-      TL.getTemplateNameLoc());
+      TL.getTemplateNameLoc(), ObjectType, FirstQualifierInScope,
+      AllowInjectedClassName);
   if (Template.isNull())
     return QualType();
 
@@ -7532,23 +7524,6 @@ QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
       NewTemplateArgs);
 
   if (!Result.isNull()) {
-    // Specializations of template template parameters are represented as
-    // TemplateSpecializationTypes, and substitution of type alias templates
-    // within a dependent context can transform them into
-    // DependentTemplateSpecializationTypes.
-    if (isa<DependentTemplateSpecializationType>(Result)) {
-      DependentTemplateSpecializationTypeLoc NewTL
-        = TLB.push<DependentTemplateSpecializationTypeLoc>(Result);
-      NewTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
-      NewTL.setQualifierLoc(QualifierLoc);
-      NewTL.setTemplateKeywordLoc(TL.getTemplateKeywordLoc());
-      NewTL.setTemplateNameLoc(TL.getTemplateNameLoc());
-      NewTL.setLAngleLoc(TL.getLAngleLoc());
-      NewTL.setRAngleLoc(TL.getRAngleLoc());
-      for (unsigned i = 0, e = NewTemplateArgs.size(); i != e; ++i)
-        NewTL.setArgLocInfo(i, NewTemplateArgs[i].getLocInfo());
-      return Result;
-    }
     TLB.push<TemplateSpecializationTypeLoc>(Result).set(
         TL.getElaboratedKeywordLoc(), QualifierLoc, TL.getTemplateKeywordLoc(),
         TL.getTemplateNameLoc(), NewTemplateArgs);
@@ -7795,83 +7770,6 @@ QualType TreeTransform<Derived>::TransformDependentNameType(
     NewTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
     NewTL.setQualifierLoc(QualifierLoc);
     NewTL.setNameLoc(TL.getNameLoc());
-  }
-  return Result;
-}
-
-template <typename Derived>
-QualType TreeTransform<Derived>::TransformDependentTemplateSpecializationType(
-    TypeLocBuilder &TLB, DependentTemplateSpecializationTypeLoc TL) {
-  return getDerived().TransformDependentTemplateSpecializationType(
-      TLB, TL, QualType(), nullptr, false);
-}
-
-template <typename Derived>
-QualType TreeTransform<Derived>::TransformDependentTemplateSpecializationType(
-    TypeLocBuilder &TLB, DependentTemplateSpecializationTypeLoc TL,
-    QualType ObjectType, NamedDecl *UnqualLookup, bool AllowInjectedClassName) {
-  const DependentTemplateSpecializationType *T = TL.getTypePtr();
-
-  NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
-  if (QualifierLoc) {
-    QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(
-        QualifierLoc, ObjectType, UnqualLookup);
-    if (!QualifierLoc)
-      return QualType();
-    // These only apply to the leftmost prefix.
-    ObjectType = QualType();
-    UnqualLookup = nullptr;
-  }
-  CXXScopeSpec SS;
-  SS.Adopt(QualifierLoc);
-
-  TemplateArgumentListInfo NewTemplateArgs(TL.getLAngleLoc(),
-                                           TL.getRAngleLoc());
-  auto ArgsRange = llvm::make_range<TemplateArgumentLocContainerIterator<
-      DependentTemplateSpecializationTypeLoc>>({TL, 0}, {TL, TL.getNumArgs()});
-
-  if (getDerived().TransformTemplateArguments(ArgsRange.begin(),
-                                              ArgsRange.end(), NewTemplateArgs))
-    return QualType();
-  bool TemplateArgumentsChanged = !llvm::equal(
-      ArgsRange, NewTemplateArgs.arguments(),
-      [](const TemplateArgumentLoc &A, const TemplateArgumentLoc &B) {
-        return A.getArgument().structurallyEquals(B.getArgument());
-      });
-
-  const DependentTemplateStorage &DTN = T->getDependentTemplateName();
-
-  QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() || SS.getScopeRep() != DTN.getQualifier() ||
-      TemplateArgumentsChanged || !ObjectType.isNull()) {
-    TemplateName Name = getDerived().RebuildTemplateName(
-        SS, TL.getTemplateKeywordLoc(), DTN.getName(), TL.getTemplateNameLoc(),
-        ObjectType, AllowInjectedClassName);
-    if (Name.isNull())
-      return QualType();
-    Result = getDerived().RebuildDependentTemplateSpecializationType(
-        T->getKeyword(), TL.getTemplateKeywordLoc(), Name,
-        TL.getTemplateNameLoc(), NewTemplateArgs,
-        /*AllowInjectedClassName=*/false);
-    if (Result.isNull())
-      return QualType();
-  }
-
-  QualifierLoc = SS.getWithLocInContext(SemaRef.Context);
-  if (isa<TemplateSpecializationType>(Result)) {
-    TLB.push<TemplateSpecializationTypeLoc>(Result).set(
-        TL.getElaboratedKeywordLoc(), QualifierLoc, TL.getTemplateKeywordLoc(),
-        TL.getTemplateNameLoc(), NewTemplateArgs);
-  } else {
-    auto SpecTL = TLB.push<DependentTemplateSpecializationTypeLoc>(Result);
-    SpecTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
-    SpecTL.setQualifierLoc(QualifierLoc);
-    SpecTL.setTemplateKeywordLoc(TL.getTemplateKeywordLoc());
-    SpecTL.setTemplateNameLoc(TL.getTemplateNameLoc());
-    SpecTL.setLAngleLoc(TL.getLAngleLoc());
-    SpecTL.setRAngleLoc(TL.getRAngleLoc());
-    for (unsigned I = 0, E = NewTemplateArgs.size(); I != E; ++I)
-      SpecTL.setArgLocInfo(I, NewTemplateArgs[I].getLocInfo());
   }
   return Result;
 }
@@ -17468,8 +17366,9 @@ template <typename Derived>
 QualType TreeTransform<Derived>::RebuildTemplateSpecializationType(
     ElaboratedTypeKeyword Keyword, TemplateName Template,
     SourceLocation TemplateNameLoc, TemplateArgumentListInfo &TemplateArgs) {
-  return SemaRef.CheckTemplateIdType(Keyword, Template, TemplateNameLoc,
-                                     TemplateArgs);
+  return SemaRef.CheckTemplateIdType(
+      Keyword, Template, TemplateNameLoc, TemplateArgs,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
 }
 
 template<typename Derived>

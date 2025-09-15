@@ -14784,7 +14784,7 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
   QualType OpTy = Op->getType();
   QualType Result;
 
-  if (isa<CXXReinterpretCastExpr>(Op)) {
+  if (isa<CXXReinterpretCastExpr>(Op->IgnoreParens())) {
     QualType OpOrigType = Op->IgnoreParenCasts()->getType();
     S.CheckCompatibleReinterpretCast(OpOrigType, OpTy, /*IsDereference*/true,
                                      Op->getSourceRange());
@@ -21360,8 +21360,9 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     QualType TST;
     {
       SFINAETrap Trap(*this);
-      TST = CheckTemplateIdType(ElaboratedTypeKeyword::None, TN,
-                                NameInfo.getBeginLoc(), TAL);
+      TST = CheckTemplateIdType(
+          ElaboratedTypeKeyword::None, TN, NameInfo.getBeginLoc(), TAL,
+          /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
     }
     if (TST.isNull())
       TST = Context.getTemplateSpecializationType(
