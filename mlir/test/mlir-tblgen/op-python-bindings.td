@@ -139,11 +139,11 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def i32attr(self) -> _ods_ir.Attribute:
+  // CHECK: def i32attr(self) -> _ods_ir.IntegerAttr:
   // CHECK:   return self.operation.attributes["i32attr"]
 
   // CHECK: @builtins.property
-  // CHECK: def optionalF32Attr(self) -> _Optional[_ods_ir.Attribute]:
+  // CHECK: def optionalF32Attr(self) -> _Optional[_ods_ir.FloatAttr]:
   // CHECK:   if "optionalF32Attr" not in self.operation.attributes:
   // CHECK:     return None
   // CHECK:   return self.operation.attributes["optionalF32Attr"]
@@ -153,7 +153,7 @@ def AttributedOp : TestOp<"attributed_op"> {
   // CHECK:   return "unitAttr" in self.operation.attributes
 
   // CHECK: @builtins.property
-  // CHECK: def in_(self) -> _ods_ir.Attribute:
+  // CHECK: def in_(self) -> _ods_ir.IntegerAttr:
   // CHECK:   return self.operation.attributes["in"]
 
   let arguments = (ins I32Attr:$i32attr, OptionalAttr<F32Attr>:$optionalF32Attr,
@@ -190,7 +190,7 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK:   return "in" in self.operation.attributes
 
   // CHECK: @builtins.property
-  // CHECK: def is_(self) -> _Optional[_ods_ir.Attribute]:
+  // CHECK: def is_(self) -> _Optional[_ods_ir.FloatAttr]:
   // CHECK:   if "is" not in self.operation.attributes:
   // CHECK:     return None
   // CHECK:   return self.operation.attributes["is"]

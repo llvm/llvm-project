@@ -194,18 +194,20 @@ constexpr const char *opVariadicSegmentOptionalTrailingTemplate =
 /// Template for an operation attribute getter:
 ///   {0} is the name of the attribute sanitized for Python;
 ///   {1} is the original name of the attribute.
+///   {2} is the type hint.
 constexpr const char *attributeGetterTemplate = R"Py(
   @builtins.property
-  def {0}(self) -> _ods_ir.Attribute:
+  def {0}(self) -> {2}:
     return self.operation.attributes["{1}"]
 )Py";
 
 /// Template for an optional operation attribute getter:
 ///   {0} is the name of the attribute sanitized for Python;
 ///   {1} is the original name of the attribute.
+///   {2} is the type hint.
 constexpr const char *optionalAttributeGetterTemplate = R"Py(
   @builtins.property
-  def {0}(self) -> _Optional[_ods_ir.Attribute]:
+  def {0}(self) -> _Optional[{2}]:
     if "{1}" not in self.operation.attributes:
       return None
     return self.operation.attributes["{1}"]
@@ -225,9 +227,10 @@ constexpr const char *unitAttributeGetterTemplate = R"Py(
 /// Template for an operation attribute setter:
 ///    {0} is the name of the attribute sanitized for Python;
 ///    {1} is the original name of the attribute.
+///    {2} is the type hint.
 constexpr const char *attributeSetterTemplate = R"Py(
   @{0}.setter
-  def {0}(self, value):
+  def {0}(self, value: {2}):
     if value is None:
       raise ValueError("'None' not allowed as value for mandatory attributes")
     self.operation.attributes["{1}"] = value
@@ -237,9 +240,10 @@ constexpr const char *attributeSetterTemplate = R"Py(
 /// removes the attribute:
 ///    {0} is the name of the attribute sanitized for Python;
 ///    {1} is the original name of the attribute.
+///    {2} is the type hint.
 constexpr const char *optionalAttributeSetterTemplate = R"Py(
   @{0}.setter
-  def {0}(self, value):
+  def {0}(self, value: _Optional[{2}]):
     if value is not None:
       self.operation.attributes["{1}"] = value
     elif "{1}" in self.operation.attributes:
@@ -482,6 +486,72 @@ static void emitResultAccessors(const Operator &op, raw_ostream &os) {
                        getNumResults(op), getResult);
 }
 
+static std::string getPythonAttrName(mlir::tblgen::Attribute attr) {
+  auto storageTypeStr = attr.getStorageType();
+  if (storageTypeStr == "::mlir::AffineMapAttr")
+    return "AffineMapAttr";
+  if (storageTypeStr == "::mlir::ArrayAttr")
+    return "ArrayAttr";
+  if (storageTypeStr == "::mlir::BoolAttr")
+    return "BoolAttr";
+  if (storageTypeStr == "::mlir::DenseBoolArrayAttr")
+    return "DenseBoolArrayAttr";
+  if (storageTypeStr == "::mlir::DenseElementsAttr") {
+    llvm::StringSet<> superClasses;
+    for (const Record *sc : attr.getDef().getSuperClasses())
+      superClasses.insert(sc->getNameInitAsString());
+    if (superClasses.contains("FloatElementsAttr") ||
+        superClasses.contains("RankedFloatElementsAttr")) {
+      return "DenseFPElementsAttr";
+    }
+    return "DenseElementsAttr";
+  }
+  if (storageTypeStr == "::mlir::DenseF32ArrayAttr")
+    return "DenseF32ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseF64ArrayAttr")
+    return "DenseF64ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseFPElementsAttr")
+    return "DenseFPElementsAttr";
+  if (storageTypeStr == "::mlir::DenseI16ArrayAttr")
+    return "DenseI16ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseI32ArrayAttr")
+    return "DenseI32ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseI64ArrayAttr")
+    return "DenseI64ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseI8ArrayAttr")
+    return "DenseI8ArrayAttr";
+  if (storageTypeStr == "::mlir::DenseIntElementsAttr")
+    return "DenseIntElementsAttr";
+  if (storageTypeStr == "::mlir::DenseResourceElementsAttr")
+    return "DenseResourceElementsAttr";
+  if (storageTypeStr == "::mlir::DictionaryAttr")
+    return "DictAttr";
+  if (storageTypeStr == "::mlir::FlatSymbolRefAttr")
+    return "FlatSymbolRefAttr";
+  if (storageTypeStr == "::mlir::FloatAttr")
+    return "FloatAttr";
+  if (storageTypeStr == "::mlir::IntegerAttr") {
+    if (attr.getAttrDefName().str() == "I1Attr")
+      return "BoolAttr";
+    return "IntegerAttr";
+  }
+  if (storageTypeStr == "::mlir::IntegerSetAttr")
+    return "IntegerSetAttr";
+  if (storageTypeStr == "::mlir::OpaqueAttr")
+    return "OpaqueAttr";
+  if (storageTypeStr == "::mlir::StridedLayoutAttr")
+    return "StridedLayoutAttr";
+  if (storageTypeStr == "::mlir::StringAttr")
+    return "StringAttr";
+  if (storageTypeStr == "::mlir::SymbolRefAttr")
+    return "SymbolRefAttr";
+  if (storageTypeStr == "::mlir::TypeAttr")
+    return "TypeAttr";
+  if (storageTypeStr == "::mlir::UnitAttr")
+    return "UnitAttr";
+  return "Attribute";
+}
+
 /// Emits accessors to Op attributes.
 static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
   for (const auto &namedAttr : op.getAttributes()) {
@@ -503,15 +573,18 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
       continue;
     }
 
+    std::string type = "_ods_ir." + getPythonAttrName(namedAttr.attr);
     if (namedAttr.attr.isOptional()) {
       os << formatv(optionalAttributeGetterTemplate, sanitizedName,
-                    namedAttr.name);
+                    namedAttr.name, type);
       os << formatv(optionalAttributeSetterTemplate, sanitizedName,
-                    namedAttr.name);
+                    namedAttr.name, type);
       os << formatv(attributeDeleterTemplate, sanitizedName, namedAttr.name);
     } else {
-      os << formatv(attributeGetterTemplate, sanitizedName, namedAttr.name);
-      os << formatv(attributeSetterTemplate, sanitizedName, namedAttr.name);
+      os << formatv(attributeGetterTemplate, sanitizedName, namedAttr.name,
+                    type);
+      os << formatv(attributeSetterTemplate, sanitizedName, namedAttr.name,
+                    type);
       // Non-optional attributes cannot be deleted.
     }
   }

@@ -2,6 +2,7 @@
 # RUN: %PYTHON %s nanobind | FileCheck %s
 import inspect
 import sys
+import typing
 from typing import Union
 
 from mlir.ir import *
@@ -232,6 +233,161 @@ def attrBuilder():
         )
         op.verify()
         op.print(use_local_scope=True)
+
+    # fmt: off
+    assert typing.get_type_hints(test.AttributesOp.x_affinemaparr.fset)["value"] is ArrayAttr
+    assert type(op.x_affinemaparr) is typing.get_type_hints(test.AttributesOp.x_affinemaparr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_affinemap.fset)["value"] is AffineMapAttr
+    assert type(op.x_affinemap) is typing.get_type_hints(test.AttributesOp.x_affinemap.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_arr.fset)["value"] is ArrayAttr
+    assert type(op.x_arr) is typing.get_type_hints(test.AttributesOp.x_arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_boolarr.fset)["value"] is ArrayAttr
+    assert type(op.x_boolarr) is typing.get_type_hints(test.AttributesOp.x_boolarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_bool.fset)["value"] is BoolAttr
+    assert type(op.x_bool) is typing.get_type_hints(test.AttributesOp.x_bool.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_dboolarr.fset)["value"] is DenseBoolArrayAttr
+    assert type(op.x_dboolarr) is typing.get_type_hints(test.AttributesOp.x_dboolarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_df32arr.fset)["value"] is DenseF32ArrayAttr
+    assert type(op.x_df32arr) is typing.get_type_hints(test.AttributesOp.x_df32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_df64arr.fset)["value"] is DenseF64ArrayAttr
+    assert type(op.x_df64arr) is typing.get_type_hints(test.AttributesOp.x_df64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_df16arr.fset)["value"] is DenseI16ArrayAttr
+    assert type(op.x_df16arr) is typing.get_type_hints(test.AttributesOp.x_df16arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_di32arr.fset)["value"] is DenseI32ArrayAttr
+    assert type(op.x_di32arr) is typing.get_type_hints(test.AttributesOp.x_di32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_di64arr.fset)["value"] is DenseI64ArrayAttr
+    assert type(op.x_di64arr) is typing.get_type_hints(test.AttributesOp.x_di64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_di8arr.fset)["value"] is DenseI8ArrayAttr
+    assert type(op.x_di8arr) is typing.get_type_hints(test.AttributesOp.x_di8arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_dictarr.fset)["value"] is ArrayAttr
+    assert type(op.x_dictarr) is typing.get_type_hints(test.AttributesOp.x_dictarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_dict.fset)["value"] is DictAttr
+    assert type(op.x_dict) is typing.get_type_hints(test.AttributesOp.x_dict.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f32arr.fset)["value"] is ArrayAttr
+    assert type(op.x_f32arr) is typing.get_type_hints(test.AttributesOp.x_f32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f32.fset)["value"] is FloatAttr
+    assert type(op.x_f32) is typing.get_type_hints(test.AttributesOp.x_f32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f64arr.fset)["value"] is ArrayAttr
+    assert type(op.x_f64arr) is typing.get_type_hints(test.AttributesOp.x_f64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f64.fset)["value"] is FloatAttr
+    assert type(op.x_f64) is typing.get_type_hints(test.AttributesOp.x_f64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_f64elems.fset)["value"] is DenseFPElementsAttr
+    assert type(op.x_f64elems) is typing.get_type_hints(test.AttributesOp.x_f64elems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_flatsymrefarr.fset)["value"] is ArrayAttr
+    assert type(op.x_flatsymrefarr) is typing.get_type_hints(test.AttributesOp.x_flatsymrefarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_flatsymref.fset)["value"] is FlatSymbolRefAttr
+    assert type(op.x_flatsymref) is typing.get_type_hints(test.AttributesOp.x_flatsymref.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i16.fset)["value"] is IntegerAttr
+    assert type(op.x_i16) is typing.get_type_hints(test.AttributesOp.x_i16.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i1.fset)["value"] is BoolAttr
+    assert type(op.x_i1) is typing.get_type_hints(test.AttributesOp.x_i1.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i32arr.fset)["value"] is ArrayAttr
+    assert type(op.x_i32arr) is typing.get_type_hints(test.AttributesOp.x_i32arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i32.fset)["value"] is IntegerAttr
+    assert type(op.x_i32) is typing.get_type_hints(test.AttributesOp.x_i32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i32elems.fset)["value"] is DenseIntElementsAttr
+    assert type(op.x_i32elems) is typing.get_type_hints(test.AttributesOp.x_i32elems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64arr.fset)["value"] is ArrayAttr
+    assert type(op.x_i64arr) is typing.get_type_hints(test.AttributesOp.x_i64arr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64.fset)["value"] is IntegerAttr
+    assert type(op.x_i64) is typing.get_type_hints(test.AttributesOp.x_i64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64elems.fset)["value"] is DenseIntElementsAttr
+    assert type(op.x_i64elems) is typing.get_type_hints(test.AttributesOp.x_i64elems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i64svecarr.fset)["value"] is ArrayAttr
+    assert type(op.x_i64svecarr) is typing.get_type_hints(test.AttributesOp.x_i64svecarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_i8.fset)["value"] is IntegerAttr
+    assert type(op.x_i8) is typing.get_type_hints(test.AttributesOp.x_i8.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_idx.fset)["value"] is IntegerAttr
+    assert type(op.x_idx) is typing.get_type_hints(test.AttributesOp.x_idx.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_idxelems.fset)["value"] is DenseIntElementsAttr
+    assert type(op.x_idxelems) is typing.get_type_hints(test.AttributesOp.x_idxelems.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_idxlistarr.fset)["value"] is ArrayAttr
+    assert type(op.x_idxlistarr) is typing.get_type_hints(test.AttributesOp.x_idxlistarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si16.fset)["value"] is IntegerAttr
+    assert type(op.x_si16) is typing.get_type_hints(test.AttributesOp.x_si16.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si1.fset)["value"] is IntegerAttr
+    assert type(op.x_si1) is typing.get_type_hints(test.AttributesOp.x_si1.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si32.fset)["value"] is IntegerAttr
+    assert type(op.x_si32) is typing.get_type_hints(test.AttributesOp.x_si32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si64.fset)["value"] is IntegerAttr
+    assert type(op.x_si64) is typing.get_type_hints(test.AttributesOp.x_si64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_si8.fset)["value"] is IntegerAttr
+    assert type(op.x_si8) is typing.get_type_hints(test.AttributesOp.x_si8.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_strarr.fset)["value"] is ArrayAttr
+    assert type(op.x_strarr) is typing.get_type_hints(test.AttributesOp.x_strarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_str.fset)["value"] is StringAttr
+    assert type(op.x_str) is typing.get_type_hints(test.AttributesOp.x_str.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_sym.fset)["value"] is StringAttr
+    assert type(op.x_sym) is typing.get_type_hints(test.AttributesOp.x_sym.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_symrefarr.fset)["value"] is ArrayAttr
+    assert type(op.x_symrefarr) is typing.get_type_hints(test.AttributesOp.x_symrefarr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_symref.fset)["value"] is SymbolRefAttr
+    assert type(op.x_symref) is typing.get_type_hints(test.AttributesOp.x_symref.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_typearr.fset)["value"] is ArrayAttr
+    assert type(op.x_typearr) is typing.get_type_hints(test.AttributesOp.x_typearr.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_type.fset)["value"] is TypeAttr
+    assert type(op.x_type) is typing.get_type_hints(test.AttributesOp.x_type.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui16.fset)["value"] is IntegerAttr
+    assert type(op.x_ui16) is typing.get_type_hints(test.AttributesOp.x_ui16.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui1.fset)["value"] is IntegerAttr
+    assert type(op.x_ui1) is typing.get_type_hints(test.AttributesOp.x_ui1.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui32.fset)["value"] is IntegerAttr
+    assert type(op.x_ui32) is typing.get_type_hints(test.AttributesOp.x_ui32.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui64.fset)["value"] is IntegerAttr
+    assert type(op.x_ui64) is typing.get_type_hints(test.AttributesOp.x_ui64.fget)["return"]
+
+    assert typing.get_type_hints(test.AttributesOp.x_ui8.fset)["value"] is IntegerAttr
+    assert type(op.x_ui8) is typing.get_type_hints(test.AttributesOp.x_ui8.fget)["return"]
+    # fmt: on
 
 
 # CHECK-LABEL: TEST: inferReturnTypes
