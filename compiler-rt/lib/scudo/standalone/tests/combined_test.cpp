@@ -24,6 +24,7 @@
 #include <set>
 #include <stdlib.h>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
@@ -1160,4 +1161,239 @@ TEST(ScudoCombinedTest, QuarantineDisabled) {
 
   // No quarantine stats should not be present.
   EXPECT_EQ(Stats.find("Stats: Quarantine"), std::string::npos);
+}
+
+struct UsableSizeClassConfig {
+  static const scudo::uptr NumBits = 1;
+  static const scudo::uptr MinSizeLog = 10;
+  static const scudo::uptr MidSizeLog = 10;
+  static const scudo::uptr MaxSizeLog = 13;
+  static const scudo::u16 MaxNumCachedHint = 8;
+  static const scudo::uptr MaxBytesCachedLog = 12;
+  static const scudo::uptr SizeDelta = 0;
+};
+
+struct TestExactUsableSizeConfig {
+  static const bool MaySupportMemoryTagging = false;
+  static const bool QuarantineDisabled = true;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
+
+  struct Primary {
+    // In order to properly test the usable size, this Primary config has
+    // four real size classes: 1024, 2048, 4096, 8192.
+    using SizeClassMap = scudo::FixedSizeClassMap<UsableSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = 21U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+template <class AllocatorT> void VerifyExactUsableSize(AllocatorT &Allocator) {
+  // Scan through all sizes up to 10000 then some larger sizes.
+  for (scudo::uptr Size = 1; Size < 10000; Size++) {
+    void *P = Allocator.allocate(Size, Origin);
+    EXPECT_EQ(Size, Allocator.getUsableSize(P))
+        << "Failed usable size at allocation size " << Size;
+    Allocator.deallocate(P, Origin);
+  }
+
+  // Verify that aligned allocations also return the exact size allocated.
+  const scudo::uptr AllocSize = 313;
+  for (scudo::uptr Align = 1; Align <= 8; Align++) {
+    void *P = Allocator.allocate(AllocSize, Origin, 1U << Align);
+    EXPECT_EQ(AllocSize, Allocator.getUsableSize(P))
+        << "Failed usable size at allocation size " << AllocSize << " at align "
+        << 1 << Align;
+    Allocator.deallocate(P, Origin);
+  }
+
+  // Verify an explicitly large allocations.
+  const scudo::uptr LargeAllocSize = 1000000;
+  void *P = Allocator.allocate(LargeAllocSize, Origin);
+  EXPECT_EQ(LargeAllocSize, Allocator.getUsableSize(P));
+  Allocator.deallocate(P, Origin);
+
+  // Now do it for aligned allocations for large allocations.
+  for (scudo::uptr Align = 1; Align <= 8; Align++) {
+    void *P = Allocator.allocate(LargeAllocSize, Origin, 1U << Align);
+    EXPECT_EQ(LargeAllocSize, Allocator.getUsableSize(P))
+        << "Failed usable size at allocation size " << AllocSize << " at align "
+        << 1 << Align;
+    Allocator.deallocate(P, Origin);
+  }
+}
+
+template <class AllocatorT>
+void VerifyIterateOverUsableSize(AllocatorT &Allocator) {
+  // This will not verify if the size is the exact size or the size of the
+  // size class. Instead verify that the size matches the usable size and
+  // assume the other tests have verified getUsableSize.
+  std::unordered_map<void *, size_t> Pointers;
+  Pointers.insert({Allocator.allocate(128, Origin), 0U});
+  Pointers.insert({Allocator.allocate(128, Origin, 32), 0U});
+  Pointers.insert({Allocator.allocate(2000, Origin), 0U});
+  Pointers.insert({Allocator.allocate(2000, Origin, 64), 0U});
+  Pointers.insert({Allocator.allocate(8000, Origin), 0U});
+  Pointers.insert({Allocator.allocate(8000, Origin, 128), 0U});
+  Pointers.insert({Allocator.allocate(2000205, Origin), 0U});
+  Pointers.insert({Allocator.allocate(2000205, Origin, 128), 0U});
+  Pointers.insert({Allocator.allocate(2000205, Origin, 256), 0U});
+
+  Allocator.disable();
+  Allocator.iterateOverChunks(
+      0, static_cast<scudo::uptr>(SCUDO_MMAP_RANGE_SIZE - 1),
+      [](uintptr_t Base, size_t Size, void *Arg) {
+        std::unordered_map<void *, size_t> *Pointers =
+            reinterpret_cast<std::unordered_map<void *, size_t> *>(Arg);
+        (*Pointers)[reinterpret_cast<void *>(Base)] = Size;
+      },
+      reinterpret_cast<void *>(&Pointers));
+  Allocator.enable();
+
+  for (auto [Ptr, IterateSize] : Pointers) {
+    EXPECT_NE(0U, IterateSize)
+        << "Pointer " << Ptr << " not found in iterateOverChunks call.";
+    EXPECT_EQ(IterateSize, Allocator.getUsableSize(Ptr))
+        << "Pointer " << Ptr
+        << " mismatch between iterate size and usable size.";
+    Allocator.deallocate(Ptr, Origin);
+  }
+}
+
+TEST(ScudoCombinedTest, ExactUsableSize) {
+  using AllocatorT = scudo::Allocator<TestExactUsableSizeConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  VerifyExactUsableSize<AllocatorT>(*Allocator);
+  VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
+}
+
+struct TestExactUsableSizeMTEConfig : TestExactUsableSizeConfig {
+  static const bool MaySupportMemoryTagging = true;
+};
+
+TEST(ScudoCombinedTest, ExactUsableSizeMTE) {
+  if (!scudo::archSupportsMemoryTagging() ||
+      !scudo::systemDetectsMemoryTagFaultsTestOnly())
+    TEST_SKIP("Only supported on systems that can enable MTE.");
+
+  scudo::enableSystemMemoryTaggingTestOnly();
+
+  using AllocatorT = scudo::Allocator<TestExactUsableSizeMTEConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  VerifyExactUsableSize<AllocatorT>(*Allocator);
+  VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
+}
+
+template <class AllocatorT> void VerifyUsableSize(AllocatorT &Allocator) {
+  // Check primary allocations first.
+  std::vector<scudo::uptr> SizeClasses = {1024U, 2048U, 4096U, 8192U};
+  scudo::uptr StartSize = 0;
+  for (auto SizeClass : SizeClasses) {
+    scudo::uptr UsableSize = SizeClass - scudo::Chunk::getHeaderSize();
+    for (scudo::uptr Size = StartSize; Size < UsableSize; Size++) {
+      void *P = Allocator.allocate(Size, Origin);
+      EXPECT_EQ(UsableSize, Allocator.getUsableSize(P))
+          << "Failed usable size at allocation size " << Size
+          << " for size class " << SizeClass;
+      Allocator.deallocate(P, Origin);
+    }
+    StartSize = UsableSize + 1;
+  }
+
+  // Check different alignments to verify usable space is calculated properly.
+  // Currently, the pointer plus usable size is aligned to the size class size.
+  const scudo::uptr AllocSize = 128;
+  EXPECT_TRUE(isPrimaryAllocation<AllocatorT>(128, 32));
+  void *P = Allocator.allocate(AllocSize, Origin, 32);
+  scudo::uptr UsableSize = Allocator.getUsableSize(P);
+  memset(P, 0xff, UsableSize);
+  EXPECT_GE(UsableSize, AllocSize);
+  EXPECT_GE(1024 - scudo::Chunk::getHeaderSize(), UsableSize);
+  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % 1024);
+  Allocator.deallocate(P, Origin);
+
+  EXPECT_TRUE(isPrimaryAllocation<AllocatorT>(AllocSize, 64));
+  P = Allocator.allocate(AllocSize, Origin, 64);
+  UsableSize = Allocator.getUsableSize(P);
+  memset(P, 0xff, UsableSize);
+  EXPECT_GE(UsableSize, AllocSize);
+  EXPECT_GE(1024 - scudo::Chunk::getHeaderSize(), UsableSize);
+  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % 1024);
+  Allocator.deallocate(P, Origin);
+
+  EXPECT_TRUE(isPrimaryAllocation<AllocatorT>(AllocSize, 128));
+  P = Allocator.allocate(AllocSize, Origin, 128);
+  UsableSize = Allocator.getUsableSize(P);
+  memset(P, 0xff, UsableSize);
+  EXPECT_GE(UsableSize, AllocSize);
+  EXPECT_GE(1024 - scudo::Chunk::getHeaderSize(), UsableSize);
+  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % 1024);
+  Allocator.deallocate(P, Origin);
+
+  // Check allocations in the secondary, the end of the allocation is always
+  // aligned to a page.
+  const scudo::uptr LargeAllocSize = 996780;
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
+  P = Allocator.allocate(LargeAllocSize, Origin);
+  UsableSize = Allocator.getUsableSize(P);
+  EXPECT_GE(UsableSize, LargeAllocSize);
+  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % PageSize);
+  Allocator.deallocate(P, Origin);
+
+  // Check aligned allocations now.
+  for (scudo::uptr Align = 1; Align <= 8; Align++) {
+    void *P = Allocator.allocate(LargeAllocSize, Origin, 1U << Align);
+    UsableSize = Allocator.getUsableSize(P);
+    EXPECT_GE(UsableSize, LargeAllocSize);
+    EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % PageSize);
+    Allocator.deallocate(P, Origin);
+  }
+}
+
+struct TestFullUsableSizeConfig : TestExactUsableSizeConfig {
+  static const bool ExactUsableSize = false;
+};
+
+TEST(ScudoCombinedTest, FullUsableSize) {
+  using AllocatorT = scudo::Allocator<TestFullUsableSizeConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  VerifyUsableSize<AllocatorT>(*Allocator);
+  VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
+}
+
+struct TestFullUsableSizeMTEConfig : TestFullUsableSizeConfig {
+  static const bool MaySupportMemoryTagging = true;
+};
+
+TEST(ScudoCombinedTest, FullUsableSizeMTE) {
+  if (!scudo::archSupportsMemoryTagging() ||
+      !scudo::systemDetectsMemoryTagFaultsTestOnly())
+    TEST_SKIP("Only supported on systems that can enable MTE.");
+
+  scudo::enableSystemMemoryTaggingTestOnly();
+
+  using AllocatorT = scudo::Allocator<TestFullUsableSizeMTEConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  // When MTE is enabled, you get exact sizes.
+  VerifyExactUsableSize<AllocatorT>(*Allocator);
+  VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
 }
