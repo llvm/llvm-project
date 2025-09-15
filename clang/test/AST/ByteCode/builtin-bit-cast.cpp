@@ -529,3 +529,44 @@ constexpr const intptr_t &returns_local() { return 0L; }
 // both-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
 // both-note@+1 {{read of temporary whose lifetime has ended}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
+
+namespace VectorCast {
+  typedef unsigned X          __attribute__ ((vector_size (64)));
+  typedef unsigned __int128 Y __attribute__ ((vector_size (64)));
+  constexpr int test() {
+    X x = {0};
+    Y y = x;
+
+    X x2 = y;
+
+    return 0;
+  }
+  static_assert(test() == 0);
+
+  typedef int X2      __attribute__ ((vector_size (64)));
+  typedef __int128 Y2 __attribute__ ((vector_size (64)));
+  constexpr int test2() {
+    X2 x = {0};
+    Y2 y = x;
+
+    X2 x2 = y;
+
+    return 0;
+  }
+  static_assert(test2() == 0);
+
+  struct S {
+    unsigned __int128 a : 3;
+  };
+  constexpr S s = __builtin_bit_cast(S, (__int128)12); // ref-error {{must be initialized by a constant expression}} \
+                                                       // ref-note {{constexpr bit_cast involving bit-field is not yet supported}} \
+                                                       // ref-note {{declared here}}
+#if LITTLE_END
+  static_assert(s.a == 4); // ref-error {{not an integral constant expression}} \
+                           // ref-note {{initializer of 's' is not a constant expression}}
+#else
+  static_assert(s.a == 0); // ref-error {{not an integral constant expression}} \
+                           // ref-note {{initializer of 's' is not a constant expression}}
+#endif
+
+}
