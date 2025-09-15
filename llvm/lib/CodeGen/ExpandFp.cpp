@@ -357,7 +357,6 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
 
   Type *Ty = I.getType();
-  assert(Ty->isFloatingPointTy() && "Instruction should have been scalarized");
   assert(FRemExpander::canExpandType(Ty));
 
   FastMathFlags FMF = I.getFastMathFlags();
@@ -927,16 +926,17 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
   Value *Result = PoisonValue::get(VTy);
   for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
     Value *Ext = Builder.CreateExtractElement(I->getOperand(0), Idx);
-    Value *Op;
-    if (isa<BinaryOperator>(I))
-      Op = Builder.CreateBinOp(
-          cast<BinaryOperator>(I)->getOpcode(), Ext,
+    auto *BinOp = dyn_cast<BinaryOperator>(I);
+    Value *NewOp;
+    if (BinOp)
+      NewOp = Builder.CreateBinOp(
+          BinOp->getOpcode(), Ext,
           Builder.CreateExtractElement(I->getOperand(1), Idx));
     else
-      Op = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
-                              I->getType()->getScalarType());
-    Result = Builder.CreateInsertElement(Result, Op, Idx);
-    if (auto *ScalarizedI = dyn_cast<Instruction>(Op)) {
+      NewOp = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
+                                 I->getType()->getScalarType());
+    Result = Builder.CreateInsertElement(Result, NewOp, Idx);
+    if (auto *ScalarizedI = dyn_cast<Instruction>(NewOp)) {
       ScalarizedI->copyIRFlags(I, true);
       Replace.push_back(ScalarizedI);
     }
