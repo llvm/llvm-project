@@ -365,6 +365,8 @@ Bug Fixes to C++ Support
   authentication enabled. (#GH152601)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in
   cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Stop rejecting C++11-style attributes on the first argument of constructors in older
+  standards. (#GH156809).
 - Fix a crash when applying binary or ternary operators to two same function types with different spellings,
   where at least one of the function parameters has an attribute which affects
   the function type.
