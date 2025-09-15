@@ -843,7 +843,8 @@ public:
              (M == OMPC_DEFAULTMAP_MODIFIER_to) ||
              (M == OMPC_DEFAULTMAP_MODIFIER_from) ||
              (M == OMPC_DEFAULTMAP_MODIFIER_tofrom) ||
-             (M == OMPC_DEFAULTMAP_MODIFIER_present);
+             (M == OMPC_DEFAULTMAP_MODIFIER_present) ||
+             (M == OMPC_DEFAULTMAP_MODIFIER_storage);
     }
     return true;
   }
@@ -3748,6 +3749,7 @@ getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
   OpenMPMapClauseKind Kind = OMPC_MAP_unknown;
   switch (M) {
   case OMPC_DEFAULTMAP_MODIFIER_alloc:
+  case OMPC_DEFAULTMAP_MODIFIER_storage:
     Kind = OMPC_MAP_alloc;
     break;
   case OMPC_DEFAULTMAP_MODIFIER_to:
@@ -23112,8 +23114,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
         }
       } else {
         StringRef ModifierValue =
-            "'alloc', 'from', 'to', 'tofrom', "
-            "'firstprivate', 'none', 'default', 'present'";
+            getLangOpts().OpenMP < 60
+                ? "'alloc', 'from', 'to', 'tofrom', "
+                  "'firstprivate', 'none', 'default', 'present'"
+                : "'storage', 'from', 'to', 'tofrom', "
+                  "'firstprivate', 'none', 'default', 'present'";
         if (!isDefaultmapKind && isDefaultmapModifier) {
           Diag(KindLoc, diag::err_omp_unexpected_clause_value)
               << KindValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
