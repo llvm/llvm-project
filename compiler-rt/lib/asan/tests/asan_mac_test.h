@@ -9,7 +9,6 @@ extern "C" {
   void TestGCDReuseWqthreadsAsync();
   void TestGCDReuseWqthreadsSync();
   void TestGCDDispatchAfter();
-  void TestGCDDispatchApply();
   void TestGCDInTSDDestructor();
   void TestGCDSourceEvent();
   void TestGCDSourceCancel();
