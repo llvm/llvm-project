@@ -122,7 +122,6 @@ libc_test(
         "//libc:mkdirat",
         "//libc:open",
         "//libc:remove",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
