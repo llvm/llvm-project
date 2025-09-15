@@ -340,7 +340,7 @@ ValueReaderDispatcher::readBuiltin(QualType QT, llvm::orc::ExecutorAddr Addr) {
   if (Ty->isVoidType()) {
     LLVM_DEBUG(llvm::dbgs()
                << "readBuiltin: void type, returning empty Value\n");
-    return Value(Ty, Value::K_None);
+    return Value(Ty);
   }
 
   auto Size = Ctx.getTypeSizeInChars(Ty).getQuantity();

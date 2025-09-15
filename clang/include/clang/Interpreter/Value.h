@@ -201,7 +201,7 @@ private:
   /// Represents a pointer. Holds the address and optionally a pointee `Value`.
   struct PtrValue {
     uint64_t Addr = 0;
-    Value *Pointee; // optional for str
+    Value *Pointee = nullptr; // optional for str
     PtrValue(uint64_t Addr) : Addr(Addr), Pointee(new Value()) {}
     ~PtrValue() {
       if (Pointee != nullptr)
@@ -231,7 +231,7 @@ private:
 
 public:
   Value() = default;
-  explicit Value(QualType Ty, ValKind K) : Ty(Ty), VKind(K) {}
+  explicit Value(QualType Ty) : Ty(Ty), VKind(K_None) {}
   Value(const Value &RHS);
   Value(Value &&RHS)
       : Ty(RHS.Ty), VKind(RHS.VKind), Data(RHS.Data),
