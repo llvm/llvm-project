@@ -44,7 +44,7 @@ static constexpr OptTable::Info InfoTable[] = {
 class HelloSubOptTable : public GenericOptTable {
 public:
   HelloSubOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable, false,
                         OptionCommands, OptionCommandIDsTable) {}
 };
 } // namespace

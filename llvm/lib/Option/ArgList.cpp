@@ -213,21 +213,19 @@ StringRef ArgList::getSubcommand(
   SmallVector<StringRef, 4> SubCommands;
   SmallVector<StringRef, 4> OtherPositionals;
   for (const Arg *A : *this) {
-    bool IsSubCommand = false;
-    if (A->getOption().getKind() == Option::InputClass) {
-      for (const OptTable::Command CMD : Commands) {
-        if (StringRef(CMD.Name) == "TopLevelCommand")
-          continue;
-        if (StringRef(CMD.Name) == A->getValue()) {
-          SubCommands.push_back(A->getValue());
-          IsSubCommand = true;
-        }
-      }
-      if (!IsSubCommand) {
-        OtherPositionals.push_back(A->getValue());
-        IsSubCommand = false;
-      }
+    if (A->getOption().getKind() != Option::InputClass)
+      continue;
+
+    size_t OldSize = SubCommands.size();
+    for (const OptTable::Command &CMD : Commands) {
+      if (StringRef(CMD.Name) == "TopLevelCommand")
+        continue;
+      if (StringRef(CMD.Name) == A->getValue())
+        SubCommands.push_back(A->getValue());
     }
+
+    if (SubCommands.size() == OldSize)
+      OtherPositionals.push_back(A->getValue());
   }
   if (SubCommands.size() > 1) {
     HandleMultipleSubcommands(SubCommands);
