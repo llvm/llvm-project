@@ -2498,8 +2498,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sad_epu8(__m128i __a,
 ///    A 128-bit integer vector containing the subtrahends.
 /// \returns A 128-bit integer vector containing the differences of the values
 ///    in the operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_sub_epi8_CONSTEXPR(__m128i __a, __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sub_epi8(__m128i __a, __m128i __b) {
   return (__m128i)((__v16qu)__a - (__v16qu)__b);
 }
 
