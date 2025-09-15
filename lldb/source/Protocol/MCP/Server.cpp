@@ -22,32 +22,30 @@ using namespace llvm;
 using namespace lldb_private;
 using namespace lldb_protocol::mcp;
 
-ServerInfoHandle::ServerInfoHandle() : ServerInfoHandle("") {}
-
 ServerInfoHandle::ServerInfoHandle(StringRef filename) : m_filename(filename) {
   if (!m_filename.empty())
     sys::RemoveFileOnSignal(m_filename);
 }
 
-ServerInfoHandle::~ServerInfoHandle() {
+ServerInfoHandle::~ServerInfoHandle() { Remove(); }
+
+ServerInfoHandle::ServerInfoHandle(ServerInfoHandle &&other) {
+  *this = std::move(other);
+}
+
+ServerInfoHandle &
+ServerInfoHandle::operator=(ServerInfoHandle &&other) noexcept {
+  m_filename = std::move(other.m_filename);
+  return *this;
+}
+
+void ServerInfoHandle::Remove() {
   if (m_filename.empty())
     return;
 
   sys::fs::remove(m_filename);
   sys::DontRemoveFileOnSignal(m_filename);
   m_filename.clear();
-}
-
-ServerInfoHandle::ServerInfoHandle(ServerInfoHandle &&other)
-    : m_filename(other.m_filename) {
-  *this = std::move(other);
-}
-
-ServerInfoHandle &
-ServerInfoHandle::operator=(ServerInfoHandle &&other) noexcept {
-  m_filename = other.m_filename;
-  other.m_filename.clear();
-  return *this;
 }
 
 json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
