@@ -107,8 +107,8 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         // a load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
         bool NoCapture = Call->doesNotCapture(DataOpNo);
-        if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
-            (Call->onlyReadsMemory(DataOpNo) && NoCapture))
+        if (NoCapture &&
+            (Call->onlyReadsMemory() || Call->onlyReadsMemory(DataOpNo)))
           continue;
       }
 
