@@ -22,7 +22,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
-#define DEBUG_TYPE "Unittest-asm-parser-tests"
+#define DEBUG_TYPE "unittest-asm-parser-tests"
 
 using namespace llvm;
 
