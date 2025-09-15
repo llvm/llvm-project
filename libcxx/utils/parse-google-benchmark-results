@@ -26,6 +26,8 @@ def main(argv):
     for file in args.filename:
         js = json.load(file)
         for bm in js['benchmarks']:
+            if args.timing not in bm:
+                raise RuntimeError(f'Benchmark does not contain key for {args.timing}: {bm}')
             row = [bm['name'], bm[args.timing]]
             rows.append(row)
 
