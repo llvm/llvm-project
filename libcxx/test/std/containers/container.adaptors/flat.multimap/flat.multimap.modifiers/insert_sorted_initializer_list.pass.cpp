@@ -14,6 +14,7 @@
 
 // void insert(sorted_equivalent_t, initializer_list<value_type> il);
 
+#include <algorithm>
 #include <flat_map>
 #include <cassert>
 #include <functional>
@@ -25,7 +26,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -43,16 +44,20 @@ void test() {
            });
   assert(m.size() == 12);
   V expected[] = {{0, 1}, {1, 1}, {1, 1.5}, {1, 2}, {1, 2}, {1, 3}, {2, 1}, {2, 4}, {3, 1}, {3, 1.5}, {3, 2}, {4, 1}};
-  assert(std::ranges::equal(m, expected));
+  assert(std::ranges::is_permutation(m, expected));
+  check_invariant(m);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto insert_func = [](auto& m, const auto& newValues) {
       using FlatMap                        = std::decay_t<decltype(m)>;
       using value_type                     = typename FlatMap::value_type;
@@ -61,6 +66,14 @@ int main(int, char**) {
     };
     test_insert_range_exception_guarantee(insert_func);
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

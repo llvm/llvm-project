@@ -189,7 +189,7 @@ func.func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK-NEXT: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
   // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[PTR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
   // CHECK-INTERFACE: llvm.intr.assume
-  memref.assume_alignment %0, 16 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
 
@@ -205,7 +205,7 @@ func.func @assume_alignment_w_offset(%0 : memref<4x4xf16, strided<[?, ?], offset
   // CHECK-DAG: %[[ALIGN:.*]] = llvm.mlir.constant(16 : index) : i64
   // CHECK-NEXT: llvm.intr.assume %[[TRUE]] ["align"(%[[BUFF_ADDR]], %[[ALIGN]] : !llvm.ptr, i64)] : i1
   // CHECK-INTERFACE: llvm.intr.assume
-  memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
+  %1 = memref.assume_alignment %0, 16 : memref<4x4xf16, strided<[?, ?], offset: ?>>
   return
 }
 // -----
@@ -452,11 +452,21 @@ func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fv
   // CHECK: llvm.atomicrmw umin %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw addf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw maximumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fmaximum %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw maxnumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fmax %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw minimumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fminimum %{{.*}}, %{{.*}} acq_rel
+  memref.atomic_rmw minnumf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw ori %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _or %{{.*}}, %{{.*}} acq_rel
   memref.atomic_rmw andi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
-  // CHECK-INTERFACE-COUNT-9: llvm.atomicrmw
+  memref.atomic_rmw xori %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  // CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} acq_rel
+  // CHECK-INTERFACE-COUNT-14: llvm.atomicrmw
   return
 }
 
@@ -745,6 +755,17 @@ func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
 
 // -----
 
+// CHECK-LABEL: func @load_with_alignment(
+// CHECK-INTERFACE-LABEL: func @load_with_alignment(
+func.func @load_with_alignment(%arg0 : memref<32xf32>, %arg1 : index) {
+  // CHECK: llvm.load %{{.*}} {alignment = 32 : i64} : !llvm.ptr -> f32
+  // CHECK-INTERFACE: llvm.load
+  %1 = memref.load %arg0[%arg1] {alignment = 32} : memref<32xf32>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @store_non_temporal(
 // CHECK-INTERFACE-LABEL: func @store_non_temporal(
 func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
@@ -753,6 +774,17 @@ func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>,
   // CHECK: llvm.store %{{.*}}, %{{.*}}  {nontemporal} : f32, !llvm.ptr
   // CHECK-INTERFACE: llvm.store
   memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @store_with_alignment(
+// CHECK-INTERFACE-LABEL: func @store_with_alignment(
+func.func @store_with_alignment(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : index) {
+  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 32 : i64} : f32, !llvm.ptr
+  // CHECK-INTERFACE: llvm.store
+  memref.store %arg1, %arg0[%arg2] {alignment = 32} : memref<32xf32>
   func.return
 }
 

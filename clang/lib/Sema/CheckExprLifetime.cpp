@@ -1340,12 +1340,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         return false;
       }
 
-      if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
-        SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
-            << DiagRange;
-        return false;
-      }
-
       switch (shouldLifetimeExtendThroughPath(Path)) {
       case PathLifetimeKind::Extend:
         // Update the storage duration of the materialized temporary.
@@ -1356,6 +1350,20 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         return true;
 
       case PathLifetimeKind::NoExtend:
+        if (SemaRef.getLangOpts().CPlusPlus23 && InitEntity) {
+          if (const VarDecl *VD =
+                  dyn_cast_if_present<VarDecl>(InitEntity->getDecl());
+              VD && VD->isCXXForRangeImplicitVar()) {
+            return false;
+          }
+        }
+
+        if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
+          SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
+              << DiagRange;
+          return false;
+        }
+
         // If the path goes through the initialization of a variable or field,
         // it can't possibly reach a temporary created in this full-expression.
         // We will have already diagnosed any problems with the initializer.

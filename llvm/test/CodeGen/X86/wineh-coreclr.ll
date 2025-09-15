@@ -38,6 +38,7 @@ entry:
 ; CHECK: [[test1_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f1:.+]]:
   invoke void @f(i32 1)
     to label %inner_try unwind label %finally
@@ -46,6 +47,7 @@ inner_try:
 ; CHECK: [[test1_before_f2:.+]]:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f2:.+]]:
   invoke void @f(i32 2)
     to label %finally.clone unwind label %exn.dispatch
@@ -69,6 +71,7 @@ catch1:
 ; CHECK: [[test1_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f3:.+]]:
   invoke void @f(i32 3) [ "funclet"(token %catch.pad1) ]
     to label %catch1.ret unwind label %finally
@@ -92,6 +95,7 @@ catch2:
 ; CHECK: [[test1_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f4:.+]]:
   invoke void @f(i32 4) [ "funclet"(token %catch.pad2) ]
     to label %try_in_catch unwind label %finally
@@ -100,6 +104,7 @@ try_in_catch:
 ; CHECK: [[test1_before_f5:.+]]:
 ; CHECK-NEXT: movl $5, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f5:.+]]:
   invoke void @f(i32 5) [ "funclet"(token %catch.pad2) ]
     to label %catch2.ret unwind label %fault
@@ -116,6 +121,7 @@ fault:
 ; CHECK: [[test1_before_f6:.+]]:
 ; CHECK-NEXT: movl $6, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f6:.+]]:
   invoke void @f(i32 6) [ "funclet"(token %fault.pad) ]
     to label %fault.ret unwind label %finally
@@ -312,6 +318,7 @@ unreachable:
 ; CHECK: [[test2_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test2_after_f1:.+]]:
 ; CHECK: .seh_proc [[test2_catch1:[^ ]+]]
 ; CHECK: .seh_proc [[test2_catch2:[^ ]+]]
@@ -320,6 +327,7 @@ unreachable:
 ; CHECK: [[test2_before_f2:.+]]:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test2_after_f2:.+]]:
 ; CHECK: int3
 ; CHECK: [[test2_end:.*func_end.*]]:
@@ -448,6 +456,7 @@ entry:
 ; CHECK: [[test3_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f1:.+]]:
   invoke void @f(i32 1)
     to label %exit unwind label %fault1
@@ -474,6 +483,7 @@ fault4:
 ; CHECK: [[test3_before_f6:.+]]:
 ; CHECK-NEXT: movl $6, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f6:.+]]:
   invoke void @f(i32 6) ["funclet"(token %fault.pad4)]
     to label %fault4.cont unwind label %exn.dispatch1
@@ -482,6 +492,7 @@ fault4.cont:
 ; CHECK: [[test3_before_f7:.+]]:
 ; CHECK-NEXT: movl $7, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f7:.+]]:
   invoke void @f(i32 7) ["funclet"(token %fault.pad4)]
     to label %unreachable unwind label %fault5
@@ -512,6 +523,7 @@ unreachable:
 ; CHECK: [[test3_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f4:.+]]:
 ; CHECK: int3
 ; CHECK: .seh_proc [[test3_fault2:[^ ]+]]
@@ -520,6 +532,7 @@ unreachable:
 ; CHECK: [[test3_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f3:.+]]:
 ; CHECK: int3
 ; CHECK: .seh_proc [[test3_fault1:[^ ]+]]
@@ -528,6 +541,7 @@ unreachable:
 ; CHECK: [[test3_before_f2:.+]]:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f2:.+]]:
 ; CHECK: int3
 ; CHECK: [[test3_end:.*func_end.*]]:

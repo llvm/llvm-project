@@ -91,8 +91,7 @@ void addBlockEntranceTester(AnalysisASTConsumer &AnalysisConsumer,
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker(&registerChecker<BlockEntranceCallbackTester>,
                         &shouldAlwaysRegister, "test.BlockEntranceTester",
-                        "EmptyDescription", "EmptyDocsUri",
-                        /*IsHidden=*/false);
+                        "EmptyDescription");
   });
 }
 
@@ -102,8 +101,7 @@ void addBranchConditionTester(AnalysisASTConsumer &AnalysisConsumer,
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker(&registerChecker<BranchConditionCallbackTester>,
                         &shouldAlwaysRegister, "test.BranchConditionTester",
-                        "EmptyDescription", "EmptyDocsUri",
-                        /*IsHidden=*/false);
+                        "EmptyDescription");
   });
 }
 
@@ -111,10 +109,10 @@ llvm::SmallVector<StringRef> parseEachDiag(StringRef Diags) {
   llvm::SmallVector<StringRef> Fragments;
   llvm::SplitString(Diags, Fragments, "\n");
   // Drop the prefix like "test.BlockEntranceTester: " from each fragment.
-  llvm::for_each(Fragments, [](StringRef &Fragment) {
+  for (StringRef &Fragment : Fragments) {
     Fragment = Fragment.drop_until([](char Ch) { return Ch == ' '; });
     Fragment.consume_front(" ");
-  });
+  }
   llvm::sort(Fragments);
   return Fragments;
 }

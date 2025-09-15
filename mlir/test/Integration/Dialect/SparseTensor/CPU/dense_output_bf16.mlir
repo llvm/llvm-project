@@ -28,8 +28,6 @@
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 
-// UNSUPPORTED: target=aarch64{{.*}}
-
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 #DenseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense)}>
 

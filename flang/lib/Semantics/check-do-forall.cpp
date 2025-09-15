@@ -1180,7 +1180,9 @@ void DoForallChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
 void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
   const auto &control{std::get<parser::IoImpliedDoControl>(outputImpliedDo.t)};
   const parser::Name &name{control.name.thing.thing};
-  context_.CheckIndexVarRedefine(name.source, *name.symbol);
+  if (name.symbol) {
+    context_.CheckIndexVarRedefine(name.source, *name.symbol);
+  }
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {

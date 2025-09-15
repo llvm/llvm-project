@@ -118,12 +118,12 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9
 ; CHECK-NEXT:    ldp q2, q1, [x10]
-; CHECK-NEXT:    fcvtzu.4s v5, v1
-; CHECK-NEXT:    ldp q1, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v4, v2
-; CHECK-NEXT:    fcvtzu.4s v7, v3
+; CHECK-NEXT:    fcvtzu.4s v4, v1
+; CHECK-NEXT:    ldp q7, q1, [x9]
+; CHECK-NEXT:    fcvtzu.4s v3, v2
 ; CHECK-NEXT:    fcvtzu.4s v6, v1
-; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
+; CHECK-NEXT:    fcvtzu.4s v5, v7
+; CHECK-NEXT:    tbl.16b v1, { v3, v4, v5, v6 }, v0
 ; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
@@ -185,12 +185,12 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle(ptr %A, ptr %B, p
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9
 ; CHECK-NEXT:    ldp q2, q1, [x10]
-; CHECK-NEXT:    fcvtzu.4s v5, v1
-; CHECK-NEXT:    ldp q1, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v4, v2
-; CHECK-NEXT:    fcvtzu.4s v7, v3
+; CHECK-NEXT:    fcvtzu.4s v4, v1
+; CHECK-NEXT:    ldp q7, q1, [x9]
+; CHECK-NEXT:    fcvtzu.4s v3, v2
 ; CHECK-NEXT:    fcvtzu.4s v6, v1
-; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
+; CHECK-NEXT:    fcvtzu.4s v5, v7
+; CHECK-NEXT:    tbl.16b v1, { v3, v4, v5, v6 }, v0
 ; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
@@ -252,12 +252,12 @@ define void @fptoui_v16f32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    ldp q2, q1, [x9, #32]
-; CHECK-NEXT:    fcvtzu.4s v7, v1
-; CHECK-NEXT:    ldp q1, q3, [x9]
-; CHECK-NEXT:    fcvtzu.4s v6, v2
-; CHECK-NEXT:    fcvtzu.4s v5, v3
+; CHECK-NEXT:    fcvtzu.4s v6, v1
+; CHECK-NEXT:    ldp q7, q1, [x9]
+; CHECK-NEXT:    fcvtzu.4s v5, v2
 ; CHECK-NEXT:    fcvtzu.4s v4, v1
-; CHECK-NEXT:    tbl.16b v1, { v4, v5, v6, v7 }, v0
+; CHECK-NEXT:    fcvtzu.4s v3, v7
+; CHECK-NEXT:    tbl.16b v1, { v3, v4, v5, v6 }, v0
 ; CHECK-NEXT:    str q1, [x1], #32
 ; CHECK-NEXT:    b.eq LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit

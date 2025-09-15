@@ -37,6 +37,9 @@ defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-r
 
 def print_timing : F<"print-timing", "Print timing information">;
 
+def emit_visible_modules
+    : F<"emit-visible-modules", "emit visible modules in primary output">;
+
 def verbose : F<"v", "Use verbose output">;
 
 def round_trip_args : F<"round-trip-args", "verify that command-line arguments are canonical by parsing and re-serializing">;

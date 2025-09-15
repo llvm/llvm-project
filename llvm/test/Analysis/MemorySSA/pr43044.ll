@@ -4,7 +4,7 @@
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 ; CHECK-LABEL: @func_42()
 define void @func_42() {
@@ -47,6 +47,8 @@ cleanup1400.loopexit1:                            ; preds = %for.cond1050
   br label %cleanup1400
 
 cleanup1400:                                      ; preds = %cleanup1400.loopexit1, %cleanup1400.loopexit.split
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull undef)
+  call void @dummy()
   unreachable
 }
+
+declare void @dummy()

@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/common/clc_smoothstep.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/common/smoothstep.h>
 
 #define SMOOTHSTEP_SINGLE_DEF(X_TYPE)                                          \
   _CLC_OVERLOAD _CLC_DEF X_TYPE smoothstep(X_TYPE edge0, X_TYPE edge1,         \

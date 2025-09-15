@@ -1,4 +1,4 @@
-//===--- SignalHandlerCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,9 @@ constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
 // mentioned POSIX specification was not updated after 'quick_exit' appeared
 // in the C11 standard.
 // Also, we want to keep the "minimal set" a subset of the "POSIX set".
-// The list is repeated in bugprone-signal-handler.rst and should be kept up to date.
+// The list is repeated in bugprone-signal-handler.rst and should be kept up to
+// date.
+// clang-format off
 constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
@@ -215,7 +217,9 @@ constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "wmemcpy",
     "wmemmove",
     "wmemset",
-    "write"};
+    "write"
+};
+// clang-format on
 
 using namespace clang::ast_matchers;
 
@@ -322,11 +326,11 @@ SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
   return P.getSourceRange();
 }
 
-} // namespace
-
 AST_MATCHER(FunctionDecl, isStandardFunction) {
   return isStandardFunction(&Node);
 }
+
+} // namespace
 
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
@@ -521,7 +525,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
   if (!FD->isInStdNamespace() && !FD->isGlobal())
     return false;
 
-  if (ConformingFunctions.count(II->getName()))
+  if (ConformingFunctions.contains(II->getName()))
     return true;
 
   return false;

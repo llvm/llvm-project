@@ -2,7 +2,7 @@
 ; Note update_mir_test_checks does not support generating checks for
 ; the frame info, so some functions have manually added stack object
 ; checks.
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -o - %s | FileCheck %s
 ; FIXME: pre-VI should have same ABI without legal i16 operations.
 
 define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {
@@ -97,8 +97,8 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[TRUNC]], [[C]]
-  ; CHECK-NEXT:   [[INTRINSIC_W_SIDE_EFFECTS:%[0-9]+]]:_(s1), [[INTRINSIC_W_SIDE_EFFECTS1:%[0-9]+]]:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[INTRINSIC_W_SIDE_EFFECTS]](s1), %bb.2
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s1), [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[INT]](s1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
@@ -108,7 +108,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb2:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INTRINSIC_W_SIDE_EFFECTS1]](s64)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s64)
   ; CHECK-NEXT:   SI_RETURN
 bb:
   br i1 %arg, label %bb2, label %bb1
@@ -1646,7 +1646,7 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[TRUNC1]](s8), [[DEF]](p1) :: (store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C]](s64)
   ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[PTR_ADD]](p1) :: (store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store { i8, i32 } %arg0, ptr addrspace(1) poison
@@ -1661,11 +1661,11 @@ define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (load (s8) from %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s32)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C1]](s64)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[PTR_ADD1]](p1) :: (store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %arg0.load = load { i8, i32 }, ptr addrspace(5) %arg0
@@ -1687,17 +1687,17 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p5) :: (volatile load (s8) from %ir.arg0, align 4, addrspace 5)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s32)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (volatile load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[COPY1]](p5) :: (volatile load (s8) from %ir.arg1, align 4, addrspace 5)
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s32)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (volatile load (s32) from %ir.arg1 + 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C1]](s64)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[PTR_ADD2]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C1]](s64)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](s32), [[PTR_ADD3]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[COPY2]](s32), [[DEF1]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   SI_RETURN
@@ -1760,10 +1760,10 @@ define void @byval_a3i32_align128_byval_i16_align64(ptr addrspace(5) byval([3 x 
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (dereferenceable load (s32) from %ir.arg0, addrspace 5)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 4, addrspace 5)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s32)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p5) :: (dereferenceable load (s32) from %ir.arg0 + 8, addrspace 5)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `ptr addrspace(1) null`, addrspace 1)
@@ -2770,7 +2770,7 @@ define void @vector_ptr_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x ptr addrspa
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C]](s64)
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<2 x p3>), [[PTR_ADD]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) poison` + 16, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store { <2 x ptr addrspace(1)>, <2 x ptr addrspace(3)> } %arg, ptr addrspace(1) poison

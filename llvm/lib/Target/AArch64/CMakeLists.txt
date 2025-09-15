@@ -8,7 +8,7 @@ tablegen(LLVM AArch64GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
 tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler
-              --large-decoder-table)
+              -ignore-non-decodable-operands)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -90,7 +90,9 @@ add_llvm_target(AArch64CodeGen
   SMEABIPass.cpp
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
+  MachineSMEABIPass.cpp
   AArch64SIMDInstrOpt.cpp
+  AArch64PrologueEpilogue.cpp
 
   DEPENDS
   intrinsics_gen
@@ -107,6 +109,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

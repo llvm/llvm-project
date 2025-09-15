@@ -13,6 +13,8 @@
 #ifndef LLVM_IR_FMF_H
 #define LLVM_IR_FMF_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class raw_ostream;
 
@@ -104,7 +106,7 @@ public:
   }
 
   /// Print fast-math flags to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI void print(raw_ostream &O) const;
 
   /// Intersect rewrite-based flags
   static inline FastMathFlags intersectRewrite(FastMathFlags LHS,

@@ -405,42 +405,6 @@ v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], a[4:11], v[12:19], v[20:23], v24, v25
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 v_mfma_scale_f32_16x16x128_f8f6f4 v[50:53], v[4:11], v[12:19], v[20:23], v24, v25
 
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], v44, s24 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x2c,0x31,0x00,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], v44, s24
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], s24, s24 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x18,0x30,0x00,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], s24, s24
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], s24, v44 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x18,0x58,0x02,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], s24, v44
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], m0, m0 op_sel_hi:[0,0,0]  ; encoding: [0x00,0x00,0xac,0xd3,0x7c,0xf8,0x00,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], m0, m0
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], vcc_lo, v2 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x6a,0x04,0x02,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], vcc_lo, v2
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], 9, v2 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x89,0x04,0x02,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], 9, v2
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], v2, 9 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x02,0x13,0x01,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], v2, 9
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], s20, 9 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0x14,0x12,0x01,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], s20, 9
-
-// GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], 33, 9 op_sel_hi:[0,0,0] ; encoding: [0x00,0x00,0xac,0xd3,0xa1,0x12,0x01,0x00,0x00,0x08,0xad,0xd3,0x04,0x19,0x52,0x04]
-// ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], 33, 9
-
 // GFX950: v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[12:19], v[20:23], v24, v25 op_sel_hi:[0,0,0] cbsz:3 blgp:1 ; encoding: [0x00,0x00,0xac,0xd3,0x18,0x33,0x02,0x00,0x00,0x0b,0xad,0xd3,0x04,0x19,0x52,0x24]
 // ERR: :[[@LINE+1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:9], v[12:19], v[20:23], v24, v25 cbsz:3 blgp:1

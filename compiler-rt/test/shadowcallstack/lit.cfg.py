@@ -32,5 +32,5 @@ config.substitutions.append(
     )
 )
 
-if config.host_os not in ["Linux"] or config.target_arch not in ["aarch64", "riscv64"]:
+if config.target_os not in ["Linux"] or config.target_arch not in ["aarch64", "riscv64"]:
     config.unsupported = True

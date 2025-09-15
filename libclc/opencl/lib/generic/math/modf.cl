@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_modf.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/modf.h>
 
-#define FUNCTION modf
+#define __CLC_FUNCTION modf
 #define __CLC_BODY <clc/math/unary_def_with_ptr.inc>
 #include <clc/math/gentype.inc>

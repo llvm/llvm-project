@@ -32,7 +32,7 @@
 ; CHECK-10: function(loop-unroll<O2>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep;no-memoryssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-11
-; CHECK-11: function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep;no-memoryssa>)
+; CHECK-11: function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;no-memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;memdep;no-memoryssa>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
 ; CHECK-12: function(early-cse<>,early-cse<memssa>)

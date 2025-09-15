@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -test-constant-fold | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-single-fold | FileCheck %s
 
 // CHECK-LABEL: fold_extract_transpose_negative
 func.func @fold_extract_transpose_negative(%arg0: vector<4x4xf16>) -> vector<4x4xf16> {
@@ -11,3 +11,5 @@ func.func @fold_extract_transpose_negative(%arg0: vector<4x4xf16>) -> vector<4x4
   %2 = vector.extract %1[0] : vector<4x4xf16> from vector<1x4x4xf16>
   return %2 : vector<4x4xf16>
 }
+
+

@@ -1,4 +1,4 @@
-//===--- AvoidThrowingObjCExceptionCheck.h - clang-tidy----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ namespace clang::tidy::google::objc {
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-avoid-throwing-exception.html
 class AvoidThrowingObjCExceptionCheck : public ClangTidyCheck {
- public:
+public:
   AvoidThrowingObjCExceptionCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -32,4 +32,4 @@ class AvoidThrowingObjCExceptionCheck : public ClangTidyCheck {
 
 } // namespace clang::tidy::google::objc
 
-#endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OBJC_AVOID_THROWING_EXCEPTION_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OBJC_AVOID_THROWING_EXCEPTION_H

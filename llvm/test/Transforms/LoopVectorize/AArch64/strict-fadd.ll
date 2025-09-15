@@ -970,7 +970,7 @@ loop:
   %red.next = fadd double %for, %red
   %for.next = sitofp i32 %iv to double
   %iv.next = add nsw i32 %iv, 1
-  %ec = icmp eq i32 %iv.next, 1024
+  %ec = icmp eq i32 %iv.next, 1025
   br i1 %ec, label %exit, label %loop, !llvm.loop !13
 
 exit:

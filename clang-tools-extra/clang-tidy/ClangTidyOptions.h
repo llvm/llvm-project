@@ -1,4 +1,4 @@
-//===--- ClangTidyOptions.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -204,7 +204,9 @@ class FileOptionsBaseProvider : public DefaultOptionsProvider {
 protected:
   // A pair of configuration file base name and a function parsing
   // configuration from text in the corresponding format.
-  using ConfigFileHandler = std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions> (llvm::MemoryBufferRef)>>;
+  using ConfigFileHandler =
+      std::pair<std::string, std::function<llvm::ErrorOr<ClangTidyOptions>(
+                                 llvm::MemoryBufferRef)>>;
 
   /// Configuration file handlers listed in the order of priority.
   ///

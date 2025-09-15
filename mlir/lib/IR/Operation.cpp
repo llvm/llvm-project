@@ -19,7 +19,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
@@ -810,13 +809,16 @@ void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
     ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
     llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedProps.begin(),
                                                   elidedProps.end());
-    bool atLeastOneAttr = llvm::any_of(attrs, [&](NamedAttribute attr) {
-      return !elidedAttrsSet.contains(attr.getName().strref());
-    });
-    if (atLeastOneAttr) {
-      p << "<";
-      p.printOptionalAttrDict(dictAttr.getValue(), elidedProps);
-      p << ">";
+    auto filteredAttrs =
+        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+          return !elidedAttrsSet.contains(attr.getName().strref());
+        });
+    if (!filteredAttrs.empty()) {
+      p << "<{";
+      interleaveComma(filteredAttrs, p, [&](NamedAttribute attr) {
+        p.printNamedAttribute(attr);
+      });
+      p << "}>";
     }
   } else {
     p << "<" << properties << ">";

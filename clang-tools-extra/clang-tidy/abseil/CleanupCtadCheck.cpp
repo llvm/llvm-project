@@ -1,4 +1,4 @@
-//===--- CleanupCtadCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ using namespace ::clang::transformer;
 
 namespace clang::tidy::abseil {
 
-RewriteRuleWith<std::string> cleanupCtadCheckImpl() {
+static RewriteRuleWith<std::string> cleanupCtadCheckImpl() {
   auto WarningMessage = cat("prefer absl::Cleanup's class template argument "
                             "deduction pattern in C++17 and higher");
 

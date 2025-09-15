@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=false -verify-machineinstrs  < %s | FileCheck %s
+; RUN: llc -O2 -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=false  < %s | FileCheck %s
 
 ; CHECK-LABEL: %entry
 ; CHECK: flat_load_dwordx4

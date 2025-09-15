@@ -210,13 +210,13 @@ void test_size_types(void) {
   scanf("%zd", &s); // No warning.
 
   double d2 = 0.;
-  scanf("%zd", &d2); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+  scanf("%zd", &d2); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 
   ssize_t sn = 0;
   scanf("%zn", &sn); // No warning.
 
   double d3 = 0.;
-  scanf("%zn", &d3); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+  scanf("%zn", &d3); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
 
 void test_ptrdiff_t_types(void) {

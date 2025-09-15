@@ -38,6 +38,13 @@ namespace {
           OutputKind(K), OutputFormat(Format), FilterString(FilterString),
           DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {}
 
+    ASTPrinter(raw_ostream &Out, Kind K, ASTDumpOutputFormat Format,
+               StringRef FilterString, bool DumpLookups = false,
+               bool DumpDeclTypes = false)
+        : Out(Out), OwnedOut(nullptr), OutputKind(K), OutputFormat(Format),
+          FilterString(FilterString), DumpLookups(DumpLookups),
+          DumpDeclTypes(DumpDeclTypes) {}
+
     void HandleTranslationUnit(ASTContext &Context) override {
       TranslationUnitDecl *D = Context.getTranslationUnitDecl();
 
@@ -90,6 +97,7 @@ namespace {
           Out << "Not a DeclContext\n";
       } else if (OutputKind == Print) {
         PrintingPolicy Policy(D->getASTContext().getLangOpts());
+        Policy.IncludeTagDefinition = true;
         D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
       } else if (OutputKind != None) {
         D->dump(Out, OutputKind == DumpFull, OutputFormat);
@@ -105,8 +113,10 @@ namespace {
         // FIXME: Support combining -ast-dump-decl-types with -ast-dump-lookups.
         if (auto *VD = dyn_cast<ValueDecl>(InnerD))
           VD->getType().dump(Out, VD->getASTContext());
-        if (auto *TD = dyn_cast<TypeDecl>(InnerD))
-          TD->getTypeForDecl()->dump(Out, TD->getASTContext());
+        if (auto *TD = dyn_cast<TypeDecl>(InnerD)) {
+          const ASTContext &Ctx = TD->getASTContext();
+          Ctx.getTypeDeclType(TD)->dump(Out, Ctx);
+        }
       }
     }
 
@@ -171,6 +181,19 @@ clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
       Deserialize ? ASTPrinter::DumpFull
                   : DumpDecls ? ASTPrinter::Dump : ASTPrinter::None,
       Format, FilterString, DumpLookups, DumpDeclTypes);
+}
+
+std::unique_ptr<ASTConsumer>
+clang::CreateASTDumper(raw_ostream &Out, StringRef FilterString, bool DumpDecls,
+                       bool Deserialize, bool DumpLookups, bool DumpDeclTypes,
+                       ASTDumpOutputFormat Format) {
+  assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
+  return std::make_unique<ASTPrinter>(Out,
+                                      Deserialize ? ASTPrinter::DumpFull
+                                      : DumpDecls ? ASTPrinter::Dump
+                                                  : ASTPrinter::None,
+                                      Format, FilterString, DumpLookups,
+                                      DumpDeclTypes);
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDeclNodeLister() {

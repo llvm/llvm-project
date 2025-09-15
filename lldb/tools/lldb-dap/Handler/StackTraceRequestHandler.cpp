@@ -69,7 +69,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame, frame_format));
+    stack_frames.emplace_back(CreateStackFrame(dap, frame, frame_format));
   }
 
   if (include_all && reached_end_of_stack) {

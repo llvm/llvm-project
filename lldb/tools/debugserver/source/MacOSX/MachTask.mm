@@ -877,6 +877,17 @@ void *MachTask::ExceptionThread(void *arg) {
       if (exception_message.CatchExceptionRaise(task)) {
         if (exception_message.state.task_port != task) {
           if (exception_message.state.IsValid()) {
+            pid_t new_pid = -1;
+            kern_return_t kr =
+                pid_for_task(exception_message.state.task_port, &new_pid);
+            pid_t old_pid = mach_proc->ProcessID();
+            if (kr == KERN_SUCCESS && old_pid != new_pid) {
+              DNBLogError("Got an exec mach message but the pid of "
+                          "the new task and the pid of the old task "
+                          "do not match, something is wrong.");
+              // exit the thread.
+              break;
+            }
             // We exec'ed and our task port changed on us.
             DNBLogThreadedIf(LOG_EXCEPTIONS,
                              "task port changed from 0x%4.4x to 0x%4.4x",

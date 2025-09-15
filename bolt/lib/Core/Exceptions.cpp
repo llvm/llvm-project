@@ -500,7 +500,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
 
   const FDE &CurFDE = *I->second;
   std::optional<uint64_t> LSDA = CurFDE.getLSDAAddress();
-  Function.setLSDAAddress(LSDA ? *LSDA : 0);
+  Function.setLSDAAddress(LSDA.value_or(0));
 
   uint64_t Offset = Function.getFirstInstructionOffset();
   uint64_t CodeAlignment = CurFDE.getLinkedCIE()->getCodeAlignmentFactor();

@@ -17,7 +17,7 @@ void binary_assign(void) {
     i = 42;
 }
 
-// CIR-LABEL: cir.func @binary_assign() {
+// CIR-LABEL: cir.func{{.*}} @binary_assign() {
 // CIR:         %[[B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"]
 // CIR:         %[[C:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"]
 // CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]

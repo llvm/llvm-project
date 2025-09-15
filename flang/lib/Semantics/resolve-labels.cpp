@@ -489,15 +489,29 @@ public:
 
   // C1401
   void Post(const parser::MainProgram &mainProgram) {
+    // Uppercase the name of the main program, so that its symbol name
+    // would be unique from similarly named non-main-program symbols.
+    auto upperCaseCharBlock = [](const parser::CharBlock &cb) {
+      auto ch{const_cast<char *>(cb.begin())};
+      for (char *endCh{ch + cb.size()}; ch != endCh; ++ch) {
+        *ch = parser::ToUpperCaseLetter(*ch);
+      }
+    };
+    const parser::CharBlock *progName{nullptr};
+    if (const auto &program{
+            std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(
+                mainProgram.t)}) {
+      progName = &program->statement.v.source;
+      upperCaseCharBlock(*progName);
+    }
     if (const parser::CharBlock *
         endName{GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
             mainProgram.t))}) {
-      if (const auto &program{
-              std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(
-                  mainProgram.t)}) {
-        if (*endName != program->statement.v.source) {
+      upperCaseCharBlock(*endName);
+      if (progName) {
+        if (*endName != *progName) {
           context_.Say(*endName, "END PROGRAM name mismatch"_err_en_US)
-              .Attach(program->statement.v.source, "should be"_en_US);
+              .Attach(*progName, "should be"_en_US);
         }
       } else {
         context_.Say(*endName,

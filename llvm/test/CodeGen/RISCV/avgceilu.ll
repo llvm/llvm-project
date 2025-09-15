@@ -75,7 +75,7 @@ define i16 @test_fixed_i16(i16 %a0, i16 %a1) nounwind {
 ; RV64I-LABEL: test_fixed_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1
@@ -104,7 +104,7 @@ define i16 @test_ext_i16(i16 %a0, i16 %a1) nounwind {
 ; RV64I-LABEL: test_ext_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    add a0, a0, a1

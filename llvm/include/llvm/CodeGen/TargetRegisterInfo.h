@@ -68,7 +68,7 @@ public:
   const bool CoveredBySubRegs;
   const unsigned *SuperClasses;
   const uint16_t SuperClassesSize;
-  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction&);
+  ArrayRef<MCPhysReg> (*OrderFunc)(const MachineFunction &, bool Rev);
 
   /// Return the register class ID number.
   unsigned getID() const { return MC->getID(); }
@@ -199,8 +199,9 @@ public:
   /// other criteria.
   ///
   /// By default, this method returns all registers in the class.
-  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : getRegisters();
+  ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF,
+                                            bool Rev = false) const {
+    return OrderFunc ? OrderFunc(MF, Rev) : getRegisters();
   }
 
   /// Returns the combination of all lane masks of register in this class.
@@ -272,9 +273,10 @@ protected:
                      const RegClassInfo *const RCIs,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
-  virtual ~TargetRegisterInfo();
 
 public:
+  virtual ~TargetRegisterInfo();
+
   /// Return the number of registers for the function. (may overestimate)
   virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
     return getNumRegs();
@@ -881,7 +883,7 @@ public:
   /// If a target supports multiple different pointer register classes,
   /// kind specifies which one is indicated.
   virtual const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const {
+  getPointerRegClass(unsigned Kind = 0) const {
     llvm_unreachable("Target didn't implement getPointerRegClass!");
   }
 
@@ -1242,6 +1244,10 @@ public:
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
   }
+
+  // Whether this register should be ignored when generating CodeView debug
+  // info, because it's a known there is no mapping available.
+  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const { return false; }
 };
 
 //===----------------------------------------------------------------------===//

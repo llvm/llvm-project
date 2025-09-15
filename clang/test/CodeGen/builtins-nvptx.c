@@ -883,6 +883,13 @@ __device__ void nvvm_vote(int pred) {
   // CHECK: ret void
 }
 
+// CHECK-LABEL: nvvm_pm_event_mask
+__device__ void nvvm_pm_event_mask() {
+  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 255)
+  __nvvm_pm_event_mask(255);
+  // CHECK: ret void
+}
+
 // CHECK-LABEL: nvvm_nanosleep
 __device__ void nvvm_nanosleep(int d) {
 #if __CUDA_ARCH__ >= 700

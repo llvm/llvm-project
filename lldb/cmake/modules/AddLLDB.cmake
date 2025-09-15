@@ -38,14 +38,11 @@ function(add_lldb_library name)
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-  # only supported parameters to this macro are the optional
-  # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
-    "INSTALL_PREFIX;ENTITLEMENTS"
-    "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
+    "INSTALL_PREFIX"
+    "LINK_LIBS;CLANG_LIBS"
     ${ARGN})
-  list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
     foreach(link_lib ${PARAM_LINK_LIBS})
@@ -71,12 +68,6 @@ function(add_lldb_library name)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
   endif()
 
-  if (MSVC_IDE OR XCODE)
-    string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})
-    list(GET split_path -1 dir)
-    file(GLOB_RECURSE headers
-      ../../include/lldb${dir}/*.h)
-  endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
   elseif (PARAM_SHARED)
@@ -91,19 +82,13 @@ function(add_lldb_library name)
     set(libkind STATIC)
   endif()
 
-  if(PARAM_ENTITLEMENTS)
-    set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
-  endif()
-
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
-  llvm_add_library(${name} ${libkind} ${headers}
+  llvm_add_library(${name} ${libkind}
     ${PARAM_UNPARSED_ARGUMENTS}
     LINK_LIBS ${PARAM_LINK_LIBS}
-    DEPENDS ${PARAM_DEPENDS}
-    ${pass_ENTITLEMENTS}
     ${pass_NO_INSTALL_RPATH}
   )
 
@@ -145,9 +130,6 @@ function(add_lldb_library name)
     add_dependencies(${name} clang-tablegen-targets)
   endif()
 
-  # Add in any extra C++ compilation flags for this library.
-  target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
-
   if(PARAM_PLUGIN)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)
     if(EXISTS ${parent_dir})
@@ -169,14 +151,10 @@ endfunction(add_lldb_library)
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "GENERATE_INSTALL"
-    "INSTALL_PREFIX;ENTITLEMENTS"
+    "INSTALL_PREFIX"
     "LINK_LIBS;CLANG_LIBS;LINK_COMPONENTS;BUILD_RPATH;INSTALL_RPATH"
     ${ARGN}
     )
-
-  if(ARG_ENTITLEMENTS)
-    set(pass_ENTITLEMENTS ENTITLEMENTS ${ARG_ENTITLEMENTS})
-  endif()
 
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
@@ -184,7 +162,6 @@ function(add_lldb_executable name)
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
   add_llvm_executable(${name}
-    ${pass_ENTITLEMENTS}
     ${pass_NO_INSTALL_RPATH}
     ${ARG_UNPARSED_ARGUMENTS}
   )

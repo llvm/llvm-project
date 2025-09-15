@@ -79,7 +79,7 @@ static lldb_private::RegisterInfo g_register_infos_mte[] = {
     DEFINE_EXTENSION_REG(mte_ctrl)};
 
 static lldb_private::RegisterInfo g_register_infos_tls[] = {
-    DEFINE_EXTENSION_REG(tpidr),
+    DEFINE_EXTENSION_REG_GENERIC(tpidr, LLDB_REGNUM_GENERIC_TP),
     // Only present when SME is present
     DEFINE_EXTENSION_REG(tpidr2)};
 
@@ -425,8 +425,7 @@ void RegisterInfoPOSIX_arm64::AddRegSetSME(bool has_zt) {
   //
   // This must be added now, rather than when vg is defined because SME is a
   // dynamic set that may or may not be present.
-  static uint32_t vg_invalidates[] = {sme_regnum + 1 /*svg*/,
-                                      LLDB_INVALID_REGNUM};
+  static uint32_t vg_invalidates[] = {GetRegNumSMESVG(), LLDB_INVALID_REGNUM};
   m_dynamic_reg_infos[GetRegNumSVEVG()].invalidate_regs = vg_invalidates;
 }
 

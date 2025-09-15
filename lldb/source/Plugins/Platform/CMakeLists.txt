@@ -1,3 +1,10 @@
+set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND Platform)
+set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
+  DynamicLoader
+  ObjectContainer
+  Process
+)
+
 add_subdirectory(AIX)
 add_subdirectory(Android)
 add_subdirectory(FreeBSD)

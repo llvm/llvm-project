@@ -1,2 +1,2 @@
-if config.root.host_os != "Linux":
+if config.root.target_os != "Linux":
     config.unsupported = True
