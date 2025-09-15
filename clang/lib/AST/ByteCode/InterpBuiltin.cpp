@@ -2952,8 +2952,55 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   });
 
   Dst.initializeAllElements();
-
   return true;
+}
+
+static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
+                                     const CallExpr *Call, bool MaskZ) {
+  assert(Call->getNumArgs() == 5);
+
+  const VectorType *VecT = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned DstLen = VecT->getNumElements();
+  PrimType DstElemT = *S.getContext().classify(VecT->getElementType());
+
+  APSInt U = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(4)));
+  APSInt Imm = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(3)));
+  const Pointer &C = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned I = 0; I < DstLen; ++I) {
+    APSInt a, b, c;
+    INT_TYPE_SWITCH(DstElemT, {
+      a = A.elem<T>(I).toAPSInt();
+      b = B.elem<T>(I).toAPSInt();
+      c = C.elem<T>(I).toAPSInt();
+    });
+
+    unsigned BitWidth = a.getBitWidth();
+    APInt R(BitWidth, 0);
+    bool DstUnsigned = a.isUnsigned();
+
+    if (U[I]) {
+      for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
+        unsigned Idx = (a[Bit] << 2) | (b[Bit] << 1) | (c[Bit]);
+        R.setBitVal(Bit, Imm[Idx]);
+      }
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(R, DstUnsigned));
+      });
+    } else if (MaskZ) {
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+        Dst.elem<T>(I) = static_cast<T>(APSInt(R, DstUnsigned));
+      });
+    } else {
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT,
+                              { Dst.elem<T>(I) = static_cast<T>(a); });
+    }
+  }
+  Dst.initializeAllElements();
 }
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
@@ -3606,7 +3653,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
-
+  case X86::BI__builtin_ia32_pternlogd128_mask:
+  case X86::BI__builtin_ia32_pternlogd256_mask:
+  case X86::BI__builtin_ia32_pternlogd512_mask:
+  case X86::BI__builtin_ia32_pternlogq128_mask:
+  case X86::BI__builtin_ia32_pternlogq256_mask:
+  case X86::BI__builtin_ia32_pternlogq512_mask:
+    return interp__builtin_pternlog(S, OpPC, Call, false);
+  case X86::BI__builtin_ia32_pternlogd128_maskz:
+  case X86::BI__builtin_ia32_pternlogd256_maskz:
+  case X86::BI__builtin_ia32_pternlogd512_maskz:
+  case X86::BI__builtin_ia32_pternlogq128_maskz:
+  case X86::BI__builtin_ia32_pternlogq256_maskz:
+  case X86::BI__builtin_ia32_pternlogq512_maskz:
+    return interp__builtin_pternlog(S, OpPC, Call, true);
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
