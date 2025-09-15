@@ -91,9 +91,8 @@ public:
   /// index into a table in TargetInstrInfo or MCInstrInfo which contains the
   /// real register class ID.
   ///
-  /// If isLookupPtrRegClass is set, then this is / an index that is passed to
-  /// TargetRegisterInfo::getPointerRegClass(x) to / get a dynamic register
-  /// class.
+  /// If isLookupPtrRegClass is set, then this is an index that is passed to
+  /// TargetRegisterInfo::getPointerRegClass(x) to get a dynamic register class.
   int16_t RegClass;
 
   /// These are flags from the MCOI::OperandFlags enum.

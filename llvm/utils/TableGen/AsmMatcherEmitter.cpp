@@ -167,8 +167,7 @@ struct ClassInfo {
     RegisterClass0,
 
     /// The (first) register class by hwmode, subsequent register classes by
-    /// hwmode are
-    /// RegisterClassByHwMode0+1, and so on.
+    /// hwmode are RegisterClassByHwMode0+1, and so on.
     RegisterClassByHwMode0 = 1 << 12,
 
     /// The (first) user defined class, subsequent user defined classes are
@@ -178,7 +177,7 @@ struct ClassInfo {
 
   /// Kind - The class kind, which is either a predefined kind, or (UserClass0 +
   /// N) for the Nth user defined class.
-  unsigned Kind;
+  unsigned Kind = 0;
 
   /// SuperClasses - The super classes of this class. Note that for simplicities
   /// sake user operands only record their immediate super class, while register
@@ -220,7 +219,7 @@ struct ClassInfo {
   std::string DiagnosticString;
 
   /// Is this operand optional and not always required.
-  bool IsOptional;
+  bool IsOptional = false;
 
   /// DefaultMethod - The name of the method that returns the default operand
   /// for optional operand
@@ -1394,15 +1393,8 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->ClassName = "RegByHwMode_" + ClassByHwMode->getName().str();
     CI->Name = "MCK_" + CI->ClassName;
     CI->ValueName = ClassByHwMode->getName();
-    CI->PredicateMethod = ""; // unused
     CI->RenderMethod = "addRegOperands";
-    // CI->Registers = RS;
-    //  FIXME: diagnostic type.
-    CI->DiagnosticType = "";
-    CI->IsOptional = false;
-    CI->DefaultMethod = ""; // unused
-    // RegisterSetClasses.try_emplace(RS, CI);
-
+    //  FIXME: Set diagnostic type.
     ++RegClassByHwModeIndex;
 
     assert(CI->isRegisterClassByHwMode());

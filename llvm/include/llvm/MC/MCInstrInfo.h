@@ -44,7 +44,7 @@ private:
   unsigned NumOpcodes;              // Number of entries in the desc array
 
 protected:
-  // Pointer to 2d array [NumHwModess][NumRegClassByHwModes]
+  // Pointer to 2d array [NumHwModes][NumRegClassByHwModes]
   const int16_t *RegClassByHwModeTables;
   int16_t NumRegClassByHwModes;
 

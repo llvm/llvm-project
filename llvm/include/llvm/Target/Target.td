@@ -271,7 +271,7 @@ class RegisterClassLike : DAGOperand;
 //
 class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
                     dag regList, RegAltNameIndex idx = NoRegAltName>
-  : DAGOperand, RegisterClassLike {
+  : RegisterClassLike {
   string Namespace = namespace;
 
   // The register size/alignment information, parameterized by a HW mode.
@@ -923,7 +923,7 @@ def decoder;
 /// type that it doesn't know, and resolves the actual regclass to use by using
 /// the TargetRegisterInfo::getPointerRegClass() hook at codegen time.
 ///
-/// This is deprecated in favor of RegClassByHwMode
+/// This is deprecated in favor of RegClassByHwMode.
 class PointerLikeRegClass<int Kind> {
   int RegClassKind = Kind;
 }
@@ -936,8 +936,8 @@ class PointerLikeRegClass<int Kind> {
 /// define operands which swap the register class with the pointer
 /// type.
 class RegClassByHwMode<list<HwMode> Modes,
-                       list<RegisterClass> RegClasses> :
-  HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
+                       list<RegisterClass> RegClasses>
+  : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
   list<RegisterClass> Objects = RegClasses;
 }
 

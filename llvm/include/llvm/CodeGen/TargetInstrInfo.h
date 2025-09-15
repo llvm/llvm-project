@@ -113,9 +113,9 @@ struct ExtAddrMode {
 ///
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
-  /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables.
-  /// This should be indexed by MCOperandInfo's RegClass field for
-  /// LookupRegClassByHwMode operands.
+  /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables
+  /// (i.e. the table for the active HwMode). This should be indexed by
+  /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
   const int16_t *const RegClassByHwMode;
 
 public:
@@ -141,7 +141,7 @@ public:
            Opc <= TargetOpcode::GENERIC_ATOMICRMW_OP_END;
   }
 
-  /// Return the subtarget appropripate RegClassID for \p OpInfo
+  /// \returns the subtarget appropriate RegClassID for \p OpInfo
   ///
   /// Note this shadows a version of getOpRegClassID in MCInstrInfo which takes
   /// an additional argument for the subtarget's HwMode, since TargetInstrInfo
