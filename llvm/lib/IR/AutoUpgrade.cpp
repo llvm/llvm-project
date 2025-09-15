@@ -1259,6 +1259,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
               .StartsWith("reverse.", Intrinsic::vector_reverse)
               .StartsWith("interleave2.", Intrinsic::vector_interleave2)
               .StartsWith("deinterleave2.", Intrinsic::vector_deinterleave2)
+              .StartsWith("partial.reduce.add", Intrinsic::vector_partial_reduce_add)
               .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         const auto *FT = F->getFunctionType();
@@ -1269,8 +1270,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           Tys.push_back(FT->getReturnType());
         if (ID != Intrinsic::vector_interleave2)
           Tys.push_back(FT->getParamType(0));
-        if (ID == Intrinsic::vector_insert)
-          // Inserting overloads the inserted type.
+        if (ID == Intrinsic::vector_insert ||
+            ID == Intrinsic::vector_partial_reduce_add)
+            // Inserting overloads the inserted type.
           Tys.push_back(FT->getParamType(1));
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
