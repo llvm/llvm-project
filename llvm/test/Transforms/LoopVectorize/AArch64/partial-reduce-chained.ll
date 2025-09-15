@@ -1404,7 +1404,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-NEON-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEON-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <16 x i32> @llvm.experimental.vector.partial.reduce.add.v16i32.v16i32(<16 x i32> [[VEC_PHI]], <16 x i32> [[TMP3]])
+; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE:%.*]] = add <16 x i32> [[VEC_PHI]], [[TMP3]]
 ; CHECK-NEON-NEXT:    [[TMP4]] = add <16 x i32> [[PARTIAL_REDUCE]], [[BROADCAST_SPLAT]]
 ; CHECK-NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1478,7 +1478,7 @@ define i32 @red_extended_add_chain(ptr %start, ptr %end, i32 %offset) {
 ; CHECK-SVE-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
-; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32(<vscale x 8 x i32> [[VEC_PHI]], <vscale x 8 x i32> [[TMP7]])
+; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = add <vscale x 8 x i32> [[VEC_PHI]], [[TMP7]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP8]] = add <vscale x 8 x i32> [[PARTIAL_REDUCE]], [[BROADCAST_SPLAT]]
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

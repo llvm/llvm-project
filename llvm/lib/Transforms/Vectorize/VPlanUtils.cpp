@@ -141,3 +141,17 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   });
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }
+
+unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
+  if (!R)
+    return 1;
+  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
+    return RR->getVFScaleFactor();
+  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+    return RR->getVFScaleFactor();
+  assert(
+      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
+                                     VPInstruction::ReductionStartVector) &&
+      "getting scaling factor of reduction-start-vector not implemented yet");
+  return 1;
+}
