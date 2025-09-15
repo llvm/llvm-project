@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=LINUX
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc   -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-gnu    -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-cygnus -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=WINDOWS
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=LINUX32
 // RUN: %clang_cc1 -triple armv7--linux-gnueabihf -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=ARM
 
@@ -77,7 +79,7 @@ __attribute__((intel_ocl_bicc)) int add_inteloclbicc(int a, int b) {
 }
 #endif
 
-#ifdef _WIN64
+#if defined(_WIN64) || defined(__CYGWIN__)
 // WINDOWS: !DISubprogram({{.*}}"add_sysvabi", {{.*}}type: ![[FTY:[0-9]+]]
 // WINDOWS: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_X86_64SysV,
 __attribute__((sysv_abi)) int add_sysvabi(int a, int b) {
