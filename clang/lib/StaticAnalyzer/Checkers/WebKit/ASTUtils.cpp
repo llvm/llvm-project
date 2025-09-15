@@ -160,6 +160,11 @@ bool tryToFindPtrOrigin(
         if (Name == "__builtin___CFStringMakeConstantString" ||
             Name == "NSClassFromString")
           return callback(E, true);
+      } else if (auto *CalleeE = call->getCallee()) {
+        if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
+          if (isSingleton(E->getFoundDecl()))
+            return callback(E, true);
+        }
       }
 
       // Sometimes, canonical type erroneously turns Ref<T> into T.
