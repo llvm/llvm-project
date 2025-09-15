@@ -6007,10 +6007,9 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
   // A C++11 attribute here signals that we have a constructor, and is an
   // attribute on the first constructor parameter.
-  if (getLangOpts().CPlusPlus11 &&
-      isCXX11AttributeSpecifier(/*Disambiguate*/ false,
-                                /*OuterMightBeMessageSend*/ true) !=
-          CXX11AttributeKind::NotAttributeSpecifier) {
+  if (isCXX11AttributeSpecifier(/*Disambiguate=*/false,
+                                /*OuterMightBeMessageSend=*/true) !=
+      CXX11AttributeKind::NotAttributeSpecifier) {
     return true;
   }
 

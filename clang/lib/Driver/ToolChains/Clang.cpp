@@ -6854,6 +6854,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_fno_unroll_loops);
   Args.AddLastArg(CmdArgs, options::OPT_floop_interchange,
                   options::OPT_fno_loop_interchange);
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
+                    options::OPT_fno_experimental_loop_fusion);
 
   Args.AddLastArg(CmdArgs, options::OPT_fstrict_flex_arrays_EQ);
 

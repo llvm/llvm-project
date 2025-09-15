@@ -4722,6 +4722,7 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
