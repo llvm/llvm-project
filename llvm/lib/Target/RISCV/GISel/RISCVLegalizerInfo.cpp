@@ -572,7 +572,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64, s128});
+      .customFor(!ST.is64Bit(), {s32})
+      .customFor(ST.is64Bit(), {s32, s64})
+      .lowerFor({s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -867,6 +869,17 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
   RISCVMatInt::InstSeq SeqLo =
       RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
+}
+
+bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APF) const {
+  [[maybe_unused]] unsigned Size = APF.getSizeInBits(APF.getSemantics());
+  assert((Size == 32 || Size == 64) && "Only support f32 and f64");
+
+  int64_t Imm = APF.bitcastToAPInt().getSExtValue();
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
+  if (Seq.size() <= STI.getMaxBuildIntsCost())
+    return false;
+  return true;
 }
 
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
@@ -1358,7 +1371,18 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  // TODO: G_FCONSTANT
+  case TargetOpcode::G_FCONSTANT: {
+    const APFloat FVal = MI.getOperand(1).getFPImm()->getValueAPF();
+    if (shouldBeInFConstantPool(FVal))
+      return Helper.lowerFConstant(MI);
+
+    // Convert G_FCONSTANT to G_CONSTANT.
+    Register DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
