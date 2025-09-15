@@ -278,9 +278,12 @@ void DFAPacketizerEmitter::emitForItineraries(
   }
   OS << "  };\n"
      << "  auto It = std::lower_bound(\n"
-     << "      std::begin(" << TargetName << DFAName << "ProcIdToProcResourceIdxTable),\n"
-     << "      std::end(" << TargetName << DFAName << "ProcIdToProcResourceIdxTable), ProcID,\n"
-     << "      [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; });\n"
+     << "      std::begin(" << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable),\n"
+     << "      std::end(" << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable), ProcID,\n"
+     << "      [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; "
+        "});\n"
      << "  return (*It)[1];\n"
      << "}\n\n";
 
