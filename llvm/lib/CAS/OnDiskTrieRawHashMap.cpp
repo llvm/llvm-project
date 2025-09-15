@@ -92,8 +92,7 @@ private:
 /// Encapsulate a database file, which:
 /// - Sets/checks magic.
 /// - Sets/checks version.
-/// - Points at an arbitrary root table (can be changed later using a lock-free
-///   algorithm).
+/// - Points at an arbitrary root table.
 /// - Sets up a MappedFileRegionArena for allocation.
 ///
 /// Top-level layout:
@@ -115,14 +114,14 @@ public:
   MappedFileRegionArena &getAlloc() { return Alloc; }
   MappedFileRegion &getRegion() { return Alloc.getRegion(); }
 
-  /// Add a table.
-  ///
-  /// TODO: Allow lazy construction via getOrCreate()-style API.
-  void addTable(TableHandle Table);
+  /// Add a table. This is currently not thread safe and should be called inside
+  /// NewDBConstructor.
+  Error addTable(TableHandle Table);
 
   /// Find a table. May return null.
   std::optional<TableHandle> findTable(StringRef Name);
 
+  /// Create the DatabaseFile at Path with Capacity.
   static Expected<DatabaseFile>
   create(const Twine &Path, uint64_t Capacity,
          function_ref<Error(DatabaseFile &)> NewDBConstructor);
@@ -185,37 +184,32 @@ DatabaseFile::create(const Twine &Path, uint64_t Capacity,
       std::make_unique<MappedFileRegionArena>(std::move(Alloc)));
 }
 
-void DatabaseFile::addTable(TableHandle Table) {
+Error DatabaseFile::addTable(TableHandle Table) {
   assert(Table);
   assert(&Table.getRegion() == &getRegion());
   int64_t ExistingRootOffset = 0;
   const int64_t NewOffset =
       reinterpret_cast<const char *>(&Table.getHeader()) - getRegion().data();
   if (H->RootTableOffset.compare_exchange_strong(ExistingRootOffset, NewOffset))
-    return;
+    return Error::success();
 
   // Silently ignore attempts to set the root to itself.
   if (ExistingRootOffset == NewOffset)
-    return;
+    return Error::success();
 
-  // FIXME: Fix the API so that having the same name is not an error. Instead,
-  // the colliding table should just be used as-is and the client can decide
-  // what to do with the new one.
-  //
-  // TODO: Add support for creating a chain or tree of tables (more than one at
-  // all!) to avoid this error.
+  // Return an proper error message.
   TableHandle Root(getRegion(), ExistingRootOffset);
   if (Root.getName() == Table.getName())
-    report_fatal_error(
-        createStringError(make_error_code(std::errc::not_supported),
-                          "table name collision '" + Table.getName() + "'"));
-  else
-    report_fatal_error(
-        createStringError(make_error_code(std::errc::not_supported),
-                          "cannot add new table '" + Table.getName() +
-                              "'"
-                              " to existing root '" +
-                              Root.getName() + "'"));
+    return createStringError(
+        make_error_code(std::errc::not_supported),
+        "collision with existing table of the same name '" + Table.getName() +
+            "'");
+
+  return createStringError(make_error_code(std::errc::not_supported),
+                           "cannot add new table '" + Table.getName() +
+                               "'"
+                               " to existing root '" +
+                               Root.getName() + "'");
 }
 
 std::optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
@@ -227,7 +221,6 @@ std::optional<TableHandle> DatabaseFile::findTable(StringRef Name) {
   if (Root.getName() == Name)
     return Root;
 
-  // TODO: Once multiple tables are supported, need to walk to find them.
   return std::nullopt;
 }
 
@@ -748,18 +741,7 @@ OnDiskTrieRawHashMap::insertLazy(ArrayRef<uint8_t> Hash,
   TrieHashIndexGenerator IndexGen = Trie.getIndexGen(*S, Hash);
   size_t Index = IndexGen.next();
 
-  // FIXME: Add non-assertion based checks for data corruption that would
-  // otherwise cause infinite loops in release builds, instead calling
-  // report_fatal_error().
-  //
-  // Two loops are possible:
-  // - All bits used up in the IndexGenerator because subtries are somehow
-  //   linked in a cycle. Could confirm that each subtrie's start-bit
-  //   follows from the start-bit and num-bits of its parent. Could also check
-  //   that the generator doesn't run out of bits.
-  // - Existing data matches tail of Hash but not the head (stored in an
-  //   invalid spot). Probably a cheap way to check this too, but needs
-  //   thought.
+  // Walk through the hash bytes and insert into correct trie position.
   std::optional<TrieRawHashMapHandle::RecordData> NewRecord;
   SubtrieHandle UnusedSubtrie;
   for (;;) {
@@ -1011,8 +993,7 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
     if (LLVM_UNLIKELY(!Trie))
       return Trie.takeError();
 
-    DB.addTable(*Trie);
-    return Error::success();
+    return DB.addTable(*Trie);
   };
 
   // Get or create the file.
@@ -1022,8 +1003,6 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
     return File.takeError();
 
   // Find the trie and validate it.
-  //
-  // TODO: Add support for creating/adding a table to an existing file.
   std::optional<TableHandle> Table = File->findTable(TrieName);
   if (!Table)
     return createTableConfigError(std::errc::argument_out_of_domain, Path,
@@ -1065,7 +1044,12 @@ static Error createInvalidTrieError(uint64_t Offset, const Twine &Msg) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-// A vistior to traverse the Trie.
+// A vistior to traverse the Trie and it can be multi-threaded.
+//
+// TODO: add more sanity checks that isn't just plain data corruption. For
+// example, some ill-formed data can be constructed to form a cycle using
+// Sub-Tries and it can lead to inifinite loop when visiting (or inserting
+// data).
 class TrieVisitor {
 public:
   TrieVisitor(TrieRawHashMapHandle Trie, unsigned ThreadCount = 0,
@@ -1076,10 +1060,12 @@ public:
   Error visit();
 
 private:
+  // Virtual method to implement the action when visiting a sub-trie.
   virtual Error visitSubTrie(StringRef Prefix, SubtrieHandle SubTrie) {
     return Error::success();
   }
 
+  // Virtual method to implement the action when visiting a slot in a trie node.
   virtual Error visitSlot(unsigned I, SubtrieHandle Subtrie, StringRef Prefix,
                           SubtrieSlotValue Slot) {
     return Error::success();
@@ -1093,6 +1079,7 @@ private:
 
   Error validateSubTrie(SubtrieHandle Node, bool IsRoot);
 
+  // Helper function to capture errors when visiting the trie nodes.
   void addError(Error NewError) {
     assert(NewError && "not an error");
     std::lock_guard<std::mutex> ErrorLock(Lock);
@@ -1121,6 +1108,7 @@ private:
   DefaultThreadPool Threads;
 };
 
+// A visitor that traverse and print the Trie.
 class TriePrinter : public TrieVisitor {
 public:
   TriePrinter(TrieRawHashMapHandle Trie, raw_ostream &OS,
@@ -1487,7 +1475,9 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     if (LLVM_UNLIKELY(!Store))
       return Store.takeError();
 
-    DB.addTable(*Store);
+    if (auto E = DB.addTable(*Store))
+      return E;
+
     if (UserHeaderSize)
       UserHeaderInit(Store->getUserHeader().data());
     return Error::success();
@@ -1500,8 +1490,6 @@ Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     return File.takeError();
 
   // Find the table and validate it.
-  //
-  // TODO: Add support for creating/adding a table to an existing file.
   std::optional<TableHandle> Table = File->findTable(TableName);
   if (!Table)
     return createTableConfigError(std::errc::argument_out_of_domain, Path,
