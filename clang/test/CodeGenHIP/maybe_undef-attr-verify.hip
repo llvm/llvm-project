@@ -20,7 +20,7 @@
 #define __maybe_undef __attribute__((maybe_undef))
 #define WARP_SIZE 64
 
-static constexpr int warpSize = WARP_SIZE;
+static constexpr int warpSize = __AMDGCN_WAVEFRONT_SIZE__;
 
 __device__ static inline unsigned int __lane_id() {
     return  __builtin_amdgcn_mbcnt_hi(
