@@ -264,7 +264,7 @@ protected:
   bool allowUnregisteredDialectsFlag = false;
 
   /// Remark format
-  RemarkFormat remarkFormatFlag;
+  RemarkFormat remarkFormatFlag = REMARK_FORMAT_STDOUT;
   /// Remark file to output to
   std::string remarksOutputFileFlag = "";
   /// Remark filters
