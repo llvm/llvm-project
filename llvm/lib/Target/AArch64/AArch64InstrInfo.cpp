@@ -1920,6 +1920,11 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
           CmpInstr.getOperand(2).getImm() == 0) &&
          "Caller guarantees that CmpInstr compares with constant 0");
 
+  // NZCV is not supported if the stack offset is scalable.
+  auto &ST = MI.getParent()->getParent()->getSubtarget<AArch64Subtarget>();
+  if ((ST.hasSVE() || ST.isStreaming()) && MI.getOperand(1).isFI())
+    return false;
+
   std::optional<UsedNZCV> NZVCUsed = examineCFlagsUse(MI, CmpInstr, TRI);
   if (!NZVCUsed || NZVCUsed->C)
     return false;
