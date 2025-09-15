@@ -1160,6 +1160,12 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   auto elementTy = resultTy.getElementType();
   Value input = op->getOperand(0);
 
+  // Figure out the accType if needed
+  bool widenAccTy = std::is_same_v<OpTy, tosa::ReduceSumOp> &&
+                    isa<FloatType>(elementTy) &&
+                    cast<FloatType>(elementTy).isBF16();
+  Type accTy = widenAccTy ? rewriter.getF32Type() : elementTy;
+
   SmallVector<int64_t> reduceShape;
   SmallVector<Value> dynDims;
   for (unsigned i = 0; i < inputTy.getRank(); i++) {
@@ -1174,11 +1180,11 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   inputs.push_back(input);
 
   // First fill the output buffer with the init value.
-  auto emptyTensor = tensor::EmptyOp::create(rewriter, loc, reduceShape,
-                                             resultTy.getElementType(), dynDims)
-                         .getResult();
+  auto emptyTensor =
+      tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
+          .getResult();
 
-  auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
+  auto fillValueAttr = createInitialValueForReduceOp(op, accTy, rewriter);
   if (!fillValueAttr)
     return rewriter.notifyMatchFailure(
         op, "No initial value found for reduction operation");
@@ -1231,8 +1237,14 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
         std::array<Value, 2> binaryArgs{
             blockArgs[0], isNanIgnoreMode ? blockArgs[2] : blockArgs[1]};
-        auto result = createLinalgBodyCalculationForReduceOp(
-            op, binaryArgs, elementTy, rewriter);
+
+        // If reduction type differs then extend (applicable to reduce_sum)
+        if (binaryArgs[0].getType() != accTy)
+          binaryArgs[0] = arith::ExtFOp::create(nestedBuilder, nestedLoc, accTy,
+                                                binaryArgs[0]);
+
+        auto result = createLinalgBodyCalculationForReduceOp(op, binaryArgs,
+                                                             accTy, rewriter);
         if (result)
           didEncounterError = true;
 
@@ -1273,12 +1285,11 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
 
     // Create a tensor full of NaNs.
     auto nanValueAttr = rewriter.getFloatAttr(
-        elementTy,
+        accTy,
         APFloat::getNaN(cast<FloatType>(elementTy).getFloatSemantics(), false));
     auto nanValue = arith::ConstantOp::create(rewriter, loc, nanValueAttr);
     auto emptyNanTensor =
-        tensor::EmptyOp::create(rewriter, loc, reduceShape,
-                                resultTy.getElementType(), dynDims)
+        tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
             .getResult();
     auto nanFilledTensor =
         linalg::FillOp::create(rewriter, loc, ValueRange{nanValue},
@@ -1288,8 +1299,7 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
     // Create an empty tensor, non need to fill this since it will be
     // overwritten by the select.
     auto finalEmptyTensor =
-        tensor::EmptyOp::create(rewriter, loc, reduceShape,
-                                resultTy.getElementType(), dynDims)
+        tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
             .getResult();
 
     // Do a selection between the tensors akin to:
@@ -1304,9 +1314,32 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
     linalgOp = linalgSelect;
   }
 
+  // Truncate back to resultTy if needed
+  Value reducedRes = linalgOp->getResult(0);
+  if (widenAccTy) {
+    auto resEmptyOp =
+        tensor::EmptyOp::create(rewriter, loc, reduceShape, elementTy, dynDims)
+            .getResult();
+
+    const unsigned reducedRank =
+        cast<ShapedType>(reducedRes.getType()).getRank();
+    auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
+    reducedRes =
+        linalg::GenericOp::create(
+            rewriter, loc, resEmptyOp.getType(), ValueRange{reducedRes},
+            ValueRange{resEmptyOp},
+            ArrayRef<AffineMap>{identityMap, identityMap},
+            getNParallelLoopsAttrs(reducedRank),
+            [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+              Value truncf = arith::TruncFOp::create(nestedBuilder, nestedLoc,
+                                                     elementTy, args[0]);
+              linalg::YieldOp::create(nestedBuilder, nestedLoc, truncf);
+            })
+            .getResults()[0];
+  }
+
   SmallVector<ReassociationExprs, 4> reassociationMap;
-  uint64_t expandInputRank =
-      cast<ShapedType>(linalgOp->getResults()[0].getType()).getRank();
+  uint64_t expandInputRank = cast<ShapedType>(reducedRes.getType()).getRank();
   reassociationMap.resize(expandInputRank);
 
   for (uint64_t i = 0; i < expandInputRank; i++) {
@@ -1324,8 +1357,8 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   // since here we know which dimension to expand, and `tosa::ReshapeOp` would
   // not have access to such information. This matters when handling dynamically
   // sized tensors.
-  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-      op, resultTy, linalgOp->getResults()[0], reassociationMap);
+  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(op, resultTy, reducedRes,
+                                                     reassociationMap);
   return success();
 }
 
