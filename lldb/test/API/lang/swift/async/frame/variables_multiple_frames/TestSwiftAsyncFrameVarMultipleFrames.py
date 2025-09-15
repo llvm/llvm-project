@@ -39,7 +39,10 @@ class TestCase(lldbtest.TestBase):
             # with the funclet's prologue skipped.
             parent_frame = async_frames[idx + 1]
             prologue_to_skip = parent_frame.GetFunction().GetPrologueByteSize()
-            self.assertEqual(continuation_ptr + prologue_to_skip, parent_frame.GetPC())
+            self.assertEqual(
+                process.FixAddress(continuation_ptr) + prologue_to_skip,
+                parent_frame.GetPC(),
+            )
 
     def check_async_regs_one_frame(self, frame, process):
         async_reg_name = "r14" if self.getArchitecture() == "x86_64" else "x22"
