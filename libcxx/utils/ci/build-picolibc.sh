@@ -81,7 +81,7 @@ cat <<EOF > "${picolibc_build_dir}/meson-cross-build.txt"
 c = ['${CC:-cc}', '--target=${target}', '-mfloat-abi=soft', '-nostdlib']
 ar = 'llvm-ar'
 as = 'llvm-as'
-ld = 'lld'
+c_ld = 'lld'
 strip = 'llvm-strip'
 [host_machine]
 system = 'none'
