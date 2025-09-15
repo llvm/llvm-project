@@ -226,9 +226,8 @@ define void @private_alloca_to_flat(ptr %ptr) {
 ; GISEL-ASM-LABEL: private_alloca_to_flat:
 ; GISEL-ASM:       ; %bb.0:
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GISEL-ASM-NEXT:    s_lshr_b32 s4, s32, 6
-; GISEL-ASM-NEXT:    s_mov_b64 s[6:7], src_private_base
-; GISEL-ASM-NEXT:    s_mov_b32 s5, s7
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
@@ -330,21 +329,21 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; DAGISEL-ASM-NEXT:    v_and_b32_e32 v0, 0xffff, v1
 ; DAGISEL-ASM-NEXT:  ; %bb.2: ; %finallyendcf.split
 ; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[4:5]
-; DAGISEL-ASM-NEXT:    s_xor_b64 s[6:7], vcc, -1
-; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], 0
-; DAGISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
+; DAGISEL-ASM-NEXT:    s_mov_b64 s[4:5], src_private_base
+; DAGISEL-ASM-NEXT:    s_xor_b64 s[8:9], vcc, -1
+; DAGISEL-ASM-NEXT:    s_mov_b64 s[6:7], 0
 ; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; DAGISEL-ASM-NEXT:  .LBB11_3: ; %finally
 ; DAGISEL-ASM-NEXT:    ; =>This Inner Loop Header: Depth=1
-; DAGISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[6:7]
-; DAGISEL-ASM-NEXT:    s_or_b64 s[4:5], s[10:11], s[4:5]
-; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
+; DAGISEL-ASM-NEXT:    s_and_b64 s[10:11], exec, s[8:9]
+; DAGISEL-ASM-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
+; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s5
 ; DAGISEL-ASM-NEXT:    flat_store_dword v[0:1], v2
 ; DAGISEL-ASM-NEXT:    s_waitcnt vmcnt(0)
-; DAGISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; DAGISEL-ASM-NEXT:    s_andn2_b64 exec, exec, s[6:7]
 ; DAGISEL-ASM-NEXT:    s_cbranch_execnz .LBB11_3
 ; DAGISEL-ASM-NEXT:  ; %bb.4: ; %end
-; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[4:5]
+; DAGISEL-ASM-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; DAGISEL-ASM-NEXT:    s_waitcnt lgkmcnt(0)
 ; DAGISEL-ASM-NEXT:    s_setpc_b64 s[30:31]
 ;
