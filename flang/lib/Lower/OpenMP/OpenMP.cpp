@@ -30,6 +30,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
@@ -2496,12 +2497,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           Fortran::lower::getDataOperandBaseAddr(
               converter, firOpBuilder, sym.GetUltimate(),
               converter.getCurrentLocation());
-      llvm::SmallVector<mlir::Value> bounds =
-          fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                             mlir::omp::MapBoundsType>(
-              firOpBuilder, info, dataExv,
-              semantics::IsAssumedSizeArray(sym.GetUltimate()),
-              converter.getCurrentLocation());
+      llvm::SmallVector<mlir::Value> bounds = flangomp::genBoundsOps(
+          firOpBuilder, info.rawInput,
+          semantics::IsAssumedSizeArray(sym.GetUltimate()),
+          semantics::IsOptional(sym.GetUltimate()));
       mlir::Value baseOp = info.rawInput;
       mlir::Type eleType = baseOp.getType();
       if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
