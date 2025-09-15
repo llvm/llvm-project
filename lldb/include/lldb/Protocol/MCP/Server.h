@@ -108,8 +108,7 @@ bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
 /// once it is no longer referenced.
 class ServerInfoHandle {
 public:
-  ServerInfoHandle();
-  explicit ServerInfoHandle(llvm::StringRef filename);
+  explicit ServerInfoHandle(llvm::StringRef filename = "");
   ~ServerInfoHandle();
 
   ServerInfoHandle(ServerInfoHandle &&other);
@@ -120,6 +119,9 @@ public:
   ServerInfoHandle(const ServerInfoHandle &) = delete;
   ServerInfoHandle &operator=(const ServerInfoHandle &) = delete;
   /// @}
+
+  /// Remove the file.
+  void Remove();
 
 private:
   llvm::SmallString<128> m_filename;
