@@ -1008,11 +1008,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
   unsigned NumClassesByHwMode = RegClassByHwMode.size();
 
-  if (NumClassesByHwMode != 0) {
-    OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
-       << NumModes << "][" << NumClassesByHwMode << "];\n";
-  }
-
   OS << "extern const unsigned " << TargetName << "InstrNameIndices[] = {";
   Num = 0;
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
@@ -1072,7 +1067,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   Timer.startTimer("Emit initialization routine");
 
   if (NumClassesByHwMode != 0) {
-    OS << "const int16_t " << TargetName << "RegClassByHwModeTables["
+    OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
        << NumModes << "][" << NumClassesByHwMode << "] = {\n";
 
     for (unsigned M = 0; M < NumModes; ++M) {

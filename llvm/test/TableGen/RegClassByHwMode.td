@@ -6,7 +6,6 @@
 
 include "llvm/Target/Target.td"
 
-
 // INSTRINFO: #if defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)
 // INSTRINFO-NEXT: namespace {
 // INSTRINFO-NEXT: enum RegClassByHwModeUses : uint16_t {
@@ -22,6 +21,33 @@ include "llvm/Target/Target.td"
 // INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_UNKNOWN, 0 },
 // INSTRINFO: { YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+
+
+// INSTRINFO: extern const int16_t MyTargetRegClassByHwModeTables[4][3] = {
+// INSTRINFO-NEXT:  { // DefaultMode
+// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID,
+// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID,
+// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID,
+// INSTRINFO-NEXT:  },
+// INSTRINFO-NEXT:  { // EvenMode
+// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID,
+// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID,
+// INSTRINFO-NEXT:  },
+// INSTRINFO-NEXT:  { // OddMode
+// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID,
+// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:  },
+// INSTRINFO-NEXT:  { // Ptr64
+// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID,
+// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:  },
+// INSTRINFO-NEXT: };
+
+// INSTRINFO: static inline void InitMyTargetMCInstrInfo(
+// INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, 321, &MyTargetRegClassByHwModeTables[0][0], 3);
 
 
 
