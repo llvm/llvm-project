@@ -148,6 +148,35 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
   return (Value != 0) && ((Value & (Value - 1)) == 0);
 }
 
+/// Count the number of set bits in a value.
+/// Ex. popcount(0xF000F000) = 8
+/// Returns 0 if Value is zero.
+template <typename T> [[nodiscard]] inline int popcount(T Value) noexcept {
+  static_assert(std::is_unsigned_v<T>, "T must be an unsigned integer type");
+  static_assert(sizeof(T) <= 8, "T must be 8 bytes or less");
+
+  if constexpr (sizeof(T) <= 4) {
+#if defined(__GNUC__)
+    return (int)__builtin_popcount(Value);
+#else
+    uint32_t V = Value;
+    V = V - ((V >> 1) & 0x55555555);
+    V = (V & 0x33333333) + ((V >> 2) & 0x33333333);
+    return int(((V + (V >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
+#endif
+  } else {
+#if defined(__GNUC__)
+    return (int)__builtin_popcountll(Value);
+#else
+    uint64_t V = Value;
+    V = V - ((V >> 1) & 0x5555555555555555ULL);
+    V = (V & 0x3333333333333333ULL) + ((V >> 2) & 0x3333333333333333ULL);
+    V = (V + (V >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return int((uint64_t)(V * 0x0101010101010101ULL) >> 56);
+#endif
+  }
+}
+
 /// Count number of 0's from the least significant bit to the most
 ///   stopping at the first 1.
 ///
@@ -179,19 +208,9 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 #endif
   }
 
-  // Fall back to the bisection method.
-  unsigned ZeroBits = 0;
-  T Shift = std::numeric_limits<T>::digits >> 1;
-  T Mask = std::numeric_limits<T>::max() >> Shift;
-  while (Shift) {
-    if ((Val & Mask) == 0) {
-      Val >>= Shift;
-      ZeroBits |= Shift;
-    }
-    Shift >>= 1;
-    Mask >>= Shift;
-  }
-  return ZeroBits;
+  // Fallback to popcount.  "(Val & -Val) - 1" is a bitmask with all bits below
+  // the least significant 1 set.
+  return llvm::popcount(static_cast<std::make_unsigned_t<T>>((Val & -Val) - 1));
 }
 
 /// Count number of 0's from the most significant bit to the least
@@ -298,35 +317,6 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
   if (Value < 2)
     return 1;
   return T(1) << llvm::bit_width<T>(Value - 1u);
-}
-
-/// Count the number of set bits in a value.
-/// Ex. popcount(0xF000F000) = 8
-/// Returns 0 if the word is zero.
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] inline int popcount(T Value) noexcept {
-  if constexpr (sizeof(T) <= 4) {
-#if defined(__GNUC__)
-    return (int)__builtin_popcount(Value);
-#else
-    uint32_t v = Value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return int(((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
-#endif
-  } else if constexpr (sizeof(T) <= 8) {
-#if defined(__GNUC__)
-    return (int)__builtin_popcountll(Value);
-#else
-    uint64_t v = Value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return int((uint64_t)(v * 0x0101010101010101ULL) >> 56);
-#endif
-  } else {
-    static_assert(sizeof(T) == 0, "T must be 8 bytes or less");
-  }
 }
 
 // Forward-declare rotr so that rotl can use it.
