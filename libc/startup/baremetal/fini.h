@@ -18,5 +18,4 @@ extern uintptr_t __fini_array_end[];
 void __libc_fini_array(void);
 } // extern "C"
 
-
 } // namespace LIBC_NAMESPACE_DECL
