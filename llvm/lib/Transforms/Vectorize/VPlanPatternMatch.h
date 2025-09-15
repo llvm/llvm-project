@@ -260,10 +260,9 @@ private:
   static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
     auto *DefR = dyn_cast<RecipeTy>(R);
     // Check for recipes that do not have opcodes.
-    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
-                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
+    if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
+                  std::is_same_v<RecipeTy, VPCanonicalIVPHIRecipe> ||
+                  std::is_same_v<RecipeTy, VPDerivedIVRecipe>)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -532,15 +531,24 @@ m_SpecificCmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-using GEPLikeRecipe_match =
+using GEPLikeRecipe_match = match_combine_or<
     Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
-                 /*Commutative*/ false, VPWidenRecipe, VPReplicateRecipe,
-                 VPWidenGEPRecipe, VPInstruction>;
+                 /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>,
+    match_combine_or<
+        VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>,
+        VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>>>;
 
 template <typename Op0_t, typename Op1_t>
 inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
                                                          const Op1_t &Op1) {
-  return GEPLikeRecipe_match<Op0_t, Op1_t>(Op0, Op1);
+  return m_CombineOr(
+      Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
+                   /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>(
+          Op0, Op1),
+      m_CombineOr(
+          VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>(Op0, Op1),
+          VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0,
+                                                                       Op1)));
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
