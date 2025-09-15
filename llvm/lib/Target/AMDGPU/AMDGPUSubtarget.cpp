@@ -39,7 +39,7 @@ bool AMDGPUSubtarget::useRealTrue16Insts() const {
 }
 
 bool AMDGPUSubtarget::has16bitD16HWBug() const {
-  return hasTrue16BitInsts() && useRealTrue16Insts() && Enable16bitD16HWBug;
+  return Enable16bitD16HWBug;
 }
 
 // Returns the maximum per-workgroup LDS allocation size (in bytes) that still
