@@ -2627,7 +2627,7 @@ typedef struct {
   } ed;
 } kmp_event_t;
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
 // Initial number of allocated nodes while recording
 #define INIT_MAPSIZE 50
 
@@ -2687,7 +2687,7 @@ extern kmp_int32 __kmp_num_tdg;
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   unsigned reserved31 : 4;
   unsigned onced : 1;
 #else
@@ -2746,7 +2746,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
   unsigned target : 1;
   unsigned hidden_helper : 1; /* 1 == hidden helper task */
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
   unsigned reserved31 : 4; /* reserved for library use */
 #else
@@ -2801,7 +2801,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
   kmp_int32 td_tdg_task_id; // local task id in its TDG
@@ -4379,7 +4379,7 @@ KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
                                                 void **user_lock,
                                                 uintptr_t hint);
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
 // Taskgraph's Record & Replay mechanism
 // __kmp_tdg_is_recording: check whether a given TDG is recording
 // status: the tdg's current status
