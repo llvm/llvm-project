@@ -2,7 +2,10 @@ import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("RISCVGenDisassemblerTables") {
   visibility = [ ":Disassembler" ]
-  args = [ "-gen-disassembler" ]
+  args = [
+    "-gen-disassembler",
+    "-specialize-decoders-per-bitwidth",
+  ]
   td_file = "../RISCV.td"
 }
 

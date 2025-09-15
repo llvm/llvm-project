@@ -4,9 +4,6 @@ subroutine test_cray_pointer_usage
   integer :: i
   real(8) :: var(*), pointee(2)
   pointer(ivar, var)
-  real(8) :: var2(10)
-  pointer(ivar2, var2)
-  ! ERROR: Whole assumed-size array 'var' may not appear here without subscripts
   ! ERROR: Cray Pointee 'var' may not appear in LINEAR clause
   ! ERROR: The list item 'var' specified without the REF 'linear-modifier' must be of INTEGER type
   ! ERROR: The list item `var` must be a dummy argument
@@ -20,9 +17,9 @@ subroutine test_cray_pointer_usage
     print *, var(1)
   !$omp end parallel
 
-  ! ERROR: Cray Pointee 'var2' may not appear in PRIVATE clause, use Cray Pointer 'ivar2' instead
-  !$omp parallel num_threads(2) default(none) private(var2)
-    print *, var2(1)
+  ! ERROR: Cray Pointee 'var' may not appear in PRIVATE clause, use Cray Pointer 'ivar' instead
+  !$omp parallel num_threads(2) default(none) private(var)
+    print *, var(1)
   !$omp end parallel
 
   ! ERROR: Cray Pointee 'var' may not appear in SHARED clause, use Cray Pointer 'ivar' instead

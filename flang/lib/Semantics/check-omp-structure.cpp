@@ -268,8 +268,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   return CheckAllowed(clause);
 }
 
-void OmpStructureChecker::AnalyzeObject(
-    const parser::OmpObject &object, bool allowAssumedSizeArrays) {
+void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
   if (std::holds_alternative<parser::Name>(object.u)) {
     // Do not analyze common block names. The analyzer will flag an error
     // on those.
@@ -294,14 +293,13 @@ void OmpStructureChecker::AnalyzeObject(
     }
   }
   evaluate::ExpressionAnalyzer ea{context_};
-  auto restore{ea.AllowWholeAssumedSizeArray(allowAssumedSizeArrays)};
+  auto restore{ea.AllowWholeAssumedSizeArray(true)};
   common::visit([&](auto &&s) { ea.Analyze(s); }, object.u);
 }
 
-void OmpStructureChecker::AnalyzeObjects(
-    const parser::OmpObjectList &objects, bool allowAssumedSizeArrays) {
+void OmpStructureChecker::AnalyzeObjects(const parser::OmpObjectList &objects) {
   for (const parser::OmpObject &object : objects.v) {
-    AnalyzeObject(object, allowAssumedSizeArrays);
+    AnalyzeObject(object);
   }
 }
 
@@ -816,7 +814,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   parser::CharBlock source;
   common::visit(
       common::visitors{
-          [&](const parser::OpenMPBlockConstruct &c) {
+          [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
             source = beginSpec.DirName().source;
             if (beginSpec.DirId() == llvm::omp::Directive::OMPD_target_data) {
@@ -866,7 +864,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
+void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const std::optional<parser::OmpEndDirective> &endSpec{x.EndDir()};
   const parser::Block &block{std::get<parser::Block>(x.t)};
@@ -876,24 +874,18 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   // Missing mandatory end block: this is checked in semantics because that
   // makes it easier to control the error messages.
   // The end block is mandatory when the construct is not applied to a strictly
-  // structured block (aka it is applied to a loosely structured block). In
-  // other words, the body doesn't contain exactly one parser::BlockConstruct.
-  auto isStrictlyStructuredBlock{[](const parser::Block &block) -> bool {
-    if (block.size() != 1) {
-      return false;
+  // structured block (aka it is applied to a loosely structured block).
+  if (!endSpec && !IsStrictlyStructuredBlock(block)) {
+    llvm::omp::Directive dirId{beginSpec.DirId()};
+    auto &msg{context_.Say(beginSpec.source,
+        "Expected OpenMP END %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirId)))};
+    // ORDERED has two variants, so be explicit about which variant we think
+    // this is.
+    if (dirId == llvm::omp::Directive::OMPD_ordered) {
+      msg.Attach(
+          beginSpec.source, "The ORDERED directive is block-associated"_en_US);
     }
-    const parser::ExecutionPartConstruct &contents{block.front()};
-    auto *executableConstruct{
-        std::get_if<parser::ExecutableConstruct>(&contents.u)};
-    if (!executableConstruct) {
-      return false;
-    }
-    return std::holds_alternative<common::Indirection<parser::BlockConstruct>>(
-        executableConstruct->u);
-  }};
-  if (!endSpec && !isStrictlyStructuredBlock(block)) {
-    context_.Say(
-        x.BeginDir().source, "Expected OpenMP end directive"_err_en_US);
   }
 
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {
@@ -1047,7 +1039,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 }
 
 void OmpStructureChecker::CheckMasterNesting(
-    const parser::OpenMPBlockConstruct &x) {
+    const parser::OmpBlockConstruct &x) {
   // A MASTER region may not be `closely nested` inside a worksharing, loop,
   // task, taskloop, or atomic region.
   // TODO:  Expand the check to include `LOOP` construct as well when it is
@@ -1076,7 +1068,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
+void OmpStructureChecker::Leave(const parser::OmpBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);
   }
@@ -2759,20 +2751,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     break;
   }
 
-  auto allowsAssumedSizeArrays{[](llvm::omp::Clause c) {
-    // These clauses allow assumed-size-arrays as list items.
-    switch (c) {
-    case llvm::omp::Clause::OMPC_map:
-    case llvm::omp::Clause::OMPC_shared:
-    case llvm::omp::Clause::OMPC_use_device_addr:
-      return true;
-    default:
-      return false;
-    }
-  }};
-
   if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
-    AnalyzeObjects(*objList, allowsAssumedSizeArrays(id));
+    AnalyzeObjects(*objList);
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[symbol, source] : symbols) {
@@ -2799,6 +2779,8 @@ CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
 CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
+CHECK_SIMPLE_CLAUSE(GraphId, OMPC_graph_id)
+CHECK_SIMPLE_CLAUSE(GraphReset, OMPC_graph_reset)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
@@ -2849,6 +2831,8 @@ CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
+CHECK_SIMPLE_CLAUSE(Replayable, OMPC_replayable)
+CHECK_SIMPLE_CLAUSE(Transparent, OMPC_transparent)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
@@ -3503,9 +3487,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
           x.v, llvm::omp::OMPC_aligned, GetContext().clauseSource, context_)) {
     auto &modifiers{OmpGetModifiers(x.v)};
     if (auto *align{OmpGetUniqueModifier<parser::OmpAlignment>(modifiers)}) {
-      if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
+      const auto &v{GetIntValue(align->v)};
+      if (!v || *v <= 0) {
         context_.Say(OmpGetModifierSource(modifiers, align),
             "The alignment value should be a constant positive integer"_err_en_US);
+      } else if (((*v) & (*v - 1)) != 0) {
+        context_.Warn(common::UsageWarning::OpenMPUsage,
+            OmpGetModifierSource(modifiers, align),
+            "Alignment is not a power of 2, Aligned clause will be ignored"_warn_en_US);
       }
     }
   }
@@ -4614,7 +4603,7 @@ bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
     if (const auto *ompConstruct{
             parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
       if (const auto *ompBlockConstruct{
-              std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+              std::get_if<parser::OmpBlockConstruct>(&ompConstruct->u)}) {
         llvm::omp::Directive dirId{ompBlockConstruct->BeginDir().DirId()};
         if (dirId == llvm::omp::Directive::OMPD_teams) {
           nestedTeams = true;
@@ -4661,7 +4650,7 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         // 'Parallel' constructs
         auto currentDir{llvm::omp::Directive::OMPD_unknown};
         if (const auto *ompBlockConstruct{
-                std::get_if<parser::OpenMPBlockConstruct>(&ompConstruct->u)}) {
+                std::get_if<parser::OmpBlockConstruct>(&ompConstruct->u)}) {
           currentDir = ompBlockConstruct->BeginDir().DirId();
         } else if (const auto *ompLoopConstruct{
                        std::get_if<parser::OpenMPLoopConstruct>(

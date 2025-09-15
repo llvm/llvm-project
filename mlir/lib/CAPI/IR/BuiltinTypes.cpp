@@ -465,10 +465,6 @@ MlirType mlirUnrankedTensorTypeGetChecked(MlirLocation loc,
   return wrap(UnrankedTensorType::getChecked(unwrap(loc), unwrap(elementType)));
 }
 
-static MlirType mlirUnrankedTensorTypeGetElementType(MlirType type) {
-  return wrap(llvm::cast<UnrankedTensorType>(unwrap(type)).getElementType());
-}
-
 //===----------------------------------------------------------------------===//
 // Ranked / Unranked MemRef type.
 //===----------------------------------------------------------------------===//

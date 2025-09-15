@@ -125,10 +125,25 @@ class Mips_prefetch_ri<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
+// MIPS Custom Barrier Insns Format.
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+class MIPSExtInst_ri<bits<6> shimm5, string opcodestr>
+    : RVInstIShift<0b00000, 0b001, OPC_OP_IMM, (outs), (ins), opcodestr, ""> {
+  let shamt = shimm5;
+  let rd = 0;
+  let rs1 = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // MIPS extensions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasVendorXMIPSCBOP] ,DecoderNamespace = "Xmipscbop" in {
+let Predicates = [HasVendorXMIPSEXECTL], DecoderNamespace = "XMIPS" in {
+  def MIPS_EHB : MIPSExtInst_ri<0b000011, "mips.ehb">;
+  def MIPS_IHB : MIPSExtInst_ri<0b000001, "mips.ihb">;
+  def MIPS_PAUSE : MIPSExtInst_ri<0b000101, "mips.pause">;
+}
+
+let Predicates = [HasVendorXMIPSCBOP], DecoderNamespace = "XMIPS" in {
   def MIPS_PREF : Mips_prefetch_ri<(outs), (ins GPR:$rs1, uimm9:$imm9, uimm5:$hint),
                                     "mips.pref", "$hint, ${imm9}(${rs1})">,
                    Sched<[]>;
@@ -146,7 +161,7 @@ let Predicates = [HasVendorXMIPSCBOP] in {
 }
 
 let Predicates = [HasVendorXMIPSCMov], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-                 DecoderNamespace = "Xmipscmov" in {
+    DecoderNamespace = "XMIPS" in {
 def MIPS_CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
                           (ins GPR:$rs1, GPR:$rs2, GPR:$rs3),
                           "mips.ccmov", "$rd, $rs2, $rs1, $rs3">,
@@ -166,7 +181,7 @@ def : Pat<(select (XLenVT GPR:$rs2), (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
 }
 
 let Predicates = [HasVendorXMIPSLSP], hasSideEffects = 0,
-                 DecoderNamespace = "Xmipslsp" in {
+    DecoderNamespace = "XMIPS" in {
 let mayLoad = 1, mayStore = 0 in {
 def MIPS_LWP : LWPFormat<(outs GPR:$rd1, GPR:$rd2), (ins GPR:$rs1, uimm7_lsb00:$imm7),
                          "mips.lwp", "$rd1, $rd2, ${imm7}(${rs1})">,
@@ -184,4 +199,4 @@ def MIPS_SDP : SDPFormat<(outs), (ins GPR:$rs2, GPR:$rs3, GPR:$rs1, uimm7_lsb000
                          "mips.sdp", "$rs2, $rs3, ${imm7}(${rs1})">,
                Sched<[WriteSTD, ReadStoreData, ReadStoreData, ReadMemBase]>;
 } // mayLoad = 0, mayStore = 1
-} // Predicates = [HasVendorXMIPSLSP], hasSideEffects = 0, DecoderNamespace = "Xmipslsp"
+} // Predicates = [HasVendorXMIPSLSP], hasSideEffects = 0, DecoderNamespace = "XMIPS"
