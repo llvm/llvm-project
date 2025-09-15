@@ -2122,7 +2122,7 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // LoongArch64 always uses symbols for relocations, so temporary symbols
     // starting with ".L" should be preserved.
     if (llvm::StringRef(symbol_name).starts_with(".L") &&
-       arch.GetMachine() != llvm::Triple::loongarch64)
+        arch.GetMachine() != llvm::Triple::loongarch64)
       continue;
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
