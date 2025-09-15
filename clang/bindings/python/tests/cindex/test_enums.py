@@ -81,10 +81,17 @@ class TestEnums(unittest.TestCase):
         for enum in self.enums:
             with self.subTest(enum):
                 python_kinds = set([kind.value for kind in enum])
-                c_kinds = set(enum_variant_map[enum])
+                # Defined in Index.h but not in cindex.py
                 missing_python_kinds = c_kinds - python_kinds
                 self.assertEqual(
                     missing_python_kinds,
                     set(),
                     f"Please ensure these are defined in {enum} in cindex.py.",
+                )
+                # Defined in cindex.py but not in Index.h
+                superfluous_python_kinds = python_kinds - c_kinds
+                self.assertEqual(
+                    superfluous_python_kinds,
+                    set(),
+                    f"Please ensure that all {enum} kinds defined in cindex.py have an equivalent in Index.h",
                 )
