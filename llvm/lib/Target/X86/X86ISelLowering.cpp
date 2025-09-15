@@ -39000,10 +39000,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     EVT VT = Op.getValueType();
-    if (!VT.isVector() || VT.getScalarSizeInBits() != 64) {
-      Known.resetAll();
-      return;
-    }
+    assert(Op.getValueType().isVector() && Op.getValueType().getScalarType() == MVT::i64 && "Unexpected VPMADD52 type");
     KnownBits K0 =
         DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     KnownBits K1 =
