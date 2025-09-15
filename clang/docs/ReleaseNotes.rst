@@ -288,6 +288,9 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
