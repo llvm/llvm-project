@@ -530,9 +530,8 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.ne .LBB14_2
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbnz x8, .LBB14_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
@@ -541,9 +540,8 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB14_3
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB14_3
 ; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB14_3:

@@ -48,9 +48,8 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-NEXT:    smstop sm
 ; NOPAIR-NEXT:  .LBB0_2:
 ; NOPAIR-NEXT:    rdvl x8, #1
-; NOPAIR-NEXT:    rdsvl x9, #1
-; NOPAIR-NEXT:    cmp x8, x9
-; NOPAIR-NEXT:    b.eq .LBB0_4
+; NOPAIR-NEXT:    addsvl x8, x8, #-1
+; NOPAIR-NEXT:    cbz x8, .LBB0_4
 ; NOPAIR-NEXT:  // %bb.3:
 ; NOPAIR-NEXT:    brk #0x1
 ; NOPAIR-NEXT:  .LBB0_4:
@@ -135,9 +134,8 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; PAIR-NEXT:    smstop sm
 ; PAIR-NEXT:  .LBB0_2:
 ; PAIR-NEXT:    rdvl x8, #1
-; PAIR-NEXT:    rdsvl x9, #1
-; PAIR-NEXT:    cmp x8, x9
-; PAIR-NEXT:    b.eq .LBB0_4
+; PAIR-NEXT:    addsvl x8, x8, #-1
+; PAIR-NEXT:    cbz x8, .LBB0_4
 ; PAIR-NEXT:  // %bb.3:
 ; PAIR-NEXT:    brk #0x1
 ; PAIR-NEXT:  .LBB0_4:

@@ -2944,27 +2944,34 @@ MachineBasicBlock *
 AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const {
   MachineFunction *MF = MBB->getParent();
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
-  DebugLoc DL = MI.getDebugLoc();
-  MachineFunction::iterator It = ++MBB->getIterator();
-
-  const TargetRegisterClass *RC = &AArch64::GPR64RegClass;
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
-  Register RegVL = MRI.createVirtualRegister(RC);
-  Register RegSVL = MRI.createVirtualRegister(RC);
-  Register RegCheck = MRI.createVirtualRegister(RC);
+  const TargetRegisterClass *RC_GPR = &AArch64::GPR64RegClass;
+  const TargetRegisterClass *RC_GPRsp = &AArch64::GPR64spRegClass;
 
-  // Read VL and Streaming VL
-  BuildMI(*MBB, MI, DL, TII->get(AArch64::RDVLI_XI), RegVL).addImm(1);
-  BuildMI(*MBB, MI, DL, TII->get(AArch64::RDSVLI_XI), RegSVL).addImm(1);
+  Register RegVL_GPR = MRI.createVirtualRegister(RC_GPR);
+  Register RegVL_GPRsp = MRI.createVirtualRegister(RC_GPRsp); // for ADDSVL src
+  Register RegSVL_GPR = MRI.createVirtualRegister(RC_GPR);
+  Register RegSVL_GPRsp = MRI.createVirtualRegister(RC_GPRsp); // for ADDSVL dst
 
-  // Compare vector lengths
-  BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBXrr), RegCheck)
-      .addReg(RegVL)
-      .addReg(RegSVL);
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
 
+  // RDVL requires GPR64, ADDSVL requires GPR64sp
+  // We need to insert COPY instructions, these will later be removed by the
+  // RegisterCoalescer
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::RDVLI_XI), RegVL_GPR).addImm(1);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegVL_GPRsp)
+      .addReg(RegVL_GPR);
+
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::ADDSVL_XXI), RegSVL_GPRsp)
+      .addReg(RegVL_GPRsp)
+      .addImm(-1);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegSVL_GPR)
+      .addReg(RegSVL_GPRsp);
+
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator It = ++MBB->getIterator();
   MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *PassBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MF->insert(It, TrapBB);
@@ -2972,7 +2979,7 @@ AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
 
   // Continue if vector lengths match
   BuildMI(*MBB, MI, DL, TII->get(AArch64::CBZX))
-      .addReg(RegCheck)
+      .addReg(RegSVL_GPR)
       .addMBB(PassBB);
 
   // Transfer rest of current BB to PassBB
@@ -9173,6 +9180,22 @@ SDValue AArch64TargetLowering::changeStreamingMode(
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setHasStreamingModeChanges(true);
 
+  auto GetCheckVL = [&](SDValue Chain, SDValue InGlue = SDValue()) -> SDValue {
+    SmallVector<SDValue, 2> Ops = {Chain};
+    if (InGlue)
+      Ops.push_back(InGlue);
+    return DAG.getNode(AArch64ISD::CHECK_MATCHING_VL, DL,
+                       DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+  };
+
+  if (InsertVectorLengthCheck && Enable) {
+    // Non-streaming -> Streaming
+    // Insert vector length check before smstart
+    SDValue CheckVL = GetCheckVL(Chain, InGlue);
+    Chain = CheckVL.getValue(0);
+    InGlue = CheckVL.getValue(1);
+  }
+
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
   SDValue MSROp =
@@ -9199,38 +9222,16 @@ SDValue AArch64TargetLowering::changeStreamingMode(
   if (InGlue)
     Ops.push_back(InGlue);
 
-  if (!InsertVectorLengthCheck)
-    return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+  SDValue SMChange =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
 
-  auto GetCheckVL = [&](SDValue Chain, SDValue InGlue = SDValue()) -> SDValue {
-    SmallVector<SDValue, 2> Ops = {Chain};
-    if (InGlue)
-      Ops.push_back(InGlue);
-    return DAG.getNode(AArch64ISD::CHECK_MATCHING_VL, DL,
-                       DAG.getVTList(MVT::Other, MVT::Glue), Ops);
-  };
-
-  // Non-streaming -> Streaming
-  if (Enable) {
-    SDValue CheckVL = GetCheckVL(Chain, InGlue);
-
-    // Replace chain
-    Ops[0] = CheckVL.getValue(0);
-
-    // Replace/append glue
-    if (InGlue)
-      Ops.back() = CheckVL.getValue(1);
-    else
-      Ops.push_back(CheckVL.getValue(1));
-
-    return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
-  }
+  if (!InsertVectorLengthCheck || Enable)
+    return SMChange;
 
   // Streaming -> Non-streaming
-  SDValue StreamingModeInstr =
-      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
-  return GetCheckVL(StreamingModeInstr.getValue(0),
-                    StreamingModeInstr.getValue(1));
+  // Insert vector length check after smstop since we cannot read VL
+  // in streaming mode
+  return GetCheckVL(SMChange.getValue(0), SMChange.getValue(1));
 }
 
 // Emit a call to __arm_sme_save or __arm_sme_restore.

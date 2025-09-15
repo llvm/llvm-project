@@ -35,9 +35,10 @@ define void @foo_non_streaming_pass_arg(ptr %arg) {
   ; CHECK-AFTER-ISEL-NEXT:   [[LDR_ZXI:%[0-9]+]]:zpr = LDR_ZXI [[COPY]], 0 :: (load (<vscale x 1 x s128>) from %ir.arg)
   ; CHECK-AFTER-ISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-AFTER-ISEL-NEXT:   [[RDVLI_XI:%[0-9]+]]:gpr64 = RDVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[RDSVLI_XI:%[0-9]+]]:gpr64 = RDSVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr [[RDVLI_XI]], [[RDSVLI_XI]]
-  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[SUBXrr]], %bb.2
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64sp = COPY [[RDVLI_XI]]
+  ; CHECK-AFTER-ISEL-NEXT:   [[ADDSVL_XXI:%[0-9]+]]:gpr64sp = ADDSVL_XXI [[COPY1]], -1, implicit $vg
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDSVL_XXI]]
+  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[COPY2]], %bb.2
   ; CHECK-AFTER-ISEL-NEXT: {{  $}}
   ; CHECK-AFTER-ISEL-NEXT: bb.1.entry:
   ; CHECK-AFTER-ISEL-NEXT:   successors:
@@ -84,9 +85,10 @@ define void @foo_streaming_pass_arg(ptr %arg) #0 {
   ; CHECK-AFTER-ISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-AFTER-ISEL-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def $sp, implicit-def $z0, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-AFTER-ISEL-NEXT:   [[RDVLI_XI:%[0-9]+]]:gpr64 = RDVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[RDSVLI_XI:%[0-9]+]]:gpr64 = RDSVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr [[RDVLI_XI]], [[RDSVLI_XI]]
-  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[SUBXrr]], %bb.2
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64sp = COPY [[RDVLI_XI]]
+  ; CHECK-AFTER-ISEL-NEXT:   [[ADDSVL_XXI:%[0-9]+]]:gpr64sp = ADDSVL_XXI [[COPY1]], -1, implicit $vg
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDSVL_XXI]]
+  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[COPY2]], %bb.2
   ; CHECK-AFTER-ISEL-NEXT: {{  $}}
   ; CHECK-AFTER-ISEL-NEXT: bb.1.entry:
   ; CHECK-AFTER-ISEL-NEXT:   successors:
@@ -131,9 +133,10 @@ define void @foo_non_streaming_retval(ptr %ptr) {
   ; CHECK-AFTER-ISEL-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
   ; CHECK-AFTER-ISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-AFTER-ISEL-NEXT:   [[RDVLI_XI:%[0-9]+]]:gpr64 = RDVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[RDSVLI_XI:%[0-9]+]]:gpr64 = RDSVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr [[RDVLI_XI]], [[RDSVLI_XI]]
-  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[SUBXrr]], %bb.2
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64sp = COPY [[RDVLI_XI]]
+  ; CHECK-AFTER-ISEL-NEXT:   [[ADDSVL_XXI:%[0-9]+]]:gpr64sp = ADDSVL_XXI [[COPY1]], -1, implicit $vg
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDSVL_XXI]]
+  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[COPY2]], %bb.2
   ; CHECK-AFTER-ISEL-NEXT: {{  $}}
   ; CHECK-AFTER-ISEL-NEXT: bb.1.entry:
   ; CHECK-AFTER-ISEL-NEXT:   successors:
@@ -144,10 +147,10 @@ define void @foo_non_streaming_retval(ptr %ptr) {
   ; CHECK-AFTER-ISEL-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def $sp, implicit-def $z0, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-AFTER-ISEL-NEXT:   BL @bar_retv_enabled, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $z0
   ; CHECK-AFTER-ISEL-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-AFTER-ISEL-NEXT:   [[COPY1:%[0-9]+]]:zpr = COPY $z0
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY3:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-AFTER-ISEL-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
-  ; CHECK-AFTER-ISEL-NEXT:   [[COPY2:%[0-9]+]]:zpr = COPY [[COPY1]]
-  ; CHECK-AFTER-ISEL-NEXT:   STR_ZXI [[COPY2]], [[COPY]], 0 :: (store (<vscale x 1 x s128>) into %ir.ptr)
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY4:%[0-9]+]]:zpr = COPY [[COPY3]]
+  ; CHECK-AFTER-ISEL-NEXT:   STR_ZXI [[COPY4]], [[COPY]], 0 :: (store (<vscale x 1 x s128>) into %ir.ptr)
   ; CHECK-AFTER-ISEL-NEXT:   RET_ReallyLR
 entry:
   %v = tail call <vscale x 4 x i32> @bar_retv_enabled() #0
@@ -182,9 +185,10 @@ define void @foo_streaming_retval(ptr %ptr) #0 {
   ; CHECK-AFTER-ISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-AFTER-ISEL-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def $sp, implicit-def $z0, implicit $vg, implicit-def $vg, implicit-def $fpmr
   ; CHECK-AFTER-ISEL-NEXT:   [[RDVLI_XI:%[0-9]+]]:gpr64 = RDVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[RDSVLI_XI:%[0-9]+]]:gpr64 = RDSVLI_XI 1, implicit $vg
-  ; CHECK-AFTER-ISEL-NEXT:   [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr [[RDVLI_XI]], [[RDSVLI_XI]]
-  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[SUBXrr]], %bb.2
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64sp = COPY [[RDVLI_XI]]
+  ; CHECK-AFTER-ISEL-NEXT:   [[ADDSVL_XXI:%[0-9]+]]:gpr64sp = ADDSVL_XXI [[COPY1]], -1, implicit $vg
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDSVL_XXI]]
+  ; CHECK-AFTER-ISEL-NEXT:   CBZX [[COPY2]], %bb.2
   ; CHECK-AFTER-ISEL-NEXT: {{  $}}
   ; CHECK-AFTER-ISEL-NEXT: bb.1.entry:
   ; CHECK-AFTER-ISEL-NEXT:   successors:
@@ -194,10 +198,10 @@ define void @foo_streaming_retval(ptr %ptr) #0 {
   ; CHECK-AFTER-ISEL-NEXT: bb.2.entry:
   ; CHECK-AFTER-ISEL-NEXT:   BL @bar_retv, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $z0
   ; CHECK-AFTER-ISEL-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-AFTER-ISEL-NEXT:   [[COPY1:%[0-9]+]]:zpr = COPY $z0
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY3:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-AFTER-ISEL-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg, implicit-def $fpmr
-  ; CHECK-AFTER-ISEL-NEXT:   [[COPY2:%[0-9]+]]:zpr = COPY [[COPY1]]
-  ; CHECK-AFTER-ISEL-NEXT:   STR_ZXI [[COPY2]], [[COPY]], 0 :: (store (<vscale x 1 x s128>) into %ir.ptr)
+  ; CHECK-AFTER-ISEL-NEXT:   [[COPY4:%[0-9]+]]:zpr = COPY [[COPY3]]
+  ; CHECK-AFTER-ISEL-NEXT:   STR_ZXI [[COPY4]], [[COPY]], 0 :: (store (<vscale x 1 x s128>) into %ir.ptr)
   ; CHECK-AFTER-ISEL-NEXT:   RET_ReallyLR
 entry:
   %v = tail call <vscale x 4 x i32> @bar_retv()

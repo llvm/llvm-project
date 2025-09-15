@@ -36,9 +36,8 @@ define void @foo_non_streaming_pass_arg(ptr %arg) {
 ; CHECK-NEXT:    .cfi_offset b15, -96
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB0_2
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB0_2: // %entry
@@ -110,11 +109,10 @@ define void @foo_streaming_compatible_pass_arg(ptr %arg) #1 {
 ; CHECK-NEXT:    .cfi_offset b15, -1136
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB1_2
+; CHECK-NEXT:    mrs x19, SVCR
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB1_2: // %entry
@@ -195,9 +193,8 @@ define void @foo_streaming_pass_arg(ptr %arg) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 2144
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB2_2
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB2_2: // %entry
@@ -264,9 +261,8 @@ define void @foo_non_streaming_retval(ptr %ptr) {
 ; CHECK-NEXT:    .cfi_offset b15, -112
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB3_2
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB3_2: // %entry
@@ -342,11 +338,10 @@ define void @foo_streaming_compatible_retval(ptr %ptr) #1 {
 ; CHECK-NEXT:    .cfi_offset b15, -1136
 ; CHECK-NEXT:    sub sp, sp, #1024
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mrs x20, SVCR
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB4_2
+; CHECK-NEXT:    mrs x20, SVCR
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB4_2: // %entry
@@ -434,9 +429,8 @@ define void @foo_streaming_retval(ptr %ptr) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB5_2
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB5_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB5_2: // %entry

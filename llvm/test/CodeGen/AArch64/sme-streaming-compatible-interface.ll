@@ -210,9 +210,8 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB5_4
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB5_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB5_4:
@@ -308,9 +307,8 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    b.eq .LBB6_4
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB6_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB6_4:
