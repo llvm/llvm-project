@@ -155,8 +155,6 @@ struct is_one {
 
 /// Match an integer 0 or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
-/// This is different from PatternMatch::m_Zero(), which also matches null
-/// constants.
 inline int_pred_ty<is_zero_int> m_ZeroInt() {
   return int_pred_ty<is_zero_int>();
 }
