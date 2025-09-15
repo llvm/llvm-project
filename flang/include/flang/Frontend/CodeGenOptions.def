@@ -47,6 +47,7 @@ CODEGENOPT(FuseLoops, 1, 0) ///< Enable loop fusion.
 CODEGENOPT(LoopVersioning, 1, 0) ///< Enable loop versioning.
 CODEGENOPT(UnrollLoops, 1, 0) ///< Enable loop unrolling
 CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
+CODEGENOPT(DwarfVersion, 3, 0) ///< Dwarf version
 
 CODEGENOPT(Underscoring, 1, 1)
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
