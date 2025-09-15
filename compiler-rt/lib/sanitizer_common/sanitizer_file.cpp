@@ -36,9 +36,16 @@ void RawWrite(const char *buffer) {
 
 void ReportFile::ReopenIfNecessary() {
   mu->CheckLocked();
-  if (fd == kStdoutFd || fd == kStderrFd) return;
+  if (!lastOpenFailed)
+    if (fd == kStdoutFd || fd == kStderrFd)
+      return;
 
   uptr pid = internal_getpid();
+  if (lastOpenFailed && fd_pid != pid) {
+    fd = kInvalidFd;
+    lastOpenFailed = false;
+  }
+
   // If in tracer, use the parent's file.
   if (pid == stoptheworld_tracer_pid)
     pid = stoptheworld_tracer_ppid;
@@ -48,8 +55,7 @@ void ReportFile::ReopenIfNecessary() {
     // process, close it now.
     if (fd_pid == pid)
       return;
-    else
-      CloseFile(fd);
+    CloseFile(fd);
   }
 
   const char *exe_name = GetProcessName();
@@ -71,12 +77,17 @@ void ReportFile::ReopenIfNecessary() {
     char errmsg[100];
     internal_snprintf(errmsg, sizeof(errmsg), " (reason: %d)\n", err);
     WriteToFile(kStderrFd, errmsg, internal_strlen(errmsg));
-    Die();
+    if (!common_flags()->log_fallback_to_stderr)
+      Die();
+    const char *errmsg2 = "ERROR: Fallback to stderr\n";
+    WriteToFile(kStderrFd, errmsg2, internal_strlen(errmsg2));
+    lastOpenFailed = true;
+    fd = kStderrFd;
   }
   fd_pid = pid;
 }
 
-static void RecursiveCreateParentDirs(char *path) {
+static void RecursiveCreateParentDirs(char *path, fd_t &fd) {
   if (path[0] == '\0')
     return;
   for (int i = 1; path[i] != '\0'; ++i) {
@@ -90,7 +101,13 @@ static void RecursiveCreateParentDirs(char *path) {
       WriteToFile(kStderrFd, path, internal_strlen(path));
       const char *ErrorMsgSuffix = "\n";
       WriteToFile(kStderrFd, ErrorMsgSuffix, internal_strlen(ErrorMsgSuffix));
-      Die();
+      if (!common_flags()->log_fallback_to_stderr)
+        Die();
+      path[i] = save;
+      const char *ErrorMsgSuffix2 = "ERROR: Fallback to stderr\n";
+      WriteToFile(kStderrFd, ErrorMsgSuffix2, internal_strlen(ErrorMsgSuffix2));
+      fd = kStderrFd;
+      return;
     }
     path[i] = save;
   }
@@ -166,7 +183,11 @@ void ReportFile::SetReportPath(const char *path) {
       WriteToFile(kStderrFd, path, 8);
       message = "...\n";
       WriteToFile(kStderrFd, message, internal_strlen(message));
-      Die();
+      if (!common_flags()->log_fallback_to_stderr)
+        Die();
+      const char *message2 = "ERROR: Fallback to stderr\n";
+      WriteToFile(kStderrFd, message2, internal_strlen(message2));
+      path = "stderr";
     }
   }
 
@@ -180,7 +201,7 @@ void ReportFile::SetReportPath(const char *path) {
     fd = kStdoutFd;
   } else {
     ParseAndSetPath(path, path_prefix, kMaxPathLength);
-    RecursiveCreateParentDirs(path_prefix);
+    RecursiveCreateParentDirs(path_prefix, fd);
   }
 }
 
