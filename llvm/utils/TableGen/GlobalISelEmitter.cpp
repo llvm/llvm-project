@@ -267,31 +267,6 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
   return failedImport(Explanation);
 }
 
-static const Record *getInitValueAsRegClass(const CodeGenTarget &Target,
-                                            const Init *V) {
-  if (const DefInit *VDefInit = dyn_cast<DefInit>(V)) {
-    const Record *RegClass = VDefInit->getDef();
-    if (RegClass->isSubClassOf("RegisterOperand"))
-      RegClass = RegClass->getValueAsDef("RegClass");
-
-    if (RegClass->isSubClassOf("RegisterClass"))
-      return RegClass;
-
-    // FIXME: We should figure out the hwmode and dispatch. But this interface
-    // is broken, we should be returning a register class. The expected uses
-    // will use the same RegBanks in all modes.
-    if (RegClass->isSubClassOf("RegClassByHwMode")) {
-      const HwModeSelect &ModeSelect =
-          Target.getHwModes().getHwModeSelect(RegClass);
-      if (ModeSelect.Items.empty())
-        return nullptr;
-      return ModeSelect.Items.front().second;
-    }
-  }
-
-  return nullptr;
-}
-
 static std::string getScopedName(unsigned Scope, const std::string &Name) {
   return ("pred:" + Twine(Scope) + ":" + Name).str();
 }
@@ -1161,8 +1136,8 @@ Error GlobalISelEmitter::importChildMatcher(
     if (ChildRec->isSubClassOf("RegisterClass") ||
         ChildRec->isSubClassOf("RegisterOperand") ||
         ChildRec->isSubClassOf("RegClassByHwMode")) {
-      OM.addPredicate<RegisterBankOperandMatcher>(Target.getRegisterClass(
-          getInitValueAsRegClass(Target, ChildDefInit)));
+      OM.addPredicate<RegisterBankOperandMatcher>(
+          Target.getRegisterClass(Target.getInitValueAsRegClass(ChildDefInit)));
       return Error::success();
     }
 
@@ -1660,7 +1635,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
     // If this is a source operand, this is just a subregister copy.
     const Record *RCDef =
-        getInitValueAsRegClass(Target, ValChild.getLeafValue());
+        Target.getInitValueAsRegClass(ValChild.getLeafValue());
     if (!RCDef)
       return failedImport("EXTRACT_SUBREG child #0 could not "
                           "be coerced to a register class");
@@ -1692,7 +1667,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       return failedImport("REG_SEQUENCE child #0 is not a leaf");
 
     const Record *RCDef =
-        getInitValueAsRegClass(Target, Dst.getChild(0).getLeafValue());
+        Target.getInitValueAsRegClass(Dst.getChild(0).getLeafValue());
     if (!RCDef)
       return failedImport("REG_SEQUENCE child #0 could not "
                           "be coerced to a register class");
@@ -1811,7 +1786,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     // COPY_TO_REGCLASS does not provide operand constraints itself but the
     // result is constrained to the class given by the second child.
     const Record *DstIOpRec =
-        getInitValueAsRegClass(Target, Dst.getChild(1).getLeafValue());
+        Target.getInitValueAsRegClass(Dst.getChild(1).getLeafValue());
 
     if (DstIOpRec == nullptr)
       return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
@@ -1917,7 +1892,7 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
 const CodeGenRegisterClass *
 GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode &Leaf) const {
   assert(Leaf.isLeaf() && "Expected leaf?");
-  const Record *RCRec = getInitValueAsRegClass(Target, Leaf.getLeafValue());
+  const Record *RCRec = Target.getInitValueAsRegClass(Leaf.getLeafValue());
   if (!RCRec)
     return nullptr;
   return CGRegs.getRegClass(RCRec);
@@ -2158,7 +2133,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
   if (Dst.isLeaf()) {
     if (const Record *RCDef =
-            getInitValueAsRegClass(Target, Dst.getLeafValue())) {
+            Target.getInitValueAsRegClass(Dst.getLeafValue())) {
       const CodeGenRegisterClass &RC = Target.getRegisterClass(RCDef);
 
       // We need to replace the def and all its uses with the specified

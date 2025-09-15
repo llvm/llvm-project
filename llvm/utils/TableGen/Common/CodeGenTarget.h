@@ -152,6 +152,8 @@ public:
     return LegalValueTypes;
   }
 
+  const Record *getInitValueAsRegClass(const Init *V) const;
+
   CodeGenSchedModels &getSchedModels() const;
 
   const CodeGenHwModes &getHwModes() const { return CGH; }
