@@ -1820,7 +1820,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
     MPM.addPass(EliminateAvailableExternallyPass());
-    MPM.addPass(GlobalDCEPass());
+    MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::ThinLTOPostLink));
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
