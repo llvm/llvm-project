@@ -229,9 +229,11 @@ def _gentbl_test_impl(ctx):
     test_args = [ctx.executable.tblgen.short_path]
     test_args.extend(ctx.attr.opts)
     test_args.append(td_file.path)
-    for include in trans_includes.to_list():
-        test_args.extend(["-I", include])
-        test_args.extend(["-I", paths.join(ctx.bin_dir.path, include)])
+    test_args.extend([
+        arg
+        for include in trans_includes.to_list()
+        for arg in ["-I", include, "-I", paths.join(ctx.bin_dir.path, include)]
+    ])
 
     test_args.extend(["-o", "/dev/null"])
 
