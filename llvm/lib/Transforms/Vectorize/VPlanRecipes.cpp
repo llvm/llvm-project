@@ -3163,9 +3163,22 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (isSingleScalar())
       return ScalarCost;
 
-    return ScalarCost * VF.getFixedValue() +
-           Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
-                                        to_vector(operands()), VF);
+    ScalarCost = ScalarCost * VF.getFixedValue() +
+                 Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
+                                              to_vector(operands()), VF);
+    // If the recipe is not predicated (i.e. not in a replicate region), return
+    // the scalar cost. Otherwise handle predicated cost.
+    if (!getParent()->getParent()->isReplicator())
+      return ScalarCost;
+
+    // Account for the phi nodes that we will create.
+    ScalarCost += VF.getFixedValue() *
+                  Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+    // Scale the cost by the probability of executing the predicated blocks.
+    // This assumes the predicated block for each vector lane is equally
+    // likely.
+    ScalarCost /= getPredBlockCostDivisor(Ctx.CostKind);
+    return ScalarCost;
   }
   case Instruction::Load:
   case Instruction::Store: {
