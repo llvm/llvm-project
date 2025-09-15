@@ -188,14 +188,14 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
 }
 
 RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
-                                   const CodeGenTarget &Target) {
+                                   const CodeGenRegBank &RegBank) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
 
   for (const HwModeSelect::PairType &P : MS.Items) {
     assert(P.second && P.second->isSubClassOf("RegisterClass") &&
            "Register class must subclass RegisterClass");
-    const CodeGenRegisterClass &RegClass = Target.getRegisterClass(P.second);
-    if (!Map.try_emplace(P.first, &RegClass).second)
+    const CodeGenRegisterClass *RegClass = RegBank.getRegClass(P.second);
+    if (!Map.try_emplace(P.first, RegClass).second)
       llvm_unreachable("duplicate entry");
   }
 }

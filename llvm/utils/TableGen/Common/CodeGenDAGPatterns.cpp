@@ -1794,7 +1794,7 @@ bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
 static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
                                                   const Record *R) {
   TypeSetByHwMode TypeSet;
-  RegClassByHwMode Helper(R, T.getHwModes(), T);
+  RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
 
   for (auto [ModeID, RegClass] : Helper) {
     ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();
