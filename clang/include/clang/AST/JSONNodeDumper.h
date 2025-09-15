@@ -297,6 +297,8 @@ public:
   void VisitCXXThisExpr(const CXXThisExpr *TE);
   void VisitCastExpr(const CastExpr *CE);
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
+  void
+  VisitConstantTemplateParamCastExpr(const ConstantTemplateParamCastExpr *CE);
   void VisitCallExpr(const CallExpr *CE);
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *TTE);
   void VisitSizeOfPackExpr(const SizeOfPackExpr *SOPE);

@@ -5474,7 +5474,18 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
 
   const TemplateArgument &Arg = ArgLoc.getArgument();
   // Check non-type template parameters.
-  if (NonTypeTemplateParmDecl *NTTP =dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    if (Arg.getKind() == TemplateArgument::Expression)
+      if (auto *E = dyn_cast<ConstantTemplateParamCastExpr>(Arg.getAsExpr());
+          E && E->getParam() == Param) {
+        // The argument is already converted for this parameter.
+        CTAI.SugaredConverted.push_back(
+            TemplateArgument(E, /*IsCanonical=*/false));
+        CTAI.CanonicalConverted.push_back(
+            TemplateArgument(E, /*IsCanonical=*/true));
+        return false;
+      }
+
     // Do substitution on the type of the non-type template parameter
     // with the template arguments we've seen thus far.  But if the
     // template has a dependent context then we cannot substitute yet.
@@ -5643,7 +5654,6 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
 
     return false;
   }
-
 
   // Check template template parameters.
   TemplateTemplateParmDecl *TempParm = cast<TemplateTemplateParmDecl>(Param);
@@ -7068,25 +7078,13 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
 
   // If the parameter type somehow involves auto, deduce the type now.
   DeducedType *DeducedT = ParamType->getContainedDeducedType();
+  bool IsDeduced = false;
   if (getLangOpts().CPlusPlus17 && DeducedT && !DeducedT->isDeduced()) {
-    // During template argument deduction, we allow 'decltype(auto)' to
-    // match an arbitrary dependent argument.
-    // FIXME: The language rules don't say what happens in this case.
-    // FIXME: We get an opaque dependent type out of decltype(auto) if the
-    // expression is merely instantiation-dependent; is this enough?
-    if (DeductionArg->isTypeDependent()) {
-      auto *AT = dyn_cast<AutoType>(DeducedT);
-      if (AT && AT->isDecltypeAuto()) {
-        SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
-        CanonicalConverted = TemplateArgument(
-            Context.getCanonicalTemplateArgument(SugaredConverted));
-        return Arg;
-      }
-    }
-
-    // When checking a deduced template argument, deduce from its type even if
-    // the type is dependent, in order to check the types of non-type template
-    // arguments line up properly in partial ordering.
+    IsDeduced = true;
+    // QualType UndeducedParamType = ParamType;
+    //  When checking a deduced template argument, deduce from its type even if
+    //  the type is dependent, in order to check the types of non-type template
+    //  arguments line up properly in partial ordering.
     TypeSourceInfo *TSI =
         Context.getTrivialTypeSourceInfo(ParamType, Param->getLocation());
     if (isa<DeducedTemplateSpecializationType>(DeducedT)) {
@@ -7112,17 +7110,22 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
                          // along with the other associated constraints after
                          // checking the template argument list.
                          /*IgnoreConstraints=*/true);
-      if (Result == TemplateDeductionResult::AlreadyDiagnosed) {
-        return ExprError();
-      } else if (Result != TemplateDeductionResult::Success) {
-        if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-          Diag(Arg->getExprLoc(),
-               diag::err_non_type_template_parm_type_deduction_failure)
-              << Param->getDeclName() << NTTP->getType() << Arg->getType()
-              << Arg->getSourceRange();
+      if (Result != TemplateDeductionResult::Success) {
+        ParamType = TSI->getType();
+        if (StrictCheck || !DeductionArg->isTypeDependent()) {
+          if (Result == TemplateDeductionResult::AlreadyDiagnosed)
+            return ExprError();
+          if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
+            Diag(Arg->getExprLoc(),
+                 diag::err_non_type_template_parm_type_deduction_failure)
+                << Param->getDeclName() << NTTP->getType() << Arg->getType()
+                << Arg->getSourceRange();
+          NoteTemplateParameterLocation(*Param);
+          return ExprError();
         }
-        NoteTemplateParameterLocation(*Param);
-        return ExprError();
+        ParamType = SubstAutoTypeDependent(
+            ParamType, /*IsPack=*/isa<PackExpansionType>(ParamType));
+        assert(!ParamType.isNull() && "substituting DependentTy can't fail");
       }
     }
     // CheckNonTypeTemplateParameterType will produce a diagnostic if there's
@@ -7144,14 +7147,11 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
   // type-dependent, there's nothing we can check now.
   if (ParamType->isDependentType() || DeductionArg->isTypeDependent()) {
     // Force the argument to the type of the parameter to maintain invariants.
-    ExprResult E = ImpCastExprToType(
-        DeductionArg, ParamType.getNonLValueExprType(Context), CK_Dependent,
-        ParamType->isLValueReferenceType()   ? VK_LValue
-        : ParamType->isRValueReferenceType() ? VK_XValue
-                                             : VK_PRValue);
-    if (E.isInvalid())
-      return ExprError();
-    setDeductionArg(E.get());
+    if (!Context.hasSameType(DeductionArg->getType(), ParamType))
+      DeductionArg = ConstantTemplateParamCastExpr::Create(
+          Context, cast<NonTypeTemplateParmDecl>(Param), ParamType,
+          DeductionArg, IsDeduced);
+    setDeductionArg(DeductionArg);
     SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
     CanonicalConverted = TemplateArgument(
         Context.getCanonicalTemplateArgument(SugaredConverted));
@@ -8555,6 +8555,7 @@ static SourceRange findTemplateParameter(unsigned Depth, TypeLoc TL) {
 static bool CheckNonTypeTemplatePartialSpecializationArgs(
     Sema &S, SourceLocation TemplateNameLoc, NonTypeTemplateParmDecl *Param,
     const TemplateArgument *Args, unsigned NumArgs, bool IsDefaultArgument) {
+  bool HasError = false;
   for (unsigned I = 0; I != NumArgs; ++I) {
     if (Args[I].getKind() == TemplateArgument::Pack) {
       if (CheckNonTypeTemplatePartialSpecializationArgs(
@@ -8574,8 +8575,9 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
     if (PackExpansionExpr *Expansion = dyn_cast<PackExpansionExpr>(ArgExpr))
       ArgExpr = Expansion->getPattern();
 
-    // Strip off any implicit casts we added as part of type checking.
-    while (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(ArgExpr))
+    // Strip off any constant template parameter casts we added when checking
+    // the template argument.
+    while (auto *ICE = dyn_cast<ConstantTemplateParamCastExpr>(ArgExpr))
       ArgExpr = ICE->getSubExpr();
 
     // C++ [temp.class.spec]p8:
@@ -8592,6 +8594,11 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
 
     if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(ArgExpr);
         ULE && (ULE->isConceptReference() || ULE->isVarDeclReference())) {
+      continue;
+    }
+
+    if (isa<RecoveryExpr>(ArgExpr)) {
+      HasError = true;
       continue;
     }
 
@@ -8638,7 +8645,7 @@ static bool CheckNonTypeTemplatePartialSpecializationArgs(
     }
   }
 
-  return false;
+  return HasError;
 }
 
 bool Sema::CheckTemplatePartialSpecializationArgs(

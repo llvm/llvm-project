@@ -13650,6 +13650,43 @@ TreeTransform<Derived>::TransformConditionalOperator(ConditionalOperator *E) {
                                                  RHS.get());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformConstantTemplateParamCastExpr(
+    ConstantTemplateParamCastExpr *E) {
+  ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
+  if (SubExpr.isInvalid())
+    return true;
+
+  auto *Param = cast_or_null<NonTypeTemplateParmDecl>(
+      getDerived().TransformDecl(E->getExprLoc(), E->getParam()));
+  if (!Param)
+    return true;
+
+  SourceLocation ParamLoc = Param->getLocation();
+
+  QualType ParamType =
+      E->isDeduced() ? Param->getType() : E->getParamType(SemaRef.Context);
+  if (!getDerived().AlreadyTransformed(ParamType)) {
+    Sema::InstantiatingTemplate Inst(SemaRef, getDerived().getBaseLocation(),
+                                     Param, E->getSourceRange());
+    TypeSourceInfo *DI =
+        E->isDeduced()
+            ? Param->getTypeSourceInfo()
+            : SemaRef.Context.getTrivialTypeSourceInfo(ParamType, ParamLoc);
+    TypeLocBuilder TLB;
+    ParamType = getDerived().TransformType(TLB, DI->getTypeLoc());
+    if (ParamType.isNull())
+      return true;
+  }
+  ParamType = SemaRef.CheckNonTypeTemplateParameterType(ParamType, ParamLoc);
+  if (ParamType.isNull())
+    return true;
+  TemplateArgument SugaredConverted, CanonicalConverted;
+  return SemaRef.CheckTemplateArgument(
+      Param, ParamType, SubExpr.get(), SugaredConverted, CanonicalConverted,
+      /*StrictCheck=*/false, Sema::CTAK_Specified);
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformImplicitCastExpr(ImplicitCastExpr *E) {
@@ -16297,12 +16334,27 @@ TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
   return E;
 }
 
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
-                                          SubstNonTypeTemplateParmExpr *E) {
-  // Default behavior is to do nothing with this transformation.
-  return E;
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
+    SubstNonTypeTemplateParmExpr *E) {
+  ExprResult Res = getDerived().TransformExpr(E->getReplacement());
+  if (Res.isInvalid())
+    return true;
+  Expr *Replacement = Res.get();
+
+  Decl *AssociatedDecl =
+      getDerived().TransformDecl(E->getNameLoc(), E->getAssociatedDecl());
+  if (!AssociatedDecl)
+    return true;
+
+  if (Replacement == E->getReplacement() &&
+      AssociatedDecl == E->getAssociatedDecl())
+    return E;
+
+  return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(
+      Replacement->getType(), Replacement->getValueKind(), E->getNameLoc(),
+      Replacement, AssociatedDecl, E->getIndex(), E->getPackIndex(),
+      E->isReferenceParameter(), E->getFinal());
 }
 
 template<typename Derived>

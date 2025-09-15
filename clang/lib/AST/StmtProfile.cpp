@@ -1519,6 +1519,16 @@ void StmtProfiler::VisitCastExpr(const CastExpr *S) {
   VisitExpr(S);
 }
 
+void StmtProfiler::VisitConstantTemplateParamCastExpr(
+    const ConstantTemplateParamCastExpr *S) {
+  if (S->isDeduced()) {
+    Visit(S->getSubExpr());
+  } else {
+    VisitCastExpr(S);
+    VisitDecl(S->getParam());
+  }
+}
+
 void StmtProfiler::VisitImplicitCastExpr(const ImplicitCastExpr *S) {
   VisitCastExpr(S);
   ID.AddInteger(S->getValueKind());

@@ -322,6 +322,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 
     // Implicit casts are lvalues if they're lvalue casts. Other than that, we
     // only specifically record class temporaries.
+  case Expr::ConstantTemplateParamCastExprClass:
   case Expr::ImplicitCastExprClass:
     return ClassifyExprValueKind(Lang, E, E->getValueKind());
 

@@ -3858,6 +3858,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
       return true;
   }
     [[fallthrough]];
+  case ConstantTemplateParamCastExprClass:
   case ImplicitCastExprClass:
   case CStyleCastExprClass:
   case CXXStaticCastExprClass:

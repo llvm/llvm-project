@@ -1765,6 +1765,30 @@ PackIndexingExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) PackIndexingExpr(EmptyShell{});
 }
 
+ConstantTemplateParamCastExpr *ConstantTemplateParamCastExpr::Create(
+    const ASTContext &C, NonTypeTemplateParmDecl *Param, QualType ParamType,
+    Expr *Operand, bool IsDeduced) {
+  return new (C) ConstantTemplateParamCastExpr(
+      Param, ParamType.getNonLValueExprType(C), Operand,
+      ParamType->isLValueReferenceType()   ? VK_LValue
+      : ParamType->isRValueReferenceType() ? VK_XValue
+                                           : VK_PRValue,
+      IsDeduced);
+}
+
+QualType
+ConstantTemplateParamCastExpr::getParamType(const ASTContext &C) const {
+  switch (getValueKind()) {
+  case VK_LValue:
+    return C.getLValueReferenceType(getType());
+  case VK_XValue:
+    return C.getRValueReferenceType(getType());
+  case VK_PRValue:
+    return getType();
+  }
+  llvm_unreachable("unhandled value kind");
+}
+
 QualType SubstNonTypeTemplateParmExpr::getParameterType(
     const ASTContext &Context) const {
   // Note that, for a class type NTTP, we will have an lvalue of type 'const

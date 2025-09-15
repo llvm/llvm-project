@@ -86,6 +86,7 @@ def AbstractConditionalOperator : StmtNode<Expr, 1>;
 def ConditionalOperator : StmtNode<AbstractConditionalOperator>;
 def BinaryConditionalOperator : StmtNode<AbstractConditionalOperator>;
 def ImplicitCastExpr : StmtNode<CastExpr>;
+def ConstantTemplateParamCastExpr : StmtNode<CastExpr>;
 def ExplicitCastExpr : StmtNode<CastExpr, 1>;
 def CStyleCastExpr : StmtNode<ExplicitCastExpr>;
 def OMPArrayShapingExpr : StmtNode<Expr>;

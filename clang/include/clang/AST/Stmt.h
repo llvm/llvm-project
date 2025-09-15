@@ -616,14 +616,17 @@ protected:
   class CastExprBitfields {
     friend class CastExpr;
     friend class ImplicitCastExpr;
+    friend class ConstantTemplateParamCastExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
 
     LLVM_PREFERRED_TYPE(CastKind)
     unsigned Kind : 7;
+
+    // Used by ImplicitCastExpr and ConstantTemplateParamCastExpr.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
+    unsigned ExtraData : 1;
 
     /// True if the call expression has some floating-point features.
     LLVM_PREFERRED_TYPE(bool)

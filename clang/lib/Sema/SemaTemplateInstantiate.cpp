@@ -988,6 +988,11 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_template_class_instantiation_here)
                      << CTD << Active->InstantiationRange);
+      } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(D)) {
+        DiagFunc(
+            Active->PointOfInstantiation,
+            PDiag(diag::note_non_type_template_parameter_instantiation_here)
+                << NTTPD << Active->InstantiationRange);
       }
       break;
     }
@@ -1644,9 +1649,7 @@ namespace {
     ExprResult TransformTemplateParmRefExpr(DeclRefExpr *E,
                                             NonTypeTemplateParmDecl *D);
     ExprResult TransformSubstNonTypeTemplateParmPackExpr(
-                                           SubstNonTypeTemplateParmPackExpr *E);
-    ExprResult TransformSubstNonTypeTemplateParmExpr(
-                                           SubstNonTypeTemplateParmExpr *E);
+        SubstNonTypeTemplateParmPackExpr *E);
 
     /// Rebuild a DeclRefExpr for a VarDecl reference.
     ExprResult RebuildVarDeclRefExpr(ValueDecl *PD, SourceLocation Loc);
@@ -2436,50 +2439,6 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmPackExpr(
   return transformNonTypeTemplateParmRef(
       E->getAssociatedDecl(), E->getParameterPack(),
       E->getParameterPackLocation(), Arg, getPackIndex(Pack), E->getFinal());
-}
-
-ExprResult
-TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
-                                          SubstNonTypeTemplateParmExpr *E) {
-  ExprResult SubstReplacement = E->getReplacement();
-  if (!isa<ConstantExpr>(SubstReplacement.get()))
-    SubstReplacement = TransformExpr(E->getReplacement());
-  if (SubstReplacement.isInvalid())
-    return true;
-  QualType SubstType = TransformType(E->getParameterType(getSema().Context));
-  if (SubstType.isNull())
-    return true;
-  // The type may have been previously dependent and not now, which means we
-  // might have to implicit cast the argument to the new type, for example:
-  // template<auto T, decltype(T) U>
-  // concept C = sizeof(U) == 4;
-  // void foo() requires C<2, 'a'> { }
-  // When normalizing foo(), we first form the normalized constraints of C:
-  // AtomicExpr(sizeof(U) == 4,
-  //            U=SubstNonTypeTemplateParmExpr(Param=U,
-  //                                           Expr=DeclRef(U),
-  //                                           Type=decltype(T)))
-  // Then we substitute T = 2, U = 'a' into the parameter mapping, and need to
-  // produce:
-  // AtomicExpr(sizeof(U) == 4,
-  //            U=SubstNonTypeTemplateParmExpr(Param=U,
-  //                                           Expr=ImpCast(
-  //                                               decltype(2),
-  //                                               SubstNTTPE(Param=U, Expr='a',
-  //                                                          Type=char)),
-  //                                           Type=decltype(2)))
-  // The call to CheckTemplateArgument here produces the ImpCast.
-  TemplateArgument SugaredConverted, CanonicalConverted;
-  if (SemaRef
-          .CheckTemplateArgument(E->getParameter(), SubstType,
-                                 SubstReplacement.get(), SugaredConverted,
-                                 CanonicalConverted,
-                                 /*StrictCheck=*/false, Sema::CTAK_Specified)
-          .isInvalid())
-    return true;
-  return transformNonTypeTemplateParmRef(
-      E->getAssociatedDecl(), E->getParameter(), E->getExprLoc(),
-      SugaredConverted, E->getPackIndex(), E->getFinal());
 }
 
 ExprResult TemplateInstantiator::RebuildVarDeclRefExpr(ValueDecl *PD,

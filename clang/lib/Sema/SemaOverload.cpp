@@ -14744,10 +14744,13 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
         SemaRef.FixOverloadedFunctionReference(Fn, (*Best)->FoundDecl, FDecl);
     if (Res.isInvalid())
       return ExprError();
-    return SemaRef.BuildResolvedCallExpr(
+    Res = SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
         /*IsExecConfig=*/false,
         static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
+    if (Res.isInvalid())
+      return ExprError();
+    Fn = Res.get();
   }
   }
 

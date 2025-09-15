@@ -1312,6 +1312,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::CStyleCastExprClass:
   case Expr::CXXStaticCastExprClass:
   case Expr::CXXFunctionalCastExprClass:
+  case Expr::ConstantTemplateParamCastExprClass:
   case Expr::ImplicitCastExprClass:
   case Expr::MaterializeTemporaryExprClass:
   case Expr::UnaryOperatorClass: {

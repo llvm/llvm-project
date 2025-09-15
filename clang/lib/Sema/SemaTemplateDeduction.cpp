@@ -153,6 +153,8 @@ static const Expr *unwrapExpressionForDeduction(const Expr *E) {
   while (true) {
     if (const auto *IC = dyn_cast<ImplicitCastExpr>(E))
       E = IC->getSubExpr();
+    if (const auto *IC = dyn_cast<ConstantTemplateParamCastExpr>(E))
+      E = IC->getSubExpr();
     else if (const auto *CE = dyn_cast<ConstantExpr>(E))
       E = CE->getSubExpr();
     else if (const auto *Subst = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
@@ -2659,12 +2661,13 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
         // cast, in order to maintain invariants. Now we can deduce the
         // resulting type from the original type, and deduce the original type
         // against the parameter we are checking.
-        if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
-            ICE && ICE->getCastKind() == clang::CK_Dependent) {
-          E = ICE->getSubExpr();
+        if (const auto *CE = dyn_cast<ConstantTemplateParamCastExpr>(E);
+            CE && !CE->isDeduced()) {
+          E = CE->getSubExpr();
+          assert(!isa<ConstantTemplateParamCastExpr>(E));
           if (auto Result = DeduceTemplateArgumentsByTypeMatch(
-                  S, TemplateParams, ICE->getType(), E->getType(), Info,
-                  Deduced, TDF_SkipNonDependent,
+                  S, TemplateParams, CE->getType(), E->getType(), Info, Deduced,
+                  TDF_SkipNonDependent,
                   PartialOrdering ? PartialOrderingKind::NonCall
                                   : PartialOrderingKind::None,
                   /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
@@ -5279,18 +5282,6 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
   SmallVector<DeducedTemplateArgument, 1> Deduced;
   Deduced.resize(1);
 
-  // If deduction failed, don't diagnose if the initializer is dependent; it
-  // might acquire a matching type in the instantiation.
-  auto DeductionFailed = [&](TemplateDeductionResult TDK) {
-    if (Init->isTypeDependent()) {
-      Result =
-          SubstituteDeducedTypeTransform(*this, DependentResult).Apply(Type);
-      assert(!Result.isNull() && "substituting DependentTy can't fail");
-      return TemplateDeductionResult::Success;
-    }
-    return TDK;
-  };
-
   SmallVector<OriginalCallArg, 4> OriginalCallArgs;
 
   QualType DeducedType;
@@ -5340,9 +5331,9 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
             Diag(Info.getLocation(), diag::err_auto_inconsistent_deduction)
                 << Info.FirstArg << Info.SecondArg << DeducedFromInitRange
                 << Init->getSourceRange();
-            return DeductionFailed(TemplateDeductionResult::AlreadyDiagnosed);
+            return TemplateDeductionResult::AlreadyDiagnosed;
           }
-          return DeductionFailed(TDK);
+          return TDK;
         }
 
         if (DeducedFromInitRange.isInvalid() &&
@@ -5364,12 +5355,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
               OriginalCallArgs,
               /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0, FailedTSC);
           TDK != TemplateDeductionResult::Success)
-        return DeductionFailed(TDK);
+        return TDK;
     }
 
     // Could be null if somehow 'auto' appears in a non-deduced context.
     if (Deduced[0].getKind() != TemplateArgument::Type)
-      return DeductionFailed(TemplateDeductionResult::Incomplete);
+      return TemplateDeductionResult::Incomplete;
     DeducedType = Deduced[0].getAsType();
 
     if (InitList) {
@@ -5383,7 +5374,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     if (!Context.hasSameType(DeducedType, Result)) {
       Info.FirstArg = Result;
       Info.SecondArg = DeducedType;
-      return DeductionFailed(TemplateDeductionResult::Inconsistent);
+      return TemplateDeductionResult::Inconsistent;
     }
     DeducedType = Context.getCommonSugaredType(Result, DeducedType);
   }
@@ -5407,7 +5398,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
             CheckOriginalCallArgDeduction(*this, Info, OriginalArg, DeducedA);
         TDK != TemplateDeductionResult::Success) {
       Result = QualType();
-      return DeductionFailed(TDK);
+      return TDK;
     }
   }
 
@@ -5428,14 +5419,15 @@ TypeSourceInfo *Sema::SubstAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
       .TransformType(TypeWithAuto);
 }
 
-QualType Sema::SubstAutoTypeDependent(QualType TypeWithAuto) {
-  return SubstituteDeducedTypeTransform(*this, DependentAuto{false})
+QualType Sema::SubstAutoTypeDependent(QualType TypeWithAuto, bool IsPack) {
+  return SubstituteDeducedTypeTransform(*this, DependentAuto{IsPack})
       .TransformType(TypeWithAuto);
 }
 
 TypeSourceInfo *
-Sema::SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto) {
-  return SubstituteDeducedTypeTransform(*this, DependentAuto{false})
+Sema::SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto,
+                                       bool IsPack) {
+  return SubstituteDeducedTypeTransform(*this, DependentAuto{IsPack})
       .TransformType(TypeWithAuto);
 }
 

@@ -1459,6 +1459,12 @@ void JSONNodeDumper::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   attributeOnlyIfTrue("isPartOfExplicitCast", ICE->isPartOfExplicitCast());
 }
 
+void JSONNodeDumper::VisitConstantTemplateParamCastExpr(
+    const ConstantTemplateParamCastExpr *CE) {
+  VisitCastExpr(CE);
+  JOS.attribute("param", createBareDeclRef(CE->getParam()));
+}
+
 void JSONNodeDumper::VisitCallExpr(const CallExpr *CE) {
   attributeOnlyIfTrue("adl", CE->usesADL());
 }

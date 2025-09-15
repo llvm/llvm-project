@@ -157,6 +157,17 @@ ExprDependence clang::computeDependence(ExplicitCastExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(ConstantTemplateParamCastExpr *E) {
+  // We model implicit conversions as combining the dependence of their
+  // subexpression, apart from its type, with the semantic portion of the
+  // target type.
+  ExprDependence D =
+      toExprDependenceForImpliedType(E->getType()->getDependence());
+  if (auto *S = E->getSubExpr())
+    D |= S->getDependence() & ~ExprDependence::Type;
+  return D;
+}
+
 ExprDependence clang::computeDependence(BinaryOperator *E) {
   return E->getLHS()->getDependence() | E->getRHS()->getDependence();
 }

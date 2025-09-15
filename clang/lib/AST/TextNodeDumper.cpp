@@ -1534,6 +1534,14 @@ void TextNodeDumper::VisitImplicitCastExpr(const ImplicitCastExpr *Node) {
     OS << " part_of_explicit_cast";
 }
 
+void TextNodeDumper::VisitConstantTemplateParamCastExpr(
+    const ConstantTemplateParamCastExpr *Node) {
+  VisitCastExpr(Node);
+  if (Node->isDeduced())
+    OS << " is_deduced";
+  dumpDeclRef(Node->getParam());
+}
+
 void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   OS << " ";
   dumpBareDeclRef(Node->getDecl());

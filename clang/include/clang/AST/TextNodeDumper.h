@@ -271,6 +271,8 @@ public:
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
   void VisitCastExpr(const CastExpr *Node);
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
+  void
+  VisitConstantTemplateParamCastExpr(const ConstantTemplateParamCastExpr *Node);
   void VisitDeclRefExpr(const DeclRefExpr *Node);
   void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *Node);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *Node);

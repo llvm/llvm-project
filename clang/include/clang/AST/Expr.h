@@ -3624,7 +3624,7 @@ protected:
            Expr *op, unsigned BasePathSize, bool HasFPFeatures)
       : Expr(SC, ty, VK, OK_Ordinary), Op(op) {
     CastExprBits.Kind = kind;
-    CastExprBits.PartOfExplicitCast = false;
+    CastExprBits.ExtraData = false;
     CastExprBits.BasePathSize = BasePathSize;
     assert((CastExprBits.BasePathSize == BasePathSize) &&
            "BasePathSize overflow!");
@@ -3636,7 +3636,7 @@ protected:
   CastExpr(StmtClass SC, EmptyShell Empty, unsigned BasePathSize,
            bool HasFPFeatures)
       : Expr(SC, Empty) {
-    CastExprBits.PartOfExplicitCast = false;
+    CastExprBits.ExtraData = false;
     CastExprBits.BasePathSize = BasePathSize;
     CastExprBits.HasFPFeatures = HasFPFeatures;
     assert((CastExprBits.BasePathSize == BasePathSize) &&
@@ -3815,9 +3815,9 @@ public:
       *getTrailingFPFeatures() = FPO;
   }
 
-  bool isPartOfExplicitCast() const { return CastExprBits.PartOfExplicitCast; }
+  bool isPartOfExplicitCast() const { return CastExprBits.ExtraData; }
   void setIsPartOfExplicitCast(bool PartOfExplicitCast) {
-    CastExprBits.PartOfExplicitCast = PartOfExplicitCast;
+    CastExprBits.ExtraData = PartOfExplicitCast;
   }
 
   static ImplicitCastExpr *Create(const ASTContext &Context, QualType T,

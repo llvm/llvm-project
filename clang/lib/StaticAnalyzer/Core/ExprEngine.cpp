@@ -2280,6 +2280,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
 
+    case Stmt::ConstantTemplateParamCastExprClass:
     case Stmt::ImplicitCastExprClass:
     case Stmt::CStyleCastExprClass:
     case Stmt::CXXStaticCastExprClass:

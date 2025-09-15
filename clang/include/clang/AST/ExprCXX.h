@@ -4653,6 +4653,62 @@ public:
   }
 };
 
+/// ImplicitCastExpr - Allows us to explicitly represent implicit type
+/// conversions, which have no direct representation in the original
+/// source code. For example: converting T[]->T*, void f()->void
+/// (*f)(), float->double, short->int, etc.
+class ConstantTemplateParamCastExpr final : public CastExpr {
+
+  NonTypeTemplateParmDecl *Param;
+
+  ConstantTemplateParamCastExpr(NonTypeTemplateParmDecl *Param, QualType ty,
+                                Expr *op, ExprValueKind VK, bool IsDeduced)
+      : CastExpr(ConstantTemplateParamCastExprClass, ty, VK,
+                 CastKind::CK_Dependent, op,
+                 /*BasePathSize=*/0,
+                 /*HasFPFeatures=*/false),
+        Param(Param) {
+    CastExprBits.ExtraData = IsDeduced;
+    setDependence(computeDependence(this));
+  }
+
+  explicit ConstantTemplateParamCastExpr(EmptyShell Shell)
+      : CastExpr(ConstantTemplateParamCastExprClass, Shell, /*BasePathSize=*/0,
+                 /*HasFPFeatures=*/false) {}
+
+  template <class T> T *getTrailingObjectsNonStrict() { return nullptr; }
+
+public:
+  static ConstantTemplateParamCastExpr *Create(const ASTContext &Context,
+                                               NonTypeTemplateParmDecl *Param,
+                                               QualType ParamType,
+                                               Expr *Operand, bool IsDeduced);
+
+  static ConstantTemplateParamCastExpr *CreateEmpty(const ASTContext &Context) {
+    return new (Context) ConstantTemplateParamCastExpr(EmptyShell());
+  }
+
+  NonTypeTemplateParmDecl *getParam() const { return Param; }
+
+  QualType getParamType(const ASTContext &Context) const;
+
+  bool isDeduced() const { return CastExprBits.ExtraData; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getSubExpr()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getSubExpr()->getEndLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ConstantTemplateParamCastExprClass;
+  }
+
+  friend class CastExpr;
+  friend class ASTStmtReader;
+};
+
 /// Represents a reference to a non-type template parameter
 /// that has been substituted with a template argument.
 class SubstNonTypeTemplateParmExpr : public Expr {

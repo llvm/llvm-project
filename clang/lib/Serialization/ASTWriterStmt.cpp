@@ -1149,6 +1149,13 @@ void ASTStmtWriter::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   Code = serialization::EXPR_IMPLICIT_CAST;
 }
 
+void ASTStmtWriter::VisitConstantTemplateParamCastExpr(
+    ConstantTemplateParamCastExpr *E) {
+  VisitCastExpr(E);
+  Record.AddDeclRef(E->getParam());
+  Code = serialization::EXPR_CONSTANT_TEMPLATE_PARAM_CAST;
+}
+
 void ASTStmtWriter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
   VisitCastExpr(E);
   Record.AddTypeSourceInfo(E->getTypeInfoAsWritten());

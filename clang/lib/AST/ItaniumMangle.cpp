@@ -5527,9 +5527,10 @@ recurse:
     break;
   }
 
+  case Expr::ConstantTemplateParamCastExprClass:
   case Expr::ImplicitCastExprClass: {
     ImplicitlyConvertedToType = E->getType();
-    E = cast<ImplicitCastExpr>(E)->getSubExpr();
+    E = cast<CastExpr>(E)->getSubExpr();
     goto recurse;
   }
 

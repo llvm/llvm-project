@@ -1182,6 +1182,12 @@ ASTStmtReader::VisitBinaryConditionalOperator(BinaryConditionalOperator *E) {
   E->ColonLoc = readSourceLocation();
 }
 
+void ASTStmtReader::VisitConstantTemplateParamCastExpr(
+    ConstantTemplateParamCastExpr *E) {
+  VisitCastExpr(E);
+  E->Param = readDeclAs<NonTypeTemplateParmDecl>();
+}
+
 void ASTStmtReader::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   VisitCastExpr(E);
   E->setIsPartOfExplicitCast(CurrentUnpackingBits->getNextBit());
@@ -3324,6 +3330,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       CastExprBits.advance(7);
       bool HasFPFeatures = CastExprBits.getNextBit();
       S = ImplicitCastExpr::CreateEmpty(Context, PathSize, HasFPFeatures);
+      break;
+    }
+
+    case EXPR_CONSTANT_TEMPLATE_PARAM_CAST: {
+      S = ConstantTemplateParamCastExpr::CreateEmpty(Context);
       break;
     }
 

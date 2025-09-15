@@ -12683,11 +12683,11 @@ public:
                                           QualType Replacement);
 
   // Substitute auto in TypeWithAuto for a Dependent auto type
-  QualType SubstAutoTypeDependent(QualType TypeWithAuto);
+  QualType SubstAutoTypeDependent(QualType TypeWithAuto, bool IsPack = false);
 
   // Substitute auto in TypeWithAuto for a Dependent auto type
-  TypeSourceInfo *
-  SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto);
+  TypeSourceInfo *SubstAutoTypeSourceInfoDependent(TypeSourceInfo *TypeWithAuto,
+                                                   bool IsPack = false);
 
   /// Completely replace the \c auto in \p TypeWithAuto by
   /// \p Replacement. This does not retain any \c auto type sugar.

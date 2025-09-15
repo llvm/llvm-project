@@ -80,7 +80,8 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:     | `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'T' dependent depth 0 index 1
 // CHECK-NEXT:     |   `-TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'T'
 // CHECK-NEXT:     `-TemplateArgument expr 'N'
-// CHECK-NEXT:       `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:42> 'T' <Dependent>
+// CHECK-NEXT:       `-ConstantTemplateParamCastExpr 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:42> 'T' <Dependent>
+// CHECK-NEXT:         |-NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} depth 0 index 2 'type-parameter-0-1'
 // CHECK-NEXT:         `-DeclRefExpr 0x{{[0-9A-Fa-f]+}} <col:42> 'int' NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} 'N' 'int'
 
   using test4 = __make_integer_seq<A, T, 1>;
@@ -94,7 +95,8 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:     | `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'T' dependent depth 0 index 1
 // CHECK-NEXT:     |   `-TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'T'
 // CHECK-NEXT:     `-TemplateArgument expr '1'
-// CHECK-NEXT:       `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:42> 'T' <Dependent>
+// CHECK-NEXT:       `-ConstantTemplateParamCastExpr 0x{{[0-9A-Fa-f]+}} <line:{{.+}}:42> 'T' <Dependent>
+// CHECK-NEXT:         |-NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} depth 0 index 2 'type-parameter-0-1'
 // CHECK-NEXT:         `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:42> 'int' 1
 
   using test5 = __make_integer_seq<A, int, N>;

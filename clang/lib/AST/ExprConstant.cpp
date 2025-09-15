@@ -18341,6 +18341,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     }
     llvm_unreachable("invalid binary operator kind");
   }
+  case Expr::ConstantTemplateParamCastExprClass:
   case Expr::ImplicitCastExprClass:
   case Expr::CStyleCastExprClass:
   case Expr::CXXFunctionalCastExprClass:

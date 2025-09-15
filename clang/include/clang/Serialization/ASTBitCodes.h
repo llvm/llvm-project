@@ -1684,6 +1684,9 @@ enum StmtCode {
   /// An ImplicitCastExpr record.
   EXPR_IMPLICIT_CAST,
 
+  /// An ConstantTemplateParamCastExpr record.
+  EXPR_CONSTANT_TEMPLATE_PARAM_CAST,
+
   /// A CStyleCastExpr record.
   EXPR_CSTYLE_CAST,
 

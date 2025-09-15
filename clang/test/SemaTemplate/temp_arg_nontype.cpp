@@ -498,7 +498,7 @@ namespace dependent_backreference {
   int arr[sizeof(int)];
   // When checking this template-id, we must not treat 'Value' as having type
   // 'int'; its type is the dependent type 'T'.
-  template<typename T> void f() { X<T, 0, &arr> x; } // expected-note {{substituting}}
+  template<typename T> void f() { X<T, 0, &arr> x; } // expected-note {{instantiation of non-type template parameter}}
   void g() { f<short>(); }
   void h() { f<int>(); } // expected-note {{instantiation}}
 

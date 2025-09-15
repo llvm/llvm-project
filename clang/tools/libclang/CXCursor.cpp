@@ -318,6 +318,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::ExpressionTraitExprClass:
   case Stmt::ExtVectorElementExprClass:
   case Stmt::ImplicitCastExprClass:
+  case Stmt::ConstantTemplateParamCastExprClass:
   case Stmt::ImplicitValueInitExprClass:
   case Stmt::NoInitExprClass:
   case Stmt::MaterializeTemporaryExprClass:

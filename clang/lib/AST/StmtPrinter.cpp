@@ -1822,6 +1822,12 @@ void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
   PrintExpr(Node->getInitializer());
 }
 
+void StmtPrinter::VisitConstantTemplateParamCastExpr(
+    ConstantTemplateParamCastExpr *Node) {
+  // No need to print anything, simply forward to the subexpression.
+  PrintExpr(Node->getSubExpr());
+}
+
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());

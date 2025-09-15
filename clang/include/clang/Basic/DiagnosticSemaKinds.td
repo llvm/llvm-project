@@ -5774,6 +5774,9 @@ def note_template_class_explicit_specialization_was_here : Note<
   "class template %0 was explicitly specialized here">;
 def note_template_class_instantiation_here : Note<
   "in instantiation of template class %q0 requested here">;
+def note_non_type_template_parameter_instantiation_here
+    : Note<
+          "in instantiation of non-type template parameter %q0 requested here">;
 def note_template_member_class_here : Note<
   "in instantiation of member class %q0 requested here">;
 def note_template_member_function_here : Note<
