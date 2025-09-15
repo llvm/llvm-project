@@ -240,7 +240,6 @@ define i8 @udiv8_constant_add(i8 %a) nounwind {
 ; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    srli a0, a0, 1
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    srli a0, a0, 2
 ; RV32-NEXT:    ret
 ;
@@ -254,7 +253,6 @@ define i8 @udiv8_constant_add(i8 %a) nounwind {
 ; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    srli a0, a0, 2
 ; RV64-NEXT:    ret
   %1 = udiv i8 %a, 7
@@ -317,7 +315,6 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV32IM-NEXT:    and a0, a0, a2
 ; RV32IM-NEXT:    srli a0, a0, 1
 ; RV32IM-NEXT:    add a0, a0, a1
-; RV32IM-NEXT:    and a0, a0, a2
 ; RV32IM-NEXT:    srli a0, a0, 2
 ; RV32IM-NEXT:    ret
 ;
@@ -332,7 +329,6 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV32IMZB-NEXT:    zext.h a0, a0
 ; RV32IMZB-NEXT:    srli a0, a0, 1
 ; RV32IMZB-NEXT:    add a0, a0, a1
-; RV32IMZB-NEXT:    zext.h a0, a0
 ; RV32IMZB-NEXT:    srli a0, a0, 2
 ; RV32IMZB-NEXT:    ret
 ;
@@ -349,7 +345,6 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    srli a0, a0, 1
 ; RV64IM-NEXT:    add a0, a0, a1
-; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    srli a0, a0, 2
 ; RV64IM-NEXT:    ret
 ;
@@ -364,7 +359,6 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV64IMZB-NEXT:    zext.h a0, a0
 ; RV64IMZB-NEXT:    srli a0, a0, 1
 ; RV64IMZB-NEXT:    add a0, a0, a1
-; RV64IMZB-NEXT:    zext.h a0, a0
 ; RV64IMZB-NEXT:    srli a0, a0, 2
 ; RV64IMZB-NEXT:    ret
   %1 = udiv i16 %a, 7

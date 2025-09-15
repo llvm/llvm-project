@@ -93,12 +93,8 @@ KnownBits GISelValueTracking::getKnownBits(Register R) {
 KnownBits GISelValueTracking::getKnownBits(Register R,
                                            const APInt &DemandedElts,
                                            unsigned Depth) {
-  // For now, we only maintain the cache during one request.
-  assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
-
   KnownBits Known;
   computeKnownBitsImpl(R, Known, DemandedElts, Depth);
-  ComputeKnownBitsCache.clear();
   return Known;
 }
 
@@ -187,14 +183,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 #endif
 
   unsigned BitWidth = DstTy.getScalarSizeInBits();
-  auto CacheEntry = ComputeKnownBitsCache.find(R);
-  if (CacheEntry != ComputeKnownBitsCache.end()) {
-    Known = CacheEntry->second;
-    LLVM_DEBUG(dbgs() << "Cache hit at ");
-    LLVM_DEBUG(dumpResult(MI, Known, Depth));
-    assert(Known.getBitWidth() == BitWidth && "Cache entry size doesn't match");
-    return;
-  }
   Known = KnownBits(BitWidth); // Don't know anything
 
   // Depth may get bigger than max depth if it gets passed to a different
@@ -254,16 +242,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     // point of the pipeline, otherwise the main live-range will be
     // defined more than once, which is against SSA.
     assert(MI.getOperand(0).getSubReg() == 0 && "Is this code in SSA?");
-    // Record in the cache that we know nothing for MI.
-    // This will get updated later and in the meantime, if we reach that
-    // phi again, because of a loop, we will cut the search thanks to this
-    // cache entry.
-    // We could actually build up more information on the phi by not cutting
-    // the search, but that additional information is more a side effect
-    // than an intended choice.
-    // Therefore, for now, save on compile time until we derive a proper way
-    // to derive known bits for PHIs within loops.
-    ComputeKnownBitsCache[R] = KnownBits(BitWidth);
     // PHI's operand are a mix of registers and basic blocks interleaved.
     // We only care about the register ones.
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
@@ -700,9 +678,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
-
-  // Update the cache.
-  ComputeKnownBitsCache[R] = Known;
 }
 
 static bool outputDenormalIsIEEEOrPosZero(const MachineFunction &MF, LLT Ty) {
