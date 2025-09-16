@@ -1475,7 +1475,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // The implicit-def of the super register may have been reduced to
   // subregisters depending on the uses.
 
-  bool NewMIDefinesFullReg = false;
+  TinyPtrVector<MachineOperand *> NewMIImpDefDestReg;
+  [[maybe_unused]] unsigned NewMIOpCount = NewMI.getNumOperands();
 
   SmallVector<MCRegister, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
@@ -1486,7 +1487,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       assert(MO.isImplicit());
       if (MO.getReg().isPhysical()) {
         if (MO.getReg() == DstReg)
-          NewMIDefinesFullReg = true;
+          NewMIImpDefDestReg.push_back(&MO);
 
         assert(MO.isImplicit() && MO.getReg().isPhysical() &&
                (MO.isDead() ||
@@ -1640,9 +1641,32 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // been asked for. If so it must implicitly define the whole thing.
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
+
+    // When we're rematerializing into a not-quite-right register we already add
+    // the real definition as an implicit-def, but we should also be marking the
+    // "official" register as dead, since nothing else is going to use it as a
+    // result of this remat. Not doing this can affect pressure tracking.
     NewMI.getOperand(0).setIsDead(true);
 
-    if (!NewMIDefinesFullReg) {
+    bool HasDefMatchingCopy = false;
+    if (!NewMIImpDefDestReg.empty()) {
+      // Assert to check MachineOperand*s have not been invalidated.
+      assert(
+          NewMIOpCount == NewMI.getNumOperands() &&
+          "Expected NewMI operands not to be appended/removed at this point");
+      // If NewMI has an implicit-def of a super-register of the CopyDstReg,
+      // we must also mark that as dead since it is not going to used as a
+      // result of this remat.
+      for (MachineOperand *MO : NewMIImpDefDestReg) {
+        if (MO->getReg() != CopyDstReg)
+          MO->setIsDead(true);
+        else
+          HasDefMatchingCopy = true;
+      }
+    }
+
+    // If NewMI does not already have an implicit-def CopyDstReg add one now.
+    if (!HasDefMatchingCopy) {
       NewMI.addOperand(MachineOperand::CreateReg(
           CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
     }

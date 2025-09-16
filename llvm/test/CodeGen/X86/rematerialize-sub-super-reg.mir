@@ -167,8 +167,6 @@ body:             |
     RET 0, $rax
 ...
 ---
-; FIXME: `$al = COPY killed %4` should rematerialize as `dead $eax = MOV32r0 ... implicit-def $al`
-;         not `dead $eax = MOV32r0 ... implicit-def $rax` (as the full $rax is not used).
 name:  rematerialize_superregister_into_subregister_def_with_impdef_physreg
 body:             |
   bb.0.entry:
@@ -176,7 +174,7 @@ body:             |
     ; CHECK: dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
     ; CHECK-NEXT: dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
     ; CHECK-NEXT: FAKE_USE implicit killed $rsi, implicit killed $rdx
-    ; CHECK-NEXT: dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $rax
+    ; CHECK-NEXT: dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def dead $rax, implicit-def $al
     ; CHECK-NEXT: FAKE_USE implicit killed $al
     ; CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: RET 0, $eax
