@@ -122,7 +122,9 @@ public:
   StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
 
   void *allocate(size_t Size, unsigned Align = 8) const {
-    return Allocator.Allocate(Size, Align);
+    if (!Allocator)
+      Allocator.emplace();
+    return Allocator->Allocate(Size, Align);
   }
   template <typename T> T *allocate(size_t Num = 1) const {
     return static_cast<T *>(allocate(Num * sizeof(T), alignof(T)));
@@ -188,7 +190,7 @@ public:
   /// for.
   llvm::SmallVector<const Block *> InitializingBlocks;
 
-  mutable llvm::BumpPtrAllocator Allocator;
+  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 };
 
 class InterpStateCCOverride final {
