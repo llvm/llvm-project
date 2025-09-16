@@ -235,6 +235,11 @@ public:
   DebugSSAUpdater(const DebugSSAUpdater &) = delete;
   DebugSSAUpdater &operator=(const DebugSSAUpdater &) = delete;
 
+  ~DebugSSAUpdater() {
+    for (auto &Block : BlockMap)
+      delete Block.second;
+  }
+
   void reset() {
     for (auto &Block : BlockMap)
       delete Block.second;
