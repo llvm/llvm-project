@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -use-fn-table-in-decode-to-mcinst -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler -use-fn-table-in-decode-to-mcinst -I %p/../../../include %s | FileCheck %s
 
 include "llvm/Target/Target.td"
 
