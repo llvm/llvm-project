@@ -12,7 +12,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class AsmPrinter;
+class BPFAsmPrinter;
 class MCContext;
 class MCInst;
 class MCOperand;
@@ -24,14 +24,16 @@ class MachineOperand;
 class LLVM_LIBRARY_VISIBILITY BPFMCInstLower {
   MCContext &Ctx;
 
-  AsmPrinter &Printer;
+  BPFAsmPrinter &Printer;
 
 public:
-  BPFMCInstLower(MCContext &ctx, AsmPrinter &printer)
+  BPFMCInstLower(MCContext &ctx, BPFAsmPrinter &printer)
       : Ctx(ctx), Printer(printer) {}
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
+  MCOperand LowerJTIOperand(const MachineInstr &MI, const MachineOperand &MO,
+                            int JTI) const;
 
   MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
   MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
