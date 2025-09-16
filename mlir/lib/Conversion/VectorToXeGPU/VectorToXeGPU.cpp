@@ -99,18 +99,11 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
 
 // Common preconditions for the lowering of vector.gather and vector.scatter:
 //  1. Source is a memref.
-//  2. The innermost dimension of the memref is contiguous (stride == 1)
 static LogicalResult gatherScatterPreconditions(PatternRewriter &rewriter,
                                                 Operation *op, Type baseType) {
   auto srcTy = dyn_cast<MemRefType>(baseType);
   if (!srcTy)
     return rewriter.notifyMatchFailure(op, "Expects memref source");
-
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
-    return rewriter.notifyMatchFailure(
-        op, "Buffer must be contiguous in the innermost dimension");
 
   return success();
 }
@@ -219,9 +212,14 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
     SmallVector<int64_t> intStrides;
     if (failed(memrefType.getStridesAndOffset(intStrides, offset)))
       return {{}, offsetVal};
-    // Wrap static strides as MLIR values
-    for (int64_t s : intStrides)
-      strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, s));
+    bool hasDynamicStrides = llvm::any_of(intStrides, [](int64_t strideVal) {
+      return ShapedType::isDynamic(strideVal);
+    });
+
+    if (!hasDynamicStrides)
+      for (int64_t s : intStrides)
+        strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, s));
+
     if (!ShapedType::isDynamic(offset))
       offsetVal = arith::ConstantIndexOp::create(rewriter, loc, offset);
   }
@@ -389,13 +387,20 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
   Value indices = gatScatOp.getIndices();
   VectorType vecType = cast<VectorType>(indices.getType());
 
+  Value strideVector =
+      vector::BroadcastOp::create(rewriter, loc, vecType, strides.back())
+          .getResult();
+  Value stridedIndices =
+      arith::MulIOp::create(rewriter, loc, strideVector, indices).getResult();
+
   Value baseVector =
       vector::BroadcastOp::create(
           rewriter, loc,
           VectorType::get(vecType.getShape(), rewriter.getIndexType()),
           baseOffset)
           .getResult();
-  return arith::AddIOp::create(rewriter, loc, baseVector, indices).getResult();
+  return arith::AddIOp::create(rewriter, loc, baseVector, stridedIndices)
+      .getResult();
 }
 
 template <

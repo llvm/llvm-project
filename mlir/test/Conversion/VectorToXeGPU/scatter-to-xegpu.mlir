@@ -118,15 +118,58 @@ gpu.func @store_dynamic_source2(%vec: vector<8x16xf32>, %source: memref<?x8x16xf
 
 // -----
 gpu.module @xevm_module {
-gpu.func @no_store_non_unit_inner_stride(
+gpu.func @non_unit_inner_stride_1D(
     %vec: vector<8xf32>, %source: memref<32xf32, strided<[?], offset: ?>>,
     %off: index, %indices: vector<8xindex>, %mask: vector<8xi1>) {
   vector.scatter %source[%off][%indices], %mask, %vec
     : memref<32xf32, strided<[?], offset: ?>>, vector<8xindex>, vector<8xi1>, vector<8xf32>
   gpu.return
 }
-// CHECK-LABEL:  @no_store_non_unit_inner_stride(
-// CHECK:        vector.scatter
+// CHECK-LABEL:  @non_unit_inner_stride_1D(
+// CHECK-SAME:   %[[VAL:.+]]: vector<8xf32>, %[[SRC:.+]]: memref<32xf32, strided<[?], offset: ?>>,
+// CHECK-SAME:   %[[OFF1:.+]]: index,
+// CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>, %[[MASK:.+]]: vector<8xi1>) {
+// CHECK:        %[[BB:.+]], %[[M_OFF:.+]], %[[SZ:.+]], %[[STRIDE:.+]] = memref.extract_strided_metadata %[[SRC]]
+// CHECK:        arith.muli %[[OFF1]], %[[STRIDE]] : index
+// CHECK:        arith.addi {{.*}} : index
+// CHECK:        %[[STRD_VEC:.+]] = vector.broadcast %[[STRIDE]] : index to vector<8xindex>
+// CHECK:        %[[STRD_INDICES:.+]] = arith.muli %[[STRD_VEC:.+]], %[[INDICES]] : vector<8xindex>
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
+// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[STRD_INDICES]] : vector<8xindex>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32xf32, strided<[?], offset: ?>> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
+// CHECK:        gpu.return
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @non_unit_inner_stride_3D(
+    %vec: vector<8xf32>,
+    %source: memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>>,
+    %off0: index, %off1: index, %off2: index,
+    %indices: vector<8xindex>, %mask: vector<8xi1>) {
+  vector.scatter %source[%off0, %off1, %off2][%indices], %mask, %vec
+    : memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>>,
+      vector<8xindex>, vector<8xi1>, vector<8xf32>
+  gpu.return
+}
+// CHECK-LABEL:  @non_unit_inner_stride_3D(
+// CHECK-SAME:   %[[VAL:.+]]: vector<8xf32>, %[[SRC:.+]]: memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>>,
+// CHECK-SAME:   %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
+// CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>, %[[MASK:.+]]: vector<8xi1>) {
+// CHECK:        %[[BB:.+]], %[[M_OFF:.+]], %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
+// CHECK:        arith.muli %[[OFF0]], %[[STRIDES]]#0 : index
+// CHECK:        arith.addi {{.*}} : index
+// CHECK-COUNT2: arith.muli {{.*}} : index
+// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK:        %[[STRD_INDICES:.+]] = arith.muli {{.*}}%[[INDICES]]{{.*}} : vector<8xindex>
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
+// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[STRD_INDICES]] : vector<8xindex>
+// CHECK:        %[[BASE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<4x8x32xf32, strided<[?, 128, 2], offset: ?>> -> index
+// CHECK:        %[[BASE_I64:.+]] = arith.index_cast %[[BASE]] : index to i64
+// CHECK:        xegpu.store %[[VAL]], %[[BASE_I64]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
+// CHECK:        gpu.return
 }
 
 // -----
