@@ -228,16 +228,12 @@ def SGPR_NULL64 :
 // need them, we need to do a 64 bit load and extract the bits manually.
 multiclass ApertureRegister<string name, bits<10> regIdx> {
   let isConstant = true in {
-    // FIXME: We shouldn't need to define subregisters for these (nor add them to any 16 bit
-    //  register classes), but if we don't it seems to confuse the TableGen
-    //  backend and we end up with a lot of weird register pressure sets and classes.
     defm _LO : SIRegLoHi16 <name, regIdx>;
-    defm _HI : SIRegLoHi16 <"", regIdx>;
-
-    def "" : RegisterWithSubRegs<name, [!cast<Register>(NAME#_LO), !cast<Register>(NAME#_HI)]> {
+    def "" : RegisterWithSubRegs<name, [!cast<Register>(NAME#_LO)]> {
       let Namespace = "AMDGPU";
-      let SubRegIndices = [sub0, sub1];
+      let SubRegIndices = [sub0];
       let HWEncoding = !cast<Register>(NAME#_LO).HWEncoding;
+      let CoveredBySubRegs = 0;
     }
   } // isConstant = true
 }
@@ -790,8 +786,7 @@ let GeneratePressureSet = 0, HasSGPR = 1 in {
 def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
   (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
    SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE_LO,
-   SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO, SRC_PRIVATE_LIMIT_LO, SRC_SHARED_BASE_HI,
-   SRC_SHARED_LIMIT_HI, SRC_PRIVATE_BASE_HI, SRC_PRIVATE_LIMIT_HI, SRC_POPS_EXITING_WAVE_ID,
+   SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO, SRC_PRIVATE_LIMIT_LO, SRC_POPS_EXITING_WAVE_ID,
    SRC_VCCZ, SRC_EXECZ, SRC_SCC, SRC_FLAT_SCRATCH_BASE_LO, SRC_FLAT_SCRATCH_BASE_HI)> {
   let AllocationPriority = 0;
 }
@@ -801,10 +796,9 @@ def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
    XNACK_MASK_LO_LO16, XNACK_MASK_HI_LO16, SGPR_NULL_LO16, SGPR_NULL_HI_LO16, TTMP_LO16,
    TMA_LO_LO16, TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO_LO16,
    SRC_SHARED_LIMIT_LO_LO16, SRC_PRIVATE_BASE_LO_LO16, SRC_PRIVATE_LIMIT_LO_LO16,
-   SRC_SHARED_BASE_HI_LO16, SRC_SHARED_LIMIT_HI_LO16, SRC_PRIVATE_BASE_HI_LO16,
-   SRC_PRIVATE_LIMIT_HI_LO16, SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16,
-   SRC_EXECZ_LO16, SRC_SCC_LO16, EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16,
-   SRC_FLAT_SCRATCH_BASE_LO_LO16, SRC_FLAT_SCRATCH_BASE_HI_LO16)> {
+   SRC_POPS_EXITING_WAVE_ID_LO16, SRC_VCCZ_LO16, SRC_EXECZ_LO16, SRC_SCC_LO16,
+   EXEC_LO_LO16, EXEC_HI_LO16, M0_CLASS_LO16, SRC_FLAT_SCRATCH_BASE_LO_LO16,
+   SRC_FLAT_SCRATCH_BASE_HI_LO16)> {
   let Size = 16;
   let isAllocatable = 0;
   let BaseClassOrder = 16;
@@ -823,6 +817,13 @@ def SReg_32_XEXEC_HI : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i1
 def SReg_32_XM0 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
   (add SReg_32_XM0_XEXEC, EXEC_LO, EXEC_HI)> {
   let AllocationPriority = 0;
+}
+
+def APERTURE_Class : SIRegisterClass<"AMDGPU", Reg64Types.types, 32,
+  (add SRC_SHARED_BASE, SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT)> {
+  let isAllocatable = 0;
+  let Size = 64;
+  let BaseClassOrder = 10000;
 }
 
 } // End GeneratePressureSet = 0
@@ -876,8 +877,7 @@ def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16, v4bf16],
 }
 
 def SReg_64_XEXEC_XNULL : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
-  (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, SRC_SHARED_BASE,
-       SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, TTMP_64, TBA, TMA,
+  (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA,
        SRC_FLAT_SCRATCH_BASE)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
@@ -897,6 +897,14 @@ def SReg_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f1
   let AllocationPriority = 1;
   let HasSGPR = 1;
   let BaseClassOrder = 64;
+  let Size = 64;
+}
+
+def SReg_64_Encodable : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
+  (add SReg_64, APERTURE_Class)> {
+  let CopyCost = 1;
+  let isAllocatable = 0;
+  let HasSGPR = 1;
   let Size = 64;
 }
 
@@ -1225,7 +1233,7 @@ def SSrc_bf16: SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_BF16">;
 def SSrc_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP16">;
 def SSrc_b32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT32">;
 def SSrc_f32 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
-def SSrc_b64 : SrcRegOrImm9 <SReg_64, "OPERAND_REG_IMM_INT64">;
+def SSrc_b64 : SrcRegOrImm9 <SReg_64_Encodable, "OPERAND_REG_IMM_INT64">;
 
 def SSrcOrLds_b32 : SrcRegOrImm9 <SRegOrLds_32, "OPERAND_REG_IMM_INT32">;
 
