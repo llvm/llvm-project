@@ -6823,8 +6823,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     ArrayRef<Value *> PointerOps, Type *ElemTy, Align CommonAlignment,
     SmallVectorImpl<unsigned> &SortedIndices, StridedPtrInfo &SPtrInfo,
     int64_t Diff, Value *Ptr0, Value *PtrN) const {
-  const unsigned Sz = PointerOps.size();
-  FixedVectorType *StridedLoadTy = getWidenedType(ElemTy, Sz);
+  const size_t Sz = PointerOps.size();
+  auto *StridedLoadTy = getWidenedType(ElemTy, Sz);
 
   // Try to generate strided load node if:
   // 1. Target with strided load support is detected.
@@ -6852,13 +6852,13 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
                  return !isVectorized(U) && !MustGather.contains(U);
                });
       });
-  const unsigned AbsoluteDiff = std::abs(Diff);
+  const uint64_t AbsoluteDiff = std::abs(Diff);
   if (IsAnyPointerUsedOutGraph ||
       ((Sz > MinProfitableStridedLoads ||
         (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
          has_single_bit(AbsoluteDiff))) &&
        AbsoluteDiff > Sz) ||
-      Diff == -(static_cast<int>(Sz) - 1)) {
+      Diff == -(static_cast<int64_t>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
       return false;
@@ -6892,7 +6892,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        SmallVectorImpl<unsigned> &SortedIndices,
                                        StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
-  FixedVectorType *VecTy = getWidenedType(ElemTy, Sz);
+  auto *VecTy = getWidenedType(ElemTy, Sz);
   if (!TTI->isLegalStridedLoadStore(VecTy, CommonAlignment))
     return false;
   const SCEV *Stride =
@@ -6900,7 +6900,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   if (!Stride)
     return false;
 
-  SPtrInfo.Ty = getWidenedType(ElemTy, PointerOps.size());
+  SPtrInfo.Ty = VecTy;
   SPtrInfo.StrideSCEV = Stride;
   return true;
 }
