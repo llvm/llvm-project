@@ -161,4 +161,76 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
   parseAndCheckBrstackEvents(1234, ExpectedSamples);
 }
 
+TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
+  // Check perf input with SPE branch events as brstack format by
+  // combining with the previous branch target address (named as PBT).
+  // Example collection command:
+  // ```
+  // perf record -e 'arm_spe_0/branch_filter=1/u' -- BINARY
+  // ```
+  // How Bolt extracts the branch events:
+  // ```
+  // perf script -F pid,brstack --itrace=bl
+  // ```
+
+  opts::ArmSPE = true;
+  opts::ReadPerfEvents =
+      // "<PID> <SRC>/<DEST>/PN/-/-/10/COND/- <NULL>/<PBT>/-/-/-/0//-\n"
+      "  4567  0xa002/0xa003/PN/-/-/10/COND/- 0x0/0xa001/-/-/-/0//-\n"
+      "  4567  0xb002/0xb003/P/-/-/4/RET/- 0x0/0xb001/-/-/-/0//-\n"
+      "  4567  0xc456/0xc789/P/-/-/13/-/- 0x0/0xc123/-/-/-/0//-\n"
+      "  4567  0xd456/0xd789/M/-/-/7/RET/- 0x0/0xd123/-/-/-/0//-\n"
+      "  4567  0xe005/0xe009/P/-/-/14/RET/- 0x0/0xe001/-/-/-/0//-\n"
+      "  4567  0xd456/0xd789/M/-/-/7/RET/- 0x0/0xd123/-/-/-/0//-\n"
+      "  4567  0xf002/0xf003/MN/-/-/8/COND/- 0x0/0xf001/-/-/-/0//-\n"
+      "  4567  0xc456/0xc789/P/-/-/13/-/- 0x0/0xc123/-/-/-/0//-\n";
+
+  // ExpectedSamples contains the aggregated information about
+  // a branch {{From, To, TraceTo}, {TakenCount, MispredCount}}.
+  // When the SPE previous branch target address (named as PBT)
+  // feature is available, an SPE sample by combining this PBT feature,
+  // has two entries.
+  // Arm SPE records SRC/DEST addresses of the latest sampled branch operation,
+  // and it stores into the first entry. PBT records the target address of
+  // most recently taken branch in program order before the sampled operation,
+  // it places into the second entry.
+  // They are formed a chain of two consecutive branches.
+  // Where:
+  //   - The previous branch operation (PBT) is always taken.
+  //   - In SPE entry, the current source branch (SRC) may be either
+  //     fall-through or taken.
+  //   - The target address (DEST) of the recorded
+  //     branch operation is always what was architecturally executed.
+  // However PBT lacks associated information such as branch
+  // source address, branch type, and prediction bit.
+  // Considering this Trace pair:
+  //  {{0xd456, 0xd789, Trace::BR_ONLY}, {2, 2}},
+  //    {{0x0, 0xd123, 0xd456}, {2, 0}}
+  // For SPE trace please see the description above.
+  // The second entry is the PBT trace:
+  // {{0x0, 0xd123, 0xd456}, {2, 0}}.
+  // The PBT entry has a TakenCount = 2, as we have two samples for
+  // (0x0, 0xd123) entry in our input. The 'MispredsCount = 0' is
+  // always zero, because it lacks prediction information.
+  // It also has no information about source branch address therefore
+  // Bolt doesn't evaluate the 'From' field, and leaves it as zero (0x0).
+  // TraceTo = 0xc456, means the execution jumped from
+  // 0xc123 (PBT) to 0xc456 (SRC), and jumped further to 0xd789 (DEST).
+  std::vector<std::pair<Trace, TakenBranchInfo>> ExpectedSamples = {
+      {{0xa002, 0xa003, Trace::BR_ONLY}, {1, 0}},
+      {{0x0, 0xa001, 0xa002}, {1, 0}},
+      {{0xb002, 0xb003, Trace::BR_ONLY}, {1, 0}},
+      {{0x0, 0xb001, 0xb002}, {1, 0}},
+      {{0xc456, 0xc789, Trace::BR_ONLY}, {2, 0}},
+      {{0x0, 0xc123, 0xc456}, {2, 0}},
+      {{0xd456, 0xd789, Trace::BR_ONLY}, {2, 2}},
+      {{0x0, 0xd123, 0xd456}, {2, 0}},
+      {{0xe005, 0xe009, Trace::BR_ONLY}, {1, 0}},
+      {{0x0, 0xe001, 0xe005}, {1, 0}},
+      {{0xf002, 0xf003, Trace::BR_ONLY}, {1, 1}},
+      {{0x0, 0xf001, 0xf002}, {1, 0}}};
+
+  parseAndCheckBrstackEvents(4567, ExpectedSamples);
+}
+
 #endif
