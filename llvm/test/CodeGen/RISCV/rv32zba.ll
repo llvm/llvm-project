@@ -1283,8 +1283,7 @@ define ptr @shl_add_knownbits(ptr %p, i32 %i) {
 ; RV32ZBA-NEXT:    slli a1, a1, 18
 ; RV32ZBA-NEXT:    srli a1, a1, 18
 ; RV32ZBA-NEXT:    sh1add a1, a1, a1
-; RV32ZBA-NEXT:    slli a1, a1, 1
-; RV32ZBA-NEXT:    srli a1, a1, 3
+; RV32ZBA-NEXT:    srli a1, a1, 2
 ; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    ret
 ;
@@ -1292,7 +1291,7 @@ define ptr @shl_add_knownbits(ptr %p, i32 %i) {
 ; RV32XANDESPERF:       # %bb.0:
 ; RV32XANDESPERF-NEXT:    nds.bfoz a1, a1, 13, 0
 ; RV32XANDESPERF-NEXT:    nds.lea.h a1, a1, a1
-; RV32XANDESPERF-NEXT:    nds.bfoz a1, a1, 30, 2
+; RV32XANDESPERF-NEXT:    srli a1, a1, 2
 ; RV32XANDESPERF-NEXT:    add a0, a0, a1
 ; RV32XANDESPERF-NEXT:    ret
   %and = and i32 %i, 16383

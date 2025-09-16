@@ -4654,8 +4654,7 @@ define ptr @shl_add_knownbits(ptr %p, i64 %i) {
 ; RV64ZBA-NEXT:    slli a1, a1, 50
 ; RV64ZBA-NEXT:    srli a1, a1, 50
 ; RV64ZBA-NEXT:    sh1add a1, a1, a1
-; RV64ZBA-NEXT:    slli a1, a1, 1
-; RV64ZBA-NEXT:    srli a1, a1, 3
+; RV64ZBA-NEXT:    srli a1, a1, 2
 ; RV64ZBA-NEXT:    add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
 ;
@@ -4663,7 +4662,7 @@ define ptr @shl_add_knownbits(ptr %p, i64 %i) {
 ; RV64XANDESPERF:       # %bb.0:
 ; RV64XANDESPERF-NEXT:    nds.bfoz a1, a1, 13, 0
 ; RV64XANDESPERF-NEXT:    nds.lea.h a1, a1, a1
-; RV64XANDESPERF-NEXT:    nds.bfoz a1, a1, 62, 2
+; RV64XANDESPERF-NEXT:    srli a1, a1, 2
 ; RV64XANDESPERF-NEXT:    add a0, a0, a1
 ; RV64XANDESPERF-NEXT:    ret
   %and = and i64 %i, 16383
