@@ -7442,10 +7442,6 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), result);
 }
 
-std::optional<SmallVector<int64_t, 4>> StepOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(llvm::cast<VectorType>(getType()).getShape());
-}
-
 //===----------------------------------------------------------------------===//
 // Vector Masking Utilities
 //===----------------------------------------------------------------------===//
