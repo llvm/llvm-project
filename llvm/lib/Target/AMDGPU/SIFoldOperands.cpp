@@ -710,22 +710,9 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   // Verify the register is compatible with the operand.
   if (const TargetRegisterClass *OpRC =
           TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI)) {
-    const TargetRegisterClass *OldRC = MRI->getRegClass(Old.getReg());
     const TargetRegisterClass *NewRC = MRI->getRegClass(New->getReg());
-    unsigned NewSubReg = New->getSubReg();
-    unsigned OldSubReg = Old.getSubReg();
-
-    const TargetRegisterClass *ConstrainRC = OpRC;
-    if (NewSubReg && OldSubReg) {
-      unsigned PreA, PreB;
-      ConstrainRC = TRI->getCommonSuperRegClass(OpRC, OldSubReg, NewRC,
-                                                NewSubReg, PreA, PreB);
-    } else if (OldSubReg) {
-      ConstrainRC = TRI->getMatchingSuperRegClass(OldRC, OpRC, OldSubReg);
-    } else if (NewSubReg) {
-      ConstrainRC = TRI->getMatchingSuperRegClass(NewRC, OpRC, NewSubReg);
-    }
-
+    const TargetRegisterClass *ConstrainRC =
+        TRI->findCommonRegClass(OpRC, Old.getSubReg(), NewRC, New->getSubReg());
     if (!ConstrainRC)
       return false;
 
