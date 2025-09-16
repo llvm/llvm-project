@@ -88,11 +88,12 @@ class FRemExpander {
   /// Return the Libcall for frem instructions of expandable type \p VT or
   /// std::nullopt if \p VT is not expandable.
   static std::optional<RTLIB::Libcall> getFremLibcallForType(EVT VT) {
-    auto *It = find(ExpandableTypes, VT.getSimpleVT());
-    if (It == ExpandableTypes.end())
-      return {};
+    MVT V = VT.getSimpleVT();
+    for (unsigned I = 0; I < ExpandableTypes.size(); I++)
+      if (ExpandableTypes[I] == V)
+        return FremLibcalls[I];
 
-    return FremLibcalls[It - ExpandableTypes.begin()];
+    return {};
   };
 
 public:
