@@ -1879,7 +1879,8 @@ void AsmPrinter::emitCallsiteLabelsForCallgraph(
     FunctionInfo &FuncInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
-  assert(MI.isCall() && "Callsite labels are meant for call instruction only.");
+  assert(MI.isCall() &&
+         "Callsite labels are meant for call instructions only.");
   const MachineOperand &CalleeOperand = MI.getOperand(0);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
@@ -1898,16 +1899,18 @@ void AsmPrinter::emitCallsiteLabelsForCallgraph(
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
     FuncInfo.DirectCallSiteLabels.emplace_back(S, CalleeSymbol);
-  } else {
-    // Handle indirect callsite info.
-    // Only indirect calls have type identifiers set.
-    const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
-    for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
-      MCSymbol *S = MF->getContext().createTempSymbol();
-      OutStreamer->emitLabel(S);
-      uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-      FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
-    }
+    return; // Early exit after handling the direct call instruction.
+  }
+  const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
+  if (CallSiteInfo == CallSitesInfoMap.end())
+    return;
+  // Handle indirect callsite info.
+  // Only indirect calls have type identifiers set.
+  for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+    MCSymbol *S = MF->getContext().createTempSymbol();
+    OutStreamer->emitLabel(S);
+    uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
+    FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
   }
 }
 
