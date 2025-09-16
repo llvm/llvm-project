@@ -133,7 +133,6 @@ PB.registerPipelineParsingCallback([=](StringRef Name, LoopPassManager &PM,
   return false;
 });
 
-
 PB.registerPipelineParsingCallback([=](StringRef Name,
                                        MachineFunctionPassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
