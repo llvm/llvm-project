@@ -174,7 +174,8 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Calculate X usage count in the statement
   llvm::SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
-  ArrayRef<BoundNodes> Matches = match(
+
+  SmallVector<BoundNodes, 1> Matches = match(
       findAll(declRefExpr(
 
                   to(varDecl(equalsNode(MatchedDecl))),
