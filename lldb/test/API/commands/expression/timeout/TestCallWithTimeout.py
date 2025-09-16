@@ -38,7 +38,7 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
 
         value = frame.EvaluateExpression(f"wait_a_while({long_time})", options)
-        self.assertTrue(value.IsValid())
+        self.assertFalse(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         # Now do the same thing with the command line command, and make sure it

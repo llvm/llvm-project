@@ -23,10 +23,10 @@ class ScopedEnumType(TestBase):
 
         ## b is not a Foo
         value = frame.EvaluateExpression("b == Foo::FooBar")
-        self.assertTrue(value.IsValid())
+        self.assertFalse(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         ## integral is not implicitly convertible to a scoped enum
         value = frame.EvaluateExpression("1 == Foo::FooBar")
-        self.assertTrue(value.IsValid())
+        self.assertFalse(value.IsValid())
         self.assertFalse(value.GetError().Success())
