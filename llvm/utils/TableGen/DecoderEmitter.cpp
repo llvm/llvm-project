@@ -1131,7 +1131,7 @@ void DecoderTableBuilder::emitSoftFailTableEntry(unsigned EncodingID) const {
   TableInfo.Table.insertOpcode(OPC_SoftFail);
   TableInfo.Table.insertULEB128(PositiveMask.getZExtValue());
   TableInfo.Table.insertULEB128(NegativeMask.getZExtValue());
-  TableInfo.HasCheckPredicate = true;
+  TableInfo.HasSoftFail = true;
 }
 
 // Emits table entries to decode the singleton.
@@ -1182,8 +1182,7 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Target.getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DecoderIndex);
-  if (DecoderOp == OPC_TryDecode)
-    TableInfo.HasTryDecode = true;
+  TableInfo.HasTryDecode |= DecoderOp == OPC_TryDecode;
 }
 
 std::unique_ptr<Filter>
