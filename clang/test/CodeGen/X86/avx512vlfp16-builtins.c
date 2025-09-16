@@ -2111,6 +2111,8 @@ __m128h test_mm256_mask_cvtepu32_ph(__m128h A, __mmask8 B, __m256i C) {
   return _mm256_mask_cvtepu32_ph(A, B, C);
 }
 
+TEST_CONSTEXPR(match_m128h( _mm256_mask_cvtepu32_ph(_mm_set1_ph(-999.0),/*1001 0011=*/0x93,(__m256i)(__v8su){1, 2, 3, 4, 5, 6, 7, 8}), 1.0, 2.0, -999.0, -999.0, 5.0, -999.0, -999.0, 8.0));
+
 __m128h test_mm256_maskz_cvtepu32_ph(__mmask8 A, __m256i B) {
   // CHECK-LABEL: test_mm256_maskz_cvtepu32_ph
   // CHECK: %{{.*}} = uitofp <8 x i32> %{{.*}} to <8 x half>
