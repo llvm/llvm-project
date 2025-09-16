@@ -1081,7 +1081,7 @@ _mm256_mask_cvtepu32_ph(__m128h __W, __mmask8 __U, __m256i __A) {
       (__mmask8)__U, (__v8hf)_mm256_cvtepu32_ph(__A), (__v8hf)__W);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS256
+static __inline__ __m128h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_cvtepu32_ph(__mmask8 __U, __m256i __A) {
   return (__m128h)__builtin_ia32_selectph_128(
       (__mmask8)__U, (__v8hf)_mm256_cvtepu32_ph(__A), (__v8hf)_mm_setzero_ph());
