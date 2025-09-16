@@ -113,7 +113,7 @@ Expected<ServerInfo> loadOrStart(
 
     // FIXME: Support selecting / multiplexing a specific lldb instance.
     if (servers->size() > 1)
-      return createStringError("To many MCP servers running, picking a "
+      return createStringError("too many MCP servers running, picking a "
                                "specific one is not yet implemented");
 
     return servers->front();
