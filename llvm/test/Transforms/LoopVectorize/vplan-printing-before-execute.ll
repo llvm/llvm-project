@@ -82,9 +82,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
-; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer ir<%A>, ir<1>
 ; CHECK-NEXT:   WIDEN store ir<%A>, ir<%add>
-; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
+; CHECK-NEXT:   WIDEN store vp<[[VPTR2]]>, ir<%add>.1
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:

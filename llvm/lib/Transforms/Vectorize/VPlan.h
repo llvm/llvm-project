@@ -1902,6 +1902,8 @@ public:
 
   void execute(VPTransformState &State) override;
 
+  Type *getSourceElementType() const { return IndexedTy; }
+
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");

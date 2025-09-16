@@ -66,9 +66,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP3]], align 1
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = add nsw <8 x i8> [[WIDE_LOAD1]], splat (i8 10)
-; VF8UF2-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i32 8
 ; VF8UF2-NEXT:    store <8 x i8> [[TMP4]], ptr [[A]], align 1
-; VF8UF2-NEXT:    store <8 x i8> [[TMP5]], ptr [[TMP7]], align 1
+; VF8UF2-NEXT:    store <8 x i8> [[TMP5]], ptr [[TMP3]], align 1
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
 ; VF8UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[AND]], [[N_VEC]]

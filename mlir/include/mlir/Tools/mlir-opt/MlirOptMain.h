@@ -38,7 +38,7 @@ enum class VerbosityLevel {
   ErrorsWarningsAndRemarks
 };
 
-using RemarkFormat = enum {
+enum class RemarkFormat {
   REMARK_FORMAT_STDOUT,
   REMARK_FORMAT_YAML,
   REMARK_FORMAT_BITSTREAM,
@@ -264,7 +264,7 @@ protected:
   bool allowUnregisteredDialectsFlag = false;
 
   /// Remark format
-  RemarkFormat remarkFormatFlag = REMARK_FORMAT_STDOUT;
+  RemarkFormat remarkFormatFlag = RemarkFormat::REMARK_FORMAT_STDOUT;
   /// Remark file to output to
   std::string remarksOutputFileFlag = "";
   /// Remark filters
