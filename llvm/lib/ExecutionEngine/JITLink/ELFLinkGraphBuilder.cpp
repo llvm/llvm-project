@@ -20,6 +20,8 @@ static const char *DWSecNames[] = {
 namespace llvm {
 namespace jitlink {
 StringRef ELFLinkGraphBuilderBase::CommonSectionName(".common");
+StringRef ELFLinkGraphBuilderBase::OriginalObjectContentSectionName =
+    ".jitlink$original_object_file_content";
 ArrayRef<const char *> ELFLinkGraphBuilderBase::DwarfSectionNames = DWSecNames;
 
 ELFLinkGraphBuilderBase::~ELFLinkGraphBuilderBase() = default;

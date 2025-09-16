@@ -14,35 +14,29 @@
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/ExecutionEngine/JITLink/ELF.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include <set>
 
 #define DEBUG_TYPE "orc"
 
+using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::object;
 
+namespace {
+StringRef DebugObjectSecttionName = "jitlink$debug_object";
+
+Section *getDebugELFObjectSection(LinkGraph &LG) {
+  return LG.findSectionByName(DebugObjectSecttionName);
+}
+
+}
+
 namespace llvm {
 namespace orc {
-
-enum DebugObjectFlags : int {
-  // Request final target memory load-addresses for all sections.
-  ReportFinalSectionLoadAddresses = 1 << 0,
-
-  // We found sections with debug information when processing the input object.
-  HasDebugSections = 1 << 1,
-};
 
 static const std::set<StringRef> DwarfSectionNames = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
@@ -55,27 +49,24 @@ static bool isDwarfSection(StringRef SectionName) {
   return DwarfSectionNames.count(SectionName) == 1;
 }
 
-template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &LG) {
+template <typename ELFT>
+static Error fixUp(StringRef DebugObjContent, LinkGraph &LG) {
+  using SectionHeader = typename ELFT::Shdr;
 
-  Error Err = Error::success();
+  Expected<ELFFile<ELFT>> ObjRef = ELFFile<ELFT>::create(DebugObjContent);
+  if (!ObjRef)
+    return ObjRef.takeError();
 
-  // TODO:replace debugObj
-  // Expected<ELFFile<ELFT>> Buffer = ELFFile<ELFT>::create(LG.g);
-  // if (!Buffer)
-  //   return Buffer.takeError();
-
-  Expected<ArrayRef<SectionHeader>> Sections = Buffer->sections();
+  Expected<ArrayRef<SectionHeader>> Sections = ObjRef->sections();
   if (!Sections)
     return Sections.takeError();
 
   for (const SectionHeader &Header : *Sections) {
-    Expected<StringRef> Name = Buffer->getSectionName(Header);
+    Expected<StringRef> Name = ObjRef->getSectionName(Header);
     if (!Name)
       return Name.takeError();
     if (Name->empty())
       continue;
-    if (isDwarfSection(*Name))
-      DebugObj->setFlags(HasDebugSections);
 
     // Only record text and data sections (i.e. no bss, comments, rel, etc.)
     if (Header.sh_type != ELF::SHT_PROGBITS &&
@@ -84,34 +75,25 @@ template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &LG) {
     if (!(Header.sh_flags & ELF::SHF_ALLOC))
       continue;
 
+    // Slide action section content.
     if (auto *GraphSec = LG.findSectionByName(*Name))
-      Header->sh_addr =
+      const_cast<SectionHeader&>(Header).sh_addr =
         static_cast<typename ELFT::uint>(SectionRange(*GraphSec).getStart().getValue());
+  }
 
-  return std::move(DebugObj);
+  return Error::success();
 }
 
+static Error fixUpDebugObject(LinkGraph &LG) {
+  auto *DebugObjSec = getDebugELFObjectSection(LG);
+  if (!DebugObjSec)
+    return Error::success();
 
-DebugObjectManagerPlugin::DebugObjectManagerPlugin(
-    ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target,
-    bool RequireDebugSections, bool AutoRegisterCode)
-    : ES(ES), Target(std::move(Target)),
-      RequireDebugSections(RequireDebugSections),
-      AutoRegisterCode(AutoRegisterCode) {}
-
-DebugObjectManagerPlugin::DebugObjectManagerPlugin(
-    ExecutionSession &ES, std::unique_ptr<DebugObjectRegistrar> Target)
-    : DebugObjectManagerPlugin(ES, std::move(Target), true, true) {}
-
-DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
-
-void fixUpDebugObject(LinkGraph &LG) {
-  auto *DebugObjSec = LG.getOriginalObjectContentSection();
   assert(DebugObjSec && "No ELF debug object section?");
-  assert(DebugObjSec.blocks_size() == 1 && "ELF debug object contains multiple blocks?");
-  auto DebugObjContent = (*DebugObjSec.blocks_begin())->getAlreadyMutableContent();
-
-  // StringRef DebugObj(DebugObjContent.data(), DebugObjContent.size());
+  assert(DebugObjSec->blocks_size() == 1 && "ELF debug object contains multiple blocks?");
+  auto DebugObjMutableContent = (*DebugObjSec->blocks().begin())->getAlreadyMutableContent();
+  StringRef DebugObjContent(DebugObjMutableContent.data(),
+			    DebugObjMutableContent.size());
 
   unsigned char Class, Endian;
   std::tie(Class, Endian) = getElfArchType(DebugObjContent);
@@ -126,67 +108,54 @@ void fixUpDebugObject(LinkGraph &LG) {
     else if (Endian == ELF::ELFDATA2MSB)
       return fixUp<ELF64BE>(DebugObjContent, LG);
   }
-  // Unsupported combo. Remove the debug object section.
-  LG.removeSection(*DebugObjSec);
-  LLVM_DEBUG({
-    dbgs() << "Can't emit debug object for " << LG.getName()
-           << ": Unsupported ELF class / endianness.\n";
-  });
+
+  // TDOO: Mark this path llvm_unreachable once we're checking the original object
+  //       type below in the pre-allocation pass.
+
   return Error::success();
 }                                                                 
+
+DebugObjectManagerPlugin::DebugObjectManagerPlugin(
+    ExecutorSymbolDef RegisterDebugObject,
+    ExecutorSymbolDef DeregisterDebugObject,
+    bool RequireDebugSections, bool AutoRegisterCode)
+  : RegisterDebugObject(RegisterDebugObject),
+    DeregisterDebugObject(DeregisterDebugObject),
+    RequireDebugSections(RequireDebugSections),
+    AutoRegisterCode(AutoRegisterCode) {}
+  
+DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 
 void DebugObjectManagerPlugin::modifyPassConfig(MaterializationResponsibility &MR,
   jitlink::LinkGraph &LG,
   jitlink::PassConfiguration &PassConfig) {
-  // Not all link artifacts have associated debug objects.
-  // std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  auto It = PendingObjs.find(&MR);
-  if (It == PendingObjs.end())
-    return;
-
+  
   PassConfig.PrePrunePasses.push_back([](LinkGraph &LG) -> Error {
-    
-    // Copy existing object content into the new debug object section
-    auto DebugObjContent = LG.getOriginalObjectContentSection();
-    // Create new debug section in LinkGraph
-    
-    // Memory protection for reading graph
-    orc::MemProt Prot = MemProt::Read;
-    // Create debug section
-    LG.createSection(DebugObjContent, Prot);
+    bool HasDebugSections = false;
+    for (auto &Sec : LG.sections()) {
+      if (isDwarfSection(Sec.getName())) {
+	HasDebugSections = true;
+	break;
+      }
+    }
 
+    if (!HasDebugSections)
+      return Error::success();
+
+    if (auto *OriginalObjectSection = getOriginalELFObjectSection(LG)) {
+      // TODO: Check header of original object to ensure that it's a supported
+      //       type.
+      assert(OriginalObjectSection->blocks_size() == 1 &&
+	     "Original object file sections should only contain a single block");
+      auto &DebugSec = LG.createSection(DebugObjectSecttionName, MemProt::Read);
+      LG.createContentBlock(DebugSec,
+			    (*OriginalObjectSection->blocks().begin())->getContent(),
+			    orc::ExecutorAddr(), 8, 0);
+    }
     return Error::success();
   });
   
-  if (DebugObjContent.hasFlags(ReportFinalSectionLoadAddresses)) {
-  // patch up the addresses in the debug object
-    PassConfig.PostAllocationPasses.push_back(
-        [&DebugObjContent](LinkGraph &LG) -> Error {
-          for (const Section &GraphSection : LG.sections())
-            DebugObjContent.reportSectionTargetMemoryRange(GraphSection.getName(),
-                                                    SectionRange(GraphSection));
-          fixUpDebugObject(LG)
-          return Error::success();
-        });
-  }
-}
-
-Error DebugObjectManagerPlugin::notifyFailed(
-    MaterializationResponsibility &MR) {
-  // std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  PendingObjs.erase(&MR);
-  return Error::success();
-}
-
-Error DebugObjectManagerPlugin::notifyRemovingResources(JITDylib &JD,
-                                                        ResourceKey Key) {
-  // Removing the resource for a pending object fails materialization, so they
-  // get cleaned up in the notifyFailed() handler.
-  // std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-  RegisteredObjs.erase(Key);
-
-  // TODO: Implement unregister notifications.
-  return Error::success();
+  PassConfig.PostAllocationPasses.push_back(fixUpDebugObject);
 }
 
 } // namespace orc
