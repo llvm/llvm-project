@@ -291,6 +291,10 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- The two-element, unary mask variant of ``__builtin_shufflevector`` is now
+  properly being rejected when used at compile-time. It was not implemented
+  and caused assertion failures before (#GH158471).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -533,6 +537,7 @@ OpenMP Support
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support for ``variable-category`` modifier in ``default clause``.
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
+- Added support for ``defaultmap`` directive implicit-behavior ``private``.
 
 Improvements
 ^^^^^^^^^^^^
