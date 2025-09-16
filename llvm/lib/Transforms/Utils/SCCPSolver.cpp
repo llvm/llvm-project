@@ -325,11 +325,6 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       // E.g, for X in [0, 4), X - 3 u< 2 -> X == 3
       if (!NewCR)
         return nullptr;
-      // Avoid transforming cases which do not relax the range.
-      // Without this we may revert the transform
-      // (X - C) < Pow2 -> (X & -Pow2) == C.
-      if (NewCR.value() == *CR)
-        return nullptr;
       ICmpInst::Predicate Pred;
       APInt RHS;
       // Check if we can represent NewCR as an icmp predicate.
