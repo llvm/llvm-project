@@ -827,7 +827,7 @@ private:
 ///   and a target unroll shape of <4>, the pattern produces:
 ///
 ///     %base = vector.step : vector<4xindex>
-///     %zero = arith.constant dense<0> : vector<4xindex>
+///     %zero = arith.constant dense<0> : vector<8xindex>
 ///     %result0 = vector.insert_strided_slice %base, %zero
 ///       {offsets = [0], strides = [1]} : vector<4xindex> into vector<8xindex>
 ///     %offset = arith.constant dense<4> : vector<4xindex>
