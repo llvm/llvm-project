@@ -207,14 +207,12 @@ entry:
 define i32 @sub32ri(i32 noundef %a) {
 ; CHECK-LABEL: sub32ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $-123456, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0xc0,0x1d,0xfe,0xff]
-; CHECK-NEXT:    # imm = 0xFFFE1DC0
+; CHECK-NEXT:    leal -123456(%rdi), %eax # encoding: [0x8d,0x87,0xc0,0x1d,0xfe,0xff]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub32ri:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} addl $-123456, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xc7,0xc0,0x1d,0xfe,0xff]
-; NF-NEXT:    # imm = 0xFFFE1DC0
+; NF-NEXT:    leal -123456(%rdi), %eax # encoding: [0x8d,0x87,0xc0,0x1d,0xfe,0xff]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = sub i32 %a, 123456
