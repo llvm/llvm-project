@@ -73,10 +73,13 @@ public:
     Files.push_back({NewFile, FileName, std::exchange(NextToEnter, {})});
   }
 
-  void InclusionDirective(SourceLocation, const Token &, StringRef FilePath,
-                          bool, CharSourceRange Range,
-                          OptionalFileEntryRef File, StringRef, StringRef,
-                          const Module *, bool,
+  void InclusionDirective(SourceLocation /*HashLoc*/,
+                          const Token & /*IncludeTok*/, StringRef FilePath,
+                          bool /*IsAngled*/, CharSourceRange Range,
+                          OptionalFileEntryRef File, StringRef /*SearchPath*/,
+                          StringRef /*RelativePath*/,
+                          const Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind FileType) override {
     if (FileType != clang::SrcMgr::C_User)
       return;

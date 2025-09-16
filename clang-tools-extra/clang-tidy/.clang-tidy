@@ -27,7 +27,6 @@ Checks: >
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration,
   -readability-magic-numbers,
-  -readability-named-parameter,
   -readability-qualified-auto,
   -readability-simplify-boolean-expr,
   -readability-static-definition-in-anonymous-namespace,

@@ -66,14 +66,14 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
 };
 
 struct NOptionMap {
-  NOptionMap(IO &) {}
-  NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
+  NOptionMap(IO & /*unused*/) {}
+  NOptionMap(IO & /*unused*/, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
       Options.emplace_back(std::string(KeyValue.getKey()),
                            KeyValue.getValue().Value);
   }
-  ClangTidyOptions::OptionMap denormalize(IO &) {
+  ClangTidyOptions::OptionMap denormalize(IO & /*unused*/) {
     ClangTidyOptions::OptionMap Map;
     for (const auto &KeyValue : Options)
       Map[KeyValue.first] = ClangTidyOptions::ClangTidyValue(KeyValue.second);
@@ -83,7 +83,7 @@ struct NOptionMap {
 };
 
 template <>
-void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
+void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool /*unused*/,
              EmptyContext &Ctx) {
   if (IO.outputting()) {
     // Ensure check options are sorted
@@ -130,7 +130,8 @@ struct ChecksVariant {
   std::optional<std::vector<std::string>> AsVector;
 };
 
-template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
+template <>
+void yamlize(IO &IO, ChecksVariant &Val, bool /*unused*/, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list

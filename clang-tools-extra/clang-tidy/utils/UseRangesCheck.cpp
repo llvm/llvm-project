@@ -288,8 +288,9 @@ UseRangesCheck::UseRangesCheck(StringRef Name, ClangTidyContext *Context)
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()) {}
 
-void UseRangesCheck::registerPPCallbacks(const SourceManager &,
-                                         Preprocessor *PP, Preprocessor *) {
+void UseRangesCheck::registerPPCallbacks(const SourceManager & /*SM*/,
+                                         Preprocessor *PP,
+                                         Preprocessor * /*ModuleExpanderPP*/) {
   Inserter.registerPreprocessor(PP);
 }
 
@@ -297,8 +298,8 @@ void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
-std::optional<std::string>
-UseRangesCheck::Replacer::getHeaderInclusion(const NamedDecl &) const {
+std::optional<std::string> UseRangesCheck::Replacer::getHeaderInclusion(
+    const NamedDecl & /*unused*/) const {
   return std::nullopt;
 }
 

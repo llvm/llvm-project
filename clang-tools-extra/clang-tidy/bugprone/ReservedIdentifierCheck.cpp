@@ -173,8 +173,8 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
-ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
-                                            const SourceManager &) const {
+ReservedIdentifierCheck::getDeclFailureInfo(
+    const NamedDecl *Decl, const SourceManager & /*SM*/) const {
   assert(Decl && Decl->getIdentifier() && !Decl->getName().empty() &&
          "Decl must be an explicit identifier with a name.");
   // Implicit identifiers cannot fail.
@@ -187,8 +187,8 @@ ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
-ReservedIdentifierCheck::getMacroFailureInfo(const Token &MacroNameTok,
-                                             const SourceManager &) const {
+ReservedIdentifierCheck::getMacroFailureInfo(
+    const Token &MacroNameTok, const SourceManager & /*SM*/) const {
   return getFailureInfoImpl(MacroNameTok.getIdentifierInfo()->getName(), true,
                             /*IsMacro = */ true, getLangOpts(), Invert,
                             AllowedIdentifiers);

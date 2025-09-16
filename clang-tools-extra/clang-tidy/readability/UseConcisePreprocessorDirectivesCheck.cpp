@@ -24,12 +24,13 @@ public:
       : Check(Check), PP(PP) {}
 
   void If(SourceLocation Loc, SourceRange ConditionRange,
-          ConditionValueKind) override {
+          ConditionValueKind /*ConditionValue*/) override {
     impl(Loc, ConditionRange, {"ifdef", "ifndef"});
   }
 
-  void Elif(SourceLocation Loc, SourceRange ConditionRange, ConditionValueKind,
-            SourceLocation) override {
+  void Elif(SourceLocation Loc, SourceRange ConditionRange,
+            ConditionValueKind /*ConditionValue*/,
+            SourceLocation /*IfLoc*/) override {
     if (PP.getLangOpts().C23 || PP.getLangOpts().CPlusPlus23)
       impl(Loc, ConditionRange, {"elifdef", "elifndef"});
   }
@@ -103,7 +104,8 @@ private:
 } // namespace
 
 void UseConcisePreprocessorDirectivesCheck::registerPPCallbacks(
-    const SourceManager &, Preprocessor *PP, Preprocessor *) {
+    const SourceManager & /*SM*/, Preprocessor *PP,
+    Preprocessor * /*ModuleExpanderPP*/) {
   PP->addPPCallbacks(std::make_unique<IfPreprocessorCallbacks>(*this, *PP));
 }
 

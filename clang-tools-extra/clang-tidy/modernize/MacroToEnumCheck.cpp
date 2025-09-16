@@ -400,7 +400,9 @@ static bool textEquals(const char (&Needle)[N], const char *HayStack) {
   return StringRef{HayStack, N - 1} == Needle;
 }
 
-template <size_t N> static size_t len(const char (&)[N]) { return N - 1; }
+template <size_t N> static size_t len(const char (& /*unused*/)[N]) {
+  return N - 1;
+}
 
 void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
                                            PragmaIntroducerKind Introducer) {
