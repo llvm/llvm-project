@@ -537,6 +537,10 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
   }
 };
 
+/// This pattern handles the unrolling of LoadGatherOp with offsets (gathered
+/// load).
+/// It unrolls the offsets and mask operands accordingly, and creates multiple
+/// LoadGatherOp with the unrolled operands.
 struct UnrollLoadGatherOpWithOffset
     : public UnrollPattern<xegpu::LoadGatherOp> {
   using UnrollPattern<xegpu::LoadGatherOp>::UnrollPattern;
@@ -555,31 +559,70 @@ struct UnrollLoadGatherOpWithOffset
     if (!targetShape)
       return failure();
 
-    // Unroll offsets
-    VectorType offsetsTy = llvm::dyn_cast<VectorType>(offsets.getType());
-    SmallVector<Type> convertedOffsetTypes =
-        getUnrolledTypes(offsetsTy, *targetShape);
-    SmallVector<Value> convertedOffsets =
-        pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
+    SmallVector<int64_t> targetMaskShape(*targetShape);
+    int64_t chunkSize = 1;
+    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
+      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
+        chunkSize = intAttr.getInt();
+    }
 
-    // Unroll mask
+    // Unroll mask and offsets with correct shape
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
-    SmallVector<Type> convertedMaskTypes =
-        getUnrolledTypes(maskTy, *targetShape);
-    SmallVector<Value> convertedMasks =
-        pack(mask, convertedMaskTypes, *targetShape, loc, rewriter);
-
+    VectorType offsetsTy = llvm::dyn_cast<VectorType>(offsets.getType());
     Type elemTy = valueTy.getElementType();
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
+    SmallVector<Type> convertedMaskTypes;
+    SmallVector<Value> convertedMasks;
+    SmallVector<Type> convertedOffsetTypes;
+    SmallVector<Value> convertedOffsets;
+
+    if (chunkSize > 1) {
+      // For chunked loads, mask and offsets have one less dimension
+      targetMaskShape.pop_back();
+      int64_t blockedChunkSize = targetShape->back();
+      int64_t numNewChunks = chunkSize / blockedChunkSize;
+      chunkSize = blockedChunkSize;
+
+      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
+      convertedOffsetTypes = getUnrolledTypes(offsetsTy, targetMaskShape);
+
+      SmallVector<Value> convertedMasksBase =
+          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
+      SmallVector<Value> convertedOffsetsBase =
+          pack(offsets, convertedOffsetTypes, targetMaskShape, loc, rewriter);
+
+      for (auto maskVal : convertedMasksBase)
+        convertedMasks.append(numNewChunks, maskVal);
+
+      for (auto [baseOffset, offsetType] :
+           llvm::zip(convertedOffsetsBase, convertedOffsetTypes)) {
+        for (int64_t i = 0; i < numNewChunks; ++i) {
+          Value inc = arith::ConstantIndexOp::create(rewriter, loc,
+                                                     i * blockedChunkSize);
+          Value incVec =
+              vector::BroadcastOp::create(rewriter, loc, offsetType, inc);
+          Value offsetVal =
+              arith::AddIOp::create(rewriter, loc, baseOffset, incVec);
+          convertedOffsets.push_back(offsetVal);
+        }
+      }
+    } else {
+      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
+      convertedMasks =
+          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
+
+      convertedOffsetTypes = getUnrolledTypes(offsetsTy, *targetShape);
+      convertedOffsets =
+          pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
+    }
+
     SmallVector<Value> newOps;
-    auto chunkSizeAttr =
-        rewriter.getI64IntegerAttr(op.getChunkSize().value_or(1));
     for (auto [o, m] : llvm::zip(convertedOffsets, convertedMasks)) {
       auto newOp = xegpu::LoadGatherOp::create(
-          rewriter, loc, newValueTy, op.getSource(), o, m, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr());
-      newOp.dump();
+          rewriter, loc, newValueTy, op.getSource(), o, m,
+          rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
+          op.getL2HintAttr(), op.getL3HintAttr());
       newOps.push_back(newOp);
     }
 
@@ -589,6 +632,10 @@ struct UnrollLoadGatherOpWithOffset
   }
 };
 
+/// This pattern handles the unrolling of StoreScatterOp with offsets (scattered
+/// store).
+/// It unrolls the offsets and mask operands accordingly, and creates multiple
+/// StoreScatterOp with the unrolled operands.
 struct UnrollStoreScatterOpWithOffsets
     : public UnrollPattern<xegpu::StoreScatterOp> {
   using UnrollPattern<xegpu::StoreScatterOp>::UnrollPattern;
@@ -607,33 +654,71 @@ struct UnrollStoreScatterOpWithOffsets
     if (!targetShape)
       return failure();
 
-    // Unroll offsets
-    VectorType offsetsTy = llvm::dyn_cast<VectorType>(offsets.getType());
-    SmallVector<Type> convertedOffsetTypes =
-        getUnrolledTypes(offsetsTy, *targetShape);
-    SmallVector<Value> convertedOffsets =
-        pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
+    int64_t chunkSize = 1;
+    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
+      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
+        chunkSize = intAttr.getInt();
+    }
 
-    // Unroll mask
+    SmallVector<int64_t> targetMaskShape(*targetShape);
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
-    SmallVector<Type> convertedMaskTypes =
-        getUnrolledTypes(maskTy, *targetShape);
-    SmallVector<Value> convertedMasks =
-        pack(mask, convertedMaskTypes, *targetShape, loc, rewriter);
+    VectorType offsetsTy = llvm::dyn_cast<VectorType>(offsets.getType());
 
-    // Unroll value
+    SmallVector<Type> convertedMaskTypes;
+    SmallVector<Value> convertedMasks;
+    SmallVector<Type> convertedOffsetTypes;
+    SmallVector<Value> convertedOffsets;
+
+    if (chunkSize > 1) {
+      targetMaskShape.pop_back();
+      int64_t blockedChunkSize = targetShape->back();
+      int64_t numNewChunks = chunkSize / blockedChunkSize;
+      chunkSize = blockedChunkSize;
+
+      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
+      convertedOffsetTypes = getUnrolledTypes(offsetsTy, targetMaskShape);
+
+      SmallVector<Value> convertedMasksBase =
+          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
+      SmallVector<Value> convertedOffsetsBase =
+          pack(offsets, convertedOffsetTypes, targetMaskShape, loc, rewriter);
+
+      for (auto maskVal : convertedMasksBase)
+        convertedMasks.append(numNewChunks, maskVal);
+
+      for (auto [baseOffset, offsetType] :
+           llvm::zip(convertedOffsetsBase, convertedOffsetTypes)) {
+        for (int64_t i = 0; i < numNewChunks; ++i) {
+          Value inc = arith::ConstantIndexOp::create(rewriter, loc,
+                                                     i * blockedChunkSize);
+          Value incVec =
+              vector::BroadcastOp::create(rewriter, loc, offsetType, inc);
+          Value offsetVal =
+              arith::AddIOp::create(rewriter, loc, baseOffset, incVec);
+          convertedOffsets.push_back(offsetVal);
+        }
+      }
+    } else {
+      convertedMaskTypes = getUnrolledTypes(maskTy, targetMaskShape);
+      convertedMasks =
+          pack(mask, convertedMaskTypes, targetMaskShape, loc, rewriter);
+
+      convertedOffsetTypes = getUnrolledTypes(offsetsTy, *targetShape);
+      convertedOffsets =
+          pack(offsets, convertedOffsetTypes, *targetShape, loc, rewriter);
+    }
+
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
     SmallVector<Value> convertedValues =
         pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
 
-    auto chunkSizeAttr =
-        rewriter.getI64IntegerAttr(op.getChunkSize().value_or(1));
     for (auto [v, o, m] :
          llvm::zip(convertedValues, convertedOffsets, convertedMasks)) {
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
-                                    chunkSizeAttr, op.getL1HintAttr(),
-                                    op.getL2HintAttr(), op.getL3HintAttr());
+                                    rewriter.getI64IntegerAttr(chunkSize),
+                                    op.getL1HintAttr(), op.getL2HintAttr(),
+                                    op.getL3HintAttr());
     }
 
     rewriter.eraseOp(op);
