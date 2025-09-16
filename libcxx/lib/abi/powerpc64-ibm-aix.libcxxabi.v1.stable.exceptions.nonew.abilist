@@ -677,6 +677,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__clocEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__itoa8__u32toaEjPc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__itoa8__u64toaEmPc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__math25__lgamma_thread_safe_implEd', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16chrono12steady_clock3nowEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16chrono12system_clock11from_time_tEl', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16chrono12system_clock3nowEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
