@@ -121,10 +121,8 @@ public:
   /// appropriate default object file section.
   LLVM_ABI void setSection(StringRef S);
 
-  /// If existing prefix is different from \p Prefix, set it to \p Prefix. If \p
-  /// Prefix is empty, the set clears the existing metadata. Returns true if
-  /// section prefix changed and false otherwise.
-  LLVM_ABI bool setSectionPrefix(StringRef Prefix);
+  /// Set the section prefix for this global object.
+  LLVM_ABI void setSectionPrefix(StringRef Prefix);
 
   /// Get the section prefix for this global object.
   LLVM_ABI std::optional<StringRef> getSectionPrefix() const;
