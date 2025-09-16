@@ -599,9 +599,16 @@ void Parser::parseSection(ASTNode *Parent, ASTNode::Type Ty,
   size_t Start = CurrentPtr;
   parseMustache(CurrentNode);
   const size_t End = CurrentPtr - 1;
+
+  size_t RawBodySize = 0;
+  for (size_t I = Start; I < End; ++I)
+    RawBodySize += Tokens[I].RawBody.size();
+
   SmallString<128> RawBody;
-  for (std::size_t I = Start; I < End; I++)
+  RawBody.reserve(RawBodySize);
+  for (std::size_t I = Start; I < End; ++I)
     RawBody += Tokens[I].RawBody;
+
   CurrentNode->setRawBody(Ctx.Saver.save(StringRef(RawBody)));
   Parent->addChild(CurrentNode);
 }
