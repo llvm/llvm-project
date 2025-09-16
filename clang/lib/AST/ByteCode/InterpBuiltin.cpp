@@ -3666,7 +3666,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pternlogq128_maskz:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
   case X86::BI__builtin_ia32_pternlogq512_maskz:
-    return interp__builtin_pternlog(S, OpPC, Call, true);
+    return interp__builtin_pternlog(S, OpPC, Call, /*MaskZ=*/true);
   case Builtin::BI__builtin_elementwise_fshl:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshl);
