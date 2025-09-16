@@ -761,6 +761,17 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
       .finalize();
 }
 
+// Adds static method that initializes resource from binding:
+//
+// static Resource<T> __createFromBinding(unsigned registerNo,
+//                                       unsigned spaceNo, int range,
+//                                       unsigned index, const char *name) {
+//   Resource<T> tmp;
+//   tmp.__handle = __builtin_hlsl_resource_handlefrombinding(
+//                                       tmp.__handle, registerNo, spaceNo,
+//                                       range, index, name);
+//   return tmp;
+// }
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCreateFromBinding() {
   if (Record->isCompleteDefinition())
     return *this;
