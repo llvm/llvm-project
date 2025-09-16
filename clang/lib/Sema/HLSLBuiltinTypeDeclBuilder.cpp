@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -47,6 +48,14 @@ static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
   assert(R.isSingleResult() &&
          "Since this is a builtin it should always resolve!");
   return cast<FunctionDecl>(R.getFoundDecl());
+}
+
+CXXConstructorDecl *lookupCopyConstructor(QualType ResTy) {
+  assert(ResTy->isRecordType() && "not a CXXRecord type");
+  for (auto *CD : ResTy->getAsCXXRecordDecl()->ctors())
+    if (CD->isCopyConstructor())
+      return CD;
+  return nullptr;
 }
 } // namespace
 
@@ -580,6 +589,23 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
 
   Expr *ReturnValueExpr = convertPlaceholder(ReturnValue);
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
+
+  QualType Ty = ReturnValueExpr->getType();
+  if (Ty->isRecordType()) {
+    // For record types, create a call to copy constructor to ensure proper copy
+    // semantics.
+    auto *ICE =
+        ImplicitCastExpr::Create(AST, Ty.withConst(), CK_NoOp, ReturnValueExpr,
+                                 nullptr, VK_XValue, FPOptionsOverride());
+    CXXConstructorDecl *CD = lookupCopyConstructor(Ty);
+    assert(CD && "no copy constructor found");
+    ReturnValueExpr = CXXConstructExpr::Create(
+        AST, Ty, SourceLocation(), CD, /*Elidable=*/false, {ICE},
+        /*HadMultipleCandidates=*/false, /*ListInitialization=*/false,
+        /*StdInitListInitialization=*/false,
+        /*ZeroInitListInitialization=*/false, CXXConstructionKind::Complete,
+        SourceRange());
+  }
   StmtsList.push_back(
       ReturnStmt::Create(AST, SourceLocation(), ReturnValueExpr, nullptr));
   return *this;
