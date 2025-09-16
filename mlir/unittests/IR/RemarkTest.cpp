@@ -280,7 +280,7 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*all=*/"",
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
                                         /*passed=*/categoryLoopunroll,
                                         /*missed=*/std::nullopt,
                                         /*analysis=*/std::nullopt,
@@ -332,7 +332,8 @@ TEST(Remark, TestCustomOptimizationRemarkPostponeDiagnostic) {
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+    mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
+                                        /*passed=*/categoryLoopunroll,
                                         /*missed=*/std::nullopt,
                                         /*analysis=*/std::nullopt,
                                         /*failed=*/categoryLoopunroll};
