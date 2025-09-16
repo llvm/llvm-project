@@ -8,7 +8,7 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib -nostdlib++ -L %{lib} -lc++ -lc++abi'
+    '-fuse-ld=lld -nostdlib -nostdlib++ -L %{lib} -lc++ -lc++abi'
     ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost' +
     ' -T {}'.format(libc_linker_script) +
     ' -Wl,--defsym=__flash=0x0'

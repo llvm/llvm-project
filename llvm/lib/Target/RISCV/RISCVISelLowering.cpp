@@ -403,12 +403,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        Legal);
   }
 
-  if (Subtarget.hasStdExtZbb() ||
-      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  if (Subtarget.hasCTZLike()) {
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
+  }
+
+  if (!Subtarget.hasCPOPLike()) {
     // TODO: These should be set to LibCall, but this currently breaks
     //   the Linux kernel build. See #101786. Lacks i128 tests, too.
     if (Subtarget.is64Bit())
@@ -418,8 +420,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
-  if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-      (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit())) {
+  if (Subtarget.hasCLZLike()) {
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
     // Use default promotion for i32 without Zbb.
@@ -2158,13 +2159,11 @@ bool RISCVTargetLowering::signExtendConstant(const ConstantInt *CI) const {
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() ||
-         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
+  return Subtarget.hasCTZLike();
 }
 
 bool RISCVTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
-  return Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
-         (Subtarget.hasVendorXCVbitmanip() && !Subtarget.is64Bit());
+  return Subtarget.hasCLZLike();
 }
 
 bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
@@ -15350,11 +15349,9 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 //          (SLLI (QC.SHLADD x, y, c1 - c0), c0), if 4 <= (c1-c0) <=31.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  const bool HasStdExtZba = Subtarget.hasStdExtZba();
-  const bool HasVendorXAndesPerf = Subtarget.hasVendorXAndesPerf();
-  const bool HasVendorXqciac = Subtarget.hasVendorXqciac();
-  // Perform this optimization only in the zba/xandesperf/xqciac extension.
-  if (!HasStdExtZba && !HasVendorXAndesPerf && !HasVendorXqciac)
+  // Perform this optimization only in the zba/xandesperf/xqciac/xtheadba
+  // extension.
+  if (!Subtarget.hasShlAdd(3))
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15380,16 +15377,7 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   int64_t Diff = std::abs(C0 - C1);
-  bool IsShXaddDiff = Diff == 1 || Diff == 2 || Diff == 3;
-  bool HasShXadd = HasStdExtZba || HasVendorXAndesPerf;
-
-  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
-  if ((!IsShXaddDiff && HasShXadd && !HasVendorXqciac) ||
-      (IsShXaddDiff && !HasShXadd && HasVendorXqciac))
-    return SDValue();
-
-  // Skip if QC_SHLADD is not applicable.
-  if (Diff == 0 || Diff > 31)
+  if (!Subtarget.hasShlAdd(Diff))
     return SDValue();
 
   // Build nodes.
@@ -15446,7 +15434,7 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
 static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   // Perform this optimization only in the zba extension.
-  if (!ReassocShlAddiAdd || !Subtarget.hasStdExtZba())
+  if (!ReassocShlAddiAdd || !Subtarget.hasShlAdd(3))
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15828,7 +15816,8 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
   // fold (sub 0, (setcc x, 0, setlt)) -> (sra x, xlen - 1)
   if (isNullConstant(N0) && N1.getOpcode() == ISD::SETCC && N1.hasOneUse() &&
-      isNullConstant(N1.getOperand(1))) {
+      isNullConstant(N1.getOperand(1)) &&
+      N1.getValueType() == N1.getOperand(0).getValueType()) {
     ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
     if (CCVal == ISD::SETLT) {
       SDLoc DL(N);
@@ -16375,17 +16364,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.hasVendorXqciac() && isInt<12>(CNode->getSExtValue()))
     return SDValue();
 
-  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
-                         Subtarget.hasVendorXTHeadBa() ||
-                         Subtarget.hasVendorXAndesPerf();
-
   // WARNING: The code below is knowingly incorrect with regards to undef semantics.
   // We're adding additional uses of X here, and in principle, we should be freezing
   // X before doing so.  However, adding freeze here causes real regressions, and no
   // other target properly freezes X in these cases either.
   SDValue X = N->getOperand(0);
 
-  if (HasShlAdd) {
+  if (Subtarget.hasShlAdd(3)) {
     for (uint64_t Divisor : {3, 5, 9}) {
       if (MulAmt % Divisor != 0)
         continue;
@@ -18840,6 +18825,8 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   case ISD::ADD:
   case ISD::OR:
   case ISD::XOR:
+  case ISD::UMIN:
+  case ISD::UMAX:
     break;
   }
 
@@ -18949,7 +18936,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
 
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
-  if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
+  if (Subtarget.hasBEXTILike() && VT.isScalarInteger() &&
       (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
@@ -21331,14 +21318,8 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
-    bool IsShXAdd =
-        (Subtarget.hasStdExtZba() || Subtarget.hasVendorXAndesPerf()) && C2 &&
-        C2->getZExtValue() >= 1 && C2->getZExtValue() <= 3;
-    bool IsQCShlAdd = Subtarget.hasVendorXqciac() && C2 &&
-                      C2->getZExtValue() >= 4 && C2->getZExtValue() <= 31;
-
     // Bail if we might break a sh{1,2,3}add/qc.shladd pattern.
-    if ((IsShXAdd || IsQCShlAdd) && N->hasOneUse() &&
+    if (C2 && Subtarget.hasShlAdd(C2->getZExtValue()) && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
         !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
@@ -23259,6 +23240,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (VA.isRegLoc()) {
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
+
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.EmitCallSiteInfo)
+        CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
       assert(!IsTailCall && "Tail call not allowed if stack is used "
@@ -23360,9 +23345,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
-    if (MF.getTarget().Options.EmitCallGraphSection && CB &&
-        CB->isIndirectCall())
-      DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
 
@@ -23371,10 +23354,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
-
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+  DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
@@ -24396,7 +24377,7 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     return true;
 
   // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
-  if (Subtarget.hasStdExtZba() && !Imm.isSignedIntN(12) &&
+  if (Subtarget.hasShlAdd(3) && !Imm.isSignedIntN(12) &&
       ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
        (Imm - 8).isPowerOf2()))
     return true;
@@ -24843,7 +24824,7 @@ bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
     return isTypeLegal(VT) && Subtarget.hasStdExtZvbb();
   if (VT.isFixedLengthVector() && Subtarget.hasStdExtZvbb())
     return true;
-  return Subtarget.hasStdExtZbb() &&
+  return Subtarget.hasCPOPLike() &&
          (VT == MVT::i32 || VT == MVT::i64 || VT.isFixedLengthVector());
 }
 
@@ -24937,8 +24918,8 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike())
-    return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
+  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())
+    return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
 

@@ -1,5 +1,8 @@
 // RUN: mlir-opt -xegpu-subgroup-distribute -allow-unregistered-dialect -canonicalize -cse -split-input-file %s | FileCheck %s
 
+// RUN: mlir-opt -xegpu-subgroup-distribute="enable-sg-reductions=false" -allow-unregistered-dialect \
+// RUN: -canonicalize -cse -split-input-file %s | FileCheck %s --check-prefix=CHECK-REDUCTION
+
 // CHECK-LABEL: gpu.func @store_nd_1d
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: memref<16xf32>) {
 // CHECK-DAG: %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<1xf32>
@@ -318,6 +321,116 @@ gpu.module @test {
     xegpu.store_nd %1, %2 : vector<16xf16>, !xegpu.tensor_desc<16xf16, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
     gpu.return
   }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction
+// CHECK:       %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] ->
+// CHECK-SAME:    (!xegpu.tensor_desc<1x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, vector<16x2xf32>) {
+// CHECK:             %[[SRC:.*]] = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : () -> vector<16x32xf32>
+// CHECK-NEXT:        gpu.yield %{{.*}}, %[[SRC]] : !xegpu.tensor_desc<1x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, vector<16x32xf32>
+// CHECK-NEXT:  }
+// CHECK:       %[[COL0:.*]] = vector.extract_strided_slice %[[W]]#1 {offsets = [0, 0], sizes = [16, 1], strides = [1, 1]} : vector<16x2xf32> to vector<16x1xf32>
+// CHECK-NEXT:  %[[CAST0:.*]] = vector.shape_cast %[[COL0]] : vector<16x1xf32> to vector<16xf32>
+// CHECK-NEXT:  %[[RED0:.*]] = vector.reduction <add>, %[[CAST0]], %{{.*}} : vector<16xf32> into f32
+// CHECK:       %[[COL1:.*]] = vector.extract_strided_slice %[[W]]#1 {offsets = [0, 1], sizes = [16, 1], strides = [1, 1]} : vector<16x2xf32> to vector<16x1xf32>
+// CHECK-NEXT:  %[[CAST1:.*]] = vector.shape_cast %[[COL1]] : vector<16x1xf32> to vector<16xf32>
+// CHECK-NEXT:  %[[RED1:.*]] = vector.reduction <add>, %[[CAST1]], %{{.*}} : vector<16xf32> into f32
+// CHECK-NEXT:  vector.from_elements %[[RED0]], %[[RED1]] : vector<2xf32>
+gpu.module @test {
+gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction() {
+  %0 = "some_def"() : () -> !xegpu.tensor_desc<1x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  %src = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}  : () -> (vector<16x32xf32>)
+  %acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} dense<0.0>  : vector<32xf32>
+  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}  [0]
+    : vector<16x32xf32> to vector<32xf32>
+  %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : vector<32xf32> to vector<1x32xf32>
+  xegpu.store_nd %3, %0 : vector<1x32xf32>, !xegpu.tensor_desc<1x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  gpu.return
+}
+}
+
+// -----
+// CHECK-REDUCTION-LABEL: gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction
+// CHECK-REDUCTION:         %[[W:.*]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (!xegpu.tensor_desc<2x16xf32,
+// CHECK-REDUCTION-SAME:      #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, f32, f32) {
+// CHECK-REDUCTION:           %[[SRC:.*]] = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : () -> vector<2x16xf32>
+// CHECK-REDUCTION-NEXT:      %[[ROW0:.*]] = vector.extract %[[SRC]][0] : vector<16xf32> from vector<2x16xf32>
+// CHECK-REDUCTION-NEXT:      %[[R0:.*]] = vector.reduction <add>, %[[ROW0]], %{{.*}} : vector<16xf32> into f32
+// CHECK-REDUCTION-NEXT:      %[[ROW1:.*]] = vector.extract %[[SRC]][1] : vector<16xf32> from vector<2x16xf32>
+// CHECK-REDUCTION-NEXT:      %[[R1:.*]] = vector.reduction <add>, %[[ROW1]], %{{.*}} : vector<16xf32> into f32
+// CHECK-REDUCTION-NEXT:      gpu.yield %4, %[[R1]], %[[R0]] : !xegpu.tensor_desc<2x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, f32, f32
+// CHECK-REDUCTION-NEXT:    }
+// CHECK-REDUCTION-NEXT:    vector.from_elements %[[W]]#2, %[[W]]#1 : vector<2xf32>
+gpu.module @test {
+gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction() {
+  %0 = "some_def"() : () -> !xegpu.tensor_desc<2x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  %src = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}  : () -> (vector<2x16xf32>)
+  %acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>} dense<0.0>  : vector<2xf32>
+  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>}
+    [1] : vector<2x16xf32> to vector<2xf32>
+  %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : vector<2xf32> to vector<2x1xf32>
+  %4 = vector.broadcast %3 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<2x1xf32> to vector<2x16xf32>
+  xegpu.store_nd %4, %0 : vector<2x16xf32>, !xegpu.tensor_desc<2x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  gpu.return
+}
+}
+
+// -----
+// CHECK-LABEL:   gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction
+// CHECK:             %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%0)[16] ->
+// CHECK-SAME:          (!xegpu.tensor_desc<32x1xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>, vector<2x16xf32>) {
+// CHECK:                 %[[SRC:.*]] = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} : () -> vector<32x16xf32>
+// CHECK-NEXT:            gpu.yield %{{.*}}, %[[SRC]] : !xegpu.tensor_desc<32x1xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>, vector<32x16xf32>
+// CHECK-NEXT:        }
+// CHECK:             %[[ROW0:.*]] = vector.extract %[[W]]#1[0] : vector<16xf32> from vector<2x16xf32>
+// CHECK-NEXT:        %[[R0:.*]] = vector.reduction <add>, %[[ROW0]], %{{.*}} : vector<16xf32> into f32
+// CHECK:             %[[ROW1:.*]] = vector.extract %[[W]]#1[1] : vector<16xf32> from vector<2x16xf32>
+// CHECK-NEXT:        %[[R1:.*]] = vector.reduction <add>, %[[ROW1]], %{{.*}} : vector<16xf32> into f32
+// CHECK-NEXT:        vector.from_elements %[[R0]], %[[R1]] : vector<2xf32>
+gpu.module @test {
+gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction() {
+  %0 = "some_def"() : () -> !xegpu.tensor_desc<32x1xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+  %src = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}  : () -> (vector<32x16xf32>)
+  %acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>} dense<0.0>  : vector<32xf32>
+  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>}  [1]
+    : vector<32x16xf32> to vector<32xf32>
+  %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+    : vector<32xf32> to vector<32x1xf32>
+  xegpu.store_nd %3, %0 : vector<32x1xf32>, !xegpu.tensor_desc<32x1xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+  gpu.return
+}
+}
+
+// -----
+// CHECK-REDUCTION-LABEL: gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction
+// CHECK-REDUCTION:       %[[W:.*]]:3 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (!xegpu.tensor_desc<16x2xf32,
+// CHECK-REDUCTION-SAME:    #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>, f32, f32) {
+// CHECK-REDUCTION:          %[[SRC:.*]] = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} : () -> vector<16x2xf32>
+// CHECK-REDUCTION-NEXT:     %[[COL0:.*]] = vector.extract_strided_slice %[[SRC]] {offsets = [0, 0], sizes = [16, 1], strides = [1, 1]} : vector<16x2xf32> to vector<16x1xf32>
+// CHECK-REDUCTION-NEXT:     %[[CAST0:.*]] = vector.shape_cast %[[COL0]] : vector<16x1xf32> to vector<16xf32>
+// CHECK-REDUCTION-NEXT:     %[[R0:.*]] = vector.reduction <add>, %[[CAST0]], %{{.*}} : vector<16xf32> into f32
+// CHECK-REDUCTION-NEXT:     %[[COL1:.*]] = vector.extract_strided_slice %5 {offsets = [0, 1], sizes = [16, 1], strides = [1, 1]} : vector<16x2xf32> to vector<16x1xf32>
+// CHECK-REDUCTION-NEXT:     %[[CAST1:.*]] = vector.shape_cast %[[COL1]] : vector<16x1xf32> to vector<16xf32>
+// CHECK-REDUCTION-NEXT:     %[[R1:.*]] = vector.reduction <add>, %[[CAST1]], %cst : vector<16xf32> into f32
+// CHECK-REDUCTION-NEXT:     gpu.yield %4, %[[R1]], %[[R0]] : !xegpu.tensor_desc<16x2xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>, f32, f32
+// CHECK-REDUCTION-NEXT:   }
+// CHECK-REDUCTION-NEXT:   vector.from_elements %[[W]]#2, %[[W]]#1 : vector<2xf32>
+gpu.module @test {
+gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction() {
+  %0 = "some_def"() : () -> !xegpu.tensor_desc<16x2xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+  %src = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}  : () -> (vector<16x2xf32>)
+  %acc = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>} dense<0.0>  : vector<2xf32>
+  %1 = vector.multi_reduction <add>, %src, %acc {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [0]>}
+    [0] : vector<16x2xf32> to vector<2xf32>
+  %3 = vector.shape_cast %1 {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+    : vector<2xf32> to vector<1x2xf32>
+  %4 = vector.broadcast %3 {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} : vector<1x2xf32> to vector<16x2xf32>
+  xegpu.store_nd %4, %0 : vector<16x2xf32>, !xegpu.tensor_desc<16x2xf32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
+  gpu.return
+}
 }
 
 // -----

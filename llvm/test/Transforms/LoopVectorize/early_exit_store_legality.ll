@@ -602,5 +602,61 @@ exit:
   ret void
 }
 
+;; ICE was caused by assert for the load used in the uncountable exit condition
+;; being guaranteed to execute.
+@ee.global = external global [4 x i8]
+define void @crash_conditional_load_for_uncountable_exit(ptr dereferenceable(40) noalias %store.area) {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr i8, ptr @ee.global, i64 %iv
+  br i1 false, label %ee.block, label %invalid.block
+
+ee.block:
+  %ee.val = load i8, ptr %ee.addr, align 1
+  store i16 0, ptr %store.area, align 2
+  %ee.cmp = icmp eq i8 %ee.val, 0
+  br i1 %ee.cmp, label %for.inc, label %invalid.block
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 10
+  br i1 %counted.cond, label %invalid.block, label %for.body
+
+invalid.block:
+  unreachable
+}
+
+define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area, i1 %skip.cond) {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit_argptr'
+; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %ee.addr = getelementptr i8, ptr %load.area, i64 %iv
+  br i1 %skip.cond, label %ee.block, label %invalid.block
+
+ee.block:
+  %ee.val = load i8, ptr %ee.addr, align 1
+  store i16 0, ptr %store.area, align 2
+  %ee.cmp = icmp eq i8 %ee.val, 0
+  br i1 %ee.cmp, label %for.inc, label %invalid.block
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 10
+  br i1 %counted.cond, label %invalid.block, label %for.body
+
+invalid.block:
+  unreachable
+}
+
+
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();
