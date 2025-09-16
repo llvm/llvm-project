@@ -214,15 +214,7 @@ public:
     raw_fd_ostream OS(ImageName, EC);
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
-    if (const auto *TgtImageBitcode = Image.getTgtImageBitcode()) {
-      size_t Size = utils::getPtrDiff(TgtImageBitcode->ImageEnd,
-                                      TgtImageBitcode->ImageStart);
-      MemoryBufferRef MBR = MemoryBufferRef(
-          StringRef((const char *)TgtImageBitcode->ImageStart, Size), "");
-      OS << MBR.getBuffer();
-    } else {
-      OS << Image.getMemoryBuffer().getBuffer();
-    }
+    OS << Image.getMemoryBuffer().getBuffer();
     OS.close();
   }
 
@@ -813,9 +805,6 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
       return Err;
   }
 
-  if (Image->getTgtImageBitcode())
-    Plugin.getJIT().erase(*Image->getTgtImageBitcode(), Image->getDevice());
-
   return unloadBinaryImpl(Image);
 }
 
@@ -865,32 +854,29 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
-Expected<DeviceImageTy *>
-GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
-                            const __tgt_device_image *InputTgtImage) {
-  assert(InputTgtImage && "Expected non-null target image");
+Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
+                                                      StringRef InputTgtImage) {
   DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage->ImageStart));
 
-  auto PostJITImageOrErr = Plugin.getJIT().process(*InputTgtImage, *this);
-  if (!PostJITImageOrErr) {
-    auto Err = PostJITImageOrErr.takeError();
-    REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
-           DeviceId, toStringWithoutConsuming(Err).data());
-    return Plugin::error(ErrorCode::COMPILE_FAILURE, std::move(Err),
-                         "failure to jit IR image");
+  std::unique_ptr<MemoryBuffer> Buffer;
+  if (identify_magic(InputTgtImage) == file_magic::bitcode) {
+    auto CompiledImageOrErr = Plugin.getJIT().process(InputTgtImage, *this);
+    if (!CompiledImageOrErr) {
+      return Plugin::error(ErrorCode::COMPILE_FAILURE,
+                           CompiledImageOrErr.takeError(),
+                           "failure to jit IR image");
+    }
+    Buffer = std::move(*CompiledImageOrErr);
+  } else {
+    Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
   }
 
   // Load the binary and allocate the image object. Use the next available id
   // for the image id, which is the number of previously loaded images.
-  auto ImageOrErr =
-      loadBinaryImpl(PostJITImageOrErr.get(), LoadedImages.size());
+  auto ImageOrErr = loadBinaryImpl(std::move(Buffer), LoadedImages.size());
   if (!ImageOrErr)
     return ImageOrErr.takeError();
-
   DeviceImageTy *Image = *ImageOrErr;
-  assert(Image != nullptr && "Invalid image");
-  if (InputTgtImage != PostJITImageOrErr.get())
-    Image->setTgtImageBitcode(InputTgtImage);
 
   // Add the image to list.
   LoadedImages.push_back(Image);
@@ -912,12 +898,12 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
-    size_t Bytes =
-        utils::getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+    size_t Bytes = InputTgtImage.size();
     performOmptCallback(
         device_load, Plugin.getUserId(DeviceId),
         /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes, /*HostAddr=*/InputTgtImage->ImageStart,
+        /*ImgSize=*/Bytes,
+        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
         /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
   }
 #endif
@@ -1848,7 +1834,9 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
                                      __tgt_device_binary *Binary) {
   GenericDeviceTy &Device = getDevice(DeviceId);
 
-  auto ImageOrErr = Device.loadBinary(*this, TgtImage);
+  StringRef Buffer(reinterpret_cast<const char *>(TgtImage->ImageStart),
+                   utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
+  auto ImageOrErr = Device.loadBinary(*this, Buffer);
   if (!ImageOrErr) {
     auto Err = ImageOrErr.takeError();
     REPORT("Failure to load binary image %p on device %d: %s\n", TgtImage,
