@@ -93,8 +93,8 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
     deviceTypes.push_back(
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
 
-  for (DeviceType DT : newDeviceTypes)
-    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+  for (DeviceType dt : newDeviceTypes)
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
 
   return mlir::ArrayAttr::get(context, deviceTypes);
 }
@@ -121,10 +121,10 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
   }
 
-  for (DeviceType DT : newDeviceTypes) {
+  for (DeviceType dt : newDeviceTypes) {
     argCollection.append(arguments);
     segments.push_back(arguments.size());
-    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
   }
 
   return mlir::ArrayAttr::get(context, deviceTypes);
@@ -2962,10 +2962,10 @@ void acc::LoopOp::setCollapseForDeviceTypes(
     newDeviceTypes.push_back(
         acc::DeviceTypeAttr::get(context, DeviceType::None));
   } else {
-    for (DeviceType DT : effectiveDeviceTypes) {
+    for (DeviceType dt : effectiveDeviceTypes) {
       newValues.push_back(
           mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
-      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
     }
   }
 
@@ -3144,7 +3144,8 @@ LogicalResult acc::DataOp::verify() {
                      "must appear on the data operation");
 
   for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
                    acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
             operand.getDefiningOp()))
@@ -3513,7 +3514,8 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
         "at least one operand must appear on the declare operation");
 
   for (mlir::Value operand : operands) {
-    if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+    if (isa<BlockArgument>(operand) ||
+        !mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
                    acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
             operand.getDefiningOp()))
