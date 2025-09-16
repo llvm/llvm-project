@@ -2436,17 +2436,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
-    if (isSafeTruncation(Val, 32) &&
-        AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Val),
-                                     AsmParser->hasInv2PiInlineImm())) {
-      Inst.addOperand(MCOperand::createImm(Val));
-      return;
-    }
-    [[fallthrough]];
-
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-
-    Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
+    Inst.addOperand(MCOperand::createImm(Val));
     return;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -2494,77 +2485,27 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val))) {
-      Inst.addOperand(MCOperand::createImm(Lo_32(Val)));
-      return;
-    }
-
-    Inst.addOperand(MCOperand::createImm(Val & 0xffff));
-    return;
-
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
-    if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
-                                       AsmParser->hasInv2PiInlineImm())) {
-      Inst.addOperand(MCOperand::createImm(Val));
-      return;
-    }
-
-    Inst.addOperand(MCOperand::createImm(Val & 0xffff));
-    return;
-
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
-    if (isSafeTruncation(Val, 16) &&
-        AMDGPU::isInlinableLiteralBF16(static_cast<int16_t>(Val),
-                                     AsmParser->hasInv2PiInlineImm())) {
-      Inst.addOperand(MCOperand::createImm(Val));
-      return;
-    }
-
-    Inst.addOperand(MCOperand::createImm(Val & 0xffff));
-    return;
-
-  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16: {
-    assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableIntLiteral(static_cast<int16_t>(Val)));
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
-  }
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16: {
-    assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val),
-                                          AsmParser->hasInv2PiInlineImm()));
-
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
-  }
-
-  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16: {
-    assert(isSafeTruncation(Val, 16));
-    assert(AMDGPU::isInlinableLiteralBF16(static_cast<int16_t>(Val),
-                                          AsmParser->hasInv2PiInlineImm()));
-
-    Inst.addOperand(MCOperand::createImm(Val));
-    return;
-  }
-
+  case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_KIMM32:
-    Inst.addOperand(MCOperand::createImm(Literal.getLoBits(32).getZExtValue()));
-    return;
   case AMDGPU::OPERAND_KIMM16:
-    Inst.addOperand(MCOperand::createImm(Literal.getLoBits(16).getZExtValue()));
+    Inst.addOperand(MCOperand::createImm(Val));
     return;
+
   case AMDGPU::OPERAND_KIMM64:
     if ((isInt<32>(Val) || isUInt<32>(Val)) && !getModifiers().Lit64)
       Val <<= 32;
 
     Inst.addOperand(MCOperand::createImm(Val));
     return;
+
   default:
-    llvm_unreachable("invalid operand size");
+    llvm_unreachable("invalid operand type");
   }
 }
 
@@ -4830,7 +4771,7 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst,
 
   unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
-  uint64_t LiteralValue;
+  int64_t LiteralValue;
 
   for (int OpIdx : OpIndices) {
     if (OpIdx == -1) break;
@@ -4839,7 +4780,9 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst,
     // Exclude special imm operands (like that used by s_set_gpr_idx_on)
     if (AMDGPU::isSISrcOperand(Desc, OpIdx)) {
       if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
-        uint64_t Value = static_cast<uint64_t>(MO.getImm());
+        auto OpType = static_cast<AMDGPU::OperandType>(
+            Desc.operands()[OpIdx].OperandType);
+        int64_t Value = encode32BitLiteral(MO.getImm(), OpType);
         if (NumLiterals == 0 || LiteralValue != Value) {
           LiteralValue = Value;
           ++NumLiterals;
