@@ -425,6 +425,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["transpose-load-f4f6-insts"] = true;
     Features["bf16-trans-insts"] = true;
     Features["bf16-cvt-insts"] = true;
+    Features["bf16-pk-insts"] = true;
     Features["fp8-conversion-insts"] = true;
     Features["fp8e5m3-insts"] = true;
     Features["permlane16-swap"] = true;
