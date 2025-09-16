@@ -52,6 +52,8 @@ void InlinedFunction::printElementLine(raw_ostream &OS,
                                        bool IsEnd) const {
   bool LiveIn = !IsEnd && Range.LowPC == Addr.Address;
   bool LiveOut = IsEnd && Range.HighPC == Addr.Address;
+  // This check is technically redundant as the function is only called when
+  // either a start or end address matches, but it serves as a small safeguard.
   if (!(LiveIn || LiveOut))
     return;
 
@@ -126,8 +128,18 @@ void LiveElementPrinter::addInlinedFunction(DWARFDie FuncDie,
   DWARFUnit *U = InlinedFuncDie.getDwarfUnit();
   const char *InlinedFuncName = InlinedFuncDie.getName(DINameKind::LinkageName);
   DWARFAddressRange Range{FuncLowPC, FuncHighPC, SectionIndex};
+  // Add the new element to the main vector.
   LiveElements.emplace_back(std::make_unique<InlinedFunction>(
       InlinedFuncName, U, FuncDie, InlinedFuncDie, Range));
+  // Map the element's low address (LowPC) to its pointer for fast range start
+  // lookup.
+  LiveElementsByAddress.emplace(FuncLowPC, LiveElements.back().get());
+  // Map the element's high address (HighPC) to its pointer for fast range end
+  // lookup.
+  LiveElementsByEndAddress.emplace(FuncHighPC, LiveElements.back().get());
+  // Map the pointer to its DWARF discovery index (ElementIdx) for deterministic
+  // ordering.
+  ElementPtrToIndex[LiveElements.back().get()] = LiveElements.size() - 1;
 }
 
 void LiveElementPrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
@@ -147,9 +159,9 @@ void LiveElementPrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
   }
 
   for (const DWARFLocationExpression &LocExpr : *Locs) {
+    std::unique_ptr<LiveVariable> NewVar;
     if (LocExpr.Range) {
-      LiveElements.emplace_back(
-          std::make_unique<LiveVariable>(LocExpr, VarName, U, FuncDie));
+      NewVar = std::make_unique<LiveVariable>(LocExpr, VarName, U, FuncDie);
     } else {
       // If the LocExpr does not have an associated range, it is valid for
       // the whole of the function.
@@ -157,8 +169,24 @@ void LiveElementPrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
       // LocExpr, does that happen in reality?
       DWARFLocationExpression WholeFuncExpr{
           DWARFAddressRange(FuncLowPC, FuncHighPC, SectionIndex), LocExpr.Expr};
-      LiveElements.emplace_back(
-          std::make_unique<LiveVariable>(WholeFuncExpr, VarName, U, FuncDie));
+      NewVar =
+          std::make_unique<LiveVariable>(WholeFuncExpr, VarName, U, FuncDie);
+    }
+
+    // Add the new variable to all the data structures.
+    if (NewVar) {
+      LiveElements.emplace_back(std::move(NewVar));
+      LiveVariable *CurrentVar =
+          static_cast<LiveVariable *>(LiveElements.back().get());
+      // Map from a LiveElement pointer to its index in the LiveElements vector.
+      ElementPtrToIndex.emplace(CurrentVar, LiveElements.size() - 1);
+      if (CurrentVar->getLocExpr().Range) {
+        // Add the variable to address-based maps.
+        LiveElementsByAddress.emplace(CurrentVar->getLocExpr().Range->LowPC,
+                                      CurrentVar);
+        LiveElementsByEndAddress.emplace(CurrentVar->getLocExpr().Range->HighPC,
+                                         CurrentVar);
+      }
     }
   }
 }
@@ -205,14 +233,56 @@ unsigned LiveElementPrinter::moveToFirstVarColumn(formatted_raw_ostream &OS) {
   return FirstUnprintedLogicalColumn;
 }
 
-unsigned LiveElementPrinter::findFreeColumn() {
-  for (unsigned ColIdx = 0; ColIdx < ActiveCols.size(); ++ColIdx)
-    if (!ActiveCols[ColIdx].isActive())
-      return ColIdx;
+unsigned LiveElementPrinter::getOrCreateColumn(unsigned ElementIdx) {
+  // Check if the element already has an assigned column.
+  auto it = ElementToColumn.find(ElementIdx);
+  if (it != ElementToColumn.end()) {
+    return it->second;
+  }
 
-  size_t OldSize = ActiveCols.size();
-  ActiveCols.grow(std::max<size_t>(OldSize * 2, 1));
-  return OldSize;
+  unsigned ColIdx;
+  if (!FreeCols.empty()) {
+    // Get the smallest available index from the set.
+    ColIdx = *FreeCols.begin();
+    // Remove the index from the set.
+    FreeCols.erase(FreeCols.begin());
+  } else {
+    // No free columns, so create a new one.
+    ColIdx = ActiveCols.size();
+    ActiveCols.emplace_back();
+  }
+
+  // Assign the element to the column and update the map.
+  ElementToColumn[ElementIdx] = ColIdx;
+  ActiveCols[ColIdx].ElementIdx = ElementIdx;
+  return ColIdx;
+}
+
+void LiveElementPrinter::freeColumn(unsigned ColIdx) {
+  unsigned ElementIdx = ActiveCols[ColIdx].ElementIdx;
+
+  // Clear the column's data and add it to the free list.
+  ActiveCols[ColIdx].ElementIdx = Column::NullElementIdx;
+  ActiveCols[ColIdx].LiveIn = false;
+  ActiveCols[ColIdx].LiveOut = false;
+  ActiveCols[ColIdx].MustDrawLabel = false;
+
+  // Remove the element's entry from the map and add the column to the free
+  // list.
+  ElementToColumn.erase(ElementIdx);
+  FreeCols.insert(ColIdx);
+}
+
+std::vector<unsigned>
+LiveElementPrinter::getSortedActiveElementIndices() const {
+  // Get all ElementIdx values that currently have an assigned column.
+  std::vector<unsigned> Indices;
+  for (const auto &Pair : ElementToColumn)
+    Indices.push_back(Pair.first);
+
+  // Sort by ElementIdx, which is the DWARF discovery order.
+  llvm::stable_sort(Indices);
+  return Indices;
 }
 
 void LiveElementPrinter::dump() const {
@@ -239,57 +309,115 @@ void LiveElementPrinter::addCompileUnit(DWARFDie D) {
 void LiveElementPrinter::update(object::SectionedAddress ThisAddr,
                                 object::SectionedAddress NextAddr,
                                 bool IncludeDefinedVars) {
-  // Do not create live ranges when debug-inlined-funcs option is provided with
-  // line format option.
+  // Exit early if only printing function limits.
   if (DbgInlinedFunctions == DFLimitsOnly)
     return;
 
-  // First, check variables which have already been assigned a column, so
-  // that we don't change their order.
-  SmallSet<unsigned, 8> CheckedElementIdxs;
+  // Free columns identified in the previous cycle.
+  for (unsigned ColIdx : ColumnsToFreeNextCycle)
+    freeColumn(ColIdx);
+  ColumnsToFreeNextCycle.clear();
+
+  // Update status of active columns and collect those to free next cycle.
   for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx) {
     if (!ActiveCols[ColIdx].isActive())
       continue;
 
-    CheckedElementIdxs.insert(ActiveCols[ColIdx].ElementIdx);
     const std::unique_ptr<LiveElement> &LE =
         LiveElements[ActiveCols[ColIdx].ElementIdx];
     ActiveCols[ColIdx].LiveIn = LE->liveAtAddress(ThisAddr);
     ActiveCols[ColIdx].LiveOut = LE->liveAtAddress(NextAddr);
-    std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
-    LLVM_DEBUG(dbgs() << "pass 1, " << ThisAddr.Address << "-"
-                      << NextAddr.Address << ", " << Name << ", Col " << ColIdx
-                      << ": LiveIn=" << ActiveCols[ColIdx].LiveIn
-                      << ", LiveOut=" << ActiveCols[ColIdx].LiveOut << "\n");
 
-    if (!ActiveCols[ColIdx].LiveIn && !ActiveCols[ColIdx].LiveOut)
+    LLVM_DEBUG({
+      std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
+      dbgs() << "pass 1, " << ThisAddr.Address << "-" << NextAddr.Address
+             << ", " << Name << ", Col " << ColIdx
+             << ": LiveIn=" << ActiveCols[ColIdx].LiveIn
+             << ", LiveOut=" << ActiveCols[ColIdx].LiveOut << "\n";
+    });
+
+    // If element is fully dead, deactivate column immediately.
+    if (!ActiveCols[ColIdx].LiveIn && !ActiveCols[ColIdx].LiveOut) {
       ActiveCols[ColIdx].ElementIdx = Column::NullElementIdx;
+      continue;
+    }
+
+    // Mark for cleanup in the next cycle if range ends here.
+    if (ActiveCols[ColIdx].LiveIn && !ActiveCols[ColIdx].LiveOut)
+      ColumnsToFreeNextCycle.push_back(ColIdx);
   }
 
   // Next, look for variables which don't already have a column, but which
-  // are now live.
+  // are now live (those starting at ThisAddr or NextAddr).
   if (IncludeDefinedVars) {
-    for (unsigned ElementIdx = 0, End = LiveElements.size(); ElementIdx < End;
-         ++ElementIdx) {
-      if (CheckedElementIdxs.count(ElementIdx))
+    // Collect all elements starting at ThisAddr and NextAddr.
+    std::vector<std::pair<unsigned, LiveElement *>> NewLiveElements;
+    // Process elements from a map range and add them to NewLiveElements.
+    auto CollectNewElements = [&](const auto &Range) {
+      for (auto it = Range.first; it != Range.second; ++it) {
+        LiveElement *LE = it->second;
+
+        // Get the ElementIdx for sorting and column management.
+        auto IndexIt = ElementPtrToIndex.find(LE);
+        if (IndexIt == ElementPtrToIndex.end()) {
+          LLVM_DEBUG(
+              dbgs()
+              << "Error: LiveElement in map but not in ElementPtrToIndex!\n");
+          continue;
+        }
+
+        unsigned ElementIdx = IndexIt->second;
+        // Skip elements that already have a column.
+        if (ElementToColumn.count(ElementIdx))
+          continue;
+
+        bool LiveIn = LE->liveAtAddress(ThisAddr);
+        bool LiveOut = LE->liveAtAddress(NextAddr);
+        if (!LiveIn && !LiveOut)
+          continue;
+
+        NewLiveElements.emplace_back(ElementIdx, LE);
+      }
+    };
+
+    // Collect elements starting at ThisAddr.
+    CollectNewElements(LiveElementsByAddress.equal_range(ThisAddr.Address));
+    // Collect elements starting at NextAddr (the address immediately following
+    // the instruction).
+    CollectNewElements(LiveElementsByAddress.equal_range(NextAddr.Address));
+    // Sort elements by DWARF discovery order (ElementIdx) for deterministic
+    // column assignment.
+    llvm::stable_sort(NewLiveElements, [](const auto &A, const auto &B) {
+      return A.first < B.first;
+    });
+
+    // Assign columns in deterministic order.
+    for (const auto &ElementPair : NewLiveElements) {
+      unsigned ElementIdx = ElementPair.first;
+      // Skip if element was already added from the first range.
+      if (ElementToColumn.count(ElementIdx))
         continue;
 
-      const std::unique_ptr<LiveElement> &LE = LiveElements[ElementIdx];
+      LiveElement *LE = ElementPair.second;
       bool LiveIn = LE->liveAtAddress(ThisAddr);
       bool LiveOut = LE->liveAtAddress(NextAddr);
-      if (!LiveIn && !LiveOut)
-        continue;
 
-      unsigned ColIdx = findFreeColumn();
-      std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
-      LLVM_DEBUG(dbgs() << "pass 2, " << ThisAddr.Address << "-"
-                        << NextAddr.Address << ", " << Name << ", Col "
-                        << ColIdx << ": LiveIn=" << LiveIn
-                        << ", LiveOut=" << LiveOut << "\n");
-      ActiveCols[ColIdx].ElementIdx = ElementIdx;
+      // Assign or create a column.
+      unsigned ColIdx = getOrCreateColumn(ElementIdx);
+      LLVM_DEBUG({
+        std::string Name = Demangle ? demangle(LE->getName()) : LE->getName();
+        dbgs() << "pass 2, " << ThisAddr.Address << "-" << NextAddr.Address
+               << ", " << Name << ", Col " << ColIdx << ": LiveIn=" << LiveIn
+               << ", LiveOut=" << LiveOut << "\n";
+      });
+
       ActiveCols[ColIdx].LiveIn = LiveIn;
       ActiveCols[ColIdx].LiveOut = LiveOut;
       ActiveCols[ColIdx].MustDrawLabel = true;
+
+      // Mark for cleanup next cycle if range ends here.
+      if (ActiveCols[ColIdx].LiveIn && !ActiveCols[ColIdx].LiveOut)
+        ColumnsToFreeNextCycle.push_back(ColIdx);
     }
   }
 }
@@ -360,7 +488,14 @@ void LiveElementPrinter::printAfterOtherLine(formatted_raw_ostream &OS,
 void LiveElementPrinter::printBetweenInsts(formatted_raw_ostream &OS,
                                            bool MustPrint) {
   bool PrintedSomething = false;
-  for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx) {
+  // Get all active elements, sorted by discovery order (ElementIdx).
+  std::vector<unsigned> SortedElementIndices = getSortedActiveElementIndices();
+  // The outer loop iterates over the deterministic DWARF discovery order
+  // (ElementIdx).
+  for (unsigned ElementIdx : SortedElementIndices) {
+    // Look up the physical column index (ColIdx) assigned to this
+    // element. We use .at() because we are certain the element is active.
+    unsigned ColIdx = ElementToColumn.at(ElementIdx);
     if (ActiveCols[ColIdx].isActive() && ActiveCols[ColIdx].MustDrawLabel) {
       // First we need to print the live range markers for any active
       // columns to the left of this one.
@@ -375,8 +510,7 @@ void LiveElementPrinter::printBetweenInsts(formatted_raw_ostream &OS,
           OS << "  ";
       }
 
-      const std::unique_ptr<LiveElement> &LE =
-          LiveElements[ActiveCols[ColIdx].ElementIdx];
+      const std::unique_ptr<LiveElement> &LE = LiveElements[ElementIdx];
       // Then print the variable name and location of the new live range,
       // with box drawing characters joining it to the live range line.
       OS << getLineChar(ActiveCols[ColIdx].LiveIn ? LineChar::LabelCornerActive
@@ -440,20 +574,58 @@ void LiveElementPrinter::printAfterInst(formatted_raw_ostream &OS) {
 
 void LiveElementPrinter::printStartLine(formatted_raw_ostream &OS,
                                         object::SectionedAddress Addr) {
-  // Print a line to idenfity the start of an inlined function if line format
-  // is specified.
-  if (DbgInlinedFunctions == DFLimitsOnly)
-    for (const std::unique_ptr<LiveElement> &LE : LiveElements)
-      LE->printElementLine(OS, Addr, false);
+  // Only print the start line for inlined functions if DFLimitsOnly is
+  // enabled.
+  if (DbgInlinedFunctions != DFLimitsOnly)
+    return;
+
+  // Use the map to find all elements that start at the given address.
+  auto Range = LiveElementsByAddress.equal_range(Addr.Address);
+  std::vector<unsigned> ElementIndices;
+  for (auto it = Range.first; it != Range.second; ++it) {
+    LiveElement *LE = it->second;
+    // Look up the ElementIdx from the pointer.
+    auto IndexIt = ElementPtrToIndex.find(LE);
+    if (IndexIt != ElementPtrToIndex.end())
+      ElementIndices.push_back(IndexIt->second);
+  }
+
+  // Sort the indices to ensure deterministic output order (by DWARF discovery
+  // order).
+  llvm::stable_sort(ElementIndices);
+
+  for (unsigned ElementIdx : ElementIndices) {
+    LiveElement *LE = LiveElements[ElementIdx].get();
+    LE->printElementLine(OS, Addr, false);
+  }
 }
 
 void LiveElementPrinter::printEndLine(formatted_raw_ostream &OS,
                                       object::SectionedAddress Addr) {
-  // Print a line to idenfity the end of an inlined function if line format is
-  // specified.
-  if (DbgInlinedFunctions == DFLimitsOnly)
-    for (const std::unique_ptr<LiveElement> &LE : LiveElements)
-      LE->printElementLine(OS, Addr, true);
+  // Only print the end line for inlined functions if DFLimitsOnly is
+  // enabled.
+  if (DbgInlinedFunctions != DFLimitsOnly)
+    return;
+
+  // Use the map to find elements that end at the given address.
+  auto Range = LiveElementsByEndAddress.equal_range(Addr.Address);
+  std::vector<unsigned> ElementIndices;
+  for (auto it = Range.first; it != Range.second; ++it) {
+    LiveElement *LE = it->second;
+    // Look up the ElementIdx from the pointer.
+    auto IndexIt = ElementPtrToIndex.find(LE);
+    if (IndexIt != ElementPtrToIndex.end())
+      ElementIndices.push_back(IndexIt->second);
+  }
+
+  // Sort the indices to ensure deterministic output order (by DWARF discovery
+  // order).
+  llvm::stable_sort(ElementIndices);
+
+  for (unsigned ElementIdx : ElementIndices) {
+    LiveElement *LE = LiveElements[ElementIdx].get();
+    LE->printElementLine(OS, Addr, true);
+  }
 }
 
 bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
