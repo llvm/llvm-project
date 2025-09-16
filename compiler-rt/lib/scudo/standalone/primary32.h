@@ -1058,8 +1058,6 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Sci->Mutex) {
-  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
-
   const uptr BlockSize = getSizeByClassId(ClassId);
 
   DCHECK_GE(Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks);
@@ -1104,6 +1102,11 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
   // ==================================================================== //
   // 3. Release the unused physical pages back to the OS.
   // ==================================================================== //
+
+  // Only add trace point after it is determined that a release will occur to
+  // avoid incurring performance penalties.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   ReleaseRecorder Recorder(Base);
   auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
     ScopedLock L(ByteMapMutex);

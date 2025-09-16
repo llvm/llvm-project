@@ -1379,8 +1379,6 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
                                                     uptr ClassId,
                                                     ReleaseToOS ReleaseType)
     REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
-  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
-
   const uptr BlockSize = getSizeByClassId(ClassId);
   uptr BytesInFreeList;
   const uptr AllocatedUserEnd =
@@ -1455,6 +1453,11 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   // ==================================================================== //
   // 4. Release the unused physical pages back to the OS.
   // ==================================================================== //
+
+  // Only add trace point after it is determined that a release will occur to
+  // avoid incurring performance penalties.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   RegionReleaseRecorder<MemMapT> Recorder(&Region->MemMapInfo.MemMap,
                                           Region->RegionBeg,
                                           Context.getReleaseOffset());
