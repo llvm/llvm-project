@@ -1,0 +1,8 @@
+schemaVersion: 0.0.1
+isProduction: true
+accountableOwners:
+  service: 188124fe-9943-469c-b4bc-959d6f2ceda4
+routing:
+  defaultAreaPath:
+    org: devdiv
+    path: DevDiv\NET Runtime\WebAssembly
