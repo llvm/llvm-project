@@ -6570,7 +6570,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
 //    add %dest, %stack, 0
 //    adds %dest, %dest, c
 static MachineInstr *unfoldAddSXri(MachineInstr &MI, unsigned FrameReg,
-                                  const AArch64InstrInfo *TII) {
+                                   const AArch64InstrInfo *TII) {
   auto *MBB = MI.getParent();
   Register DestReg = MI.getOperand(0).getReg();
 
