@@ -911,6 +911,22 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     endif()
   endif()
 
+  # Disable -Warray-bounds on GCC; this warning exists since a very long time,
+  # but since GCC 11, it produces a lot of very noisy, seemingly false positive
+  # warnings (potentially originating in libstdc++).
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    append("-Wno-array-bounds" CMAKE_CXX_FLAGS)
+  endif()
+
+  # Disable -Wstringop-overread on GCC; this warning produces a number of very
+  # noisy diagnostics when -Warray-bounds is disabled above; this option exists
+  # since GCC 11.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
+      append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
+    endif()
+  endif()
+
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
   append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
