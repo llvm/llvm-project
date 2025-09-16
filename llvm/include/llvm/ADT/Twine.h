@@ -119,22 +119,19 @@ class Twine {
     /// An int value, to render as a signed decimal integer.
     DecIKind,
 
-    /// A pointer to an unsigned long value, to render as an unsigned decimal
-    /// integer.
+    /// An unsigned long value, to render as an unsigned decimal integer.
     DecULKind,
 
-    /// A pointer to a long value, to render as a signed decimal integer.
+    /// A long value, to render as a signed decimal integer.
     DecLKind,
 
-    /// A pointer to an unsigned long long value, to render as an unsigned
-    /// decimal integer.
+    /// An unsigned long long value, to render as an unsigned decimal integer.
     DecULLKind,
 
-    /// A pointer to a long long value, to render as a signed decimal integer.
+    /// A long long value, to render as a signed decimal integer.
     DecLLKind,
 
-    /// A pointer to a uint64_t value, to render as an unsigned hexadecimal
-    /// integer.
+    /// A uint64_t value, to render as an unsigned hexadecimal integer.
     UHexKind
   };
 
