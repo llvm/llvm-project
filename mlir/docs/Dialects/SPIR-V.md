@@ -1418,7 +1418,7 @@ dialect.
 
 ### Add a new test
 
-Currently the SPIR-V dialect has two types of tests that should be added or
+Currently the SPIR-V dialect has three types of tests that should be added or
 updated accordingly:
 
 1.  **Dialect tests** - Those tests check different aspects of the op in isolation.
@@ -1446,6 +1446,9 @@ updated accordingly:
     SPIR-V binary (MLIR allows multiple modules per files, however the SPIR-V
     spec restricts each binary to a single module), and then runs `spirv-val`
     on each of the file.
+
+3.  **Integration tests** - Those tests execute the MLIR code using the `mlir-runner`
+    to verify its functional correctness.
 
 ## Operation definitions
 
