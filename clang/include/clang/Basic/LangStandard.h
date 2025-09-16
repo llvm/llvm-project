@@ -140,6 +140,9 @@ public:
     return isCPlusPlus11() || (!isCPlusPlus() && isC99() && isGNUMode());
   }
 
+  /// allowLiteralDigitSeparator - Language supports literal digit seperator
+  bool allowLiteralDigitSeparator() const { return isCPlusPlus14() || isC23(); }
+
   /// isGNUMode - Language includes GNU extensions.
   bool isGNUMode() const { return Flags & GNUMode; }
 

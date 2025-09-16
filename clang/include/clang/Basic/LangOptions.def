@@ -438,7 +438,7 @@ LANGOPT(CXXAssumptions, 1, 1, NotCompatible, "Enable or disable codegen and comp
 
 LANGOPT(RawStringLiterals, 1, 1, NotCompatible, "Enable or disable raw string literals")
 
-LANGOPT(ScanDeps, 1, 0, NotCompatible, "True if we are scanning by DependencyDirectivesScanner")
+LANGOPT(AllowLiteralDigitSeparator, 1, 0, NotCompatible, "Allow literal digit seperator in source")
 
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default, NotCompatible,
