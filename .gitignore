@@ -57,6 +57,7 @@ autoconf/autom4te.cache
 /.claude/
 /GEMINI.md
 /.gemini/
+/.cline_storage/
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
