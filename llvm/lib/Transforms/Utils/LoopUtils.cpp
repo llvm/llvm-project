@@ -1008,7 +1008,7 @@ bool llvm::setBranchProbability(BranchInst *B, double P, bool ForFirstTarget) {
   // Sum should be some large number so that the weights accurately encode P,
   // but it should not be so large that some branch weights will print as
   // negative in LLVM IR as that makes LLVM tests harder to maintain.
-  const uint64_t Sum = 1000000000;
+  const uint64_t Sum = 100000000;
   uint64_t Weight0 = round(P * Sum);
   uint64_t Weight1 = round((1 - P) * Sum);
   if (!ForFirstTarget)
