@@ -2023,6 +2023,18 @@ def fno_bounds_safety_bringup_missing_checks : Flag<["-"], "fno-bounds-safety-br
   Alias<fno_bounds_safety_bringup_missing_checks_EQ>, AliasArgs<["all"]>,
   HelpText<"Disable new -fbounds-safety run-time checks">;
 
+defm bounds_safety_unique_traps : BoolFOption<"bounds-safety-unique-traps",
+  CodeGenOpts<"BoundsSafetyUniqueTraps">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option],
+    "Make trap instructions unique by preventing traps from being merged by the"
+    " optimizer. This is useful for preserving the debug information on traps "
+    "in optimized code. This makes it easier to debug programs at the cost of "
+    "increased code size">,
+  NegFlag<SetFalse, [], [CC1Option],
+    "Don't try to make trap instructions unique. This allows trap instructions "
+    "to be merged by the optimizer.">>;
+// TO_UPSTREAM(BoundsSafety) OFF
+
 defm lifetime_safety : BoolFOption<
   "experimental-lifetime-safety",
   LangOpts<"EnableLifetimeSafety">, DefaultFalse,
