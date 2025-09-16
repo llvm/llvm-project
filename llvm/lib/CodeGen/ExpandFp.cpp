@@ -77,12 +77,12 @@ class FRemExpander {
   /// The frem argument/return types that can be expanded by this class.
   // TODO The expansion could work for other floating point types
   // as well, but this would require additional testing.
-  inline static const SmallVector<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
-                                                          MVT::f64};
+  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
+                                                      MVT::f64};
 
   /// Libcalls for frem instructions of the type at the corresponding
   /// positions of ExpandableTypes.
-  inline static const SmallVector<RTLIB::Libcall, 3> FremLibcalls{
+  static constexpr std::array<RTLIB::Libcall, 3> FremLibcalls{
       RTLIB::REM_F32, RTLIB::REM_F32, RTLIB::REM_F64};
 
   /// Return the Libcall for frem instructions of expandable type \p VT or
@@ -108,14 +108,14 @@ public:
   /// should happen if the legalization for the scalar type uses a
   /// non-existing libcall.
   static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
+    assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
+
     TargetLowering::LegalizeAction LA = TLI.getOperationAction(ISD::FREM, VT);
-    if (LA != TargetLowering::LegalizeAction::LibCall &&
-        LA != TargetLowering::LegalizeAction::Expand)
+    if (LA != TargetLowering::LegalizeAction::Expand)
       return false;
 
     auto Libcall = getFremLibcallForType(VT);
-    bool MissingLibcall = Libcall.has_value() && !TLI.getLibcallName(*Libcall);
-    return MissingLibcall;
+    return Libcall.has_value() && !TLI.getLibcallName(*Libcall);;
   }
 
   static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
