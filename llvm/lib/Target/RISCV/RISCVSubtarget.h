@@ -209,6 +209,14 @@ public:
            hasShortForwardBranchOpt();
   }
 
+  bool hasShlAdd(int64_t ShAmt) const {
+    if (ShAmt <= 0)
+      return false;
+    if (ShAmt <= 3)
+      return HasStdExtZba || HasVendorXAndesPerf || HasVendorXTHeadBa;
+    return ShAmt <= 31 && HasVendorXqciac;
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;

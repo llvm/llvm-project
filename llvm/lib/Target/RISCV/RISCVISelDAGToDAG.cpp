@@ -3204,9 +3204,7 @@ static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
     // If we have a SHXADD instruction, prefer that over reassociating an ADDI.
     assert(Shift.getOpcode() == ISD::SHL);
     unsigned ShiftAmt = Shift.getConstantOperandVal(1);
-    if ((ShiftAmt <= 3 &&
-         (Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa())) ||
-        (ShiftAmt >= 4 && ShiftAmt <= 7 && Subtarget.hasVendorXqciac()))
+    if (Subtarget.hasShlAdd(ShiftAmt))
       return false;
 
     // All users of the ADDI should be load/store.
