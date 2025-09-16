@@ -73,6 +73,9 @@ class TestEnums(unittest.TestCase):
 
         for enum in self.enums:
             with self.subTest(enum):
+                # This ensures only the custom assert message below is printed
+                self.longMessage = False
+
                 python_kinds = set([kind.value for kind in enum])
                 num_to_c_kind = enum_variant_map[enum]
                 c_kinds = set(num_to_c_kind.keys())
@@ -84,6 +87,7 @@ class TestEnums(unittest.TestCase):
                 self.assertEqual(
                     missing_names,
                     set(),
+                    f"{missing_names} variants are missing. "
                     f"Please ensure these are defined in {enum} in cindex.py.",
                 )
                 # Defined in cindex.py but not in Index.h
@@ -94,5 +98,6 @@ class TestEnums(unittest.TestCase):
                 self.assertEqual(
                     missing_names,
                     set(),
+                    f"{missing_names} variants only exist in the Python bindings. "
                     f"Please ensure that all {enum} kinds defined in cindex.py have an equivalent in Index.h",
                 )
