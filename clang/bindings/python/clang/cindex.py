@@ -2546,6 +2546,8 @@ class TypeKind(BaseEnumeration):
     ULONGACCUM = 38
     BFLOAT16 = 39
     IBM128 = 40
+    FIRSTBUILTIN = VOID
+    LASTBUILTIN = IBM128
     COMPLEX = 100
     POINTER = 101
     BLOCKPOINTER = 102
