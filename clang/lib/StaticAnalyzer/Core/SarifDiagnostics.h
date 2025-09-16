@@ -13,15 +13,13 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include <string>
 
-namespace clang {
-namespace ento {
+namespace clang::ento {
 
 void createSarifDiagnosticConsumerImpl(PathDiagnosticConsumerOptions DiagOpts,
                                        PathDiagnosticConsumers &C,
                                        const std::string &Output,
                                        const Preprocessor &PP);
 
-} // namespace ento
-} // namespace clang
+} // namespace clang::ento
 
 #endif

@@ -14,9 +14,7 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include <string>
 
-namespace clang {
-
-namespace ento {
+namespace clang::ento {
 
 void createPlistDiagnosticConsumerImpl(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
@@ -24,7 +22,6 @@ void createPlistDiagnosticConsumerImpl(
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions, bool SupportsMultipleFiles);
 
-} // namespace ento
-} // namespace clang
+} // namespace clang::ento
 
 #endif
