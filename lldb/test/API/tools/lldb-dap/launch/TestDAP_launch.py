@@ -143,6 +143,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
         self.assertTrue(found, "verified program working directory")
 
+    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
