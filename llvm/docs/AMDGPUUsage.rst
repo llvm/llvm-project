@@ -1672,6 +1672,15 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-workgroup-id-z"                       The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.workgroup.id.z intrinsic.
 
+     "amdgpu-no-cluster-id-x"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.x intrinsic.
+
+     "amdgpu-no-cluster-id-y"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.y intrinsic.
+
+     "amdgpu-no-cluster-id-z"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.cluster.id.z intrinsic.
+
      "amdgpu-no-dispatch-ptr"                         The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.ptr intrinsic.
 
@@ -1811,6 +1820,13 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       prefixed with "_dvgpr$" with the value of the function symbol,
                                                       offset by one less than the number of dynamic VGPR blocks required
                                                       by the function encoded in bits 5..3.
+
+     "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
+                                                      cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
+                                                      but the dimensions cannot be determined at compile time. Any other value explicitly
+                                                      specifies the cluster dimensions.
+
+                                                      This is only relevant on targets with cluster support.
 
      ================================================ ==========================================================
 
@@ -4823,7 +4839,24 @@ Code object V5 metadata is the same as
 
      ====================== ============== ========= ================================
 
-..
+.. _amdgpu-amdhsa-code-object-metadata-v6:
+
+Code Object V6 Metadata
++++++++++++++++++++++++
+
+Code object V6 metadata is the same as
+:ref:`amdgpu-amdhsa-code-object-metadata-v5` with the changes defined in table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6`.
+
+    .. table:: AMDHSA Code Object V6 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v6
+
+     ============================= ============= ========== =======================================
+     String Key                    Value Type     Required? Description
+     ============================= ============= ========== =======================================
+     ".cluster_dims"               sequence of              The dimension of the cluster.
+                                   3 integers
+     ============================= ============= ========== =======================================
 
 Kernel Dispatch
 ~~~~~~~~~~~~~~~

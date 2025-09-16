@@ -2450,7 +2450,7 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 void ASTStmtReader::VisitOMPCanonicalLoopNestTransformationDirective(
     OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
-  D->setNumGeneratedLoops(Record.readUInt32());
+  D->setNumGeneratedTopLevelLoops(Record.readUInt32());
 }
 
 void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {

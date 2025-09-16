@@ -13,6 +13,7 @@
 
 #include "OpGenHelpers.h"
 
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringSet.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <regex>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -36,7 +38,6 @@ from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
     get_default_loc_context as _ods_get_default_loc_context,
-    get_op_result_or_op_results as _get_op_result_or_op_results,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
 )
@@ -62,10 +63,11 @@ from ._{0}_ops_gen import _Dialect
 
 /// Template for operation class:
 ///   {0} is the Python class name;
-///   {1} is the operation name.
+///   {1} is the operation name;
+///   {2} is the docstring for this operation.
 constexpr const char *opClassTemplate = R"Py(
 @_ods_cext.register_operation(_Dialect)
-class {0}(_ods_ir.OpView):
+class {0}(_ods_ir.OpView):{2}
   OPERATION_NAME = "{1}"
 )Py";
 
@@ -276,8 +278,9 @@ def {0}({2}) -> {4}:
 )Py";
 
 constexpr const char *valueBuilderVariadicTemplate = R"Py(
-def {0}({2}) -> {4}:
-  return _get_op_result_or_op_results({1}({3}))
+def {0}({2}) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, {1}]:
+  op = {1}({3}); results = op.results
+  return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 )Py";
 
 static llvm::cl::OptionCategory
@@ -1013,30 +1016,49 @@ static void emitValueBuilder(const Operator &op,
     nameWithoutDialect += "_";
   std::string params = llvm::join(valueBuilderParams, ", ");
   std::string args = llvm::join(opBuilderArgs, ", ");
-  const char *type =
-      (op.getNumResults() > 1
-           ? "_Sequence[_ods_ir.Value]"
-           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation"));
-  if (op.getNumVariableLengthResults() > 0) {
+  if (op.getNumVariableLengthResults()) {
     os << formatv(valueBuilderVariadicTemplate, nameWithoutDialect,
-                  op.getCppClassName(), params, args, type);
+                  op.getCppClassName(), params, args);
   } else {
-    const char *results;
-    if (op.getNumResults() == 0) {
-      results = "";
-    } else if (op.getNumResults() == 1) {
-      results = ".result";
-    } else {
+    std::string type = op.getCppClassName().str();
+    const char *results = "";
+    if (op.getNumResults() > 1) {
+      type = "_ods_ir.OpResultList";
       results = ".results";
+    } else if (op.getNumResults() == 1) {
+      type = "_ods_ir.OpResult";
+      results = ".result";
     }
     os << formatv(valueBuilderTemplate, nameWithoutDialect,
                   op.getCppClassName(), params, args, type, results);
   }
 }
 
+/// Retrieve the description of the given op and generate a docstring for it.
+static std::string makeDocStringForOp(const Operator &op) {
+  if (!op.hasDescription())
+    return "";
+
+  auto desc = op.getDescription().rtrim(" \t").str();
+  // Replace all """ with \"\"\" to avoid early termination of the literal.
+  desc = std::regex_replace(desc, std::regex(R"(""")"), R"(\"\"\")");
+
+  std::string docString = "\n";
+  llvm::raw_string_ostream os(docString);
+  raw_indented_ostream identedOs(os);
+  os << R"(  r""")" << "\n";
+  identedOs.printReindented(desc, "  ");
+  if (!StringRef(desc).ends_with("\n"))
+    os << "\n";
+  os << R"(  """)" << "\n";
+
+  return docString;
+}
+
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op, raw_ostream &os) {
-  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName());
+  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName(),
+                makeDocStringForOp(op));
 
   // Sized segments.
   if (op.getTrait(attrSizedTraitForKind("operand")) != nullptr) {
