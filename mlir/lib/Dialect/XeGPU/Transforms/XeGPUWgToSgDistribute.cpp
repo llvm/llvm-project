@@ -1027,7 +1027,12 @@ struct WgToSgVectorShapeCastOp
   }
 };
 
-// Pattern for lowering vector.multi_reduction op to subgroup level.
+/// Pattern for lowering vector.multi_reduction op to subgroup level.
+/// Current limitation: only support 2D->1D reduction with single reduction
+/// dimension, and the sg_layout in the reduced dimension being 1
+/// so that reduction is local to subgroup & no cross-subgroup communication is
+/// needed.
+/// TODO: Add cases to handle more general situations which require SLM access.
 struct WgToSgMultiDimReductionOp
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
@@ -1035,14 +1040,15 @@ struct WgToSgMultiDimReductionOp
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType srcType = dyn_cast<VectorType>(op.getSource().getType());
+    VectorType srcType = op.getSourceVectorType();
     VectorType dstType = dyn_cast<VectorType>(op.getResult().getType());
-    if (!srcType || !dstType)
+    if (!dstType)
       return failure();
 
-    // TODO: generalize it
-    auto srcShape = srcType.getShape();
-    auto dstShape = dstType.getShape();
+    SmallVector<int64_t> srcShape(srcType.getShape().begin(),
+                                  srcType.getShape().end());
+    SmallVector<int64_t> dstShape(dstType.getShape().begin(),
+                                  dstType.getShape().end());
     if (srcShape.size() != 2 || dstShape.size() != 1)
       return failure();
 
@@ -1051,7 +1057,8 @@ struct WgToSgMultiDimReductionOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
-    auto reductionDims = op.getReductionDims();
+    SmallVector<int64_t> reductionDims(op.getReductionDims().begin(),
+                                       op.getReductionDims().end());
     if (reductionDims.size() != 1)
       return failure();
 
@@ -1069,8 +1076,8 @@ struct WgToSgMultiDimReductionOp
     SmallVector<Value> newReductions;
     for (auto [sgSrc, sgAcc] :
          llvm::zip(adaptor.getSource(), adaptor.getAcc())) {
-      auto newOp = rewriter.create<vector::MultiDimReductionOp>(
-          op.getLoc(), newDstType, op.getKind(), sgSrc, sgAcc,
+      auto newOp = vector::MultiDimReductionOp::create(
+          rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc, sgAcc,
           op.getReductionDims());
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
