@@ -2459,7 +2459,7 @@ void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
 void ASTStmtWriter::VisitOMPCanonicalLoopNestTransformationDirective(
     OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
-  Record.writeUInt32(D->getNumGeneratedLoops());
+  Record.writeUInt32(D->getNumGeneratedTopLevelLoops());
 }
 
 void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {

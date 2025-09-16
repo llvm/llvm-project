@@ -187,8 +187,8 @@ define void @flat_atomic_xchg_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -422,8 +422,8 @@ define i64 @flat_atomic_xchg_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -660,8 +660,8 @@ define amdgpu_gfx void @flat_atomic_xchg_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -897,8 +897,8 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -1010,8 +1010,8 @@ define void @flat_atomic_xchg_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -1126,8 +1126,8 @@ define i64 @flat_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -1347,8 +1347,8 @@ define void @flat_atomic_xchg_f64_noret_offset(ptr %out, double %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -1582,8 +1582,8 @@ define double @flat_atomic_xchg_f64_ret_offset(ptr %out, double %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -1820,8 +1820,8 @@ define amdgpu_gfx void @flat_atomic_xchg_f64_noret_offset_scalar(ptr inreg %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -2057,8 +2057,8 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -2170,8 +2170,8 @@ define void @flat_atomic_xchg_f64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -2286,8 +2286,8 @@ define double @flat_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -2537,8 +2537,8 @@ define void @flat_atomic_add_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -2797,8 +2797,8 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -3063,8 +3063,8 @@ define amdgpu_gfx void @flat_atomic_add_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -3320,8 +3320,8 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -3448,8 +3448,8 @@ define void @flat_atomic_add_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -3578,8 +3578,8 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -3924,8 +3924,8 @@ define void @flat_atomic_sub_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -4284,8 +4284,8 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -4656,8 +4656,8 @@ define amdgpu_gfx void @flat_atomic_sub_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -5017,8 +5017,8 @@ define amdgpu_gfx i64 @flat_atomic_sub_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -5159,8 +5159,8 @@ define void @flat_atomic_sub_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -5289,8 +5289,8 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -5635,8 +5635,8 @@ define void @flat_atomic_and_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -5995,8 +5995,8 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -6357,8 +6357,8 @@ define amdgpu_gfx void @flat_atomic_and_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -6706,8 +6706,8 @@ define amdgpu_gfx i64 @flat_atomic_and_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -6846,8 +6846,8 @@ define void @flat_atomic_and_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -6976,8 +6976,8 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -7342,8 +7342,8 @@ define void @flat_atomic_nand_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -7726,8 +7726,8 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -8112,8 +8112,8 @@ define amdgpu_gfx void @flat_atomic_nand_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -8485,8 +8485,8 @@ define amdgpu_gfx i64 @flat_atomic_nand_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -8675,8 +8675,8 @@ define void @flat_atomic_nand_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -8871,8 +8871,8 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -9237,8 +9237,8 @@ define void @flat_atomic_or_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -9597,8 +9597,8 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -9959,8 +9959,8 @@ define amdgpu_gfx void @flat_atomic_or_i64_noret_offset_scalar(ptr inreg %out, i
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -10308,8 +10308,8 @@ define amdgpu_gfx i64 @flat_atomic_or_i64_ret_offset_scalar(ptr inreg %out, i64 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -10448,8 +10448,8 @@ define void @flat_atomic_or_i64_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -10578,8 +10578,8 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -10924,8 +10924,8 @@ define void @flat_atomic_xor_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -11284,8 +11284,8 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -11646,8 +11646,8 @@ define amdgpu_gfx void @flat_atomic_xor_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -11995,8 +11995,8 @@ define amdgpu_gfx i64 @flat_atomic_xor_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -12135,8 +12135,8 @@ define void @flat_atomic_xor_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -12265,8 +12265,8 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -12611,8 +12611,8 @@ define void @flat_atomic_max_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -12971,8 +12971,8 @@ define i64 @flat_atomic_max_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -13358,8 +13358,8 @@ define amdgpu_gfx void @flat_atomic_max_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -13737,8 +13737,8 @@ define amdgpu_gfx i64 @flat_atomic_max_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -13939,20 +13939,20 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN3:       ; %bb.0: ; %entry
 ; GCN3-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCN3-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN3-NEXT:    s_mov_b32 s14, -1
 ; GCN3-NEXT:    s_mov_b32 s15, 0xe00000
 ; GCN3-NEXT:    s_add_u32 s12, s12, s11
 ; GCN3-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_lshl_b64 s[6:7], s[6:7], 3
-; GCN3-NEXT:    s_add_u32 s0, s0, s6
-; GCN3-NEXT:    s_addc_u32 s1, s1, s7
+; GCN3-NEXT:    s_lshl_b64 s[4:5], s[8:9], 3
+; GCN3-NEXT:    s_add_u32 s0, s0, s4
+; GCN3-NEXT:    s_addc_u32 s1, s1, s5
 ; GCN3-NEXT:    s_add_u32 s0, s0, 32
-; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GCN3-NEXT:    s_addc_u32 s1, s1, 0
-; GCN3-NEXT:    s_cmp_eq_u32 s1, s5
+; GCN3-NEXT:    s_cmp_eq_u32 s1, s7
 ; GCN3-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN3-NEXT:    s_mov_b64 s[4:5], -1
@@ -14368,18 +14368,18 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GCN3:       ; %bb.0: ; %entry
 ; GCN3-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCN3-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN3-NEXT:    s_mov_b32 s14, -1
 ; GCN3-NEXT:    s_mov_b32 s15, 0xe00000
 ; GCN3-NEXT:    s_add_u32 s12, s12, s11
 ; GCN3-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_lshl_b64 s[6:7], s[6:7], 3
-; GCN3-NEXT:    s_add_u32 s0, s0, s6
-; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GCN3-NEXT:    s_addc_u32 s1, s1, s7
-; GCN3-NEXT:    s_cmp_eq_u32 s1, s5
+; GCN3-NEXT:    s_lshl_b64 s[4:5], s[8:9], 3
+; GCN3-NEXT:    s_add_u32 s0, s0, s4
+; GCN3-NEXT:    s_mov_b64 s[6:7], src_private_base
+; GCN3-NEXT:    s_addc_u32 s1, s1, s5
+; GCN3-NEXT:    s_cmp_eq_u32 s1, s7
 ; GCN3-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN3-NEXT:    s_mov_b64 s[4:5], -1
@@ -14734,8 +14734,8 @@ define void @flat_atomic_max_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -14864,8 +14864,8 @@ define i64 @flat_atomic_max_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -15210,8 +15210,8 @@ define void @flat_atomic_umax_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -15570,8 +15570,8 @@ define i64 @flat_atomic_umax_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -15957,8 +15957,8 @@ define amdgpu_gfx void @flat_atomic_umax_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -16336,8 +16336,8 @@ define amdgpu_gfx i64 @flat_atomic_umax_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -16538,20 +16538,20 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GCN3:       ; %bb.0: ; %entry
 ; GCN3-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCN3-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN3-NEXT:    s_mov_b32 s14, -1
 ; GCN3-NEXT:    s_mov_b32 s15, 0xe00000
 ; GCN3-NEXT:    s_add_u32 s12, s12, s11
 ; GCN3-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_lshl_b64 s[6:7], s[6:7], 3
-; GCN3-NEXT:    s_add_u32 s0, s0, s6
-; GCN3-NEXT:    s_addc_u32 s1, s1, s7
+; GCN3-NEXT:    s_lshl_b64 s[4:5], s[8:9], 3
+; GCN3-NEXT:    s_add_u32 s0, s0, s4
+; GCN3-NEXT:    s_addc_u32 s1, s1, s5
 ; GCN3-NEXT:    s_add_u32 s0, s0, 32
-; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GCN3-NEXT:    s_addc_u32 s1, s1, 0
-; GCN3-NEXT:    s_cmp_eq_u32 s1, s5
+; GCN3-NEXT:    s_cmp_eq_u32 s1, s7
 ; GCN3-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN3-NEXT:    s_mov_b64 s[4:5], -1
@@ -17124,8 +17124,8 @@ define void @flat_atomic_umax_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -17254,8 +17254,8 @@ define i64 @flat_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -17600,8 +17600,8 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -17960,8 +17960,8 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -18347,8 +18347,8 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -18726,8 +18726,8 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -18871,8 +18871,8 @@ define void @flat_atomic_umin_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -19001,8 +19001,8 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -19347,8 +19347,8 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -19707,8 +19707,8 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -20094,8 +20094,8 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -20473,8 +20473,8 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -20675,20 +20675,20 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GCN3:       ; %bb.0: ; %entry
 ; GCN3-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCN3-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN3-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN3-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; GCN3-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN3-NEXT:    s_mov_b32 s14, -1
 ; GCN3-NEXT:    s_mov_b32 s15, 0xe00000
 ; GCN3-NEXT:    s_add_u32 s12, s12, s11
 ; GCN3-NEXT:    s_addc_u32 s13, s13, 0
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_lshl_b64 s[6:7], s[6:7], 3
-; GCN3-NEXT:    s_add_u32 s0, s0, s6
-; GCN3-NEXT:    s_addc_u32 s1, s1, s7
+; GCN3-NEXT:    s_lshl_b64 s[4:5], s[8:9], 3
+; GCN3-NEXT:    s_add_u32 s0, s0, s4
+; GCN3-NEXT:    s_addc_u32 s1, s1, s5
 ; GCN3-NEXT:    s_add_u32 s0, s0, 32
-; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GCN3-NEXT:    s_addc_u32 s1, s1, 0
-; GCN3-NEXT:    s_cmp_eq_u32 s1, s5
+; GCN3-NEXT:    s_cmp_eq_u32 s1, s7
 ; GCN3-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN3-NEXT:    s_mov_b64 s[4:5], -1
@@ -21101,9 +21101,9 @@ define amdgpu_kernel void @atomic_min_i64(ptr %out, i64 %in) {
 ; GCN3-NEXT:    s_mov_b32 s15, 0xe00000
 ; GCN3-NEXT:    s_add_u32 s12, s12, s11
 ; GCN3-NEXT:    s_addc_u32 s13, s13, 0
-; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GCN3-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN3-NEXT:    s_cmp_eq_u32 s1, s5
+; GCN3-NEXT:    s_cmp_eq_u32 s1, s7
 ; GCN3-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN3-NEXT:    s_mov_b64 s[4:5], -1
@@ -21457,8 +21457,8 @@ define void @flat_atomic_min_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -21587,8 +21587,8 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -21958,8 +21958,8 @@ define void @flat_atomic_uinc_wrap_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -22348,8 +22348,8 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -22745,8 +22745,8 @@ define amdgpu_gfx void @flat_atomic_uinc_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -23130,8 +23130,8 @@ define amdgpu_gfx i64 @flat_atomic_uinc_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s34, s4, 32
-; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[36:37], src_private_base
+; GCN3-NEXT:    s_addc_u32 s35, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s35, s37
 ; GCN3-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[36:37]
@@ -23282,8 +23282,8 @@ define void @flat_atomic_uinc_wrap_i64_noret_offset__amdgpu_no_remote_memory(ptr
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -23421,8 +23421,8 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -23810,8 +23810,8 @@ define void @flat_atomic_udec_wrap_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
@@ -24223,8 +24223,8 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -24659,8 +24659,8 @@ define amdgpu_gfx void @flat_atomic_udec_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s38, s4, 32
-; GCN3-NEXT:    s_addc_u32 s39, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[34:35], src_private_base
+; GCN3-NEXT:    s_addc_u32 s39, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s39, s35
 ; GCN3-NEXT:    s_cselect_b64 s[34:35], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[34:35]
@@ -25091,8 +25091,8 @@ define amdgpu_gfx i64 @flat_atomic_udec_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    s_add_u32 s38, s4, 32
-; GCN3-NEXT:    s_addc_u32 s39, s5, 0
 ; GCN3-NEXT:    s_mov_b64 s[34:35], src_private_base
+; GCN3-NEXT:    s_addc_u32 s39, s5, 0
 ; GCN3-NEXT:    s_cmp_eq_u32 s39, s35
 ; GCN3-NEXT:    s_cselect_b64 s[34:35], -1, 0
 ; GCN3-NEXT:    s_andn2_b64 vcc, exec, s[34:35]
@@ -25253,8 +25253,8 @@ define void @flat_atomic_udec_wrap_i64_noret_offset__amdgpu_no_remote_memory(ptr
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v0, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN3-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -25397,8 +25397,8 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GCN3:       ; %bb.0:
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    v_add_co_u32_e32 v4, vcc, 32, v0
-; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN3-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN3-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:    s_and_saveexec_b64 s[4:5], vcc

@@ -139,13 +139,14 @@ bool OMPLoopBasedDirective::doForAllLoops(
 
       Stmt *TransformedStmt = Dir->getTransformedStmt();
       if (!TransformedStmt) {
-        unsigned NumGeneratedLoops = Dir->getNumGeneratedLoops();
-        if (NumGeneratedLoops == 0) {
+        unsigned NumGeneratedTopLevelLoops =
+            Dir->getNumGeneratedTopLevelLoops();
+        if (NumGeneratedTopLevelLoops == 0) {
           // May happen if the loop transformation does not result in a
           // generated loop (such as full unrolling).
           break;
         }
-        if (NumGeneratedLoops > 0) {
+        if (NumGeneratedTopLevelLoops > 0) {
           // The loop transformation construct has generated loops, but these
           // may not have been generated yet due to being in a dependent
           // context.
@@ -447,16 +448,16 @@ OMPStripeDirective *OMPStripeDirective::CreateEmpty(const ASTContext &C,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPUnrollDirective *
-OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                           Stmt *AssociatedStmt, unsigned NumGeneratedLoops,
-                           Stmt *TransformedStmt, Stmt *PreInits) {
-  assert(NumGeneratedLoops <= 1 && "Unrolling generates at most one loop");
+OMPUnrollDirective *OMPUnrollDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+    unsigned NumGeneratedTopLevelLoops, Stmt *TransformedStmt, Stmt *PreInits) {
+  assert(NumGeneratedTopLevelLoops <= 1 &&
+         "Unrolling generates at most one loop");
 
   auto *Dir = createDirective<OMPUnrollDirective>(
       C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
-  Dir->setNumGeneratedLoops(NumGeneratedLoops);
+  Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
