@@ -3995,6 +3995,8 @@ public:
   ScanInfo() {
     ScanBuffPtrs = new llvm::SmallDenseMap<llvm::Value *, llvm::Value *>();
   }
+  ScanInfo(ScanInfo &) = delete;
+  ScanInfo &operator=(const ScanInfo &) = delete;
 
   ~ScanInfo() { delete (ScanBuffPtrs); }
 };
