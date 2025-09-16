@@ -32,6 +32,15 @@
 ; RUN:                         %p/Inputs/test-codeview-clang.o 2>&1 | \
 ; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
 
+; If `--output-sort=none`, `LVScope::Children` is not sorted; it, however,
+; reflects the order in which elements were added (same as `--output-sort=id`).
+; This is expected to change once #69160 is resolved though.
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=none \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %p/Inputs/test-codeview-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format \
 ; RUN:                         --output-sort=offset \
 ; RUN:                         --print=elements \
