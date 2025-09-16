@@ -65,8 +65,20 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
   char *pathDst{EnsureNullTerminated(
       path2.OffsetElement(), path2.ElementBytes(), terminator)};
 
+  // Trim trailing blanks
+  auto srcTrimPos{TrimTrailingSpaces(pathSrc, path1.ElementBytes())};
+  auto dstTrimPos{TrimTrailingSpaces(pathDst, path2.ElementBytes())};
+  char *srcPathTrim{
+      static_cast<char *>(alloca((srcTrimPos + 1) * sizeof(char)))};
+  char *dstPathTrim{
+      static_cast<char *>(alloca((dstTrimPos + 1) * sizeof(char)))};
+  std::strncpy(srcPathTrim, pathSrc, srcTrimPos);
+  std::strncpy(dstPathTrim, pathDst, dstTrimPos);
+  srcPathTrim[srcTrimPos] = '\0';
+  dstPathTrim[dstTrimPos] = '\0';
+
   // We simply call rename(2) from POSIX
-  int result{rename(pathSrc, pathDst)};
+  int result{rename(srcPathTrim, dstPathTrim)};
   if (status) {
     // When an error has happened,
     int errorCode{0}; // Assume success
