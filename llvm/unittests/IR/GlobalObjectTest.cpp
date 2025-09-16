@@ -66,7 +66,7 @@ TEST_F(GlobalObjectTest, SectionPrefix) {
   ASSERT_NE(Bar, nullptr);
   ASSERT_THAT(Bar->getSectionPrefix(), Eq(std::nullopt));
 
-  // Teset that update method returns false since Bar doesn't have prefix
+  // Test that update method returns false since Bar doesn't have prefix
   // metadata.
   EXPECT_FALSE(Bar->updateSectionPrefix(""));
 
