@@ -36,7 +36,7 @@ class Ptr_ShapedValueType<list<Type> allowedTypes, list<Pred> preds = []> :
     /*cppType=*/"::mlir::ShapedType">;
 
 // A ptr-like type, either scalar or shaped type with value semantics.
-def Ptr_PtrLikeType : 
+def Ptr_PtrLikeType :
   AnyTypeOf<[Ptr_ShapedValueType<[Ptr_PtrType], [HasRankPred]>, Ptr_PtrType]>;
 
 // An int-like type, either scalar or shaped type with value semantics.
@@ -56,6 +56,31 @@ def Ptr_Mask1DType :
 // A shaped value type of rank 1 of `i1` element type.
 def Ptr_Ptr1DType :
   Ptr_ShapedValueType<[Ptr_PtrType], [HasAnyRankOfPred<[1]>]>;
+
+//===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_ConstantOp : Pointer_Op<"constant", [
+    ConstantLike, Pure, AllTypesMatch<["value", "result"]>
+  ]> {
+  let summary = "Pointer constant operation";
+  let description = [{
+    The `constant` operation produces a pointer constant. The attribute must be
+    a typed attribute of pointer type.
+
+    Example:
+
+    ```mlir
+    // Create a null pointer
+    %null = ptr.constant #ptr.null : !ptr.ptr<#ptr.generic_space>
+    ```
+  }];
+  let arguments = (ins TypedAttrInterface:$value);
+  let results = (outs Ptr_PtrType:$result);
+  let assemblyFormat = "attr-dict $value";
+  let hasFolder = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // FromPtrOp
@@ -81,7 +106,7 @@ def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
     ```mlir
     %typed_ptr = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> !my.ptr<f32, #ptr.generic_space>
     %memref = ptr.from_ptr %ptr metadata %md : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
-  
+
     // Cast the `%ptr` to a memref without utilizing metadata.
     %memref = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
     ```
@@ -361,13 +386,13 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
     // Scalar base and offset
     %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<#ptr.generic_space>, i32
     %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<#ptr.generic_space>, i32
-    
+
     // Shaped base with scalar offset
     %ptrs_off = ptr.ptr_add %ptrs, %off : vector<4x!ptr.ptr<#ptr.generic_space>>, i32
-    
+
     // Scalar base with shaped offset
     %x_offs = ptr.ptr_add %x, %offs : !ptr.ptr<#ptr.generic_space>, vector<4xi32>
-    
+
     // Both base and offset are shaped
     %ptrs_offs = ptr.ptr_add %ptrs, %offs : vector<4x!ptr.ptr<#ptr.generic_space>>, vector<4xi32>
     ```
@@ -382,7 +407,7 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
   }];
   let hasFolder = 1;
   let extraClassDeclaration = [{
-    /// `ViewLikeOp::getViewSource` method. 
+    /// `ViewLikeOp::getViewSource` method.
     Value getViewSource() { return getBase(); }
 
     /// Returns the ptr type of the operation.
@@ -418,7 +443,7 @@ def Ptr_ScatterOp : Pointer_Op<"scatter", [
     // Scatter values to multiple memory locations
     ptr.scatter %value, %ptrs, %mask :
       vector<4xf32>, vector<4x!ptr.ptr<#ptr.generic_space>>
-    
+
     // Scatter with alignment
     ptr.scatter %value, %ptrs, %mask alignment = 8 :
       vector<4xf32>, vector<4x!ptr.ptr<#ptr.generic_space>>
