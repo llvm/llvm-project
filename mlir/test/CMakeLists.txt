@@ -65,6 +65,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
 
 endif()
 
+set(MLIR_STANDALONE_INSTALL_TEST_PREFIX "${MLIR_BINARY_DIR}/mlir-standalone-test-install")
+
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_HAS_NVPTX_TARGET
@@ -125,51 +127,6 @@ set(MLIR_TEST_DEPENDS
 if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
 endif()
-set(MLIR_STANDALONE_INSTALL_TEST_PREFIX "${MLIR_BINARY_DIR}/mlir-standalone-test-install")
-add_custom_target(
-  install-mlir-standalone-test-prefix
-  DEPENDS mlir-headers mlir-libraries mlir-cmake-exports mlir-tblgen
-          mlir-opt mlir-python-sources FileCheck count not
-  COMMAND ${CMAKE_COMMAND} -E make_directory "${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=mlir-headers
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=mlir-libraries
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=mlir-cmake-exports
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=mlir-tblgen
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=mlir-opt
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=mlir-python-sources
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=FileCheck
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=count
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=not
-          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-)
-list(APPEND MLIR_TEST_DEPENDS install-mlir-standalone-test-prefix)
-
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
   mlir-capi-pdl-test
   mlir-pdll-lsp-server
@@ -243,6 +200,8 @@ if(LLVM_BUILD_EXAMPLES)
     transform-opt-ch4
     mlir-minimal-opt
     mlir-transform-opt
+    mlir-cat
+    mlir-minimal-opt-canonicalize
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS
@@ -283,6 +242,62 @@ add_custom_target(check-mlir-build-only
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
 set_target_properties(check-mlir-build-only PROPERTIES FOLDER "MLIR/Tests")
+
+get_property(LLVM_EXPORTS GLOBAL PROPERTY LLVM_EXPORTS)
+get_property(MLIR_EXPORTS GLOBAL PROPERTY MLIR_EXPORTS)
+add_custom_target(
+  install-mlir-standalone-test-prefix
+  DEPENDS ${MLIR_TEST_DEPENDS} ${MLIR_EXPORTS} FileCheck count not
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${MLIR_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-headers
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-libraries
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-cmake-exports
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-tblgen
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-pdll
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-linalg-ods-yaml-gen
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-opt
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-python-sources
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=FileCheck
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=count
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=not
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+)
+list(APPEND MLIR_TEST_DEPENDS install-mlir-standalone-test-prefix)
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
