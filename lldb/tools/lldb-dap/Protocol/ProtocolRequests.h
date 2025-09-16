@@ -300,6 +300,8 @@ struct LaunchRequestArguments {
   /// terminal or external terminal.
   Console console = eConsoleInternal;
 
+  std::vector<std::optional<std::string>> stdio;
+
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
