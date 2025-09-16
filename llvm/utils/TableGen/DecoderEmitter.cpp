@@ -721,15 +721,12 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS,
     return Value;
   };
 
-  unsigned OpcodeMask = 0;
-
   while (I != E) {
     assert(I < E && "incomplete decode table entry!");
 
     uint32_t Pos = I - Table.begin();
     EmitPos(Pos);
     const uint8_t DecoderOp = *I++;
-    OpcodeMask |= (1 << DecoderOp);
     OS << getDecoderOpName(static_cast<DecoderOps>(DecoderOp)) << ", ";
     switch (DecoderOp) {
     default:
