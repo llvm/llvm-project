@@ -484,7 +484,7 @@ bool OmptTracingBufferMgr::isBufferOwned(const FlushInfo &flush_info) {
  * list of buffers to be flushed.
  */
 OmptTracingBufferMgr::FlushInfo
-OmptTracingBufferMgr::findAndReserveFlushedBuf(uint64_t ID) {
+OmptTracingBufferMgr::findAndReserveFlushedBuf(uint64_t FlushId) {
   std::unique_lock<std::mutex> flush_lock(FlushMutex);
   MapId2Md::iterator flush_itr;
   if (FlushId == std::numeric_limits<uint64_t>::max()) {

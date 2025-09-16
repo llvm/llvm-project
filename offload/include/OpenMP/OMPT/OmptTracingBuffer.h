@@ -257,7 +257,7 @@ private:
 
   // Reserve a candidate buffer for flushing, preventing other helper threads
   // from accessing it
-  FlushInfo findAndReserveFlushedBuf(uint64_t ID);
+  FlushInfo findAndReserveFlushedBuf(uint64_t FlushId);
 
   // Unreserve a buffer so that other helper threads can process it
   void unreserveFlushedBuf(const FlushInfo &);
