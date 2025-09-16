@@ -1,4 +1,4 @@
-## Tests that readfile works with absolute paths
+## Tests that readfile works with absolute paths.
 # RUN: echo -n "hello" > %t
 # RUN: echo %{readfile:%t}
 
