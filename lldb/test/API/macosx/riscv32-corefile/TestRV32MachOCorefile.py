@@ -9,7 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
+@skipIf(bugnumber = "rdar://160698393")
 class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
