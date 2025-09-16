@@ -1,5 +1,3 @@
-// REQUIRES: target={{x86_64.*-linux.*}}
-
 // Simple inheritance case:
 // For CBase and CDerived we check:
 // - Generation of their vtables (including attributes).
@@ -86,35 +84,35 @@ int main() {
 }
 #endif
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-base.bc    -DBASE_CODE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-derived.bc -DDERIVED_CODE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-main.bc    -DMAIN_CODE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o %t.simple-base.bc    -DBASE_CODE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o %t.simple-derived.bc -DDERIVED_CODE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o %t.simple-main.bc    -DMAIN_CODE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-ONE %s
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-base.bc    -DBASE_CODE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-derived.bc -DDERIVED_CODE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-main.bc    -DMAIN_CODE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -flto -disable-llvm-passes %s -o %t.simple-base.bc    -DBASE_CODE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -flto -disable-llvm-passes %s -o %t.simple-derived.bc -DDERIVED_CODE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -flto -disable-llvm-passes %s -o %t.simple-main.bc    -DMAIN_CODE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-ONE %s
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-base.bc    -DBASE_CODE    -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-derived.bc -DDERIVED_CODE -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-main.bc    -DMAIN_CODE    -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o %t.simple-base.bc    -DBASE_CODE    -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o %t.simple-derived.bc -DDERIVED_CODE -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -disable-llvm-passes %s -o %t.simple-main.bc    -DMAIN_CODE    -DSYMBOL_AT_FILE_SCOPE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-TWO %s
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-base.bc    -DBASE_CODE    -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-derived.bc -DDERIVED_CODE -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-main.bc    -DMAIN_CODE    -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -flto -disable-llvm-passes %s -o %t.simple-base.bc    -DBASE_CODE    -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -flto -disable-llvm-passes %s -o %t.simple-derived.bc -DDERIVED_CODE -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm-bc -debug-info-kind=limited -dwarf-version=5 -O0 -flto -disable-llvm-passes %s -o %t.simple-main.bc    -DMAIN_CODE    -DSYMBOL_AT_FILE_SCOPE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-TWO %s
 
 // CHECK-ONE: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 // CHECK-ONE: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 
-// CHECK-ONE: @_ZTV8CDerived = {{dso_local|hidden}} unnamed_addr constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
-// CHECK-ONE: @_ZTVN3NSP5CBaseE = {{dso_local|hidden}} unnamed_addr constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK-ONE: @_ZTV8CDerived = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK-ONE: @_ZTVN3NSP5CBaseE = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
 
 // CHECK-ONE: [[DERIVED_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[DERIVED_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-ONE-NEXT: [[DERIVED_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV8CDerived"
@@ -133,8 +131,8 @@ int main() {
 // CHECK-TWO: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 // CHECK-TWO: ${{_ZN3NSP5CBaseC2Ev|_ZN8CDerivedC2Ev}} = comdat any
 
-// CHECK-TWO: @_ZTVN3NSP5CBaseE = {{dso_local|hidden}} unnamed_addr constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
-// CHECK-TWO: @_ZTV8CDerived = {{dso_local|hidden}} unnamed_addr constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK-TWO: @_ZTVN3NSP5CBaseE = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK-TWO: @_ZTV8CDerived = {{.*}}unnamed_addr constant {{.*}}, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
 
 // CHECK-TWO: [[BASE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-TWO-NEXT: [[BASE_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTVN3NSP5CBaseE"

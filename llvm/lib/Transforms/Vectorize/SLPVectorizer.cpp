@@ -199,6 +199,16 @@ static cl::opt<unsigned> MaxProfitableLoadStride(
     cl::desc("The maximum stride, considered to be profitable."));
 
 static cl::opt<bool>
+    DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
+                       cl::desc("Disable tree reordering even if it is "
+                                "profitable. Used for testing only."));
+
+static cl::opt<bool>
+    ForceStridedLoads("slp-force-strided-loads", cl::init(false), cl::Hidden,
+                      cl::desc("Generate strided loads even if they are not "
+                               "profitable. Used for testing only."));
+
+static cl::opt<bool>
     ViewSLPTree("view-slp-tree", cl::Hidden,
                 cl::desc("Display the SLP trees with Graphviz"));
 
@@ -5243,6 +5253,7 @@ private:
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
+              ::isCommutative(User) ||
               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
           EdgeInfo EI(TE, U.getOperandNo());
           if (!IsCommutativeUser && !isa<CmpInst>(User)) {
@@ -7770,6 +7781,9 @@ static void combineOrders(MutableArrayRef<unsigned> Order,
 }
 
 bool BoUpSLP::isProfitableToReorder() const {
+  if (DisableTreeReorder)
+    return false;
+
   constexpr unsigned TinyVF = 2;
   constexpr unsigned TinyTree = 10;
   constexpr unsigned PhiOpsLimit = 12;
@@ -11287,9 +11301,6 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
       return false;
 
-    SmallVector<Value *> NewVL(VL.size());
-    copy(Op1, NewVL.begin());
-    copy(Op2, std::next(NewVL.begin(), Op1.size()));
     auto Invalid = ScheduleBundle::invalid();
     auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
                             UserTreeIdx, {}, ReorderIndices);
@@ -13030,7 +13041,7 @@ void BoUpSLP::transformNodes() {
         InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
             Instruction::Load, VecTy, BaseLI->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind, BaseLI);
-        if (StridedCost < OriginalVecCost)
+        if (StridedCost < OriginalVecCost || ForceStridedLoads)
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
           E.State = TreeEntry::StridedVectorize;
@@ -20788,6 +20799,14 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           continue;
         }
         auto *SD = cast<ScheduleData>(SE);
+        if (SD->hasValidDependencies() &&
+            (!S.areInstructionsWithCopyableElements() ||
+             !S.isCopyableElement(SD->getInst())) &&
+            !getScheduleCopyableData(SD->getInst()).empty() && EI.UserTE &&
+            EI.UserTE->hasState() &&
+            (!EI.UserTE->hasCopyableElements() ||
+             !EI.UserTE->isCopyableElement(SD->getInst())))
+          SD->clearDirectDependencies();
         for (const Use &U : SD->getInst()->operands()) {
           unsigned &NumOps =
               UserOpToNumOps
@@ -21889,6 +21908,10 @@ bool BoUpSLP::collectValuesToDemote(
     return TryProcessInstruction(BitWidth);
   case Instruction::ZExt:
   case Instruction::SExt:
+    if (E.UserTreeIndex.UserTE && E.UserTreeIndex.UserTE->hasState() &&
+        E.UserTreeIndex.UserTE->getOpcode() == Instruction::BitCast &&
+        E.UserTreeIndex.UserTE->getMainOp()->getType()->isFPOrFPVectorTy())
+      return false;
     IsProfitableToDemote = true;
     return TryProcessInstruction(BitWidth);
 

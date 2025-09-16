@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/cospif16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,8 +15,6 @@
 using LlvmLibcCospif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcCospif16Test, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::cospif16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
