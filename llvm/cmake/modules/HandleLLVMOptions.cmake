@@ -1483,7 +1483,7 @@ endif()
 check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
 set(LLVM_ENABLE_ONDISK_CAS_default OFF)
 if(HAVE_FLOCK OR LLVM_ON_WIN32)
-  # LLVM ONDisk CAS currently requires flock on Unix.
+  # LLVM OnDisk CAS currently requires flock on Unix.
   set(LLVM_ENABLE_ONDISK_CAS_default ON)
 endif()
 option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})
