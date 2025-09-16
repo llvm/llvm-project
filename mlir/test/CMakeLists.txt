@@ -65,12 +65,6 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
 
 endif()
 
-option(MLIR_RUN_STANDALONE_INSTALL_TESTS "Run Standalone example install tests." ON)
-if(MLIR_RUN_STANDALONE_INSTALL_TESTS AND "${CMAKE_INSTALL_PREFIX}" STREQUAL "")
-  message(WARNING "Standalone example install tests will install into root!\
-  If you want to disable this behavior pass -DMLIR_RUN_STANDALONE_INSTALL_TESTS=OFF")
-endif()
-
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_HAS_NVPTX_TARGET
@@ -82,7 +76,6 @@ llvm_canonicalize_cmake_booleans(
   MLIR_ENABLE_SPIRV_CPU_RUNNER
   MLIR_ENABLE_VULKAN_RUNNER
   MLIR_INCLUDE_INTEGRATION_TESTS
-  MLIR_RUN_STANDALONE_INSTALL_TESTS
   MLIR_RUN_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
   MLIR_RUN_X86VECTOR_TESTS
@@ -132,6 +125,50 @@ set(MLIR_TEST_DEPENDS
 if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
 endif()
+set(MLIR_STANDALONE_INSTALL_TEST_PREFIX "${MLIR_BINARY_DIR}/mlir-standalone-test-install")
+add_custom_target(
+  install-mlir-standalone-test-prefix
+  DEPENDS mlir-headers mlir-libraries mlir-cmake-exports mlir-tblgen
+          mlir-opt mlir-python-sources FileCheck count not
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-headers
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-libraries
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-cmake-exports
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-tblgen
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-opt
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=mlir-python-sources
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=FileCheck
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=count
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+  COMMAND "${CMAKE_COMMAND}"
+          -DCMAKE_INSTALL_COMPONENT=not
+          -DCMAKE_INSTALL_PREFIX="${MLIR_STANDALONE_INSTALL_TEST_PREFIX}"
+          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+)
+list(APPEND MLIR_TEST_DEPENDS install-mlir-standalone-test-prefix)
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
   mlir-capi-pdl-test

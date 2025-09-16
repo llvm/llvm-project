@@ -3,8 +3,8 @@
 import sys
 
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
@@ -18,12 +18,9 @@ config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
 config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
-config.cmake_build_type = "@CMAKE_BUILD_TYPE@"
-config.cmake_c_compiler_launcher = "@CMAKE_C_COMPILER_LAUNCHER@"
-config.cmake_cxx_compiler_launcher= "@CMAKE_CXX_COMPILER_LAUNCHER@"
 config.host_cmake_generator = "@CMAKE_GENERATOR@"
 config.cmake_build_type = "@CMAKE_BUILD_TYPE@"
-config.host_cmake_install_prefix = "@CMAKE_INSTALL_PREFIX@"
+config.standalone_install_test_prefix = "@MLIR_STANDALONE_INSTALL_TEST_PREFIX@"
 config.llvm_use_linker = "@LLVM_USE_LINKER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.host_arch = "@HOST_ARCH@"
@@ -37,7 +34,6 @@ config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.run_nvptx_tests = @LLVM_HAS_NVPTX_TARGET@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
-config.run_standalone_install_tests = @MLIR_RUN_STANDALONE_INSTALL_TESTS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
 config.gpu_compilation_format = "@MLIR_GPU_COMPILATION_TEST_FORMAT@"
 config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
