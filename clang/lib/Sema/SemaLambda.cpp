@@ -356,7 +356,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
     }
 
-    return std::make_tuple(nullptr, nullptr);
+    return std::make_tuple(nullptr, ManglingContextDecl);
   }
 
   case NonInlineInModulePurview:
