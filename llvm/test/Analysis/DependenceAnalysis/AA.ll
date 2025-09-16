@@ -128,11 +128,11 @@ define void @test_tbaa_diff(ptr %A, ptr %B) {
 define void @tbaa_loop(i32 %I, i32 %J, ptr nocapture %A, ptr nocapture readonly %B) {
 ; CHECK-LABEL: 'tbaa_loop'
 ; CHECK-NEXT:  Src: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !0 --> Dst: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !0
-; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !0 --> Dst: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !4 --> Dst: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp = icmp ne i32 %J, 0

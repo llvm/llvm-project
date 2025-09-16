@@ -24,7 +24,7 @@ define void @prop0(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -81,7 +81,7 @@ define void @prop1(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx14, align 4 --> Dst: store i32 %0, ptr %B.addr.21, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.21, align 4 --> Dst: store i32 %0, ptr %B.addr.21, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -151,7 +151,7 @@ define void @prop2(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -208,7 +208,7 @@ define void @prop3(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx8, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -266,7 +266,7 @@ define void @prop4(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx10, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -325,7 +325,7 @@ define void @prop5(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx12, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -385,7 +385,7 @@ define void @prop6(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -445,7 +445,7 @@ define void @prop7(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx13, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -507,7 +507,7 @@ define void @prop8(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -565,7 +565,7 @@ define void @prop9(ptr %A, ptr %B, i32 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx9, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader

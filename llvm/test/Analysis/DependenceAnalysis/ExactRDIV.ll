@@ -508,7 +508,7 @@ define void @rdiv9(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -564,7 +564,7 @@ define void @rdiv10(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -619,7 +619,7 @@ define void @rdiv11(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
@@ -674,7 +674,7 @@ define void @rdiv12(ptr %A, ptr %B) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.11, align 4 --> Dst: store i32 %0, ptr %B.addr.11, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond1.preheader
