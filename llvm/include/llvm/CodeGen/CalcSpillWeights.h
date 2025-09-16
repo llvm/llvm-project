@@ -79,7 +79,7 @@ class VirtRegMap;
 
     /// Determine if all values in LI are rematerializable.
     static bool isRematerializable(const LiveInterval &LI,
-                                   const LiveIntervals &LIS,
+                                   LiveIntervals &LIS,
                                    const VirtRegMap &VRM,
                                    const TargetInstrInfo &TII);
 

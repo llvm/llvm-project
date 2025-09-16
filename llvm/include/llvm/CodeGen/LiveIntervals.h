@@ -466,10 +466,6 @@ public:
   /// have any segments or value numbers.
   LLVM_ABI void constructMainRangeFromSubranges(LiveInterval &LI);
 
-  /// \returns true if all registers used by \p OrigMI at \p OrigIdx are also
-  /// available with the same value at \p UseIdx.
-  bool allUsesAvailableAt(const MachineInstr &MI, SlotIndex UseIdx) const;
-
 private:
   /// Compute live intervals for all virtual registers.
   void computeVirtRegs();
