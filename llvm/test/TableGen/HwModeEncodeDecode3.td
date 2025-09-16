@@ -230,28 +230,22 @@ def unrelated: Instruction {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
 // ENCODER: case 0: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 1: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 2: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(255);
-// ENCODER: op <<= 8;
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xff) << 8;
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 3: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(255);
-// ENCODER: op <<= 24;
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xff) << 24;
 // ENCODER: break;
 // ENCODER: }
 // ENCODER-LABEL: case ::baz: {
@@ -265,7 +259,6 @@ def unrelated: Instruction {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
 // ENCODER: case 2: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
