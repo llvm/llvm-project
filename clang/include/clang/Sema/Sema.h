@@ -2819,26 +2819,27 @@ public:
 
   /// BuiltinConstantArg - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression.
-  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
+  bool BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
+                          llvm::APSInt &Result);
 
   /// BuiltinConstantArgRange - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression in the range [Low, High].
-  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
-                               bool RangeIsError = true);
+  bool BuiltinConstantArgRange(CallExpr *TheCall, unsigned ArgNum, int Low,
+                               int High, bool RangeIsError = true);
 
   /// BuiltinConstantArgMultiple - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression is a multiple of Num..
-  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+  bool BuiltinConstantArgMultiple(CallExpr *TheCall, unsigned ArgNum,
                                   unsigned Multiple);
 
   /// BuiltinConstantArgPower2 - Check if argument ArgNum of TheCall is a
   /// constant expression representing a power of 2.
-  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
+  bool BuiltinConstantArgPower2(CallExpr *TheCall, unsigned ArgNum);
 
   /// BuiltinConstantArgShiftedByte - Check if argument ArgNum of TheCall is
   /// a constant expression representing an arbitrary byte value shifted left by
   /// a multiple of 8 bits.
-  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, unsigned ArgNum,
                                      unsigned ArgBits);
 
   /// BuiltinConstantArgShiftedByteOr0xFF - Check if argument ArgNum of
@@ -2846,7 +2847,7 @@ public:
   /// or a value of the form 0x??FF (i.e. a member of the arithmetic progression
   /// 0x00FF, 0x01FF, ..., 0xFFFF). This strange range check is needed for some
   /// Arm MVE intrinsics.
-  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, unsigned ArgNum,
                                            unsigned ArgBits);
 
   /// Checks that a call expression's argument count is at least the desired
