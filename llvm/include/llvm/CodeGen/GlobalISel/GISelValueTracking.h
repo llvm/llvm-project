@@ -37,8 +37,6 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   const TargetLowering &TL;
   const DataLayout &DL;
   unsigned MaxDepth;
-  /// Cache maintained during a computeKnownBits request.
-  SmallDenseMap<Register, KnownBits, 16> ComputeKnownBitsCache;
 
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
                            const APInt &DemandedElts, unsigned Depth = 0);
