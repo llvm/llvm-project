@@ -158,15 +158,13 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   llvm::SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
 
   SmallVector<BoundNodes, 1> Matches = match(
-      findAll(declRefExpr(
+      findAll(
+          declRefExpr(to(varDecl(equalsNode(MatchedDecl))),
+                      unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
+                          capturesVar(varDecl(equalsNode(MatchedDecl))))))))
 
-                  to(varDecl(equalsNode(MatchedDecl))),
-
-                  unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
-                      capturesVar(varDecl(equalsNode(MatchedDecl))))))))
-
-                      )
-                  .bind("ref")),
+                          )
+              .bind("ref")),
       *MatchedLeafStatement, *Result.Context);
   extractNodesByIdTo(Matches, "ref", DeclRefs);
   if (DeclRefs.size() > 1) {
