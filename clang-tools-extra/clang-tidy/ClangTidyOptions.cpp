@@ -1,4 +1,4 @@
-//===--- ClangTidyOptions.cpp - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,7 +70,8 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(std::string(KeyValue.getKey()), KeyValue.getValue().Value);
+      Options.emplace_back(std::string(KeyValue.getKey()),
+                           KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -98,6 +99,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     for (auto &Option : SortedOptions) {
       bool UseDefault = false;
       void *SaveInfo = nullptr;
+      // Requires 'llvm::yaml::IO' to accept 'StringRef'
+      // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
       IO.preflightKey(Option.first.data(), true, false, UseDefault, SaveInfo);
       IO.scalarString(Option.second, needsQuotes(Option.second));
       IO.postflightKey(SaveInfo);
@@ -115,6 +118,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
       for (StringRef Key : IO.keys()) {
+        // Requires 'llvm::yaml::IO' to accept 'StringRef'
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         IO.mapRequired(Key.data(), Val[Key].Value);
       }
       IO.endMapping();

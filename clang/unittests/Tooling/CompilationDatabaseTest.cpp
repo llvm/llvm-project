@@ -971,7 +971,8 @@ TEST_F(TargetAndModeTest, TargetAndMode) {
 
 class ExpandResponseFilesTest : public MemDBTest {
 public:
-  ExpandResponseFilesTest() : FS(new llvm::vfs::InMemoryFileSystem) {}
+  ExpandResponseFilesTest()
+      : FS(llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()) {}
 
 protected:
   void addFile(StringRef File, StringRef Content) {

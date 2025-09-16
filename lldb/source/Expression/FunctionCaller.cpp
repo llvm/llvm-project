@@ -323,8 +323,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
 void FunctionCaller::DeallocateFunctionResults(ExecutionContext &exe_ctx,
                                                lldb::addr_t args_addr) {
   std::list<lldb::addr_t>::iterator pos;
-  pos = std::find(m_wrapper_args_addrs.begin(), m_wrapper_args_addrs.end(),
-                  args_addr);
+  pos = llvm::find(m_wrapper_args_addrs, args_addr);
   if (pos != m_wrapper_args_addrs.end())
     m_wrapper_args_addrs.erase(pos);
 

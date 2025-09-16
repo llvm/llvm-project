@@ -87,34 +87,10 @@ static size_t WriteMemoryCallback(EmulateInstruction *instruction, void *baton,
   return length;
 }
 
-static lldb::addr_t ReadFlags(NativeRegisterContext &regsiter_context) {
-  const RegisterInfo *flags_info = regsiter_context.GetRegisterInfo(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
-  return regsiter_context.ReadRegisterAsUnsigned(flags_info,
-                                                 LLDB_INVALID_ADDRESS);
-}
-
-static int GetSoftwareBreakpointSize(const ArchSpec &arch,
-                                     lldb::addr_t next_flags) {
-  if (arch.GetMachine() == llvm::Triple::arm) {
-    if (next_flags & 0x20)
-      // Thumb mode
-      return 2;
-    // Arm mode
-    return 4;
-  }
-  if (arch.IsMIPS() || arch.GetTriple().isPPC64() ||
-      arch.GetTriple().isRISCV() || arch.GetTriple().isLoongArch())
-    return 4;
-  return 0;
-}
-
-static Status SetSoftwareBreakpointOnPC(const ArchSpec &arch, lldb::addr_t pc,
-                                        lldb::addr_t next_flags,
-                                        NativeProcessProtocol &process) {
-  int size_hint = GetSoftwareBreakpointSize(arch, next_flags);
+static Status SetSoftwareBreakpoint(lldb::addr_t bp_addr, unsigned bp_size,
+                                    NativeProcessProtocol &process) {
   Status error;
-  error = process.SetBreakpoint(pc, size_hint, /*hardware=*/false);
+  error = process.SetBreakpoint(bp_addr, bp_size, /*hardware=*/false);
 
   // If setting the breakpoint fails because pc is out of the address
   // space, ignore it and let the debugee segfault.
@@ -136,7 +112,6 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
   std::unique_ptr<EmulateInstruction> emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypePCModifying,
                                      nullptr));
-
   if (emulator_up == nullptr)
     return Status::FromErrorString("Instruction emulator not found!");
 
@@ -147,65 +122,24 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
   emulator_up->SetWriteMemCallback(&WriteMemoryCallback);
   emulator_up->SetWriteRegCallback(&WriteRegisterCallback);
 
-  if (!emulator_up->ReadInstruction()) {
-    // try to get at least the size of next instruction to set breakpoint.
-    auto instr_size = emulator_up->GetLastInstrSize();
-    if (!instr_size)
-      return Status::FromErrorString("Read instruction failed!");
-    bool success = false;
-    auto pc = emulator_up->ReadRegisterUnsigned(eRegisterKindGeneric,
-                                                LLDB_REGNUM_GENERIC_PC,
-                                                LLDB_INVALID_ADDRESS, &success);
-    if (!success)
-      return Status::FromErrorString("Reading pc failed!");
-    lldb::addr_t next_pc = pc + *instr_size;
-    auto result =
-        SetSoftwareBreakpointOnPC(arch, next_pc, /* next_flags */ 0x0, process);
-    m_threads_stepping_with_breakpoint.insert({thread.GetID(), next_pc});
-    return result;
+  auto bp_locaions_predictor =
+      EmulateInstruction::CreateBreakpointLocationPredictor(
+          std::move(emulator_up));
+
+  auto bp_locations = bp_locaions_predictor->GetBreakpointLocations(error);
+  if (error.Fail())
+    return error;
+
+  for (auto &&bp_addr : bp_locations) {
+    auto bp_size = bp_locaions_predictor->GetBreakpointSize(bp_addr);
+    if (auto err = bp_size.takeError())
+      return Status(toString(std::move(err)));
+
+    error = SetSoftwareBreakpoint(bp_addr, *bp_size, process);
+    if (error.Fail())
+      return error;
   }
 
-  bool emulation_result =
-      emulator_up->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
-
-  const RegisterInfo *reg_info_pc = register_context.GetRegisterInfo(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
-  const RegisterInfo *reg_info_flags = register_context.GetRegisterInfo(
-      eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
-
-  auto pc_it =
-      baton.m_register_values.find(reg_info_pc->kinds[eRegisterKindDWARF]);
-  auto flags_it = reg_info_flags == nullptr
-                      ? baton.m_register_values.end()
-                      : baton.m_register_values.find(
-                            reg_info_flags->kinds[eRegisterKindDWARF]);
-
-  lldb::addr_t next_pc;
-  lldb::addr_t next_flags;
-  if (emulation_result) {
-    assert(pc_it != baton.m_register_values.end() &&
-           "Emulation was successfull but PC wasn't updated");
-    next_pc = pc_it->second.GetAsUInt64();
-
-    if (flags_it != baton.m_register_values.end())
-      next_flags = flags_it->second.GetAsUInt64();
-    else
-      next_flags = ReadFlags(register_context);
-  } else if (pc_it == baton.m_register_values.end()) {
-    // Emulate instruction failed and it haven't changed PC. Advance PC with
-    // the size of the current opcode because the emulation of all
-    // PC modifying instruction should be successful. The failure most
-    // likely caused by a not supported instruction which don't modify PC.
-    next_pc = register_context.GetPC() + emulator_up->GetOpcode().GetByteSize();
-    next_flags = ReadFlags(register_context);
-  } else {
-    // The instruction emulation failed after it modified the PC. It is an
-    // unknown error where we can't continue because the next instruction is
-    // modifying the PC but we don't  know how.
-    return Status::FromErrorString(
-        "Instruction emulation failed unexpectedly.");
-  }
-  auto result = SetSoftwareBreakpointOnPC(arch, next_pc, next_flags, process);
-  m_threads_stepping_with_breakpoint.insert({thread.GetID(), next_pc});
-  return result;
+  m_threads_stepping_with_breakpoint.insert({thread.GetID(), bp_locations});
+  return error;
 }

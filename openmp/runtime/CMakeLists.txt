@@ -136,7 +136,7 @@ set(LIBOMP_ASMFLAGS "" CACHE STRING
   "Appended user specified assembler flags.")
 set(LIBOMP_LDFLAGS "" CACHE STRING
   "Appended user specified linker flags.")
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
   if("${LIBOMP_ARCH}" STREQUAL "ppc")

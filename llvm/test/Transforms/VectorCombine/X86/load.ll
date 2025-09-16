@@ -553,8 +553,7 @@ define <4 x float> @load_v2f32_extract_insert_v4f32(ptr align 16 dereferenceable
 
 define <4 x float> @load_v8f32_extract_insert_v4f32(ptr align 16 dereferenceable(16) %p) nofree nosync {
 ; SSE2-LABEL: @load_v8f32_extract_insert_v4f32(
-; SSE2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x float>, ptr [[P:%.*]], i32 0, i32 0
-; SSE2-NEXT:    [[S:%.*]] = load float, ptr [[TMP1]], align 4
+; SSE2-NEXT:    [[S:%.*]] = load float, ptr [[TMP1:%.*]], align 4
 ; SSE2-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
 ; SSE2-NEXT:    ret <4 x float> [[R]]
 ;
@@ -590,8 +589,7 @@ define <8 x i32> @load_v1i32_extract_insert_v8i32_extra_use(ptr align 16 derefer
 define <8 x i16> @gep1_load_v2i16_extract_insert_v8i16(ptr align 1 dereferenceable(16) %p) nofree nosync {
 ; CHECK-LABEL: @gep1_load_v2i16_extract_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <2 x i16>, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i16>, ptr [[GEP]], i32 0, i32 0
-; CHECK-NEXT:    [[S:%.*]] = load i16, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[S:%.*]] = load i16, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
@@ -605,11 +603,10 @@ define <8 x i16> @gep1_load_v2i16_extract_insert_v8i16(ptr align 1 dereferenceab
 ; PR30986 - split vector loads for scalarized operations
 define <2 x i64> @PR30986(ptr %0) {
 ; CHECK-LABEL: @PR30986(
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i64>, ptr [[TMP0:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2:%.*]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> undef, i64 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <2 x i64>, ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <2 x i64>, ptr [[TMP2]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP5]], i64 [[TMP8]], i32 1

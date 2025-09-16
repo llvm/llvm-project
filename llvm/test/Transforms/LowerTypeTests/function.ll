@@ -28,14 +28,13 @@ target datalayout = "e-p:64:64"
 ; NATIVE: private constant [0 x i8] zeroinitializer
 ; WASM32: private constant [0 x i8] zeroinitializer
 
-; NATIVE: @f = alias void (), ptr @[[JT:.*]]
+; JT4: @f = alias [4 x i8], ptr @[[JT:.*]]
+; JT8: @f = alias [8 x i8], ptr @[[JT:.*]]
+; JT16: @f = alias [16 x i8], ptr @[[JT:.*]]
 
-; X86: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; ARM: @g = internal alias void (), getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; THUMB: @g = internal alias void (), getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; THUMBV6M: @g = internal alias void (), getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
-; RISCV: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; LOONGARCH64: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT4: @g = internal alias [4 x i8], getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT8: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT16: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
 
 ; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]

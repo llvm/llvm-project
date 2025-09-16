@@ -1293,7 +1293,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   RDA = &getAnalysis<ReachingDefAnalysis>();
   MF->getProperties().setTracksLiveness();
   MRI = &MF->getRegInfo();
-  TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);
   BBUtils->computeAllBlockSizes();

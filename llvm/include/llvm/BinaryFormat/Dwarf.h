@@ -19,6 +19,7 @@
 #ifndef LLVM_BINARYFORMAT_DWARF_H
 #define LLVM_BINARYFORMAT_DWARF_H
 
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -757,6 +758,12 @@ enum CallingConvention {
   DW_CC_hi_user = 0xff
 };
 
+enum AddressSpace {
+#define HANDLE_DW_ASPACE(ID, NAME) DW_ASPACE_LLVM_##NAME = ID,
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED) DW_ASPACE_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
 enum InlineAttribute {
   // Inline codes
   DW_INL_not_inlined = 0x00,
@@ -1011,6 +1018,7 @@ LLVM_ABI StringRef IndexString(unsigned Idx);
 LLVM_ABI StringRef FormatString(DwarfFormat Format);
 LLVM_ABI StringRef FormatString(bool IsDWARF64);
 LLVM_ABI StringRef RLEString(unsigned RLE);
+LLVM_ABI StringRef AddressSpaceString(unsigned AS, const llvm::Triple &TT);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -1191,32 +1199,32 @@ template <typename Enum> struct EnumTraits : public std::false_type {};
 
 template <> struct EnumTraits<Attribute> : public std::true_type {
   static constexpr char Type[3] = "AT";
-  static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Form> : public std::true_type {
   static constexpr char Type[5] = "FORM";
-  static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Index> : public std::true_type {
   static constexpr char Type[4] = "IDX";
-  static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Tag> : public std::true_type {
   static constexpr char Type[4] = "TAG";
-  static constexpr StringRef (*StringFn)(unsigned) = &TagString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<LineNumberOps> : public std::true_type {
   static constexpr char Type[4] = "LNS";
-  static constexpr StringRef (*StringFn)(unsigned) = &LNStandardString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<LocationAtom> : public std::true_type {
   static constexpr char Type[3] = "OP";
-  static constexpr StringRef (*StringFn)(unsigned) = &OperationEncodingString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 inline uint64_t computeTombstoneAddress(uint8_t AddressByteSize) {

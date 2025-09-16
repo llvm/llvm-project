@@ -14,7 +14,6 @@ use omp_lib
   !ERROR: List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
     allocate(darray(a, b))
 

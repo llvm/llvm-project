@@ -1493,8 +1493,9 @@ enum NodeType {
   VECREDUCE_UMIN,
 
   // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
-  // The partial reduction nodes sign or zero extend Input1 and Input2 to the
-  // element type of Accumulator before multiplying their results.
+  // The partial reduction nodes sign or zero extend Input1 and Input2
+  // (with the extension kind noted below) to the element type of
+  // Accumulator before multiplying their results.
   // This result is concatenated to the Accumulator, and this is then reduced,
   // using addition, to the result type.
   // The output is only expected to either be given to another partial reduction
@@ -1506,8 +1507,9 @@ enum NodeType {
   // multiple of the number of elements in the Accumulator / output type.
   // Input1 and Input2 must have an element type which is the same as or smaller
   // than the element type of the Accumulator and output.
-  PARTIAL_REDUCE_SMLA,
-  PARTIAL_REDUCE_UMLA,
+  PARTIAL_REDUCE_SMLA,  // sext, sext
+  PARTIAL_REDUCE_UMLA,  // zext, zext
+  PARTIAL_REDUCE_SUMLA, // sext, zext
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
@@ -1555,6 +1557,12 @@ enum NodeType {
   // node supports result types which are wider than i1, where the high
   // bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
+
+  // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
+  // Operands: Load pointer, Store pointer, Element size
+  // Output: Mask
+  LOOP_DEPENDENCE_WAR_MASK,
+  LOOP_DEPENDENCE_RAW_MASK,
 
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address

@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_half_sin.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/half_sin.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION half_sin
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION half_sin
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

@@ -233,6 +233,9 @@ public:
   /// Return true if this is 'token'.
   bool isTokenTy() const { return getTypeID() == TokenTyID; }
 
+  /// Returns true if this is 'token' or a token-like target type.s
+  bool isTokenLikeTy() const;
+
   /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
@@ -515,7 +518,7 @@ inline Type **unwrap(LLVMTypeRef* Tys) {
 }
 
 inline LLVMTypeRef *wrap(Type **Tys) {
-  return reinterpret_cast<LLVMTypeRef*>(const_cast<Type**>(Tys));
+  return reinterpret_cast<LLVMTypeRef *>(Tys);
 }
 
 } // end namespace llvm

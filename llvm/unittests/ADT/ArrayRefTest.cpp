@@ -8,10 +8,16 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <limits>
 #include <vector>
+#if __has_include(<version>)
+#include <version>
+#endif
+#ifdef __cpp_lib_span
+#include <span>
+#endif
+
 using namespace llvm;
 
 // Check that the ArrayRef-of-pointer converting constructor only allows adding
@@ -98,6 +104,48 @@ TEST(ArrayRefTest, DropFront) {
   EXPECT_TRUE(AR1.drop_front(2).equals(AR2));
 }
 
+TEST(ArrayRefTest, ConsumeFront) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[0]);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[1]);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
+TEST(ArrayRefTest, ConsumeBack) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(TheNumbers, AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[5]);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[4]);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
+TEST(ArrayRefTest, MutableArryaRefConsumeFront) {
+  int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  MutableArrayRef<int> AR1(TheNumbers);
+  MutableArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[0]);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[1]);
+  EXPECT_TRUE(AR1.equals(AR2));
+
+  AR1.consume_front() = 33;
+  EXPECT_EQ(TheNumbers[2], 33);
+}
+
+TEST(ArrayRefTest, MutableArryaRefConsumeBack) {
+  int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  MutableArrayRef<int> AR1(TheNumbers);
+  MutableArrayRef<int> AR2(TheNumbers, AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[5]);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[4]);
+  EXPECT_TRUE(AR1.equals(AR2));
+
+  AR1.consume_back() = 33;
+  EXPECT_EQ(TheNumbers[3], 33);
+}
+
 TEST(ArrayRefTest, DropWhile) {
   static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
   ArrayRef<int> AR1(TheNumbers);
@@ -181,6 +229,27 @@ TEST(ArrayRefTest, Equals) {
 
 TEST(ArrayRefTest, EmptyEquals) {
   EXPECT_TRUE(ArrayRef<unsigned>() == ArrayRef<unsigned>());
+}
+
+TEST(ArrayRefTest, Compare) {
+  ArrayRef<char> Ban("Ban");
+  ArrayRef<char> Banana("Banana");
+  ArrayRef<char> Band("Band");
+
+  EXPECT_TRUE(Ban < Banana);
+  EXPECT_TRUE(Ban <= Banana);
+  EXPECT_FALSE(Ban > Banana);
+  EXPECT_FALSE(Ban >= Banana);
+
+  EXPECT_FALSE(Banana < Banana);
+  EXPECT_TRUE(Banana <= Banana);
+  EXPECT_FALSE(Banana > Banana);
+  EXPECT_TRUE(Banana >= Banana);
+
+  EXPECT_TRUE(Banana < Band);
+  EXPECT_TRUE(Banana <= Band);
+  EXPECT_FALSE(Banana > Band);
+  EXPECT_FALSE(Banana >= Band);
 }
 
 TEST(ArrayRefTest, ConstConvert) {
@@ -405,5 +474,26 @@ TEST(ArrayRefTest, MutableArrayRefDeductionGuides) {
     EXPECT_EQ(aref.size(), 4u);
   }
 }
+
+#ifdef __cpp_lib_span
+static_assert(std::is_constructible_v<ArrayRef<int>, std::span<const int>>,
+              "should be able to construct ArrayRef from const std::span");
+static_assert(std::is_constructible_v<std::span<const int>, ArrayRef<int>>,
+              "should be able to construct const std::span from ArrayRef");
+static_assert(std::is_constructible_v<ArrayRef<int>, std::span<int>>,
+              "should be able to construct ArrayRef from mutable std::span");
+static_assert(!std::is_constructible_v<std::span<int>, ArrayRef<int>>,
+              "cannot construct mutable std::span from ArrayRef");
+
+static_assert(
+    !std::is_constructible_v<MutableArrayRef<int>, std::span<const int>>,
+    "cannot construct MutableArrayRef from const std::span");
+static_assert(
+    std::is_constructible_v<std::span<const int>, MutableArrayRef<int>>,
+    "should be able to construct const std::span from MutableArrayRef");
+static_assert(
+    std::is_constructible_v<MutableArrayRef<int>, std::span<int>>,
+    "should be able to construct MutableArrayRef from mutable std::span");
+#endif
 
 } // end anonymous namespace

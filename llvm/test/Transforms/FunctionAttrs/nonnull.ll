@@ -1396,5 +1396,35 @@ define ptr @pr91177_non_inbounds_gep(ptr nonnull %arg) {
   ret ptr %res
 }
 
+define ptr @unknown_func(ptr %fn) {
+; FNATTRS-LABEL: define ptr @unknown_func(
+; FNATTRS-SAME: ptr readonly captures(none) [[FN:%.*]]) {
+; FNATTRS-NEXT:    [[RES:%.*]] = call ptr [[FN]]()
+; FNATTRS-NEXT:    ret ptr [[RES]]
+;
+; ATTRIBUTOR-LABEL: define ptr @unknown_func(
+; ATTRIBUTOR-SAME: ptr nofree nonnull captures(none) [[FN:%.*]]) {
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call ptr [[FN]]()
+; ATTRIBUTOR-NEXT:    ret ptr [[RES]]
+;
+  %res = call ptr %fn()
+  ret ptr %res
+}
+
+define ptr @unknown_nonnull_func(ptr %fn) {
+; FNATTRS-LABEL: define nonnull ptr @unknown_nonnull_func(
+; FNATTRS-SAME: ptr readonly captures(none) [[FN:%.*]]) {
+; FNATTRS-NEXT:    [[RES:%.*]] = call nonnull ptr [[FN]]()
+; FNATTRS-NEXT:    ret ptr [[RES]]
+;
+; ATTRIBUTOR-LABEL: define nonnull ptr @unknown_nonnull_func(
+; ATTRIBUTOR-SAME: ptr nofree nonnull captures(none) [[FN:%.*]]) {
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call nonnull ptr [[FN]]()
+; ATTRIBUTOR-NEXT:    ret ptr [[RES]]
+;
+  %res = call nonnull ptr %fn()
+  ret ptr %res
+}
+
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}

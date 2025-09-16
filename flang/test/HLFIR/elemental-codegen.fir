@@ -171,19 +171,19 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<none>) -> !fir.ref<i64>
 // CHECK:           %[[VAL_15:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_12]], %[[VAL_13]], %[[VAL_10]], %[[VAL_11]],
 // CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
-// CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = ".tmp.array"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>)
+// CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = ".tmp.array"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>)
 // CHECK:           %[[VAL_18:.*]] = arith.constant true
 // CHECK:           %[[VAL_19:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_20:.*]] = %[[VAL_19]] to %[[ARG3]] step %[[VAL_19]] unordered {
 // CHECK:             fir.do_loop %[[VAL_21:.*]] = %[[VAL_19]] to %[[ARG2]] step %[[VAL_19]] unordered {
 // CHECK:               %[[VAL_22:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_21]], %[[VAL_20]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
-// CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_21]], %[[VAL_20]])  : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
+// CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_21]], %[[VAL_20]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               hlfir.assign %[[VAL_22]] to %[[VAL_23]] temporary_lhs : !fir.class<!fir.type<_QMtypesTt>>, !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_24:.*]] = fir.undefined tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
-// CHECK:           %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[VAL_18]], [1 : index] : (tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>, i1) -> tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
-// CHECK:           %[[VAL_26:.*]] = fir.insert_value %[[VAL_25]], %[[VAL_17]]#0, [0 : index] : (tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
+// CHECK:           %[[VAL_24:.*]] = fir.undefined tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
+// CHECK:           %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[VAL_18]], [1 : index] : (tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>, i1) -> tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
+// CHECK:           %[[VAL_26:.*]] = fir.insert_value %[[VAL_25]], %[[VAL_17]]#0, [0 : index] : (tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>) -> tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
 // CHECK:           return
 // CHECK:         }
 
@@ -226,21 +226,21 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<none>) -> !fir.ref<i64>
 // CHECK:           %[[VAL_16:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_13]], %[[VAL_14]], %[[VAL_11]], %[[VAL_12]],
 // CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
-// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = ".tmp.array"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>)
+// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = ".tmp.array"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>)
 // CHECK:           %[[VAL_19:.*]] = arith.constant true
 // CHECK:           %[[VAL_20:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_21:.*]] = %[[VAL_20]] to %[[ARG3]] step %[[VAL_20]] unordered {
 // CHECK:             fir.do_loop %[[VAL_22:.*]] = %[[VAL_20]] to %[[ARG2]] step %[[VAL_20]] unordered {
 // CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_22]], %[[VAL_21]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
-// CHECK:               %[[VAL_24:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_22]], %[[VAL_21]])  : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
+// CHECK:               %[[VAL_24:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_22]], %[[VAL_21]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               hlfir.assign %[[VAL_23]] to %[[VAL_24]] temporary_lhs : !fir.class<!fir.type<_QMtypesTt>>, !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_25:.*]] = fir.undefined tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
-// CHECK:           %[[VAL_26:.*]] = fir.insert_value %[[VAL_25]], %[[VAL_19]], [1 : index] : (tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>, i1) -> tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
-// CHECK:           %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_18]]#0, [0 : index] : (tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
+// CHECK:           %[[VAL_25:.*]] = fir.undefined tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
+// CHECK:           %[[VAL_26:.*]] = fir.insert_value %[[VAL_25]], %[[VAL_19]], [1 : index] : (tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>, i1) -> tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
+// CHECK:           %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_18]]#0, [0 : index] : (tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>) -> tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
 // CHECK:           %[[VAL_28:.*]] = fir.zero_bits !fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>
-// CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_28]](%[[VAL_4]]) source_box %[[VAL_18]]#1 : (!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.shape<2>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>
+// CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_28]](%[[VAL_4]]) source_box %[[VAL_18]]#1 : (!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.shape<2>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>) -> !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>
 // CHECK:           fir.store %[[VAL_29]] to %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_30:.*]] = fir.zero_bits !fir.ref<none>
 // CHECK:           %[[VAL_34:.*]] = arith.constant false
@@ -249,25 +249,25 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_30]] : (!fir.ref<none>) -> !fir.ref<i64>
 // CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_36]], %[[VAL_37]], %[[VAL_34]], %[[VAL_35]],
 // CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
-// CHECK:           %[[VAL_41:.*]]:2 = hlfir.declare %[[VAL_40]] {uniq_name = ".tmp.array"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>)
+// CHECK:           %[[VAL_41:.*]]:2 = hlfir.declare %[[VAL_40]] {uniq_name = ".tmp.array"} : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>)
 // CHECK:           %[[VAL_42:.*]] = arith.constant true
 // CHECK:           %[[VAL_43:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_44:.*]] = %[[VAL_43]] to %[[ARG3]] step %[[VAL_43]] unordered {
 // CHECK:             fir.do_loop %[[VAL_45:.*]] = %[[VAL_43]] to %[[ARG2]] step %[[VAL_43]] unordered {
-// CHECK:               %[[VAL_46:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_45]], %[[VAL_44]])  : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
+// CHECK:               %[[VAL_46:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_45]], %[[VAL_44]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               %[[VAL_47:.*]] = arith.constant false
 // CHECK:               %[[VAL_48:.*]] = fir.undefined tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>
 // CHECK:               %[[VAL_49:.*]] = fir.insert_value %[[VAL_48]], %[[VAL_47]], [1 : index] : (tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>, i1) -> tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>
 // CHECK:               %[[VAL_50:.*]] = fir.insert_value %[[VAL_49]], %[[VAL_46]], [0 : index] : (tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>, !fir.class<!fir.type<_QMtypesTt>>) -> tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>
-// CHECK:               %[[VAL_51:.*]] = hlfir.designate %[[VAL_41]]#0 (%[[VAL_45]], %[[VAL_44]])  : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
+// CHECK:               %[[VAL_51:.*]] = hlfir.designate %[[VAL_41]]#0 (%[[VAL_45]], %[[VAL_44]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               hlfir.assign %[[VAL_46]] to %[[VAL_51]] temporary_lhs : !fir.class<!fir.type<_QMtypesTt>>, !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               %[[VAL_52:.*]] = fir.box_addr %[[VAL_46]] : (!fir.class<!fir.type<_QMtypesTt>>) -> !fir.heap<!fir.type<_QMtypesTt>>
 // CHECK:               %[[VAL_53:.*]] = fir.convert %[[VAL_46]] : (!fir.class<!fir.type<_QMtypesTt>>) -> !fir.box<none>
 // CHECK:               fir.call @_FortranADestroyWithoutFinalization(%[[VAL_53]]) : (!fir.box<none>) -> ()
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_54:.*]] = fir.undefined tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
-// CHECK:           %[[VAL_55:.*]] = fir.insert_value %[[VAL_54]], %[[VAL_42]], [1 : index] : (tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>, i1) -> tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
-// CHECK:           %[[VAL_56:.*]] = fir.insert_value %[[VAL_55]], %[[VAL_41]]#0, [0 : index] : (tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>, !fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>) -> tuple<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, i1>
+// CHECK:           %[[VAL_54:.*]] = fir.undefined tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
+// CHECK:           %[[VAL_55:.*]] = fir.insert_value %[[VAL_54]], %[[VAL_42]], [1 : index] : (tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>, i1) -> tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
+// CHECK:           %[[VAL_56:.*]] = fir.insert_value %[[VAL_55]], %[[VAL_41]]#0, [0 : index] : (tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>, !fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>) -> tuple<!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, i1>
 // CHECK:           return
 // CHECK:         }

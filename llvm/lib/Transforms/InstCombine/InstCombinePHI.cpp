@@ -60,17 +60,18 @@ bool InstCombinerImpl::foldDeadPhiWeb(PHINode &PN) {
   SmallVector<PHINode *, 16> Stack;
   SmallPtrSet<PHINode *, 16> Visited;
   Stack.push_back(&PN);
+  Visited.insert(&PN);
   while (!Stack.empty()) {
     PHINode *Phi = Stack.pop_back_val();
-    if (!Visited.insert(Phi).second)
-      continue;
-    // Early stop if the set of PHIs is large
-    if (Visited.size() == 16)
-      return false;
     for (User *Use : Phi->users()) {
-      if (PHINode *PhiUse = dyn_cast<PHINode>(Use))
+      if (PHINode *PhiUse = dyn_cast<PHINode>(Use)) {
+        if (!Visited.insert(PhiUse).second)
+          continue;
+        // Early stop if the set of PHIs is large
+        if (Visited.size() >= 16)
+          return false;
         Stack.push_back(PhiUse);
-      else
+      } else
         return false;
     }
   }
@@ -841,7 +842,7 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
       NumZexts++;
     } else if (auto *C = dyn_cast<Constant>(V)) {
       // Make sure that constants can fit in the new type.
-      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType);
+      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType, DL);
       if (!Trunc)
         return nullptr;
       NewIncoming.push_back(Trunc);
@@ -870,7 +871,14 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
     NewPhi->addIncoming(NewIncoming[I], Phi.getIncomingBlock(I));
 
   InsertNewInstBefore(NewPhi, Phi.getIterator());
-  return CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
+  auto *CI = CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
+
+  // We use a dropped location here because the new ZExt is necessarily a merge
+  // of ZExtInsts and at least one constant from incoming branches; the presence
+  // of the constant means we have no viable DebugLoc from that branch, and
+  // therefore we must use a dropped location.
+  CI->setDebugLoc(DebugLoc::getDropped());
+  return CI;
 }
 
 /// If all operands to a PHI node are the same "unary" operator and they all are

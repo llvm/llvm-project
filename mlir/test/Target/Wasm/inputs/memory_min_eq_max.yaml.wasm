@@ -1,0 +1,10 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            MEMORY
+    Memories:
+      - Flags:           [ HAS_MAX ]
+        Minimum:         0x0
+        Maximum:         0x0
+...

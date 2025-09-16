@@ -9,13 +9,11 @@
 
 include "APIDefs.td"
 
-def : Handle {
-    let name = "some_handle_t";
+def some_handle_t: Handle {
     let desc = "An example handle type";
 }
 
-def : Enum {
-  let name = "my_type_tagged_enum_t";
+def my_type_tagged_enum_t : Enum {
   let desc = "Example type tagged enum";
   let is_typed = 1;
   let etors = [
@@ -34,8 +32,7 @@ def : Enum {
 // CHECK-API-NEXT: [some_handle_t] Value three.
 // CHECK-API-NEXT: MY_TYPE_TAGGED_ENUM_VALUE_THREE = 2,
 
-def : Function {
-    let name = "FunctionA";
+def FunctionA : Function {
     let desc = "Function A description";
     let details = [ "Function A detailed information" ];
   let params = [

@@ -1,4 +1,4 @@
-//===--- DynamicStaticInitializersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
 AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   const Expr *Init = Node.getInit();
   if (Init && !Init->isValueDependent()) {
@@ -24,6 +26,8 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   }
   return false;
 }
+
+} // namespace
 
 DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(
     StringRef Name, ClangTidyContext *Context)

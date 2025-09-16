@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
+typedef __INT64_TYPE__ int64_t;
 namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
@@ -465,3 +466,31 @@ namespace ArrayRoot {
 
   static_assert(foo() == 0);
 }
+
+namespace bitcast {
+  template <typename F, typename T>
+  constexpr T bit_cast(const F &f) {
+    return __builtin_bit_cast(T, f);
+  }
+  constexpr int foo() {
+    double *d = std::allocator<double>{}.allocate(2);
+    std::construct_at<double>(d, 0);
+
+    double &dd = *d;
+
+    int64_t i = bit_cast<double, int64_t>(*d);
+
+
+    std::allocator<double>{}.deallocate(d);
+    return i;
+  }
+  static_assert(foo() == 0);
+}
+
+constexpr int modify_const_variable() {
+  const int a = 10;
+  new ((int *)&a) int(12); // both-note {{modification of object of const-qualified type 'const int' is not allowed in a constant expression}}
+  return a;
+}
+static_assert(modify_const_variable()); // both-error {{not an integral constant expression}} \
+                                        // both-note {{in call to}}

@@ -358,7 +358,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
 
 unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
   StringRef Namespace = Target.getInstNamespace();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   unsigned NumCol = ValueCols.size();

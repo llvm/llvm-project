@@ -1,4 +1,4 @@
-//===--- StringviewNullptrCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,7 @@ AST_MATCHER(clang::VarDecl, isDirectInitialization) {
 
 } // namespace
 
-RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
+static RewriteRuleWith<std::string> stringviewNullptrCheckImpl() {
   auto ConstructionWarning =
       cat("constructing basic_string_view from null is undefined; replace with "
           "the default constructor");

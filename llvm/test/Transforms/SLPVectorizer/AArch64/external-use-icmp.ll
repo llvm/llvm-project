@@ -5,24 +5,21 @@ define i16 @foo(i16 %in1, i16 %in2) {
 ; CHECK-LABEL: define i16 @foo(
 ; CHECK-SAME: i16 [[IN1:%.*]], i16 [[IN2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> poison, i16 [[IN1]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> poison, i16 [[IN2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw nsw <2 x i64> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i64> [[TMP9]], splat (i64 65535)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i64> [[TMP12]], splat (i64 65533)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
+; CHECK-NEXT:    [[ZEXT1_1:%.*]] = zext i16 [[IN1]] to i64
+; CHECK-NEXT:    [[ZEXT2_1:%.*]] = zext i16 [[IN2]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[ZEXT2_1]], [[ZEXT1_1]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[TMP10]], 65535
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[AND1]], 65533
 ; CHECK-NEXT:    [[ZEXT3_1:%.*]] = zext i1 [[TMP8]] to i16
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i32 1
 ; CHECK-NEXT:    [[CMP2_1:%.*]] = icmp ne i64 [[TMP10]], 196605
 ; CHECK-NEXT:    [[ZEXT4_1:%.*]] = zext i1 [[CMP2_1]] to i16
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i16 [[ZEXT3_1]], [[ZEXT4_1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
+; CHECK-NEXT:    [[ZEXT1_2:%.*]] = zext i16 [[IN1]] to i64
+; CHECK-NEXT:    [[ZEXT2_2:%.*]] = zext i16 [[IN2]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw nsw i64 [[ZEXT2_2]], [[ZEXT1_2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[TMP13]], 65535
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[AND2]], 65533
 ; CHECK-NEXT:    [[ZEXT3_2:%.*]] = zext i1 [[TMP11]] to i16
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[TMP9]], i32 0
 ; CHECK-NEXT:    [[CMP2_2:%.*]] = icmp ne i64 [[TMP13]], 196605
 ; CHECK-NEXT:    [[ZEXT4_2:%.*]] = zext i1 [[CMP2_2]] to i16
 ; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i16 [[ADD1]], [[ZEXT4_2]]

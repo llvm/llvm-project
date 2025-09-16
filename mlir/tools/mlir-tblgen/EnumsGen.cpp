@@ -222,7 +222,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         llvm::StringSwitch<StringRef>(separator.trim())
             .Case("|", "parseOptionalVerticalBar")
             .Case(",", "parseOptionalComma")
-            .Default("error, enum seperator must be '|' or ','");
+            .Default("error, enum separator must be '|' or ','");
     os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
                   enumInfo.getSummary(), casesList, separator,
                   parseSeparatorFn);
@@ -648,8 +648,10 @@ static void emitSpecializedAttrDef(const Record &enumDef, raw_ostream &os) {
 
   os << formatv("{0} {1}::getValue() const {{\n", enumName, attrClassName);
 
-  os << formatv("  return static_cast<{0}>(::mlir::IntegerAttr::getInt());\n",
-                enumName);
+  os << formatv(
+      "  return "
+      "static_cast<{0}>(::mlir::IntegerAttr::getValue().getZExtValue());\n",
+      enumName);
 
   os << "}\n";
 }

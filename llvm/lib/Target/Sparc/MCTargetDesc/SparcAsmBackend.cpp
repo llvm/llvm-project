@@ -12,7 +12,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -128,8 +127,7 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
@@ -182,15 +180,15 @@ std::optional<MCFixupKind> SparcAsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // clang-format off
   const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
-    // name                    offset bits  flags
-    { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_sparc_13",        19,     13,  0 },
+      // name                    offset bits flags
+      {"fixup_sparc_call30",     2,     30,  0},
+      {"fixup_sparc_13",        19,     13,  0},
   };
 
   const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
-    // name                    offset bits  flags
-    { "fixup_sparc_call30",     0,     30,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_sparc_13",         0,     13,  0 },
+      // name                    offset bits flags
+      {"fixup_sparc_call30",     0,     30,  0},
+      {"fixup_sparc_13",         0,     13,  0},
   };
   // clang-format on
 
@@ -208,22 +206,22 @@ MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   MCFixupKindInfo Info{};
   switch (uint16_t(Kind)) {
   case ELF::R_SPARC_PC10:
-    Info = {"", 22, 10, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 22, 10, 0};
     break;
   case ELF::R_SPARC_PC22:
-    Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 10, 22, 0};
     break;
   case ELF::R_SPARC_WDISP10:
-    Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 0, 32, 0};
     break;
   case ELF::R_SPARC_WDISP16:
-    Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 0, 32, 0};
     break;
   case ELF::R_SPARC_WDISP19:
-    Info = {"", 13, 19, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 13, 19, 0};
     break;
   case ELF::R_SPARC_WDISP22:
-    Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 10, 22, 0};
     break;
 
   case ELF::R_SPARC_HI22:
@@ -253,21 +251,20 @@ MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Info;
 }
 
-void SparcAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
-                                 const MCValue &Target,
-                                 MutableArrayRef<char> Data, uint64_t Value,
-                                 bool IsResolved) {
+void SparcAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                 const MCValue &Target, uint8_t *Data,
+                                 uint64_t Value, bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (!IsResolved)
     return;
   Value = adjustFixupValue(Fixup.getKind(), Value);
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  unsigned Offset = Fixup.getOffset();
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-    Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 

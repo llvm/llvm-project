@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_tgamma.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/tgamma.h>
 
-#define FUNCTION tgamma
+#define __CLC_FUNCTION tgamma
 #define __CLC_BODY <clc/shared/unary_def.inc>
 #include <clc/math/gentype.inc>

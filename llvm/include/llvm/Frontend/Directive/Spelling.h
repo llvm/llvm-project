@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 #include <limits>
 #include <tuple>
@@ -33,7 +34,8 @@ struct Spelling {
   VersionRange Versions;
 };
 
-StringRef FindName(llvm::iterator_range<const Spelling *>, unsigned Version);
+LLVM_ABI StringRef FindName(llvm::iterator_range<const Spelling *>,
+                            unsigned Version);
 
 } // namespace llvm::directive
 

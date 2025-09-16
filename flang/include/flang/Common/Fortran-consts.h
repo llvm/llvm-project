@@ -9,6 +9,7 @@
 #ifndef FORTRAN_COMMON_FORTRAN_CONSTS_H_
 #define FORTRAN_COMMON_FORTRAN_CONSTS_H_
 
+#include "api-attrs.h"
 #include "enum-class.h"
 #include <cstdint>
 
@@ -27,8 +28,10 @@ ENUM_CLASS(IoStmtKind, None, Backspace, Close, Endfile, Flush, Inquire, Open,
 ENUM_CLASS(
     DefinedIo, ReadFormatted, ReadUnformatted, WriteFormatted, WriteUnformatted)
 
+RT_OFFLOAD_VAR_GROUP_BEGIN
 // Fortran arrays may have up to 15 dimensions (See Fortran 2018 section 5.4.6).
 static constexpr int maxRank{15};
+RT_OFFLOAD_VAR_GROUP_END
 
 // Floating-point rounding modes; these are packed into a byte to save
 // room in the runtime's format processing context structure.  These

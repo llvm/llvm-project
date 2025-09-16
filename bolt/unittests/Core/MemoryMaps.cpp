@@ -100,10 +100,10 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
       "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
       Pid, Filename);
 
-  BC->SegmentMapInfo[0x11da000] =
-      SegmentInfo{0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true};
-  BC->SegmentMapInfo[0x31d0000] =
-      SegmentInfo{0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000, true};
+  BC->SegmentMapInfo[0x11da000] = SegmentInfo{
+      0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true, false};
+  BC->SegmentMapInfo[0x31d0000] = SegmentInfo{
+      0x31d0000, 0x51ac82c, 0x31d0000, 0x3000000, 0x200000, true, false};
 
   DataAggregator DA("");
   BC->setFilename(Filename);
@@ -131,12 +131,12 @@ TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
       "[0xabc2000000(0x8000000) @ 0x31d0000 103:01 1573523 0]: r-xp {1}\n",
       Pid, Filename);
 
-  BC->SegmentMapInfo[0x11da000] =
-      SegmentInfo{0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true};
+  BC->SegmentMapInfo[0x11da000] = SegmentInfo{
+      0x11da000, 0x10da000, 0x11ca000, 0x10da000, 0x10000, true, false};
   // Using '0x31d0fff' FileOffset which triggers a different base address
   // for this second text segment.
-  BC->SegmentMapInfo[0x31d0000] =
-      SegmentInfo{0x31d0000, 0x51ac82c, 0x31d0fff, 0x3000000, 0x200000, true};
+  BC->SegmentMapInfo[0x31d0000] = SegmentInfo{
+      0x31d0000, 0x51ac82c, 0x31d0fff, 0x3000000, 0x200000, true, false};
 
   DataAggregator DA("");
   BC->setFilename(Filename);

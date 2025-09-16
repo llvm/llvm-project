@@ -89,7 +89,8 @@ public:
 
   void setAddressSpaceMap(bool DefaultIsPrivate);
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   uint64_t getPointerWidthV(LangAS AS) const override {
     if (isR600(getTriple()))
@@ -399,15 +400,12 @@ public:
   /// in the DWARF.
   std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
-    const unsigned DWARF_Private = 1;
-    const unsigned DWARF_Local = 2;
-    if (AddressSpace == llvm::AMDGPUAS::PRIVATE_ADDRESS) {
-      return DWARF_Private;
-    } else if (AddressSpace == llvm::AMDGPUAS::LOCAL_ADDRESS) {
-      return DWARF_Local;
-    } else {
+    int DWARFAS = llvm::AMDGPU::mapToDWARFAddrSpace(AddressSpace);
+    // If there is no corresponding address space identifier, or it would be
+    // the default, then don't emit the attribute.
+    if (DWARFAS == -1 || DWARFAS == llvm::AMDGPU::DWARFAS::DEFAULT)
       return std::nullopt;
-    }
+    return DWARFAS;
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
@@ -439,6 +437,7 @@ public:
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
+    HasFullBFloat16 = true;
     auto TargetIDFeatures =
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
     for (const auto &F : Features) {

@@ -227,6 +227,8 @@ public:
 
   const char *GetIOHandlerHelpPrologue();
 
+  void RefreshIOHandler();
+
   void ClearIOHandlers();
 
   bool EnableLog(llvm::StringRef channel,
@@ -307,6 +309,10 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetDisabledAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledAnsiSuffix() const;
+
   bool GetUseAutosuggestion() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
@@ -361,7 +367,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const std::string &GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() const { return m_instance_name; }
 
   bool GetShowInlineDiagnostics() const;
 

@@ -354,11 +354,11 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
     offset += 16;
   }
 
-  if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
+  if (ctx.aarch64PauthAbiCoreInfo) {
     write32(ctx, buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
-    write32(ctx, buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
-    memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
-           ctx.aarch64PauthAbiCoreInfo.size());
+    write32(ctx, buf + offset + 4, AArch64PauthAbiCoreInfo::size());
+    write64(ctx, buf + offset + 8, ctx.aarch64PauthAbiCoreInfo->platform);
+    write64(ctx, buf + offset + 16, ctx.aarch64PauthAbiCoreInfo->version);
   }
 }
 
@@ -366,8 +366,8 @@ size_t GnuPropertySection::getSize() const {
   uint32_t contentSize = 0;
   if (ctx.arg.andFeatures != 0)
     contentSize += ctx.arg.is64 ? 16 : 12;
-  if (!ctx.aarch64PauthAbiCoreInfo.empty())
-    contentSize += 4 + 4 + ctx.aarch64PauthAbiCoreInfo.size();
+  if (ctx.aarch64PauthAbiCoreInfo)
+    contentSize += 4 + 4 + AArch64PauthAbiCoreInfo::size();
   assert(contentSize != 0);
   return contentSize + 16;
 }
@@ -769,10 +769,6 @@ void GotSection::writeTo(uint8_t *buf) {
   }
 }
 
-static uint64_t getMipsPageAddr(uint64_t addr) {
-  return (addr + 0x8000) & ~0xffff;
-}
-
 static uint64_t getMipsPageCount(uint64_t size) {
   return (size + 0xfffe) / 0xffff + 1;
 }
@@ -786,7 +782,7 @@ void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
   FileGot &g = getGot(file);
   if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
-      g.pagesMap.insert({os, {}});
+      g.pagesMap.insert({os, {&sym}});
     else
       g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
@@ -1066,8 +1062,7 @@ void MipsGotSection::build() {
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
         ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+            {ctx.target->tlsGotRel, this, offset, true, *s, 0, R_ABS});
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1115,15 +1110,16 @@ void MipsGotSection::build() {
       size_t pageCount = l.second.count;
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                         l.first, int64_t(pi * 0x10000)});
+        ctx.mainPart->relaDyn->addReloc(
+            {ctx.target->relativeRel, this, offset, false, *l.second.repSym,
+             int64_t(pi * 0x10000), RE_MIPS_OSEC_LOCAL_PAGE});
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * ctx.arg.wordsize;
       ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                       DynamicReloc::AddendOnlyWithTargetVA,
-                                       *p.first.first, p.first.second, R_ABS});
+                                       false, *p.first.first, p.first.second,
+                                       R_ABS});
     }
   }
 }
@@ -1646,24 +1642,10 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
-  switch (kind) {
-  case AddendOnly:
-    assert(sym == nullptr);
-    return addend;
-  case AgainstSymbol:
-    assert(sym != nullptr);
-    return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
-    uint64_t ca = inputSec->getRelocTargetVA(
-        ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
-    return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
-  }
-  case MipsMultiGotPage:
-    assert(sym == nullptr);
-    return getMipsPageAddr(outputSec->addr) + addend;
-  }
-  llvm_unreachable("Unknown DynamicReloc::Kind enum");
+  assert(!isFinal && "addend already computed");
+  uint64_t ca = inputSec->getRelocTargetVA(
+      ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
+  return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
@@ -1691,8 +1673,8 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
 void RelocationBaseSection::addSymbolReloc(
     RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
     int64_t addend, std::optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
-           R_ADDEND, addendRelType ? *addendRelType : ctx.target->noneRel);
+  addReloc(true, dynType, isec, offsetInSec, sym, addend, R_ADDEND,
+           addendRelType ? *addendRelType : ctx.target->noneRel);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1700,11 +1682,9 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
     RelType addendRelType) {
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
-    addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ABS});
+    addReloc({dynType, &isec, offsetInSec, true, sym, 0, R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
-             sym, 0, R_ABS, addendRelType);
+    addReloc(false, dynType, isec, offsetInSec, sym, 0, R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
@@ -1744,17 +1724,17 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
+void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = AddendOnly; // Catch errors
+  isFinal = true; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
-    rel.computeRaw(ctx, symTab);
+    rel.finalize(ctx, symTab);
   });
 
   auto irelative = std::stable_partition(
@@ -1939,11 +1919,8 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // For Rela, we also want to sort by r_addend when r_info is the same. This
   // enables us to group by r_addend as well.
   llvm::sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
-    if (a.r_info != b.r_info)
-      return a.r_info < b.r_info;
-    if (a.r_addend != b.r_addend)
-      return a.r_addend < b.r_addend;
-    return a.r_offset < b.r_offset;
+    return std::tie(a.r_info, a.r_addend, a.r_offset) <
+           std::tie(b.r_info, b.r_addend, b.r_offset);
   });
 
   // Group relocations with the same r_info. Note that each group emits a group
@@ -4029,10 +4006,9 @@ void MergeNoTailSection::finalizeContents() {
   // So far, section pieces have offsets from beginning of shards, but
   // we want offsets from beginning of the whole section. Fix them.
   parallelForEach(sections, [&](MergeInputSection *sec) {
-    for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
-      if (sec->pieces[i].live)
-        sec->pieces[i].outputOff +=
-            shardOffsets[getShardId(sec->pieces[i].hash)];
+    for (SectionPiece &piece : sec->pieces)
+      if (piece.live)
+        piece.outputOff += shardOffsets[getShardId(piece.hash)];
   });
 }
 
@@ -4970,7 +4946,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   ctx.in.iplt = std::make_unique<IpltSection>(ctx);
   add(*ctx.in.iplt);
 
-  if (ctx.arg.andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty()) {
+  if (ctx.arg.andFeatures || ctx.aarch64PauthAbiCoreInfo) {
     ctx.in.gnuProperty = std::make_unique<GnuPropertySection>(ctx);
     add(*ctx.in.gnuProperty);
   }

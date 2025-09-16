@@ -188,7 +188,107 @@ AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
+static lldb::SymbolType MapSymbolType(llvm::object::SymbolRef::Type sym_type) {
+  switch (sym_type) {
+  case llvm::object::SymbolRef::ST_Function:
+    return lldb::eSymbolTypeCode;
+  case llvm::object::SymbolRef::ST_Data:
+    return lldb::eSymbolTypeData;
+  case llvm::object::SymbolRef::ST_File:
+    return lldb::eSymbolTypeSourceFile;
+  default:
+    return lldb::eSymbolTypeInvalid;
+  }
+}
+
+void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
+  Log *log = GetLog(LLDBLog::Object);
+  SectionList *sectionList = GetSectionList();
+
+  for (const auto &symbol_ref : m_binary->symbols()) {
+    llvm::object::XCOFFSymbolRef xcoff_sym_ref(symbol_ref);
+
+    llvm::Expected<llvm::StringRef> name_or_err = xcoff_sym_ref.getName();
+    if (!name_or_err) {
+      LLDB_LOG_ERROR(log, name_or_err.takeError(),
+                     "Unable to extract name from the xcoff symbol ref object");
+      continue;
+    }
+
+    llvm::StringRef symbolName = name_or_err.get();
+    // Remove the . prefix added during compilation. This prefix is usually
+    // added to differentiate between reference to the code and function
+    // descriptor. For instance, Adding .func will only allow user to put bp on
+    // .func, which is not known to the user, instead of func.
+    llvm::StringRef name_no_dot =
+        symbolName.starts_with(".") ? symbolName.drop_front() : symbolName;
+    auto storageClass = xcoff_sym_ref.getStorageClass();
+    // C_HIDEXT symbols are not needed to be exposed, with the exception of TOC
+    // which is responsible for storing references to global data
+    if (storageClass == XCOFF::C_HIDEXT && symbolName != "TOC") {
+
+      // Zero or muliple aux entries may suggest ambiguous data
+      if (xcoff_sym_ref.getNumberOfAuxEntries() != 1)
+        continue;
+
+      auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
+      if (!aux_csect_or_err) {
+        LLDB_LOG_ERROR(log, aux_csect_or_err.takeError(),
+                       "Unable to access xcoff csect aux ref object");
+        continue;
+      }
+
+      const llvm::object::XCOFFCsectAuxRef csect_aux = aux_csect_or_err.get();
+
+      // Only add hidden ext entries which come under Program Code, skip others
+      // as they are not useful as debugging data.
+      if (csect_aux.getStorageMappingClass() != XCOFF::XMC_PR)
+        continue;
+
+      // This does not apply to 32-bit,
+      // Only add csect symbols identified by the aux entry, as they are
+      // needed to reference section information. Skip others
+      if (m_binary->is64Bit())
+        if (csect_aux.getAuxType64() != XCOFF::AUX_CSECT)
+          continue;
+    }
+
+    Symbol symbol;
+    symbol.GetMangled().SetValue(ConstString(name_no_dot));
+
+    int16_t sectionNumber = xcoff_sym_ref.getSectionNumber();
+    // Note that XCOFF section headers are numbered from 1 and not 0.
+    size_t sectionIndex = static_cast<size_t>(sectionNumber - 1);
+    if (sectionNumber > 0) {
+      if (sectionIndex < sectionList->GetSize()) {
+
+        lldb::SectionSP section_sp =
+            sectionList->GetSectionAtIndex(sectionIndex);
+        if (!section_sp || section_sp->GetFileAddress() == LLDB_INVALID_ADDRESS)
+          continue;
+
+        lldb::addr_t file_addr = section_sp->GetFileAddress();
+        lldb::addr_t symbolValue = xcoff_sym_ref.getValue();
+        if (symbolValue < file_addr)
+          continue;
+
+        symbol.GetAddressRef() = Address(section_sp, symbolValue - file_addr);
+      }
+    }
+
+    Expected<llvm::object::SymbolRef::Type> sym_type_or_err =
+        symbol_ref.getType();
+    if (!sym_type_or_err) {
+      LLDB_LOG_ERROR(log, sym_type_or_err.takeError(),
+                     "Unable to access xcoff symbol type");
+      continue;
+    }
+
+    symbol.SetType(MapSymbolType(sym_type_or_err.get()));
+
+    lldb_symtab.AddSymbol(symbol);
+  }
+}
 
 bool ObjectFileXCOFF::IsStripped() { return false; }
 

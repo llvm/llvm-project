@@ -28,6 +28,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 namespace llvm {
@@ -96,7 +97,7 @@ protected:
   bool MadeChange;
 
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);

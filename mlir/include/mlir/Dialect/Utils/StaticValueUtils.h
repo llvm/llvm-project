@@ -156,7 +156,7 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 /// corresponding pair of arrays. This is the inverse function of
 /// `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues);
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues);
 
 /// Helper to sort `values` according to matching `keys`.
 SmallVector<Value>

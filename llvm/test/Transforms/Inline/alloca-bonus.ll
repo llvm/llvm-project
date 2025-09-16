@@ -3,8 +3,6 @@
 
 target datalayout = "p:32:32"
 
-declare void @llvm.lifetime.start.p0(i64 %size, ptr nocapture %ptr)
-
 @glbl = external global i32
 
 define void @outer1() {
@@ -20,7 +18,6 @@ define void @inner1(ptr %ptr) {
   store i32 0, ptr %ptr
   %D = getelementptr inbounds i32, ptr %ptr, i32 1
   %F = select i1 false, ptr %ptr, ptr @glbl
-  call void @llvm.lifetime.start.p0(i64 0, ptr %ptr)
   call void @extern()
   ret void
 }
@@ -39,7 +36,6 @@ define void @inner2(ptr %ptr) {
   store i32 0, ptr %ptr
   %D = getelementptr inbounds i32, ptr %ptr, i32 %A
   %F = select i1 false, ptr %ptr, ptr @glbl
-  call void @llvm.lifetime.start.p0(i64 0, ptr %ptr)
   call void @extern()
   ret void
 }
@@ -146,7 +142,6 @@ define void @inner5(i1 %flag, ptr %ptr) {
 if.then:
   %D = getelementptr inbounds i32, ptr %ptr, i32 %A
   %F = select i1 false, ptr %ptr, ptr @glbl
-  call void @llvm.lifetime.start.p0(i64 0, ptr %ptr)
   ret void
 
 exit:

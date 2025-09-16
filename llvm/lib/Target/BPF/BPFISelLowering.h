@@ -66,6 +66,8 @@ public:
 
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
+  unsigned getJumpTableEncoding() const override;
+
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
@@ -81,6 +83,8 @@ private:
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
@@ -114,7 +118,7 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
     return Op.size() >= 8 ? MVT::i64 : MVT::i32;
   }
@@ -163,7 +167,9 @@ private:
   MachineBasicBlock * EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
                                                         MachineBasicBlock *BB)
                                                         const;
-
+  MachineBasicBlock *
+  EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
+                                     MachineBasicBlock *BB) const;
 };
 }
 

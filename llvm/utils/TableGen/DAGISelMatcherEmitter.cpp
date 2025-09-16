@@ -1158,7 +1158,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
       "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
-      "const SmallVectorImpl<SDValue> &Operands) const",
+      "ArrayRef<SDValue> Operands) const",
       OS);
 
   // Emit CompletePattern matchers.

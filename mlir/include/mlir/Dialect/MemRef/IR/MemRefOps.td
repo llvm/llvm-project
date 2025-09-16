@@ -13,7 +13,6 @@ include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
@@ -339,7 +338,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
     The `alloca` operation allocates memory on the stack, to be automatically
     released when control transfers back from the region of its closest
     surrounding operation with an
-    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
+    [`AutomaticAllocationScope`](../Traits/#automaticallocationscope) trait.
     The amount of memory allocated is specified by its memref and additional
     operands. For example:
 
@@ -530,7 +529,7 @@ def MemRef_CastOp : MemRef_Op<"cast", [
 // CopyOp
 //===----------------------------------------------------------------------===//
 
-def CopyOp : MemRef_Op<"copy", [CopyOpInterface, SameOperandsElementType,
+def CopyOp : MemRef_Op<"copy", [SameOperandsElementType,
     SameOperandsShape]> {
 
   let description = [{
@@ -1078,8 +1077,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
 
 def AtomicYieldOp : MemRef_Op<"atomic_yield", [
       HasParent<"GenericAtomicRMWOp">,
-      Pure,
-      Terminator
+      Pure, Terminator, ReturnLike
     ]> {
   let summary = "yield operation for GenericAtomicRMWOp";
   let description = [{
@@ -1165,7 +1163,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
                        MemRefTypeAttr:$type,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
-                       OptionalAttr<I64Attr>:$alignment);
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let assemblyFormat = [{
        ($sym_visibility^)?
@@ -1215,8 +1213,13 @@ def LoadOp : MemRef_Op<"load",
 
     A set `nontemporal` attribute indicates that this load is not expected to
     be reused in the cache. For details, refer to the
-    [https://llvm.org/docs/LangRef.html#load-instruction](LLVM load instruction).
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
     Example:
 
     ```mlir
@@ -1227,7 +1230,38 @@ def LoadOp : MemRef_Op<"load",
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "Type":$resultType,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultType, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
+
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
@@ -1911,8 +1945,13 @@ def MemRef_StoreOp : MemRef_Op<"store",
 
     A set `nontemporal` attribute indicates that this store is not expected to
     be reused in the cache. For details, refer to the
-    [https://llvm.org/docs/LangRef.html#store-instruction](LLVM store instruction).
+    [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
     Example:
 
     ```mlir
@@ -1924,13 +1963,24 @@ def MemRef_StoreOp : MemRef_Op<"store",
                        Arg<AnyMemRef, "the reference to store to",
                            [MemWrite]>:$memref,
                        Variadic<Index>:$indices,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
+    OpBuilder<(ins "Value":$valueToStore,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);
       $_state.addOperands(memref);
-    }]>];
+    }]>
+  ];
 
   let extraClassDeclaration = [{
       Value getValueToStore() { return getOperand(0); }
@@ -2334,6 +2384,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

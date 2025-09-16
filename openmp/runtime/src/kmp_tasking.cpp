@@ -42,221 +42,6 @@ static kmp_tdg_info_t *__kmp_find_tdg(kmp_int32 tdg_id);
 int __kmp_taskloop_task(int gtid, void *ptask);
 #endif
 
-#ifdef BUILD_TIED_TASK_STACK
-
-//  __kmp_trace_task_stack: print the tied tasks from the task stack in order
-//  from top do bottom
-//
-//  gtid: global thread identifier for thread containing stack
-//  thread_data: thread data for task team thread containing stack
-//  threshold: value above which the trace statement triggers
-//  location: string identifying call site of this function (for trace)
-static void __kmp_trace_task_stack(kmp_int32 gtid,
-                                   kmp_thread_data_t *thread_data,
-                                   int threshold, char *location) {
-  kmp_task_stack_t *task_stack = &thread_data->td.td_susp_tied_tasks;
-  kmp_taskdata_t **stack_top = task_stack->ts_top;
-  kmp_int32 entries = task_stack->ts_entries;
-  kmp_taskdata_t *tied_task;
-
-  KA_TRACE(
-      threshold,
-      ("__kmp_trace_task_stack(start): location = %s, gtid = %d, entries = %d, "
-       "first_block = %p, stack_top = %p \n",
-       location, gtid, entries, task_stack->ts_first_block, stack_top));
-
-  KMP_DEBUG_ASSERT(stack_top != NULL);
-  KMP_DEBUG_ASSERT(entries > 0);
-
-  while (entries != 0) {
-    KMP_DEBUG_ASSERT(stack_top != &task_stack->ts_first_block.sb_block[0]);
-    // fix up ts_top if we need to pop from previous block
-    if (entries & TASK_STACK_INDEX_MASK == 0) {
-      kmp_stack_block_t *stack_block = (kmp_stack_block_t *)(stack_top);
-
-      stack_block = stack_block->sb_prev;
-      stack_top = &stack_block->sb_block[TASK_STACK_BLOCK_SIZE];
-    }
-
-    // finish bookkeeping
-    stack_top--;
-    entries--;
-
-    tied_task = *stack_top;
-
-    KMP_DEBUG_ASSERT(tied_task != NULL);
-    KMP_DEBUG_ASSERT(tied_task->td_flags.tasktype == TASK_TIED);
-
-    KA_TRACE(threshold,
-             ("__kmp_trace_task_stack(%s):             gtid=%d, entry=%d, "
-              "stack_top=%p, tied_task=%p\n",
-              location, gtid, entries, stack_top, tied_task));
-  }
-  KMP_DEBUG_ASSERT(stack_top == &task_stack->ts_first_block.sb_block[0]);
-
-  KA_TRACE(threshold,
-           ("__kmp_trace_task_stack(exit): location = %s, gtid = %d\n",
-            location, gtid));
-}
-
-//  __kmp_init_task_stack: initialize the task stack for the first time
-//  after a thread_data structure is created.
-//  It should not be necessary to do this again (assuming the stack works).
-//
-//  gtid: global thread identifier of calling thread
-//  thread_data: thread data for task team thread containing stack
-static void __kmp_init_task_stack(kmp_int32 gtid,
-                                  kmp_thread_data_t *thread_data) {
-  kmp_task_stack_t *task_stack = &thread_data->td.td_susp_tied_tasks;
-  kmp_stack_block_t *first_block;
-
-  // set up the first block of the stack
-  first_block = &task_stack->ts_first_block;
-  task_stack->ts_top = (kmp_taskdata_t **)first_block;
-  memset((void *)first_block, '\0',
-         TASK_STACK_BLOCK_SIZE * sizeof(kmp_taskdata_t *));
-
-  // initialize the stack to be empty
-  task_stack->ts_entries = TASK_STACK_EMPTY;
-  first_block->sb_next = NULL;
-  first_block->sb_prev = NULL;
-}
-
-//  __kmp_free_task_stack: free the task stack when thread_data is destroyed.
-//
-//  gtid: global thread identifier for calling thread
-//  thread_data: thread info for thread containing stack
-static void __kmp_free_task_stack(kmp_int32 gtid,
-                                  kmp_thread_data_t *thread_data) {
-  kmp_task_stack_t *task_stack = &thread_data->td.td_susp_tied_tasks;
-  kmp_stack_block_t *stack_block = &task_stack->ts_first_block;
-
-  KMP_DEBUG_ASSERT(task_stack->ts_entries == TASK_STACK_EMPTY);
-  // free from the second block of the stack
-  while (stack_block != NULL) {
-    kmp_stack_block_t *next_block = (stack_block) ? stack_block->sb_next : NULL;
-
-    stack_block->sb_next = NULL;
-    stack_block->sb_prev = NULL;
-    if (stack_block != &task_stack->ts_first_block) {
-      __kmp_thread_free(thread,
-                        stack_block); // free the block, if not the first
-    }
-    stack_block = next_block;
-  }
-  // initialize the stack to be empty
-  task_stack->ts_entries = 0;
-  task_stack->ts_top = NULL;
-}
-
-//  __kmp_push_task_stack: Push the tied task onto the task stack.
-//     Grow the stack if necessary by allocating another block.
-//
-//  gtid: global thread identifier for calling thread
-//  thread: thread info for thread containing stack
-//  tied_task: the task to push on the stack
-static void __kmp_push_task_stack(kmp_int32 gtid, kmp_info_t *thread,
-                                  kmp_taskdata_t *tied_task) {
-  // GEH - need to consider what to do if tt_threads_data not allocated yet
-  kmp_thread_data_t *thread_data =
-      &thread->th.th_task_team->tt.tt_threads_data[__kmp_tid_from_gtid(gtid)];
-  kmp_task_stack_t *task_stack = &thread_data->td.td_susp_tied_tasks;
-
-  if (tied_task->td_flags.team_serial || tied_task->td_flags.tasking_ser) {
-    return; // Don't push anything on stack if team or team tasks are serialized
-  }
-
-  KMP_DEBUG_ASSERT(tied_task->td_flags.tasktype == TASK_TIED);
-  KMP_DEBUG_ASSERT(task_stack->ts_top != NULL);
-
-  KA_TRACE(20,
-           ("__kmp_push_task_stack(enter): GTID: %d; THREAD: %p; TASK: %p\n",
-            gtid, thread, tied_task));
-  // Store entry
-  *(task_stack->ts_top) = tied_task;
-
-  // Do bookkeeping for next push
-  task_stack->ts_top++;
-  task_stack->ts_entries++;
-
-  if (task_stack->ts_entries & TASK_STACK_INDEX_MASK == 0) {
-    // Find beginning of this task block
-    kmp_stack_block_t *stack_block =
-        (kmp_stack_block_t *)(task_stack->ts_top - TASK_STACK_BLOCK_SIZE);
-
-    // Check if we already have a block
-    if (stack_block->sb_next !=
-        NULL) { // reset ts_top to beginning of next block
-      task_stack->ts_top = &stack_block->sb_next->sb_block[0];
-    } else { // Alloc new block and link it up
-      kmp_stack_block_t *new_block = (kmp_stack_block_t *)__kmp_thread_calloc(
-          thread, sizeof(kmp_stack_block_t));
-
-      task_stack->ts_top = &new_block->sb_block[0];
-      stack_block->sb_next = new_block;
-      new_block->sb_prev = stack_block;
-      new_block->sb_next = NULL;
-
-      KA_TRACE(
-          30,
-          ("__kmp_push_task_stack(): GTID: %d; TASK: %p; Alloc new block: %p\n",
-           gtid, tied_task, new_block));
-    }
-  }
-  KA_TRACE(20, ("__kmp_push_task_stack(exit): GTID: %d; TASK: %p\n", gtid,
-                tied_task));
-}
-
-//  __kmp_pop_task_stack: Pop the tied task from the task stack.  Don't return
-//  the task, just check to make sure it matches the ending task passed in.
-//
-//  gtid: global thread identifier for the calling thread
-//  thread: thread info structure containing stack
-//  tied_task: the task popped off the stack
-//  ending_task: the task that is ending (should match popped task)
-static void __kmp_pop_task_stack(kmp_int32 gtid, kmp_info_t *thread,
-                                 kmp_taskdata_t *ending_task) {
-  // GEH - need to consider what to do if tt_threads_data not allocated yet
-  kmp_thread_data_t *thread_data =
-      &thread->th.th_task_team->tt_threads_data[__kmp_tid_from_gtid(gtid)];
-  kmp_task_stack_t *task_stack = &thread_data->td.td_susp_tied_tasks;
-  kmp_taskdata_t *tied_task;
-
-  if (ending_task->td_flags.team_serial || ending_task->td_flags.tasking_ser) {
-    // Don't pop anything from stack if team or team tasks are serialized
-    return;
-  }
-
-  KMP_DEBUG_ASSERT(task_stack->ts_top != NULL);
-  KMP_DEBUG_ASSERT(task_stack->ts_entries > 0);
-
-  KA_TRACE(20, ("__kmp_pop_task_stack(enter): GTID: %d; THREAD: %p\n", gtid,
-                thread));
-
-  // fix up ts_top if we need to pop from previous block
-  if (task_stack->ts_entries & TASK_STACK_INDEX_MASK == 0) {
-    kmp_stack_block_t *stack_block = (kmp_stack_block_t *)(task_stack->ts_top);
-
-    stack_block = stack_block->sb_prev;
-    task_stack->ts_top = &stack_block->sb_block[TASK_STACK_BLOCK_SIZE];
-  }
-
-  // finish bookkeeping
-  task_stack->ts_top--;
-  task_stack->ts_entries--;
-
-  tied_task = *(task_stack->ts_top);
-
-  KMP_DEBUG_ASSERT(tied_task != NULL);
-  KMP_DEBUG_ASSERT(tied_task->td_flags.tasktype == TASK_TIED);
-  KMP_DEBUG_ASSERT(tied_task == ending_task); // If we built the stack correctly
-
-  KA_TRACE(20, ("__kmp_pop_task_stack(exit): GTID: %d; TASK: %p\n", gtid,
-                tied_task));
-  return;
-}
-#endif /* BUILD_TIED_TASK_STACK */
-
 // returns 1 if new task is allowed to execute, 0 otherwise
 // checks Task Scheduling constraint (if requested) and
 // mutexinoutset dependencies if any
@@ -683,13 +468,6 @@ static void __kmp_task_start(kmp_int32 gtid, kmp_task_t *task,
   // KMP_DEBUG_ASSERT( current_task -> td_flags.executing == 1 );
   current_task->td_flags.executing = 0;
 
-// Add task to stack if tied
-#ifdef BUILD_TIED_TASK_STACK
-  if (taskdata->td_flags.tiedness == TASK_TIED) {
-    __kmp_push_task_stack(gtid, thread, taskdata);
-  }
-#endif /* BUILD_TIED_TASK_STACK */
-
   // mark starting task as executing and as current task
   thread->th.th_current_task = taskdata;
 
@@ -1041,13 +819,6 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   is_taskgraph = taskdata->is_taskgraph;
 #endif
 
-// Pop task from stack if tied
-#ifdef BUILD_TIED_TASK_STACK
-  if (taskdata->td_flags.tiedness == TASK_TIED) {
-    __kmp_pop_task_stack(gtid, thread, taskdata);
-  }
-#endif /* BUILD_TIED_TASK_STACK */
-
   if (UNLIKELY(taskdata->td_flags.tiedness == TASK_UNTIED)) {
     // untied task needs to check the counter so that the task structure is not
     // freed prematurely
@@ -1378,6 +1149,13 @@ void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
 // thread:  thread data structure corresponding to implicit task
 void __kmp_finish_implicit_task(kmp_info_t *thread) {
   kmp_taskdata_t *task = thread->th.th_current_task;
+#if ENABLE_LIBOMPTARGET
+  // Give an opportunity to the offload runtime to synchronize any unfinished
+  // target async regions before finishing the implicit task
+  if (UNLIKELY(kmp_target_sync_cb != NULL))
+    (*kmp_target_sync_cb)(NULL, thread->th.th_info.ds.ds_gtid,
+                          KMP_TASKDATA_TO_TASK(task), NULL);
+#endif // ENABLE_LIBOMPTARGET
   if (task->td_dephash) {
     int children;
     task->td_flags.complete = 1;
@@ -1528,7 +1306,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   // Calculate shared structure offset including padding after kmp_task_t struct
   // to align pointers in shared struct
   shareds_offset = sizeof(kmp_taskdata_t) + sizeof_kmp_task_t;
-  shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(void *));
+  shareds_offset = __kmp_round_up_to_val(shareds_offset, sizeof(kmp_uint64));
 
   // Allocate a kmp_taskdata_t block and a kmp_task_t block.
   KA_TRACE(30, ("__kmp_task_alloc: T#%d First malloc size: %ld\n", gtid,
@@ -2249,6 +2027,14 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
     }
 #endif // OMPT_SUPPORT && OMPT_OPTIONAL
 
+#if ENABLE_LIBOMPTARGET
+    // Give an opportunity to the offload runtime to make progress and create
+    // any necessary proxy tasks
+    if (UNLIKELY(kmp_target_sync_cb))
+      (*kmp_target_sync_cb)(loc_ref, gtid, KMP_TASKDATA_TO_TASK(taskdata),
+                            NULL);
+#endif // ENABLE_LIBOMPTARGET
+
 // Debugger: The taskwait is active. Store location and thread encountered the
 // taskwait.
 #if USE_ITT_BUILD
@@ -2948,6 +2734,13 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     }
 #endif
 
+#if ENABLE_LIBOMPTARGET
+    // Give an opportunity to the offload runtime to make progress and create
+    // any necessary proxy tasks
+    if (UNLIKELY(kmp_target_sync_cb))
+      (*kmp_target_sync_cb)(loc, gtid, KMP_TASKDATA_TO_TASK(taskdata), NULL);
+#endif // ENABLE_LIBOMPTARGET
+
     if (!taskdata->td_flags.team_serial ||
         (thread->th.th_task_team != NULL &&
          (thread->th.th_task_team->tt.tt_found_proxy_tasks ||
@@ -3391,6 +3184,13 @@ static inline int __kmp_execute_tasks_template(
   while (1) { // Outer loop keeps trying to find tasks in case of single thread
     // getting tasks from target constructs
     while (1) { // Inner loop to find a task and execute it
+#if ENABLE_LIBOMPTARGET
+      // Give an opportunity to the offload runtime to make progress
+      if (UNLIKELY(kmp_target_sync_cb))
+        (*kmp_target_sync_cb)(NULL, gtid, KMP_TASKDATA_TO_TASK(current_task),
+                              NULL);
+#endif // ENABLE_LIBOMPTARGET
+
       task = NULL;
       if (task_team->tt.tt_num_task_pri) { // get priority task first
         task = __kmp_get_priority_task(gtid, task_team, is_constrained);
@@ -3786,13 +3586,6 @@ static void __kmp_free_task_deque(kmp_thread_data_t *thread_data) {
     thread_data->td.td_deque = NULL;
     __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
   }
-
-#ifdef BUILD_TIED_TASK_STACK
-  // GEH: Figure out what to do here for td_susp_tied_tasks
-  if (thread_data->td.td_susp_tied_tasks.ts_entries != TASK_STACK_EMPTY) {
-    __kmp_free_task_stack(__kmp_thread_from_gtid(gtid), thread_data);
-  }
-#endif // BUILD_TIED_TASK_STACK
 }
 
 // __kmp_realloc_task_threads_data:
@@ -3849,14 +3642,7 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
         KMP_MEMCPY_S((void *)new_data, nthreads * sizeof(kmp_thread_data_t),
                      (void *)old_data, maxthreads * sizeof(kmp_thread_data_t));
 
-#ifdef BUILD_TIED_TASK_STACK
-        // GEH: Figure out if this is the right thing to do
-        for (i = maxthreads; i < nthreads; i++) {
-          kmp_thread_data_t *thread_data = &(*threads_data_p)[i];
-          __kmp_init_task_stack(__kmp_gtid_from_thread(thread), thread_data);
-        }
-#endif // BUILD_TIED_TASK_STACK
-       // Install the new data and free the old data
+        // Install the new data and free the old data
         (*threads_data_p) = new_data;
         __kmp_free(old_data);
       } else {
@@ -3868,13 +3654,6 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
         // kmp_reap_task_team( ).
         *threads_data_p = (kmp_thread_data_t *)__kmp_allocate(
             nthreads * sizeof(kmp_thread_data_t));
-#ifdef BUILD_TIED_TASK_STACK
-        // GEH: Figure out if this is the right thing to do
-        for (i = 0; i < nthreads; i++) {
-          kmp_thread_data_t *thread_data = &(*threads_data_p)[i];
-          __kmp_init_task_stack(__kmp_gtid_from_thread(thread), thread_data);
-        }
-#endif // BUILD_TIED_TASK_STACK
       }
       task_team->tt.tt_max_threads = nthreads;
     } else {

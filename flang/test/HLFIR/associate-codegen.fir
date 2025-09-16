@@ -174,22 +174,22 @@ func.func @test_result_convert(%x : !fir.heap<!fir.array<10xi32>>) {
 
 func.func @test_0dim_box(%x : !fir.ref<!fir.box<!fir.heap<i32>>>) {
   %0 = fir.load %x : !fir.ref<!fir.box<!fir.heap<i32>>>
-  %1:2 = hlfir.declare %0 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<i32>>) -> (!fir.box<!fir.heap<i32>>, !fir.box<!fir.heap<i32>>)
+  %1:2 = hlfir.declare %0 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<i32>>) -> (!fir.box<i32>, !fir.box<i32>)
   %true = arith.constant true
-  %2 = hlfir.as_expr %1#0 move %true : (!fir.box<!fir.heap<i32>>, i1) -> !hlfir.expr<i32>
+  %2 = hlfir.as_expr %1#0 move %true : (!fir.box<i32>, i1) -> !hlfir.expr<i32>
   %3:3 = hlfir.associate %2 {adapt.valuebyref} : (!hlfir.expr<i32>) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
   return
 }
 // CHECK-LABEL:   func.func @test_0dim_box(
 // CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<i32>>) -> (!fir.box<!fir.heap<i32>>, !fir.box<!fir.heap<i32>>)
+// CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<i32>>) -> (!fir.box<i32>, !fir.box<i32>)
 // CHECK:           %[[VAL_3:.*]] = arith.constant true
-// CHECK:           %[[VAL_4:.*]] = fir.undefined tuple<!fir.box<!fir.heap<i32>>, i1>
-// CHECK:           %[[VAL_5:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_3]], [1 : index] : (tuple<!fir.box<!fir.heap<i32>>, i1>, i1) -> tuple<!fir.box<!fir.heap<i32>>, i1>
-// CHECK:           %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_2]]#0, [0 : index] : (tuple<!fir.box<!fir.heap<i32>>, i1>, !fir.box<!fir.heap<i32>>) -> tuple<!fir.box<!fir.heap<i32>>, i1>
-// CHECK:           %[[VAL_7:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.box<!fir.heap<i32>>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_8:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.heap<i32>>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_4:.*]] = fir.undefined tuple<!fir.box<i32>, i1>
+// CHECK:           %[[VAL_5:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_3]], [1 : index] : (tuple<!fir.box<i32>, i1>, i1) -> tuple<!fir.box<i32>, i1>
+// CHECK:           %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_2]]#0, [0 : index] : (tuple<!fir.box<i32>, i1>, !fir.box<i32>) -> tuple<!fir.box<i32>, i1>
+// CHECK:           %[[VAL_7:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.box<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_8:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<i32>) -> !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 

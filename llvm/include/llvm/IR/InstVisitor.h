@@ -183,6 +183,7 @@ public:
   RetTy visitUIToFPInst(UIToFPInst &I)            { DELEGATE(CastInst);}
   RetTy visitSIToFPInst(SIToFPInst &I)            { DELEGATE(CastInst);}
   RetTy visitPtrToIntInst(PtrToIntInst &I)        { DELEGATE(CastInst);}
+  RetTy visitPtrToAddrInst(PtrToAddrInst &I)      { DELEGATE(CastInst);}
   RetTy visitIntToPtrInst(IntToPtrInst &I)        { DELEGATE(CastInst);}
   RetTy visitBitCastInst(BitCastInst &I)          { DELEGATE(CastInst);}
   RetTy visitAddrSpaceCastInst(AddrSpaceCastInst &I) { DELEGATE(CastInst);}
@@ -199,13 +200,6 @@ public:
   RetTy visitCatchPadInst(CatchPadInst &I)     { DELEGATE(FuncletPadInst); }
   RetTy visitFreezeInst(FreezeInst &I)         { DELEGATE(Instruction); }
 
-  // Handle the special intrinsic instruction classes.
-  RetTy visitDbgDeclareInst(DbgDeclareInst &I)    { DELEGATE(DbgVariableIntrinsic);}
-  RetTy visitDbgValueInst(DbgValueInst &I)        { DELEGATE(DbgVariableIntrinsic);}
-  RetTy visitDbgVariableIntrinsic(DbgVariableIntrinsic &I)
-                                                  { DELEGATE(DbgInfoIntrinsic);}
-  RetTy visitDbgLabelInst(DbgLabelInst &I)        { DELEGATE(DbgInfoIntrinsic);}
-  RetTy visitDbgInfoIntrinsic(DbgInfoIntrinsic &I){ DELEGATE(IntrinsicInst); }
   RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
   RetTy visitMemSetPatternInst(MemSetPatternInst &I) {
     DELEGATE(IntrinsicInst);
@@ -286,9 +280,6 @@ private:
     if (const Function *F = I.getCalledFunction()) {
       switch (F->getIntrinsicID()) {
       default:                     DELEGATE(IntrinsicInst);
-      case Intrinsic::dbg_declare: DELEGATE(DbgDeclareInst);
-      case Intrinsic::dbg_value:   DELEGATE(DbgValueInst);
-      case Intrinsic::dbg_label:   DELEGATE(DbgLabelInst);
       case Intrinsic::memcpy:
       case Intrinsic::memcpy_inline:
         DELEGATE(MemCpyInst);

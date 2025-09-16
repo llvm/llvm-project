@@ -4,7 +4,7 @@
 
 ; Make sure that .vgpr_count doesn't include the %inactive.vgpr registers.
 ; CHECK-LABEL: leaf_shader:
-; CHECK: .vgpr_count:{{.*}}0x1{{$}}
+; CHECK: .vgpr_count: 0xc{{$}}
 
 ; Function without calls.
 define amdgpu_cs_chain void @_leaf_shader(ptr %output.ptr, i32 inreg %input.value,

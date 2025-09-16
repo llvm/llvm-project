@@ -9,6 +9,7 @@
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
 #include "DXILOpBuilder.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -39,11 +40,13 @@ class OpLowerer {
   DXILOpBuilder OpBuilder;
   DXILResourceMap &DRM;
   DXILResourceTypeMap &DRTM;
+  const ModuleMetadataInfo &MMDI;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM)
-      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM,
+            const ModuleMetadataInfo &MMDI)
+      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM), MMDI(MMDI) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -217,7 +220,7 @@ public:
 
     removeResourceGlobals(CI);
 
-    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(5));
+    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(4));
 
     CI->replaceAllUsesWith(Replacement);
     CI->eraseFromParent();
@@ -230,6 +233,7 @@ public:
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -246,10 +250,13 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
+      // FIXME: The last argument is a NonUniform flag which needs to be set
+      // based on resource analysis.
+      // https://github.com/llvm/llvm-project/issues/155701
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
-          CI->getArgOperand(4)};
+          ConstantInt::get(Int1Ty, false)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
@@ -264,6 +271,7 @@ public:
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -292,7 +300,11 @@ public:
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
-      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
+      // FIXME: The last argument is a NonUniform flag which needs to be set
+      // based on resource analysis.
+      // https://github.com/llvm/llvm-project/issues/155701
+      Constant *NonUniform = ConstantInt::get(Int1Ty, false);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniform};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -316,8 +328,7 @@ public:
   /// model and taking into account binding information from
   /// DXILResourceAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    const Triple &TT = M.getTargetTriple();
-    if (TT.getDXILVersion() < VersionTuple(1, 6))
+    if (MMDI.DXILVersion < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
   }
@@ -486,8 +497,6 @@ public:
   }
 
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
-    const Triple &TT = M.getTargetTriple();
-    VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -511,7 +520,7 @@ public:
           ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
 
       Expected<CallInst *> OpCall =
-          DXILVersion >= VersionTuple(1, 2)
+          MMDI.DXILVersion >= VersionTuple(1, 2)
               ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
                                       {Handle, Index0, Index1, Mask, Align},
                                       CI->getName(), NewRetTy)
@@ -586,8 +595,6 @@ public:
   }
 
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
-    const Triple &TT = M.getTargetTriple();
-    VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -654,7 +661,7 @@ public:
       SmallVector<Value *, 9> Args{
           Handle,          Index0,          Index1,          DataElements[0],
           DataElements[1], DataElements[2], DataElements[3], Mask};
-      if (IsRaw && DXILVersion >= VersionTuple(1, 2)) {
+      if (IsRaw && MMDI.DXILVersion >= VersionTuple(1, 2)) {
         Op = OpCode::RawBufferStore;
         // RawBufferStore requires the alignment
         Args.push_back(
@@ -745,6 +752,37 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerLifetimeIntrinsic(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Ptr = CI->getArgOperand(0);
+      assert(Ptr->getType()->isPointerTy() &&
+             "Expected operand of lifetime intrinsic to be a pointer");
+
+      auto ZeroOrUndef = [&](Type *Ty) {
+        return MMDI.ValidatorVersion < VersionTuple(1, 6)
+                   ? Constant::getNullValue(Ty)
+                   : UndefValue::get(Ty);
+      };
+
+      Value *Val = nullptr;
+      if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+        if (GV->hasInitializer() || GV->isExternallyInitialized())
+          return Error::success();
+        Val = ZeroOrUndef(GV->getValueType());
+      } else if (auto *AI = dyn_cast<AllocaInst>(Ptr))
+        Val = ZeroOrUndef(AI->getAllocatedType());
+
+      assert(Val && "Expected operand of lifetime intrinsic to be a global "
+                    "variable or alloca instruction");
+      IRB.CreateStore(Val, Ptr, false);
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerIsFPClass(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *RetTy = IRB.getInt1Ty();
@@ -803,8 +841,6 @@ public:
       case Intrinsic::dx_resource_casthandle:
       // NOTE: llvm.dbg.value is supported as is in DXIL.
       case Intrinsic::dbg_value:
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
       case Intrinsic::not_intrinsic:
         if (F.use_empty())
           F.eraseFromParent();
@@ -855,6 +891,17 @@ public:
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
         break;
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          if (MMDI.DXILVersion < VersionTuple(1, 6))
+            HasErrors |= lowerLifetimeIntrinsic(F);
+          else
+            continue;
+        }
+        break;
       case Intrinsic::is_fpclass:
         HasErrors |= lowerIsFPClass(F);
         break;
@@ -872,14 +919,16 @@ public:
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
+  const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DRM, DRTM).lowerIntrinsics();
+  const bool MadeChanges = OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DXILResourceAnalysis>();
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
+  PA.preserve<RootSignatureAnalysis>();
   return PA;
 }
 
@@ -891,8 +940,10 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+    const ModuleMetadataInfo MMDI =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    return OpLowerer(M, DRM, DRTM).lowerIntrinsics();
+    return OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
@@ -901,9 +952,11 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;

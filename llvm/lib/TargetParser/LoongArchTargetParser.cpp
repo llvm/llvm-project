@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
 using namespace llvm::LoongArch;

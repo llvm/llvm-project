@@ -12,28 +12,23 @@ use omp_lib
   integer, dimension(:), allocatable :: a, b, c, d, e, f, &
                                         g, h, i, j, k, l
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(a) allocator(omp_default_mem_alloc)
     allocate(a(1), b(2))
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(c, d) allocator(omp_default_mem_alloc)
     allocate(c(3), d(4))
 
   !$omp allocate(e) allocator(omp_default_mem_alloc)
   !$omp allocate(f, g) allocator(omp_default_mem_alloc)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate
     allocate(e(5), f(6), g(7))
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: Object 'i' in ALLOCATE directive not found in corresponding ALLOCATE statement
   !$omp allocate(h, i) allocator(omp_default_mem_alloc)
     allocate(h(8))
 
   !ERROR: Object 'j' in ALLOCATE directive not found in corresponding ALLOCATE statement
   !$omp allocate(j, k) allocator(omp_default_mem_alloc)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(l) allocator(omp_default_mem_alloc)
     allocate(k(9), l(10))
 

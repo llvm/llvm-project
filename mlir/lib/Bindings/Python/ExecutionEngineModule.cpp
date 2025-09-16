@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/ExecutionEngine.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -45,7 +45,7 @@ public:
     referencedObjects.push_back(obj);
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static nb::object createFromCapsule(const nb::object &capsule) {
     MlirExecutionEngine rawPm =
         mlirPythonCapsuleToExecutionEngine(capsule.ptr());
     if (mlirExecutionEngineIsNull(rawPm))
@@ -113,7 +113,7 @@ NB_MODULE(_mlirExecutionEngine, m) {
       .def(
           "raw_register_runtime",
           [](PyExecutionEngine &executionEngine, const std::string &name,
-             nb::object callbackObj) {
+             const nb::object &callbackObj) {
             executionEngine.addReferencedObject(callbackObj);
             uintptr_t rawSym =
                 nb::cast<uintptr_t>(nb::getattr(callbackObj, "value"));
@@ -124,6 +124,17 @@ NB_MODULE(_mlirExecutionEngine, m) {
           },
           nb::arg("name"), nb::arg("callback"),
           "Register `callback` as the runtime symbol `name`.")
+      .def(
+          "initialize",
+          [](PyExecutionEngine &executionEngine) {
+            mlirExecutionEngineInitialize(executionEngine.get());
+          },
+          "Initialize the ExecutionEngine. Global constructors specified by "
+          "`llvm.mlir.global_ctors` will be run. One common scenario is that "
+          "kernel binary compiled from `gpu.module` gets loaded during "
+          "initialization. Make sure all symbols are resolvable before "
+          "initialization by calling `register_runtime` or including "
+          "shared libraries.")
       .def(
           "dump_to_object_file",
           [](PyExecutionEngine &executionEngine, const std::string &fileName) {
