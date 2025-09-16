@@ -1998,6 +1998,12 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
 defm : PatXrXr<abds, "XVABSD">;
 defm : PatXrXrU<abdu, "XVABSD">;
 
+// XVSADD_{B/H/W/D}[U], XVSSUB_{B/H/W/D}[U]
+defm : PatXrXr<saddsat, "XVSADD">;
+defm : PatXrXr<ssubsat, "XVSSUB">;
+defm : PatXrXrU<uaddsat, "XVSADD">;
+defm : PatXrXrU<usubsat, "XVSSUB">;
+
 // Vector mask set by condition
 def : Pat<(loongarch_xvmskltz (v32i8 LASX256:$vj)), (PseudoXVMSKLTZ_B LASX256:$vj)>;
 def : Pat<(loongarch_xvmskltz (v16i16 LASX256:$vj)), (PseudoXVMSKLTZ_H LASX256:$vj)>;
