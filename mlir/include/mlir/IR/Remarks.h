@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -442,6 +443,12 @@ public:
   /// Report an analysis remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
   InFlightRemark emitOptimizationRemarkAnalysis(Location loc, RemarkOpts opts);
+
+  /// Get the postponed remarks.
+  ArrayRef<Remark>  getPostponedRemarks() const { return postponedRemarks; }
+
+  /// Clear the postponed remarks.
+  void  clearPostponedRemarks()  { postponedRemarks.clear(); }
 };
 
 template <typename Fn, typename... Args>
