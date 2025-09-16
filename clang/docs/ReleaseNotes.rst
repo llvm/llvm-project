@@ -58,6 +58,9 @@ C/C++ Language Potentially Breaking Changes
 
 - The ``__has_builtin`` function now only considers the currently active target when being used with target offloading.
 
+- The ``-Wincompatible-pointer-types`` diagnostic now defaults to an error;
+  it can still be downgraded to a warning by passing ``-Wno-error=incompatible-pointer-types``. (#GH74605)
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
@@ -288,6 +291,10 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- The two-element, unary mask variant of ``__builtin_shufflevector`` is now
+  properly being rejected when used at compile-time. It was not implemented
+  and caused assertion failures before (#GH158471).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -365,6 +372,8 @@ Bug Fixes to C++ Support
   authentication enabled. (#GH152601)
 - Fix the check for narrowing int-to-float conversions, so that they are detected in
   cases where converting the float back to an integer is undefined behaviour (#GH157067).
+- Stop rejecting C++11-style attributes on the first argument of constructors in older
+  standards. (#GH156809).
 - Fix a crash when applying binary or ternary operators to two same function types with different spellings,
   where at least one of the function parameters has an attribute which affects
   the function type.
@@ -527,6 +536,7 @@ OpenMP Support
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support for ``variable-category`` modifier in ``default clause``.
+- Added support for ``defaultmap`` directive implicit-behavior ``storage``.
 
 Improvements
 ^^^^^^^^^^^^

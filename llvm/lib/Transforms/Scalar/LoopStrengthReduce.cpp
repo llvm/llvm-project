@@ -167,17 +167,15 @@ static cl::opt<bool> FilterSameScaledReg(
              " with the same ScaledReg and Scale"));
 
 static cl::opt<TTI::AddressingModeKind> PreferredAddresingMode(
-  "lsr-preferred-addressing-mode", cl::Hidden, cl::init(TTI::AMK_None),
-   cl::desc("A flag that overrides the target's preferred addressing mode."),
-   cl::values(clEnumValN(TTI::AMK_None,
-                         "none",
-                         "Don't prefer any addressing mode"),
-              clEnumValN(TTI::AMK_PreIndexed,
-                         "preindexed",
-                         "Prefer pre-indexed addressing mode"),
-              clEnumValN(TTI::AMK_PostIndexed,
-                         "postindexed",
-                         "Prefer post-indexed addressing mode")));
+    "lsr-preferred-addressing-mode", cl::Hidden, cl::init(TTI::AMK_None),
+    cl::desc("A flag that overrides the target's preferred addressing mode."),
+    cl::values(
+        clEnumValN(TTI::AMK_None, "none", "Don't prefer any addressing mode"),
+        clEnumValN(TTI::AMK_PreIndexed, "preindexed",
+                   "Prefer pre-indexed addressing mode"),
+        clEnumValN(TTI::AMK_PostIndexed, "postindexed",
+                   "Prefer post-indexed addressing mode"),
+        clEnumValN(TTI::AMK_All, "all", "Consider all addressing modes")));
 
 static cl::opt<unsigned> ComplexityLimit(
   "lsr-complexity-limit", cl::Hidden,
@@ -1404,7 +1402,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     // for now LSR only handles innermost loops).
     if (AR->getLoop() != L) {
       // If the AddRec exists, consider it's register free and leave it alone.
-      if (isExistingPhi(AR, *SE) && AMK != TTI::AMK_PostIndexed)
+      if (isExistingPhi(AR, *SE) && !(AMK & TTI::AMK_PostIndexed))
         return;
 
       // It is bad to allow LSR for current loop to add induction variables
@@ -1427,9 +1425,9 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step))))
         // If the step size matches the base offset, we could use pre-indexed
         // addressing.
-        if ((AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed() &&
+        if (((AMK & TTI::AMK_PreIndexed) && F.BaseOffset.isFixed() &&
              Step->getAPInt() == F.BaseOffset.getFixedValue()) ||
-            (AMK == TTI::AMK_PostIndexed && !isa<SCEVConstant>(Start) &&
+            ((AMK & TTI::AMK_PostIndexed) && !isa<SCEVConstant>(Start) &&
              SE->isLoopInvariant(Start, L)))
           LoopCost = 0;
     }
@@ -4147,7 +4145,7 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   // means that a single pre-indexed access can be generated to become the new
   // base pointer for each iteration of the loop, resulting in no extra add/sub
   // instructions for pointer updating.
-  if (AMK == TTI::AMK_PreIndexed && LU.Kind == LSRUse::Address) {
+  if ((AMK & TTI::AMK_PreIndexed) && LU.Kind == LSRUse::Address) {
     const APInt *StepInt;
     if (match(G, m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StepInt)))) {
       int64_t Step = StepInt->isNegative() ? StepInt->getSExtValue()
@@ -5437,7 +5435,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     // This can sometimes (notably when trying to favour postinc) lead to
     // sub-optimial decisions. There it is best left to the cost modelling to
     // get correct.
-    if (AMK != TTI::AMK_PostIndexed || LU.Kind != LSRUse::Address) {
+    if (!(AMK & TTI::AMK_PostIndexed) || LU.Kind != LSRUse::Address) {
       int NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
       for (const SCEV *Reg : ReqRegs) {
         if ((F.ScaledReg && F.ScaledReg == Reg) ||
