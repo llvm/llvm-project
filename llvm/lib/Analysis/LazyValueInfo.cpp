@@ -59,6 +59,11 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 
+static cl::opt<bool> PerPredRanges(
+    "lvi-per-pred-ranges", cl::Hidden, cl::init(false),
+    cl::desc("Enable tracking of ranges for a value in a block for"
+             "each block predecessor (default = false)"));
+
 namespace llvm {
 FunctionPass *createLazyValueInfoPass() {
   return new LazyValueInfoWrapperPass();
@@ -246,7 +251,8 @@ void LazyValueInfoCache::eraseValue(Value *V) {
     Pair.second->OverDefined.erase(V);
     if (Pair.second->NonNullPointers)
       Pair.second->NonNullPointers->erase(V);
-    Pair.second->PredecessorLatticeElements.erase(V);
+    if (PerPredRanges)
+      Pair.second->PredecessorLatticeElements.erase(V);
   }
 
   auto HandleIt = ValueHandles.find_as(V);
@@ -262,9 +268,9 @@ void LVIValueHandle::deleted() {
 
 void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
   // Clear all when a BB is removed.
-  for (auto &Pair : BlockCache) {
-    Pair.second->PredecessorLatticeElements.clear();
-  }
+  if (PerPredRanges)
+    for (auto &Pair : BlockCache)
+      Pair.second->PredecessorLatticeElements.clear();
   BlockCache.erase(BB);
 }
 
@@ -746,11 +752,12 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
                         << Pred->getName() << "' (non local).\n");
       return Result;
     }
-
-    PredLatticeElements.insert({Pred, *EdgeResult});
+    if (PerPredRanges)
+      PredLatticeElements.insert({Pred, *EdgeResult});
   }
 
-  TheCache.insertPredecessorResults(Val, BB, PredLatticeElements);
+  if (PerPredRanges)
+    TheCache.insertPredecessorResults(Val, BB, PredLatticeElements);
 
   // Return the merged value, which is more precise than 'overdefined'.
   assert(!Result.isOverdefined());
@@ -788,10 +795,12 @@ LazyValueInfoImpl::solveBlockValuePHINode(PHINode *PN, BasicBlock *BB) {
       return Result;
     }
 
-    PredLatticeElements.insert({PhiBB, *EdgeResult});
+    if (PerPredRanges)
+      PredLatticeElements.insert({PhiBB, *EdgeResult});
   }
 
-  TheCache.insertPredecessorResults(PN, BB, PredLatticeElements);
+  if (PerPredRanges)
+    TheCache.insertPredecessorResults(PN, BB, PredLatticeElements);
 
   // Return the merged value, which is more precise than 'overdefined'.
   assert(!Result.isOverdefined() && "Possible PHI in entry block?");
@@ -1050,6 +1059,9 @@ LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
 
   std::optional<ValueLatticeElement> MergedResult =
       ValueLatticeElement::getRange(OpFn(LHSRange, RHSRange));
+
+  if (!PerPredRanges)
+    return MergedResult;
 
   std::optional<BBLatticeElementMap> PredLHS =
       TheCache.getCachedPredecessorInfo(LHS, BB);
