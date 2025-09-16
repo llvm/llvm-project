@@ -811,7 +811,11 @@ private:
 };
 
 struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  UnrollToElements(MLIRContext *context,
+                   const vector::UnrollVectorOptions &options,
+                   PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::ToElementsOp>(context, benefit),
+        options(options) {}
 
   LogicalResult matchAndRewrite(vector::ToElementsOp op,
                                 PatternRewriter &rewriter) const override {
@@ -833,6 +837,9 @@ struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
     rewriter.replaceOp(op, results);
     return success();
   }
+
+private:
+  vector::UnrollVectorOptions options;
 };
 
 /// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
@@ -852,7 +859,11 @@ struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
 /// When applied exhaustively, this will produce a sequence of 1-d from_elements
 /// ops.
 struct UnrollFromElements : OpRewritePattern<vector::FromElementsOp> {
-  using OpRewritePattern::OpRewritePattern;
+  UnrollFromElements(MLIRContext *context,
+                     const vector::UnrollVectorOptions &options,
+                     PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::FromElementsOp>(context, benefit),
+        options(options) {}
 
   LogicalResult matchAndRewrite(vector::FromElementsOp op,
                                 PatternRewriter &rewriter) const override {
@@ -870,6 +881,9 @@ struct UnrollFromElements : OpRewritePattern<vector::FromElementsOp> {
 
     return unrollVectorOp(op, rewriter, unrollFromElementsFn);
   }
+
+private:
+  vector::UnrollVectorOptions options;
 };
 
 } // namespace
@@ -877,22 +891,22 @@ struct UnrollFromElements : OpRewritePattern<vector::FromElementsOp> {
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options,
     PatternBenefit benefit) {
-  patterns.add<UnrollFromElements, UnrollToElements>(patterns.getContext(),
-                                                     benefit);
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
-               UnrollStorePattern, UnrollBroadcastPattern>(
-      patterns.getContext(), options, benefit);
+               UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
+               UnrollToElements>(patterns.getContext(), options, benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<UnrollToElements>(patterns.getContext(), benefit);
+  patterns.add<UnrollToElements>(patterns.getContext(), UnrollVectorOptions(),
+                                 benefit);
 }
 
 void mlir::vector::populateVectorFromElementsUnrollPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<UnrollFromElements>(patterns.getContext(), benefit);
+  patterns.add<UnrollFromElements>(patterns.getContext(), UnrollVectorOptions(),
+                                   benefit);
 }
