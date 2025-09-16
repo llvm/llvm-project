@@ -13,7 +13,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/identity.h"
 
 namespace clang {
 
@@ -42,9 +41,9 @@ public:
   resolveUsingValueDecl(const UnresolvedUsingValueDecl *UUVD);
   std::vector<const NamedDecl *>
   resolveDependentNameType(const DependentNameType *DNT);
-  std::vector<const NamedDecl *> resolveTemplateSpecializationType(
-      const DependentTemplateSpecializationType *DTST);
-  QualType resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS);
+  std::vector<const NamedDecl *>
+  resolveTemplateSpecializationType(const TemplateSpecializationType *TST);
+  QualType resolveNestedNameSpecifierToType(NestedNameSpecifier NNS);
   QualType getPointeeType(QualType T);
   std::vector<const NamedDecl *>
   lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
@@ -57,7 +56,7 @@ private:
   ASTContext &Ctx;
 
   // Recursion protection sets
-  llvm::SmallSet<const DependentNameType *, 4> SeenDependentNameTypes;
+  llvm::SmallPtrSet<const DependentNameType *, 4> SeenDependentNameTypes;
 
   // Given a tag-decl type and a member name, heuristically resolve the
   // name to one or more declarations.
@@ -101,9 +100,8 @@ QualType resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
                             ASTContext &Ctx) {
   if (Decls.size() != 1) // Names an overload set -- just bail.
     return QualType();
-  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
-    return Ctx.getTypeDeclType(TD);
-  }
+  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0]))
+    return Ctx.getCanonicalTypeDeclType(TD);
   if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
     return VD->getType();
   }
@@ -139,8 +137,7 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
     T = T->getCanonicalTypeInternal().getTypePtr();
   }
 
-  if (auto *TT = T->getAs<TagType>()) {
-    TagDecl *TD = TT->getDecl();
+  if (auto *TD = T->getAsTagDecl()) {
     // Template might not be instantiated yet, fall back to primary template
     // in such cases.
     if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(TD)) {
@@ -150,11 +147,6 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
     }
     return TD;
   }
-
-  if (const auto *ICNT = T->getAs<InjectedClassNameType>())
-    T = ICNT->getInjectedSpecializationType().getTypePtrOrNull();
-  if (!T)
-    return nullptr;
 
   TemplateName TN = getReferencedTemplateName(T);
   if (TN.isNull())
@@ -262,6 +254,21 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
+    // Check if the expression refers to an explicit object parameter of
+    // templated type. If so, heuristically treat it as having the type of the
+    // enclosing class.
+    if (!T.Type.isNull() &&
+        (T.Type->isUndeducedAutoType() || T.Type->isTemplateTypeParmType())) {
+      if (auto *DRE = dyn_cast_if_present<DeclRefExpr>(T.E)) {
+        auto *PrDecl = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        if (PrDecl && PrDecl->isExplicitObjectParameter()) {
+          const auto *Parent =
+              dyn_cast<TagDecl>(PrDecl->getDeclContext()->getParent());
+          return {Ctx.getCanonicalTagType(Parent)};
+        }
+      }
+    }
+
     return T;
   };
   // As an additional protection against infinite loops, bound the number of
@@ -292,7 +299,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   //      an instance method, it's represented as a CXXDependentScopeMemberExpr
   //      with `this` as the base expression as `X` as the qualifier
   //      (which could be valid if `X` names a base class after instantiation).
-  if (NestedNameSpecifier *NNS = ME->getQualifier()) {
+  if (NestedNameSpecifier NNS = ME->getQualifier()) {
     if (QualType QualifierType = resolveNestedNameSpecifierToType(NNS);
         !QualifierType.isNull()) {
       auto Decls =
@@ -348,7 +355,10 @@ HeuristicResolverImpl::resolveCalleeOfCallExpr(const CallExpr *CE) {
 
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveUsingValueDecl(
     const UnresolvedUsingValueDecl *UUVD) {
-  return resolveDependentMember(QualType(UUVD->getQualifier()->getAsType(), 0),
+  NestedNameSpecifier Qualifier = UUVD->getQualifier();
+  if (Qualifier.getKind() != NestedNameSpecifier::Kind::Type)
+    return {};
+  return resolveDependentMember(QualType(Qualifier.getAsType(), 0),
                                 UUVD->getNameInfo().getName(), ValueFilter);
 }
 
@@ -363,8 +373,9 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) {
-  const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
+    const TemplateSpecializationType *TST) {
+  const DependentTemplateStorage &DTN =
+      *TST->getTemplateName().getAsDependentTemplateName();
   return resolveDependentMember(
       resolveNestedNameSpecifierToType(DTN.getQualifier()),
       DTN.getName().getIdentifier(), TemplateFilter);
@@ -399,23 +410,23 @@ QualType HeuristicResolverImpl::resolveExprToType(const Expr *E) {
 }
 
 QualType HeuristicResolverImpl::resolveNestedNameSpecifierToType(
-    const NestedNameSpecifier *NNS) {
-  if (!NNS)
-    return QualType();
-
+    NestedNameSpecifier NNS) {
   // The purpose of this function is to handle the dependent (Kind ==
   // Identifier) case, but we need to recurse on the prefix because
   // that may be dependent as well, so for convenience handle
   // the TypeSpec cases too.
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::TypeSpec:
-    return QualType(NNS->getAsType(), 0);
-  case NestedNameSpecifier::Identifier: {
-    return resolveDeclsToType(
-        resolveDependentMember(
-            resolveNestedNameSpecifierToType(NNS->getPrefix()),
-            NNS->getAsIdentifier(), TypeFilter),
-        Ctx);
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Type: {
+    const auto *T = NNS.getAsType();
+    // FIXME: Should this handle the DependentTemplateSpecializationType as
+    // well?
+    if (const auto *DTN = dyn_cast<DependentNameType>(T))
+      return resolveDeclsToType(
+          resolveDependentMember(
+              resolveNestedNameSpecifierToType(DTN->getQualifier()),
+              DTN->getIdentifier(), TypeFilter),
+          Ctx);
+    return QualType(T, 0);
   }
   default:
     break;
@@ -551,7 +562,7 @@ HeuristicResolverImpl::getFunctionProtoTypeLoc(const Expr *Fn) {
     // In some edge cases the AST can contain a "trivial" FunctionProtoTypeLoc
     // which has null parameters. Avoid these as they don't contain useful
     // information.
-    if (llvm::all_of(F.getParams(), llvm::identity<ParmVarDecl *>()))
+    if (!llvm::is_contained(F.getParams(), nullptr))
       return F;
   }
 
@@ -586,11 +597,11 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentNameType(
 }
 std::vector<const NamedDecl *>
 HeuristicResolver::resolveTemplateSpecializationType(
-    const DependentTemplateSpecializationType *DTST) const {
-  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(DTST);
+    const TemplateSpecializationType *TST) const {
+  return HeuristicResolverImpl(Ctx).resolveTemplateSpecializationType(TST);
 }
 QualType HeuristicResolver::resolveNestedNameSpecifierToType(
-    const NestedNameSpecifier *NNS) const {
+    NestedNameSpecifier NNS) const {
   return HeuristicResolverImpl(Ctx).resolveNestedNameSpecifierToType(NNS);
 }
 std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(

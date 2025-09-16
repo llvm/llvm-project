@@ -1329,10 +1329,7 @@ SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
   // Prepare argument list to generate call.
   ArgListTy Args;
-  ArgListEntry Entry;
-  Entry.Node = Load;
-  Entry.Ty = CallTy;
-  Args.push_back(Entry);
+  Args.emplace_back(Load, CallTy);
 
   // Setup call to __tls_get_addr.
   TargetLowering::CallLoweringInfo CLI(DAG);

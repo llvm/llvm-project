@@ -36,27 +36,29 @@ public:
   void GetGlobalVariables(
       DWARFUnit &cu,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void
-  GetObjCMethods(ConstString class_name,
-                 llvm::function_ref<bool(DWARFDIE die)> callback) override {}
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override {}
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
   void GetFullyQualifiedType(
       const DWARFDeclContext &context,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(const DWARFDeclContext &context,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespaces(
       ConstString name,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void
-  GetTypesWithQuery(TypeQuery &query,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetTypesWithQuery(
+      TypeQuery &query,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespacesWithParents(
       ConstString name, const CompilerDeclContext &parent_decl_ctx,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
@@ -120,8 +122,9 @@ private:
   std::optional<DWARFTypeUnit *>
   GetForeignTypeUnit(const DebugNames::Entry &entry) const;
 
-  bool ProcessEntry(const DebugNames::Entry &entry,
-                    llvm::function_ref<bool(DWARFDIE die)> callback);
+  IterationAction
+  ProcessEntry(const DebugNames::Entry &entry,
+               llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   /// Returns true if `parent_entries` have identical names to `parent_names`.
   bool SameParentChain(llvm::ArrayRef<llvm::StringRef> parent_names,

@@ -1283,6 +1283,7 @@ static int getDecodedCastOpcode(unsigned Val) {
   case bitc::CAST_SITOFP  : return Instruction::SIToFP;
   case bitc::CAST_FPTRUNC : return Instruction::FPTrunc;
   case bitc::CAST_FPEXT   : return Instruction::FPExt;
+  case bitc::CAST_PTRTOADDR: return Instruction::PtrToAddr;
   case bitc::CAST_PTRTOINT: return Instruction::PtrToInt;
   case bitc::CAST_INTTOPTR: return Instruction::IntToPtr;
   case bitc::CAST_BITCAST : return Instruction::BitCast;

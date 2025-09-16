@@ -61,7 +61,7 @@ protected:
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
   virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
-                               const Function &Func,
+                               const MachineFunction &MF,
                                msgpack::MapDocNode Kern) = 0;
 };
 
@@ -102,7 +102,7 @@ protected:
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
@@ -149,7 +149,7 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
-  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
 
 public:
@@ -164,6 +164,9 @@ protected:
 public:
   MetadataStreamerMsgPackV6() = default;
   ~MetadataStreamerMsgPackV6() = default;
+
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 };
 
 } // end namespace HSAMD

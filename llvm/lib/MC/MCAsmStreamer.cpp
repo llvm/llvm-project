@@ -28,7 +28,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
@@ -897,14 +896,14 @@ void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(CsectSym);
+  auto *XSym = static_cast<MCSymbolXCOFF *>(CsectSym);
   if (XSym->hasRename())
     emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
-
+  auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   switch (Linkage) {
   case MCSA_Global:
     OS << MAI->getGlobalDirective();
@@ -944,9 +943,8 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  if (cast<MCSymbolXCOFF>(Symbol)->hasRename())
-    emitXCOFFRenameDirective(Symbol,
-                             cast<MCSymbolXCOFF>(Symbol)->getSymbolTableName());
+  if (Sym.hasRename())
+    emitXCOFFRenameDirective(&Sym, Sym.getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
@@ -1070,9 +1068,11 @@ void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(Symbol);
-  if (XSym && XSym->hasRename())
-    emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  if (getContext().isXCOFF()) {
+    auto *XSym = static_cast<MCSymbolXCOFF *>(Symbol);
+    if (XSym && XSym->hasRename())
+      emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  }
 }
 
 void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -2340,6 +2340,9 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
   getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
+  // RISC-V instructions are always little-endian, even on BE systems.
+  bool ForceLE = getContext().getTargetTriple().isRISCV();
+
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
   // then trying to display it as nicely as possible.
@@ -2394,7 +2397,10 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
         unsigned Bit = (Code[i] >> j) & 1;
 
         unsigned FixupBit;
-        if (MAI->isLittleEndian())
+        // RISC-V instructions are always little-endian.
+        // The FixupMap is indexed by actual bit positions in the LE
+        // instruction.
+        if (MAI->isLittleEndian() || ForceLE)
           FixupBit = i * 8 + j;
         else
           FixupBit = i * 8 + (7-j);
@@ -2431,6 +2437,11 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
+  if (CurFrag) {
+    MCSection *Sec = getCurrentSectionOnly();
+    Sec->setHasInstructions(true);
+  }
+
   if (MAI->isAIX() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.

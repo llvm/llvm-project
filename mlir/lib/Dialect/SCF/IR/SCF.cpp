@@ -21,6 +21,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -157,8 +158,7 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
-
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"no_inline"});
 }
 
 LogicalResult ExecuteRegionOp::verify() {
@@ -237,6 +237,8 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.getNoInline())
+      return failure();
     if (!isa<FunctionOpInterface, ExecuteRegionOp>(op->getParentOp()))
       return failure();
 
@@ -318,9 +320,12 @@ void ConditionOp::getSuccessorRegions(
 
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, ValueRange initArgs,
-                  BodyBuilderFn bodyBuilder) {
+                  BodyBuilderFn bodyBuilder, bool unsignedCmp) {
   OpBuilder::InsertionGuard guard(builder);
 
+  if (unsignedCmp)
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
   result.addOperands({lb, ub, step});
   result.addOperands(initArgs);
   for (Value v : initArgs)
@@ -450,6 +455,9 @@ static void printInitializationList(OpAsmPrinter &p,
 }
 
 void ForOp::print(OpAsmPrinter &p) {
+  if (getUnsignedCmp())
+    p << " unsigned";
+
   p << " " << getInductionVar() << " = " << getLowerBound() << " to "
     << getUpperBound() << " step " << getStep();
 
@@ -462,7 +470,8 @@ void ForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          /*elidedAttrs=*/getUnsignedCmpAttrName().strref());
 }
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -471,6 +480,10 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
   OpAsmParser::Argument inductionVariable;
   OpAsmParser::UnresolvedOperand lb, ub, step;
+
+  if (succeeded(parser.parseOptionalKeyword("unsigned")))
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
 
   // Parse the induction variable followed by '='.
   if (parser.parseOperand(inductionVariable.ssaName) || parser.parseEqual() ||
@@ -562,7 +575,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   inits.append(newInitOperands.begin(), newInitOperands.end());
   scf::ForOp newLoop = scf::ForOp::create(
       rewriter, getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
-      [](OpBuilder &, Location, Value, ValueRange) {});
+      [](OpBuilder &, Location, Value, ValueRange) {}, getUnsignedCmp());
   newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
 
   // Generate the new yield values and append them to the scf.yield operation.
@@ -671,7 +684,9 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   results.reserve(forallOp.getResults().size());
   for (auto &yieldingOp : terminator.getYieldingOps()) {
     auto parallelInsertSliceOp =
-        cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
+    if (!parallelInsertSliceOp)
+      continue;
 
     Value dst = parallelInsertSliceOp.getDest();
     Value src = parallelInsertSliceOp.getSource();
@@ -806,7 +821,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   // 2. Create the new forOp shell.
   scf::ForOp newForOp = scf::ForOp::create(
       rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-      forOp.getStep(), newIterOperands);
+      forOp.getStep(), newIterOperands, /*bodyBuilder=*/nullptr,
+      forOp.getUnsignedCmp());
   newForOp->setAttrs(forOp->getAttrs());
   Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
@@ -931,7 +947,8 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 
     scf::ForOp newForOp =
         scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(),
-                           forOp.getUpperBound(), forOp.getStep(), newIterArgs);
+                           forOp.getUpperBound(), forOp.getStep(), newIterArgs,
+                           /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
     newForOp->setAttrs(forOp->getAttrs());
     Block &newBlock = newForOp.getRegion().front();
 
@@ -989,12 +1006,12 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// Util function that tries to compute a constant diff between u and l.
 /// Returns std::nullopt when the difference between two AffineValueMap is
 /// dynamic.
-static std::optional<int64_t> computeConstDiff(Value l, Value u) {
+static std::optional<APInt> computeConstDiff(Value l, Value u) {
   IntegerAttr clb, cub;
   if (matchPattern(l, m_Constant(&clb)) && matchPattern(u, m_Constant(&cub))) {
     llvm::APInt lbValue = clb.getValue();
     llvm::APInt ubValue = cub.getValue();
-    return (ubValue - lbValue).getSExtValue();
+    return ubValue - lbValue;
   }
 
   // Else a simple pattern match for x + c or c + x
@@ -1003,7 +1020,7 @@ static std::optional<int64_t> computeConstDiff(Value l, Value u) {
           u, m_Op<arith::AddIOp>(matchers::m_Val(l), m_ConstantInt(&diff))) ||
       matchPattern(
           u, m_Op<arith::AddIOp>(m_ConstantInt(&diff), matchers::m_Val(l))))
-    return diff.getSExtValue();
+    return diff;
   return std::nullopt;
 }
 
@@ -1022,13 +1039,15 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    std::optional<int64_t> diff =
+    std::optional<APInt> diff =
         computeConstDiff(op.getLowerBound(), op.getUpperBound());
     if (!diff)
       return failure();
 
     // If the loop is known to have 0 iterations, remove it.
-    if (*diff <= 0) {
+    bool zeroOrLessIterations =
+        diff->isZero() || (!op.getUnsignedCmp() && diff->isNegative());
+    if (zeroOrLessIterations) {
       rewriter.replaceOp(op, op.getInitArgs());
       return success();
     }
@@ -1425,12 +1444,9 @@ InParallelOp ForallOp::getTerminator() {
 
 SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   SmallVector<Operation *> storeOps;
-  InParallelOp inParallelOp = getTerminator();
-  for (Operation &yieldOp : inParallelOp.getYieldingOps()) {
-    if (auto parallelInsertSliceOp =
-            dyn_cast<tensor::ParallelInsertSliceOp>(yieldOp);
-        parallelInsertSliceOp && parallelInsertSliceOp.getDest() == bbArg) {
-      storeOps.push_back(parallelInsertSliceOp);
+  for (Operation *user : bbArg.getUsers()) {
+    if (auto parallelOp = dyn_cast<ParallelCombiningOpInterface>(user)) {
+      storeOps.push_back(parallelOp);
     }
   }
   return storeOps;
@@ -1897,8 +1913,10 @@ struct FoldTensorCastOfOutputIntoForallOp
     auto terminator = newForallOp.getTerminator();
     for (auto [yieldingOp, outputBlockArg] : llvm::zip(
              terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-      insertSliceOp.getDestMutable().assign(outputBlockArg);
+      if (auto parallelCombingingOp =
+              dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
+        parallelCombingingOp.getUpdatedDestinations().assign(outputBlockArg);
+      }
     }
 
     // Cast results back to the original types.
@@ -1957,19 +1975,22 @@ LogicalResult InParallelOp::verify() {
   if (!forallOp)
     return this->emitOpError("expected forall op parent");
 
-  // TODO: InParallelOpInterface.
   for (Operation &op : getRegion().front().getOperations()) {
-    if (!isa<tensor::ParallelInsertSliceOp>(op)) {
-      return this->emitOpError("expected only ")
-             << tensor::ParallelInsertSliceOp::getOperationName() << " ops";
+    auto parallelCombiningOp = dyn_cast<ParallelCombiningOpInterface>(&op);
+    if (!parallelCombiningOp) {
+      return this->emitOpError("expected only ParallelCombiningOpInterface")
+             << " ops";
     }
 
     // Verify that inserts are into out block arguments.
-    Value dest = cast<tensor::ParallelInsertSliceOp>(op).getDest();
+    MutableOperandRange dests = parallelCombiningOp.getUpdatedDestinations();
     ArrayRef<BlockArgument> regionOutArgs = forallOp.getRegionOutArgs();
-    if (!llvm::is_contained(regionOutArgs, dest))
-      return op.emitOpError("may only insert into an output block argument");
+    for (OpOperand &dest : dests) {
+      if (!llvm::is_contained(regionOutArgs, dest.get()))
+        return op.emitOpError("may only insert into an output block argument");
+    }
   }
+
   return success();
 }
 
@@ -2004,12 +2025,17 @@ OpResult InParallelOp::getParentResult(int64_t idx) {
 }
 
 SmallVector<BlockArgument> InParallelOp::getDests() {
-  return llvm::to_vector<4>(
-      llvm::map_range(getYieldingOps(), [](Operation &op) {
-        // Add new ops here as needed.
-        auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(&op);
-        return llvm::cast<BlockArgument>(insertSliceOp.getDest());
-      }));
+  SmallVector<BlockArgument> updatedDests;
+  for (Operation &yieldingOp : getYieldingOps()) {
+    auto parallelCombiningOp =
+        dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+    if (!parallelCombiningOp)
+      continue;
+    for (OpOperand &updatedOperand :
+         parallelCombiningOp.getUpdatedDestinations())
+      updatedDests.push_back(cast<BlockArgument>(updatedOperand.get()));
+  }
+  return updatedDests;
 }
 
 llvm::iterator_range<Block::iterator> InParallelOp::getYieldingOps() {
@@ -3384,9 +3410,8 @@ ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (functionType.getNumInputs() != operands.size()) {
     return parser.emitError(typeLoc)
-           << "expected as many input types as operands "
-           << "(expected " << operands.size() << " got "
-           << functionType.getNumInputs() << ")";
+           << "expected as many input types as operands " << "(expected "
+           << operands.size() << " got " << functionType.getNumInputs() << ")";
   }
 
   // Resolve input operands.
@@ -4222,14 +4247,15 @@ LogicalResult scf::IndexSwitchOp::verify() {
              << "see yield operation here";
     }
     for (auto [idx, result, operand] :
-         llvm::zip(llvm::seq<unsigned>(0, getNumResults()), getResultTypes(),
-                   yield.getOperandTypes())) {
-      if (result == operand)
+         llvm::enumerate(getResultTypes(), yield.getOperands())) {
+      if (!operand)
+        return yield.emitOpError() << "operand " << idx << " is null\n";
+      if (result == operand.getType())
         continue;
       return (emitOpError("expected result #")
               << idx << " of each region to be " << result)
                  .attachNote(yield.getLoc())
-             << name << " returns " << operand << " here";
+             << name << " returns " << operand.getType() << " here";
     }
     return success();
   };

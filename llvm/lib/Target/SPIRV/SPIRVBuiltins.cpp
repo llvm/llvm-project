@@ -51,7 +51,7 @@ struct IncomingCall {
   IncomingCall(const std::string BuiltinName, const DemangledBuiltin *Builtin,
                const Register ReturnRegister, const SPIRVType *ReturnType,
                const SmallVectorImpl<Register> &Arguments)
-      : BuiltinName(BuiltinName), Builtin(Builtin),
+      : BuiltinName(std::move(BuiltinName)), Builtin(Builtin),
         ReturnRegister(ReturnRegister), ReturnType(ReturnType),
         Arguments(Arguments) {}
 
@@ -802,10 +802,9 @@ static bool buildAtomicCompareExchangeInst(
     MRI->setRegClass(Tmp, GR->getRegClass(SpvDesiredTy));
   GR->assignSPIRVTypeToVReg(SpvDesiredTy, Tmp, MIRBuilder.getMF());
 
-  SPIRVType *IntTy = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
   MIRBuilder.buildInstr(Opcode)
       .addDef(Tmp)
-      .addUse(GR->getSPIRVTypeID(IntTy))
+      .addUse(GR->getSPIRVTypeID(SpvDesiredTy))
       .addUse(ObjectPtr)
       .addUse(ScopeReg)
       .addUse(MemSemEqualReg)
@@ -2619,6 +2618,7 @@ static bool generateConvertInst(const StringRef DemangledCall,
                               GR->getSPIRVTypeID(Call->ReturnType));
   }
 
+  assert(Builtin && "Conversion builtin not found.");
   if (Builtin->IsSaturated)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,
                     SPIRV::Decoration::SaturatedConversion, {});

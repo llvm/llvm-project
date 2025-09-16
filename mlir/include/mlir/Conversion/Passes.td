@@ -52,6 +52,8 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
                "Test conversion patterns of only the specified dialects">,
     Option<"useDynamic", "dynamic", "bool", "false",
            "Use op conversion attributes to configure the conversion">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
   ];
 }
 
@@ -622,7 +624,6 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
 
 def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let summary = "Generate ROCDL operations for gpu operations";
-  let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
   let dependentDialects = [
     "ROCDL::ROCDLDialect",
     "amdgpu::AMDGPUDialect",
@@ -968,7 +969,10 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
   }];
 
   let dependentDialects = [
-    "NVVM::NVVMDialect",
+    "arith::ArithDialect",
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+    "NVVM::NVVMDialect"
   ];
 }
 
@@ -1452,7 +1456,9 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "operations instead of the alignment of the element type of the "
            "memref. This flag is intended for use with hardware which requires"
            "vector alignment, or in application contexts where it is known all "
-           "vector access are naturally aligned. ">,
+           "vector access are naturally aligned. If operations have an "
+           "alignment attribute set, the alignment attribute takes priority "
+           "over this option ">,
     Option<"amx", "enable-amx",
            "bool", /*default=*/"false",
            "Enables the use of AMX dialect while lowering the vector "
@@ -1532,12 +1538,37 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VectorToAMX
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
+  let summary = "Lower the operations from the vector dialect into the AMX "
+                "dialect";
+  let dependentDialects = [
+    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // XeVMToLLVM
 //===----------------------------------------------------------------------===//
 
 def ConvertXeVMToLLVMPass : Pass<"convert-xevm-to-llvm"> {
   let summary = "Convert XeVM to LLVM dialect";
   let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPUToXeVM
+//===----------------------------------------------------------------------===//
+
+def ConvertXeGPUToXeVMPass : Pass<"convert-xegpu-to-xevm"> {
+  let summary = "Convert XeGPU to XeVM dialect";
+  let dependentDialects = ["xevm::XeVMDialect", "vector::VectorDialect",
+                           "memref::MemRefDialect", "arith::ArithDialect",
+                           "LLVM::LLVMDialect", "index::IndexDialect",
+                           "gpu::GPUDialect", "scf::SCFDialect"];
 }
 
 #endif // MLIR_CONVERSION_PASSES

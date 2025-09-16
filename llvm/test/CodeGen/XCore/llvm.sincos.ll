@@ -26,9 +26,8 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) nounwind {
 }
 
 ; CHECK-LABEL: test_sincos_f32:
-; OTHER: bl sinf
-; OTHER: bl cosf
-; GNU: bl sincosf
+; CHECK: bl sinf
+; CHECK: bl cosf
 define { float, float } @test_sincos_f32(float %a) nounwind {
   %result = call { float, float } @llvm.sincos.f32(float %a)
   ret { float, float } %result

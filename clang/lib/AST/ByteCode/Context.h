@@ -30,7 +30,7 @@ namespace interp {
 class Function;
 class Program;
 class State;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 struct ParamOffset {
   unsigned Offset;
@@ -59,7 +59,8 @@ public:
                 ConstantExprKind Kind);
 
   /// Evaluates a toplevel initializer.
-  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
+  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
+                             APValue &Result);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
@@ -91,6 +92,25 @@ public:
       return PT_Ptr;
 
     return classify(E->getType());
+  }
+
+  bool canClassify(QualType T) {
+    if (const auto *BT = dyn_cast<BuiltinType>(T)) {
+      if (BT->isInteger() || BT->isFloatingPoint())
+        return true;
+      if (BT->getKind() == BuiltinType::Bool)
+        return true;
+    }
+
+    if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
+        T->isVectorType())
+      return false;
+    return classify(T) != std::nullopt;
+  }
+  bool canClassify(const Expr *E) {
+    if (E->isGLValue())
+      return true;
+    return canClassify(E->getType());
   }
 
   const CXXMethodDecl *

@@ -55,7 +55,11 @@ class MCObjectStreamer : public MCStreamer {
   SmallVector<std::unique_ptr<uint8_t[]>, 0> FragStorage;
   // Available bytes in the current block for trailing data or new fragments.
   size_t FragSpace = 0;
+  // Used to allocate special fragments that do not use MCFragment's fixed-size
+  // part.
+  BumpPtrAllocator SpecialFragAllocator;
 
+  void addSpecialFragment(MCFragment *F);
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
@@ -85,15 +89,22 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  // Add a fragment with a variable-size tail and start a new empty fragment.
-  void insert(MCFragment *F);
-
   uint8_t *getCurFragEnd() const {
     return reinterpret_cast<uint8_t *>(CurFrag + 1) + CurFrag->getFixedSize();
   }
   MCFragment *allocFragSpace(size_t Headroom);
   // Add a new fragment to the current section without a variable-size tail.
   void newFragment();
+
+  // Add a new special fragment to the current section and start a new empty
+  // fragment.
+  template <typename FT, typename... Args>
+  FT *newSpecialFragment(Args &&...args) {
+    auto *F = new (SpecialFragAllocator.Allocate(sizeof(FT), alignof(FT)))
+        FT(std::forward<Args>(args)...);
+    addSpecialFragment(F);
+    return F;
+  }
 
   void ensureHeadroom(size_t Headroom);
   void appendContents(ArrayRef<char> Contents);

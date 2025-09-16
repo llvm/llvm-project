@@ -62,13 +62,12 @@ public:
   std::vector<const NamedDecl *>
   resolveDependentNameType(const DependentNameType *DNT) const;
   std::vector<const NamedDecl *> resolveTemplateSpecializationType(
-      const DependentTemplateSpecializationType *DTST) const;
+      const TemplateSpecializationType *TST) const;
 
   // Try to heuristically resolve a dependent nested name specifier
   // to the type it likely denotes. Note that *dependent* name specifiers always
   // denote types, not namespaces.
-  QualType
-  resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) const;
+  QualType resolveNestedNameSpecifierToType(NestedNameSpecifier NNS) const;
 
   // Perform an imprecise lookup of a dependent name in `RD`.
   // This function does not follow strict semantic rules and should be used

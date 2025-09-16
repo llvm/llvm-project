@@ -84,29 +84,28 @@ public:
     if (!IsCollectingDecls)
       return;
     if (!D || isa<TranslationUnitDecl>(D) || isa<LinkageSpecDecl>(D) ||
-        isa<NamespaceDecl>(D)) {
+        isa<NamespaceDecl>(D) || isa<ExportDecl>(D)) {
       // These decls cover a lot of nested declarations that might not be used,
       // reducing the granularity and making the output less useful.
       return;
     }
-    auto *DC = D->getLexicalDeclContext();
-    if (!DC || !DC->isFileContext()) {
-      // We choose to work at namespace level to reduce complexity and the
-      // number of cases we care about.
+    if (isa<ParmVarDecl>(D)) {
+      // Parameters are covered by their functions.
       return;
     }
+    auto *DC = D->getLexicalDeclContext();
+    if (!DC || !shouldIncludeDeclsIn(DC))
+      return;
 
     PendingDecls.push_back(D);
-    if (auto *NS = dyn_cast<NamespaceDecl>(DC)) {
-      // Add any namespaces we have not seen before.
-      // Note that we filter out namespaces from DeclRead as it includes too
-      // all redeclarations and we only want the ones that had other used
-      // declarations.
-      while (NS && ProcessedNamespaces.insert(NS).second) {
-        PendingDecls.push_back(NS);
-
-        NS = dyn_cast<NamespaceDecl>(NS->getLexicalParent());
-      }
+    for (; (isa<ExportDecl>(DC) || isa<NamespaceDecl>(DC)) &&
+           ProcessedDeclContexts.insert(DC).second;
+         DC = DC->getLexicalParent()) {
+      // Add any interesting decl contexts that we have not seen before.
+      // Note that we filter them out from DeclRead as that would include all
+      // redeclarations of namespaces, potentially those that do not have any
+      // imported declarations.
+      PendingDecls.push_back(cast<Decl>(DC));
     }
   }
 
@@ -205,12 +204,38 @@ public:
 
 private:
   std::vector<const Decl *> PendingDecls;
-  llvm::SmallPtrSet<const NamespaceDecl *, 0> ProcessedNamespaces;
+  llvm::SmallPtrSet<const DeclContext *, 0> ProcessedDeclContexts;
   bool IsCollectingDecls = true;
   const SourceManager &SM;
   std::unique_ptr<llvm::raw_ostream> OS;
 
+  static bool shouldIncludeDeclsIn(const DeclContext *DC) {
+    assert(DC && "DC is null");
+    // We choose to work at namespace level to reduce complexity and the number
+    // of cases we care about.
+    // We still need to carefully handle composite declarations like
+    // `ExportDecl`.
+    for (; DC; DC = DC->getLexicalParent()) {
+      if (DC->isFileContext())
+        return true;
+      if (isa<ExportDecl>(DC))
+        continue; // Depends on the parent.
+      return false;
+    }
+    llvm_unreachable("DeclContext chain must end with a translation unit");
+  }
+
   llvm::SmallVector<CharSourceRange, 2> getRangesToMark(const Decl *D) {
+    if (auto *ED = dyn_cast<ExportDecl>(D)) {
+      if (!ED->hasBraces())
+        return {SM.getExpansionRange(ED->getExportLoc())};
+
+      return {SM.getExpansionRange(SourceRange(
+                  ED->getExportLoc(),
+                  lexForLBrace(ED->getExportLoc(), D->getLangOpts()))),
+              SM.getExpansionRange(ED->getRBraceLoc())};
+    }
+
     auto *NS = dyn_cast<NamespaceDecl>(D);
     if (!NS)
       return {SM.getExpansionRange(D->getSourceRange())};
@@ -232,17 +257,7 @@ private:
           }
         }
       }
-      auto &LangOpts = D->getLangOpts();
-      // Now skip one token, the next should be the lbrace.
-      Token Tok;
-      if (Lexer::getRawToken(TokenBeforeLBrace, Tok, SM, LangOpts, true) ||
-          Lexer::getRawToken(Tok.getEndLoc(), Tok, SM, LangOpts, true) ||
-          Tok.getKind() != tok::l_brace) {
-        // On error or if we did not find the token we expected, avoid marking
-        // everything inside the namespace as used.
-        return {};
-      }
-      LBraceLoc = Tok.getLocation();
+      LBraceLoc = lexForLBrace(TokenBeforeLBrace, D->getLangOpts());
     }
     return {SM.getExpansionRange(SourceRange(NS->getBeginLoc(), LBraceLoc)),
             SM.getExpansionRange(NS->getRBraceLoc())};
@@ -284,6 +299,20 @@ private:
     *OS << "}\n";
 
     OS->flush();
+  }
+
+  SourceLocation lexForLBrace(SourceLocation TokenBeforeLBrace,
+                              const LangOptions &LangOpts) {
+    // Now skip one token, the next should be the lbrace.
+    Token Tok;
+    if (Lexer::getRawToken(TokenBeforeLBrace, Tok, SM, LangOpts, true) ||
+        Lexer::getRawToken(Tok.getEndLoc(), Tok, SM, LangOpts, true) ||
+        Tok.getKind() != tok::l_brace) {
+      // On error or if we did not find the token we expected, avoid marking
+      // everything inside the namespace as used.
+      return SourceLocation();
+    }
+    return Tok.getLocation();
   }
 };
 
@@ -594,7 +623,7 @@ static std::error_code collectModuleHeaderIncludes(
     llvm::sys::path::native(UmbrellaDir->Entry.getName(), DirNative);
 
     llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-    SmallVector<std::pair<std::string, FileEntryRef>, 8> Headers;
+    SmallVector<std::pair<std::string, std::string>, 8> HeaderPaths;
     for (llvm::vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
          Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with
@@ -602,17 +631,6 @@ static std::error_code collectModuleHeaderIncludes(
       if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
                .Cases(".h", ".H", ".hh", ".hpp", true)
                .Default(false))
-        continue;
-
-      auto Header = FileMgr.getOptionalFileRef(Dir->path());
-      // FIXME: This shouldn't happen unless there is a file system race. Is
-      // that worth diagnosing?
-      if (!Header)
-        continue;
-
-      // If this header is marked 'unavailable' in this module, don't include
-      // it.
-      if (ModMap.isHeaderUnavailableInModule(*Header, Module))
         continue;
 
       // Compute the relative path from the directory to this file.
@@ -626,20 +644,33 @@ static std::error_code collectModuleHeaderIncludes(
            ++It)
         llvm::sys::path::append(RelativeHeader, *It);
 
-      std::string RelName = RelativeHeader.c_str();
-      Headers.push_back(std::make_pair(RelName, *Header));
+      HeaderPaths.push_back(
+          std::make_pair(Dir->path().str(), RelativeHeader.c_str()));
     }
 
     if (EC)
       return EC;
 
     // Sort header paths and make the header inclusion order deterministic
-    // across different OSs and filesystems.
-    llvm::sort(Headers, llvm::less_first());
-    for (auto &H : Headers) {
+    // across different OSs and filesystems. As the header search table
+    // serialization order depends on the file reference UID, we need to create
+    // file references in deterministic order too.
+    llvm::sort(HeaderPaths, llvm::less_first());
+    for (auto &[Path, RelPath] : HeaderPaths) {
+      auto Header = FileMgr.getOptionalFileRef(Path);
+      // FIXME: This shouldn't happen unless there is a file system race. Is
+      // that worth diagnosing?
+      if (!Header)
+        continue;
+
+      // If this header is marked 'unavailable' in this module, don't include
+      // it.
+      if (ModMap.isHeaderUnavailableInModule(*Header, Module))
+        continue;
+
       // Include this header as part of the umbrella directory.
-      Module->addTopHeader(H.second);
-      addHeaderInclude(H.first, Includes, LangOpts, Module->IsExternC);
+      Module->addTopHeader(*Header);
+      addHeaderInclude(RelPath, Includes, LangOpts, Module->IsExternC);
     }
   }
 

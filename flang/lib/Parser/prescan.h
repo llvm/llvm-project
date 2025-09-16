@@ -91,6 +91,15 @@ public:
     return messages_.Say(std::forward<A>(a)...);
   }
 
+  template <typename... A>
+  Message *Warn(common::UsageWarning warning, A &&...a) {
+    return messages_.Warn(false, features_, warning, std::forward<A>(a)...);
+  }
+  template <typename... A>
+  Message *Warn(common::LanguageFeature feature, A &&...a) {
+    return messages_.Warn(false, features_, feature, std::forward<A>(a)...);
+  }
+
 private:
   struct LineClassification {
     enum class Kind {

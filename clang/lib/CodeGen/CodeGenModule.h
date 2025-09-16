@@ -17,6 +17,7 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -1185,9 +1186,8 @@ public:
   ///
   /// \param GlobalName If provided, the name to use for the global (if one is
   /// created).
-  ConstantAddress
-  GetAddrOfConstantCString(const std::string &Str,
-                           const char *GlobalName = nullptr);
+  ConstantAddress GetAddrOfConstantCString(const std::string &Str,
+                                           StringRef GlobalName = ".str");
 
   /// Returns a pointer to a constant global variable for the given file-scope
   /// compound literal expression.
@@ -1621,7 +1621,10 @@ public:
   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
 
   /// Generate a KCFI type identifier for T.
-  llvm::ConstantInt *CreateKCFITypeId(QualType T);
+  llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
+
+  /// Create a metadata identifier for the given function type.
+  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1822,6 +1825,11 @@ public:
                           ? 32
                           : getTarget().getPointerAlign(AS);
     return PAlign;
+  }
+
+  /// Helper function to construct a TrapReasonBuilder
+  TrapReasonBuilder BuildTrapReason(unsigned DiagID, TrapReason &TR) {
+    return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
 private:

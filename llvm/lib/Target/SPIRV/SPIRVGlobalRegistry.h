@@ -438,6 +438,9 @@ private:
 
   SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
 
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
+                            SPIRV::FPEncoding::FPEncoding FPEncode);
+
   SPIRVType *getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeVector(uint32_t NumElems, SPIRVType *ElemType,

@@ -766,8 +766,32 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
           break;
         }
 
-        case DW_CFA_val_offset:    // 0x14
-        case DW_CFA_val_offset_sf: // 0x15
+        case DW_CFA_val_offset: { // 0x14
+          // takes two unsigned LEB128 operands representing a register number
+          // and a factored offset. The required action is to change the rule
+          // for the register indicated by the register number to be a
+          // val_offset(N) rule where the value of N is factored_offset*
+          // data_alignment_factor
+          uint32_t reg_num = (uint32_t)m_cfi_data.GetULEB128(&offset);
+          int32_t op_offset =
+              (int32_t)m_cfi_data.GetULEB128(&offset) * data_align;
+          reg_location.SetIsCFAPlusOffset(op_offset);
+          row.SetRegisterInfo(reg_num, reg_location);
+          break;
+        }
+        case DW_CFA_val_offset_sf: { // 0x15
+          // takes two operands: an unsigned LEB128 value representing a
+          // register number and a signed LEB128 factored offset. This
+          // instruction is identical to DW_CFA_val_offset except that the
+          // second operand is signed and factored. The resulting offset is
+          // factored_offset* data_alignment_factor.
+          uint32_t reg_num = (uint32_t)m_cfi_data.GetULEB128(&offset);
+          int32_t op_offset =
+              (int32_t)m_cfi_data.GetSLEB128(&offset) * data_align;
+          reg_location.SetIsCFAPlusOffset(op_offset);
+          row.SetRegisterInfo(reg_num, reg_location);
+          break;
+        }
         default:
           break;
         }

@@ -485,7 +485,16 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!CanPadInst)
     return;
 
-  if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
+  if (PendingBA) {
+    auto *NextFragment = PendingBA->getNext();
+    assert(NextFragment && "NextFragment should not be null");
+    if (NextFragment == OS.getCurrentFragment())
+      return;
+    // We eagerly create an empty fragment when inserting a fragment
+    // with a variable-size tail.
+    if (NextFragment->getNext() == OS.getCurrentFragment())
+      return;
+
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
@@ -511,9 +520,8 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                           isFirstMacroFusibleInst(Inst, *MCII))) {
     // If we meet a unfused branch or the first instuction in a fusiable pair,
     // insert a BoundaryAlign fragment.
-    PendingBA = OS.getContext().allocFragment<MCBoundaryAlignFragment>(
-        AlignBoundary, STI);
-    OS.insert(PendingBA);
+    PendingBA =
+        OS.newSpecialFragment<MCBoundaryAlignFragment>(AlignBoundary, STI);
   }
 }
 

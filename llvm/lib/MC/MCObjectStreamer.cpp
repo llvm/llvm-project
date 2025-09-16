@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSFrame.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -30,7 +31,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
     : MCStreamer(Context),
       Assembler(std::make_unique<MCAssembler>(
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
-      EmitEHFrame(true), EmitDebugFrame(false) {
+      EmitEHFrame(true), EmitDebugFrame(false), EmitSFrame(false) {
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
   IsObj = true;
   setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -84,9 +85,9 @@ void MCObjectStreamer::ensureHeadroom(size_t Headroom) {
   addFragment(F);
 }
 
-void MCObjectStreamer::insert(MCFragment *Frag) {
+void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
   assert(Frag->getKind() != MCFragment::FT_Data &&
-         "F should have a variable-size tail");
+         "Frag should have a variable-size tail");
   // Frag is not connected to FragSpace. Before modifying CurFrag with
   // addFragment(Frag), allocate an empty fragment to maintain FragSpace
   // connectivity, potentially reusing CurFrag's associated space.
@@ -173,6 +174,7 @@ void MCObjectStreamer::reset() {
   EmitDebugFrame = false;
   FragStorage.clear();
   FragSpace = 0;
+  SpecialFragAllocator.Reset();
   MCStreamer::reset();
 }
 
@@ -185,6 +187,10 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 
   if (EmitDebugFrame)
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
+
+  if (EmitSFrame || (getContext().getTargetOptions() &&
+                     getContext().getTargetOptions()->EmitSFrameUnwind))
+    MCSFrameEmitter::emit(*this);
 }
 
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
@@ -442,7 +448,7 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
     // MCAssembler::relaxAlign.
     auto *Sec = F->getParent();
     if (!Sec->isLinkerRelaxable())
-      Sec->setLinkerRelaxable();
+      Sec->setFirstLinkerRelaxable(F->getLayoutOrder());
     // Do not add data after a linker-relaxable instruction. The difference
     // between a new label and a label at or before the linker-relaxable
     // instruction cannot be resolved at assemble-time.
@@ -460,11 +466,23 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   getAssembler().getEmitter().encodeInstruction(Inst, Data, Fixups, STI);
 
   F->Kind = MCFragment::FT_Relaxable;
-  F->STI = &STI;
-  F->HasInstructions = true;
+  F->setHasInstructions(STI);
+
   F->setVarContents(Data);
-  F->setVarFixups(Fixups);
   F->setInst(Inst);
+
+  bool MarkedLinkerRelaxable = false;
+  for (auto &Fixup : Fixups) {
+    if (!Fixup.isLinkerRelaxable() || MarkedLinkerRelaxable)
+      continue;
+    MarkedLinkerRelaxable = true;
+    auto *Sec = F->getParent();
+    if (!Sec->isLinkerRelaxable())
+      Sec->setFirstLinkerRelaxable(F->getLayoutOrder());
+    F->setLinkerRelaxable();
+  }
+  F->setVarFixups(Fixups);
+
   newFragment();
 }
 
@@ -649,7 +667,7 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
-  insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
+  newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc);
 }
 
 void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
@@ -681,8 +699,7 @@ void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                                 SMLoc Loc) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc));
+  newSpecialFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc);
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
@@ -709,15 +726,13 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
 
   // Otherwise emit as fragment.
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(Expr, Size, NumValues, Loc));
+  newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
                                 SMLoc Loc, const MCSubtargetInfo &STI) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(getContext().allocFragment<MCNopsFragment>(
-      NumBytes, ControlledNopLength, Loc, STI));
+  newSpecialFragment<MCNopsFragment>(NumBytes, ControlledNopLength, Loc, STI);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {

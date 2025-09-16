@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --format=mustache --output=%t --executor=standalone %s 
-// RUN: FileCheck %s < %t/MyNamespace.html
+// RUN: FileCheck %s < %t/html/MyNamespace.html
 
 namespace MyNamespace {
   class Foo;

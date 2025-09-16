@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-tidy/ClangTidyDiagnosticConsumer.cpp ----------=== //
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -533,7 +533,8 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       Builder << reinterpret_cast<const NamedDecl *>(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_nestednamespec:
-      Builder << reinterpret_cast<NestedNameSpecifier *>(Info.getRawArg(Index));
+      Builder << NestedNameSpecifier::getFromVoidPointer(
+          reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
     case clang::DiagnosticsEngine::ak_declcontext:
       Builder << reinterpret_cast<DeclContext *>(Info.getRawArg(Index));

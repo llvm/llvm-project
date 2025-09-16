@@ -241,10 +241,11 @@ VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP ptr = valobj.GetChildAtNamePath({"_M_dataplus", "_M_p"});
-  if (!ptr)
-    return false;
+  if (!ptr || !ptr->GetError().Success())
+    stream << "Summary Unavailable";
+  else
+    stream << ptr->GetSummaryAsCString();
 
-  stream << ptr->GetSummaryAsCString();
   return true;
 }
 

@@ -31,28 +31,25 @@ def InstB : TestInstruction {
   let hasCompleteDecoder = 0;
 }
 
-// CHECK:      /* 0 */       MCD::OPC_ExtractField, 2, 1,  // Inst{2} ...
-// CHECK-NEXT: /* 3 */       MCD::OPC_FilterValueOrFail, 0,
-// CHECK-NEXT: /* 5 */       MCD::OPC_ExtractField, 5, 3,  // Inst{7-5} ...
-// CHECK-NEXT: /* 8 */       MCD::OPC_FilterValueOrFail, 0
-// CHECK-NEXT: /* 10 */      MCD::OPC_CheckField, 0, 2, 3, 6, 0, // Skip to: 22
-// CHECK-NEXT: /* 16 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 22
-// CHECK-NEXT: /* 22 */      MCD::OPC_CheckFieldOrFail, 3, 2, 0,
-// CHECK-NEXT: /* 26 */      MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, {{[0-9]+}}, 1,
-// CHECK-NEXT: /* 30 */      MCD::OPC_Fail,
+// CHECK:      /* 0 */       OPC_CheckField, 2, 1, 0,
+// CHECK-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
+// CHECK-NEXT: /* 8 */       OPC_Scope, 8, 0, // end scope at 19
+// CHECK-NEXT: /* 11 */      OPC_CheckField, 0, 2, 3,
+// CHECK-NEXT: /* 15 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
+// CHECK-NEXT: /* 19 */      OPC_CheckField, 3, 2, 0,
+// CHECK-NEXT: /* 23 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 1,
 
 // CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
 // CHECK: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
 
-// CHECK-LARGE:      /* 0 */       MCD::OPC_ExtractField, 2, 1,  // Inst{2} ...
-// CHECK-LARGE-NEXT: /* 3 */       MCD::OPC_FilterValueOrFail, 0,
-// CHECK-LARGE-NEXT: /* 5 */       MCD::OPC_ExtractField, 5, 3,  // Inst{7-5} ...
-// CHECK-LARGE-NEXT: /* 8 */       MCD::OPC_FilterValueOrFail, 0,
-// CHECK-LARGE-NEXT: /* 10 */      MCD::OPC_CheckField, 0, 2, 3, 7, 0, 0, // Skip to: 24
-// CHECK-LARGE-NEXT: /* 17 */      MCD::OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0, 0, 0, 0, // Opcode: InstB, DecodeIdx: {{[0-9]+}}, Skip to: 24
-// CHECK-LARGE-NEXT: /* 24 */      MCD::OPC_CheckFieldOrFail, 3, 2, 0,
-// CHECK-LARGE-NEXT: /* 28 */      MCD::OPC_TryDecodeOrFail, {{[0-9]+}}, {{[0-9]+}}, 1,
-// CHECK-LARGE-NEXT: /* 32 */      MCD::OPC_Fail,
+// CHECK-LARGE:      /* 0 */       OPC_CheckField, 2, 1, 0,
+// CHECK-LARGE-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
+// CHECK-LARGE-NEXT: /* 8 */       OPC_Scope, 8, 0, 0, // end scope at 20
+// CHECK-LARGE-NEXT: /* 12 */      OPC_CheckField, 0, 2, 3,
+// CHECK-LARGE-NEXT: /* 16 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 0,
+// CHECK-LARGE-NEXT: /* 20 */      OPC_CheckField, 3, 2, 0,
+// CHECK-LARGE-NEXT: /* 24 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 1,
+// CHECK-LARGE-NEXT: };
 
 // CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
 // CHECK-LARGE: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

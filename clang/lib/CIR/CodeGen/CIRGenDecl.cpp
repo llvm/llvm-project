@@ -31,6 +31,8 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
 
   mlir::Location loc = getLoc(d.getSourceRange());
+  bool nrvo =
+      getContext().getLangOpts().ElideConstructors && d.isNRVOVariable();
 
   CIRGenFunction::AutoVarEmission emission(d);
   emission.IsEscapingByRef = d.isEscapingByref();
@@ -44,16 +46,37 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   if (ty->isVariablyModifiedType())
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: variably modified type");
 
+  assert(!cir::MissingFeatures::openMP());
+
   Address address = Address::invalid();
   if (!ty->isConstantSizeType())
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: non-constant size type");
 
   // A normal fixed sized variable becomes an alloca in the entry block,
-  mlir::Type allocaTy = convertTypeForMem(ty);
-  // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                             /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
-  declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
+  // unless:
+  // - it's an NRVO variable.
+  // - we are compiling OpenMP and it's an OpenMP local variable.
+  if (nrvo) {
+    // The named return value optimization: allocate this variable in the
+    // return slot, so that we can elide the copy when returning this
+    // variable (C++0x [class.copy]p34).
+    address = returnValue;
+
+    if (const RecordDecl *rd = ty->getAsRecordDecl()) {
+      if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
+          (cxxrd && !cxxrd->hasTrivialDestructor()) ||
+          rd->isNonTrivialToPrimitiveDestroy())
+        cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: set NRVO flag");
+    }
+  } else {
+    // A normal fixed sized variable becomes an alloca in the entry block,
+    mlir::Type allocaTy = convertTypeForMem(ty);
+    // Create the temp alloca and declare variable using it.
+    address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                               /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
+    declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
+            alignment);
+  }
 
   emission.Addr = address;
   setAddrOfLocalVar(&d, address);
@@ -154,15 +177,19 @@ void CIRGenFunction::emitAutoVarInit(
     initializeWhatIsTechnicallyUninitialized(addr);
     LValue lv = makeAddrLValue(addr, type, AlignmentSource::Decl);
     emitExprAsInit(init, &d, lv);
-    // In case lv has uses it means we indeed initialized something
-    // out of it while trying to build the expression, mark it as such.
-    mlir::Value val = lv.getAddress().getPointer();
-    assert(val && "Should have an address");
-    auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
-    assert(allocaOp && "Address should come straight out of the alloca");
 
-    if (!allocaOp.use_empty())
-      allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    if (!emission.wasEmittedAsOffloadClause()) {
+      // In case lv has uses it means we indeed initialized something
+      // out of it while trying to build the expression, mark it as such.
+      mlir::Value val = lv.getAddress().getPointer();
+      assert(val && "Should have an address");
+      auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
+      assert(allocaOp && "Address should come straight out of the alloca");
+
+      if (!allocaOp.use_empty())
+        allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
     return;
   }
 
@@ -293,7 +320,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   mlir::Attribute init = builder.getZeroInitAttr(convertType(ty));
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
-      getModule(), getLoc(d.getLocation()), name, lty, linkage);
+      getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   gv.setInitialValueAttr(init);
@@ -666,6 +693,12 @@ struct DestroyObject final : EHScopeStack::Cleanup {
 
   void emit(CIRGenFunction &cgf) override {
     cgf.emitDestroy(addr, type, destroyer);
+  }
+
+  // This is a placeholder until EHCleanupScope is implemented.
+  size_t getSize() const override {
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    return sizeof(DestroyObject);
   }
 };
 } // namespace

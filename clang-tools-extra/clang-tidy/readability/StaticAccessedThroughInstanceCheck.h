@@ -1,4 +1,4 @@
-//===--- StaticAccessedThroughInstanceCheck.h - clang-tidy-------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,6 +24,9 @@ public:
       : ClangTidyCheck(Name, Context),
         NameSpecifierNestingThreshold(
             Options.get("NameSpecifierNestingThreshold", 3U)) {}
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

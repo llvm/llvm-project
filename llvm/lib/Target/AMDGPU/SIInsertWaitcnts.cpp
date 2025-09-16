@@ -32,11 +32,15 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
@@ -148,7 +152,7 @@ static constexpr StringLiteral WaitEventTypeName[] = {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
+  SQ_MAX_PGM_VGPRS = 2048, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
   // Artificial register slots to track LDS writes into specific LDS locations
@@ -827,7 +831,6 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *Context->ST);
   unsigned RegIdx = TRI->getHWRegIndex(MCReg);
-  assert(isUInt<8>(RegIdx));
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
@@ -835,7 +838,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
-    assert(Reg < AGPR_OFFSET);
+    assert(!Context->ST->hasMAIInsts() || Reg < AGPR_OFFSET);
     Result.first = Reg;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
@@ -1938,13 +1941,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = FIRST_LDS_VGPR;
-        // Only objects with alias scope info were added to LDSDMAScopes array.
-        // In the absense of the scope info we will not be able to disambiguate
-        // aliasing here. There is no need to try searching for a corresponding
-        // store slot. This is conservatively correct because in that case we
-        // will produce a wait using the first (general) LDS DMA wait slot which
-        // will wait on all of them anyway.
-        if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
+        if (Ptr && Memop->getAAInfo()) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
             if (MI.mayAlias(AA, *LDSDMAStores[I], true))
@@ -2010,11 +2007,19 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     }
   }
 
-  // The subtarget may have an implicit S_WAITCNT 0 before barriers. If it does
-  // not, we need to ensure the subtarget is capable of backing off barrier
-  // instructions in case there are any outstanding memory operations that may
-  // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
-  if (TII->isBarrierStart(MI.getOpcode()) &&
+  // Ensure safety against exceptions from outstanding memory operations while
+  // waiting for a barrier:
+  //
+  //  * Some subtargets safely handle backing off the barrier in hardware
+  //    when an exception occurs.
+  //  * Some subtargets have an implicit S_WAITCNT 0 before barriers, so that
+  //    there can be no outstanding memory operations during the wait.
+  //  * Subtargets with split barriers don't need to back off the barrier; it
+  //    is up to the trap handler to preserve the user barrier state correctly.
+  //
+  // In all other cases, ensure safety by ensuring that there are no outstanding
+  // memory operations.
+  if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }
@@ -2341,6 +2346,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     case AMDGPU::S_MEMREALTIME:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
+    case AMDGPU::S_BARRIER_LEAVE:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);

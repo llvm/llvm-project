@@ -5,12 +5,12 @@ define i1 @f(i32 %x, i1 %y) {
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X2]], 2
-; CHECK:         [[X2_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X2]])
+; CHECK:         [[X2_0:%.*]] = bitcast i32 [[X2]] to i32
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB2]], label [[BB3]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[X3:%.*]] = phi i32 [ [[X_0]], [[BB0]] ], [ [[X2_0]], [[BB1]] ]
@@ -38,12 +38,12 @@ define i1 @g(i32 %x, i1 %y) {
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
-; CHECK:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB3:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X2]], 2
-; CHECK:         [[X2_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X2]])
+; CHECK:         [[X2_0:%.*]] = bitcast i32 [[X2]] to i32
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB3]], label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[X3:%.*]] = phi i32 [ [[X_0]], [[BB0]] ], [ [[X2_0]], [[BB1]] ]

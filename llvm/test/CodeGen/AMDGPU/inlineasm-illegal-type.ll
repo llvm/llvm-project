@@ -18,6 +18,12 @@ define amdgpu_kernel void @v_input_output_i8() {
   ret void
 }
 
+; GCN: error: couldn't allocate input reg for constraint 'v'
+define amdgpu_kernel void @v_input_empty_struct() {
+  call void asm "", "v"({} poison)
+  ret void
+}
+
 ; SICI: error: couldn't allocate output register for constraint 's'
 ; SICI: error: couldn't allocate input reg for constraint 's'
 ; VI-NOT: error

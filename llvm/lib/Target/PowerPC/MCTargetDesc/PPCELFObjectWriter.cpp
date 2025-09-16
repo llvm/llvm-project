@@ -86,8 +86,8 @@ unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case PPC::S_TPREL_HIGHEST:
   case PPC::S_TPREL_HIGHESTA:
   case PPC::S_TPREL_LO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -499,7 +499,8 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
       // The "other" values are stored in the last 6 bits of the second byte.
       // The traditional defines for STO values assume the full byte and thus
       // the shift to pack it.
-      unsigned Other = cast<MCSymbolELF>(V.getAddSym())->getOther() << 2;
+      unsigned Other =
+          static_cast<const MCSymbolELF *>(V.getAddSym())->getOther() << 2;
       return (Other & ELF::STO_PPC64_LOCAL_MASK) != 0;
     }
 

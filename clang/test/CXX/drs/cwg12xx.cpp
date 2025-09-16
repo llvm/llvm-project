@@ -81,7 +81,7 @@ void g() {
     A b(auto ()->C);
     static_assert(sizeof(B ()->C[1] == sizeof(int)), "");
     sizeof(auto () -> C[1]);
-    // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'cwg1223::BB[1]')}}
+    // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'struct BB[1]')}}
 }
 #endif
 } // namespace cwg1223

@@ -293,6 +293,9 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     return;
   }
 
+  // Give the Architecture a chance to replace the UnwindPlan.
+  TryAdoptArchitectureUnwindPlan();
+
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64 " cfa is 0x%" PRIx64
                " afa is 0x%" PRIx64 " using %s UnwindPlan",
                (uint64_t)m_current_pc.GetLoadAddress(exe_ctx.GetTargetPtr()),
@@ -481,6 +484,9 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
           return;
         }
       }
+
+      // Give the Architecture a chance to replace the UnwindPlan.
+      TryAdoptArchitectureUnwindPlan();
 
       UnwindLogMsg("initialized frame cfa is 0x%" PRIx64 " afa is 0x%" PRIx64,
                    (uint64_t)m_cfa, (uint64_t)m_afa);
@@ -685,6 +691,9 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       return;
     }
   }
+
+  // Give the Architecture a chance to replace the UnwindPlan.
+  TryAdoptArchitectureUnwindPlan();
 
   UnwindLogMsg("initialized frame current pc is 0x%" PRIx64
                " cfa is 0x%" PRIx64 " afa is 0x%" PRIx64,
@@ -1118,6 +1127,27 @@ bool RegisterContextUnwind::ReadRegisterValueFromRegisterLocation(
       success = GetNextFrame()->ReadRegister(other_reg_info, value);
     }
   } break;
+  case UnwindLLDB::ConcreteRegisterLocation::eRegisterIsRegisterPlusOffset: {
+    auto regnum = regloc.location.reg_plus_offset.register_number;
+    const RegisterInfo *other_reg_info =
+        GetRegisterInfoAtIndex(regloc.location.reg_plus_offset.register_number);
+
+    if (!other_reg_info)
+      return false;
+
+    if (IsFrameZero()) {
+      success =
+          m_thread.GetRegisterContext()->ReadRegister(other_reg_info, value);
+    } else {
+      success = GetNextFrame()->ReadRegister(other_reg_info, value);
+    }
+    if (success) {
+      UnwindLogMsg("read (%d)'s location", regnum);
+      value = value.GetAsUInt64(~0ull, &success) +
+              regloc.location.reg_plus_offset.offset;
+      UnwindLogMsg("success %s", success ? "yes" : "no");
+    }
+  } break;
   case UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred:
     success =
         value.SetUInt(regloc.location.inferred_value, reg_info->byte_size);
@@ -1164,6 +1194,7 @@ bool RegisterContextUnwind::WriteRegisterValueToRegisterLocation(
       success = GetNextFrame()->WriteRegister(other_reg_info, value);
     }
   } break;
+  case UnwindLLDB::ConcreteRegisterLocation::eRegisterIsRegisterPlusOffset:
   case UnwindLLDB::ConcreteRegisterLocation::eRegisterValueInferred:
   case UnwindLLDB::ConcreteRegisterLocation::eRegisterNotSaved:
     break;
@@ -1695,6 +1726,41 @@ RegisterContextUnwind::SavedLocationForRegister(
   return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
 }
 
+UnwindPlanSP RegisterContextUnwind::TryAdoptArchitectureUnwindPlan() {
+  if (!m_full_unwind_plan_sp)
+    return {};
+  ProcessSP process_sp = m_thread.GetProcess();
+  if (!process_sp)
+    return {};
+
+  UnwindPlanSP arch_override_plan_sp;
+  if (Architecture *arch = process_sp->GetTarget().GetArchitecturePlugin())
+    arch_override_plan_sp =
+        arch->GetArchitectureUnwindPlan(m_thread, this, m_full_unwind_plan_sp);
+
+  if (arch_override_plan_sp) {
+    m_full_unwind_plan_sp = arch_override_plan_sp;
+    PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
+    m_registers.clear();
+    if (GetLog(LLDBLog::Unwind)) {
+      UnwindLogMsg(
+          "Replacing Full Unwindplan with Architecture UnwindPlan, '%s'",
+          m_full_unwind_plan_sp->GetSourceName().AsCString());
+      const UnwindPlan::Row *active_row =
+          m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
+      if (active_row) {
+        StreamString active_row_strm;
+        active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
+                         &m_thread,
+                         m_start_pc.GetLoadAddress(&process_sp->GetTarget()));
+        UnwindLogMsg("%s", active_row_strm.GetData());
+      }
+    }
+  }
+
+  return {};
+}
+
 // TryFallbackUnwindPlan() -- this method is a little tricky.
 //
 // When this is called, the frame above -- the caller frame, the "previous"
@@ -1959,6 +2025,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
 
   switch (fa.GetValueType()) {
   case UnwindPlan::Row::FAValue::isRegisterDereferenced: {
+    UnwindLogMsg("CFA value via dereferencing reg");
     RegisterNumber cfa_reg(m_thread, row_register_kind,
                            fa.GetRegisterNumber());
     if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
@@ -1972,8 +2039,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
             reg_info, cfa_reg_contents, reg_info->byte_size, reg_value);
         if (error.Success()) {
           address = reg_value.GetAsUInt64();
-          if (abi_sp)
-            address = abi_sp->FixCodeAddress(address);
           UnwindLogMsg(
               "CFA value via dereferencing reg %s (%d): reg has val 0x%" PRIx64
               ", CFA value is 0x%" PRIx64,
@@ -1991,18 +2056,16 @@ bool RegisterContextUnwind::ReadFrameAddress(
     break;
   }
   case UnwindPlan::Row::FAValue::isRegisterPlusOffset: {
+    UnwindLogMsg("CFA value via register plus offset");
     RegisterNumber cfa_reg(m_thread, row_register_kind,
                            fa.GetRegisterNumber());
     if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
-      if (abi_sp)
-        cfa_reg_contents = abi_sp->FixDataAddress(cfa_reg_contents);
       if (cfa_reg_contents == LLDB_INVALID_ADDRESS || cfa_reg_contents == 0 ||
           cfa_reg_contents == 1) {
         UnwindLogMsg(
             "Got an invalid CFA register value - reg %s (%d), value 0x%" PRIx64,
             cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
             cfa_reg_contents);
-        cfa_reg_contents = LLDB_INVALID_ADDRESS;
         return false;
       }
       address = cfa_reg_contents + fa.GetOffset();
@@ -2012,10 +2075,13 @@ bool RegisterContextUnwind::ReadFrameAddress(
           address, cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
           cfa_reg_contents, fa.GetOffset());
       return true;
-    }
+    } else
+      UnwindLogMsg("unable to read CFA register %s (%d)", cfa_reg.GetName(),
+                   cfa_reg.GetAsKind(eRegisterKindLLDB));
     break;
   }
   case UnwindPlan::Row::FAValue::isDWARFExpression: {
+    UnwindLogMsg("CFA value via DWARF expression");
     ExecutionContext exe_ctx(m_thread.shared_from_this());
     Process *process = exe_ctx.GetProcessPtr();
     DataExtractor dwarfdata(fa.GetDWARFExpressionBytes(),
@@ -2030,9 +2096,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
         dwarfexpr.Evaluate(&exe_ctx, this, 0, nullptr, nullptr);
     if (result) {
       address = result->GetScalar().ULongLong();
-      if (ABISP abi_sp = m_thread.GetProcess()->GetABI())
-        address = abi_sp->FixCodeAddress(address);
-
       UnwindLogMsg("CFA value set by DWARF expression is 0x%" PRIx64,
                    address);
       return true;
@@ -2042,6 +2105,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
     break;
   }
   case UnwindPlan::Row::FAValue::isRaSearch: {
+    UnwindLogMsg("CFA value via heuristic search");
     Process &process = *m_thread.GetProcess();
     lldb::addr_t return_address_hint = GetReturnAddressHint(fa.GetOffset());
     if (return_address_hint == LLDB_INVALID_ADDRESS)
@@ -2072,7 +2136,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
   }
   case UnwindPlan::Row::FAValue::isConstant: {
     address = fa.GetConstant();
-    address = m_thread.GetProcess()->FixDataAddress(address);
     UnwindLogMsg("CFA value set by constant is 0x%" PRIx64, address);
     return true;
   }
