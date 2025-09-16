@@ -10,17 +10,17 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    v_pk_mov_b32 v[46:47], 0, 0
 ; CHECK-NEXT:    flat_load_dword v42, v[46:47]
-; CHECK-NEXT:    s_load_dwordx4 s[64:67], s[8:9], 0x8
-; CHECK-NEXT:    s_load_dword s68, s[8:9], 0x0
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
+; CHECK-NEXT:    s_load_dwordx4 s[64:67], s[34:35], 0x8
+; CHECK-NEXT:    s_load_dword s68, s[34:35], 0x0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s68, -1
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s5, s5, 0
+; CHECK-NEXT:    s_cselect_b32 s5, s9, 0
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_cselect_b32 s6, s68, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v57, s5
