@@ -258,6 +258,7 @@ public:
   std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
   bool tryFoldOMod(MachineInstr &MI);
   bool tryFoldRegSequence(MachineInstr &MI);
+  bool tryFoldImmRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
 
@@ -2367,6 +2368,114 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   return true;
 }
 
+// gfx942+ can use V_MOV_B64 for materializing constant immediates.
+// For example:
+// %0:vgpr_32 = V_MOV_B32 0, implicit $exec
+// %1:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
+//  ->
+// %1:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
+  assert(MI.isRegSequence() &&
+         "MachineInstr is not expected REG_SEQUENCE instruction");
+  Register Reg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
+  const MCInstrDesc &MovDesc = TII->get(AMDGPU::V_MOV_B64_PSEUDO);
+  const TargetRegisterClass *RC =
+      TII->getRegClass(MovDesc, 0, TRI, *MI.getMF());
+
+  if (!ST->hasMovB64() || !TRI->isVGPR(*MRI, Reg) ||
+      !MRI->hasOneNonDBGUse(Reg) ||
+      (!TRI->getCompatibleSubRegClass(DefRC, RC, AMDGPU::sub0_sub1) &&
+       DefRC != RC))
+    return false;
+
+  SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
+  if (!getRegSeqInit(Defs, Reg))
+    return false;
+
+  // Only attempt to fold immediate materializations.
+  if (!Defs.empty() &&
+      llvm::any_of(Defs, [](const std::pair<MachineOperand *, unsigned> &Op) {
+        return !Op.first->isImm();
+      }))
+    return false;
+
+  SmallVector<uint64_t, 8> ImmVals;
+  uint64_t ImmVal = 0;
+  uint64_t ImmSize = 0;
+  uint64_t RemainderSize = TRI->getRegSizeInBits(*DefRC);
+  SmallVector<std::pair<MachineOperand *, unsigned>, 4> Remainders;
+  for (auto &[Op, SubIdx] : Defs) {
+    unsigned SubRegSize = TRI->getSubRegIdxSize(SubIdx);
+    unsigned Shift = (TRI->getChannelFromSubReg(SubIdx) % 2) * SubRegSize;
+    ImmSize += SubRegSize;
+    ImmVal |= Op->getImm() << Shift;
+
+    if (SubRegSize == 64)
+      return false;
+
+    if (ImmSize == 64) {
+      // Only 32 bit literals can be encoded.
+      if (!isUInt<32>(ImmVal))
+        return false;
+      ImmVals.push_back(ImmVal);
+      ImmVal = 0;
+      ImmSize = 0;
+      RemainderSize -= 64;
+    } else if ((RemainderSize / 64 == 0) && (RemainderSize % 64 != 0)) {
+      // There's some remainder to consider.
+      Remainders.push_back({Op, SubRegSize});
+    }
+  }
+
+  // Can only combine REG_SEQUENCE into one 64b immediate materialization mov.
+  if (DefRC == RC) {
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), MovDesc, Reg)
+        .addImm(ImmVals[0]);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (ImmVals.size() == 1 && RemainderSize == 0)
+    return false;
+
+  // Can't bail from here on out: modifying the MI.
+
+  // Remove source operands.
+  for (unsigned i = MI.getNumOperands() - 1; i > 0; --i)
+    MI.removeOperand(i);
+
+  unsigned Ch = 0;
+  for (uint64_t Val : ImmVals) {
+    Register MovReg = MRI->createVirtualRegister(RC);
+    // Duplicate vmov imm materializations (e.g., splatted operands) should get
+    // combined by MachineCSE pass.
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+            TII->get(AMDGPU::V_MOV_B64_PSEUDO), MovReg)
+        .addImm(Val);
+
+    // 2 subregs with no overlap (i.e., sub0_sub1, sub2_sub3, etc.).
+    unsigned SubReg64B =
+        SIRegisterInfo::getSubRegFromChannel(/*Channel=*/Ch * 2, /*SubRegs=*/2);
+
+    MI.addOperand(MachineOperand::CreateReg(MovReg, /*isDef=*/false));
+    MI.addOperand(MachineOperand::CreateImm(SubReg64B));
+    ++Ch;
+  }
+  Ch *= 2;
+  for (auto &[Op, Size] : Remainders) {
+    unsigned SubReg = SIRegisterInfo::getSubRegFromChannel(/*Channel=*/Ch);
+    MachineOperand &Mov = Op->getParent()->getOperand(0);
+    MI.addOperand(MachineOperand::CreateReg(Mov.getReg(), /*isDef=*/false));
+    MI.addOperand(MachineOperand::CreateImm(SubReg));
+    ++Ch;
+  }
+
+  LLVM_DEBUG(dbgs() << "Folded into " << MI);
+
+  return true;
+}
+
 // Try to fold a reg_sequence with vgpr output and agpr inputs into an
 // instruction which can take an agpr. So far that means a store.
 bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
@@ -2796,9 +2905,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
         continue;
       }
 
-      if (MI.isRegSequence() && tryFoldRegSequence(MI)) {
-        Changed = true;
-        continue;
+      if (MI.isRegSequence()) {
+        if (tryFoldImmRegSequence(MI) || tryFoldRegSequence(MI)) {
+          Changed = true;
+          continue;
+        }
       }
 
       if (MI.isPHI() && tryFoldPhiAGPR(MI)) {
