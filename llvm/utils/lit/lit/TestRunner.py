@@ -853,7 +853,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Ensure args[0] is hashable.
         args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
 
-        # Expand all late substitutions
+        # Expand all late substitutions.
         args = _expandLateSubstitutions(args, cmd_shenv.cwd)
 
         inproc_builtin = inproc_builtins.get(args[0], None)
