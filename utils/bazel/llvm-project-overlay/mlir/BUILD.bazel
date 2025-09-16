@@ -29,6 +29,7 @@ exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
     "utils/lldb-scripts/mlirDataFormatters.py",
+    "utils/pygments/mlir_lexer.py",
     "utils/textmate/mlir.json",
 ])
 
@@ -4722,6 +4723,7 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -6074,6 +6076,7 @@ cc_library(
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
+        ":PtrDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
