@@ -1,17 +1,29 @@
 ; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime -unroll-threshold=40 -unroll-max-percent-threshold-boost=100 | FileCheck %s
-; XFAIL: *
 
 @known_constant = internal unnamed_addr constant [9 x i32] [i32 0, i32 -1, i32 0, i32 -1, i32 5, i32 -1, i32 0, i32 -1, i32 0], align 16
 
 ; CHECK-LABEL: @bar_prof
-; CHECK: loop:
-; CHECK:   %mul = mul
-; CHECK:   %mul.1 = mul
-; CHECK:   %mul.2 = mul
-; CHECK:   %mul.3 = mul
-; CHECK:   br i1 %niter.ncmp.7, label %loop.end.unr-lcssa, label %loop, !prof [[PROF0:![0-9]+]]
-; CHECK: loop.epil:
-; CHECK:   br i1 %epil.iter.cmp, label %loop.epil, label %loop.end.epilog-lcssa, !prof [[PROF1:![0-9]+]], !llvm.loop {{![0-9]+}}
+;       CHECK: entry:
+;       CHECK:   br i1 %{{.*}}, label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof ![[#PROF_UR_GUARD:]]
+;       CHECK: [[ENTRY_NEW]]:
+;       CHECK:   br label %loop
+;       CHECK: loop:
+;       CHECK:   %mul = mul
+;       CHECK:   %mul.1 = mul
+;       CHECK:   %mul.2 = mul
+;       CHECK:   %mul.3 = mul
+;       CHECK:   %mul.4 = mul
+;       CHECK:   %mul.5 = mul
+;       CHECK:   %mul.6 = mul
+;       CHECK:   %mul.7 = mul
+;   CHECK-NOT:   %mul.8 = mul
+;       CHECK:   br i1 %{{.*}}, label %[[LOOP_END_UNR_LCSSA:.*]], label %loop, !prof ![[#PROF_UR_LATCH:]], !llvm.loop ![[#LOOP_UR_LATCH:]]
+;       CHECK: [[LOOP_END_UNR_LCSSA]]:
+;       CHECK:   br i1 %{{.*}}, label %[[LOOP_EPIL_PREHEADER]], label %loop.end, !prof ![[#PROF_RM_GUARD:]]
+;       CHECK: [[LOOP_EPIL_PREHEADER]]:
+;       CHECK:   br label %[[LOOP_EPIL:.*]]
+;       CHECK: [[LOOP_EPIL]]:
+;       CHECK:   br i1 %{{.*}}, label %[[LOOP_EPIL]], label %[[LOOP_END_EPILOG_LCSSA:.*]], !prof ![[#PROF_RM_LATCH:]], !llvm.loop ![[#LOOP_RM_LATCH:]]
 define i32 @bar_prof(ptr noalias nocapture readonly %src, i64 %c) !prof !1 {
 entry:
   br label %loop
@@ -61,5 +73,35 @@ loop.end:
 !1 = !{!"function_entry_count", i64 1}
 !2 = !{!"branch_weights", i32 1, i32 1000}
 
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 124}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 1}
+; Original loop probability: p = 1000/(1+1000) = 0.999000999
+; Original estimated trip count: (1+1000)/1 = 1001
+; Unroll count: 8
+
+; Probability of >=7 iterations after first: p^7 = 0.993027916
+; CHECK: ![[#PROF_UR_GUARD]] = !{!"branch_weights", i32 697208, i32 99302792}
+
+; Probability of >=8 more iterations: p^8 = 0.99203588
+; CHECK: ![[#PROF_UR_LATCH]] = !{!"branch_weights", i32 796412, i32 99203588}
+
+; 1001//8 = 125
+; CHECK: ![[#LOOP_UR_LATCH]] = distinct !{![[#LOOP_UR_LATCH]], ![[#LOOP_UR_TC:]]}
+; CHECK: ![[#LOOP_UR_TC]] = !{!"llvm.loop.estimated_trip_count", i32 125}
+
+; Probability of 1 to 7 more of 7 more remainder iterations:
+; (p-p^8)/(1-p^8) = 0.874562282
+; CHECK: ![[#PROF_RM_GUARD]] = !{!"branch_weights", i32 87456228, i32 12543772}
+
+; Frequency of first remainder iter:   r1 =                      1
+; Frequency of second remainder iter:  r2 = r1*(p-p^7)/(1-p^7) = 0.856714143
+; Frequency of third remainder iter:   r3 = r2*(p-p^6)/(1-p^6) = 0.713571429
+; Frequency of fourth remainder iter:  r4 = r2*(p-p^5)/(1-p^5) = 0.570571715
+; Frequency of fifth remainder iter:   r5 = r2*(p-p^4)/(1-p^4) = 0.427714858
+; Frequency of sixth remainder iter:   r6 = r2*(p-p^3)/(1-p^3) = 0.285000715
+; Frequency of seventh remainder iter: r7 = r2*(p-p^2)/(1-p^2) = 0.142429143
+; Solve for loop probability that produces that frequency: f = 1/(1-p') =>
+; p' = 1-1/f = 1-1/(r1+r2+r3+r4+r5+r6+r7) = 0.749749875.
+; CHECK: ![[#PROF_RM_LATCH]] = !{!"branch_weights", i32 74974988, i32 25025012}
+
+; Remainder estimated trip count: 1001%8 = 1
+; CHECK: ![[#LOOP_RM_LATCH]] = distinct !{![[#LOOP_RM_LATCH]], ![[#LOOP_RM_TC:]], ![[#DISABLE:]]}
+; CHECK: ![[#LOOP_RM_TC]] = !{!"llvm.loop.estimated_trip_count", i32 1}

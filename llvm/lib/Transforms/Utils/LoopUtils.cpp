@@ -46,6 +46,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <cmath>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -969,6 +970,53 @@ bool llvm::setLoopEstimatedTripCount(
       LLVMContext::MD_prof,
       MDB.createBranchWeights(BackedgeTakenWeight, LatchExitWeight));
 
+  return true;
+}
+
+std::optional<double> llvm::getLoopProbability(Loop *L) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return std::nullopt;
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return getBranchProbability(LatchBranch, FirstTargetIsLoop);
+}
+
+bool llvm::setLoopProbability(Loop *L, double P) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+}
+
+std::optional<double> llvm::getBranchProbability(BranchInst *B,
+                                                 bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return std::nullopt;
+  uint64_t Weight0, Weight1;
+  if (!extractBranchWeights(*B, Weight0, Weight1))
+    return std::nullopt;
+  if (!ForFirstTarget)
+    std::swap(Weight0, Weight1);
+  return double(Weight0) / (double(Weight0) + double(Weight1));
+}
+
+bool llvm::setBranchProbability(BranchInst *B, double P, bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return false;
+
+  // Sum should be some large number so that the weights accurately encode P,
+  // but it should not be so large that some branch weights will print as
+  // negative in LLVM IR as that makes LLVM tests harder to maintain.
+  const uint64_t Sum = 1000000000;
+  uint64_t Weight0 = round(P * Sum);
+  uint64_t Weight1 = round((1 - P) * Sum);
+  if (!ForFirstTarget)
+    std::swap(Weight0, Weight1);
+
+  MDBuilder MDB(B->getContext());
+  B->setMetadata(LLVMContext::MD_prof,
+                 MDB.createBranchWeights(Weight0, Weight1));
   return true;
 }
 
