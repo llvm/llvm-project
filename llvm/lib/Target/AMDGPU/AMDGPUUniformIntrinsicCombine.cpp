@@ -12,7 +12,7 @@
 /// some instruction whose operand was previously recognized as statically
 /// uniform is later on no longer recognized as statically uniform. However, the
 /// semantics of how programs execute don't (and must not, for this precise
-/// reason[0]) care about static uniformity, they only ever care about dynamic
+/// reason) care about static uniformity, they only ever care about dynamic
 /// uniformity. And every instruction that's downstream and cares about dynamic
 /// uniformity must be convergent (and isel will introduce v_readfirstlane for
 /// them if their operands can't be proven statically uniform).
@@ -42,17 +42,7 @@ using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
 /// Tracks uniformity of newly created instructions.
-/// Wraps a ValueMap so we can enforce consistent mark/erase usage.
-struct UniformityTracker : DenseMap<const Value *, bool> {
-  /// Record that V has known uniformity.
-  void mark(Value *V, bool IsUniform) { (*this)[V] = IsUniform; }
-
-  /// Erase V from the map if it is an instruction with no uses anymore.
-  void eraseIfDead(Value *V) {
-    if (auto *I = dyn_cast<Instruction>(V); I && I->use_empty())
-      this->erase(V);
-  }
-};
+using UniformityTracker = ValueMap<const Value *, bool>;
 
 /// Wrapper for querying uniformity info that first checks new instructions.
 static bool isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
@@ -78,7 +68,6 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
-    Tracker.eraseIfDead(&II);
     II.eraseFromParent();
     return true;
   }
@@ -104,10 +93,9 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
           // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
-          Tracker.mark(NotOp, true); // NOT preserves uniformity
+          Tracker[NotOp] = true; // NOT preserves uniformity
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
-          Tracker.eraseIfDead(ICmp);
           ICmp->eraseFromParent();
           Changed = true;
         } else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
@@ -115,17 +103,14 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
                             << *Src << '\n');
           ICmp->replaceAllUsesWith(Src);
-          Tracker.eraseIfDead(ICmp);
           ICmp->eraseFromParent();
           Changed = true;
         }
       }
     }
     // Erase the intrinsic if it has no remaining uses.
-    if (II.use_empty()) {
-      Tracker.eraseIfDead(&II);
+    if (II.use_empty())
       II.eraseFromParent();
-    }
     return Changed;
   }
   default:
