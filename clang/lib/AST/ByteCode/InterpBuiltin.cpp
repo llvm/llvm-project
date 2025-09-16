@@ -2914,6 +2914,56 @@ static bool interp__builtin_elementwise_triop(
   return true;
 }
 
+static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 3);
+
+  PrimType ImmPT = *S.getContext().classify(Call->getArg(2));
+  APSInt ImmAPS = popToAPSInt(S.Stk, ImmPT);
+  uint64_t Index = ImmAPS.getZExtValue();
+
+  const Pointer &SubVec = S.Stk.pop<Pointer>();
+  if (!SubVec.getFieldDesc()->isPrimitiveArray()) {
+    return Invalid(S, OpPC);
+  }
+
+  const Pointer &DstVec = S.Stk.pop<Pointer>();
+  if (!DstVec.getFieldDesc()->isPrimitiveArray()) {
+    return Invalid(S, OpPC);
+  }
+
+  const Pointer &Result = S.Stk.peek<Pointer>();
+
+  unsigned DstElements = DstVec.getNumElems();
+  unsigned SubElements = SubVec.getNumElems();
+
+  if (SubElements == 0 || DstElements == 0 || (DstElements % SubElements) != 0)
+    return Invalid(S, OpPC);
+
+  unsigned NumLanes = DstElements / SubElements;
+  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+
+  QualType ElemType = DstVec.getFieldDesc()->getElemQualType();
+  PrimType ElemPT = *S.getContext().classify(ElemType);
+
+  unsigned InsertPos = Lane * SubElements;
+
+  TYPE_SWITCH(ElemPT, {
+    for (unsigned i = 0; i < DstElements; ++i) {
+      Result.elem<T>(i) = DstVec.elem<T>(i);
+    }
+
+    for (unsigned i = 0; i < SubElements; ++i) {
+      Result.elem<T>(InsertPos + i) = SubVec.elem<T>(i);
+    }
+  });
+
+  Result.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3571,6 +3621,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fshr:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
+
+  case X86::BI__builtin_ia32_insertf32x4_256:
+  case X86::BI__builtin_ia32_inserti32x4_256:
+  case X86::BI__builtin_ia32_insertf64x2_256:
+  case X86::BI__builtin_ia32_inserti64x2_256:
+  case X86::BI__builtin_ia32_insertf32x4:
+  case X86::BI__builtin_ia32_inserti32x4:
+  case X86::BI__builtin_ia32_insertf64x2_512:
+  case X86::BI__builtin_ia32_inserti64x2_512:
+  case X86::BI__builtin_ia32_insertf32x8:
+  case X86::BI__builtin_ia32_inserti32x8:
+  case X86::BI__builtin_ia32_insertf64x4:
+  case X86::BI__builtin_ia32_inserti64x4:
+  case X86::BI__builtin_ia32_vinsertf128_ps256:
+  case X86::BI__builtin_ia32_vinsertf128_pd256:
+  case X86::BI__builtin_ia32_vinsertf128_si256:
+  case X86::BI__builtin_ia32_insert128i256:
+    return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
