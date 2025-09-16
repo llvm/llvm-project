@@ -67,7 +67,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // CHECK:     br label %[[CONT_BB:.*]]
 
 // CHECK:   [[CONT_BB]]:
-// CHECK:     br label %.omp.reduction.done
+// CHECK-NEXT: %[[RED_RHS:.*]] = phi ptr [ %final.rhs, %{{.*}} ]
+// CHECK-NEXT: store ptr %[[RED_RHS]], ptr %{{.*}}, align 8
+// CHECK-NEXT: br label %.omp.reduction.done
 // CHECK: }
 
 // CHECK: define internal void @"{{.*}}$reduction$reduction_func"(ptr noundef %0, ptr noundef %1) #0 {
