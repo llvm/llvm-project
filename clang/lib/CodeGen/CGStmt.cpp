@@ -858,21 +858,17 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
     return;
   }
 
-  // Ensure that we have an i8* for our PHI node.
+  // Ensure that we have an i8* for the indirect branch.
   llvm::Value *V = Builder.CreateBitCast(EmitScalarExpr(S.getTarget()),
                                          Int8PtrTy, "addr");
-  llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
 
-  // Get the basic block for the indirect goto.
-  llvm::BasicBlock *IndGotoBB = GetIndirectGotoBlock();
+  // Create a new indirect branch instruction for this statement
+  llvm::IndirectBrInst *IndBr = Builder.CreateIndirectBr(V);
 
-  // The first instruction in the block has to be the PHI for the switch dest,
-  // add an entry for this branch.
-  cast<llvm::PHINode>(IndGotoBB->begin())->addIncoming(V, CurBB);
-
-  EmitBranch(IndGotoBB);
-  if (CurBB && CurBB->getTerminator())
-    addInstToCurrentSourceAtom(CurBB->getTerminator(), nullptr);
+  // Add all address-taken labels as possible destinations
+  for (llvm::BasicBlock *BB : AddressTakenLabels) {
+    IndBr->addDestination(BB);
+  }
 }
 
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {

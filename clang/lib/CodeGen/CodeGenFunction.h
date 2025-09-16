@@ -1527,6 +1527,11 @@ private:
   /// codegen'd as a jump to the IndirectBranch's basic block.
   llvm::IndirectBrInst *IndirectBranch = nullptr;
 
+  /// AddressTakenLabels - Collection of address-taken labels for indirect gotos.
+  /// Each indirect goto statement will create its own indirectbr instruction
+  /// with all these labels as possible destinations.
+  llvm::SmallVector<llvm::BasicBlock *, 8> AddressTakenLabels;
+
   /// LocalDeclMap - This keeps track of the LLVM allocas or globals for local C
   /// decls.
   DeclMapTy LocalDeclMap;

@@ -2287,14 +2287,13 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
 }
 
 llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {
-  // Make sure that there is a block for the indirect goto.
-  if (!IndirectBranch)
-    GetIndirectGotoBlock();
-
   llvm::BasicBlock *BB = getJumpDestForLabel(L).getBlock();
 
-  // Make sure the indirect branch includes all of the address-taken blocks.
-  IndirectBranch->addDestination(BB);
+  // Keep track of this address-taken label for indirect goto statements
+  if (llvm::find(AddressTakenLabels, BB) == AddressTakenLabels.end()) {
+    AddressTakenLabels.push_back(BB);
+  }
+
   return llvm::BlockAddress::get(CurFn->getType(), BB);
 }
 

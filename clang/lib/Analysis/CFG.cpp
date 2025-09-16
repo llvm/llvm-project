@@ -545,6 +545,9 @@ class CFGBuilder {
   using LabelSetTy = llvm::SmallSetVector<LabelDecl *, 8>;
   LabelSetTy AddressTakenLabels;
 
+  // A list of indirect goto dispatch blocks (one per indirect goto statement).
+  std::vector<CFGBlock *> IndirectGotoBlocks;
+
   // Information about the currently visited C++ object construction site.
   // This is set in the construction trigger and read when the constructor
   // or a function that returns an object by value is being visited.
@@ -1751,8 +1754,8 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
     }
   }
 
-  // Add successors to the Indirect Goto Dispatch block (if we have one).
-  if (CFGBlock *B = cfg->getIndirectGotoBlock())
+  // Add successors to the Indirect Goto Dispatch blocks (one per indirect goto statement).  
+  for (CFGBlock *B : IndirectGotoBlocks) {
     for (LabelDecl *LD : AddressTakenLabels) {
       // Lookup the target block.
       LabelMapTy::iterator LI = LabelMap.find(LD);
@@ -1763,6 +1766,7 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
 
       addSuccessor(B, LI->second.block);
     }
+  }
 
   // Create an empty entry block that has no predecessors.
   cfg->setEntry(createBlock());
@@ -5028,13 +5032,8 @@ CFGBlock *CFGBuilder::VisitConstantExpr(ConstantExpr *E, AddStmtChoice asc) {
 }
 
 CFGBlock *CFGBuilder::VisitIndirectGotoStmt(IndirectGotoStmt *I) {
-  // Lazily create the indirect-goto dispatch block if there isn't one already.
-  CFGBlock *IBlock = cfg->getIndirectGotoBlock();
-
-  if (!IBlock) {
-    IBlock = createBlock(false);
-    cfg->setIndirectGotoBlock(IBlock);
-  }
+  // Create a new indirect-goto dispatch block for each statement.
+  CFGBlock *IBlock = createBlock(false);
 
   // IndirectGoto is a control-flow statement.  Thus we stop processing the
   // current block and create a new one.
@@ -5044,6 +5043,10 @@ CFGBlock *CFGBuilder::VisitIndirectGotoStmt(IndirectGotoStmt *I) {
   Block = createBlock(false);
   Block->setTerminator(I);
   addSuccessor(Block, IBlock);
+  
+  // Store this dispatch block so we can connect it to labels later
+  IndirectGotoBlocks.push_back(IBlock);
+  
   return addStmt(I->getTarget());
 }
 
