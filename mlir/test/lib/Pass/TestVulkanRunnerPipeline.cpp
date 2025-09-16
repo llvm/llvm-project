@@ -13,6 +13,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -73,6 +74,7 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
   opt.kernelBarePtrCallConv = true;
   opt.kernelIntersperseSizeCallConv = true;
   passManager.addPass(createGpuToLLVMConversionPass(opt));
+  passManager.addPass(createReconcileUnrealizedCastsPass());
 }
 
 } // namespace

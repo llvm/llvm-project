@@ -5,8 +5,18 @@
 
 	.cfi_sections .sframe
 f1:
-	.cfi_startproc
+	.cfi_startproc  // FRE 0
 	nop
+	.cfi_def_cfa_offset 16  // FRE 1
+	.cfi_def_cfa_offset 8   // location didn't change. No new FRE, but new offset.
+	nop
+	.cfi_def_cfa_offset 8   // offset didn't change. No new FRE.
+	nop
+	.cfi_def_cfa_offset 16  // FRE 2. new location, new offset.
+	nop
+	.cfi_register 0, 1      // Uninteresting register. No new FRE.
+	nop
+
         .cfi_endproc
 
 f2:
@@ -32,11 +42,11 @@ f2:
 // CHECK:    Function Index [
 // CHECK-NEXT:        FuncDescEntry [0] {
 // CHECK-NEXT:          PC {
-// CHECK-NEXT:            Relocation: {{.*}}32{{.*}}
+// CHECK-NEXT:            Relocation: {{.*}}PC32{{.*}}
 // CHECK-NEXT:            Symbol Name: .text
-// CHECK-NEXT:            Start Address: 0x0
+// CHECK-NEXT:            Start Address: {{.*}}
 // CHECK-NEXT:          }
-// CHECK-NEXT:          Size: 0x1
+// CHECK-NEXT:          Size: 0x5
 // CHECK-NEXT:          Start FRE Offset: 0x0
 // CHECK-NEXT:          Num FREs: 0
 // CHECK-NEXT:          Info {
@@ -51,7 +61,7 @@ f2:
 // CHECK-NEXT:        }
 // CHECK-NEXT:        FuncDescEntry [1] {
 // CHECK-NEXT:          PC {
-// CHECK-NEXT:            Relocation: R_X86_64_PC32
+// CHECK-NEXT:            Relocation: {{.*}}PC32{{.*}}
 // CHECK-NEXT:            Symbol Name: .text
 // CHECK-NEXT:            Start Address: {{.*}}
 // CHECK-NEXT:          }

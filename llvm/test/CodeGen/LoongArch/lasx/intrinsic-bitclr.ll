@@ -47,9 +47,7 @@ define <4 x i64> @lasx_xvbitclr_d(<4 x i64> %va, <4 x i64> %vb) nounwind {
 ; LA32-NEXT:    xvand.v $xr1, $xr1, $xr2
 ; LA32-NEXT:    xvrepli.d $xr2, 1
 ; LA32-NEXT:    xvsll.d $xr1, $xr2, $xr1
-; LA32-NEXT:    xvrepli.b $xr2, -1
-; LA32-NEXT:    xvxor.v $xr1, $xr1, $xr2
-; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
+; LA32-NEXT:    xvandn.v $xr0, $xr1, $xr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: lasx_xvbitclr_d:
