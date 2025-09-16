@@ -1206,7 +1206,11 @@ DIE &DwarfCompileUnit::getOrCreateAbstractSubprogramDIE(
     return *AbsDef;
 
   auto [ContextDIE, ContextCU] = getOrCreateAbstractSubprogramContextDIE(SP);
+  return createAbstractSubprogramDIE(SP, ContextDIE, ContextCU);
+}
 
+DIE &DwarfCompileUnit::createAbstractSubprogramDIE(
+    const DISubprogram *SP, DIE *ContextDIE, DwarfCompileUnit *ContextCU) {
   // Passing null as the associated node because the abstract definition
   // shouldn't be found by lookup.
   DIE &AbsDef = ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram,
@@ -1251,13 +1255,16 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     return;
   }
 
-  DIE &AbsDef = getOrCreateAbstractSubprogramDIE(SP);
   auto [ContextDIE, ContextCU] = getOrCreateAbstractSubprogramContextDIE(SP);
+  DIE *AbsDef = getAbstractScopeDIEs().lookup(SP);
+  if (!AbsDef)
+    AbsDef = &createAbstractSubprogramDIE(SP, ContextDIE, ContextCU);
 
   getFinalizedAbstractSubprograms().insert(SP);
 
-  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, AbsDef))
-    ContextCU->addDIEEntry(AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
+  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
+    ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer,
+                           *ObjectPointer);
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {

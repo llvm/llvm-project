@@ -156,6 +156,10 @@ class DwarfCompileUnit final : public DwarfUnit {
   std::pair<DIE *, DwarfCompileUnit *>
   getOrCreateAbstractSubprogramContextDIE(const DISubprogram *SP);
 
+  /// Create new DIE for abstract subprogram.
+  DIE &createAbstractSubprogramDIE(const DISubprogram *SP, DIE *ContextDIE,
+                                   DwarfCompileUnit *ContextCU);
+
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU,
