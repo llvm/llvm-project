@@ -8023,6 +8023,17 @@ static bool isPassedInFPR(EVT VT) {
          (VT.isFloatingPoint() && !VT.isScalableVector());
 }
 
+static SDValue getZT0FrameIndex(MachineFrameInfo &MFI,
+                                AArch64FunctionInfo &FuncInfo,
+                                SelectionDAG &DAG) {
+  if (!FuncInfo.hasZT0SpillSlotIndex())
+    FuncInfo.setZT0SpillSlotIndex(MFI.CreateSpillStackObject(64, Align(16)));
+
+  return DAG.getFrameIndex(
+      FuncInfo.getZT0SpillSlotIndex(),
+      DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
+}
+
 SDValue AArch64TargetLowering::lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
                                                SelectionDAG &DAG) const {
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
@@ -9427,10 +9438,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If the caller has ZT0 state which will not be preserved by the callee,
   // spill ZT0 before the call.
   if (ShouldPreserveZT0) {
-    unsigned ZTObj = MFI.CreateSpillStackObject(64, Align(16));
-    ZTFrameIdx = DAG.getFrameIndex(
-        ZTObj,
-        DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
+    ZTFrameIdx = getZT0FrameIndex(MFI, *FuncInfo, DAG);
 
     Chain = DAG.getNode(AArch64ISD::SAVE_ZT, DL, DAG.getVTList(MVT::Other),
                         {Chain, DAG.getConstant(0, DL, MVT::i32), ZTFrameIdx});
