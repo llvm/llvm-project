@@ -30,6 +30,8 @@ public:
   ELFLinkGraphBuilderBase(std::unique_ptr<LinkGraph> G) : G(std::move(G)) {}
   virtual ~ELFLinkGraphBuilderBase();
 
+  static StringRef OriginalObjectContentSectionName;
+
 protected:
   static bool isDwarfSection(StringRef SectionName) {
     return llvm::is_contained(DwarfSectionNames, SectionName);
@@ -53,7 +55,6 @@ protected:
 
 private:
   static StringRef CommonSectionName;
-  static StringRef OriginalObjectContentSectionName;
   static ArrayRef<const char *> DwarfSectionNames;
 
   Section *CommonSection = nullptr;
