@@ -284,6 +284,7 @@ void DFAPacketizerEmitter::emitForItineraries(
      << "ProcIdToProcResourceIdxTable), ProcID,\n"
      << "      [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; "
         "});\n"
+     << "  assert(*It[0] == ProcID);\n"
      << "  return (*It)[1];\n"
      << "}\n\n";
 
