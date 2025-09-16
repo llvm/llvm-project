@@ -423,6 +423,9 @@ class FilterChooser {
   /// The "field value" here refers to the encoding bits in the filtered range.
   std::map<uint64_t, std::unique_ptr<const FilterChooser>> FilterChooserMap;
 
+  std::vector<unsigned> AllUnfilteredUnknownIDs;
+  std::unique_ptr<const FilterChooser> SomeUnfilteredKnownFC;
+
   /// Set to true if decoding conflict was encountered.
   bool HasConflict = false;
 
@@ -1434,6 +1437,58 @@ void FilterChooser::doFilter() {
     return;
   }
 
+  // If we are unable to find the best filter, it generally means for all
+  // unfiltered bit positions, we have atleast one instruction that has that
+  // bit position unknown. Implement a heuristic to see if we can find
+  // instructions that have all unfiltered bits unknown. In such cases, we
+  // separate such insts and create a sub-chooser with the remaining
+  // instructions with atleast one unfiltered bit known. The idea is to
+  // give the remaining insts a first chance to decode since they assert more
+  // known bits than the ones with all unknown ones. If the sub-chooser with the
+  // remaining instructions is not able to decode, we decode the segregated
+  // instructions 1-by-1. That is, we generate:
+  //
+  //   OPC_SCope {
+  //     sub-chooser for unfiltered known bits;
+  //   }
+  //   OPC_Scope {
+  //     decode unfiltered unknown 0
+  //   }
+  //   OPC_Scope {
+  //     decode unfiltered unknown 1
+  //   }
+  //   decode unfiltered unknown (last)
+
+  unsigned FilterWidth = FilterBits.getBitWidth();
+  std::vector<unsigned> SomeUnfilteredKnownIDs;
+  for (unsigned ID : EncodingIDs) {
+    bool AllUnfilteredUnknown = true;
+    const InstructionEncoding &Encoding = Encodings[ID];
+    KnownBits EncodingBits = Encoding.getMandatoryBits();
+    for (unsigned BitIndex = 0; BitIndex != FilterWidth; ++BitIndex) {
+      if (isPositionFiltered(BitIndex))
+        continue;
+      // We are dealing with an unfiltered bits.
+      bool IsKnown = EncodingBits.Zero[BitIndex] || EncodingBits.One[BitIndex];
+      if (IsKnown) {
+        AllUnfilteredUnknown = false;
+        break;
+      }
+    }
+    if (AllUnfilteredUnknown) {
+      AllUnfilteredUnknownIDs.push_back(ID);
+    } else {
+      SomeUnfilteredKnownIDs.push_back(ID);
+    }
+  }
+
+  if (!AllUnfilteredUnknownIDs.empty()) {
+    if (!SomeUnfilteredKnownIDs.empty())
+      SomeUnfilteredKnownFC = std::make_unique<FilterChooser>(
+          Encodings, SomeUnfilteredKnownIDs, FilterBits, *this);
+    return;
+  }
+
   // Print out useful conflict information for postmortem analysis.
   errs() << "Decoding Conflict:\n";
   dump();
@@ -1460,64 +1515,98 @@ void FilterChooser::dump() const {
 void DecoderTableBuilder::emitTableEntries(const FilterChooser &FC) const {
   DecoderTable &Table = TableInfo.Table;
 
-  // If there are other encodings that could match if those with all bits
-  // known don't, enter a scope so that they have a chance.
-  size_t FixupLoc = 0;
-  if (FC.VariableFC) {
-    Table.insertOpcode(OPC_Scope);
-    FixupLoc = Table.insertNumToSkip();
-  }
-
   if (FC.SingletonEncodingID) {
     assert(FC.FilterChooserMap.empty());
     // There is only one encoding in which all bits in the filtered range are
     // fully defined, but we still need to check if the remaining (unfiltered)
     // bits are valid for this encoding. We also need to check predicates etc.
     emitSingletonTableEntry(FC);
-  } else if (FC.FilterChooserMap.size() == 1) {
-    // If there is only one possible field value, emit a combined OPC_CheckField
-    // instead of OPC_ExtractField + OPC_FilterValue.
-    const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.begin();
-    Table.insertOpcode(OPC_CheckField);
-    Table.insertULEB128(FC.StartBit);
-    Table.insertUInt8(FC.NumBits);
-    Table.insertULEB128(FilterVal);
+    return;
+  }
 
-    // Emit table entries for the only case.
-    emitTableEntries(*Delegate);
-  } else {
-    // The general case: emit a switch over the field value.
-    Table.insertOpcode(OPC_ExtractField);
-    Table.insertULEB128(FC.StartBit);
-    Table.insertUInt8(FC.NumBits);
-
-    // Emit switch cases for all but the last element.
-    for (const auto &[FilterVal, Delegate] : drop_end(FC.FilterChooserMap)) {
-      Table.insertOpcode(OPC_FilterValueOrSkip);
+  if (!FC.FilterChooserMap.empty()) {
+    // If there are other encodings that could match if those with all bits
+    // known don't, enter a scope so that they have a chance.
+    size_t FixupLoc = 0;
+    if (FC.VariableFC) {
+      Table.insertOpcode(OPC_Scope);
+      FixupLoc = Table.insertNumToSkip();
+    }
+    if (FC.FilterChooserMap.size() == 1) {
+      // If there is only one possible field value, emit a combined
+      // OPC_CheckField instead of OPC_ExtractField + OPC_FilterValue.
+      const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.begin();
+      Table.insertOpcode(OPC_CheckField);
+      Table.insertULEB128(FC.StartBit);
+      Table.insertUInt8(FC.NumBits);
       Table.insertULEB128(FilterVal);
-      size_t FixupPos = Table.insertNumToSkip();
 
-      // Emit table entries for this case.
+      // Emit table entries for the only case.
       emitTableEntries(*Delegate);
+    } else {
+      // The general case: emit a switch over the field value.
+      Table.insertOpcode(OPC_ExtractField);
+      Table.insertULEB128(FC.StartBit);
+      Table.insertUInt8(FC.NumBits);
 
-      // Patch the previous FilterValueOrSkip to fall through to the next case.
-      Table.patchNumToSkip(FixupPos, Table.size());
+      // Emit switch cases for all but the last element.
+      for (const auto &[FilterVal, Delegate] : drop_end(FC.FilterChooserMap)) {
+        Table.insertOpcode(OPC_FilterValueOrSkip);
+        Table.insertULEB128(FilterVal);
+        size_t FixupPos = Table.insertNumToSkip();
+
+        // Emit table entries for this case.
+        emitTableEntries(*Delegate);
+
+        // Patch the previous FilterValueOrSkip to fall through to the next
+        // case.
+        Table.patchNumToSkip(FixupPos, Table.size());
+      }
+
+      // Emit a switch case for the last element. It never falls through;
+      // if it doesn't match, we leave the current scope.
+      const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.rbegin();
+      Table.insertOpcode(OPC_FilterValue);
+      Table.insertULEB128(FilterVal);
+
+      // Emit table entries for the last case.
+      emitTableEntries(*Delegate);
     }
 
-    // Emit a switch case for the last element. It never falls through;
-    // if it doesn't match, we leave the current scope.
-    const auto &[FilterVal, Delegate] = *FC.FilterChooserMap.rbegin();
-    Table.insertOpcode(OPC_FilterValue);
-    Table.insertULEB128(FilterVal);
-
-    // Emit table entries for the last case.
-    emitTableEntries(*Delegate);
+    if (FC.VariableFC) {
+      Table.patchNumToSkip(FixupLoc, Table.size());
+      emitTableEntries(*FC.VariableFC);
+    }
+    return;
   }
 
-  if (FC.VariableFC) {
-    Table.patchNumToSkip(FixupLoc, Table.size());
-    emitTableEntries(*FC.VariableFC);
+  if (!FC.AllUnfilteredUnknownIDs.empty()) {
+    if (FC.SomeUnfilteredKnownFC) {
+      Table.insertOpcode(OPC_Scope);
+      size_t FixupLoc = Table.insertNumToSkip();
+      emitTableEntries(*FC.SomeUnfilteredKnownFC);
+      Table.patchNumToSkip(FixupLoc, Table.size());
+    }
+
+    // For each op in AllUnfilteredUnknownID, except the last one.
+    if (FC.AllUnfilteredUnknownIDs.size() > 1) {
+      for (unsigned ID : drop_end(FC.AllUnfilteredUnknownIDs)) {
+        Table.insertOpcode(OPC_Scope);
+        size_t FixupLoc = Table.insertNumToSkip();
+        FilterChooser SingletonFC(FC.Encodings, ID, FC.FilterBits, FC);
+        emitSingletonTableEntry(SingletonFC);
+        Table.patchNumToSkip(FixupLoc, Table.size());
+      }
+    }
+
+    // Last one has no scope.
+    unsigned LastID = FC.AllUnfilteredUnknownIDs.back();
+    FilterChooser SingletonFC(FC.Encodings, LastID, FC.FilterBits, FC);
+    emitSingletonTableEntry(SingletonFC);
+    return;
   }
+
+  llvm_unreachable("invalid filter chooser");
 }
 
 // emitDecodeInstruction - Emit the templated helper function

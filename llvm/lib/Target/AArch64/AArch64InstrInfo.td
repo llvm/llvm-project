@@ -10718,7 +10718,7 @@ def RPRFM:
   // RPRFM overlaps with PRFM (reg), when the decoder method of PRFM returns
   // Fail, the decoder should attempt to decode RPRFM. This requires setting
   // the decoder namespace to "Fallback".
-  let DecoderNamespace = "Fallback";
+  //let DecoderNamespace = "Fallback";
 }
 
 //===----------------------------------------------------------------------===//

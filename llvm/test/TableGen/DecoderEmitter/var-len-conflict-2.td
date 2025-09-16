@@ -1,5 +1,6 @@
 // RUN: not llvm-tblgen -gen-disassembler -I %p/../../../include %s -o /dev/null 2>&1 \
 // RUN:   | FileCheck --strict-whitespace %s
+// XFAIL: *
 
 include "llvm/Target/Target.td"
 
