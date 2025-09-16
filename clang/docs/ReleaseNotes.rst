@@ -282,6 +282,11 @@ Improvements to Clang's diagnostics
 - The :doc:`ThreadSafetyAnalysis` attributes ``ACQUIRED_BEFORE(...)`` and
   ``ACQUIRED_AFTER(...)`` have been moved to the stable feature set and no
   longer require ``-Wthread-safety-beta`` to be used.
+- The :doc:`ThreadSafetyAnalysis` gains basic alias-analysis of capability
+  pointers under ``-Wthread-safety-beta`` (still experimental), which reduces
+  both false positives but also false negatives through more precise analysis.
+
+- Clang now looks through parenthesis for ``-Wundefined-reinterpret-cast`` diagnostic.
 
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
