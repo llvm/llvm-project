@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -139,58 +140,28 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
   StringRef EncoderMethodName =
       CGI.Operands[SO.first].EncoderMethodNames[SO.second];
 
+  raw_string_ostream OS(Case);
+  indent Indent(6);
+
+  OS << Indent << "// op: " << VarName << '\n';
+
   if (UseAPInt)
-    Case += "      op.clearAllBits();\n";
+    OS << Indent << "op.clearAllBits();\n";
 
-  Case += "      // op: " + VarName + "\n";
-
-  // If the source operand has a custom encoder, use it.
   if (!EncoderMethodName.empty()) {
-    raw_string_ostream CaseOS(Case);
-    CaseOS << indent(6);
     if (UseAPInt)
-      CaseOS << EncoderMethodName << "(MI, " << OpIdx << ", op";
+      OS << Indent << EncoderMethodName << "(MI, " << OpIdx
+         << ", op, Fixups, STI);\n";
     else
-      CaseOS << "op = " << EncoderMethodName << "(MI, " << OpIdx;
-    CaseOS << ", Fixups, STI);\n";
+      OS << Indent << "op = " << EncoderMethodName << "(MI, " << OpIdx
+         << ", Fixups, STI);\n";
   } else {
-    if (UseAPInt) {
-      Case +=
-          "      getMachineOpValue(MI, MI.getOperand(" + utostr(OpIdx) + ")";
-      Case += ", op, Fixups, STI";
-    } else {
-      Case += "      op = getMachineOpValue(MI, MI.getOperand(" +
-              utostr(OpIdx) + ")";
-      Case += ", Fixups, STI";
-    }
-    Case += ");\n";
-  }
-
-  // Precalculate the number of lits this variable contributes to in the
-  // operand. If there is a single lit (consecutive range of bits) we can use a
-  // destructive sequence on APInt that reduces memory allocations.
-  int NumOperandLits = 0;
-  for (int TmpBit = Bit; TmpBit >= 0;) {
-    int VarBit = getVariableBit(VarName, BI, TmpBit);
-
-    // If this bit isn't from a variable, skip it.
-    if (VarBit == -1) {
-      --TmpBit;
-      continue;
-    }
-
-    // Figure out the consecutive range of bits covered by this operand, in
-    // order to generate better encoding code.
-    int BeginVarBit = VarBit;
-    int N = 1;
-    for (--TmpBit; TmpBit >= 0;) {
-      VarBit = getVariableBit(VarName, BI, TmpBit);
-      if (VarBit == -1 || VarBit != (BeginVarBit - N))
-        break;
-      ++N;
-      --TmpBit;
-    }
-    ++NumOperandLits;
+    if (UseAPInt)
+      OS << Indent << "getMachineOpValue(MI, MI.getOperand(" << OpIdx
+         << "), op, Fixups, STI);\n";
+    else
+      OS << Indent << "op = getMachineOpValue(MI, MI.getOperand(" << OpIdx
+         << "), Fixups, STI);\n";
   }
 
   unsigned BitOffset = -1;
@@ -216,52 +187,25 @@ bool CodeEmitterGen::addCodeToMergeInOperand(const Record *R,
       --Bit;
     }
 
-    std::string MaskStr;
-    int OpShift;
-
     unsigned LoBit = BeginVarBit - N + 1;
-    unsigned HiBit = LoBit + N;
     unsigned LoInstBit = BeginInstBit - N + 1;
     BitOffset = LoInstBit;
     if (UseAPInt) {
-      std::string ExtractStr;
-      if (N >= 64) {
-        ExtractStr = "op.extractBits(" + itostr(HiBit - LoBit) + ", " +
-                     itostr(LoBit) + ")";
-        Case += "      Value.insertBits(" + ExtractStr + ", " +
-                itostr(LoInstBit) + ");\n";
-      } else {
-        ExtractStr = "op.extractBitsAsZExtValue(" + itostr(HiBit - LoBit) +
-                     ", " + itostr(LoBit) + ")";
-        Case += "      Value.insertBits(" + ExtractStr + ", " +
-                itostr(LoInstBit) + ", " + itostr(HiBit - LoBit) + ");\n";
-      }
+      if (N > 64)
+        OS << Indent << "Value.insertBits(op.extractBits(" << N << ", " << LoBit
+           << "), " << LoInstBit << ");\n";
+      else
+        OS << Indent << "Value.insertBits(op.extractBitsAsZExtValue(" << N
+           << ", " << LoBit << "), " << LoInstBit << ", " << N << ");\n";
     } else {
-      uint64_t OpMask = ~(uint64_t)0 >> (64 - N);
-      OpShift = BeginVarBit - N + 1;
-      OpMask <<= OpShift;
-      MaskStr = "UINT64_C(" + utostr(OpMask) + ")";
-      OpShift = BeginInstBit - BeginVarBit;
-
-      if (NumOperandLits == 1) {
-        Case += "      op &= " + MaskStr + ";\n";
-        if (OpShift > 0) {
-          Case += "      op <<= " + itostr(OpShift) + ";\n";
-        } else if (OpShift < 0) {
-          Case += "      op >>= " + itostr(-OpShift) + ";\n";
-        }
-        Case += "      Value |= op;\n";
-      } else {
-        if (OpShift > 0) {
-          Case += "      Value |= (op & " + MaskStr + ") << " +
-                  itostr(OpShift) + ";\n";
-        } else if (OpShift < 0) {
-          Case += "      Value |= (op & " + MaskStr + ") >> " +
-                  itostr(-OpShift) + ";\n";
-        } else {
-          Case += "      Value |= (op & " + MaskStr + ");\n";
-        }
-      }
+      uint64_t OpMask = maskTrailingOnes<uint64_t>(N) << LoBit;
+      OS << Indent << "Value |= (op & " << format_hex(OpMask, 0) << ')';
+      int OpShift = BeginInstBit - BeginVarBit;
+      if (OpShift > 0)
+        OS << " << " << OpShift;
+      else if (OpShift < 0)
+        OS << " >> " << -OpShift;
+      OS << ";\n";
     }
   }
 
