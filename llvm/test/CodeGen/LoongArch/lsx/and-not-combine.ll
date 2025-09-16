@@ -8,9 +8,8 @@ define void @and_not_combine_v16i8(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    vld $vr0, $a2, 0
 ; CHECK-NEXT:    vld $vr1, $a3, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
-; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
-; CHECK-NEXT:    vadd.b $vr0, $vr0, $vr1
-; CHECK-NEXT:    vand.v $vr0, $vr2, $vr0
+; CHECK-NEXT:    vsub.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -30,10 +29,8 @@ define void @and_not_combine_v8i16(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    vld $vr0, $a2, 0
 ; CHECK-NEXT:    vld $vr1, $a3, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
-; CHECK-NEXT:    vadd.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vand.v $vr0, $vr2, $vr0
+; CHECK-NEXT:    vsub.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -53,10 +50,8 @@ define void @and_not_combine_v4i32(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    vld $vr0, $a2, 0
 ; CHECK-NEXT:    vld $vr1, $a3, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
-; CHECK-NEXT:    vadd.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    vand.v $vr0, $vr2, $vr0
+; CHECK-NEXT:    vsub.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -76,10 +71,8 @@ define void @and_not_combine_v2i64(ptr %res, ptr %a0, ptr %a1, ptr %a2) nounwind
 ; CHECK-NEXT:    vld $vr0, $a2, 0
 ; CHECK-NEXT:    vld $vr1, $a3, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
-; CHECK-NEXT:    vadd.d $vr0, $vr0, $vr1
-; CHECK-NEXT:    vand.v $vr0, $vr2, $vr0
+; CHECK-NEXT:    vsub.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
