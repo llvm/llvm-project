@@ -3919,11 +3919,13 @@ bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {
 
   if (VkBinding || (RBA && RBA->hasRegisterSlot()))
     // Resource has explicit binding.
-    CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding", VD->getLocation());
+    CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding",
+                                VD->getLocation());
   else
     // Resource has implicit binding.
     CreateMethod =
-        lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding", VD->getLocation());
+        lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding",
+                     VD->getLocation());
 
   if (!CreateMethod)
     return false;
