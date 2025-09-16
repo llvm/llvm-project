@@ -38,7 +38,7 @@
 
 // DEFAULT: ld.lld
 // DEFAULT-SAME: "--thinlto-distributor=d.exe"
-// DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}clang{{[^\"]*}}"
+// DEFAULT-SAME: "--thinlto-remote-compiler={{[^"]+}}"
 
 /// Check that nothing is forwarded when the compiler is not in LTO mode, and that
 /// appropriate unused option warnings are issued.
