@@ -518,7 +518,7 @@ private:
   bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
                              raw_ostream &OS) const;
 
-  void emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
+  bool emitPredicateMatch(raw_ostream &OS, unsigned EncodingID) const;
 
   void emitPredicateTableEntry(unsigned EncodingID) const;
 
@@ -1133,14 +1133,19 @@ bool DecoderTableBuilder::emitPredicateMatchAux(const Init &Val,
   return true;
 }
 
-void DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
+// Returns true if there was any predicate emitted.
+bool DecoderTableBuilder::emitPredicateMatch(raw_ostream &OS,
                                              unsigned EncodingID) const {
-  const ListInit *PredicateList =
-      Encodings[EncodingID].getRecord()->getValueAsListInit("Predicates");
-  std::vector<const Record *> Predicates;
-  for (unsigned i = 0; i < PredicateList->size(); ++i)
-    Predicates.push_back(PredicateList->getElementAsRecord(i));
+  std::vector<const Record *> Predicates =
+      Encodings[EncodingID].getRecord()->getValueAsListOfDefs("Predicates");
+  auto It = llvm::find_if(Predicates, [](const Record *R) {
+    return R->getValueAsBit("AssemblerMatcherPredicate");
+  });
+  bool AnyAsmPredicate = It != Predicates.end();
+  if (!AnyAsmPredicate)
+    return false;
   SubtargetFeatureInfo::emitMCPredicateCheck(OS, Target.getName(), Predicates);
+  return true;
 }
 
 unsigned DecoderTableBuilder::getPredicateIndex(StringRef Predicate) const {
@@ -1161,11 +1166,7 @@ void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
   // Build up the predicate string.
   SmallString<256> Predicate;
   raw_svector_ostream PS(Predicate);
-  emitPredicateMatch(PS, EncodingID);
-  // Predicate being empty indicates that there are no predicates.
-  // Predicate being "false" indicate that there are predicates but with no
-  // AssemblerMatcherPredicate.
-  if (Predicate.empty() || Predicate == "false")
+  if (!emitPredicateMatch(PS, EncodingID))
     return;
 
   // Figure out the index into the predicate table for the predicate just

@@ -66,16 +66,16 @@ def insn1 : TestInsn<1, [AsmPred1]>;
 // DISASS: return FB[arch::AsmCond1]
 
 def insn2 : TestInsn<2, [AsmPred2]>;
-// DISASS: return FB[arch::AsmCond2a] && FB[arch::AsmCond2b]
+// DISASS: return FB[arch::AsmCond2a] && FB[arch::AsmCond2b];
 
 def insn3 : TestInsn<3, [AsmPred3]>;
-// DISASS: return FB[arch::AsmCond3a] || FB[arch::AsmCond3b]
+// DISASS: return FB[arch::AsmCond3a] || FB[arch::AsmCond3b];
 
 def insn4 : TestInsn<4, [AsmPred1, AsmPred2]>;
-// DISASS: return FB[arch::AsmCond1] && (FB[arch::AsmCond2a] && FB[arch::AsmCond2b])
+// DISASS: return FB[arch::AsmCond1] && (FB[arch::AsmCond2a] && FB[arch::AsmCond2b]);
 
 def insn5 : TestInsn<5, [AsmPred1, AsmPred3]>;
-// DISASS: return FB[arch::AsmCond1] && (FB[arch::AsmCond3a] || FB[arch::AsmCond3b])
+// DISASS: return FB[arch::AsmCond1] && (FB[arch::AsmCond3a] || FB[arch::AsmCond3b]);
 
 def insn6 : TestInsn<6, []>;
 def : InstAlias<"alias1", (insn6 R0)> { let Predicates = [AsmPred1]; }
