@@ -152,11 +152,11 @@ gpu.func @no_load_tensor(%source: tensor<32x64xf32>,
 // -----
 gpu.module @xevm_module {
 gpu.func @gather_from_subview(%source: memref<4096x4096xf16>,
-                              %off1: index, %off2: index,
+                              %memref_off: index, %off1: index, %off2: index,
                               %indices: vector<8xindex>,
                               %mask: vector<8xi1>,
                               %pass_thru: vector<8xf16>) -> vector<8xf16> {
-  %subview = memref.subview %source[%off1, %off2] [256, 256] [1, 1]
+  %subview = memref.subview %source[%memref_off, %memref_off] [256, 256] [1, 1]
       : memref<4096x4096xf16>
         to memref<256x256xf16, strided<[4096, 1], offset: ?>>
   %0 = vector.gather %subview[%off1, %off2][%indices], %mask, %pass_thru
@@ -167,15 +167,15 @@ gpu.func @gather_from_subview(%source: memref<4096x4096xf16>,
 }
 // CHECK-LABEL:  @gather_from_subview(
 // CHECK-SAME:   %[[SRC:.+]]: memref<4096x4096xf16>,
-// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
+// CHECK-SAME:   %[[MEMREF_OFF:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index,
 // CHECK-SAME:   %[[INDICES:.+]]: vector<8xindex>,
 // CHECK-SAME:   %[[MASK:.+]]: vector<8xi1>,
 // CHECK-SAME:   %[[PASS:.+]]: vector<8xf16>) -> vector<8xf16> {
-// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[OFF1]], %[[OFF2]]] [256, 256] [1, 1]
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[SRC]][%[[MEMREF_OFF]], %[[MEMREF_OFF]]] [256, 256] [1, 1]
 // CHECK:        %[[BB:.+]], %[[OFFSET:.+]],{{.*}},{{.*}} = memref.extract_strided_metadata %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> memref<f16>, index, index, index, index, index
-// CHECK:        arith.muli {{.*}} : index
+// CHECK:        arith.muli {{.*}}%[[OFF1]]{{.*}} : index
 // CHECK:        arith.addi %[[OFFSET]]{{.*}} : index
-// CHECK:        %[[BASE_OFF:.+]] = arith.addi {{.*}} : index
+// CHECK:        %[[BASE_OFF:.+]] = arith.addi {{.*}}%[[OFF2]]{{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast %[[BASE_OFF]] : index to vector<8xindex>
 // CHECK:        %[[LIN:.+]] = arith.addi %[[SPLAT]], %[[INDICES]] : vector<8xindex>
 // CHECK:        %[[BASE_IDX:.+]] = memref.extract_aligned_pointer_as_index %[[SUBVIEW]] : memref<256x256xf16, strided<[4096, 1], offset: ?>> -> index
