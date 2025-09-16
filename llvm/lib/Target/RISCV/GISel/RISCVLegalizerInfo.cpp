@@ -871,17 +871,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
   return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
 }
 
-bool RISCVLegalizerInfo::shouldBeInFConstantPool(const APFloat &APF) const {
-  [[maybe_unused]] unsigned Size = APF.getSizeInBits(APF.getSemantics());
-  assert((Size == 32 || Size == 64) && "Only support f32 and f64");
-
-  int64_t Imm = APF.bitcastToAPInt().getSExtValue();
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
-  if (Seq.size() <= STI.getMaxBuildIntsCost())
-    return false;
-  return true;
-}
-
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
                                         MachineIRBuilder &MIB) const {
   const LLT XLenTy(STI.getXLenVT());
@@ -1372,9 +1361,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
   case TargetOpcode::G_FCONSTANT: {
-    const APFloat FVal = MI.getOperand(1).getFPImm()->getValueAPF();
-    if (shouldBeInFConstantPool(FVal))
-      return Helper.lowerFConstant(MI);
+    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
 
     // Convert G_FCONSTANT to G_CONSTANT.
     Register DstReg = MI.getOperand(0).getReg();
