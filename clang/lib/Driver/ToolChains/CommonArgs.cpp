@@ -1352,7 +1352,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString("--thinlto-remote-compiler=" +
                            Twine(ToolChain.getDriver().getClangProgramPath())));
 
-    for (auto &A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
       CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
   }
 }

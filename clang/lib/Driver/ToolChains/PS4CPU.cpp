@@ -344,13 +344,14 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
 
-  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
     CmdArgs.push_back(
         Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
     CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
                                          Twine(D.getClangProgramPath())));
 
-    for (auto &A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+    for (const auto &A :
+         Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
       CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
   }
 
