@@ -235,7 +235,7 @@ size_t mlir::moveLoopInvariantCode(
   LDBG() << "Loop " << OpWithFlags(loopLike.getOperation(), OpPrintingFlags().skipRegions())
     << " has constant bounds and steps? isZeroTrip()? " << (isDead.has_value() ? (isDead.value() ? "YES, YES" : "YES, NO") : "NO, NULL");
 
-  if (!isDead.has_value() || isDead.value())
+  if (isDead.has_value() && isDead.value())
     return numMoved;
 
   // Go through loop body and map out resource usages.
