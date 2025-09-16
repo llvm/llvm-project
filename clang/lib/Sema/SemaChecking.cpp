@@ -5618,8 +5618,8 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     if (Arg->isTypeDependent() || Arg->isValueDependent())
       continue;
 
-    std::optional<llvm::APSInt> Result;
-    if (!(Result = Arg->getIntegerConstantExpr(Context)))
+    std::optional<llvm::APSInt> Result = Arg->getIntegerConstantExpr(Context);
+    if (!Result)
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_nonconstant_argument)
                        << Arg->getSourceRange());
@@ -5886,23 +5886,26 @@ bool Sema::BuiltinOSLogFormat(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinConstantArg(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
                               llvm::APSInt &Result) {
   Expr *Arg = TheCall->getArg(ArgNum);
-  DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
-  FunctionDecl *FDecl = cast<FunctionDecl>(DRE->getDecl());
 
-  if (Arg->isTypeDependent() || Arg->isValueDependent()) return false;
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
 
-  std::optional<llvm::APSInt> R;
-  if (!(R = Arg->getIntegerConstantExpr(Context)))
+  std::optional<llvm::APSInt> R = Arg->getIntegerConstantExpr(Context);
+  if (!R) {
+    auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+    auto *FDecl = cast<FunctionDecl>(DRE->getDecl());
     return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
            << FDecl->getDeclName() << Arg->getSourceRange();
+  }
   Result = *R;
+
   return false;
 }
 
-bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low,
+bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, unsigned ArgNum, int Low,
                                    int High, bool RangeIsError) {
   if (isConstantEvaluatedContext())
     return false;
@@ -5933,7 +5936,7 @@ bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low,
   return false;
 }
 
-bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, unsigned ArgNum,
                                       unsigned Num) {
   llvm::APSInt Result;
 
@@ -5953,7 +5956,7 @@ bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
   return false;
 }
 
-bool Sema::BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum) {
+bool Sema::BuiltinConstantArgPower2(CallExpr *TheCall, unsigned ArgNum) {
   llvm::APSInt Result;
 
   // We can't check the value of a dependent argument.
@@ -5965,9 +5968,7 @@ bool Sema::BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum) {
   if (BuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
 
-  // Bit-twiddling to test for a power of 2: for x > 0, x & (x-1) is zero if
-  // and only if x is a power of 2.
-  if (Result.isStrictlyPositive() && (Result & (Result - 1)) == 0)
+  if (Result.isPowerOf2())
     return false;
 
   return Diag(TheCall->getBeginLoc(), diag::err_argument_not_power_of_2)
@@ -5996,7 +5997,7 @@ static bool IsShiftedByte(llvm::APSInt Value) {
   }
 }
 
-bool Sema::BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArgShiftedByte(CallExpr *TheCall, unsigned ArgNum,
                                          unsigned ArgBits) {
   llvm::APSInt Result;
 
@@ -6020,7 +6021,8 @@ bool Sema::BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
          << Arg->getSourceRange();
 }
 
-bool Sema::BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall,
+                                               unsigned ArgNum,
                                                unsigned ArgBits) {
   llvm::APSInt Result;
 
