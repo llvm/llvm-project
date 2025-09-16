@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the AArch64PrologueEmitter class,
-/// which is is used to emit the prologue on AArch64.
+/// This file contains the declaration of the AArch64PrologueEmitter and
+/// AArch64EpilogueEmitter classes, which are is used to emit the prologue and
+/// epilogue on AArch64.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -104,6 +105,63 @@ private:
 
   const TargetInstrInfo *TII = nullptr;
   AArch64FunctionInfo *AFI = nullptr;
+};
+
+/// A helper class for emitting the epilogue. Substantial new functionality
+/// should be factored into a new method. Where possible "emit*" methods should
+/// be const, and any flags that change how the epilogue is emitted should be
+/// set in the constructor.
+class AArch64EpilogueEmitter {
+public:
+  AArch64EpilogueEmitter(MachineFunction &MF, MachineBasicBlock &MBB,
+                         const AArch64FrameLowering &AFL);
+
+  /// Emit the epilogue.
+  void emitEpilogue();
+
+  ~AArch64EpilogueEmitter() { finalizeEpilogue(); }
+
+private:
+  void emitSwiftAsyncContextFramePointer(MachineBasicBlock::iterator MBBI,
+                                         const DebugLoc &DL) const;
+
+  void emitShadowCallStackEpilogue(MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL) const;
+
+  void emitCalleeSavedRestores(MachineBasicBlock::iterator MBBI,
+                               bool SVE) const;
+
+  void emitCalleeSavedGPRRestores(MachineBasicBlock::iterator MBBI) const {
+    emitCalleeSavedRestores(MBBI, /*SVE=*/false);
+  }
+
+  void emitCalleeSavedSVERestores(MachineBasicBlock::iterator MBBI) const {
+    emitCalleeSavedRestores(MBBI, /*SVE=*/true);
+  }
+
+  void finalizeEpilogue() const;
+
+  MachineFunction &MF;
+  MachineBasicBlock &MBB;
+
+  const MachineFrameInfo &MFI;
+  const AArch64Subtarget &Subtarget;
+  const AArch64FrameLowering &AFL;
+
+  // Epilogue flags. These generally should not change outside of the
+  // constructor (or early in emitEpilogue).
+  bool NeedsWinCFI = false;
+  bool EmitCFI = false;
+  bool IsFunclet = false;
+
+  // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
+  mutable bool HasWinCFI = false;
+
+  const TargetInstrInfo *TII = nullptr;
+  AArch64FunctionInfo *AFI = nullptr;
+
+  DebugLoc DL;
+  MachineBasicBlock::iterator SEHEpilogueStartI;
 };
 
 } // namespace llvm

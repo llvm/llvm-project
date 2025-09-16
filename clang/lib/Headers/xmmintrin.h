@@ -2520,8 +2520,8 @@ _mm_maskmove_si64(__m64 __d, __m64 __n, char *__p)
     // If there's a risk of spurious trap due to a 128-bit write, back up the
     // pointer by 8 bytes and shift values in registers to match.
     __p -= 8;
-    __d128 = __builtin_ia32_pslldqi128_byteshift((__v2di)__d128, 8);
-    __n128 = __builtin_ia32_pslldqi128_byteshift((__v2di)__n128, 8);
+    __d128 = (__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)__d128, 8);
+    __n128 = (__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)__n128, 8);
   }
 
   __builtin_ia32_maskmovdqu((__v16qi)__d128, (__v16qi)__n128, __p);
