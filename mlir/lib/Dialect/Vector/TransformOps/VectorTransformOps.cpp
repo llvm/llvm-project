@@ -151,7 +151,7 @@ void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
 
 void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorToElementsLoweringPatterns(patterns);
+  vector::populateVectorToElementsUnrollPatterns(patterns);
 }
 
 void transform::ApplyLowerScanPatternsOp::populatePatterns(
