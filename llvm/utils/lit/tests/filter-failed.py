@@ -1,14 +1,14 @@
 # Checks that --filter-failed only runs tests that previously failed.
 
-# RUN: not %{lit} %{inputs}/filter-failed
+# RUN: rm -rf %t
+# RUN: cp -r %{inputs}/filter-failed %t
 #
-# RUN: rm -f %{inputs}/filter-failed/new-fail.txt
-# RUN: echo "RUN: false" > %{inputs}/filter-failed/new-fail.txt
+# RUN: not %{lit} %t
 #
-# RUN: rm -f %{inputs}/filter-failed/new-pass.txt
-# RUN: echo "RUN: true" > %{inputs}/filter-failed/new-pass.txt
+# RUN: echo "RUN: false" > %t/new-fail.txt
+# RUN: echo "RUN: true"  > %t/new-pass.txt
 #
-# RUN: not %{lit} --filter-failed %{inputs}/filter-failed | FileCheck %s
+# RUN: not %{lit} --filter-failed %t | FileCheck %s
 
 # CHECK: Testing: 3 of 7 tests
 # CHECK-DAG: FAIL: filter-failed :: fail.txt

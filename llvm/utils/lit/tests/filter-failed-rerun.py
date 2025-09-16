@@ -1,20 +1,18 @@
 # Checks that --filter-failed won't re-run tests that have passed
 # since the last time --filter-failed has run.
 
-# RUN: not %{lit} %{inputs}/filter-failed-rerun | FileCheck %s --check-prefix=CHECK-FIRST
+# RUN: rm -rf %t
+# RUN: cp -r %{inputs}/filter-failed %t
 #
-# RUN: mv %{inputs}/filter-failed-rerun/fail.txt %{inputs}/filter-failed-rerun/fail.txt.bk
-# RUN: cp %{inputs}/filter-failed-rerun/pass.txt %{inputs}/filter-failed-rerun/fail.txt
-# RUN: not %{lit} %{inputs}/filter-failed-rerun > %s.rerun-1.log
-# RUN: not %{lit} --filter-failed %{inputs}/filter-failed-rerun > %s.rerun-2.log
-# RUN: mv %{inputs}/filter-failed-rerun/fail.txt.bk %{inputs}/filter-failed-rerun/fail.txt
+# RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-FIRST
 #
-# RUN: FileCheck %s --input-file=%s.rerun-1.log --check-prefix=CHECK-RERUN1
-# RUN: FileCheck %s --input-file=%s.rerun-2.log --check-prefix=CHECK-RERUN2
+# RUN: cp %t/pass.txt %t/fail.txt
+# RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-RERUN1
+# RUN: not %{lit} --filter-failed %t | FileCheck %s --check-prefix=CHECK-RERUN2
 
-# CHECK-FIRST: FAIL: filter-failed-rerun :: fail.txt
+# CHECK-FIRST: FAIL: filter-failed :: fail.txt
 
-# CHECK-RERUN1: PASS: filter-failed-rerun :: fail.txt
+# CHECK-RERUN1: PASS: filter-failed :: fail.txt
 
-# CHECK-RERUN2: Testing: 1 of 3 tests
-# CHECK-RERUN2-NOT: filter-failed-rerun :: fail.txt
+# CHECK-RERUN2: Testing: 2 of 5 tests
+# CHECK-RERUN2-NOT: filter-failed :: fail.txt

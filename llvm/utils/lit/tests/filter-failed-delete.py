@@ -1,14 +1,14 @@
 # Shows behaviour when a previously failed test was deleted
 # before running with --filter-failed.
 
-# RUN: not %{lit} %{inputs}/filter-failed-delete | FileCheck %s --check-prefix=CHECK-FIRST
+# RUN: rm -rf %t
+# RUN: cp -r %{inputs}/filter-failed %t
 #
-# RUN: mv %{inputs}/filter-failed-delete/fail.txt %{inputs}/filter-failed-delete/fail.txt.bk
-# RUN: not %{lit} --filter-failed %{inputs}/filter-failed-delete > %s.rerun.log
-# RUN: mv %{inputs}/filter-failed-delete/fail.txt.bk %{inputs}/filter-failed-delete/fail.txt
+# RUN: not %{lit} %t | FileCheck %s --check-prefix=CHECK-FIRST
 #
-# RUN: FileCheck %s --input-file=%s.rerun.log --check-prefix=CHECK-RERUN
+# RUN: rm %t/fail.txt
+# RUN: not %{lit} --filter-failed %t | FileCheck %s --check-prefix=CHECK-RERUN
 
-# CHECK-FIRST: FAIL: filter-failed-delete :: fail.txt
+# CHECK-FIRST: FAIL: filter-failed :: fail.txt
 
-# CHECK-RERUN-NOT: filter-failed-delete :: fail.txt
+# CHECK-RERUN-NOT: filter-failed :: fail.txt
