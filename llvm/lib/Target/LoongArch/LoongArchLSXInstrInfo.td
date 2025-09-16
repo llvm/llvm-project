@@ -2155,6 +2155,12 @@ def : Pat<(f64 f64imm_vldi:$in),
 defm : PatVrVr<abds, "VABSD">;
 defm : PatVrVrU<abdu, "VABSD">;
 
+// VSADD_{B/H/W/D}[U], VSSUB_{B/H/W/D}[U]
+defm : PatVrVr<saddsat, "VSADD">;
+defm : PatVrVr<ssubsat, "VSSUB">;
+defm : PatVrVrU<uaddsat, "VSADD">;
+defm : PatVrVrU<usubsat, "VSSUB">;
+
 // Vector mask set by condition
 def : Pat<(loongarch_vmskltz (v16i8 LSX128:$vj)), (PseudoVMSKLTZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmskltz (v8i16 LSX128:$vj)), (PseudoVMSKLTZ_H LSX128:$vj)>;
