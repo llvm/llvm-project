@@ -35,8 +35,6 @@ page](https://llvm.org/releases/).
 
 ## New Compiler Flags
 
-* -fexperimental-loop-fusion is now recognized by flang.
-
 ## Windows Support
 
 ## Fortran Language Changes in Flang
