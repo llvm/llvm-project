@@ -725,6 +725,7 @@ FUNCTION_PASS_WITH_PARAMS(
       return ExpandFpPass(TM, OL);
     },
     parseExpandFpOptions, "opt-level=N")
+
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
@@ -819,6 +820,7 @@ MODULE_LTO_CALLBACK("OptimizerLastCallbacks", invokeOptimizerLastEPCallbacks)
 FUNCTION_CALLBACK("PeepholeCallbacks", invokePeepholeEPCallbacks)
 FUNCTION_CALLBACK("ScalarOptimizerLateCallbacks", invokeScalarOptimizerLateEPCallbacks)
 FUNCTION_CALLBACK("VectorizerStartCallbacks", invokeVectorizerStartEPCallbacks)
+FUNCTION_CALLBACK("VectorizerEndCallbacks", invokeVectorizerEndEPCallbacks)
 #endif
 
 #ifdef LOOP_CALLBACK

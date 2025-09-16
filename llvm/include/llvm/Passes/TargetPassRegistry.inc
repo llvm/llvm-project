@@ -92,7 +92,7 @@ if (PIC) {
     return true;                                                               \
   }
 
-PB.registerPipelineParsingCallback([&](StringRef Name, ModulePassManager &PM,
+PB.registerPipelineParsingCallback([=](StringRef Name, ModulePassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
 #define MODULE_PASS(NAME, CREATE_PASS) ADD_PASS(NAME, CREATE_PASS)
 #include GET_PASS_REGISTRY
@@ -109,7 +109,7 @@ PB.registerPipelineParsingCallback([=](StringRef Name, ModulePassManager &PM,
   return false;
 });
 
-PB.registerPipelineParsingCallback([&](StringRef Name, FunctionPassManager &PM,
+PB.registerPipelineParsingCallback([=](StringRef Name, FunctionPassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
 #define FUNCTION_PASS(NAME, CREATE_PASS) ADD_PASS(NAME, CREATE_PASS)
 #include GET_PASS_REGISTRY
