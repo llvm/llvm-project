@@ -809,6 +809,32 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+/// This pattern unrolls `vector.step` operations according to the provided
+/// target unroll shape. It decomposes a large step vector into smaller step
+/// vectors (segments) and assembles the result by inserting each computed
+/// segment into the appropriate offset of the original vector.
+///
+/// The pattern does not support scalable vectors and will fail to match them.
+///
+/// For each segment, it adds the base step vector and the segment's offset,
+/// then inserts the result into the output vector at the corresponding
+/// position.
+///
+/// Example:
+///   Given a step operation:
+///     %0 = vector.step : vector<8xindex>
+///
+///   and a target unroll shape of <4>, the pattern produces:
+///
+///     %base = vector.step : vector<4xindex>
+///     %zero = arith.constant dense<0> : vector<4xindex>
+///     %result0 = vector.insert_strided_slice %base, %zero
+///       {offsets = [0], strides = [1]} : vector<4xindex> into vector<8xindex>
+///     %offset = arith.constant dense<4> : vector<4xindex>
+///     %segment1 = arith.addi %base, %offset : vector<4xindex>
+///     %result1 = vector.insert_strided_slice %segment1, %result0
+///       {offsets = [4], strides = [1]} : vector<4xindex> into vector<8xindex>
+///
 struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
   UnrollStepPattern(MLIRContext *context,
                     const vector::UnrollVectorOptions &options,
@@ -817,7 +843,8 @@ struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
 
   LogicalResult matchAndRewrite(vector::StepOp stepOp,
                                 PatternRewriter &rewriter) const override {
-    auto targetShape = getTargetShape(options, stepOp);
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, stepOp);
     if (!targetShape)
       return failure();
 
@@ -833,18 +860,18 @@ struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
     Value result = arith::ConstantOp::create(rewriter, loc, vecType,
                                              rewriter.getZeroAttr(vecType));
 
+    VectorType targetVecType =
+        VectorType::get(*targetShape, vecType.getElementType());
+    Value baseStep = vector::StepOp::create(rewriter, loc, targetVecType);
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange({originalSize}, *targetShape)) {
-      int64_t tileOffset = offsets[0];
-      auto targetVecType =
-          VectorType::get(*targetShape, vecType.getElementType());
-      Value baseStep = rewriter.create<vector::StepOp>(loc, targetVecType);
-      Value offsetVal =
-          rewriter.create<arith::ConstantIndexOp>(loc, tileOffset);
-      Value bcastOffset =
-          rewriter.create<vector::BroadcastOp>(loc, targetVecType, offsetVal);
+      Value bcastOffset = arith::ConstantOp::create(
+          rewriter, loc, targetVecType,
+          DenseElementsAttr::get(
+              targetVecType,
+              IntegerAttr::get(targetVecType.getElementType(), offsets[0])));
       Value tileStep =
-          rewriter.create<arith::AddIOp>(loc, baseStep, bcastOffset);
+          arith::AddIOp::create(rewriter, loc, baseStep, bcastOffset);
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, tileStep, result, offsets, strides);

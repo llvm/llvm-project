@@ -427,19 +427,16 @@ func.func @vector_step() -> vector<32xindex> {
     return %0 : vector<32xindex>
 }
 // CHECK-LABEL: func @vector_step
-// CHECK: %[[CST3:.*]] = arith.constant dense<24> : vector<8xindex>
-// CHECK: %[[CST2:.*]] = arith.constant dense<16> : vector<8xindex>
+// CHECK: %[[CST:.*]] = arith.constant dense<24> : vector<8xindex>
+// CHECK: %[[CST0:.*]] = arith.constant dense<16> : vector<8xindex>
 // CHECK: %[[CST1:.*]] = arith.constant dense<8> : vector<8xindex>
-// CHECK: %[[CST0:.*]] = arith.constant dense<0> : vector<32xindex>
-// CHECK: %[[STEP0:.*]] = vector.step : vector<8xindex>
-// CHECK: %[[INS0:.*]] = vector.insert_strided_slice %[[STEP0]], %[[CST0]] {offsets = [0], strides = [1]} : vector<8xindex> into vector<32xindex>
-// CHECK: %[[STEP1:.*]] = vector.step : vector<8xindex>
-// CHECK: %[[ADD1:.*]] = arith.addi %[[STEP1]], %[[CST1]] : vector<8xindex>
+// CHECK: %[[CST2:.*]] = arith.constant dense<0> : vector<32xindex>
+// CHECK: %[[STEP:.*]] = vector.step : vector<8xindex>
+// CHECK: %[[INS0:.*]] = vector.insert_strided_slice %[[STEP]], %[[CST2]] {offsets = [0], strides = [1]} : vector<8xindex> into vector<32xindex>
+// CHECK: %[[ADD1:.*]] = arith.addi %[[STEP]], %[[CST1]] : vector<8xindex>
 // CHECK: %[[INS1:.*]] = vector.insert_strided_slice %[[ADD1]], %[[INS0]] {offsets = [8], strides = [1]} : vector<8xindex> into vector<32xindex>
-// CHECK: %[[STEP2:.*]] = vector.step : vector<8xindex>
-// CHECK: %[[ADD2:.*]] = arith.addi %[[STEP2]], %[[CST2]] : vector<8xindex>
+// CHECK: %[[ADD2:.*]] = arith.addi %[[STEP]], %[[CST0]] : vector<8xindex>
 // CHECK: %[[INS2:.*]] = vector.insert_strided_slice %[[ADD2]], %[[INS1]] {offsets = [16], strides = [1]} : vector<8xindex> into vector<32xindex>
-// CHECK: %[[STEP3:.*]] = vector.step : vector<8xindex>
-// CHECK: %[[ADD3:.*]] = arith.addi %[[STEP3]], %[[CST3]] : vector<8xindex>
+// CHECK: %[[ADD3:.*]] = arith.addi %[[STEP]], %[[CST]] : vector<8xindex>
 // CHECK: %[[INS3:.*]] = vector.insert_strided_slice %[[ADD3]], %[[INS2]] {offsets = [24], strides = [1]} : vector<8xindex> into vector<32xindex>
 // CHECK: return %[[INS3]] : vector<32xindex>
