@@ -76,7 +76,7 @@ class LVIRReader final : public LVReader {
   LVType *NodeIndexType = nullptr;
 
   SSAValueNameMap ValueNameMap;
-  DenseMap<void*, uint64_t> InstrLineAddrMap;
+  DenseMap<void *, uint64_t> InstrLineAddrMap;
   std::unique_ptr<DbgValueRangeTable> DbgValueRanges;
 
   // Record the last assigned file index for each compile unit.
