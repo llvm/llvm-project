@@ -414,10 +414,9 @@ class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
 }
 
 class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
-  bits<3> scale_sel;
+  bits<4> scale_sel;
 
-  let Inst{13-11} = scale_sel;
-  let Inst{14} = 0;
+  let Inst{14-11} = scale_sel;
 }
 
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
