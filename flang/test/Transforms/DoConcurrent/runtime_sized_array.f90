@@ -40,6 +40,3 @@ end subroutine
 
 ! CHECK:   omp.terminator
 ! CHECK: }
-
-
-
