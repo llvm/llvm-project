@@ -197,7 +197,7 @@ public:
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
   bool hasREV8Like() const {
-    return HasStdExtZbb | HasStdExtZbkb || HasVendorXTHeadBb;
+    return HasStdExtZbb || HasStdExtZbkb || HasVendorXTHeadBb;
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
