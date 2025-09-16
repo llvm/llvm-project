@@ -1739,20 +1739,20 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  if (OrigAverageTripCount) {
-    // Calculate number of iterations in unrolled loop.
-    unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-    // Calculate number of iterations for remainder loop.
-    unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+  if (!OrigAverageTripCount)
+    return;
+  // Calculate number of iterations in unrolled loop.
+  unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+  // Calculate number of iterations for remainder loop.
+  unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
 
-    if (HeaderVPBB) {
-      setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
-                                OrigLoopInvocationWeight);
-    }
-    if (Plan.getScalarPreheader()->hasPredecessors()) {
-      setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
-                                OrigLoopInvocationWeight);
-    }
+  if (HeaderVPBB) {
+    setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
+                              OrigLoopInvocationWeight);
+  }
+  if (Plan.getScalarPreheader()->hasPredecessors()) {
+    setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
+                              OrigLoopInvocationWeight);
   }
 }
 

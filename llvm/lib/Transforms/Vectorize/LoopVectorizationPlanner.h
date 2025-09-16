@@ -573,7 +573,7 @@ public:
   /// loop on the vector loop and replaces vectorizer-specific metadata. The
   /// loop ID of the original loop \p OrigLoopID must be passed, together with
   /// the average trip count and invocation weight of the original loop (\p
-  /// OrigAverageTripCount and \p OrigLoopInvocationWeight respectively. They
+  /// OrigAverageTripCount and \p OrigLoopInvocationWeight respectively). They
   /// cannot be retrieved after the plan has been executed, as the original loop
   /// may have been removed.
   void updateLoopMetadataAndProfileInfo(

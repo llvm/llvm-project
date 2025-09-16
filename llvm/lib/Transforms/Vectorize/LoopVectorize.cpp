@@ -7201,7 +7201,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationDead",
                                         OrigLoop->getStartLoc(),
                                         OrigLoop->getHeader())
-             << "Created vector loop never executes.";
+             << "Created vector loop never executes due insufficient trip "
+                "count.";
     });
     return DenseMap<const SCEV *, Value *>();
   }
