@@ -445,10 +445,10 @@ public:
   InFlightRemark emitOptimizationRemarkAnalysis(Location loc, RemarkOpts opts);
 
   /// Get the postponed remarks.
-  ArrayRef<Remark>  getPostponedRemarks() const { return postponedRemarks; }
+  ArrayRef<Remark> getPostponedRemarks() const { return postponedRemarks; }
 
   /// Clear the postponed remarks.
-  void  clearPostponedRemarks()  { postponedRemarks.clear(); }
+  void clearPostponedRemarks() { postponedRemarks.clear(); }
 };
 
 template <typename Fn, typename... Args>
