@@ -58,6 +58,8 @@ private:
   Visit(const IntegerLiteralNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const FloatLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BooleanLiteralNode *node) override;
 
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
