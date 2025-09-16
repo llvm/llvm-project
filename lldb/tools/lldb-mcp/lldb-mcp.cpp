@@ -52,6 +52,12 @@ using lldb_private::NativeFile;
 
 namespace {
 
+#if defined(_WIN32)
+constexpr StringLiteral kDriverName = "lldb.exe";
+#else
+constexpr StringLiteral kDriverName = "lldb";
+#endif
+
 constexpr size_t kForwardIOBufferSize = 1024;
 
 inline void exitWithError(llvm::Error Err, StringRef Prefix = "") {
@@ -68,11 +74,11 @@ FileSpec driverPath() {
   // to the current binary.
   std::string lldb_exe_path = host_env.lookup("LLDB_EXE_PATH");
   auto &fs = FileSystem::Instance();
-  if (fs.Exists(lldb_exe_path)) 
+  if (fs.Exists(lldb_exe_path))
     return FileSpec(lldb_exe_path);
 
   FileSpec lldb_exec_spec = lldb_private::HostInfo::GetProgramFileSpec();
-  lldb_exec_spec.SetFilename("lldb");
+  lldb_exec_spec.SetFilename(kDriverName);
   return lldb_exec_spec;
 }
 
