@@ -38,11 +38,6 @@ namespace llvm {
 extern cl::opt<std::string> OutputPrefix;
 }
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden);
-
 static cl::opt<std::string>
     OptCmd("opt-command", cl::init(""),
            cl::desc("Path to opt. (default: search path "
@@ -51,7 +46,7 @@ static cl::opt<std::string>
 /// This writes the current "Program" to the named bitcode file.  If an error
 /// occurs, true is returned.
 static bool writeProgramToFileAux(ToolOutputFile &Out, const Module &M) {
-  WriteBitcodeToFile(M, Out.os(), PreserveBitcodeUseListOrder);
+  WriteBitcodeToFile(M, Out.os(), /* ShouldPreserveUseListOrder */ true);
   Out.os().close();
   if (!Out.os().has_error()) {
     Out.keep();
@@ -68,7 +63,7 @@ bool BugDriver::writeProgramToFile(const std::string &Filename, int FD,
 
 bool BugDriver::writeProgramToFile(int FD, const Module &M) const {
   raw_fd_ostream OS(FD, /*shouldClose*/ false);
-  WriteBitcodeToFile(M, OS, PreserveBitcodeUseListOrder);
+  WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ true);
   OS.flush();
   if (!OS.has_error())
     return false;
@@ -155,7 +150,7 @@ bool BugDriver::runPasses(Module &Program,
   DiscardTemp Discard{*Temp};
   raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
 
-  WriteBitcodeToFile(Program, OS, PreserveBitcodeUseListOrder);
+  WriteBitcodeToFile(Program, OS, /* ShouldPreserveUseListOrder */ true);
   OS.flush();
   if (OS.has_error()) {
     errs() << "Error writing bitcode file: " << Temp->TmpName << "\n";
