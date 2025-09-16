@@ -1076,21 +1076,20 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
         const Record *Class = RegClassByHwMode[I];
         const HwModeSelect &ModeSelect = CGH.getHwModeSelect(Class);
 
-        bool Seen = false;
-        for (const HwModeSelect::PairType &P : ModeSelect.Items) {
-          if (P.first == M) {
-            const CodeGenRegisterClass *RegClass =
-                RegBank.getRegClass(P.second);
-            OS << indent(4) << RegClass->getQualifiedIdName() << ",\n";
-            Seen = true;
-            break;
-          }
-        }
+        auto FoundMode =
+            find_if(ModeSelect.Items, [=](const HwModeSelect::PairType P) {
+              return P.first == M;
+            });
 
-        // If a RegClassByHwMode doesn't have an entry corresponding to a mode,
-        // pad with default register class.
-        if (!Seen)
+        if (FoundMode == ModeSelect.Items.end()) {
+          // If a RegClassByHwMode doesn't have an entry corresponding to a
+          // mode, pad with default register class.
           OS << indent(4) << "-1, // Missing mode entry\n";
+        } else {
+          const CodeGenRegisterClass *RegClass =
+              RegBank.getRegClass(FoundMode->second);
+          OS << indent(4) << RegClass->getQualifiedIdName() << ",\n";
+        }
       }
 
       OS << "  },\n";

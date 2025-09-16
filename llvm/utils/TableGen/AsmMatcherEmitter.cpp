@@ -2576,23 +2576,20 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
         const Record *Class = RegClassesByHwMode[I];
         const HwModeSelect &ModeSelect = CGH.getHwModeSelect(Class);
 
-        bool Seen = false;
-        for (const HwModeSelect::PairType &P : ModeSelect.Items) {
-          if (P.first == M) {
-            const CodeGenRegisterClass *RegClass =
-                RegBank.getRegClass(P.second);
+        auto FoundMode =
+            find_if(ModeSelect.Items, [=](const HwModeSelect::PairType P) {
+              return P.first == M;
+            });
 
-            const ClassInfo *CI =
-                Info.RegisterClassClasses.at(RegClass->getDef());
-
-            OS << indent(8) << CI->Name << ",\n";
-            Seen = true;
-            break;
-          }
-        }
-
-        if (!Seen)
+        if (FoundMode == ModeSelect.Items.end()) {
           OS << indent(8) << "InvalidMatchClass, // Missing mode\n";
+        } else {
+          const CodeGenRegisterClass *RegClass =
+              RegBank.getRegClass(FoundMode->second);
+          const ClassInfo *CI =
+              Info.RegisterClassClasses.at(RegClass->getDef());
+          OS << indent(8) << CI->Name << ",\n";
+        }
       }
 
       OS << indent(6) << "},\n";
