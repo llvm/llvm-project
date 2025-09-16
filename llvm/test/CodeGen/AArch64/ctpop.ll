@@ -512,7 +512,6 @@ define i8 @i8(i8 %x) {
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
-; CHECK-SD-NEXT:    addv b0, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -536,7 +535,6 @@ define i16 @i16_mask(i16 %x) {
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
-; CHECK-SD-NEXT:    addv b0, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -561,7 +559,6 @@ define i32 @i32_mask(i32 %x) {
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
 ; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
-; CHECK-SD-NEXT:    addv b0, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
