@@ -20900,21 +20900,38 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   }
   case AssignConvertType::IncompatibleStringLiteralToValueTerminatedPointer:
-    DiagKind = diag::err_bounds_safety_incompatible_string_literal_to_terminated_by;
-    isInvalid = true;
+    if (isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind = diag::warn_unsafe_incompatible_string_literal_to_terminated_by;
+      isInvalid = false;
+    } else {
+      DiagKind =
+          diag::err_bounds_safety_incompatible_string_literal_to_terminated_by;
+      isInvalid = true;
+    }
     break;
   case AssignConvertType::IncompatibleValueTerminatedTerminators:
-    DiagKind = diag::err_bounds_safety_incompatible_terminated_by_terminators;
-    isInvalid = true;
+    if (isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind = diag::warn_unsafe_incompatible_terminated_by_terminators;
+      isInvalid = false;
+    } else {
+      DiagKind = diag::err_bounds_safety_incompatible_terminated_by_terminators;
+      isInvalid = true;
+    }
     break;
   case AssignConvertType::
       IncompatibleValueTerminatedToNonValueTerminatedPointer: {
     const auto *SrcPointerType = SrcType->getAs<ValueTerminatedType>();
     IsSrcNullTerm =
         SrcPointerType->getTerminatorValue(getASTContext()).isZero();
-    DiagKind =
-        diag::err_bounds_safety_incompatible_terminated_by_to_non_terminated_by;
-    isInvalid = true;
+    if (isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind =
+          diag::warn_unsafe_incompatible_terminated_by_to_non_terminated_by;
+      isInvalid = false;
+    } else {
+      DiagKind = diag::
+          err_bounds_safety_incompatible_terminated_by_to_non_terminated_by;
+      isInvalid = true;
+    }
     break;
   }
   case AssignConvertType::
@@ -20922,9 +20939,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     const auto *DstPointerType = DstType->getAs<ValueTerminatedType>();
     IsDstNullTerm =
         DstPointerType->getTerminatorValue(getASTContext()).isZero();
-
-    if (getLangOpts().BoundsSafetyRelaxedSystemHeaders ||
-        isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+    if (isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind =
+          diag::warn_unsafe_incompatible_non_terminated_by_to_terminated_by;
+      isInvalid = false;
+    } else if (getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
       DiagKind = diag::
           warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
       isInvalid = false;
@@ -20937,13 +20956,23 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   }
   case AssignConvertType::
       IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
-    DiagKind = diag::
-        err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
-    isInvalid = true;
+    if (isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind = diag::
+          warn_unsafe_incompatible_terminated_by_to_non_terminated_by_mismatch;
+      isInvalid = false;
+    } else {
+      DiagKind = diag::
+          err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
+      isInvalid = true;
+    }
     break;
   case AssignConvertType::
       IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
-    if (getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+    if (isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)) {
+      DiagKind = diag::
+          warn_unsafe_incompatible_non_terminated_by_to_terminated_by_mismatch;
+      isInvalid = false;
+    } else if (getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
       DiagKind = diag::
           warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
       isInvalid = false;
@@ -21194,24 +21223,31 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
              diag::warn_bounds_safety_implicit_conv_single_to_explicit_indexable) {
     SrcDecl = DiagnoseBoundsSafetyImplicitConversionFromSingleToExplicitIndexable(
         DstType, SrcType, SrcExpr, ActionForDiag, FirstType, SecondType, FDiag);
-  } else if (
-      DiagKind ==
-      diag::err_bounds_safety_incompatible_terminated_by_to_non_terminated_by) {
+  } else if (ConvTy ==
+             AssignConvertType::
+                 IncompatibleValueTerminatedToNonValueTerminatedPointer) {
     FDiag << FirstType << SecondType << ActionForDiag
           << SrcExpr->getSourceRange()
           << (IsSrcNullTerm ? /*null_terminated*/ 1 : /*terminated_by*/ 0);
-  } else if (
-      DiagKind ==
-          diag::err_bounds_safety_incompatible_non_terminated_by_to_terminated_by ||
-      DiagKind ==
-          diag::
-              warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by) {
+  } else if (ConvTy ==
+             AssignConvertType::
+                 IncompatibleNonValueTerminatedToValueTerminatedPointer) {
     FDiag << FirstType << SecondType << ActionForDiag
           << SrcExpr->getSourceRange()
           << (!isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)
                   ? (IsDstNullTerm ? /*null_terminated*/ 1
                                    : /*terminated_by*/ 0)
                   : 2 /* cut message irrelevant to that mode*/);
+  } else if (
+      ConvTy ==
+          AssignConvertType::
+              IncompatibleNestedValueTerminatedToNonValueTerminatedPointer ||
+      ConvTy ==
+          AssignConvertType::
+              IncompatibleNestedNonValueTerminatedToValueTerminatedPointer) {
+    FDiag << FirstType << SecondType << ActionForDiag
+          << isCXXSafeBuffersBoundsSafetyInteropEnabledAt(Loc)
+          << SrcExpr->getSourceRange();
   } else {
     FDiag << FirstType << SecondType << ActionForDiag
           << SrcExpr->getSourceRange();

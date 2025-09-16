@@ -1,24 +1,24 @@
-
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,bs %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify=expected,bs %s
+// RUN: %clang_cc1 -fsyntax-only -x c++ -fexperimental-bounds-safety-attributes -Wunsafe-buffer-usage -Wno-dangling -Wno-return-stack-address -verify=expected,cxx,ubu %s
 
 #include <ptrcheck.h>
 
-// expected-note@+1 +{{passing argument to parameter here}}
+// bs-note@+1 +{{passing argument to parameter here}}
 void nul(const char *__null_terminated);
 
 void nul_c(const char *const __null_terminated);
 
-// expected-note@+1 +{{passing argument to parameter here}}
+// bs-note@+1 +{{passing argument to parameter here}}
 void nul_int(const int *__null_terminated);
 
-// expected-note@+1{{passing argument to parameter here}}
+// bs-note@+1{{passing argument to parameter here}}
 void _42(const char *__terminated_by(42));
 
-// expected-note@+1{{passing argument to parameter here}}
+// bs-note@+1{{passing argument to parameter here}}
 void _42_int(const int *__terminated_by(42));
 
-// expected-note@+1 +{{passing argument to parameter here}}
+// bs-note@+1 +{{passing argument to parameter here}}
 void nul_nested(char *__null_terminated *__null_terminated);
 
 void _42_nested(char *__terminated_by(42) * __null_terminated);
@@ -57,50 +57,60 @@ const char *__null_terminated const_arr_stringlit_arit(int x) {
 const char *__null_terminated const_arr_stringlit_arit_end(int x) {
   const char const_arr_stringlit[] = "hello";
 
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{initializing 'const char * __terminated_by(0)' (aka 'const char *') with an expression of incompatible type 'const char *' is an unsafe operation}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = const_arr_stringlit + 6;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{assigning to 'const char * __terminated_by(0)' (aka 'const char *') from incompatible type 'const char *' is an unsafe operation}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = const_arr_stringlit + 6;
-  // expected-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{passing 'const char *' to parameter of incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(const_arr_stringlit + 6);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const char *' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated)( const_arr_stringlit + 6));
-  // expected-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{returning 'const char *' from a function with incompatible result type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return const_arr_stringlit + 6;
 }
 
 const char *__null_terminated const_arr_stringlit_arit_pastend(int x) {
   const char const_arr_stringlit[] = "hello";
 
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{initializing 'const char * __terminated_by(0)' (aka 'const char *') with an expression of incompatible type 'const char *' is an unsafe operation}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = const_arr_stringlit + 7;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{assigning to 'const char * __terminated_by(0)' (aka 'const char *') from incompatible type 'const char *' is an unsafe operation}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = const_arr_stringlit + 7;
-  // expected-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{passing 'const char *' to parameter of incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(const_arr_stringlit + 7);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const char *' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated)( const_arr_stringlit + 7));
-  // expected-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{returning 'const char *' from a function with incompatible result type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return const_arr_stringlit + 7;
 }
 
@@ -114,53 +124,58 @@ const char *__null_terminated const_arr_braced(int x) {
   return const_arr_braced;                                  // ok
 }
 
+// FIXME: We should have a warning for -Wunsafe-buffer-usage.
+
 const char *__null_terminated const_arr_stringlit_nonnt_trunc(int x) {
+  // cxx-error@+1{{initializer-string for char array is too long}}
   const char const_arr_stringlit_nonnt[2] = "he";
 
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char[2]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char[2]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = const_arr_stringlit_nonnt;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char[2]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char[2]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = const_arr_stringlit_nonnt;
-  // expected-error@+3{{passing 'const char[2]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const char[2]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(const_arr_stringlit_nonnt);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const char *' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) const_arr_stringlit_nonnt);
-  // expected-error@+3{{returning 'const char[2]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const char[2]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return const_arr_stringlit_nonnt;
 }
 
 const char *__null_terminated const_arr_braced_nonnt_trunc(int x) {
   const char const_arr_braced_nonnt[2] = {'h', 'e'};
 
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char[2]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char[2]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = const_arr_braced_nonnt;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char[2]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char[2]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = const_arr_braced_nonnt;
-  // expected-error@+3{{passing 'const char[2]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const char[2]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(const_arr_braced_nonnt);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const char *' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) const_arr_braced_nonnt);
-  // expected-error@+3{{returning 'const char[2]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const char[2]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return const_arr_braced_nonnt;
 }
 
@@ -197,51 +212,53 @@ const char *__null_terminated const_arr_stringlit_nt_oversized(int x) {
 const char *__null_terminated const_arr_braced_nonnt_oversized(int x) {
   const char const_arr_braced_nonnt[4] = {'h', 'e', '\0', 'w'};
 
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char[4]' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char[4]' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = const_arr_braced_nonnt;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char[4]' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char[4]' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = const_arr_braced_nonnt;
-  // expected-error@+3{{passing 'const char[4]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const char[4]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(const_arr_braced_nonnt);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const char *' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) const_arr_braced_nonnt);
-  // expected-error@+3{{returning 'const char[4]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const char[4]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return const_arr_braced_nonnt;
 }
 
 const char *__null_terminated arr_stringlit(int x) {
-  // expected-note@+1 4{{consider adding 'const' to 'arr_stringlit'}}
+  // bs-note@+1 4{{consider adding 'const' to 'arr_stringlit'}}
   char arr_stringlit[] = "hello";
 
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'char[6]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'char[6]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = arr_stringlit;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'char[6]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'char[6]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = arr_stringlit;
-  // expected-error@+3{{passing 'char[6]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'char[6]' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(arr_stringlit);
-  // expected-error@+3{{casting 'char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'char *' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+3{{casting 'char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) arr_stringlit);
-  // expected-error@+3{{returning 'char[6]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'char[6]' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return arr_stringlit;
 }
 
@@ -256,25 +273,26 @@ const int *__null_terminated compound_lit_explicit_ok(void) {
 }
 
 const int *__null_terminated compound_lit_explicit_bad(void) {
-  // expected-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int[3]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int[3]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const int *__null_terminated p = (const int[3]){1, 2, 3};
-  // expected-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int[3]' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int[3]' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = (const int[3]){1, 2, 3};
-  // expected-error@+3{{passing 'const int[3]' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const int[3]' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul_int((const int[3]){1, 2, 3});
-  // expected-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const int *' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const int *__null_terminated) (const int[3]){1, 2, 3});
-  // expected-error@+3{{returning 'const int[3]' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const int[3]' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return (const int[3]){1, 2, 3};
 }
 
@@ -287,15 +305,16 @@ const int *__null_terminated compound_lit_implicit_ok(void) {
 }
 
 const int *__terminated_by(42) compound_lit_implicit_bad(void) {
-  // expected-error@+1{{initializing 'const int *__single __terminated_by(42)' (aka 'const int *__single') with an expression of incompatible type 'const int[3]' is an unsafe operation}}
+  // bs-error@+1{{initializing 'const int *__single __terminated_by(42)' (aka 'const int *__single') with an expression of incompatible type 'const int[3]' is an unsafe operation}}
   const int *__terminated_by(42) p = (const int[3]){1, 2};
-  // expected-error@+1{{assigning to 'const int *__single __terminated_by(42)' (aka 'const int *__single') from incompatible type 'const int[3]' is an unsafe operation}}
+  // bs-error@+1{{assigning to 'const int *__single __terminated_by(42)' (aka 'const int *__single') from incompatible type 'const int[3]' is an unsafe operation}}
   p = (const int[3]){1, 2};
-  // expected-error@+1{{passing 'const int[3]' to parameter of incompatible type 'const int *__single __terminated_by(42)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-error@+1{{passing 'const int[3]' to parameter of incompatible type 'const int *__single __terminated_by(42)' (aka 'const int *__single') is an unsafe operation}}
   _42_int((const int[3]){1, 2});
-  // expected-error@+1{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(42)' (aka 'const int *') is an unsafe operation; use '__unsafe_terminated_by_from_indexable()' or '__unsafe_forge_terminated_by()' to perform this conversion}}
+  // ubu-warning@+2{{casting 'const int *' to incompatible type 'const int * __terminated_by(42)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+1{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(42)' (aka 'const int *') is an unsafe operation; use '__unsafe_terminated_by_from_indexable()' or '__unsafe_forge_terminated_by()' to perform this conversion}}
   (void)((const int *__terminated_by(42)) (const int[3]){1, 2});
-  // expected-error@+1{{returning 'const int[3]' from a function with incompatible result type 'const int *__single __terminated_by(42)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-error@+1{{returning 'const int[3]' from a function with incompatible result type 'const int *__single __terminated_by(42)' (aka 'const int *__single') is an unsafe operation}}
   return (const int[3]){1, 2};
 }
 
@@ -308,121 +327,150 @@ const int *__null_terminated compound_lit_arith_ok(void) {
 }
 
 const int *__null_terminated compound_lit_arith_end(void) {
-  // expected-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{initializing 'const int * __terminated_by(0)' (aka 'const int *') with an expression of incompatible type 'const int *' is an unsafe operation}}
+  // bs-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const int *__null_terminated p = (const int[3]){1, 2, 3} + 3;
-  // expected-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{assigning to 'const int * __terminated_by(0)' (aka 'const int *') from incompatible type 'const int *' is an unsafe operation}}
+  // bs-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = (const int[3]){1, 2, 3} + 3;
-  // expected-error@+3{{passing 'const int *__bidi_indexable' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{passing 'const int *' to parameter of incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{passing 'const int *__bidi_indexable' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul_int((const int[3]){1, 2, 3} + 3);
-  // expected-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const int *' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const int *__null_terminated) ((const int[3]){1, 2, 3} + 3));
-  // expected-error@+3{{returning 'const int *__bidi_indexable' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{returning 'const int *' from a function with incompatible result type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{returning 'const int *__bidi_indexable' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return (const int[3]){1, 2, 3} + 3;
 }
 
 const int *__null_terminated compound_lit_arith_past_end(void) {
-  // expected-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{initializing 'const int * __terminated_by(0)' (aka 'const int *') with an expression of incompatible type 'const int *' is an unsafe operation}}
+  // bs-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const int *__null_terminated p = (const int[3]){1, 2, 3} + 4;
-  // expected-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{assigning to 'const int * __terminated_by(0)' (aka 'const int *') from incompatible type 'const int *' is an unsafe operation}}
+  // bs-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = (const int[3]){1, 2, 3} + 4;
-  // expected-error@+3{{passing 'const int *__bidi_indexable' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{passing 'const int *' to parameter of incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{passing 'const int *__bidi_indexable' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul_int((const int[3]){1, 2, 3} + 4);
-  // expected-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const int *' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const int *__null_terminated) ((const int[3]){1, 2, 3} + 4));
-  // expected-error@+3{{returning 'const int *__bidi_indexable' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{returning 'const int *' from a function with incompatible result type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{returning 'const int *__bidi_indexable' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return (const int[3]){1, 2, 3} + 4;
 }
 
 const int *__null_terminated compound_lit_arith_neg(void) {
-  // expected-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{initializing 'const int * __terminated_by(0)' (aka 'const int *') with an expression of incompatible type 'const int *' is an unsafe operation}}
+  // bs-error@+3{{initializing 'const int *__single __terminated_by(0)' (aka 'const int *__single') with an expression of incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const int *__null_terminated p = (const int[3]){1, 2, 3} - 1;
-  // expected-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{assigning to 'const int * __terminated_by(0)' (aka 'const int *') from incompatible type 'const int *' is an unsafe operation}}
+  // bs-error@+3{{assigning to 'const int *__single __terminated_by(0)' (aka 'const int *__single') from incompatible type 'const int *__bidi_indexable' is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = (const int[3]){1, 2, 3} - 1;
-  // expected-error@+3{{passing 'const int *__bidi_indexable' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{passing 'const int *' to parameter of incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{passing 'const int *__bidi_indexable' to parameter of incompatible type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul_int((const int[3]){1, 2, 3} - 1);
-  // expected-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{casting 'const int *' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{casting 'const int *__bidi_indexable' to incompatible type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const int *__null_terminated) ((const int[3]){1, 2, 3} - 1));
-  // expected-error@+3{{returning 'const int *__bidi_indexable' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // ubu-warning@+4{{returning 'const int *' from a function with incompatible result type 'const int * __terminated_by(0)' (aka 'const int *') is an unsafe operation}}
+  // bs-error@+3{{returning 'const int *__bidi_indexable' from a function with incompatible result type 'const int *__single __terminated_by(0)' (aka 'const int *__single') is an unsafe operation}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return (const int[3]){1, 2, 3} - 1;
 }
 
 // String literal
 
-char *__null_terminated string_literal_nul(void) {
-  char *__null_terminated p = "init";                // ok
+const char *__null_terminated string_literal_nul(void) {
+  const char *__null_terminated p = "init";          // ok
   p = "assign";                                      // ok
   nul("passing");                                    // ok
   return "returning";                                // ok
   (void)((const char *__null_terminated) "casting"); // ok
 }
 
-char *__terminated_by(42) string_literal_42(void) {
-  char *__terminated_by(42) p = "init";                // expected-error{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
-  p = "assign";                                        // expected-error{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
-  _42("passing");                                      // expected-error{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
-  return "returning";                                  // expected-error{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
-  // expected-error@+1{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+const char *__terminated_by(42) string_literal_42(void) {
+  // ubu-warning@+2{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  // bs-error@+1{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  const char *__terminated_by(42) p = "init";
+  // ubu-warning@+2{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  // bs-error@+1{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  p = "assign";
+  // ubu-warning@+2{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  // bs-error@+1{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  _42("passing");
+  // ubu-warning@+2{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  // bs-error@+1{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  return "returning";
+  // ubu-warning@+2{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
+  // bs-error@+1{{'__terminated_by' pointer converted from a string literal must be NUL-terminated}}
   (void)((const char *__terminated_by(42)) "casting");
 }
 
 // Terminators
 
 char *__null_terminated terminators(char *__terminated_by(42) p, char *__null_terminated q) {
-  // expected-error@+1{{pointers with incompatible terminators initializing 'char *__single __terminated_by(0)' (aka 'char *__single') with an expression of incompatible type 'char *__single __terminated_by(42)' (aka 'char *__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators initializing 'char * __terminated_by(0)' (aka 'char *') with an expression of incompatible type 'char * __terminated_by(42)' (aka 'char *')}}
+  // bs-error@+1{{pointers with incompatible terminators initializing 'char *__single __terminated_by(0)' (aka 'char *__single') with an expression of incompatible type 'char *__single __terminated_by(42)' (aka 'char *__single')}}
   char *__null_terminated a = p;
 
   // ok
   char *__null_terminated b = q;
 
-  // expected-error@+1{{pointers with incompatible terminators assigning to 'char *__single __terminated_by(0)' (aka 'char *__single') from incompatible type 'char *__single __terminated_by(42)' (aka 'char *__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators assigning to 'char * __terminated_by(0)' (aka 'char *') from incompatible type 'char * __terminated_by(42)' (aka 'char *')}}
+  // bs-error@+1{{pointers with incompatible terminators assigning to 'char *__single __terminated_by(0)' (aka 'char *__single') from incompatible type 'char *__single __terminated_by(42)' (aka 'char *__single')}}
   a = p;
 
   // ok
   a = q;
 
-  // expected-error@+1{{pointers with incompatible terminators passing 'char *__single __terminated_by(42)' (aka 'char *__single') to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators passing 'char * __terminated_by(42)' (aka 'char *') to parameter of incompatible type 'const char * __terminated_by(0)' (aka 'const char *')}}
+  // bs-error@+1{{pointers with incompatible terminators passing 'char *__single __terminated_by(42)' (aka 'char *__single') to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single')}}
   nul(p);
 
   // ok
   _42(p);
 
-  // expected-error@+1{{pointers with incompatible terminators returning 'char *__single __terminated_by(42)' (aka 'char *__single') from a function with incompatible result type 'char *__single __terminated_by(0)' (aka 'char *__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators returning 'char * __terminated_by(42)' (aka 'char *') from a function with incompatible result type 'char * __terminated_by(0)' (aka 'char *')}}
+  // bs-error@+1{{pointers with incompatible terminators returning 'char *__single __terminated_by(42)' (aka 'char *__single') from a function with incompatible result type 'char *__single __terminated_by(0)' (aka 'char *__single')}}
   return p;
 
   // ok
   return q;
 
-  // expected-error@+1{{pointers with incompatible terminators casting 'char *__single __terminated_by(42)' (aka 'char *__single') to incompatible type 'char * __terminated_by(0)' (aka 'char *')}}
+  // ubu-warning@+2{{pointers with incompatible terminators casting 'char * __terminated_by(42)' (aka 'char *') to incompatible type 'char * __terminated_by(0)' (aka 'char *')}}
+  // bs-error@+1{{pointers with incompatible terminators casting 'char *__single __terminated_by(42)' (aka 'char *__single') to incompatible type 'char * __terminated_by(0)' (aka 'char *')}}
   (void)((char *__null_terminated)p);
 
   // ok
@@ -430,31 +478,36 @@ char *__null_terminated terminators(char *__terminated_by(42) p, char *__null_te
 }
 
 char *__null_terminated *__null_terminated nested_terminators(char *__terminated_by(42) * __null_terminated p, char *__null_terminated *__null_terminated q) {
-  // expected-error@+1{{pointers with incompatible terminators initializing 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') with an expression of incompatible type 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators initializing 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') with an expression of incompatible type 'char * __terminated_by(42)* __terminated_by(0)' (aka 'char **')}}
+  // bs-error@+1{{pointers with incompatible terminators initializing 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') with an expression of incompatible type 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
   char *__null_terminated *__null_terminated a = p;
 
   // ok
   char *__null_terminated *__null_terminated b = q;
 
-  // expected-error@+1{{pointers with incompatible terminators assigning to 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') from incompatible type 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators assigning to 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') from incompatible type 'char * __terminated_by(42)* __terminated_by(0)' (aka 'char **')}}
+  // bs-error@+1{{pointers with incompatible terminators assigning to 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') from incompatible type 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
   a = p;
 
   // ok
   a = q;
 
-  // expected-error@+1{{pointers with incompatible terminators passing 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single') to parameter of incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators passing 'char * __terminated_by(42)* __terminated_by(0)' (aka 'char **') to parameter of incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **')}}
+  // bs-error@+1{{pointers with incompatible terminators passing 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single') to parameter of incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
   nul_nested(p);
 
   // ok
   _42_nested(p);
 
-  // expected-error@+1{{pointers with incompatible terminators returning 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single') from a function with incompatible result type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
+  // ubu-warning@+2{{pointers with incompatible terminators returning 'char * __terminated_by(42)* __terminated_by(0)' (aka 'char **') from a function with incompatible result type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **')}}
+  // bs-error@+1{{pointers with incompatible terminators returning 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single') from a function with incompatible result type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single')}}
   return p;
 
   // ok
   return q;
 
-  // expected-error@+1{{pointers with incompatible terminators casting 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single') to incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **')}}
+  // ubu-warning@+2{{pointers with incompatible terminators casting 'char * __terminated_by(42)* __terminated_by(0)' (aka 'char **') to incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **')}}
+  // bs-error@+1{{pointers with incompatible terminators casting 'char *__single __terminated_by(42)*__single __terminated_by(0)' (aka 'char *__single*__single') to incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **')}}
   (void)((char *__null_terminated *__null_terminated)p);
 
   // ok
@@ -485,7 +538,8 @@ char *const __null_terminated quals_nc_to_c(char *__null_terminated p) {
   char *const __null_terminated a = p;
 
   // expected-note@-2{{variable 'a' declared const here}}
-  // expected-error@+1{{cannot assign to variable 'a' with const-qualified type 'char *__single __terminated_by(0)const' (aka 'char *__singleconst')}}
+  // ubu-error@+2{{cannot assign to variable 'a' with const-qualified type 'char * __terminated_by(0)const' (aka 'char *const')}}
+  // bs-error@+1{{cannot assign to variable 'a' with const-qualified type 'char *__single __terminated_by(0)const' (aka 'char *__singleconst')}}
   a = p;
 
   // ok
@@ -501,145 +555,173 @@ char *const __null_terminated quals_nc_to_c(char *__null_terminated p) {
 // Non-TerminatedBy to TerminatedBy
 
 char *__null_terminated single_to_terminated_by(char *__single p) {
-  // expected-error@+1{{initializing 'char *__single __terminated_by(0)' (aka 'char *__single') with an expression of incompatible type 'char *__single' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // ubu-warning@+2{{initializing 'char * __terminated_by(0)' (aka 'char *') with an expression of incompatible type 'char *__single' is an unsafe operation}}
+  // bs-error@+1{{initializing 'char *__single __terminated_by(0)' (aka 'char *__single') with an expression of incompatible type 'char *__single' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
   char *__null_terminated q = p;
 
-  // expected-error@+1{{assigning to 'char *__single __terminated_by(0)' (aka 'char *__single') from incompatible type 'char *__single' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // ubu-warning@+2{{assigning to 'char * __terminated_by(0)' (aka 'char *') from incompatible type 'char *__single' is an unsafe operation}}
+  // bs-error@+1{{assigning to 'char *__single __terminated_by(0)' (aka 'char *__single') from incompatible type 'char *__single' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
   q = p;
 
-  // expected-error@+1{{passing 'char *__single' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // ubu-warning@+2{{passing 'char *__single' to parameter of incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  // bs-error@+1{{passing 'char *__single' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
   nul(p);
 
-  // expected-error@+1{{returning 'char *__single' from a function with incompatible result type 'char *__single __terminated_by(0)' (aka 'char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // ubu-warning@+2{{returning 'char *__single' from a function with incompatible result type 'char * __terminated_by(0)' (aka 'char *') is an unsafe operation}}
+  // bs-error@+1{{returning 'char *__single' from a function with incompatible result type 'char *__single __terminated_by(0)' (aka 'char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
   return p;
 
-  // expected-error@+1{{casting 'char *__single' to incompatible type 'char * __terminated_by(0)' (aka 'char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // ubu-warning@+2{{casting 'char *__single' to incompatible type 'char * __terminated_by(0)' (aka 'char *') is an unsafe operation}}
+  // bs-error@+1{{casting 'char *__single' to incompatible type 'char * __terminated_by(0)' (aka 'char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
   (void)((char *__null_terminated)p);
 }
 
+#if __has_ptrcheck
 char *__null_terminated indexable_to_terminated_by(char *__indexable p) {
-  // expected-error@+3{{initializing 'char *__single __terminated_by(0)' (aka 'char *__single') with an expression of incompatible type 'char *__indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'char *__single __terminated_by(0)' (aka 'char *__single') with an expression of incompatible type 'char *__indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   char *__null_terminated q = p;
 
-  // expected-error@+3{{assigning to 'char *__single __terminated_by(0)' (aka 'char *__single') from incompatible type 'char *__indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'char *__single __terminated_by(0)' (aka 'char *__single') from incompatible type 'char *__indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   q = p;
 
-  // expected-error@+3{{passing 'char *__indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'char *__indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(p);
 
-  // expected-error@+3{{returning 'char *__indexable' from a function with incompatible result type 'char *__single __terminated_by(0)' (aka 'char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'char *__indexable' from a function with incompatible result type 'char *__single __terminated_by(0)' (aka 'char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return p;
 
-  // expected-error@+3{{casting 'char *__indexable' to incompatible type 'char * __terminated_by(0)' (aka 'char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{casting 'char *__indexable' to incompatible type 'char * __terminated_by(0)' (aka 'char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((char *__null_terminated)p);
 }
+#endif
 
 char *__null_terminated *__null_terminated nested_to_terminated_by(char *__single *__null_terminated p) {
-  // expected-error@+1{{initializing 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') with an expression of incompatible type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{initializing 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') with an expression of incompatible type 'char ** __terminated_by(0)__single' (aka 'char **') that adds '__terminated_by' attribute}}
+  // bs-error@+1{{initializing 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') with an expression of incompatible type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
   char *__null_terminated *__null_terminated q = p;
 
-  // expected-error@+1{{assigning to 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') from incompatible type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{assigning to 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') from incompatible type 'char ** __terminated_by(0)__single' (aka 'char **') that adds '__terminated_by' attribute}}
+  // bs-error@+1{{assigning to 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') from incompatible type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
   q = p;
 
-  // expected-error@+1{{passing 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') to parameter of incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{passing 'char ** __terminated_by(0)__single' (aka 'char **') to parameter of incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that adds '__terminated_by' attribute}}
+  // bs-error@+1{{passing 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') to parameter of incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
   nul_nested(p);
 
-  // expected-error@+1{{returning 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') from a function with incompatible result type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{returning 'char ** __terminated_by(0)__single' (aka 'char **') from a function with incompatible result type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that adds '__terminated_by' attribute}}
+  // bs-error@+1{{returning 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') from a function with incompatible result type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that adds '__terminated_by' attribute is not allowed}}
   return p;
 
-  // expected-error@+1{{casting 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') to incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that adds '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{casting 'char ** __terminated_by(0)__single' (aka 'char **') to incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that adds '__terminated_by' attribute}}
+  // bs-error@+1{{casting 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') to incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that adds '__terminated_by' attribute is not allowed}}
   (void)((char *__null_terminated *__null_terminated)p);
 }
 
 // TerminatedBy to Non-TerminatedBy
 
-// expected-note@+1{{passing argument to parameter here}}
+// bs-note@+1{{passing argument to parameter here}}
 void foo_single(char *__single);
 
-// expected-note@+1{{passing argument to parameter here}}
-void foo_indexable(char *__indexable);
-
 char *__single single_from_terminated_by(char *__null_terminated p) {
-  // expected-error@+1{{initializing 'char *__single' with an expression of incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // ubu-warning@+2{{initializing 'char *__single' with an expression of incompatible type 'char * __terminated_by(0)' (aka 'char *') requires a linear search for the terminator}}
+  // bs-error@+1{{initializing 'char *__single' with an expression of incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
   char *__single q = p;
 
-  // expected-error@+1{{assigning to 'char *__single' from incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // ubu-warning@+2{{assigning to 'char *__single' from incompatible type 'char * __terminated_by(0)' (aka 'char *') requires a linear search for the terminator}}
+  // bs-error@+1{{assigning to 'char *__single' from incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
   q = p;
 
-  // expected-error@+1{{passing 'char *__single __terminated_by(0)' (aka 'char *__single') to parameter of incompatible type 'char *__single' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // ubu-warning@+2{{passing 'char * __terminated_by(0)' (aka 'char *') to parameter of incompatible type 'char *__single' requires a linear search for the terminator}}
+  // bs-error@+1{{passing 'char *__single __terminated_by(0)' (aka 'char *__single') to parameter of incompatible type 'char *__single' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
   foo_single(p);
 
-  // expected-error@+1{{returning 'char *__single __terminated_by(0)' (aka 'char *__single') from a function with incompatible result type 'char *__single' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // ubu-warning@+2{{returning 'char * __terminated_by(0)' (aka 'char *') from a function with incompatible result type 'char *__single' requires a linear search for the terminator}}
+  // bs-error@+1{{returning 'char *__single __terminated_by(0)' (aka 'char *__single') from a function with incompatible result type 'char *__single' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
   return p;
 
-  // expected-error@+1{{casting 'char *__single __terminated_by(0)' (aka 'char *__single') to incompatible type 'char *__single' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // ubu-warning@+2{{casting 'char * __terminated_by(0)' (aka 'char *') to incompatible type 'char *__single' requires a linear search for the terminator}}
+  // bs-error@+1{{casting 'char *__single __terminated_by(0)' (aka 'char *__single') to incompatible type 'char *__single' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
   (void)((char *__single)p);
 }
 
+#if __has_ptrcheck
+// bs-note@+1{{passing argument to parameter here}}
+void foo_indexable(char *__indexable);
+
 char *__indexable indexable_from_terminated_by(char *__null_terminated p) {
-  // expected-error@+3{{initializing 'char *__indexable' with an expression of incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
-  // expected-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
+  // bs-error@+3{{initializing 'char *__indexable' with an expression of incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // bs-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
   char *__indexable q = p;
 
-  // expected-error@+3{{assigning to 'char *__indexable' from incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
-  // expected-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
+  // bs-error@+3{{assigning to 'char *__indexable' from incompatible type 'char *__single __terminated_by(0)' (aka 'char *__single') requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // bs-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
   q = p;
 
-  // expected-error@+3{{passing 'char *__single __terminated_by(0)' (aka 'char *__single') to parameter of incompatible type 'char *__indexable' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
-  // expected-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
+  // bs-error@+3{{passing 'char *__single __terminated_by(0)' (aka 'char *__single') to parameter of incompatible type 'char *__indexable' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // bs-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
   foo_indexable(p);
 
-  // expected-error@+3{{returning 'char *__single __terminated_by(0)' (aka 'char *__single') from a function with incompatible result type 'char *__indexable' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
-  // expected-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
+  // bs-error@+3{{returning 'char *__single __terminated_by(0)' (aka 'char *__single') from a function with incompatible result type 'char *__indexable' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // bs-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
   return p;
 
-  // expected-error@+3{{casting 'char *__single __terminated_by(0)' (aka 'char *__single') to incompatible type 'char *__indexable' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
-  // expected-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
+  // bs-error@+3{{casting 'char *__single __terminated_by(0)' (aka 'char *__single') to incompatible type 'char *__indexable' requires a linear search for the terminator; use '__null_terminated_to_indexable()' to perform this conversion explicitly}}
+  // bs-note@+2{{consider using '__null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound excludes the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_to_indexable()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound includes the null terminator}}
   (void)((char *__indexable)p);
 }
+#endif
 
-// expected-note@+1{{passing argument to parameter here}}
+// bs-note@+1{{passing argument to parameter here}}
 void bar(char *__single *__null_terminated);
 
 char *__single *__null_terminated nested_from_terminated_by(char *__null_terminated *__null_terminated p) {
-  // expected-error@+1{{initializing 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') with an expression of incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{initializing 'char ** __terminated_by(0)__single' (aka 'char **') with an expression of incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that discards '__terminated_by' attribute}}
+  // bs-error@+1{{initializing 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') with an expression of incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
   char *__single *__null_terminated q = p;
 
-  // expected-error@+1{{assigning to 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') from incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{assigning to 'char ** __terminated_by(0)__single' (aka 'char **') from incompatible type 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') that discards '__terminated_by' attribute}}
+  // bs-error@+1{{assigning to 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') from incompatible type 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
   q = p;
 
-  // expected-error@+1{{passing 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') to parameter of incompatible type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{passing 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') to parameter of incompatible type 'char ** __terminated_by(0)__single' (aka 'char **') that discards '__terminated_by' attribute}}
+  // bs-error@+1{{passing 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') to parameter of incompatible type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
   bar(p);
 
-  // expected-error@+1{{returning 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') from a function with incompatible result type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{returning 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') from a function with incompatible result type 'char ** __terminated_by(0)__single' (aka 'char **') that discards '__terminated_by' attribute}}
+  // bs-error@+1{{returning 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') from a function with incompatible result type 'char *__single*__single __terminated_by(0)' (aka 'char *__single*__single') that discards '__terminated_by' attribute is not allowed}}
   return p;
 
-  // expected-error@+1{{casting 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') to incompatible type 'char *__single* __terminated_by(0)' (aka 'char *__single*') that discards '__terminated_by' attribute is not allowed}}
+  // ubu-warning@+2{{casting 'char * __terminated_by(0)* __terminated_by(0)' (aka 'char **') to incompatible type 'char ** __terminated_by(0)__single' (aka 'char **') that discards '__terminated_by' attribute}}
+  // bs-error@+1{{casting 'char *__single __terminated_by(0)*__single __terminated_by(0)' (aka 'char *__single*__single') to incompatible type 'char *__single* __terminated_by(0)' (aka 'char *__single*') that discards '__terminated_by' attribute is not allowed}}
   (void)((char *__single *__null_terminated)p);
 }
 
 void sign_mismatch(void) {
   const unsigned char array[] = "foo";
-  // expected-warning@+1{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of type 'const unsigned char[4]' converts between pointers to integer types where one is of the unique plain 'char' type and the other is not}}
+  // cxx-error@+2{{cannot initialize a variable of type 'const char * __terminated_by(0)' (aka 'const char *') with an lvalue of type 'const unsigned char[4]'}}
+  // bs-warning@+1{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of type 'const unsigned char[4]' converts between pointers to integer types where one is of the unique plain 'char' type and the other is not}}
   const char *__terminated_by(0) p = array;
 }
 
 // Conditional operators
+
+// FIXME: Those cases don't work currently in C++.
+#ifndef __cplusplus
 
 char *__null_terminated cond_op_string_lit(int cond) {
   char *__null_terminated p = cond ? "init-true" : "init-false";                     // ok
@@ -688,90 +770,90 @@ const char *__null_terminated cond_op_char_array_arith(int cond) {
 const char *__null_terminated cond_op_char_array_arith_true_end(int cond) {
   const char t[] = "true";
   const char f[] = "false";
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = cond ? t+5 : f+4;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = cond ? t+5 : f+4;
-  // expected-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(cond ? t+5 : f+4);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) (cond ? t+5 : f+4));
-  // expected-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return cond ? t+5 : f+4;
 }
 
 const char *__null_terminated cond_op_char_array_arith_false_end(int cond) {
   const char t[] = "true";
   const char f[] = "false";
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = cond ? t+4 : f+6;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = cond ? t+4 : f+6;
-  // expected-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(cond ? t+4 : f+6);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) (cond ? t+4 : f+6));
-  // expected-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return cond ? t+4 : f+6;
 }
 
 const char *__null_terminated cond_op_char_array_wrong_term(int cond) {
   const char t[] = "true";
   const char f[5] = "false"; // not NUL-terminated
-  // expected-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{initializing 'const char *__single __terminated_by(0)' (aka 'const char *__single') with an expression of incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   const char *__null_terminated p = cond ? t : f;
-  // expected-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{assigning to 'const char *__single __terminated_by(0)' (aka 'const char *__single') from incompatible type 'const char *__bidi_indexable' is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   p = cond ? t : f;
-  // expected-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{passing 'const char *__bidi_indexable' to parameter of incompatible type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   nul(cond ? t : f);
-  // expected-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{casting 'const char *__bidi_indexable' to incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   (void)((const char *__null_terminated) (cond ? t : f));
-  // expected-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
-  // expected-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
-  // expected-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
+  // bs-error@+3{{returning 'const char *__bidi_indexable' from a function with incompatible result type 'const char *__single __terminated_by(0)' (aka 'const char *__single') is an unsafe operation; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion}}
+  // bs-note@+2{{consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator}}
+  // bs-note@+1{{consider using '__unsafe_null_terminated_from_indexable()' with a pointer to the null terminator to perform this conversion. Note this performs the conversion in constant time}}
   return cond ? t : f;
 }
 
 const int *__null_terminated cond_op_different_type(int cond) {
   const int i[] = {1, 2, 3, 0};
   const long l[] = {1, 2, 0};
-  // expected-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
+  // bs-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
   const long *__null_terminated p = cond ? i : l;
-  // expected-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
+  // bs-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
   p = cond ? i : l;
-  // expected-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
+  // bs-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
   nul_int(cond ? i : l);
-  // expected-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
+  // bs-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
   (void)((const int *__null_terminated) (cond ? i : l));
-  // expected-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
+  // bs-error@+1{{conditional expression evaluates values with incompatible pointee types 'const int *__bidi_indexable' and 'const long *__bidi_indexable'; use explicit casts to perform this conversion}}
   return cond ? i : l;
 }
 
@@ -791,9 +873,13 @@ char *__null_terminated gnu_cond_op_string_lit_false(void) {
   return 0 ?: "f";                                    // ok
 }
 
+#endif // !__cplusplus
+
+#if __has_ptrcheck
 void const_ptr_indexable_to_terminated_by(int x) {
   const char *__indexable ptr_terminated_by;;
 
-  // expected-error@+1{{initializing 'const char *__single __terminated_by(4)' (aka 'const char *__single') with an expression of incompatible type 'const char *__indexable' is an unsafe operation; use '__unsafe_terminated_by_from_indexable()' or '__unsafe_forge_terminated_by()' to perform this conversion}}
+  // bs-error@+1{{initializing 'const char *__single __terminated_by(4)' (aka 'const char *__single') with an expression of incompatible type 'const char *__indexable' is an unsafe operation; use '__unsafe_terminated_by_from_indexable()' or '__unsafe_forge_terminated_by()' to perform this conversion}}
   const char *__terminated_by(4) p = ptr_terminated_by;
 }
+#endif

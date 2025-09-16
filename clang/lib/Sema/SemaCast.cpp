@@ -239,9 +239,9 @@ namespace {
       /// int *__bidi_indexable p1;
       /// int *__indexable p2 = (int *__indexable)p1;
       /// \endcode
-      if (Self.getLangOpts().BoundsSafety ||
-          Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
-              SrcExpr.get()->getBeginLoc())) {
+      bool isCXXSafeBuffersBoundsSafetyInterop =
+          Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(OpRange.getBegin());
+      if (Self.getLangOpts().BoundsSafety || isCXXSafeBuffersBoundsSafetyInterop) {
         unsigned DiagKind = 0;
         bool isInvalid = false;
         // The type error may be nested, so any pointer can result in VT errors
@@ -254,22 +254,37 @@ namespace {
           break;
         case AssignConvertType::
             IncompatibleStringLiteralToValueTerminatedPointer:
-          DiagKind =
-              diag::err_bounds_safety_incompatible_string_literal_to_terminated_by;
-          isInvalid = true;
+          if (isCXXSafeBuffersBoundsSafetyInterop)
+            DiagKind =
+                diag::warn_unsafe_incompatible_string_literal_to_terminated_by;
+          else {
+            DiagKind = diag::
+                err_bounds_safety_incompatible_string_literal_to_terminated_by;
+            isInvalid = true;
+          }
           break;
         case AssignConvertType::IncompatibleValueTerminatedTerminators:
-          DiagKind = diag::err_bounds_safety_incompatible_terminated_by_terminators;
-          isInvalid = true;
+          if (isCXXSafeBuffersBoundsSafetyInterop)
+            DiagKind = diag::warn_unsafe_incompatible_terminated_by_terminators;
+          else {
+            DiagKind =
+                diag::err_bounds_safety_incompatible_terminated_by_terminators;
+            isInvalid = true;
+          }
           break;
         case AssignConvertType::
             IncompatibleValueTerminatedToNonValueTerminatedPointer: {
           const auto *SrcPointerType = SrcType->getAs<ValueTerminatedType>();
           IsSrcNullTerm =
               SrcPointerType->getTerminatorValue(Self.Context).isZero();
-          DiagKind = diag::
-              err_bounds_safety_incompatible_terminated_by_to_non_terminated_by;
-          isInvalid = true;
+          if (isCXXSafeBuffersBoundsSafetyInterop)
+            DiagKind = diag::
+                warn_unsafe_incompatible_terminated_by_to_non_terminated_by;
+          else {
+            DiagKind = diag::
+                err_bounds_safety_incompatible_terminated_by_to_non_terminated_by;
+            isInvalid = true;
+          }
           break;
         }
         case AssignConvertType::
@@ -277,13 +292,13 @@ namespace {
           const auto *DstPointerType = DestType->getAs<ValueTerminatedType>();
           IsDstNullTerm =
               DstPointerType->getTerminatorValue(Self.Context).isZero();
-          if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders ||
-              Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
-                  OpRange.getBegin())) {
+          if (isCXXSafeBuffersBoundsSafetyInterop)
+            DiagKind = diag::
+                warn_unsafe_incompatible_non_terminated_by_to_terminated_by;
+          else if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders)
             DiagKind = diag::
                 warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
-            isInvalid = false;
-          } else {
+          else {
             DiagKind = diag::
                 err_bounds_safety_incompatible_non_terminated_by_to_terminated_by;
             isInvalid = true;
@@ -292,17 +307,24 @@ namespace {
         }
         case AssignConvertType::
             IncompatibleNestedValueTerminatedToNonValueTerminatedPointer:
-          DiagKind = diag::
-              err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
-          isInvalid = true;
+          if (isCXXSafeBuffersBoundsSafetyInterop)
+            DiagKind = diag::
+                warn_unsafe_incompatible_terminated_by_to_non_terminated_by_mismatch;
+          else {
+            DiagKind = diag::
+                err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch;
+            isInvalid = true;
+          }
           break;
         case AssignConvertType::
             IncompatibleNestedNonValueTerminatedToValueTerminatedPointer:
-          if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders) {
+          if (isCXXSafeBuffersBoundsSafetyInterop)
+            DiagKind = diag::
+                warn_unsafe_incompatible_non_terminated_by_to_terminated_by_mismatch;
+          else if (Self.getLangOpts().BoundsSafetyRelaxedSystemHeaders)
             DiagKind = diag::
                 warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
-            isInvalid = false;
-          } else {
+          else {
             DiagKind = diag::
                 err_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch;
             isInvalid = true;
@@ -310,20 +332,17 @@ namespace {
           break;
         }
         if (DiagKind) {
-          if (DiagKind ==
-              diag::
-                  err_bounds_safety_incompatible_terminated_by_to_non_terminated_by) {
+          if (ConvertTy ==
+              AssignConvertType::
+                  IncompatibleValueTerminatedToNonValueTerminatedPointer) {
             auto FDiag = Self.Diag(OpRange.getBegin(), DiagKind)
                          << SrcType << DestType << AssignmentAction::Casting
                          << (IsSrcNullTerm ? /*null_terminated*/ 1
                                            : /*terminated_by*/ 0);
           } else if (
-              DiagKind ==
-                  diag::
-                      err_bounds_safety_incompatible_non_terminated_by_to_terminated_by ||
-              DiagKind ==
-                  diag::
-                      warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by) {
+              ConvertTy ==
+              AssignConvertType::
+                  IncompatibleNonValueTerminatedToValueTerminatedPointer) {
             auto FDiag = Self.Diag(OpRange.getBegin(), DiagKind)
                          << SrcType << DestType << AssignmentAction::Casting
                          << (!Self.isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
@@ -331,19 +350,31 @@ namespace {
                                  ? (IsDstNullTerm ? /*null_terminated*/ 1
                                                   : /*terminated_by*/ 0)
                                  : 2 /* cut message irrelevant to that mode*/);
+          } else if (
+              ConvertTy ==
+                  AssignConvertType::
+                      IncompatibleNestedValueTerminatedToNonValueTerminatedPointer ||
+              ConvertTy ==
+                  AssignConvertType::
+                      IncompatibleNestedNonValueTerminatedToValueTerminatedPointer) {
+            Self.Diag(OpRange.getBegin(), DiagKind)
+                << SrcType << DestType << AssignmentAction::Casting
+                << isCXXSafeBuffersBoundsSafetyInterop;
           } else {
             Self.Diag(OpRange.getBegin(), DiagKind)
                 << SrcType << DestType << AssignmentAction::Casting;
           }
 
-          Self.TryFixAssigningNullTerminatedToBidiIndexableExpr(SrcExpr.get(),
+          if (Self.getLangOpts().BoundsSafety) {
+            Self.TryFixAssigningNullTerminatedToBidiIndexableExpr(SrcExpr.get(),
                                                                   DestType);
 
-          Self.TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(
+            Self.TryFixAssigningImplicitBidiIndexableToNullTerminatedPtr(
                 SrcExpr.get(), DestType);
 
-          Self.TryFixAssigningBidiIndexableExprToNullTerminated(SrcExpr.get(),
+            Self.TryFixAssigningBidiIndexableExprToNullTerminated(SrcExpr.get(),
                                                                   DestType);
+          }
 
           if (isInvalid) {
             SrcExpr = ExprError();

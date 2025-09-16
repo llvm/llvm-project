@@ -13520,6 +13520,9 @@ def err_bounds_safety_terminated_by_from_indexable_pointee_mismatch : Error<
 def err_bounds_safety_incompatible_string_literal_to_terminated_by : Error<
   "'__terminated_by' pointer converted from a string literal must be "
   "NUL-terminated">;
+def warn_unsafe_incompatible_string_literal_to_terminated_by : Warning<
+  err_bounds_safety_incompatible_string_literal_to_terminated_by.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 
 def note_fixit_null_terminated_to_indexable: Note<"consider using '%select{__null_terminated_to_indexable|__unsafe_null_terminated_to_indexable}0()' to perform this conversion. Note this conversion requires a linear scan of memory to find the null terminator and the resulting upper bound %select{excludes|includes}0 the null terminator">;
 def note_fixit_unsafe_null_terminated_from_indexable : Note<"consider using '__unsafe_null_terminated_from_indexable()' to perform this conversion. Note this performs a linear scan of memory to find the null terminator">;
@@ -13543,6 +13546,9 @@ def err_bounds_safety_incompatible_terminated_by_terminators : Error<
     "%diff{casting $ to incompatible type $|"
           "casting type to incompatible type}0,1|"
   "}2">;
+def warn_unsafe_incompatible_terminated_by_terminators : Warning<
+  err_bounds_safety_incompatible_terminated_by_terminators.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by : Error<
   "%select{"
     "%diff{assigning to $ from incompatible type $|"
@@ -13561,6 +13567,9 @@ def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by : Error<
           "casting type to incompatible type}0,1|"
   "}2 requires a linear search for the terminator; use "
   "'%select{__terminated_by_to_indexable|__null_terminated_to_indexable}3()' to perform this conversion explicitly">;
+def warn_unsafe_incompatible_terminated_by_to_non_terminated_by : Warning<
+  err_bounds_safety_incompatible_terminated_by_to_non_terminated_by.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Warning<
   "%select{"
     "%diff{assigning to $ from incompatible type $|"
@@ -13582,6 +13591,9 @@ def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Warning
   "; use '__unsafe_null_terminated_from_indexable()' or '__unsafe_forge_null_terminated()' to perform this conversion|"
   "}3">, InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
 def err_bounds_safety_incompatible_non_terminated_by_to_terminated_by : Error<warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by.Summary>;
+def warn_unsafe_incompatible_non_terminated_by_to_terminated_by : Warning<
+  warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch : Error<
   "%select{"
     "%diff{assigning to $ from incompatible type $|"
@@ -13598,7 +13610,10 @@ def err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch :
           "sending type to parameter of incompatible type}0,1|"
     "%diff{casting $ to incompatible type $|"
           "casting type to incompatible type}0,1|"
-  "}2 that discards '__terminated_by' attribute is not allowed">;
+  "}2 that discards '__terminated_by' attribute%select{ is not allowed|}3">;
+def warn_unsafe_incompatible_terminated_by_to_non_terminated_by_mismatch : Warning<
+  err_bounds_safety_incompatible_terminated_by_to_non_terminated_by_mismatch.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch : Warning<
   "%select{"
     "%diff{assigning to $ from incompatible type $|"
@@ -13615,22 +13630,41 @@ def warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch 
           "sending type to parameter of incompatible type}0,1|"
     "%diff{casting $ to incompatible type $|"
           "casting type to incompatible type}0,1|"
-  "}2 that adds '__terminated_by' attribute is not allowed">, InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
+  "}2 that adds '__terminated_by' attribute%select{ is not allowed|}3">,
+  InGroup<BoundsSafetyStrictTerminatedByCast>, DefaultError;
 def err_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch : Error<warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch.Summary>;
+def warn_unsafe_incompatible_non_terminated_by_to_terminated_by_mismatch : Warning<
+  warn_bounds_safety_incompatible_non_terminated_by_to_terminated_by_mismatch.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 
 def err_bounds_safety_terminated_by_uninitialized : Error<
   "array '%0' with '__terminated_by' attribute must be initialized">;
+def warn_unsafe_terminated_by_uninitialized : Warning<
+  err_bounds_safety_terminated_by_uninitialized.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def err_bounds_safety_terminated_by_incomplete_array_empty_init : Error<
   "incomplete array '%0' with '__terminated_by' attribute must be initialized "
   "with at least one element">;
+def warn_unsafe_terminated_by_incomplete_array_empty_init : Warning<
+  err_bounds_safety_terminated_by_incomplete_array_empty_init.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def err_bounds_safety_terminated_by_terminator_in_array_must_be_const : Error<
   "terminator in array '%0' must be a compile-time constant">;
+def warn_unsafe_terminated_by_terminator_in_array_must_be_const : Warning<
+  err_bounds_safety_terminated_by_terminator_in_array_must_be_const.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def err_bounds_safety_terminated_by_wrong_initializer_kind : Error<
   "array '%0' with '__terminated_by' attribute must be initialized with a "
   "string literal or an initializer list">;
+def warn_unsafe_terminated_by_wrong_initializer_kind : Warning<
+  err_bounds_safety_terminated_by_wrong_initializer_kind.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def err_bounds_safety_terminated_by_terminator_mismatch : Error<
   "array '%0' with '__terminated_by' attribute is initialized with an "
   "incorrect terminator (expected: %quoted1; got %quoted2)">;
+def warn_unsafe_terminated_by_terminator_mismatch : Warning<
+  err_bounds_safety_terminated_by_terminator_mismatch.Summary>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 
 def err_bounds_safety_irrecoverable_attr : Error<
   "bounds attribute '%select{__bidi_indexable|__indexable|__single|__unsafe_indexable}0' cannot be applied to attributed type %1 in this context%select{| due to the surrounding 'typeof' specifier}2">;
