@@ -1023,17 +1023,16 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, CondCode CC,
-                            unsigned SelectOpc, bool Imm) {
+unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   switch (SelectOpc) {
   default:
     switch (CC) {
     default:
       llvm_unreachable("Unexpected condition code!");
     case RISCVCC::COND_EQ:
-      return (Imm && STI.hasStdExtZibi()) ? RISCV::BEQI : RISCV::BEQ;
+      return RISCV::BEQ;
     case RISCVCC::COND_NE:
-      return (Imm && STI.hasStdExtZibi()) ? RISCV::BNEI : RISCV::BNE;
+      return RISCV::BNE;
     case RISCVCC::COND_LT:
       return RISCV::BLT;
     case RISCVCC::COND_GE:
@@ -1042,6 +1041,16 @@ unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, CondCode CC,
       return RISCV::BLTU;
     case RISCVCC::COND_GEU:
       return RISCV::BGEU;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_Imm5_Zibi:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::BEQI;
+    case RISCVCC::COND_NE:
+      return RISCV::BNEI;
     }
     break;
   case RISCV::Select_GPR_Using_CC_SImm5_CV:
@@ -1545,7 +1554,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  unsigned NewOpc = RISCVCC::getBrCond(STI, getOppositeBranchCondition(CC));
+  unsigned NewOpc = RISCVCC::getBrCond(getOppositeBranchCondition(CC));
 
   // Might be case 1.
   // Don't change 0 to 1 since we can use x0.
