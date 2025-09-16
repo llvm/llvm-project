@@ -130,6 +130,18 @@ struct Messages {
   std::string Short, Full;
 };
 
+enum class BadOffsetKind {Negative, Overflowing, Indeterminate};
+
+constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing", "a negative or overflowing"};
+StringRef asAdjective(BadOffsetKind Problem) {
+  return Adjectives[static_cast<int>(Problem)];
+}
+
+constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of", "around"};
+StringRef asPreposition(BadOffsetKind Problem) {
+  return Prepositions[static_cast<int>(Problem)];
+}
+
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
 // instead of `PreStmt` because the current implementation passes the whole
 // expression to `CheckerContext::getSVal()` which only works after the
@@ -388,29 +400,6 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
   return SV ? getConcreteValue(*SV) : std::nullopt;
 }
 
-static Messages getPrecedesMsgs(const MemSpaceRegion *Space,
-                                const SubRegion *Region, NonLoc Offset,
-                                QualType ElemType, int64_t ElemSize) {
-  std::string RegName = getRegionName(Space, Region);
-
-  std::string OffsetStr = "", ElemInfoStr = "";
-  if (std::optional<int64_t> ConcreteOffset = getConcreteValue(Offset)) {
-    OffsetStr = formatv(" {0}", ConcreteOffset);
-    if (*ConcreteOffset % ElemSize == 0) {
-      int64_t Count = *ConcreteOffset / ElemSize;
-      if (Count != -1)
-        ElemInfoStr =
-            formatv(" = {0} * sizeof({1})", Count, ElemType.getAsString());
-      else
-        ElemInfoStr = formatv(" = -sizeof({0})", ElemType.getAsString());
-    }
-  }
-
-  return {formatv("Out of bound access to memory preceding {0}", RegName),
-          formatv("Access of {0} at negative byte offset{1}{2}", RegName,
-                  OffsetStr, ElemInfoStr)};
-}
-
 /// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
 /// it can be performed (`Divisor` is nonzero and there is no remainder). The
 /// values `Val1` and `Val2` may be nullopt and in that case the corresponding
@@ -430,14 +419,19 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
-static Messages getExceedsMsgs(const MemSpaceRegion *Space,
+static Messages getNonTaintMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
                                const SubRegion *Region, NonLoc Offset,
-                               NonLoc Extent, bool AlsoMentionUnderflow,
-                               QualType ElemType, int64_t ElemSize) {
+                               std::optional<NonLoc> Extent, SVal Location,
+                               BadOffsetKind Problem) {
   std::string RegName = getRegionName(Space, Region);
+  const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
+  assert(EReg && "this checker only handles element access");
+  QualType ElemType = EReg->getElementType();
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
+
+  int64_t ElemSize = ACtx.getTypeSizeInChars(ElemType).getQuantity();
 
   bool UseByteOffsets = !tryDividePair(OffsetN, ExtentN, ElemSize);
   const char *OffsetOrIndex = UseByteOffsets ? "byte offset" : "index";
@@ -445,15 +439,21 @@ static Messages getExceedsMsgs(const MemSpaceRegion *Space,
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
   Out << "Access of ";
-  if (!ExtentN && !UseByteOffsets)
+  if (OffsetN && !ExtentN && !UseByteOffsets) {
+    // If the offset is reported as an index, then the report must mention the
+    // element type (because it is not always clear from the code). It's more
+    // natural to mention the element type later where the extent is described,
+    // but if the extent is unknown/irrelevant, then the element type can be
+    // inserted into the message at this point.
     Out << "'" << ElemType.getAsString() << "' element in ";
+  }
   Out << RegName << " at ";
-  if (AlsoMentionUnderflow) {
-    Out << "a negative or overflowing " << OffsetOrIndex;
-  } else if (OffsetN) {
+  if (OffsetN) {
+    if (Problem == BadOffsetKind::Negative)
+      Out << "negative ";
     Out << OffsetOrIndex << " " << *OffsetN;
   } else {
-    Out << "an overflowing " << OffsetOrIndex;
+    Out << asAdjective(Problem) << " " << OffsetOrIndex;
   }
   if (ExtentN) {
     Out << ", while it holds only ";
@@ -471,7 +471,7 @@ static Messages getExceedsMsgs(const MemSpaceRegion *Space,
   }
 
   return {formatv("Out of bound access to memory {0} {1}",
-                  AlsoMentionUnderflow ? "around" : "after the end of",
+                  asPreposition(Problem),
                   RegName),
           std::string(Buf)};
 }
@@ -591,13 +591,6 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
   if (!RawOffset)
     return;
 
-  const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
-  assert(EReg && "this checker only handles element access");
-  QualType ElemType = EReg->getElementType();
-
-  int64_t ElemSize =
-      C.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
-
   auto [Reg, ByteOffset] = *RawOffset;
 
   // The state updates will be reported as a single note tag, which will be
@@ -648,8 +641,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Messages Msgs =
-              getPrecedesMsgs(Space, Reg, ByteOffset, ElemType, ElemSize);
+          Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg,
+              ByteOffset, /*Extent=*/std::nullopt, Location, BadOffsetKind::Negative);
           reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
           return;
         }
@@ -691,9 +684,10 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
           return;
         }
 
+        BadOffsetKind Problem = AlsoMentionUnderflow ? BadOffsetKind::Indeterminate : BadOffsetKind::Overflowing;
         Messages Msgs =
-            getExceedsMsgs(Space, Reg, ByteOffset, *KnownSize,
-                           AlsoMentionUnderflow, ElemType, ElemSize);
+            getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
+                           *KnownSize, Location, Problem);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }
