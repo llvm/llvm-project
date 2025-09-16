@@ -115,7 +115,7 @@ public:
       return false;
 
     auto Libcall = getFremLibcallForType(VT);
-    return Libcall.has_value() && !TLI.getLibcallName(*Libcall);;
+    return Libcall.has_value() && !TLI.getLibcallName(*Libcall);
   }
 
   static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
