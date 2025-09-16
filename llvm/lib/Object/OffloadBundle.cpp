@@ -199,8 +199,8 @@ Error object::extractOffloadBundleFatBinary(
   return Error::success();
 }
 
-Error object::extractCodeObject(const ObjectFile &Source, int64_t Offset,
-                                int64_t Size, StringRef OutputFileName) {
+Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
+                                size_t Size, StringRef OutputFileName) {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFileName, Size);
 
@@ -254,7 +254,7 @@ Error object::extractOffloadBundleByURI(StringRef URIstr) {
   auto Obj = ObjOrErr->getBinary();
   if (Error Err =
           object::extractCodeObject(*Obj, Uri.Offset, Uri.Size, OutputFile))
-    return std::move(Err);
+    return Err;
 
   return Error::success();
 }
