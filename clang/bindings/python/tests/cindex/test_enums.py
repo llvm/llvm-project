@@ -57,6 +57,9 @@ class TestEnums(unittest.TestCase):
             Path(__file__).parent.parent.parent.parent.parent
             / "include/clang-c/Index.h"
         )
+        # FIXME: Index.h is a C file, but we read it as a C++ file because we
+        # don't get ENUM_CONSTANT_DECL cursors otherwise, which we need here
+        # See bug report: https://github.com/llvm/llvm-project/issues/159075
         tu = TranslationUnit.from_source(indexheader, ["-x", "c++"])
 
         enum_variant_map = {}
