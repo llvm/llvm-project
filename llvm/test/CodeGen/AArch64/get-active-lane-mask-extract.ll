@@ -326,11 +326,9 @@ define void @test_2x8bit_mask_with_extracts_and_ptest(i64 %i, i64 %n) {
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_2x8bit_mask_with_extracts_and_ptest:
 ; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p1.b, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.h, p1.h }, x0, x1
 ; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB11_2
 ; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p1.b
-; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-SVE2p1-SME2-NEXT:    b use
 ; CHECK-SVE2p1-SME2-NEXT:  .LBB11_2: // %if.end
 ; CHECK-SVE2p1-SME2-NEXT:    ret
@@ -366,11 +364,9 @@ define void @test_2x8bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_2x8bit_mask_with_extracts_and_reinterpret_casts:
 ; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
-; CHECK-SVE2p1-SME2-NEXT:    whilelo p1.h, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.s, p1.s }, x0, x1
 ; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB12_2
 ; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
-; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p1.b
-; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-SVE2p1-SME2-NEXT:    b use
 ; CHECK-SVE2p1-SME2-NEXT:  .LBB12_2: // %if.end
 ; CHECK-SVE2p1-SME2-NEXT:    ret
