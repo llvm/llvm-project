@@ -962,7 +962,7 @@ convertExtractStridedSlice(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(op, "no mmaSyncFragmentInfo");
 
   // Find the vector.transer_read whose result vector is being sliced.
-  auto transferReadOp = op.getVector().getDefiningOp<vector::TransferReadOp>();
+  auto transferReadOp = op.getSource().getDefiningOp<vector::TransferReadOp>();
   if (!transferReadOp)
     return rewriter.notifyMatchFailure(op, "no transfer read");
 
