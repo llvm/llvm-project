@@ -1,4 +1,4 @@
-// RUN: %clang_cl --target=aarch64-windows-msvc -Xclang -verify /E -U__STDC_HOSTED__ -Wno-builtin-macro-redefined %s 2>&1 | FileCheck %s
+// RUN: %clang_cl --target=aarch64-windows-msvc -Xclang -verify /E -U__STDC_HOSTED__ -Wno-builtin-macro-redefined -- %s 2>&1 | FileCheck %s
 
 // expected-no-diagnostics
 
