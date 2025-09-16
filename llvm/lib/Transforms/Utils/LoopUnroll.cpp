@@ -1131,23 +1131,26 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // We shouldn't try to use `L` anymore.
     L = nullptr;
   } else if (OriginalTripCount) {
-    // Update metadata for the estimated trip count.
+    // Update metadata for the loop's branch weights and estimated trip count:
+    // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
+    //   weights, latch branch weights, and estimated trip count of the
+    //   remainder loop it creates.  It also sets the branch weights for the
+    //   unrolled loop guard it creates.  The branch weights for the unrolled
+    //   loop latch are adjusted below.  FIXME: Actually handle ULO.Runtime.
+    // - Otherwise, if unrolled loop iteration latches become unconditional,
+    //   branch weights are adjusted above.  FIXME: Actually handle such
+    //   unconditional latches.
+    // - Otherwise, the original loop's branch weights are correct for the
+    //   unrolled loop, so do not adjust them.
+    // - In all cases, the unrolled loop's estimated trip count is set below.
     //
-    // If ULO.Runtime, UnrollRuntimeLoopRemainder handles branch weights for the
-    // remainder loop it creates, and the unrolled loop's branch weights are
-    // adjusted below.  Otherwise, if unrolled loop iterations' latches become
-    // unconditional, branch weights are adjusted above.  Otherwise, the
-    // original loop's branch weights are correct for the unrolled loop, so do
-    // not adjust them.
-    // FIXME: Actually handle such unconditional latches and ULO.Runtime.
-    //
-    // For example, consider what happens if the unroll count is 4 for a loop
-    // with an estimated trip count of 10 when we do not create a remainder loop
-    // and all iterations' latches remain conditional.  Each unrolled
-    // iteration's latch still has the same probability of exiting the loop as
-    // it did when in the original loop, and thus it should still have the same
-    // branch weights.  Each unrolled iteration's non-zero probability of
-    // exiting already appropriately reduces the probability of reaching the
+    // As an example of the last case, consider what happens if the unroll count
+    // is 4 for a loop with an estimated trip count of 10 when we do not create
+    // a remainder loop and all iterations' latches remain conditional.  Each
+    // unrolled iteration's latch still has the same probability of exiting the
+    // loop as it did when in the original loop, and thus it should still have
+    // the same branch weights.  Each unrolled iteration's non-zero probability
+    // of exiting already appropriately reduces the probability of reaching the
     // remaining iterations just as it did in the original loop.  Trying to also
     // adjust the branch weights of the final unrolled iteration's latch (i.e.,
     // the backedge for the unrolled loop as a whole) to reflect its new trip
