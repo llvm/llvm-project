@@ -36,15 +36,16 @@ void RawWrite(const char *buffer) {
 
 void ReportFile::ReopenIfNecessary() {
   mu->CheckLocked();
-  if (!lastOpenFailed)
-    if (fd == kStdoutFd || fd == kStderrFd)
-      return;
-
   uptr pid = internal_getpid();
   if (lastOpenFailed && fd_pid != pid) {
+    // If lastOpenFailed is set then we fellback to stderr. If this is a new
+    // process, mark fd as invalid so we attempt to open again.
+    CHECK_EQ(fd, kStderrFd);
     fd = kInvalidFd;
     lastOpenFailed = false;
   }
+  if (fd == kStdoutFd || fd == kStderrFd)
+    return;
 
   // If in tracer, use the parent's file.
   if (pid == stoptheworld_tracer_pid)
