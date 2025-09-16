@@ -860,10 +860,10 @@ struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
     Value result = arith::ConstantOp::create(rewriter, loc, vecType,
                                              rewriter.getZeroAttr(vecType));
 
-    VectorType targetVecType =
+    auto targetVecType =
         VectorType::get(*targetShape, vecType.getElementType());
     Value baseStep = vector::StepOp::create(rewriter, loc, targetVecType);
-    for (SmallVector<int64_t> offsets :
+    for (const SmallVector<int64_t> &offsets :
          StaticTileOffsetRange({originalSize}, *targetShape)) {
       Value bcastOffset = arith::ConstantOp::create(
           rewriter, loc, targetVecType,
