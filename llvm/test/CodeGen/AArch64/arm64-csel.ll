@@ -77,11 +77,17 @@ define i32@foo4(i32 %a) nounwind ssp {
 }
 
 define i32@foo5(i32 %a, i32 %b) nounwind ssp {
-; CHECK-LABEL: foo5:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs w8, w0, w1
-; CHECK-NEXT:    cneg w0, w8, mi
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: foo5:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    subs w8, w0, w1
+; CHECK-SD-NEXT:    cneg w0, w8, lt
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: foo5:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    subs w8, w0, w1
+; CHECK-GI-NEXT:    cneg w0, w8, mi
+; CHECK-GI-NEXT:    ret
 entry:
   %sub = sub nsw i32 %a, %b
   %cmp = icmp sgt i32 %sub, -1
@@ -113,7 +119,7 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 ; CHECK-SD-LABEL: foo7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    subs w8, w0, w1
-; CHECK-SD-NEXT:    cneg w9, w8, mi
+; CHECK-SD-NEXT:    cneg w9, w8, lt
 ; CHECK-SD-NEXT:    cmn w8, #1
 ; CHECK-SD-NEXT:    csel w8, w9, w0, lt
 ; CHECK-SD-NEXT:    csel w0, w8, w9, gt

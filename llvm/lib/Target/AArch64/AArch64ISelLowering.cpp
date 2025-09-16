@@ -717,6 +717,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i64, Custom);
   }
 
+  setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDS, MVT::i64, Custom);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, Custom);
+
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -7766,6 +7771,92 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      getCondCode(DAG, AArch64CC::PL), Cmp.getValue(1));
 }
 
+// Generate SUBS and CNEG for absolute difference.
+SDValue AArch64TargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+
+  bool IsSigned = Op.getOpcode() == ISD::ABDS;
+  if (VT.isVector()) {
+    if (IsSigned)
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
+    else
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+  }
+
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  // If the subtract doesn't overflow then just use abs(sub())
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  unsigned Opcode = AArch64ISD::SUBS;
+
+  // Check if RHS is a negation (0 - X). If so, we can use ADDS instead of SUBS:
+  //   a - (0 - x) = a + x (mod 2^n)
+  //
+  // At the assembly level, SUBS and ADDS produce equivalent results and flags:
+  //   SUBS a, (0-x): result = a + x (mod 2^n), carry = 1 iff a >= (2^n - x)
+  //   ADDS a, x:     result = a + x (mod 2^n), carry = 1 iff a + x >= 2^n
+  // These are the same when x != 0.
+  //
+  // Edge case x = 0: SUBS a, 0 sets carry = 1 (a >= 0), but ADDS a, 0 sets
+  // carry = 0 (no overflow). So we must ensure x != 0.
+  //
+  // Additional constraints:
+  //   - For ABDS: x must not be INT_MIN (negating INT_MIN overflows)
+  //   - For ABDU: x must not be 0 (flag mismatch as explained above)
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    // Check if it's 0 - X
+    if (isNullConstant(SubLHS)) {
+      bool CanUseAdd = false;
+      if (IsSigned) {
+        // For ABDS: only safe if X is known to never be INT_MIN
+        if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
+                                                      .getSignedMinValue()
+                                                      .isMinSignedValue())
+          CanUseAdd = true;
+      } else {
+        // For ABDU: only safe if X is known to never be zero
+        if (DAG.isKnownNeverZero(SubRHS))
+          CanUseAdd = true;
+      }
+
+      if (CanUseAdd) {
+        Opcode = AArch64ISD::ADDS;
+        RHS = SubRHS; // Replace RHS with X, so we do LHS + X instead of
+                      // LHS - (0 - X)
+      }
+    }
+  }
+
+  // Generate SUBS/ADDS and CSEL for absolute difference (like LowerABS)
+  // Compute a - b (or a + b if we matched the negation pattern) with flags
+  SDValue Cmp = DAG.getNode(Opcode, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+
+  // Compute the negation: -(a - b) = b - a
+  SDValue Neg = DAG.getNegative(Cmp.getValue(0), DL, VT);
+
+  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
+  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  AArch64CC::CondCode CC = IsSigned ? AArch64CC::GE : AArch64CC::HS;
+
+  // CSEL: if a >= b, select a-b, otherwise b-a
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Cmp.getValue(0), Neg,
+                     getCondCode(DAG, CC), Cmp.getValue(1));
+}
+
 static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -8334,9 +8425,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::ABS:
     return LowerABS(Op, DAG);
   case ISD::ABDS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+    return LowerABD(Op, DAG);
   case ISD::AVGFLOORS:
     return LowerAVG(Op, DAG, AArch64ISD::HADDS_PRED);
   case ISD::AVGFLOORU:
@@ -12350,27 +12440,6 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
       SDValue Flags = TST.getValue(1);
       return DAG.getNode(AArch64ISD::CSEL, DL, TVal.getValueType(), TVal, FVal,
                          DAG.getConstant(AArch64CC::NE, DL, MVT::i32), Flags);
-    }
-
-    // Canonicalise absolute difference patterns:
-    //   select_cc lhs, rhs, sub(lhs, rhs), sub(rhs, lhs), cc ->
-    //   select_cc lhs, rhs, sub(lhs, rhs), neg(sub(lhs, rhs)), cc
-    //
-    //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
-    //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
-    // The second forms can be matched into subs+cneg.
-    // NOTE: Drop poison generating flags from the negated operand to avoid
-    // inadvertently propagating poison after the canonicalisation.
-    if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
-      if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
-          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS) {
-        TVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
-        FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
-      } else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
-                 FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS) {
-        FVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
-        TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
-      }
     }
 
     unsigned Opcode = AArch64ISD::CSEL;
