@@ -380,7 +380,7 @@ func.func @mismatched_types() {
 
 // -----
 
-// expected-error @+1 {{alignment attribute value 63 is not a power of 2}}
+// expected-error @+1 {{'memref.global' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
 memref.global "private" @gv : memref<4xf32> = dense<1.0> { alignment = 63 }
 
 // -----
