@@ -6264,8 +6264,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
       Offset, Bytes, NumPredicateVectors, NumDataVectors);
 
   // Insert ADDSXri for scalable offset at the end.
-  bool NeedInsertADDS = SetNZCV && (NumPredicateVectors || NumDataVectors);
-  if (NeedInsertADDS)
+  bool NeedsFinalDefNZCV = SetNZCV && (NumPredicateVectors || NumDataVectors);
+  if (NeedsFinalDefNZCV)
     SetNZCV = false;
 
   // First emit non-scalable frame offsets, or a simple 'mov'.
@@ -6307,7 +6307,7 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                        FrameReg);
   }
 
-  if (NeedInsertADDS)
+  if (NeedsFinalDefNZCV)
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDSXri), DestReg)
         .addReg(DestReg)
         .addImm(0)
