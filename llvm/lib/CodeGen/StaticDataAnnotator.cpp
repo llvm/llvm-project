@@ -31,6 +31,8 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -78,21 +80,8 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
     if (GV.isDeclarationForLinker())
       continue;
 
-    // The implementation below assumes prior passes don't set section prefixes,
-    // and specifically do 'assign' rather than 'update'. So report error if a
-    // section prefix is already set.
-    if (auto maybeSectionPrefix = GV.getSectionPrefix();
-        maybeSectionPrefix && !maybeSectionPrefix->empty())
-      llvm::report_fatal_error("Global variable " + GV.getName() +
-                               " already has a section prefix " +
-                               *maybeSectionPrefix);
-
     StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
-    if (SectionPrefix.empty())
-      continue;
-
-    GV.setSectionPrefix(SectionPrefix);
-    Changed = true;
+    Changed |= GV.updateSectionPrefix(SectionPrefix);
   }
 
   return Changed;
