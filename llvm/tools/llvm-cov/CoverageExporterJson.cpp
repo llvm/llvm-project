@@ -21,7 +21,7 @@
 //         -- Branches: array => List of Branches in the file
 //           -- Branch: dict => Describes a branch of the file with counters
 //         -- MCDC Records: array => List of MCDC records in the file
-//           -- MCDC Values: array => List of T/F covered condition values
+//           -- MCDC Values: array => List of T/F covered condition values and list of executed test vectors
 //         -- Segments: array => List of Segments contained in the file
 //           -- Segment: dict => Describes a segment of the file with a counter
 //         -- Expansions: array => List of expansion records
