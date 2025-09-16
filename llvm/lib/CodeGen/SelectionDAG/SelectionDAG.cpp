@@ -9103,16 +9103,13 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
     return {};
 
   // Emit a library call.
-
-  PointerType *PT = PointerType::getUnqual(*getContext());
-  TargetLowering::ArgListTy Args = {{Src, PT}};
+  TargetLowering::ArgListTy Args = {
+      {Src, PointerType::getUnqual(*getContext())}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall =
       isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
-  //  TODO: propagate tail call flag for targets where that is safe. Note
-  //  that it is not safe on AIX which is the only current target.
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
