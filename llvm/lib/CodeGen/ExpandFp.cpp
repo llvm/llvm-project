@@ -918,7 +918,8 @@ static void expandIToFP(Instruction *IToFP) {
   IToFP->eraseFromParent();
 }
 
-static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Worklist) {
+static void scalarize(Instruction *I,
+                      SmallVectorImpl<Instruction *> &Worklist) {
   VectorType *VTy = cast<FixedVectorType>(I->getType());
 
   IRBuilder<> Builder(I);
