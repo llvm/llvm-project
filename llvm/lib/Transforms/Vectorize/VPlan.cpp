@@ -343,37 +343,21 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
+  // We need to construct the vector value for a single-scalar value by
+  // broadcasting the scalar to all lanes.
+  // TODO: Replace by introducing Broadcast VPInstructions.
+  assert(IsSingleScalar && "must be a single-scalar at this point");
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
+  auto *LastInst = cast<Instruction>(get(Def, LastLane));
   auto NewIP = isa<PHINode>(LastInst)
                    ? LastInst->getParent()->getFirstNonPHIIt()
                    : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
-
-  // However, if we are vectorizing, we need to construct the vector values.
-  // If the value is known to be uniform after vectorization, we can just
-  // broadcast the scalar value corresponding to lane zero. Otherwise, we
-  // construct the vector values using insertelement instructions. Since the
-  // resulting vectors are stored in State, we will only generate the
-  // insertelements once.
-  Value *VectorValue = nullptr;
-  if (IsSingleScalar) {
-    VectorValue = GetBroadcastInstrs(ScalarValue);
-    set(Def, VectorValue);
-  } else {
-    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    assert(isa<VPInstruction>(Def) &&
-           "Explicit BuildVector recipes must have"
-           "handled packing for non-VPInstructions.");
-    // Initialize packing with insertelements to start from poison.
-    VectorValue = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
-    for (unsigned Lane = 0; Lane < VF.getFixedValue(); ++Lane)
-      VectorValue = packScalarIntoVectorizedValue(Def, VectorValue, Lane);
-    set(Def, VectorValue);
-  }
+  Value *VectorValue = GetBroadcastInstrs(ScalarValue);
+  set(Def, VectorValue);
   Builder.restoreIP(OldIP);
   return VectorValue;
 }
@@ -1762,4 +1746,34 @@ VPCostContext::getOperandInfo(VPValue *V) const {
     return {};
 
   return TTI::getOperandInfo(V->getLiveInIRValue());
+}
+
+InstructionCost VPCostContext::getScalarizationOverhead(
+    Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF) {
+  if (VF.isScalar())
+    return 0;
+
+  InstructionCost ScalarizationCost = 0;
+  // Compute the cost of scalarizing the result if needed.
+  if (!ResultTy->isVoidTy()) {
+    for (Type *VectorTy :
+         to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
+      ScalarizationCost += TTI.getScalarizationOverhead(
+          cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
+          /*Insert=*/true,
+          /*Extract=*/false, CostKind);
+    }
+  }
+  // Compute the cost of scalarizing the operands, skipping ones that do not
+  // require extraction/scalarization and do not incur any overhead.
+  SmallPtrSet<const VPValue *, 4> UniqueOperands;
+  SmallVector<Type *> Tys;
+  for (auto *Op : Operands) {
+    if (Op->isLiveIn() || isa<VPReplicateRecipe, VPPredInstPHIRecipe>(Op) ||
+        !UniqueOperands.insert(Op).second)
+      continue;
+    Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
+  }
+  return ScalarizationCost +
+         TTI.getOperandsScalarizationOverhead(Tys, CostKind);
 }
