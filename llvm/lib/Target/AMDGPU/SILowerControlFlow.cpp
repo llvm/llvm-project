@@ -48,6 +48,7 @@
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
 
+#include "SICustomBranchBundles.h"
 #include "SILowerControlFlow.h"
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
@@ -321,6 +322,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
           .add(MI.getOperand(1)); // Saved EXEC
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
+
+  move_ins_before_phis(*OrSaveExec);
 
   MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
 
