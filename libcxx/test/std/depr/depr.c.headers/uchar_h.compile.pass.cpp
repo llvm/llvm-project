@@ -11,6 +11,11 @@
 // Apple platforms don't provide <uchar.h> yet, so these tests fail.
 // XFAIL: target={{.+}}-apple-{{.+}}
 
+// The following platforms do not provide mbrtoc8 and c8rtomb so the tests fail
+// XFAIL: aix
+// XFAIL: freebsd
+// XFAIL: windows
+
 // mbrtoc16 not defined.
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 

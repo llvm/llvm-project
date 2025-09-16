@@ -47,17 +47,6 @@
 //       user code. Move code paths that need _NEWLIB_VERSION to another customization mechanism.
 #if __has_include(<picolibc.h>)
 #  include <picolibc.h>
-#  define _LIBCPP_PICOLIBC_VERSION_INT(maj, min, patch) (maj * 10000 + min * 100 + patch)
-#  define _LIBCPP_PICOLIBC_PREREQ(maj, min, patch)                                                                     \
-    _LIBCPP_PICOLIBC_VERSION_INT(__PICOLIBC__, __PICOLIBC_MINOR__, __PICOLIBC_PATCHLEVEL__) >=                         \
-        _LIBCPP_PICOLIBC_VERSION_INT(maj, min, patch)
-#endif
-
-#if __has_include(<corecrt.h>)
-#  include <corecrt.h>
-#  if defined(_UCRT)
-#    define _LIBCPP_UCRT
-#  endif
 #endif
 
 #ifndef __BYTE_ORDER__

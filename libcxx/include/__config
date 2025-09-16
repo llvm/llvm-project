@@ -1021,27 +1021,16 @@ typedef __char32_t char32_t;
 // the latter depends on internal GNU libc details that are not appropriate
 // to depend on here, so any declarations present when __cpp_char8_t is not
 // defined are ignored.
-//
-// picolibc 1.8.9 and newer declare the two functions unconditionally.
-//
-// Apple C library, Microsoft C Runtime, AIX C library and FreeBSD libc do not
-// yet support these functions.
 #  if defined(_LIBCPP_GLIBC_PREREQ)
-#    if defined(__cpp_char8_t) && _LIBCPP_GLIBC_PREREQ(2, 36)
+#    if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #    else
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #    endif
-#  elif defined(_LIBCPP_PICOLIBC_PREREQ)
-#    if _LIBCPP_PICOLIBC_PREREQ(1, 8, 9)
-#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
-#    else
-#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
-#    endif
-#  elif defined(__APPLE__) || defined(_MSC_VER) || defined(_LIBCPP_UCRT) || defined(_AIX) || defined(__FreeBSD__)
-#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
-#  else
+#  elif defined(__clang__)
 #    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
+#  else
+#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #  endif
 
 // There are a handful of public standard library types that are intended to

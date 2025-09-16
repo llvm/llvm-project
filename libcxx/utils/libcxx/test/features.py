@@ -669,6 +669,7 @@ DEFAULT_FEATURES += [
             """,
         ),
     ),
+    Feature(name="aix", when=lambda cfg: "_AIX" in compilerMacros(cfg)),
 ]
 
 # Add features representing the build host platform name.
