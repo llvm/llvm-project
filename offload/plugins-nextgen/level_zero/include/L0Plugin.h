@@ -45,7 +45,6 @@ private:
   /// L0 plugin global options
   static L0OptionsTy Options;
 
-  /// Global mutex
   std::mutex GlobalMutex;
 
   /// Common pool of AsyncQueue
