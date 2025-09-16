@@ -41,10 +41,8 @@
 namespace Fortran::parser {
 using namespace Fortran::parser::omp;
 
-static constexpr size_t DirectiveCount{
-    static_cast<size_t>(llvm::omp::Directive::Last_) -
-    static_cast<size_t>(llvm::omp::Directive::First_) + 1};
-using DirectiveSet = llvm::Bitset<llvm::NextPowerOf2(DirectiveCount)>;
+using DirectiveSet =
+    llvm::Bitset<llvm::NextPowerOf2(llvm::omp::Directive_enumSize)>;
 
 // Helper function to print the buffer contents starting at the current point.
 [[maybe_unused]] static std::string ahead(const ParseState &state) {
