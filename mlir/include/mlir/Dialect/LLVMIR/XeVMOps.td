@@ -209,7 +209,7 @@ def XeVM_BlockLoadOp
     Result type may be a scalar or vector type of scalar element type.
 
     The parameters are:
-      * `ptr` - the base address to load from
+      * `ptr` - the base address to load from. Must be uniform across subgroup.
       * `cache_control` - an enumerator that sets the cache behaviour
 
     Example:
@@ -245,7 +245,7 @@ def XeVM_BlockStoreOp
     `val` type may be a scalar or vector type of scalar element type.
 
     The parameters are:
-      * `ptr` - the base address to store to
+      * `ptr` - the base address to store to. Must be uniform across subgroup.
       * `val` - the value to store
       * `cache_control` - an enumerator that sets the cache behaviour
 
