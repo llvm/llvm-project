@@ -514,7 +514,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     Value NIter = ivs[2];
     Value CIter = ivs[3];
 
-    auto context = builder.getContext();
+    auto *context = builder.getContext();
 
     auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
@@ -735,7 +735,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
 
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
-    auto context = builder.getContext();
+    auto *context = builder.getContext();
     Value tileHIter = ivs[0];
     Value tileWIter = ivs[1];
     Value NIter = ivs[2];

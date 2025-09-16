@@ -208,6 +208,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::SPLAT_VECTOR,   T, Legal);
     setOperationAction(ISD::UADDSAT, T, Legal);
     setOperationAction(ISD::SADDSAT, T, Legal);
+    setOperationAction(ISD::USUBSAT, T, Legal);
+    setOperationAction(ISD::SSUBSAT, T, Legal);
     if (T != ByteV) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
@@ -302,6 +304,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::UADDSAT, T, Legal);
     setOperationAction(ISD::SADDSAT, T, Legal);
     setOperationAction(ISD::SUB,      T, Legal);
+    setOperationAction(ISD::USUBSAT, T, Legal);
+    setOperationAction(ISD::SSUBSAT, T, Legal);
     setOperationAction(ISD::MUL,      T, Custom);
     setOperationAction(ISD::MULHS,    T, Custom);
     setOperationAction(ISD::MULHU,    T, Custom);

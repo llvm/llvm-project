@@ -55,6 +55,9 @@ static bool createElementwiseOp(ConversionPatternRewriter &builder,
   case gpu::MMAElementwiseOp::SUBI:
     builder.replaceOpWithNewOp<spirv::ISubOp>(op, coopType, operands);
     return true;
+  case gpu::MMAElementwiseOp::MULF:
+    builder.replaceOpWithNewOp<spirv::FMulOp>(op, coopType, operands);
+    return true;
   case gpu::MMAElementwiseOp::DIVF:
     builder.replaceOpWithNewOp<spirv::FDivOp>(op, coopType, operands);
     return true;

@@ -37,6 +37,7 @@ add_llvm_target(BPFCodeGen
   BPFRegisterInfo.cpp
   BPFSelectionDAGInfo.cpp
   BPFSubtarget.cpp
+  BPFTargetLoweringObjectFile.cpp
   BPFTargetMachine.cpp
   BPFMIPeephole.cpp
   BPFMIChecking.cpp

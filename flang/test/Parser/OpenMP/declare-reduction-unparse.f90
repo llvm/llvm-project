@@ -30,7 +30,7 @@ function func(x, n, init)
 !CHECK: !$OMP SIMD REDUCTION(red_add: res)
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE:  OmpBeginLoopDirective
-!PARSE-TREE:  OmpLoopDirective -> llvm::omp::Directive = simd
+!PARSE-TREE:  OmpDirectiveName -> llvm::omp::Directive = simd
 !PARSE-TREE:  OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE:  Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add
   do i=1,n

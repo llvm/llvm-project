@@ -4,6 +4,8 @@
 module eoshift_types
   type t
   end type t
+  type, extends(t) :: t2
+  end type t2
 end module eoshift_types
 
 ! 1d shift by scalar
@@ -269,3 +271,12 @@ subroutine eoshift14(array)
 ! CHECK-DAG:           %[[VAL_3]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_5:.*]] = hlfir.eoshift{{.*}}boundary %[[VAL_4]] : (!fir.box<!fir.array<?xui32>>, i32, ui32) -> !hlfir.expr<?xui32>
 end subroutine eoshift14
+
+! CHECK-LABEL:   func.func @_QPeoshift15(
+subroutine eoshift15(array, boundary)
+  use eoshift_types
+  class(t), allocatable :: array(:,:)
+  type(t) :: boundary(:)
+  array = eoshift(array, shift=1, boundary=boundary)
+! CHECK:           hlfir.eoshift %{{.*}} %{{.*}} boundary %{{.*}}#0 : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMeoshift_typesTt>>>>, i32, !fir.box<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>) -> !hlfir.expr<?x?x!fir.type<_QMeoshift_typesTt>?>
+end subroutine eoshift15

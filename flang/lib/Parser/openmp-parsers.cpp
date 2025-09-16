@@ -18,14 +18,31 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Support/MathExtras.h"
+
+#include <algorithm>
+#include <cctype>
+#include <iterator>
+#include <list>
+#include <optional>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
 // OpenMP Directives and Clauses
 namespace Fortran::parser {
 using namespace Fortran::parser::omp;
+
+using DirectiveSet =
+    llvm::Bitset<llvm::NextPowerOf2(llvm::omp::Directive_enumSize)>;
 
 // Helper function to print the buffer contents starting at the current point.
 [[maybe_unused]] static std::string ahead(const ParseState &state) {
@@ -1349,95 +1366,46 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
 TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
     verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
 
-// Omp directives enclosing do loop
-TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
-    "DISTRIBUTE PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::OMPD_distribute_parallel_do_simd),
-    "DISTRIBUTE PARALLEL DO" >>
-        pure(llvm::omp::Directive::OMPD_distribute_parallel_do),
-    "DISTRIBUTE SIMD" >> pure(llvm::omp::Directive::OMPD_distribute_simd),
-    "DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_distribute),
-    "DO SIMD" >> pure(llvm::omp::Directive::OMPD_do_simd),
-    "DO" >> pure(llvm::omp::Directive::OMPD_do),
-    "LOOP" >> pure(llvm::omp::Directive::OMPD_loop),
-    "MASKED TASKLOOP SIMD" >>
-        pure(llvm::omp::Directive::OMPD_masked_taskloop_simd),
-    "MASKED TASKLOOP" >> pure(llvm::omp::Directive::OMPD_masked_taskloop),
-    "MASTER TASKLOOP SIMD" >>
-        pure(llvm::omp::Directive::OMPD_master_taskloop_simd),
-    "MASTER TASKLOOP" >> pure(llvm::omp::Directive::OMPD_master_taskloop),
-    "PARALLEL DO SIMD" >> pure(llvm::omp::Directive::OMPD_parallel_do_simd),
-    "PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_parallel_do),
-    "PARALLEL MASKED TASKLOOP SIMD" >>
-        pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd),
-    "PARALLEL MASKED TASKLOOP" >>
-        pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop),
-    "PARALLEL MASTER TASKLOOP SIMD" >>
-        pure(llvm::omp::Directive::OMPD_parallel_master_taskloop_simd),
-    "PARALLEL MASTER TASKLOOP" >>
-        pure(llvm::omp::Directive::OMPD_parallel_master_taskloop),
-    "SIMD" >> pure(llvm::omp::Directive::OMPD_simd),
-    "TARGET LOOP" >> pure(llvm::omp::Directive::OMPD_target_loop),
-    "TARGET PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::OMPD_target_parallel_do_simd),
-    "TARGET PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_target_parallel_do),
-    "TARGET PARALLEL LOOP" >>
-        pure(llvm::omp::Directive::OMPD_target_parallel_loop),
-    "TARGET SIMD" >> pure(llvm::omp::Directive::OMPD_target_simd),
-    "TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::
-                OMPD_target_teams_distribute_parallel_do_simd),
-    "TARGET TEAMS DISTRIBUTE PARALLEL DO" >>
-        pure(llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do),
-    "TARGET TEAMS DISTRIBUTE SIMD" >>
-        pure(llvm::omp::Directive::OMPD_target_teams_distribute_simd),
-    "TARGET TEAMS DISTRIBUTE" >>
-        pure(llvm::omp::Directive::OMPD_target_teams_distribute),
-    "TARGET TEAMS LOOP" >> pure(llvm::omp::Directive::OMPD_target_teams_loop),
-    "TASKLOOP SIMD" >> pure(llvm::omp::Directive::OMPD_taskloop_simd),
-    "TASKLOOP" >> pure(llvm::omp::Directive::OMPD_taskloop),
-    "TEAMS DISTRIBUTE PARALLEL DO SIMD" >>
-        pure(llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd),
-    "TEAMS DISTRIBUTE PARALLEL DO" >>
-        pure(llvm::omp::Directive::OMPD_teams_distribute_parallel_do),
-    "TEAMS DISTRIBUTE SIMD" >>
-        pure(llvm::omp::Directive::OMPD_teams_distribute_simd),
-    "TEAMS DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_teams_distribute),
-    "TEAMS LOOP" >> pure(llvm::omp::Directive::OMPD_teams_loop),
-    "TILE" >> pure(llvm::omp::Directive::OMPD_tile),
-    "UNROLL" >> pure(llvm::omp::Directive::OMPD_unroll)))))
-
-TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
-    sourced(Parser<OmpLoopDirective>{}), Parser<OmpClauseList>{})))
-
 static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
   return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
+
+static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+  return [&dirs](const OmpDirectiveName &name) -> bool {
+    return dirs.test(llvm::to_underlying(name.v));
+  };
 }
 
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpBeginDirectiveParser(llvm::omp::Directive dir) : dir_(dir) {}
+  constexpr OmpBeginDirectiveParser(DirectiveSet dirs) : dirs_(dirs) {}
+  constexpr OmpBeginDirectiveParser(llvm::omp::Directive dir) {
+    dirs_.set(llvm::to_underlying(dir));
+  }
 
   std::optional<resultType> Parse(ParseState &state) const {
-    auto &&p{predicated(Parser<OmpDirectiveName>{}, IsDirective(dir_)) >=
+    auto &&p{predicated(Parser<OmpDirectiveName>{}, IsMemberOf(dirs_)) >=
         Parser<OmpDirectiveSpecification>{}};
     return p.Parse(state);
   }
 
 private:
-  llvm::omp::Directive dir_;
+  DirectiveSet dirs_;
 };
 
 struct OmpEndDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) : dir_(dir) {}
+  constexpr OmpEndDirectiveParser(DirectiveSet dirs) : dirs_(dirs) {}
+  constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) {
+    dirs_.set(llvm::to_underlying(dir));
+  }
 
   std::optional<resultType> Parse(ParseState &state) const {
     if (startOmpLine.Parse(state)) {
       if (auto endToken{verbatim("END"_sptok).Parse(state)}) {
-        if (auto &&dirSpec{OmpBeginDirectiveParser(dir_).Parse(state)}) {
+        if (auto &&dirSpec{OmpBeginDirectiveParser(dirs_).Parse(state)}) {
           // Extend the "source" on both the OmpDirectiveName and the
           // OmpDirectiveNameSpecification.
           CharBlock &nameSource{std::get<OmpDirectiveName>(dirSpec->t).source};
@@ -1451,7 +1419,7 @@ struct OmpEndDirectiveParser {
   }
 
 private:
-  llvm::omp::Directive dir_;
+  DirectiveSet dirs_;
 };
 
 struct OmpStatementConstructParser {
@@ -1946,11 +1914,56 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}))))
 
+static constexpr DirectiveSet GetLoopDirectives() {
+  using Directive = llvm::omp::Directive;
+  constexpr DirectiveSet loopDirectives{
+      unsigned(Directive::OMPD_distribute),
+      unsigned(Directive::OMPD_distribute_parallel_do),
+      unsigned(Directive::OMPD_distribute_parallel_do_simd),
+      unsigned(Directive::OMPD_distribute_simd),
+      unsigned(Directive::OMPD_do),
+      unsigned(Directive::OMPD_do_simd),
+      unsigned(Directive::OMPD_loop),
+      unsigned(Directive::OMPD_masked_taskloop),
+      unsigned(Directive::OMPD_masked_taskloop_simd),
+      unsigned(Directive::OMPD_master_taskloop),
+      unsigned(Directive::OMPD_master_taskloop_simd),
+      unsigned(Directive::OMPD_parallel_do),
+      unsigned(Directive::OMPD_parallel_do_simd),
+      unsigned(Directive::OMPD_parallel_masked_taskloop),
+      unsigned(Directive::OMPD_parallel_masked_taskloop_simd),
+      unsigned(Directive::OMPD_parallel_master_taskloop),
+      unsigned(Directive::OMPD_parallel_master_taskloop_simd),
+      unsigned(Directive::OMPD_simd),
+      unsigned(Directive::OMPD_target_loop),
+      unsigned(Directive::OMPD_target_parallel_do),
+      unsigned(Directive::OMPD_target_parallel_do_simd),
+      unsigned(Directive::OMPD_target_parallel_loop),
+      unsigned(Directive::OMPD_target_simd),
+      unsigned(Directive::OMPD_target_teams_distribute),
+      unsigned(Directive::OMPD_target_teams_distribute_parallel_do),
+      unsigned(Directive::OMPD_target_teams_distribute_parallel_do_simd),
+      unsigned(Directive::OMPD_target_teams_distribute_simd),
+      unsigned(Directive::OMPD_target_teams_loop),
+      unsigned(Directive::OMPD_taskloop),
+      unsigned(Directive::OMPD_taskloop_simd),
+      unsigned(Directive::OMPD_teams_distribute),
+      unsigned(Directive::OMPD_teams_distribute_parallel_do),
+      unsigned(Directive::OMPD_teams_distribute_parallel_do_simd),
+      unsigned(Directive::OMPD_teams_distribute_simd),
+      unsigned(Directive::OMPD_teams_loop),
+      unsigned(Directive::OMPD_tile),
+      unsigned(Directive::OMPD_unroll),
+  };
+  return loopDirectives;
+}
+
+TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
+    sourced(OmpBeginDirectiveParser(GetLoopDirectives())))))
+
 // END OMP Loop directives
-TYPE_PARSER(
-    startOmpLine >> sourced(construct<OmpEndLoopDirective>(
-                        sourced("END"_tok >> Parser<OmpLoopDirective>{}),
-                        Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(construct<OmpEndLoopDirective>(
+    sourced(OmpEndDirectiveParser(GetLoopDirectives())))))
 
 TYPE_PARSER(construct<OpenMPLoopConstruct>(
     Parser<OmpBeginLoopDirective>{} / endOmpLine))
