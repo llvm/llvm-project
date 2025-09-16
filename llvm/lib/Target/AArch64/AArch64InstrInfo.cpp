@@ -6569,7 +6569,7 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
 //  -->
 //    add %dest, %stack, 0
 //    adds %dest, %dest, c
-static MachineInstr *unfoldAddXri(MachineInstr &MI, unsigned FrameReg,
+static MachineInstr *unfoldAddSXri(MachineInstr &MI, unsigned FrameReg,
                                   const AArch64InstrInfo *TII) {
   auto *MBB = MI.getParent();
   Register DestReg = MI.getOperand(0).getReg();
@@ -6598,7 +6598,7 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
   MachineInstr *NewMI = &MI;
   if (Opcode == AArch64::ADDSXri && Offset.getScalable()) {
-    NewMI = unfoldAddXri(MI, FrameReg, TII);
+    NewMI = unfoldAddSXri(MI, FrameReg, TII);
     Opcode = AArch64::ADDXri;
   }
 
