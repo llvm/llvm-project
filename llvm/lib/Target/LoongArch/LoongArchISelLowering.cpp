@@ -311,6 +311,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
+      setOperationAction(ISD::SADDSAT, VT, Legal);
+      setOperationAction(ISD::SSUBSAT, VT, Legal);
+      setOperationAction(ISD::UADDSAT, VT, Legal);
+      setOperationAction(ISD::USUBSAT, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -386,6 +390,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
       setOperationAction(ISD::ABDS, VT, Legal);
       setOperationAction(ISD::ABDU, VT, Legal);
+      setOperationAction(ISD::SADDSAT, VT, Legal);
+      setOperationAction(ISD::SSUBSAT, VT, Legal);
+      setOperationAction(ISD::UADDSAT, VT, Legal);
+      setOperationAction(ISD::USUBSAT, VT, Legal);
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
