@@ -1521,8 +1521,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (isInteger(inType) && isFloatCompatible(outType)) ||
          (isFloatCompatible(inType) && isInteger(outType)) ||
          (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
-         (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
-         (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isInteger(inType) && isPointerCompatible(outType)) ||
+         (isPointerCompatible(inType) && isInteger(outType)) ||
          (mlir::isa<fir::BoxType>(inType) &&
           mlir::isa<fir::BoxType>(outType)) ||
          (mlir::isa<fir::BoxProcType>(inType) &&
