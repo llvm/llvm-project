@@ -3343,7 +3343,7 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
 }
 
 void PPCAIXAsmPrinter::emitAssociatedMetadata(const GlobalObject *GO) {
-  SmallVector< MDNode * > MDs;
+  SmallVector<MDNode *> MDs;
   GO->getMetadata(LLVMContext::MD_associated, MDs);
   assert(MDs.size() && "Expected asscoiated metadata nodes");
 
