@@ -1335,7 +1335,7 @@ TEST(MustacheDelimiters, PairBehavior) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("(Hey!)", Out);
+  EXPECT_EQ("(Hey!)", Out);
 }
 
 TEST(MustacheDelimiters, SpecialCharacters) {
@@ -1344,7 +1344,7 @@ TEST(MustacheDelimiters, SpecialCharacters) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("(It worked!)", Out);
+  EXPECT_EQ("(It worked!)", Out);
 }
 
 TEST(MustacheDelimiters, Sections) {
@@ -1354,7 +1354,7 @@ TEST(MustacheDelimiters, Sections) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
+  EXPECT_EQ("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
             "interpolated.\n]\n",
             Out);
 }
@@ -1366,7 +1366,7 @@ TEST(MustacheDelimiters, InvertedSections) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
+  EXPECT_EQ("[\n  I got interpolated.\n  |data|\n\n  {{data}}\n  I got "
             "interpolated.\n]\n",
             Out);
 }
@@ -1378,7 +1378,7 @@ TEST(MustacheDelimiters, PartialInheritence) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("[ .yes. ]\n[ .yes. ]\n", Out);
+  EXPECT_EQ("[ .yes. ]\n[ .yes. ]\n", Out);
 }
 
 TEST(MustacheDelimiters, PostPartialBehavior) {
@@ -1388,7 +1388,7 @@ TEST(MustacheDelimiters, PostPartialBehavior) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n", Out);
+  EXPECT_EQ("[ .yes.  .yes. ]\n[ .yes.  .|value|. ]\n", Out);
 }
 
 TEST(MustacheDelimiters, SurroundingWhitespace) {
@@ -1415,7 +1415,7 @@ TEST(MustacheDelimiters, StandaloneTag) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("Begin.\nEnd.\n", Out);
+  EXPECT_EQ("Begin.\nEnd.\n", Out);
 }
 
 TEST(MustacheDelimiters, IndentedStandaloneTag) {
@@ -1424,7 +1424,7 @@ TEST(MustacheDelimiters, IndentedStandaloneTag) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("Begin.\nEnd.\n", Out);
+  EXPECT_EQ("Begin.\nEnd.\n", Out);
 }
 
 TEST(MustacheDelimiters, StandaloneLineEndings) {
@@ -1433,7 +1433,7 @@ TEST(MustacheDelimiters, StandaloneLineEndings) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("|\r\n|", Out);
+  EXPECT_EQ("|\r\n|", Out);
 }
 
 TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
@@ -1442,7 +1442,7 @@ TEST(MustacheDelimiters, StandaloneWithoutPreviousLine) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("=", Out);
+  EXPECT_EQ("=", Out);
 }
 
 TEST(MustacheDelimiters, StandaloneWithoutNewline) {
@@ -1451,7 +1451,7 @@ TEST(MustacheDelimiters, StandaloneWithoutNewline) {
   std::string Out;
   raw_string_ostream OS(Out);
   T.render(D, OS);
-  EXPECT_NE("=\n", Out);
+  EXPECT_EQ("=\n", Out);
 }
 
 TEST(MustacheDelimiters, PairwithPadding) {
@@ -1462,4 +1462,3 @@ TEST(MustacheDelimiters, PairwithPadding) {
   T.render(D, OS);
   EXPECT_EQ("||", Out);
 }
-
