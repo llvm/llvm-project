@@ -254,7 +254,7 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
     return false;
 
   // Set context type based on whether this is a stack-based load
-  if (inst.rs1.rs == RISCV_GPR_SP) // x2 is the stack pointer in RISC-V
+  if (inst.rs1.rs == RISCV_GPR_SP)
     context.type = EmulateInstruction::eContextPopRegisterOffStack;
   else
     context.type = EmulateInstruction::eContextRegisterLoad;
@@ -805,7 +805,7 @@ public:
                  int64_t result = rs1 + int64_t(SignExt(inst.imm));
                  // Check if this is a stack pointer adjustment
                  if (inst.rd.rd == RISCV_GPR_SP &&
-                     inst.rs1.rs == RISCV_GPR_SP) { // rd=sp, rs1=sp
+                     inst.rs1.rs == RISCV_GPR_SP) {
                    EmulateInstruction::Context context;
                    context.type =
                        EmulateInstruction::eContextAdjustStackPointer;
@@ -819,7 +819,7 @@ public:
                  // Check if this is setting up the frame pointer
                  // addi fp, sp, imm -> fp = sp + imm (frame pointer setup)
                  if (inst.rd.rd == RISCV_GPR_FP &&
-                     inst.rs1.rs == RISCV_GPR_SP) { // rd=fp, rs1=sp
+                     inst.rs1.rs == RISCV_GPR_SP) {
                    EmulateInstruction::Context context;
                    context.type = EmulateInstruction::eContextSetFramePointer;
                    auto sp_reg_info = m_emu.GetRegisterInfo(
