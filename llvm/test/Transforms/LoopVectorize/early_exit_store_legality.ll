@@ -353,7 +353,7 @@ exit:
 
 define void @loop_contains_store_condition_load_is_chained(ptr dereferenceable(40) noalias %array, ptr align 8 dereferenceable(160) readonly %offsets, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_is_chained'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
 
@@ -407,7 +407,7 @@ exit:
 
 define void @loop_contains_store_condition_load_requires_gather(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(512) readonly %pred, ptr align 1 dereferenceable(20) readonly %offsets) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_requires_gather'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
 
@@ -544,7 +544,7 @@ exit:
 
 define void @uncountable_exit_condition_address_is_invariant(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_invariant'
-; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence.
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
 entry:
   br label %for.body
 
@@ -566,6 +566,76 @@ for.inc:
 exit:
   ret void
 }
+
+define void @uncountable_exit_condition_address_is_addrec_in_outer_loop(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(2) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_condition_address_is_addrec_in_outer_loop'
+; CHECK:       LV: Not vectorizing: Uncountable exit condition depends on load with an address that is not an add recurrence in the loop.
+entry:
+  br label %outer.body
+
+outer.body:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.inc ]
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %outer.iv
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %outer.body ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %outer.inc, label %for.body
+
+outer.inc:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.cond = icmp eq i64 %outer.iv.next, 2
+  br i1 %outer.cond, label %exit, label %outer.body
+
+exit:
+  ret void
+}
+
+;; ICE was caused by assert for the load used in the uncountable exit condition
+;; being guaranteed to execute.
+@e = external addrspace(21) global [4 x i8]
+define void @crash_conditional_load_for_uncountable_exit() {
+; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %cont
+
+handler.out_of_bounds:
+  unreachable
+
+cont:
+  %h.06 = phi i64 [ 0, %entry ], [ %inc, %a.exit ]
+  %arrayidx = getelementptr i8, ptr addrspace(21) @e, i64 %h.06
+  br i1 false, label %cont1, label %handler.type_mismatch
+
+handler.type_mismatch:
+  unreachable
+
+cont1:
+  %0 = load i8, ptr addrspace(21) %arrayidx, align 1
+  store i16 0, ptr null, align 2
+  %cmp.not.i.i = icmp eq i8 %0, 0
+  br i1 %cmp.not.i.i, label %a.exit, label %if.then.i.i
+
+if.then.i.i:
+  unreachable
+
+a.exit:
+  %inc = add i64 %h.06, 1
+  br i1 true, label %handler.out_of_bounds, label %cont
+}
+
 
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();

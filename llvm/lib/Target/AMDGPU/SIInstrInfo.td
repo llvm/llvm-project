@@ -2596,24 +2596,42 @@ class getAlign2RegOp<RegisterOperand RC> {
   RegisterOperand ret =
     !cond(!eq(RC, VGPROp_16) : VGPROp_16,
           !eq(RC, VGPROp_32) : VGPROp_32,
+
           !eq(RC, VGPROp_64) : VGPROp_64_Align2,
           !eq(RC, VGPROp_64_Align1) : VGPROp_64_Align2,
+          !eq(RC, VGPROp_64_Align2) : VGPROp_64_Align2,
+
           !eq(RC, VGPROp_96) : VGPROp_96_Align2,
           !eq(RC, VGPROp_96_Align1) : VGPROp_96_Align2,
+          !eq(RC, VGPROp_96_Align2) : VGPROp_96_Align2,
+
           !eq(RC, VGPROp_128) : VGPROp_128_Align2,
           !eq(RC, VGPROp_128_Align1) : VGPROp_128_Align2,
+          !eq(RC, VGPROp_128_Align2) : VGPROp_128_Align2,
+
           !eq(RC, VGPROp_160) : VGPROp_160_Align2,
           !eq(RC, VGPROp_160_Align1) : VGPROp_160_Align2,
+          !eq(RC, VGPROp_160_Align2) : VGPROp_160_Align2,
+
           !eq(RC, VGPROp_1024) : VGPROp_1024_Align2,
           !eq(RC, VGPROp_1024_Align1) : VGPROp_1024_Align2,
+          !eq(RC, VGPROp_1024_Align2) : VGPROp_1024_Align2,
+
           !eq(RC, AVLdSt_32) : AVLdSt_32,
+          !eq(RC, AVLdSt_64_Align1) : AVLdSt_64_Align2,
           !eq(RC, AVLdSt_64) : AVLdSt_64_Align2,
+
           !eq(RC, AVLdSt_96) : AVLdSt_96_Align2,
+          !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align1,
           !eq(RC, AVLdSt_96_Align1) : AVLdSt_96_Align2,
+
           !eq(RC, AVLdSt_128) : AVLdSt_128_Align2,
           !eq(RC, AVLdSt_128_Align1) : AVLdSt_128_Align2,
+          !eq(RC, AVLdSt_128_Align2) : AVLdSt_128_Align2,
+
           !eq(RC, AVLdSt_160) : AVLdSt_160_Align2,
-          !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2);
+          !eq(RC, AVLdSt_160_Align1) : AVLdSt_160_Align2,
+          !eq(RC, AVLdSt_160_Align2) : AVLdSt_160_Align2);
 }
 
 class getEquivalentAGPROperand<RegisterOperand RC> {
