@@ -248,6 +248,9 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
         Args);
 
     if (!CreateMethod)
+      // This can happen if someone creates an array of structs that looks like
+      // an HLSL resource record array but it does not have the required static
+      // create method. No binding will be generated for it.
       return std::nullopt;
 
     callResourceInitMethod(CGF, CreateMethod, Args, ReturnAddress);
