@@ -2014,12 +2014,19 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
   uint64_t SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
   uint64_t EltBitMask = (1ull << SrcEltSizeInBits) - 1;
+  uint64_t TotalBits = DL->getTypeSizeInBits(SrcTy);
+  Type *PackedTy = IntegerType::get(SrcTy->getContext(), TotalBits);
+  Value *Mask = ConstantInt::get(PackedTy, EltBitMask);
   for (User *U : Ext->users()) {
     auto *Extract = cast<ExtractElementInst>(U);
     uint64_t Idx =
         cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
-    Value *LShr = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
-    Value *And = Builder.CreateAnd(LShr, EltBitMask);
+    uint64_t ShiftAmt =
+        DL->isBigEndian()
+            ? (TotalBits - SrcEltSizeInBits - Idx * SrcEltSizeInBits)
+            : (Idx * SrcEltSizeInBits);
+    Value *LShr = Builder.CreateLShr(ScalarV, ShiftAmt);
+    Value *And = Builder.CreateAnd(LShr, Mask);
     U->replaceAllUsesWith(And);
   }
   return true;

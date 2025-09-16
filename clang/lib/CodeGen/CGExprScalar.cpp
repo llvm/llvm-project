@@ -2142,9 +2142,9 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   bool Ignore = TestAndClearIgnoreResultAssign();
   (void)Ignore;
   unsigned NumInitElements = E->getNumInits();
-  assert(Ignore == false ||
-         (NumInitElements == 0 && E->getType()->isVoidType()) &&
-             "init list ignored");
+  assert((Ignore == false ||
+          (NumInitElements == 0 && E->getType()->isVoidType())) &&
+         "init list ignored");
 
   // HLSL initialization lists in the AST are an expansion which can contain
   // side-effecting expressions wrapped in opaque value expressions. To properly
