@@ -52,7 +52,7 @@
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
 
-// RUN: %clang -### -S -fexperimental-loop-fusion %s 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
+// RUN: %clang -### -S -fexperimental-loop-fusion %s -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
 // CHECK-FUSE-LOOPS: "-fexperimental-loop-fusion"
 //
 // RUN: %clang -c -fexperimental-loop-fusion -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=LOOP-FUSION-ON %s
