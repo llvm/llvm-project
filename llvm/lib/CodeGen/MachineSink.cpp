@@ -2189,9 +2189,23 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
                          const SmallVectorImpl<Register> &DefedRegsInCopy) {
   MachineFunction &MF = *SuccBB->getParent();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  for (Register DefReg : DefedRegsInCopy)
+  for (Register DefReg : DefedRegsInCopy) {
     for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
       SuccBB->removeLiveIn(S);
+
+    // Remove live-in bitmask in super registers as well.
+    for (MCPhysReg Super : TRI->superregs(DefReg)) {
+      for (MCSubRegIndexIterator SRI(Super, TRI); SRI.isValid(); ++SRI) {
+        if (DefReg == SRI.getSubReg()) {
+          unsigned SubRegIndex = SRI.getSubRegIndex();
+          LaneBitmask SubRegLaneMask = TRI->getSubRegIndexLaneMask(SubRegIndex);
+          SuccBB->removeLiveIn(Super, SubRegLaneMask);
+          break;
+        }
+      }
+    }
+  }
+
   for (auto U : UsedOpsInCopy)
     SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();
