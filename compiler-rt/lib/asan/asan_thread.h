@@ -104,7 +104,7 @@ class AsanThread {
     if (!fake_stack_) return;
     FakeStack *t = fake_stack_;
     fake_stack_ = nullptr;
-    SetTLSFakeStack(nullptr);
+    SetTLSFakeStack(this, nullptr);
     t->Destroy(tid);
   }
 
@@ -144,6 +144,14 @@ class AsanThread {
     GetStartData(&data, sizeof(data));
   }
 
+  bool IsFakeStackEnabled() const { return fake_stack_enabled_; }
+  void SetFakeStackEnabled(bool enabled) {
+    fake_stack_enabled_ = enabled;
+    if (!enabled) {
+      SetTLSFakeStack(this, nullptr);
+    }
+  }
+
  private:
   // NOTE: There is no AsanThread constructor. It is allocated
   // via mmap() and *must* be valid in zero-initialized state.
@@ -179,6 +187,7 @@ class AsanThread {
   DTLS *dtls_;
 
   FakeStack *fake_stack_;
+  bool fake_stack_enabled_;
   AsanThreadLocalMallocStorage malloc_storage_;
   AsanStats stats_;
   bool unwinding_;

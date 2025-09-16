@@ -217,26 +217,44 @@ static THREADLOCAL FakeStack *fake_stack_tls;
 FakeStack *GetTLSFakeStack() {
   return fake_stack_tls;
 }
-void SetTLSFakeStack(FakeStack *fs) {
+void SetTLSFakeStack(AsanThread* t, FakeStack* fs) {
+  if (fs && !t->IsFakeStackEnabled()) {
+    return;
+  }
   fake_stack_tls = fs;
 }
 #else
 FakeStack *GetTLSFakeStack() { return 0; }
-void SetTLSFakeStack(FakeStack *fs) { }
+void SetTLSFakeStack(AsanThread* t, FakeStack* fs) {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
-static FakeStack *GetFakeStack() {
+static void DisableFakeStack() {
   AsanThread *t = GetCurrentThread();
-  if (!t) return nullptr;
+  if (t) {
+    t->SetFakeStackEnabled(false);
+  }
+}
+
+static void EnableFakeStack() {
+  AsanThread* t = GetCurrentThread();
+  if (t) {
+    t->SetFakeStackEnabled(true);
+  }
+}
+
+static FakeStack* GetFakeStack(bool for_allocation = true) {
+  AsanThread* t = GetCurrentThread();
+  if (!t || (for_allocation && !t->IsFakeStackEnabled()))
+    return nullptr;
   return t->get_or_create_fake_stack();
 }
 
-static FakeStack *GetFakeStackFast() {
+static FakeStack* GetFakeStackFast(bool for_allocation = true) {
   if (FakeStack *fs = GetTLSFakeStack())
     return fs;
   if (!__asan_option_detect_stack_use_after_return)
     return nullptr;
-  return GetFakeStack();
+  return GetFakeStack(for_allocation);
 }
 
 static FakeStack *GetFakeStackFastAlways() {
@@ -311,7 +329,9 @@ extern "C" {
 // -asan-use-after-return=never, after modal UAR flag lands
 // (https://github.com/google/sanitizers/issues/1394)
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_get_current_fake_stack() { return GetFakeStackFast(); }
+void* __asan_get_current_fake_stack() {
+  return GetFakeStackFast(/*for_allocation=*/false);
+}
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
@@ -349,4 +369,9 @@ void __asan_allocas_unpoison(uptr top, uptr bottom) {
   (reinterpret_cast<void *>(MemToShadow(top)), 0,
    (bottom - top) / ASAN_SHADOW_GRANULARITY);
 }
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __asan_disable_fake_stack() { return DisableFakeStack(); }
+SANITIZER_INTERFACE_ATTRIBUTE
+void __asan_enable_fake_stack() { return EnableFakeStack(); }
 } // extern "C"
