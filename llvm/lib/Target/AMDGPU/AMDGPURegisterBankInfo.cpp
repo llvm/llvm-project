@@ -73,6 +73,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -783,17 +784,8 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   MachineFunction *MF = &B.getMF();
 
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
-  const unsigned MovExecOpc =
-      Subtarget.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-  const unsigned MovExecTermOpc =
-      Subtarget.isWave32() ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term;
-
-  const unsigned XorTermOpc = Subtarget.isWave32() ?
-    AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
-  const unsigned AndSaveExecOpc =  Subtarget.isWave32() ?
-    AMDGPU::S_AND_SAVEEXEC_B32 : AMDGPU::S_AND_SAVEEXEC_B64;
-  const unsigned ExecReg =  Subtarget.isWave32() ?
-    AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  const AMDGPU::LaneMaskConstants &LMC =
+      AMDGPU::LaneMaskConstants::get(Subtarget);
 
 #ifndef NDEBUG
   const int OrigRangeSize = std::distance(Range.begin(), Range.end());
@@ -941,19 +933,19 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   MRI.setRegClass(CondReg, WaveRC);
 
   // Update EXEC, save the original EXEC value to VCC.
-  B.buildInstr(AndSaveExecOpc)
-    .addDef(NewExec)
-    .addReg(CondReg, RegState::Kill);
+  B.buildInstr(LMC.AndSaveExecOpc)
+      .addDef(NewExec)
+      .addReg(CondReg, RegState::Kill);
 
   MRI.setSimpleHint(NewExec, CondReg);
 
   B.setInsertPt(*BodyBB, BodyBB->end());
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  B.buildInstr(XorTermOpc)
-    .addDef(ExecReg)
-    .addReg(ExecReg)
-    .addReg(NewExec);
+  B.buildInstr(LMC.XorTermOpc)
+      .addDef(LMC.ExecReg)
+      .addReg(LMC.ExecReg)
+      .addReg(NewExec);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -962,14 +954,12 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   B.buildInstr(AMDGPU::SI_WATERFALL_LOOP).addMBB(LoopBB);
 
   // Save the EXEC mask before the loop.
-  BuildMI(MBB, MBB.end(), DL, TII->get(MovExecOpc), SaveExecReg)
-    .addReg(ExecReg);
+  BuildMI(MBB, MBB.end(), DL, TII->get(LMC.MovOpc), SaveExecReg)
+      .addReg(LMC.ExecReg);
 
   // Restore the EXEC mask after the loop.
   B.setMBB(*RestoreExecBB);
-  B.buildInstr(MovExecTermOpc)
-    .addDef(ExecReg)
-    .addReg(SaveExecReg);
+  B.buildInstr(LMC.MovTermOpc).addDef(LMC.ExecReg).addReg(SaveExecReg);
 
   // Set the insert point after the original instruction, so any new
   // instructions will be in the remainder.
