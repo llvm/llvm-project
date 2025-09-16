@@ -2984,7 +2984,7 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
     bool DstUnsigned = a.isUnsigned();
 
     if (U[I]) {
-      for (unsigned Bit = 0; Bit < BitWidth; ++Bit) {
+      for (unsigned Bit = 0; Bit != BitWidth; ++Bit) {
         unsigned Idx = (a[Bit] << 2) | (b[Bit] << 1) | (c[Bit]);
         R.setBitVal(Bit, Imm[Idx]);
       }
