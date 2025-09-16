@@ -688,6 +688,14 @@ unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
   return NSAThreshold;
 }
 
+unsigned GCNSubtarget::getSNopBits() const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX12)
+    return 7;
+  if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return 4;
+  return 3;
+}
+
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
                                            const GCNSubtarget &ST)
     : ST(ST) {
