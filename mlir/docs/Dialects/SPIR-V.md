@@ -1375,7 +1375,7 @@ the proper file in test/Dialect/SPIRV/.
 
 The generated op will automatically gain the logic for (de)serialization.
 However, tests still need to be coupled with the change to make sure no
-surprises (see more "Add a new test(s)" below).
+surprises (see [Add a new test](#add-a-new-test) below).
 
 ### Add a new enum
 
@@ -1416,7 +1416,7 @@ conversion][MlirDialectConversionSignatureConversion] might be needed as well.
 operations contained within its region are valid operations in the SPIR-V
 dialect.
 
-### Add a new test(s)
+### Add a new test
 
 Currently the SPIR-V dialect has two types of tests that should be added or
 updated accordingly:
