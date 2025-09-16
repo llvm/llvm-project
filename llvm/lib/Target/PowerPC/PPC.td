@@ -58,8 +58,13 @@ def DirectivePwrFuture
 
 // Specifies that the selected CPU supports 64-bit instructions, regardless of
 // whether we are in 32-bit or 64-bit mode.
-def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
-                                        "Enable 64-bit instructions">;
+def Feature64BitSupport : SubtargetFeature<"64bit-support", "Has64BitSupport", "true",
+                                        "Supports 64-bit instructions">;
+// 64-bit is enabled.
+def Feature64Bit     : SubtargetFeature<"64bit", "IsPPC64", "true",
+                                        "Enable 64-bit mode",
+                                        [Feature64BitSupport]>;
+
 def AIXOS: SubtargetFeature<"aix", "IsAIX", "true", "AIX OS">;
 def FeatureModernAIXAs
     : SubtargetFeature<"modern-aix-as", "HasModernAIXAs", "true",
@@ -85,7 +90,7 @@ def FeatureAltivec   : SubtargetFeature<"altivec","HasAltivec", "true",
 def FeatureSPE       : SubtargetFeature<"spe","HasSPE", "true",
                                         "Enable SPE instructions",
                                         [FeatureHardFloat]>;
-def FeatureEFPU2 : SubtargetFeature<"efpu2", "HasEFPU2", "true", 
+def FeatureEFPU2 : SubtargetFeature<"efpu2", "HasEFPU2", "true",
                                         "Enable Embedded Floating-Point APU 2 instructions",
                                         [FeatureSPE]>;
 def FeatureMFOCRF    : SubtargetFeature<"mfocrf","HasMFOCRF", "true",
@@ -429,7 +434,7 @@ def ProcessorFeatures {
                                                   FeaturePOPCNTD,
                                                   FeatureCMPB,
                                                   FeatureLDBRX,
-                                                  Feature64Bit,
+                                                  Feature64BitSupport,
                                                   /* Feature64BitRegs, */
                                                   FeatureBPERMD,
                                                   FeatureExtDiv,
@@ -667,13 +672,13 @@ def : ProcessorModel<"970", G5Model,
                   [Directive970, FeatureAltivec,
                    FeatureMFOCRF, FeatureFSqrt,
                    FeatureFRES, FeatureFRSQRTE, FeatureSTFIWX,
-                   Feature64Bit /*, Feature64BitRegs */,
+                   Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB]>;
 def : ProcessorModel<"g5", G5Model,
                   [Directive970, FeatureAltivec,
                    FeatureMFOCRF, FeatureFSqrt, FeatureSTFIWX,
                    FeatureFRES, FeatureFRSQRTE,
-                   Feature64Bit /*, Feature64BitRegs */,
+                   Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"e500", PPCE500Model,
                   [DirectiveE500,
@@ -694,41 +699,41 @@ def : ProcessorModel<"a2", PPCA2Model,
                    FeatureSTFIWX, FeatureLFIWAX,
                    FeatureFPRND, FeatureFPCVT, FeatureISEL,
                    FeatureSlowPOPCNTD, FeatureCMPB, FeatureLDBRX,
-                   Feature64Bit /*, Feature64BitRegs */, FeatureMFTB,
+                   Feature64BitSupport /*, Feature64BitRegs */, FeatureMFTB,
                    FeatureISA2_06]>;
 def : ProcessorModel<"pwr3", G5Model,
                   [DirectivePwr3, FeatureAltivec,
                    FeatureFRES, FeatureFRSQRTE, FeatureMFOCRF,
-                   FeatureSTFIWX, Feature64Bit]>;
+                   FeatureSTFIWX, Feature64BitSupport]>;
 def : ProcessorModel<"pwr4", G5Model,
                   [DirectivePwr4, FeatureAltivec, FeatureMFOCRF,
                    FeatureFSqrt, FeatureFRES, FeatureFRSQRTE,
-                   FeatureSTFIWX, Feature64Bit, FeatureMFTB]>;
+                   FeatureSTFIWX, Feature64BitSupport, FeatureMFTB]>;
 def : ProcessorModel<"pwr5", G5Model,
                   [DirectivePwr5, FeatureAltivec, FeatureMFOCRF,
                    FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES,
-                   FeatureSTFIWX, Feature64Bit,
+                   FeatureSTFIWX, Feature64BitSupport,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr5x", G5Model,
                   [DirectivePwr5x, FeatureAltivec, FeatureMFOCRF,
                    FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES,
-                   FeatureSTFIWX, FeatureFPRND, Feature64Bit,
+                   FeatureSTFIWX, FeatureFPRND, Feature64BitSupport,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr6", G5Model,
                   [DirectivePwr6, FeatureAltivec,
                    FeatureMFOCRF, FeatureFCPSGN, FeatureFSqrt, FeatureFRE,
                    FeatureFRES, FeatureFRSQRTE, FeatureFRSQRTES,
                    FeatureRecipPrec, FeatureSTFIWX, FeatureLFIWAX, FeatureCMPB,
-                   FeatureFPRND, Feature64Bit /*, Feature64BitRegs */,
+                   FeatureFPRND, Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr6x", G5Model,
                   [DirectivePwr5x, FeatureAltivec, FeatureMFOCRF,
                    FeatureFCPSGN, FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES, FeatureRecipPrec,
                    FeatureSTFIWX, FeatureLFIWAX, FeatureCMPB,
-                   FeatureFPRND, Feature64Bit,
+                   FeatureFPRND, Feature64BitSupport,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.P7Features>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.P8Features>;
@@ -746,7 +751,7 @@ def : ProcessorModel<"ppc64", G5Model,
                   [Directive64, FeatureAltivec,
                    FeatureMFOCRF, FeatureFSqrt, FeatureFRES,
                    FeatureFRSQRTE, FeatureSTFIWX,
-                   Feature64Bit /*, Feature64BitRegs */,
+                   Feature64BitSupport /*, Feature64BitRegs */,
                    FeatureMFTB]>;
 def : ProcessorModel<"ppc64le", P8Model, ProcessorFeatures.P8Features>;
 
