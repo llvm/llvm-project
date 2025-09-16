@@ -430,11 +430,8 @@ define void @single_stride_int_scaled(ptr %p, i64 %stride) {
 ; NOSTRIDED-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
 ; NOSTRIDED-UF2-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; NOSTRIDED-UF2-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD1]], splat (i32 1)
-; NOSTRIDED-UF2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-UF2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
-; NOSTRIDED-UF2-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP4]], i64 [[TMP11]]
 ; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP4]], align 4
-; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP12]], align 4
+; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP7]], align 4
 ; NOSTRIDED-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NOSTRIDED-UF2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-UF2-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -557,11 +554,8 @@ define void @single_stride_int_iv(ptr %p, i64 %stride) {
 ; NOSTRIDED-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
 ; NOSTRIDED-UF2-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; NOSTRIDED-UF2-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD1]], splat (i32 1)
-; NOSTRIDED-UF2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-UF2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
-; NOSTRIDED-UF2-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP4]], i64 [[TMP11]]
 ; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP4]], align 4
-; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP12]], align 4
+; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP7]], align 4
 ; NOSTRIDED-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NOSTRIDED-UF2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-UF2-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -1060,11 +1054,8 @@ define void @double_stride_int_iv(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
 ; NOSTRIDED-UF2-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; NOSTRIDED-UF2-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD1]], splat (i32 1)
-; NOSTRIDED-UF2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-UF2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
-; NOSTRIDED-UF2-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP4]], i64 [[TMP11]]
 ; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP4]], align 4
-; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP12]], align 4
+; NOSTRIDED-UF2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP7]], align 4
 ; NOSTRIDED-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NOSTRIDED-UF2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NOSTRIDED-UF2-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
