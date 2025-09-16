@@ -91,7 +91,8 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
     if (SectionPrefix.empty())
       continue;
 
-    Changed |= GV.setSectionPrefix(SectionPrefix);
+    GV.setSectionPrefix(SectionPrefix);
+    Changed = true;
   }
 
   return Changed;
