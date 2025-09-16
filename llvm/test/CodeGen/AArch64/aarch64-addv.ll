@@ -493,3 +493,58 @@ entry:
   ret i128 %arg1
 }
 
+define i16 @addv_zero_lanes_v4i16(ptr %arr)  {
+; CHECK-SD-LABEL: addv_zero_lanes_v4i16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldrb w0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addv_zero_lanes_v4i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    addv h0, v0.4h
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+  %v = load i64, ptr %arr
+  %and = and i64 %v, 255
+  %vec = bitcast i64 %and to <4 x i16>
+  %r = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %vec)
+  ret i16 %r
+}
+
+define i8 @addv_zero_lanes_v8i8(ptr %arr)  {
+; CHECK-SD-LABEL: addv_zero_lanes_v8i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldrb w0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: addv_zero_lanes_v8i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    addv b0, v0.8b
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+  %v = load i64, ptr %arr
+  %and = and i64 %v, 255
+  %vec = bitcast i64 %and to <8 x i8>
+  %r = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %vec)
+  ret i8 %r
+}
+
+define i8 @addv_zero_lanes_negative_v8i8(ptr %arr)  {
+; CHECK-LABEL: addv_zero_lanes_negative_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    and x8, x8, #0x100
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %v = load i64, ptr %arr
+  %and = and i64 %v, 256
+  %vec = bitcast i64 %and to <8 x i8>
+  %r = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %vec)
+  ret i8 %r
+}
