@@ -729,7 +729,6 @@ static std::optional<int> parseDevirtPassName(StringRef Name) {
   return Count;
 }
 
-
 Expected<bool> PassBuilder::parseSinglePassOption(StringRef Params,
                                                   StringRef OptionName,
                                                   StringRef PassName) {
