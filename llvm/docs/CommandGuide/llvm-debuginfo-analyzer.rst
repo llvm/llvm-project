@@ -365,6 +365,7 @@ output for a single compilation unit.
 
  .. code-block:: text
 
+   =id: Sort by unique element ID.
    =kind: Sort by element kind.
    =line: Sort by element line number.
    =name: Sort by element name.

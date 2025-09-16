@@ -22,6 +22,12 @@ using namespace llvm::logicalview;
 //===----------------------------------------------------------------------===//
 // Callback functions to sort objects.
 //===----------------------------------------------------------------------===//
+// Callback comparator based on ID.
+LVSortValue llvm::logicalview::compareID(const LVObject *LHS,
+                                         const LVObject *RHS) {
+  return LHS->getID() < RHS->getID();
+}
+
 // Callback comparator based on kind.
 LVSortValue llvm::logicalview::compareKind(const LVObject *LHS,
                                            const LVObject *RHS) {
@@ -99,9 +105,9 @@ LVSortValue llvm::logicalview::sortByName(const LVObject *LHS,
 LVSortFunction llvm::logicalview::getSortFunction() {
   using LVSortInfo = std::map<LVSortMode, LVSortFunction>;
   static LVSortInfo SortInfo = {
-      {LVSortMode::None, nullptr},         {LVSortMode::Kind, sortByKind},
-      {LVSortMode::Line, sortByLine},      {LVSortMode::Name, sortByName},
-      {LVSortMode::Offset, compareOffset},
+      {LVSortMode::None, nullptr},    {LVSortMode::ID, compareID},
+      {LVSortMode::Kind, sortByKind}, {LVSortMode::Line, sortByLine},
+      {LVSortMode::Name, sortByName}, {LVSortMode::Offset, compareOffset},
   };
 
   LVSortFunction SortFunction = nullptr;
