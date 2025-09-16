@@ -64,7 +64,7 @@ template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &LG) {
   // if (!Buffer)
   //   return Buffer.takeError();
 
-  Expected<ArrayRef<SectionHeader>> Sections = Buffer->sections();
+  Expected<ArrayRef<SectionHeader>> Sections = Buffer.sections();
   if (!Sections)
     return Sections.takeError();
 
