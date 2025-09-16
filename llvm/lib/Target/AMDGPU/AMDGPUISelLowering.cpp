@@ -5312,18 +5312,13 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   if (ST.has64BitLiterals())
     return true;
 
-  uint64_t Val = 0;
   if (SDConstant) {
     const APInt &APVal = SDConstant->getAPIntValue();
-    isInlineable = TII->isInlineConstant(APVal);
-    Val = APVal.getZExtValue();
-  } else if (SDFPConstant) {
-    const APFloat &APVal = SDFPConstant->getValueAPF();
-    isInlineable = TII->isInlineConstant(APVal);
-    Val = APVal.bitcastToAPInt().getZExtValue();
+    return isUInt<32>(APVal.getZExtValue()) || TII->isInlineConstant(APVal);
   }
 
-  return (isInlineable || isUInt<32>(Val));
+  APInt Val = SDFPConstant->getValueAPF().bitcastToAPInt();
+  return isUInt<32>(Val.getZExtValue()) || TII->isInlineConstant(Val);
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
