@@ -42,10 +42,11 @@ end subroutine omp_in_reduction_taskgroup
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE-NEXT: OmpBeginLoopDirective
-!PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = taskloop
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> InReduction -> OmpInReductionClause
 !PARSE-TREE-NEXT: OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE-NEXT: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'z'
+!PARSE-TREE-NEXT: Flags = None
 
 subroutine omp_in_reduction_parallel()
     integer :: z
@@ -72,8 +73,9 @@ end subroutine omp_in_reduction_parallel
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE-NEXT: OmpBeginLoopDirective
-!PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = taskloop simd
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> InReduction -> OmpInReductionClause
 !PARSE-TREE-NEXT: OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE-NEXT: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'z'
+!PARSE-TREE-NEXT: Flags = None
 
