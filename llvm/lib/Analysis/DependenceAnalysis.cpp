@@ -3419,13 +3419,24 @@ bool DependenceInfo::tryDelinearizeFixedSize(
       size_t SSize = Subscripts.size();
       for (size_t I = 1; I < SSize; ++I) {
         const SCEV *S = Subscripts[I];
-        if (!isKnownNonNegative(S, Ptr))
+        if (!isKnownNonNegative(S, Ptr)) {
+          LLVM_DEBUG({
+            dbgs() << "Check failed: !isKnownNonNegative(S, Ptr)\n";
+            dbgs() << "  S: " << *S << "\n" << "  Ptr: " << *Ptr << "\n";
+          });
           return false;
+        }
         if (auto *SType = dyn_cast<IntegerType>(S->getType())) {
           const SCEV *Range = SE->getConstant(
               ConstantInt::get(SType, DimensionSizes[I - 1], false));
-          if (!isKnownLessThan(S, Range))
+          if (!isKnownLessThan(S, Range)) {
+            LLVM_DEBUG({
+              dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
+              dbgs() << "  S: " << *S << "\n"
+                     << "  Range: " << *Range << "\n";
+            });
             return false;
+          }
         }
       }
       return true;
@@ -3433,6 +3444,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
 
     if (!AllIndicesInRange(SrcSizes, SrcSubscripts, SrcPtr) ||
         !AllIndicesInRange(DstSizes, DstSubscripts, DstPtr)) {
+      LLVM_DEBUG(dbgs() << "Check failed: AllIndicesInRange.\n");
       SrcSubscripts.clear();
       DstSubscripts.clear();
       return false;
@@ -3500,17 +3512,27 @@ bool DependenceInfo::tryDelinearizeParametricSize(
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
     for (size_t I = 1; I < Size; ++I) {
-      if (!isKnownNonNegative(SrcSubscripts[I], SrcPtr))
-        return false;
+      bool SNN = isKnownNonNegative(SrcSubscripts[I], SrcPtr);
+      bool DNN = isKnownNonNegative(DstSubscripts[I], DstPtr);
+      bool SLT = isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]);
+      bool DLT = isKnownLessThan(DstSubscripts[I], Sizes[I - 1]);
+      if (SNN && DNN && SLT && DLT)
+        continue;
 
-      if (!isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]))
-        return false;
-
-      if (!isKnownNonNegative(DstSubscripts[I], DstPtr))
-        return false;
-
-      if (!isKnownLessThan(DstSubscripts[I], Sizes[I - 1]))
-        return false;
+      LLVM_DEBUG({
+        dbgs() << "Delinearization checks failed: can't prove the following\n";
+        if (!SNN)
+          dbgs() << "  isKnownNonNegative(" << *SrcSubscripts[I] << ")\n";
+        if (!DNN)
+          dbgs() << "  isKnownNonNegative(" << *DstSubscripts[I] << ")\n";
+        if (!SLT)
+          dbgs() << "  isKnownLessThan(" << *SrcSubscripts[I] << ", "
+                 << *Sizes[I - 1] << ")\n";
+        if (!DLT)
+          dbgs() << "  isKnownLessThan(" << *DstSubscripts[I] << ", "
+                 << *Sizes[I - 1] << ")\n";
+      });
+      return false;
     }
 
   return true;
@@ -3676,8 +3698,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
-  Pair[0].Src = SrcSCEV;
-  Pair[0].Dst = DstSCEV;
+  Pair[0].Src = SrcEv;
+  Pair[0].Dst = DstEv;
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
@@ -3687,6 +3709,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
+    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
+    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
@@ -4089,8 +4113,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   SmallVector<Subscript, 2> Pair(Pairs);
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  Pair[0].Src = SrcSCEV;
-  Pair[0].Dst = DstSCEV;
+  Pair[0].Src = SE->removePointerBase(SrcSCEV);
+  Pair[0].Dst = SE->removePointerBase(DstSCEV);
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
@@ -4100,6 +4124,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
+    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
+    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);

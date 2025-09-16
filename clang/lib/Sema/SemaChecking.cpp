@@ -5551,16 +5551,6 @@ bool Sema::BuiltinComplex(CallExpr *TheCall) {
            << Real->getSourceRange() << Imag->getSourceRange();
   }
 
-  // We don't allow _Complex _Float16 nor _Complex __fp16 as type specifiers;
-  // don't allow this builtin to form those types either.
-  // FIXME: Should we allow these types?
-  if (Real->getType()->isFloat16Type())
-    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
-           << "_Float16";
-  if (Real->getType()->isHalfType())
-    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
-           << "half";
-
   TheCall->setType(Context.getComplexType(Real->getType()));
   return false;
 }
@@ -5568,17 +5558,18 @@ bool Sema::BuiltinComplex(CallExpr *TheCall) {
 /// BuiltinShuffleVector - Handle __builtin_shufflevector.
 // This is declared to take (...), so we have to check everything.
 ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
-  if (TheCall->getNumArgs() < 2)
+  unsigned NumArgs = TheCall->getNumArgs();
+  if (NumArgs < 2)
     return ExprError(Diag(TheCall->getEndLoc(),
                           diag::err_typecheck_call_too_few_args_at_least)
-                     << 0 /*function call*/ << 2 << TheCall->getNumArgs()
+                     << 0 /*function call*/ << 2 << NumArgs
                      << /*is non object*/ 0 << TheCall->getSourceRange());
 
   // Determine which of the following types of shufflevector we're checking:
   // 1) unary, vector mask: (lhs, mask)
   // 2) binary, scalar mask: (lhs, rhs, index, ..., index)
-  QualType resType = TheCall->getArg(0)->getType();
-  unsigned numElements = 0;
+  QualType ResType = TheCall->getArg(0)->getType();
+  unsigned NumElements = 0;
 
   if (!TheCall->getArg(0)->isTypeDependent() &&
       !TheCall->getArg(1)->isTypeDependent()) {
@@ -5588,48 +5579,48 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     if (!LHSType->isVectorType() || !RHSType->isVectorType())
       return ExprError(
           Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_non_vector)
-          << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ false
+          << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ false
           << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                          TheCall->getArg(1)->getEndLoc()));
 
-    numElements = LHSType->castAs<VectorType>()->getNumElements();
-    unsigned numResElements = TheCall->getNumArgs() - 2;
+    NumElements = LHSType->castAs<VectorType>()->getNumElements();
+    unsigned NumResElements = NumArgs - 2;
 
     // Check to see if we have a call with 2 vector arguments, the unary shuffle
     // with mask.  If so, verify that RHS is an integer vector type with the
     // same number of elts as lhs.
-    if (TheCall->getNumArgs() == 2) {
+    if (NumArgs == 2) {
       if (!RHSType->hasIntegerRepresentation() ||
-          RHSType->castAs<VectorType>()->getNumElements() != numElements)
+          RHSType->castAs<VectorType>()->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
                               diag::err_vec_builtin_incompatible_vector)
                          << TheCall->getDirectCallee()
-                         << /*isMorethantwoArgs*/ false
+                         << /*isMoreThanTwoArgs*/ false
                          << SourceRange(TheCall->getArg(1)->getBeginLoc(),
                                         TheCall->getArg(1)->getEndLoc()));
     } else if (!Context.hasSameUnqualifiedType(LHSType, RHSType)) {
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                        << TheCall->getDirectCallee()
-                       << /*isMorethantwoArgs*/ false
+                       << /*isMoreThanTwoArgs*/ false
                        << SourceRange(TheCall->getArg(0)->getBeginLoc(),
                                       TheCall->getArg(1)->getEndLoc()));
-    } else if (numElements != numResElements) {
-      QualType eltType = LHSType->castAs<VectorType>()->getElementType();
-      resType = resType->isExtVectorType()
-                    ? Context.getExtVectorType(eltType, numResElements)
-                    : Context.getVectorType(eltType, numResElements,
+    } else if (NumElements != NumResElements) {
+      QualType EltType = LHSType->castAs<VectorType>()->getElementType();
+      ResType = ResType->isExtVectorType()
+                    ? Context.getExtVectorType(EltType, NumResElements)
+                    : Context.getVectorType(EltType, NumResElements,
                                             VectorKind::Generic);
     }
   }
 
-  for (unsigned i = 2; i < TheCall->getNumArgs(); i++) {
-    Expr *Arg = TheCall->getArg(i);
+  for (unsigned I = 2; I != NumArgs; ++I) {
+    Expr *Arg = TheCall->getArg(I);
     if (Arg->isTypeDependent() || Arg->isValueDependent())
       continue;
 
-    std::optional<llvm::APSInt> Result;
-    if (!(Result = Arg->getIntegerConstantExpr(Context)))
+    std::optional<llvm::APSInt> Result = Arg->getIntegerConstantExpr(Context);
+    if (!Result)
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_nonconstant_argument)
                        << Arg->getSourceRange());
@@ -5638,23 +5629,21 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     if (Result->isSigned() && Result->isAllOnes())
       ;
     else if (Result->getActiveBits() > 64 ||
-             Result->getZExtValue() >= numElements * 2)
+             Result->getZExtValue() >= NumElements * 2)
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_shufflevector_argument_too_large)
                        << Arg->getSourceRange());
 
-    TheCall->setArg(i, ConstantExpr::Create(Context, Arg, APValue(*Result)));
+    TheCall->setArg(I, ConstantExpr::Create(Context, Arg, APValue(*Result)));
   }
 
-  SmallVector<Expr *> exprs;
-  for (unsigned i = 0, e = TheCall->getNumArgs(); i != e; i++) {
-    exprs.push_back(TheCall->getArg(i));
-    TheCall->setArg(i, nullptr);
-  }
+  auto *Result = new (Context) ShuffleVectorExpr(
+      Context, ArrayRef(TheCall->getArgs(), NumArgs), ResType,
+      TheCall->getCallee()->getBeginLoc(), TheCall->getRParenLoc());
 
-  return new (Context) ShuffleVectorExpr(Context, exprs, resType,
-                                         TheCall->getCallee()->getBeginLoc(),
-                                         TheCall->getRParenLoc());
+  // All moved to Result.
+  TheCall->shrinkNumArgs(0);
+  return Result;
 }
 
 ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
@@ -5896,23 +5885,26 @@ bool Sema::BuiltinOSLogFormat(CallExpr *TheCall) {
   return false;
 }
 
-bool Sema::BuiltinConstantArg(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
                               llvm::APSInt &Result) {
   Expr *Arg = TheCall->getArg(ArgNum);
-  DeclRefExpr *DRE =cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
-  FunctionDecl *FDecl = cast<FunctionDecl>(DRE->getDecl());
 
-  if (Arg->isTypeDependent() || Arg->isValueDependent()) return false;
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
 
-  std::optional<llvm::APSInt> R;
-  if (!(R = Arg->getIntegerConstantExpr(Context)))
+  std::optional<llvm::APSInt> R = Arg->getIntegerConstantExpr(Context);
+  if (!R) {
+    auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+    auto *FDecl = cast<FunctionDecl>(DRE->getDecl());
     return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
            << FDecl->getDeclName() << Arg->getSourceRange();
+  }
   Result = *R;
+
   return false;
 }
 
-bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low,
+bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, unsigned ArgNum, int Low,
                                    int High, bool RangeIsError) {
   if (isConstantEvaluatedContext())
     return false;
@@ -5943,7 +5935,7 @@ bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low,
   return false;
 }
 
-bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, unsigned ArgNum,
                                       unsigned Num) {
   llvm::APSInt Result;
 
@@ -5963,7 +5955,7 @@ bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
   return false;
 }
 
-bool Sema::BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum) {
+bool Sema::BuiltinConstantArgPower2(CallExpr *TheCall, unsigned ArgNum) {
   llvm::APSInt Result;
 
   // We can't check the value of a dependent argument.
@@ -5975,9 +5967,7 @@ bool Sema::BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum) {
   if (BuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
 
-  // Bit-twiddling to test for a power of 2: for x > 0, x & (x-1) is zero if
-  // and only if x is a power of 2.
-  if (Result.isStrictlyPositive() && (Result & (Result - 1)) == 0)
+  if (Result.isPowerOf2())
     return false;
 
   return Diag(TheCall->getBeginLoc(), diag::err_argument_not_power_of_2)
@@ -6006,7 +5996,7 @@ static bool IsShiftedByte(llvm::APSInt Value) {
   }
 }
 
-bool Sema::BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArgShiftedByte(CallExpr *TheCall, unsigned ArgNum,
                                          unsigned ArgBits) {
   llvm::APSInt Result;
 
@@ -6030,7 +6020,8 @@ bool Sema::BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
          << Arg->getSourceRange();
 }
 
-bool Sema::BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+bool Sema::BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall,
+                                               unsigned ArgNum,
                                                unsigned ArgBits) {
   llvm::APSInt Result;
 
