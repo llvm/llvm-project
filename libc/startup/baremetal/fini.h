@@ -9,6 +9,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 
+// NOTE: The namespace is necessary here to set the correct symbol visibility.
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
