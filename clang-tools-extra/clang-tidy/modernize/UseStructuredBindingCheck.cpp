@@ -149,8 +149,8 @@ AST_MATCHER_P2(Stmt, hasNextTwoVarDecl,
   return false;
 }
 
-/// Matches a CompoundStmt which has two VarDecls
-/// matching the inner matcher in the beginning.
+/// Matches a CompoundStmt which has two VarDecls matching the inner matcher in
+/// the beginning.
 AST_MATCHER_P2(CompoundStmt, hasFirstTwoVarDecl,
                ast_matchers::internal::Matcher<VarDecl>, InnerMatcher1,
                ast_matchers::internal::Matcher<VarDecl>, InnerMatcher2) {
@@ -164,8 +164,8 @@ AST_MATCHER_P2(CompoundStmt, hasFirstTwoVarDecl,
       InnerMatcher1, InnerMatcher2, Finder, Builder);
 }
 
-/// It's not very common to have specifiers for variables used to decompose
-/// a pair, so we ignore these cases.
+/// It's not very common to have specifiers for variables used to decompose a
+/// pair, so we ignore these cases.
 AST_MATCHER(VarDecl, hasAnySpecifiersShouldBeIgnored) {
   return Node.isStaticLocal() || Node.isConstexpr() || Node.hasAttrs() ||
          Node.isInlineSpecified();
