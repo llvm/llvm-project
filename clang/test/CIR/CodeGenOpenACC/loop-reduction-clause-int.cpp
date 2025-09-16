@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 
 
 // CHECK: acc.reduction.recipe @reduction_lor__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> reduction_operator <lor> init {
@@ -32,9 +32,28 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_land__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> reduction_operator <land> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>>{{.*}})
-// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[ONE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[TWO_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[THREE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -60,9 +79,10 @@
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!s32i>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -88,9 +108,10 @@
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!s32i>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -99,9 +120,28 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> reduction_operator <iand> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>>{{.*}})
-// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ALL_ONES]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[ONE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ALL_ONES]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[TWO_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ALL_ONES]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[THREE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ALL_ONES]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ALL_ONES]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -110,9 +150,28 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_min__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>>{{.*}})
-// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[ONE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[TWO_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[THREE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LARGEST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -121,9 +180,28 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_max__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> reduction_operator <max> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>>{{.*}})
-// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[ONE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[TWO_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[THREE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[LEAST]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -132,9 +210,28 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_mul__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> reduction_operator <mul> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>>{{.*}})
-// CHECK-NEXT: cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!s32i x 5>>), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[DECAY]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE_IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[ONE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[TWO_IDX:.*]] = cir.const #cir.int<2> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[TWO_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[THREE_IDX:.*]] = cir.const #cir.int<3> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[THREE_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT: %[[FOUR_IDX:.*]] = cir.const #cir.int<4> : !s64i
+// CHECK-NEXT: %[[NEXT_ELT:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!s32i>, %[[FOUR_IDX]] : !s64i), !cir.ptr<!s32i>
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[NEXT_ELT]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -160,9 +257,10 @@
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[TEMP_LOAD]], %[[END_ITR]]) : !cir.ptr<!s32i>, !cir.bool
-// CHECK-NEXT: cir.condition(%[[CMP]]) 
+// CHECK-NEXT: cir.condition(%[[CMP]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -185,9 +283,11 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_land__ZTSi : !cir.ptr<!s32i> reduction_operator <land> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i>{{.*}})
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!s32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!s32i> {{.*}})
 // TODO OpenACC: Expecting combination operation here
@@ -222,8 +322,9 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTSi : !cir.ptr<!s32i> reduction_operator <iand> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i>{{.*}})
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALL_ONES:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK-NEXT: cir.store {{.*}} %[[ALL_ONES]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!s32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!s32i> {{.*}})
@@ -233,8 +334,9 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_min__ZTSi : !cir.ptr<!s32i> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i>{{.*}})
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[LARGEST:.*]] = cir.const #cir.int<2147483647> : !s32i
+// CHECK-NEXT: cir.store {{.*}} %[[LARGEST]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!s32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!s32i> {{.*}})
@@ -244,8 +346,9 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_max__ZTSi : !cir.ptr<!s32i> reduction_operator <max> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i>{{.*}})
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[LEAST:.*]] = cir.const #cir.int<-2147483648> : !s32i
+// CHECK-NEXT: cir.store {{.*}} %[[LEAST]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!s32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!s32i> {{.*}})
@@ -255,9 +358,11 @@
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_mul__ZTSi : !cir.ptr<!s32i> reduction_operator <mul> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i>{{.*}})
-// CHECK-NEXT: cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init"]
-// TODO OpenACC: Expecting an initialization to... SOME value here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT: cir.store{{.*}} %[[ONE]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
+//
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!s32i> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!s32i> {{.*}})
 // TODO OpenACC: Expecting combination operation here

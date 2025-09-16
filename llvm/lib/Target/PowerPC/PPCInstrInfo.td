@@ -58,6 +58,10 @@ def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
 ]>;
 
+def SDT_PPCVecShiftQuad : SDTypeProfile<1, 2, [
+  SDTCisVec<0>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>
+]>;
+
 def SDT_PPCVecInsert : SDTypeProfile<1, 3, [ SDTCisVec<0>,
   SDTCisVec<1>, SDTCisVec<2>, SDTCisInt<3>
 ]>;
@@ -156,6 +160,8 @@ def PPCfctidz : SDNode<"PPCISD::FCTIDZ", SDTFPUnaryOp, []>;
 def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
 def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
 def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
+
+def PPCvsrq: SDNode<"PPCISD::VSRQ", SDT_PPCVecShiftQuad, []>;
 
 def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
                              SDTFPUnaryOp, [SDNPHasChain]>;
@@ -706,42 +712,6 @@ let WantsParent = true in {
   def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm">;
   def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm">;
 }
-
-//===----------------------------------------------------------------------===//
-// PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
-def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
-
-// AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
-                 AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -4269,7 +4239,7 @@ def WRTEEI: I<31, (outs), (ins i1imm:$E), "wrteei $E", IIC_SprMTMSR>,
   bits<1> E;
 
   let Inst{16} = E;
-  let Inst{21-30} = 163;
+  let Inst{21...30} = 163;
 }
 
 def DCCCI : XForm_tlb<454, (outs), (ins gprc:$RA, gprc:$RB),
@@ -4949,44 +4919,44 @@ defm : BranchSimpleMnemonic1<"dzf", "", 2>;
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
-                  (BCC bibo, crrc:$cc, condbrtarget:$dst)>;
+                  (BCC (pred bibo, crrc:$cc), condbrtarget:$dst)>;
   def : InstAlias<"b"#name#pm#" $dst",
-                  (BCC bibo, CR0, condbrtarget:$dst)>;
+                  (BCC (pred bibo, CR0), condbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"a"#pm#" $cc, $dst",
-                  (BCCA bibo, crrc:$cc, abscondbrtarget:$dst)>;
+                  (BCCA (pred bibo, crrc:$cc), abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"a"#pm#" $dst",
-                  (BCCA bibo, CR0, abscondbrtarget:$dst)>;
+                  (BCCA (pred bibo, CR0), abscondbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"lr"#pm#" $cc",
-                  (BCCLR bibo, crrc:$cc)>;
+                  (BCCLR (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"lr"#pm,
-                  (BCCLR bibo, CR0)>;
+                  (BCCLR (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"ctr"#pm#" $cc",
-                  (BCCCTR bibo, crrc:$cc)>;
+                  (BCCCTR (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctr"#pm,
-                  (BCCCTR bibo, CR0)>;
+                  (BCCCTR (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"l"#pm#" $cc, $dst",
-                  (BCCL bibo, crrc:$cc, condbrtarget:$dst)>;
+                  (BCCL (pred bibo, crrc:$cc), condbrtarget:$dst)>;
   def : InstAlias<"b"#name#"l"#pm#" $dst",
-                  (BCCL bibo, CR0, condbrtarget:$dst)>;
+                  (BCCL (pred bibo, CR0), condbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"la"#pm#" $cc, $dst",
-                  (BCCLA bibo, crrc:$cc, abscondbrtarget:$dst)>;
+                  (BCCLA (pred bibo, crrc:$cc), abscondbrtarget:$dst)>;
   def : InstAlias<"b"#name#"la"#pm#" $dst",
-                  (BCCLA bibo, CR0, abscondbrtarget:$dst)>;
+                  (BCCLA (pred bibo, CR0), abscondbrtarget:$dst)>;
 
   def : InstAlias<"b"#name#"lrl"#pm#" $cc",
-                  (BCCLRL bibo, crrc:$cc)>;
+                  (BCCLRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"lrl"#pm,
-                  (BCCLRL bibo, CR0)>;
+                  (BCCLRL (pred bibo, CR0))>;
 
   def : InstAlias<"b"#name#"ctrl"#pm#" $cc",
-                  (BCCCTRL bibo, crrc:$cc)>;
+                  (BCCCTRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctrl"#pm,
-                  (BCCCTRL bibo, CR0)>;
+                  (BCCCTRL (pred bibo, CR0))>;
 }
 multiclass BranchExtendedMnemonic<string name, int bibo> {
   defm : BranchExtendedMnemonicPM<name, "", bibo>;

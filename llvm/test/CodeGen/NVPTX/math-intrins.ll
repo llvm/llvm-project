@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mcpu=sm_80 -mattr +ptx70 | FileCheck %s --check-prefixes=CHECK,CHECK-F16
 ; RUN: llc < %s -mcpu=sm_80 -mattr +ptx70 --nvptx-no-f16-math | FileCheck %s --check-prefixes=CHECK,CHECK-SM80-NOF16
 ; RUN: %if ptxas %{ llc < %s | %ptxas-verify %}
-; RUN: %if ptxas-11.0 %{ llc < %s -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
-; RUN: %if ptxas-11.0 %{ llc < %s -mcpu=sm_80 --nvptx-no-f16-math | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-sm_80 %{ llc < %s -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-sm_80 %{ llc < %s -mcpu=sm_80 --nvptx-no-f16-math | %ptxas-verify -arch=sm_80 %}
 
 target triple = "nvptx64-nvidia-cuda"
 

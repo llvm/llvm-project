@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | FileCheck %s
-; RUN: %if ptxas-11.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | %ptxas-verify -arch=sm_86 %}
+; RUN: %if ptxas-sm_86 && ptxas-isa-7.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | %ptxas-verify -arch=sm_86 %}
 
 ; CHECK-LABEL: fmin_xorsign_abs_f16
 define half @fmin_xorsign_abs_f16(half %0, half %1) {

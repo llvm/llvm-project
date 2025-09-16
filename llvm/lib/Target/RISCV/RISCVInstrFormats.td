@@ -498,6 +498,22 @@ class RVInstB<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{6-0} = opcode.Value;
 }
 
+class RVInstBIMM<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatB> {
+  bits<12> imm12;
+  bits<5> cimm;
+  bits<5> rs1;
+  let Inst{31} = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = cimm;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-8} = imm12{3-0};
+  let Inst{7} = imm12{10};
+  let Inst{6-0} = opcode.Value;
+}
+
 class RVInstU<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
               string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatU> {

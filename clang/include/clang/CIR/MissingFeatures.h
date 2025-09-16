@@ -47,9 +47,8 @@ struct MissingFeatures {
   // Load/store attributes
   static bool opLoadStoreThreadLocal() { return false; }
   static bool opLoadEmitScalarRangeCheck() { return false; }
-  static bool opLoadBooleanRepresentation() { return false; }
+  static bool opLoadStoreNontemporal() { return false; }
   static bool opLoadStoreTbaa() { return false; }
-  static bool opLoadStoreVolatile() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
 
@@ -63,7 +62,6 @@ struct MissingFeatures {
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
-  static bool opAllocaDynAllocSize() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
@@ -133,10 +131,9 @@ struct MissingFeatures {
   // RecordType
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
-  static bool cxxSupport() { return false; }
   static bool recordZeroInit() { return false; }
+  static bool recordZeroInitPadding() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
-  static bool recordLayoutVirtualBases() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -149,8 +146,6 @@ struct MissingFeatures {
   static bool cxxabiUseARMMethodPtrABI() { return false; }
   static bool cxxabiUseARMGuardVarABI() { return false; }
   static bool cxxabiAppleARM64CXXABI() { return false; }
-  static bool cxxabiStructorImplicitParam() { return false; }
-  static bool isDiscreteBitFieldABI() { return false; }
 
   // Address class
   static bool addressOffset() { return false; }
@@ -169,6 +164,7 @@ struct MissingFeatures {
   // Misc
   static bool abiArgInfo() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
+  static bool aggEmitFinalDestCopyRValue() { return false; }
   static bool aggValueSlot() { return false; }
   static bool aggValueSlotAlias() { return false; }
   static bool aggValueSlotDestructedFlag() { return false; }
@@ -230,7 +226,6 @@ struct MissingFeatures {
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool hip() { return false; }
-  static bool implicitConstructorArgs() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
@@ -249,6 +244,7 @@ struct MissingFeatures {
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
@@ -300,8 +296,6 @@ struct MissingFeatures {
   // Future CIR operations
   static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool complexImagOp() { return false; }
-  static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
   static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
