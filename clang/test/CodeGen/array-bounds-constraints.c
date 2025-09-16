@@ -1,14 +1,17 @@
-// Test that array bounds constraints generate llvm.assume statements for optimization hints.
-// RUN: %clang_cc1 -emit-llvm -O2 %s -o - | FileCheck %s
-
 // This test verifies that clang generates llvm.assume statements to inform the
 // optimizer that array subscripts are within bounds to enable better optimization.
+// RUN: %clang_cc1 -emit-llvm -O2 -fassume-array-bounds %s -o - | FileCheck %s
+
+// Verify no assumes are generated.
+// RUN: %clang_cc1 -emit-llvm -O2 -fno-assume-array-bounds %s -o - | FileCheck %s -check-prefix=NO-FLAG
 
 // CHECK-LABEL: define {{.*}} @test_simple_array
+// NO-FLAG-LABEL: define {{.*}} @test_simple_array
 int test_simple_array(int i) {
   int arr[10];  // C arrays are 0-based: valid indices are [0, 9]
   // CHECK: %{{.*}} = icmp ult i32 %i, 10
   // CHECK: call void @llvm.assume(i1 %{{.*}})
+  // NO-FLAG-NOT: call void @llvm.assume
   return arr[i];
 }
 

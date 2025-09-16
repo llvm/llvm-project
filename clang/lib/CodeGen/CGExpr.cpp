@@ -4589,8 +4589,25 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 /// array subscripts are within bounds, enabling better optimization without
 /// duplicating side effects from the subscript expression. The IndexVal
 /// parameter should be the already-emitted index value to avoid re-evaluation.
+///
+/// Code that intentionally accesses out-of-bounds (UB) may break with
+/// optimizations. Only applies to constant-size arrays (not pointers, VLAs, or
+/// flexible arrays.) Disabled when -fsanitize=array-bounds is active.
+///
 void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
                                                  llvm::Value *IndexVal) {
+  // Disable with -fno-assume-array-bounds.
+  if (!CGM.getCodeGenOpts().AssumeArrayBounds)
+    return;
+
+  // Disable at -O0.
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    return;
+
+  // Disable with array-bounds sanitizer.
+  if (SanOpts.has(SanitizerKind::ArrayBounds))
+    return;
+
   const Expr *Base = E->getBase();
   const Expr *Idx = E->getIdx();
   QualType BaseType = Base->getType();
@@ -4609,6 +4626,26 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
   llvm::APInt ArraySize = CAT->getSize();
   if (ArraySize == 0)
     return;
+
+  // Don't generate assumes for flexible array member pattern.
+  // Arrays of size 1 in structs are often used as placeholders for
+  // variable-length data (pre-C99 flexible array member idiom.)
+  if (ArraySize == 1) {
+    if (const auto *ME = dyn_cast<MemberExpr>(Base->IgnoreParenImpCasts())) {
+      if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+        const RecordDecl *RD = FD->getParent();
+        // Check if this field is the last field in the record.
+        // Only the last field can be a flexible array member.
+        const FieldDecl *LastField = nullptr;
+        for (const auto *Field : RD->fields())
+          LastField = Field;
+        if (LastField == FD)
+          // This is a size-1 array as the last field in a struct.
+          // Likely a flexible array member pattern - skip assumes.
+          return;
+      }
+    }
+  }
 
   QualType IdxType = Idx->getType();
   llvm::Type *IndexType = ConvertType(IdxType);
@@ -4633,21 +4670,21 @@ void CodeGenFunction::EmitArrayBoundsConstraints(const ArraySubscriptExpr *E,
   // This enforces the C18 standard requirement that array subscripts
   // must be "greater than or equal to zero and less than the size of the
   // array."
-  llvm::Value *LowerBound, *UpperBound;
   if (IdxType->isSignedIntegerOrEnumerationType()) {
     // For signed indices: index >= 0 && index < size.
-    LowerBound = Builder.CreateICmpSGE(IndexVal, Zero, "idx.ge.zero");
-    UpperBound = Builder.CreateICmpSLT(IndexVal, ArraySizeVal, "idx.lt.size");
+    llvm::Value *LowerBound =
+        Builder.CreateICmpSGE(IndexVal, Zero, "idx.ge.zero");
+    llvm::Value *UpperBound =
+        Builder.CreateICmpSLT(IndexVal, ArraySizeVal, "idx.lt.size");
+    llvm::Value *BoundsConstraint =
+        Builder.CreateAnd(LowerBound, UpperBound, "bounds.constraint");
+    Builder.CreateAssumption(BoundsConstraint);
   } else {
-    // For unsigned indices: index < size (>= 0 is implicit).
-    LowerBound = Builder.getTrue();
-    UpperBound = Builder.CreateICmpULT(IndexVal, ArraySizeVal, "idx.lt.size");
+    // For unsigned indices: index < size (>= 0 is implicit.)
+    llvm::Value *UpperBound =
+        Builder.CreateICmpULT(IndexVal, ArraySizeVal, "idx.lt.size");
+    Builder.CreateAssumption(UpperBound);
   }
-
-  llvm::Value *BoundsConstraint =
-      Builder.CreateAnd(LowerBound, UpperBound, "bounds.constraint");
-  llvm::Function *AssumeIntrinsic = CGM.getIntrinsic(llvm::Intrinsic::assume);
-  Builder.CreateCall(AssumeIntrinsic, BoundsConstraint);
 }
 
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
