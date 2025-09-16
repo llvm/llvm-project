@@ -774,8 +774,8 @@ TEST_P(ImportType, ImportDependentTemplateSpecialization) {
              "  typename A<T>::template B<T> a;"
              "};",
              Lang_CXX03, "", Lang_CXX03, Verifier,
-             classTemplateDecl(has(cxxRecordDecl(has(
-                 fieldDecl(hasType(dependentTemplateSpecializationType())))))));
+             classTemplateDecl(has(cxxRecordDecl(
+                 has(fieldDecl(hasType(templateSpecializationType())))))));
 }
 
 TEST_P(ImportType, ImportDeducedTemplateSpecialization) {
@@ -10025,7 +10025,8 @@ protected:
       EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     } else {
       EXPECT_EQ(FromD, FromDInherited->getPreviousDecl());
-      EXPECT_EQ(ToD, ToDInherited->getPreviousDecl());
+      // The order is reversed by the import process.
+      EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     }
   }
 
