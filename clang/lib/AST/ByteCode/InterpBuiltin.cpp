@@ -2936,8 +2936,7 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   unsigned DstElements = DstVec.getNumElems();
   unsigned SubElements = SubVec.getNumElems();
 
-  if (SubElements == 0 || DstElements == 0 || (DstElements % SubElements) != 0)
-    return false;
+  assert(SubElements != 0 && DstElements != 0 && (DstElements % SubElements) == 0);
 
   unsigned NumLanes = DstElements / SubElements;
   unsigned Lane = static_cast<unsigned>(Index % NumLanes);

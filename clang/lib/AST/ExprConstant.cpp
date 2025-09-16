@@ -12156,12 +12156,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     if (!SourceDst.isVector() || !SourceSub.isVector())
       return false;
-
+    assert(SourceDst.isVector() && SourceSub.isVector());
     unsigned DstLen = SourceDst.getVectorLength();
     unsigned SubLen = SourceSub.getVectorLength();
-    if (SubLen == 0 || DstLen == 0 || (DstLen % SubLen) != 0)
-      return false;
-
+    assert(SubLen != 0 && DstLen != 0 && (DstLen % SubLen) == 0);
     unsigned NumLanes = DstLen / SubLen;
     unsigned LaneIdx = (Imm.getZExtValue() % NumLanes) * SubLen;
 
