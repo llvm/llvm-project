@@ -10,26 +10,26 @@ define void @global_atomic_cmpxchg_i32_ret_av_av__av(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=^VA"()
-  %data1 = call i64 asm "; def $0", "=^VA"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "^VA"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=^VA"()
+  %data1 = call i32 asm "; def $0", "=^VA"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "^VA"(i32 %result)
   ret void
 }
 
@@ -38,26 +38,26 @@ define void @global_atomic_cmpxchg_i32_ret_av_av__v(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=^VA"()
-  %data1 = call i64 asm "; def $0", "=^VA"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "v"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=^VA"()
+  %data1 = call i32 asm "; def $0", "=^VA"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "v"(i32 %result)
   ret void
 }
 
@@ -66,28 +66,27 @@ define void @global_atomic_cmpxchg_i32_ret_av_av__a(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use a[0:1]
+; CHECK-NEXT:    ; use a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=^VA"()
-  %data1 = call i64 asm "; def $0", "=^VA"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "a"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=^VA"()
+  %data1 = call i32 asm "; def $0", "=^VA"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "a"(i32 %result)
   ret void
 }
 
@@ -96,32 +95,29 @@ define void @global_atomic_cmpxchg_i32_ret_a_a__a(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a1
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a0
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use a[0:1]
+; CHECK-NEXT:    ; use a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=a"()
-  %data1 = call i64 asm "; def $0", "=a"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "a"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=a"()
+  %data1 = call i32 asm "; def $0", "=a"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "a"(i32 %result)
   ret void
 }
 
@@ -130,30 +126,28 @@ define void @global_atomic_cmpxchg_i32_ret_a_a__v(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a1
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a0
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=a"()
-  %data1 = call i64 asm "; def $0", "=a"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "v"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=a"()
+  %data1 = call i32 asm "; def $0", "=a"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "v"(i32 %result)
   ret void
 }
 
@@ -162,28 +156,27 @@ define void @global_atomic_cmpxchg_i32_ret_v_a__v(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=v"()
-  %data1 = call i64 asm "; def $0", "=a"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "v"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=v"()
+  %data1 = call i32 asm "; def $0", "=a"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "v"(i32 %result)
   ret void
 }
 
@@ -192,28 +185,27 @@ define void @global_atomic_cmpxchg_i32_ret_a_v__v(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=a"()
-  %data1 = call i64 asm "; def $0", "=v"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "v"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=a"()
+  %data1 = call i32 asm "; def $0", "=v"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "v"(i32 %result)
   ret void
 }
 
@@ -222,28 +214,27 @@ define void @global_atomic_cmpxchg_i32_ret_v_v__a(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use a[0:1]
+; CHECK-NEXT:    ; use a0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=v"()
-  %data1 = call i64 asm "; def $0", "=v"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "a"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=v"()
+  %data1 = call i32 asm "; def $0", "=v"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "a"(i32 %result)
   ret void
 }
 
@@ -252,26 +243,26 @@ define void @global_atomic_cmpxchg_i32_ret_av_v__av(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=^VA"()
-  %data1 = call i64 asm "; def $0", "=v"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "^VA"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=^VA"()
+  %data1 = call i32 asm "; def $0", "=v"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "^VA"(i32 %result)
   ret void
 }
 
@@ -280,26 +271,26 @@ define void @global_atomic_cmpxchg_i32_ret_v_av__av(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=v"()
-  %data1 = call i64 asm "; def $0", "=^VA"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "^VA"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=v"()
+  %data1 = call i32 asm "; def $0", "=^VA"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "^VA"(i32 %result)
   ret void
 }
 
@@ -308,28 +299,27 @@ define void @global_atomic_cmpxchg_i32_ret_av_a__av(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[4:5]
+; CHECK-NEXT:    ; def v3
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=^VA"()
-  %data1 = call i64 asm "; def $0", "=a"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "^VA"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=^VA"()
+  %data1 = call i32 asm "; def $0", "=a"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "^VA"(i32 %result)
   ret void
 }
 
@@ -338,28 +328,27 @@ define void @global_atomic_cmpxchg_i32_ret_a_av__av(ptr addrspace(1) %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a[0:1]
+; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v3, a0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v[2:3]
+; CHECK-NEXT:    ; def v2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_wbl2
-; CHECK-NEXT:    global_atomic_cmpswap_x2 v[0:1], v[0:1], v[2:5], off offset:80 glc
+; CHECK-NEXT:    global_atomic_cmpswap v0, v[0:1], v[2:3], off offset:40 glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_invl2
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v[0:1]
+; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %gep.0 = getelementptr inbounds [512 x i64], ptr addrspace(1) %ptr, i64 0, i64 10
-  %data0 = call i64 asm "; def $0", "=a"()
-  %data1 = call i64 asm "; def $0", "=^VA"()
-  %pair = cmpxchg ptr addrspace(1) %gep.0, i64 %data0, i64 %data1 seq_cst monotonic
-  %result = extractvalue { i64, i1 } %pair, 0
-  call void asm "; use $0", "^VA"(i64 %result)
+  %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(1) %ptr, i64 0, i64 10
+  %data0 = call i32 asm "; def $0", "=a"()
+  %data1 = call i32 asm "; def $0", "=^VA"()
+  %pair = cmpxchg ptr addrspace(1) %gep.0, i32 %data0, i32 %data1 seq_cst monotonic
+  %result = extractvalue { i32, i1 } %pair, 0
+  call void asm "; use $0", "^VA"(i32 %result)
   ret void
 }
 

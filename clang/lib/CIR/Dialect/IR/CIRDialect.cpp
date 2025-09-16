@@ -1754,9 +1754,6 @@ LogicalResult cir::BinOp::verify() {
     return emitError() << "The nsw/nuw flags and the saturated flag are "
                           "mutually exclusive";
 
-  assert(!cir::MissingFeatures::complexType());
-  // TODO(cir): verify for complex binops
-
   return mlir::success();
 }
 
@@ -1917,6 +1914,21 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         return previous.getInput();
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// CopyOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CopyOp::verify() {
+  // A data layout is required for us to know the number of bytes to be copied.
+  if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
+    return emitError() << "missing data layout for pointee type";
+
+  if (getSrc() == getDst())
+    return emitError() << "source and destination are the same";
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2713,6 +2725,20 @@ mlir::LogicalResult cir::ThrowOp::verify() {
   }
 
   return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCmpXchg
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicCmpXchg::verify() {
+  mlir::Type pointeeType = getPtr().getType().getPointee();
+
+  if (pointeeType != getExpected().getType() ||
+      pointeeType != getDesired().getType())
+    return emitOpError("ptr, expected and desired types must match");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
@@ -21,6 +22,42 @@ class LLVM_Attr<string name, string attrMnemonic,
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AddressSpaceAttr :
+    LLVM_Attr<"AddressSpace", "address_space", [
+    LLVM_LLVMAddrSpaceAttrInterface,
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let summary = "LLVM address space";
+  let description = [{
+    The `address_space` attribute represents an LLVM address space. It takes an
+    unsigned integer parameter that specifies the address space number.
+
+    Different address spaces in LLVM can have different properties:
+    - Address space 0 is the default/generic address space
+    - Other address spaces may have specific semantics (e.g., shared memory,
+      constant memory, etc.) depending on the target architecture
+
+    Example:
+
+    ```mlir
+    // Address space 0 (default)
+    #llvm.address_space<0>
+
+    // Address space 1 (e.g., global memory on some targets)
+    #llvm.address_space<1>
+
+    // Address space 3 (e.g., shared memory on some GPU targets)
+    #llvm.address_space<3>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -428,25 +465,25 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements,
     OptionalParameter<"DIExpressionAttr">:$dataLocation,
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
-    OptionalParameter<"DIExpressionAttr">:$associated
+    OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
     AttrBuilder<(ins
       "unsigned":$tag, "StringAttr":$name, "DIFileAttr":$file,
       "uint32_t":$line, "DIScopeAttr":$scope, "DITypeAttr":$baseType,
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
-      "ArrayRef<DINodeAttr>":$elements, "DIExpressionAttr":$dataLocation,
-      "DIExpressionAttr":$rank, "DIExpressionAttr":$allocated,
-      "DIExpressionAttr":$associated
+      "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
+      "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "ArrayRef<DINodeAttr>":$elements
     ), [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
-                   alignInBits, elements, dataLocation, rank, allocated,
-                   associated);
+                   alignInBits, dataLocation, rank, allocated,
+                   associated, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -554,7 +591,7 @@ def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -580,7 +617,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_file",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -638,7 +675,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
-                                      "DIScopeAttr"> {
+                                      "DILocalScopeAttr"> {
   let parameters = (ins
     // DIRecursiveTypeAttrInterface specific parameters.
     OptionalParameter<"DistinctAttr">:$recId,
@@ -1194,6 +1231,47 @@ def LLVM_TBAATagArrayAttr
     : TypedArrayAttrBase<LLVM_TBAATagAttr,
                          LLVM_TBAATagAttr.summary # " array"> {
   let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// MMRATagAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
+  let parameters = (ins
+    StringRefParameter<>:$prefix,
+    StringRefParameter<>:$suffix
+  );
+
+  let summary = "MLIR wrapper around a prefix:suffix MMRA tag";
+
+  let description = [{
+    Defines a single memory model relaxation annotation (MMRA) entry
+    with prefix `$prefix` and suffix `$suffix`. This corresponds directly
+    to a LLVM `!{prefix, suffix}` metadata tuple, which is often written
+    `prefix:shuffix` as shorthand.
+
+    Example:
+    ```mlir
+    #mmra_tag = #llvm.mmmra_tag<"amdgpu-synchronize-as":"local">
+    #mmra_tag1 = #llvm.mmra_tag<"foo":"bar">
+    ```
+
+    Either one MMRA tag or an array of them may be added to any LLVM
+    operation that operates on memory.
+
+    ```mlir
+    %v = llvm.load %ptr {llvm.mmra = #mmra_tag} : !llvm.ptr -> i8
+    llvm.store %v, %ptr2 {llvm.mmra [#mmra_tag, #mmra_tag1]} : i8, !llvm.ptr
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/MemoryModelRelaxationAnnotations.html
+  }];
+
+  let assemblyFormat = "`<` $prefix `` `:` `` $suffix `>`";
+
+  let genMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
