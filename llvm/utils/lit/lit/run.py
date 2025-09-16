@@ -7,6 +7,14 @@ import lit.Test
 import lit.util
 import lit.worker
 
+# Windows has a limit of 60 workers per pool.
+# This is defined in the multiprocessing module implementation.
+# See: https://github.com/python/cpython/blob/6bc65c30ff1fd0b581a2c93416496fc720bc442c/Lib/concurrent/futures/process.py#L669-L672
+WINDOWS_MAX_WORKERS_PER_POOL = 60
+
+
+def _ceilDiv(a, b):
+    return (a + b - 1) // b
 
 class MaxFailuresError(Exception):
     pass
@@ -73,37 +81,39 @@ class Run(object):
         }
 
         # Windows has a limit of 60 workers per pool, so we need to use multiple pools
-        # if we have more than 60 workers requested
-        max_workers_per_pool = 60 if os.name == "nt" else self.workers
-        num_pools = max(
-            1, (self.workers + max_workers_per_pool - 1) // max_workers_per_pool
+        # if we have more workers requested than the limit.
+        max_workers_per_pool = (
+            WINDOWS_MAX_WORKERS_PER_POOL if os.name == "nt" else self.workers
         )
-        workers_per_pool = min(self.workers, max_workers_per_pool)
+        num_pools = max(1, _ceilDiv(self.workers, max_workers_per_pool))
+
+        # Distribute self.workers across num_pools as evenly as possible
+        workers_per_pool_list = [self.workers // num_pools] * num_pools
+        for pool_idx in range(self.workers % num_pools):
+            workers_per_pool_list[pool_idx] += 1
 
         if num_pools > 1:
             self.lit_config.note(
-                "Using %d pools with %d workers each (Windows worker limit workaround)"
-                % (num_pools, workers_per_pool)
+                "Using %d pools balancing %d workers total distributed as %s (Windows worker limit workaround)"
+                % (num_pools, self.workers, workers_per_pool_list)
             )
 
         # Create multiple pools
         pools = []
-        for i in range(num_pools):
+        for pool_size in workers_per_pool_list:
             pool = multiprocessing.Pool(
-                workers_per_pool, lit.worker.initialize, (self.lit_config, semaphores)
+                pool_size, lit.worker.initialize, (self.lit_config, semaphores)
             )
             pools.append(pool)
 
         # Distribute tests across pools
-        tests_per_pool = (len(self.tests) + num_pools - 1) // num_pools
+        tests_per_pool = _ceilDiv(len(self.tests), num_pools)
         async_results = []
 
         for pool_idx, pool in enumerate(pools):
             start_idx = pool_idx * tests_per_pool
             end_idx = min(start_idx + tests_per_pool, len(self.tests))
-            pool_tests = self.tests[start_idx:end_idx]
-
-            for test in pool_tests:
+            for test in self.tests[start_idx:end_idx]:
                 ar = pool.apply_async(
                     lit.worker.execute, args=[test], callback=self.progress_callback
                 )
