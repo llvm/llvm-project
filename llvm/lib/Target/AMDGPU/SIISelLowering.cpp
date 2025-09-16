@@ -6095,50 +6095,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       Src2.setReg(RegOp2);
     }
 
-<<<<<<< HEAD
-    if (ST.isWave64()) {
-      if (ST.hasScalarCompareEq64()) {
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
-            .addReg(Src2.getReg())
-            .addImm(0);
-      } else {
-        const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
-        const TargetRegisterClass *SubRC =
-            TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
-        MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
-            MII, MRI, Src2, Src2RC, AMDGPU::sub0, SubRC);
-        MachineOperand Src2Sub1 = TII->buildExtractSubRegOrImm(
-            MII, MRI, Src2, Src2RC, AMDGPU::sub1, SubRC);
-        Register Src2_32 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_OR_B32), Src2_32)
-            .add(Src2Sub0)
-            .add(Src2Sub1);
-
-        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-            .addReg(Src2_32, RegState::Kill)
-            .addImm(0);
-      }
-    } else {
-      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
-          .addReg(Src2.getReg())
-          .addImm(0);
-    }
-
-    // clang-format off
-    BuildMI(*BB, MII, DL, TII->get(Opc), Dest.getReg())
-        .add(Src0)
-        .add(Src1);
-    // clang-format on
-
-    unsigned SelOpc =
-        ST.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
-=======
     const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
     unsigned WaveSize = TRI->getRegSizeInBits(*Src2RC);
     assert(WaveSize == 64 || WaveSize == 32);
 
-    unsigned SelOpc =
+    unsigned SelectOpc =
         (WaveSize == 64) ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
     unsigned AddcSubbOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
     unsigned AddSubOpc = IsAdd ? AMDGPU::S_ADD_I32 : AMDGPU::S_SUB_I32;
@@ -6161,22 +6122,27 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     //  dead S_CSELECT*.
 
     bool RecalculateSCC{true};
-    MachineInstr *Def = MRI.getVRegDef(Src2.getReg());
-    if (Def && Def->getParent() == BB && Def->getOpcode() == SelOpc &&
-        Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0 &&
-        Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0) {
-
-      auto I1 = std::next(MachineBasicBlock::reverse_iterator(Def));
+    MachineInstr *SelectDef = MRI.getVRegDef(Src2.getReg());
+    if (SelectDef && SelectDef->getParent() == BB &&
+        SelectDef->getOpcode() == SelectOpc &&
+        SelectDef->getOperand(1).isImm() &&
+        SelectDef->getOperand(1).getImm() != 0 &&
+        SelectDef->getOperand(2).isImm() &&
+        SelectDef->getOperand(2).getImm() == 0) {
+      auto I1 = std::next(MachineBasicBlock::reverse_iterator(SelectDef));
       if (I1 != BB->rend() &&
           (I1->getOpcode() == AddSubOpc || I1->getOpcode() == AddcSubbOpc)) {
-        RecalculateSCC = false;
-        // Ensure there are no intervening definitions of SCC.
+        // Ensure there are no intervening definitions of SCC between ADDs/SUBs
+        const unsigned SearchLimit = 6;
+        unsigned Count = 0;
         for (auto I2 = std::next(MachineBasicBlock::reverse_iterator(MI));
-             I2 != I1; I2++) {
-          if (I2->definesRegister(AMDGPU::SCC, TRI)) {
-            RecalculateSCC = true;
+             Count < SearchLimit; I2++, Count++) {
+          if (I2 == I1) {
+            RecalculateSCC = false;
             break;
           }
+          if (I2->definesRegister(AMDGPU::SCC, TRI))
+            break;
         }
       }
     }
@@ -6215,9 +6181,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(*BB, MII, DL, TII->get(AddcSubbOpc), Dest.getReg())
         .add(Src0)
         .add(Src1);
->>>>>>> 0cb43743ea30 (Do not generate S_CMP if add/sub carryout is available)
 
-    BuildMI(*BB, MII, DL, TII->get(SelOpc), CarryDest.getReg())
+    BuildMI(*BB, MII, DL, TII->get(SelectOpc), CarryDest.getReg())
         .addImm(-1)
         .addImm(0);
 
