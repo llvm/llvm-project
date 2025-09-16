@@ -54,7 +54,7 @@ void g18(void) { // expected-note{{'g18' declared here}}
   extern int g19;
 }
 int *p=&g19; // expected-error{{use of undeclared identifier 'g19'}} \
-             // expected-warning{{incompatible pointer types}}
+             // expected-error{{incompatible pointer types}}
 
 // PR3645
 static int a;
