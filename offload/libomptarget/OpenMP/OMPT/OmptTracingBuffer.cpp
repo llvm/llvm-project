@@ -564,14 +564,14 @@ void OmptTracingBufferMgr::destroyFlushedBuf(const FlushInfo &flush_info) {
  */
 uint64_t OmptTracingBufferMgr::addNewFlushEntry(BufPtr Buf, void *Cursor) {
   assert(FlushBufPtr2IdMap.find(Buf) == FlushBufPtr2IdMap.end());
-  uint64_t FlushID = get_and_inc_flush_id();
-  FlushBufPtr2IdMap.emplace(Buf, FlushID);
-  assert(Id2FlushMdMap.find(FlushID) == Id2FlushMdMap.end());
-  Id2FlushMdMap.emplace(FlushID, FlushMd(Cursor, Buf, Flush_waiting));
+  uint64_t FlushId = get_and_inc_flush_id();
+  FlushBufPtr2IdMap.emplace(Buf, FlushId);
+  assert(Id2FlushMdMap.find(FlushId) == Id2FlushMdMap.end());
+  Id2FlushMdMap.emplace(FlushId, FlushMd(Cursor, Buf, Flush_waiting));
 
-  DP("Added new flush id %lu cursor %p buf %p\n", FlushID, Cursor, Buf->Start);
+  DP("Added new flush id %lu cursor %p buf %p\n", FlushId, Cursor, Buf->Start);
 
-  return FlushID;
+  return FlushId;
 }
 
 /*
