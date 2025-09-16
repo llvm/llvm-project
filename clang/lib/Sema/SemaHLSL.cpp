@@ -1212,12 +1212,13 @@ struct PerVisibilityBindingChecker {
   }
 };
 
-static CXXMethodDecl *lookupMethod(CXXRecordDecl *Record, StringRef Name,
-                                   StorageClass SC = SC_None) {
-  for (auto *Method : Record->methods())
-    if (Method->getStorageClass() == SC && Method->getName() == Name)
-      return Method;
-  return nullptr;
+static CXXMethodDecl *lookupMethod(Sema &S, CXXRecordDecl *RecordDecl,
+                                   StringRef Name, SourceLocation Loc) {
+  DeclarationName DeclName(&S.getASTContext().Idents.get(Name));
+  LookupResult Result(S, DeclName, Loc, Sema::LookupMemberName);
+  if (!S.LookupQualifiedName(Result, static_cast<DeclContext *>(RecordDecl)))
+    return nullptr;
+  return cast<CXXMethodDecl>(Result.getFoundDecl());
 }
 
 } // end anonymous namespace
@@ -3825,7 +3826,8 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
 
   if (RegisterSlot.has_value()) {
     // The resource has explicit binding.
-    CreateMethod = lookupMethod(ResourceDecl, "__createFromBinding", SC_Static);
+    CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding",
+                                VD->getLocation());
     IntegerLiteral *RegSlot = IntegerLiteral::Create(
         AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
         SourceLocation());
@@ -3833,7 +3835,8 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   } else {
     // The resource has implicit binding.
     CreateMethod =
-        lookupMethod(ResourceDecl, "__createFromImplicitBinding", SC_Static);
+        lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding",
+                     VD->getLocation());
     uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
                            ? RBA->getImplicitBindingOrderID()
                            : getNextImplicitBindingOrderID();

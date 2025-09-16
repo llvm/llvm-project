@@ -600,8 +600,11 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnValue(T ReturnValue) {
     CXXConstructorDecl *CD = lookupCopyConstructor(Ty);
     assert(CD && "no copy constructor found");
     ReturnValueExpr = CXXConstructExpr::Create(
-        AST, Ty, SourceLocation(), CD, false, {ICE}, false, false, false, false,
-        CXXConstructionKind::Complete, SourceRange());
+        AST, Ty, SourceLocation(), CD, /*Elidable=*/false, {ICE},
+        /*HadMultipleCandidates=*/false, /*ListInitialization=*/false,
+        /*StdInitListInitialization=*/false,
+        /*ZeroInitListInitialization=*/false, CXXConstructionKind::Complete,
+        SourceRange());
   }
   StmtsList.push_back(
       ReturnStmt::Create(AST, SourceLocation(), ReturnValueExpr, nullptr));
