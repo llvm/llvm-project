@@ -454,17 +454,10 @@ bool Pointer::isInitialized() const {
 
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
-  if (Desc->isPrimitiveArray()) {
-    InitMap *&IM = getInitMap();
-    if (!IM)
-      return false;
+  if (Desc->isPrimitiveArray())
+    return this->isElementInitialized(getIndex());
 
-    if (InitMap::allInitialized(IM))
-      return true;
-    return IM->isElementInitialized(getIndex());
-  }
-
-  if (asBlockPointer().Base == 0)
+  if (BS.Base == 0)
     return true;
   // Field has its bit in an inline descriptor.
   return getInlineDesc()->IsInitialized;
@@ -477,6 +470,13 @@ bool Pointer::isElementInitialized(unsigned Index) const {
   if (Desc->isPrimitiveArray()) {
     assert(getFieldDesc()->isPrimitiveArray());
     InitMap *&IM = getInitMap();
+    unsigned NumElems = Desc->getNumElems();
+
+    if (InitMap::isInline(NumElems)) {
+      return InitMap::allInitialized(IM) ||
+             InitMap::isInlineElementInitialized(
+                 reinterpret_cast<uintptr_t>(IM), Index);
+    }
     if (!IM)
       return false;
 
@@ -528,6 +528,12 @@ void Pointer::initializeElement(InterpState &S, unsigned Index) const {
   if (InitMap::allInitialized(IM))
     return;
 
+  unsigned NumElems = getFieldDesc()->getNumElems();
+  if (InitMap::isInline(NumElems)) {
+    if (InitMap::initializeInlineElement(IM, NumElems, Index))
+      InitMap::markAllInitialized(IM);
+    return;
+  }
   // nullptr means no initmap yet.
   if (!IM) {
     unsigned NumElems = getFieldDesc()->getNumElems();

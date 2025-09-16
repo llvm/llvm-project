@@ -278,6 +278,11 @@ public:
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.
+///
+/// InitMaps are saved for primitive arrays, so we don't have to have a
+/// per-element InlineDescriptor. When the number of elements in the array
+/// is small enough (see InitMap::isInline()), we use the pointer value
+/// directly instead of allocating an InitMap.
 struct alignas(alignof(uint64_t)) InitMap final {
 private:
   /// Type packing bits.
@@ -288,6 +293,28 @@ private:
 public:
   /// Initializes the map with no fields set.
   explicit InitMap(unsigned N);
+
+  static bool isInline(size_t N) {
+    return N < (sizeof(uintptr_t) * CHAR_BIT - 1);
+  }
+
+  static bool isInlineElementInitialized(uintptr_t BucketValue, unsigned I) {
+    return BucketValue & (uintptr_t(1) << I);
+  }
+
+  static bool initializeInlineElement(InitMap *&IMPtr, size_t NumElems,
+                                      unsigned I) {
+    assert(isInline(NumElems));
+    assert(I < NumElems);
+    uintptr_t BucketValue = reinterpret_cast<uintptr_t>(IMPtr);
+    uintptr_t Mask = uintptr_t(1) << I;
+    if (!(BucketValue & Mask)) {
+      BucketValue |= Mask;
+      IMPtr = reinterpret_cast<InitMap *>(BucketValue);
+      return static_cast<unsigned>(llvm::popcount(BucketValue)) == NumElems;
+    }
+    return false;
+  }
 
   /// Checks if all elements have been initialized.
   static bool allInitialized(const InitMap *IM) {
