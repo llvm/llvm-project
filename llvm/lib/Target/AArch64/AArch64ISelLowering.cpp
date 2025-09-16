@@ -7454,6 +7454,19 @@ SDValue AArch64TargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(1);
   SDLoc DL(Op);
 
+  if (!isa<ConstantSDNode>(RHS) || !isLegalCmpImmed(RHS->getAsAPIntVal())) {
+    SDValue TheLHS = isCMN(LHS, IsSigned ? ISD::SETGE : ISD::SETUGE, DAG)
+                         ? LHS.getOperand(1)
+                         : LHS;
+    SDValue TheRHS = isCMN(RHS, IsSigned ? ISD::SETGE : ISD::SETUGE, DAG)
+                         ? RHS.getOperand(1)
+                         : RHS;
+    if (getCmpOperandFoldingProfit(TheLHS) >
+        getCmpOperandFoldingProfit(TheRHS)) {
+      std::swap(LHS, RHS);
+    }
+  }
+
   // If the subtract doesn't overflow then just use abs(sub())
   bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
 

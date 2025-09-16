@@ -72,8 +72,7 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i16_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    subs w8, w8, w1
+; CHECK-NEXT:    subs w8, w1, w0, sxth
 ; CHECK-NEXT:    cneg w0, w8, ge
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i64
