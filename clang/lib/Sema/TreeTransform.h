@@ -2196,8 +2196,7 @@ public:
   OMPClause *
   RebuildOMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                      ArrayRef<SourceLocation> MotionModifiersLoc,
-                     Expr *IteratorModifier,
-                     CXXScopeSpec &MapperIdScopeSpec,
+                     Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                      DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                      ArrayRef<Expr *> UnresolvedMappers) {
@@ -2214,8 +2213,7 @@ public:
   OMPClause *
   RebuildOMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                        ArrayRef<SourceLocation> MotionModifiersLoc,
-                       Expr *IteratorModifier,
-                       CXXScopeSpec &MapperIdScopeSpec,
+                       Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                        DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                        ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                        ArrayRef<Expr *> UnresolvedMappers) {
@@ -11438,7 +11436,7 @@ template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFromClause(OMPFromClause *C) {
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
   llvm::SmallVector<Expr *, 16> Vars;
-    Expr *IteratorModifier = C->getIteratorModifier();
+  Expr *IteratorModifier = C->getIteratorModifier();
   if (IteratorModifier) {
     ExprResult MapModRes = getDerived().TransformExpr(IteratorModifier);
     if (MapModRes.isInvalid())

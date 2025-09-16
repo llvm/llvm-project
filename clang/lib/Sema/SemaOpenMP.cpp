@@ -23464,8 +23464,7 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetInitializer(Decl *TargetDecl) {
 
 OMPClause *SemaOpenMP::ActOnOpenMPToClause(
     ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-    ArrayRef<SourceLocation> MotionModifiersLoc,
-    Expr *IteratorExpr,
+    ArrayRef<SourceLocation> MotionModifiersLoc, Expr *IteratorExpr,
     CXXScopeSpec &MapperIdScopeSpec, DeclarationNameInfo &MapperId,
     SourceLocation ColonLoc, ArrayRef<Expr *> VarList,
     const OMPVarListLocTy &Locs, ArrayRef<Expr *> UnresolvedMappers) {
@@ -23494,14 +23493,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPToClause(
                               MapperIdScopeSpec, MapperId, UnresolvedMappers);
   if (MVLI.ProcessedVarList.empty())
     return nullptr;
-  if(IteratorExpr)
-    if (auto *DRE = dyn_cast<DeclRefExpr>(IteratorExpr)) 
-      if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) 
+  if (IteratorExpr)
+    if (auto *DRE = dyn_cast<DeclRefExpr>(IteratorExpr))
+      if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
         DSAStack->addIteratorVarDecl(VD);
   return OMPToClause::Create(
       getASTContext(), Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-      MVLI.VarComponents, MVLI.UDMapperList,IteratorExpr, Modifiers, ModifiersLoc,
-      MapperIdScopeSpec.getWithLocInContext(getASTContext()), MapperId);
+      MVLI.VarComponents, MVLI.UDMapperList, IteratorExpr, Modifiers,
+      ModifiersLoc, MapperIdScopeSpec.getWithLocInContext(getASTContext()),
+      MapperId);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPFromClause(
@@ -23536,8 +23536,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPFromClause(
   if (MVLI.ProcessedVarList.empty())
     return nullptr;
   if (IteratorExpr)
-    if (auto *DRE = dyn_cast<DeclRefExpr>(IteratorExpr)) 
-      if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) 
+    if (auto *DRE = dyn_cast<DeclRefExpr>(IteratorExpr))
+      if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
         DSAStack->addIteratorVarDecl(VD);
   return OMPFromClause::Create(
       getASTContext(), Locs, MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,

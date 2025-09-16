@@ -7476,7 +7476,8 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
 
   /// Motion-modifiers for the 'to' clause.
   OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
-      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown,
+      OMPC_MOTION_MODIFIER_unknown};
 
   /// Location of motion-modifiers for the 'to' clause.
   SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];
@@ -7585,15 +7586,14 @@ public:
   /// \param UDMQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperId The identifier of associated user-defined mapper.
-  static OMPToClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
-                             ArrayRef<Expr *> Vars,
-                             ArrayRef<ValueDecl *> Declarations,
-                             MappableExprComponentListsRef ComponentLists,
-                             ArrayRef<Expr *> UDMapperRefs,Expr *IteratorModifier,
-                             ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
-                             ArrayRef<SourceLocation> MotionModifiersLoc,
-                             NestedNameSpecifierLoc UDMQualifierLoc,
-                             DeclarationNameInfo MapperId);
+  static OMPToClause *
+  Create(const ASTContext &C, const OMPVarListLocTy &Locs,
+         ArrayRef<Expr *> Vars, ArrayRef<ValueDecl *> Declarations,
+         MappableExprComponentListsRef ComponentLists,
+         ArrayRef<Expr *> UDMapperRefs, Expr *IteratorModifier,
+         ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+         ArrayRef<SourceLocation> MotionModifiersLoc,
+         NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///
@@ -7682,7 +7682,8 @@ class OMPFromClause final
 
   /// Motion-modifiers for the 'from' clause.
   OpenMPMotionModifierKind MotionModifiers[NumberOfOMPMotionModifiers] = {
-      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown};
+      OMPC_MOTION_MODIFIER_unknown, OMPC_MOTION_MODIFIER_unknown,
+      OMPC_MOTION_MODIFIER_unknown};
 
   /// Location of motion-modifiers for the 'from' clause.
   SourceLocation MotionModifiersLoc[NumberOfOMPMotionModifiers];

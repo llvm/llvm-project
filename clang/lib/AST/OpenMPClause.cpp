@@ -2573,12 +2573,12 @@ template <typename T> void OMPClausePrinter::VisitOMPMotionClause(T *Node) {
         if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
           PrintIterator(OS, Node, Policy);
         else {
-        OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
-                                            Node->getMotionModifier(I));
-        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)
-          PrintMapper(OS, Node, Policy);
-        if (I < ModifierCount - 1)
-          OS << ", ";
+          OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
+                                              Node->getMotionModifier(I));
+          if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)
+            PrintMapper(OS, Node, Policy);
+          if (I < ModifierCount - 1)
+            OS << ", ";
         }
       }
     }
