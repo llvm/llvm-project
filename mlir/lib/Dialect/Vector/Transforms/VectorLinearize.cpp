@@ -252,7 +252,7 @@ struct LinearizeVectorExtractStridedSlice final
     SmallVector<int64_t> indices = getStridedSliceInsertionIndices(
         outputShape, inputShape, offsets.value());
 
-    Value srcVector = adaptor.getVector();
+    Value srcVector = adaptor.getSource();
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
         extractStridedSliceOp, flatOutputType, srcVector, srcVector, indices);
     return success();
@@ -438,8 +438,8 @@ struct LinearizeVectorExtract final
       return rewriter.notifyMatchFailure(extractOp,
                                          "dynamic position is not supported.");
 
-    llvm::ArrayRef<int64_t> shape = extractOp.getVector().getType().getShape();
-    int64_t size = extractOp.getVector().getType().getNumElements();
+    llvm::ArrayRef<int64_t> shape = extractOp.getSource().getType().getShape();
+    int64_t size = extractOp.getSource().getType().getNumElements();
 
     // Compute linearized offset.
     int64_t linearizedOffset = 0;
@@ -449,7 +449,7 @@ struct LinearizeVectorExtract final
       linearizedOffset += offsets[i] * size;
     }
 
-    Value srcVector = adaptor.getVector();
+    Value srcVector = adaptor.getSource();
     if (!isa<VectorType>(extractOp.getType())) {
       // Scalar case: generate a 1-D extract.
       Value result = rewriter.createOrFold<vector::ExtractOp>(
