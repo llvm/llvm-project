@@ -6263,6 +6263,11 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
       Offset, Bytes, NumPredicateVectors, NumDataVectors);
 
+  // Insert ADDSXri for scalable offset at the end.
+  bool NeedInsertADDS = SetNZCV && (NumPredicateVectors || NumDataVectors);
+  if (NeedInsertADDS)
+    SetNZCV = false;
+
   // First emit non-scalable frame offsets, or a simple 'mov'.
   if (Bytes || (!Offset && SrcReg != DestReg)) {
     assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
@@ -6282,8 +6287,6 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
     FrameReg = DestReg;
   }
 
-  assert(!(SetNZCV && (NumPredicateVectors || NumDataVectors)) &&
-         "SetNZCV not supported with SVE vectors");
   assert(!(NeedsWinCFI && NumPredicateVectors) &&
          "WinCFI can't allocate fractions of an SVE data vector");
 
@@ -6303,6 +6306,12 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                        Flag, NeedsWinCFI, HasWinCFI, EmitCFAOffset, CFAOffset,
                        FrameReg);
   }
+
+  if (NeedInsertADDS)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDSXri), DestReg)
+        .addReg(DestReg)
+        .addImm(0)
+        .addImm(0);
 }
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
@@ -6564,50 +6573,18 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
          (SOffset ? 0 : AArch64FrameOffsetIsLegal);
 }
 
-// Unfold ADDSXri:
-//    adds %dest, %stack, c
-//  -->
-//    add %dest, %stack, 0
-//    adds %dest, %dest, c
-static MachineInstr *unfoldAddSXri(MachineInstr &MI, unsigned FrameReg,
-                                   const AArch64InstrInfo *TII) {
-  auto *MBB = MI.getParent();
-  Register DestReg = MI.getOperand(0).getReg();
-
-  auto *Unfolded =
-      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AArch64::ADDXri), DestReg)
-          .addReg(FrameReg)
-          .addImm(0)
-          .addImm(0)
-          .getInstr();
-
-  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(AArch64::ADDSXri), DestReg)
-      .addReg(DestReg)
-      .addImm(MI.getOperand(2).getImm())
-      .addImm(MI.getOperand(3).getImm());
-
-  MI.eraseFromParent();
-  return Unfolded;
-}
-
 bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                                     unsigned FrameReg, StackOffset &Offset,
                                     const AArch64InstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
   unsigned ImmIdx = FrameRegIdx + 1;
 
-  MachineInstr *NewMI = &MI;
-  if (Opcode == AArch64::ADDSXri && Offset.getScalable()) {
-    NewMI = unfoldAddSXri(MI, FrameReg, TII);
-    Opcode = AArch64::ADDXri;
-  }
-
   if (Opcode == AArch64::ADDSXri || Opcode == AArch64::ADDXri) {
-    Offset += StackOffset::getFixed(NewMI->getOperand(ImmIdx).getImm());
-    emitFrameOffset(*NewMI->getParent(), *NewMI, NewMI->getDebugLoc(),
-                    NewMI->getOperand(0).getReg(), FrameReg, Offset, TII,
+    Offset += StackOffset::getFixed(MI.getOperand(ImmIdx).getImm());
+    emitFrameOffset(*MI.getParent(), MI, MI.getDebugLoc(),
+                    MI.getOperand(0).getReg(), FrameReg, Offset, TII,
                     MachineInstr::NoFlags, (Opcode == AArch64::ADDSXri));
-    NewMI->eraseFromParent();
+    MI.eraseFromParent();
     Offset = StackOffset();
     return true;
   }
@@ -6615,16 +6592,16 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   int64_t NewOffset;
   unsigned UnscaledOp;
   bool UseUnscaledOp;
-  int Status = isAArch64FrameOffsetLegal(*NewMI, Offset, &UseUnscaledOp,
+  int Status = isAArch64FrameOffsetLegal(MI, Offset, &UseUnscaledOp,
                                          &UnscaledOp, &NewOffset);
   if (Status & AArch64FrameOffsetCanUpdate) {
     if (Status & AArch64FrameOffsetIsLegal)
       // Replace the FrameIndex with FrameReg.
-      NewMI->getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
+      MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
     if (UseUnscaledOp)
-      NewMI->setDesc(TII->get(UnscaledOp));
+      MI.setDesc(TII->get(UnscaledOp));
 
-    NewMI->getOperand(ImmIdx).ChangeToImmediate(NewOffset);
+    MI.getOperand(ImmIdx).ChangeToImmediate(NewOffset);
     return !Offset;
   }
 
