@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
 
-namespace cwg3005 { // cwg3005: 21 open 2025-03-10
+namespace cwg3005 { // cwg3005: 21 tentatively ready 2025-09-12
 
 void f(
     int _, // #cwg3005-first-param

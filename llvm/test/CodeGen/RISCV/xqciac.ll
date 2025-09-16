@@ -361,8 +361,8 @@ define dso_local i32 @shladdc1c2(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IMXQCIAC-LABEL: shladdc1c2:
 ; RV32IMXQCIAC:       # %bb.0: # %entry
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a1, 5
-; RV32IMXQCIAC-NEXT:    slli a0, a0, 26
+; RV32IMXQCIAC-NEXT:    slli a1, a1, 26
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a1, 31
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: shladdc1c2:
