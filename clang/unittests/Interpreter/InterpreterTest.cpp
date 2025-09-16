@@ -454,7 +454,6 @@ TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
                     "-mllvm",       "-enable-emscripten-cxx-exceptions",
                     "-mllvm",       "-enable-emscripten-sjlj"};
 
-
   std::unique_ptr<Interpreter> Interp = createInterpreter(ExtraArgs);
 
   llvm::cantFail(
