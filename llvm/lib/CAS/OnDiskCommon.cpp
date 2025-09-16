@@ -107,8 +107,14 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   fstore_t FAlloc;
   FAlloc.fst_flags = F_ALLOCATEALL;
 #if defined(F_ALLOCATEPERSIST) &&                                              \
-    defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
-    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 130000
+    ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                \
+      __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 130000) ||              \
+     (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&               \
+      __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 160000) ||              \
+     (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) &&                \
+      __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 90000) ||                \
+     (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) &&                   \
+      __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 160000))
   // F_ALLOCATEPERSIST is introduced in macOS 13.
   FAlloc.fst_flags |= F_ALLOCATEPERSIST;
 #endif
