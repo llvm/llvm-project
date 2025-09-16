@@ -101,7 +101,7 @@ public:
     EVT VT = EVT::getEVT(Ty);
     assert(VT.isSimple() && "Can expand only simple types");
 
-    return find(ExpandableTypes, VT.getSimpleVT());
+    return find(ExpandableTypes, VT.getSimpleVT()) != ExpandableTypes.end();
   }
 
   /// Return true if the pass should expand a frem instruction of the
