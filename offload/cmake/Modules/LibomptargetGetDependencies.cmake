@@ -89,4 +89,25 @@ if(LIBOMPTARGET_AMDGPU_ARCH)
   endif()
 endif()
 
+################################################################################
+# Looking for Level0
+################################################################################
+message(STATUS "Looking for Level0 includes.")
+find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS NAMES level_zero/ze_api.h)
+
+if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS)
+	set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND FALSE)
+  message(STATUS "Could NOT find Level Zero. Missing includes.")
+else()
+  message(STATUS "Level Zero include DIR: ${LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIRS}")
+  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND TRUE)
+  message(STATUS "Looking for Level Zero library.")
+  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES NAMES ze_loader)
+  if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES)
+    message(STATUS "Could NOT find Level Zero. Missing library.")
+  else()
+	  message(STATUS "Level Zero library: ${LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARIES}")
+  endif()
+endif()
+
 set(OPENMP_PTHREAD_LIB ${LLVM_PTHREAD_LIB})
