@@ -815,8 +815,8 @@ for.end:                                          ; preds = %for.body
 ;;     A[3*i - 2] = 1;
 ;; }
 ;;
-;; FIXME: There is a loop-carried dependency between
-;; `A[-6*i + INT64_MAX]` and `A[3*i - 2]`. For example,
+;; FIXME: DependencyAnalsysis currently detects no dependency between
+;; `A[-6*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
 ;;
 ;; | memory location        | -6*i + INT64_MAX       | 3*i - 2
 ;; |------------------------|------------------------|-----------
