@@ -17,7 +17,7 @@
 ; CHECK: LV: Loop hints: force=disabled
 ; CHECK: LV: Not vectorizing: loop hasDisableAllTransformsHint.
 ; CHECK: remark:
-; CHECK-SAME: loop not vectorized: vectorization is explicitly disabled
+; CHECK-SAME: loop not vectorized: loop transformations are disabled
 ; CHECK: LV: Loop hints prevent vectorization
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 define void @disable_nonforced(ptr nocapture %a, i32 %n) {
