@@ -217,17 +217,33 @@ void FakeStack::ForEachFakeFrame(RangeIteratorCallback callback, void* arg) {
 static THREADLOCAL FakeStack* fake_stack_tls;
 
 static FakeStack* GetTLSFakeStack() { return fake_stack_tls; }
-static void SetTLSFakeStack(FakeStack* fs) { fake_stack_tls = fs; }
+static void SetTLSFakeStack(FakeStack* fs) {
+  fake_stack_tls = fs;
+}
 void ResetTLSFakeStack() { fake_stack_tls = nullptr; }
 #else
 static FakeStack* GetTLSFakeStack() { return nullptr; }
-static void SetTLSFakeStack(FakeStack*) {}
+static void SetTLSFakeStack(FakeStack* fs) {}
 void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
+static void DisableFakeStack() {
+  AsanThread* t = GetCurrentThread();
+  if (t) {
+    t->SetFakeStackEnabled(false);
+  }
+}
+
+static void EnableFakeStack() {
+  AsanThread* t = GetCurrentThread();
+  if (t) {
+    t->SetFakeStackEnabled(true);
+  }
+}
+
 static FakeStack* GetFakeStack() {
   AsanThread* t = GetCurrentThread();
-  if (!t)
+  if (!t || !t->IsFakeStackEnabled())
     return nullptr;
   return t->get_or_create_fake_stack();
 }
@@ -362,4 +378,9 @@ void __asan_allocas_unpoison(uptr top, uptr bottom) {
   REAL(memset)(reinterpret_cast<void*>(MemToShadow(top)), 0,
                (bottom - top) / ASAN_SHADOW_GRANULARITY);
 }
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __asan_disable_fake_stack() { return DisableFakeStack(); }
+SANITIZER_INTERFACE_ATTRIBUTE
+void __asan_enable_fake_stack() { return EnableFakeStack(); }
 }  // extern "C"
