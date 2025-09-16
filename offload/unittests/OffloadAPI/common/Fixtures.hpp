@@ -40,12 +40,16 @@
   } while (0)
 #endif
 
-// TODO: rework this so the EXPECTED/ACTUAL results are readable
 #ifndef ASSERT_ERROR
 #define ASSERT_ERROR(EXPECTED, ACTUAL)                                         \
   do {                                                                         \
     ol_result_t Res = ACTUAL;                                                  \
-    ASSERT_TRUE(Res && (Res->Code == EXPECTED));                               \
+    if (!Res)                                                                  \
+      GTEST_FAIL() << #ACTUAL " succeeded when we expected it to fail";        \
+    if (Res->Code != EXPECTED)                                                 \
+      GTEST_FAIL() << #ACTUAL " was expected to return "                       \
+                   << #EXPECTED " but instead returned " << Res->Code << ": "  \
+                   << Res->Details;                                            \
   } while (0)
 #endif
 
