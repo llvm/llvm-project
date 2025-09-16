@@ -2924,14 +2924,12 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   uint64_t Index = ImmAPS.getZExtValue();
 
   const Pointer &SubVec = S.Stk.pop<Pointer>();
-  if (!SubVec.getFieldDesc()->isPrimitiveArray()) {
-    return Invalid(S, OpPC);
-  }
+  if (!SubVec.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   const Pointer &DstVec = S.Stk.pop<Pointer>();
-  if (!DstVec.getFieldDesc()->isPrimitiveArray()) {
-    return Invalid(S, OpPC);
-  }
+  if (!DstVec.getFieldDesc()->isPrimitiveArray())
+    return false;
 
   const Pointer &Result = S.Stk.peek<Pointer>();
 
@@ -2939,24 +2937,20 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   unsigned SubElements = SubVec.getNumElems();
 
   if (SubElements == 0 || DstElements == 0 || (DstElements % SubElements) != 0)
-    return Invalid(S, OpPC);
+    return false;
 
   unsigned NumLanes = DstElements / SubElements;
   unsigned Lane = static_cast<unsigned>(Index % NumLanes);
-
-  QualType ElemType = DstVec.getFieldDesc()->getElemQualType();
-  PrimType ElemPT = *S.getContext().classify(ElemType);
-
   unsigned InsertPos = Lane * SubElements;
 
-  TYPE_SWITCH(ElemPT, {
-    for (unsigned i = 0; i < DstElements; ++i) {
-      Result.elem<T>(i) = DstVec.elem<T>(i);
-    }
+  PrimType ElemPT = DstVec.getFieldDesc()->getPrimType();
 
-    for (unsigned i = 0; i < SubElements; ++i) {
-      Result.elem<T>(InsertPos + i) = SubVec.elem<T>(i);
-    }
+  TYPE_SWITCH(ElemPT, {
+    for (unsigned I = 0; I != DstElements; ++I)
+      Result.elem<T>(I) = DstVec.elem<T>(I);
+
+    for (unsigned I = 0; I != SubElements; ++I)
+      Result.elem<T>(InsertPos + I) = SubVec.elem<T>(I);
   });
 
   Result.initializeAllElements();

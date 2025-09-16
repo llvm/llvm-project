@@ -12169,11 +12169,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     ResultElements.reserve(DstLen);
 
     for (unsigned EltNum = 0; EltNum < DstLen; ++EltNum) {
-      if (EltNum >= LaneIdx && EltNum < LaneIdx + SubLen) {
+      if (EltNum >= LaneIdx && EltNum < LaneIdx + SubLen)
         ResultElements.push_back(SourceSub.getVectorElt(EltNum - LaneIdx));
-      } else {
+      else
         ResultElements.push_back(SourceDst.getVectorElt(EltNum));
-      }
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
