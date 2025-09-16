@@ -5,10 +5,9 @@
 define void @orn_v16i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: orn_v16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -23,11 +22,9 @@ entry:
 define void @orn_v8i16(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: orn_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -42,11 +39,9 @@ entry:
 define void @orn_v4i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: orn_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -61,11 +56,9 @@ entry:
 define void @orn_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: orn_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
