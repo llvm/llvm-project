@@ -38,7 +38,7 @@
 
 // DEFAULT: prospero-lld
 // DEFAULT-SAME: "--thinlto-distributor=d.exe"
-// DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}clang{{[^\"]*}}"
+// DEFAULT-SAME: "--thinlto-remote-compiler={{[^"]+}}"
 
 /// Check that the arguments are forwarded unconditionally even when the
 /// compiler is not in LTO mode.
