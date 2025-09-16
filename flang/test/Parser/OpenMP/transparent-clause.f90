@@ -70,7 +70,8 @@ end
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: | OmpBeginLoopDirective
-!PARSE-TREE: | | OmpLoopDirective -> llvm::omp::Directive = taskloop
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Transparent -> OmpTransparentClause -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '2'
+!PARSE-TREE: | | Flags = None
 !PARSE-TREE: | DoConstruct
