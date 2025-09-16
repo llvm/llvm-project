@@ -674,6 +674,11 @@ if (MINGW)
   )
 endif()
 
+# Don't build enable_execute_stack on arm64 darwin.
+if (APPLE)
+  list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
+endif()
+
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
