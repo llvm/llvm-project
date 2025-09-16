@@ -15349,11 +15349,9 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 //          (SLLI (QC.SHLADD x, y, c1 - c0), c0), if 4 <= (c1-c0) <=31.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  const bool HasStdExtZba = Subtarget.hasStdExtZba();
-  const bool HasVendorXAndesPerf = Subtarget.hasVendorXAndesPerf();
-  const bool HasVendorXqciac = Subtarget.hasVendorXqciac();
-  // Perform this optimization only in the zba/xandesperf/xqciac extension.
-  if (!HasStdExtZba && !HasVendorXAndesPerf && !HasVendorXqciac)
+  // Perform this optimization only in the zba/xandesperf/xqciac/xtheadba
+  // extension.
+  if (!Subtarget.hasShlAdd(3))
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15379,16 +15377,7 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   int64_t Diff = std::abs(C0 - C1);
-  bool IsShXaddDiff = Diff == 1 || Diff == 2 || Diff == 3;
-  bool HasShXadd = HasStdExtZba || HasVendorXAndesPerf;
-
-  // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
-  if ((!IsShXaddDiff && HasShXadd && !HasVendorXqciac) ||
-      (IsShXaddDiff && !HasShXadd && HasVendorXqciac))
-    return SDValue();
-
-  // Skip if QC_SHLADD is not applicable.
-  if (Diff == 0 || Diff > 31)
+  if (!Subtarget.hasShlAdd(Diff))
     return SDValue();
 
   // Build nodes.
@@ -15445,7 +15434,7 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
 static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   // Perform this optimization only in the zba extension.
-  if (!ReassocShlAddiAdd || !Subtarget.hasStdExtZba())
+  if (!ReassocShlAddiAdd || !Subtarget.hasShlAdd(3))
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -16375,17 +16364,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.hasVendorXqciac() && isInt<12>(CNode->getSExtValue()))
     return SDValue();
 
-  const bool HasShlAdd = Subtarget.hasStdExtZba() ||
-                         Subtarget.hasVendorXTHeadBa() ||
-                         Subtarget.hasVendorXAndesPerf();
-
   // WARNING: The code below is knowingly incorrect with regards to undef semantics.
   // We're adding additional uses of X here, and in principle, we should be freezing
   // X before doing so.  However, adding freeze here causes real regressions, and no
   // other target properly freezes X in these cases either.
   SDValue X = N->getOperand(0);
 
-  if (HasShlAdd) {
+  if (Subtarget.hasShlAdd(3)) {
     for (uint64_t Divisor : {3, 5, 9}) {
       if (MulAmt % Divisor != 0)
         continue;
@@ -21333,14 +21318,8 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
-    bool IsShXAdd =
-        (Subtarget.hasStdExtZba() || Subtarget.hasVendorXAndesPerf()) && C2 &&
-        C2->getZExtValue() >= 1 && C2->getZExtValue() <= 3;
-    bool IsQCShlAdd = Subtarget.hasVendorXqciac() && C2 &&
-                      C2->getZExtValue() >= 4 && C2->getZExtValue() <= 31;
-
     // Bail if we might break a sh{1,2,3}add/qc.shladd pattern.
-    if ((IsShXAdd || IsQCShlAdd) && N->hasOneUse() &&
+    if (C2 && Subtarget.hasShlAdd(C2->getZExtValue()) && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
         !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
@@ -24398,7 +24377,7 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     return true;
 
   // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
-  if (Subtarget.hasStdExtZba() && !Imm.isSignedIntN(12) &&
+  if (Subtarget.hasShlAdd(3) && !Imm.isSignedIntN(12) &&
       ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
        (Imm - 8).isPowerOf2()))
     return true;
