@@ -530,7 +530,6 @@ constexpr const intptr_t &returns_local() { return 0L; }
 // both-note@+1 {{read of temporary whose lifetime has ended}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
-
 #ifdef __SIZEOF_INT128__
 namespace VectorCast {
   typedef unsigned X          __attribute__ ((vector_size (64)));
@@ -572,3 +571,19 @@ namespace VectorCast {
 #endif
 }
 #endif
+
+namespace ToPrimPtrs {
+  struct S { int foo () { return 0; } };
+  auto ptr  = __builtin_bit_cast(int *, ((__INTPTR_TYPE__) 0));
+  auto nptr = __builtin_bit_cast(nullptr_t, ((__INTPTR_TYPE__)0));
+
+  constexpr auto cptr  = __builtin_bit_cast(int *, ((__INTPTR_TYPE__) 0)); // both-error {{must be initialized by a constant expression}} \
+                                                                           // both-note {{bit_cast to a pointer type is not allowed in a constant expression}}
+  constexpr auto cnptr = __builtin_bit_cast(nullptr_t, ((__INTPTR_TYPE__)0));
+
+#if !defined(_WIN32)
+  auto memptr = __builtin_bit_cast(int S::*, ((__INTPTR_TYPE__) 0));
+  constexpr auto cmemptr = __builtin_bit_cast(int S::*, ((__INTPTR_TYPE__) 0)); // both-error {{must be initialized by a constant expression}} \
+                                                                                // both-note {{bit_cast to a member pointer type is not allowed in a constant expression}}
+#endif
+}

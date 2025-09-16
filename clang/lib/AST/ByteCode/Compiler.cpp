@@ -7398,7 +7398,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
 
   if (!this->emitBitCastPrim(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
-                             ResultBitWidth, TargetSemantics, E))
+                             ResultBitWidth, TargetSemantics,
+                             ToType.getTypePtr(), E))
     return false;
 
   if (DiscardResult)
