@@ -60201,15 +60201,8 @@ static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
   if (HasC0 && !HasC1)
     return DAG.getNode(N->getOpcode(), DL, VT, Op1, Op0, Op2);
 
-  // Only keep the low 52 bits of C1
-  if (HasC1 && C1.countLeadingZeros() < 12) {
-    C1.clearBits(52, 64);
-    SDValue LowC1 = DAG.getConstant(C1, DL, VT);
-    return DAG.getNode(N->getOpcode(), DL, VT, Op0, LowC1, Op2);
-  }
-
   // lo(X * 1) + Z --> lo(X) + Z iff X == lo(X)
-  if (AddLow && HasC1 && C1.isOne()) {
+  if (AddLow && HasC1 && C1.trunc(52).isOne()) {
     KnownBits KnownOp0 = DAG.computeKnownBits(Op0);
     if (KnownOp0.countMinLeadingZeros() >= 12)
       return DAG.getNode(ISD::ADD, DL, VT, Op0, Op2);
