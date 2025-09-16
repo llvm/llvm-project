@@ -149,8 +149,8 @@ AST_MATCHER_P2(Stmt, hasNextTwoVarDecl,
   return false;
 }
 
-/// Matches a Stmt whose parent is a CompoundStmt, and there a two VarDecls
-/// matching the inner matcher in the beginning of CompoundStmt.
+/// Matches a CompoundStmt which has two VarDecls
+/// matching the inner matcher in the beginning.
 AST_MATCHER_P2(CompoundStmt, hasFirstTwoVarDecl,
                ast_matchers::internal::Matcher<VarDecl>, InnerMatcher1,
                ast_matchers::internal::Matcher<VarDecl>, InnerMatcher2) {
