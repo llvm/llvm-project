@@ -1136,3 +1136,66 @@ define i32 @mul_neg8(i32 %a) {
   %c = mul i32 %a, -8
   ret i32 %c
 }
+
+define i32 @select3i32(i1 zeroext %x) {
+; CHECK-LABEL: select3i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 3
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i32 3, i32 0
+  ret i32 %select
+}
+
+define i32 @select5i32(i1 zeroext %x) {
+; CHECK-LABEL: select5i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 5
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i32 5, i32 0
+  ret i32 %select
+}
+
+define i32 @select9i32(i1 zeroext %x) {
+; CHECK-LABEL: select9i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 9
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i32 9, i32 0
+  ret i32 %select
+}
+
+define i64 @select3i64(i1 zeroext %x) {
+; CHECK-LABEL: select3i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 3
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i64 3, i64 0
+  ret i64 %select
+}
+
+define i64 @select5i64(i1 zeroext %x) {
+; CHECK-LABEL: select5i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 5
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i64 5, i64 0
+  ret i64 %select
+}
+
+define i64 @select9i64(i1 zeroext %x) {
+; CHECK-LABEL: select9i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 9
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i64 9, i64 0
+  ret i64 %select
+}

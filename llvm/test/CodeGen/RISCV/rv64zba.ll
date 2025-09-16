@@ -4576,3 +4576,33 @@ define i64 @append_32ones(i64 %x) {
   %o = or i64 %s, 4294967295
   ret i64 %o
 }
+
+define i32 @select3(i1 zeroext %x) {
+; CHECK-LABEL: select3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 3
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i32 3, i32 0
+  ret i32 %select
+}
+
+define i32 @select5(i1 zeroext %x) {
+; CHECK-LABEL: select5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 5
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i32 5, i32 0
+  ret i32 %select
+}
+
+define i32 @select9(i1 zeroext %x) {
+; CHECK-LABEL: select9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    andi a0, a0, 9
+; CHECK-NEXT:    ret
+  %select = select i1 %x, i32 9, i32 0
+  ret i32 %select
+}
