@@ -1842,7 +1842,13 @@ public:
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.
-  unsigned getSNopBits() const;
+  unsigned getSNopBits() const {
+    if (getGeneration() >= AMDGPUSubtarget::GFX12)
+      return 7;
+    if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return 4;
+    return 3;
+  }
 };
 
 class GCNUserSGPRUsageInfo {
