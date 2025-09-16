@@ -177,7 +177,10 @@ struct TestMemRefFlattenAndVectorNarrowTypeEmulationPass
 
     RewritePatternSet patterns(ctx);
 
+    // This is necessary for the purpose of emulating `memref.alloc` and
+    // function boundaries.
     memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
+
     vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
         typeConverter, patterns);
 
