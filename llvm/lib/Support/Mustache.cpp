@@ -292,8 +292,7 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
   StringRef PrevTokenBody = PrevToken.TokenBody;
   StringRef Unindented = PrevTokenBody.rtrim(" \r\t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
-  if (CurrentType != Token::Type::Partial)
-    PrevToken.TokenBody = Unindented.str();
+  PrevToken.TokenBody = Unindented.str();
   CurrentToken.setIndentation(Indentation);
 }
 
@@ -425,7 +424,8 @@ class AddIndentationStringStream : public raw_ostream {
 public:
   explicit AddIndentationStringStream(llvm::raw_ostream &WrappedStream,
                                       size_t Indentation)
-      : Indentation(Indentation), WrappedStream(WrappedStream) {
+      : Indentation(Indentation), WrappedStream(WrappedStream),
+        NeedsIndent(true) {
     SetUnbuffered();
   }
 
@@ -434,10 +434,15 @@ protected:
     llvm::StringRef Data(Ptr, Size);
     SmallString<0> Indent;
     Indent.resize(Indentation, ' ');
+
     for (char C : Data) {
+      if (NeedsIndent && C != '\n') {
+        WrappedStream << Indent;
+        NeedsIndent = false;
+      }
       WrappedStream << C;
       if (C == '\n')
-        WrappedStream << Indent;
+        NeedsIndent = true;
     }
   }
 
@@ -446,6 +451,7 @@ protected:
 private:
   size_t Indentation;
   llvm::raw_ostream &WrappedStream;
+  bool NeedsIndent;
 };
 
 class Parser {
