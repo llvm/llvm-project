@@ -1910,20 +1910,30 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
-  // Combine adds through zext nneg:
-  // (zext nneg (X + C1)) + C2 --> zext X if C1 + C2 == 0
   {
     Value *X;
     const APInt *C1, *C2;
     if (match(&I, m_c_Add(m_NNegZExt(m_Add(m_Value(X), m_APInt(C1))),
                           m_APInt(C2)))) {
-      // Check if the constants cancel out (C1 + C2 == 0)
+      // Check if inner constant C1 is negative C1 < 0 and outer constant C2 >=
+      // 0
+      if (!C1->isNegative() || C2->isNegative())
+        return nullptr;
+
       APInt Sum = C1->sext(C2->getBitWidth()) + *C2;
-      if (Sum.isZero()) {
-        // The add inside the zext and the outer add cancel out
-        Value *NewZExt = Builder.CreateZExt(X, I.getType());
-        return replaceInstUsesWith(I, NewZExt);
-      }
+      APInt newSum = Sum.trunc(C1->getBitWidth());
+
+      if (newSum.sext(C2->getBitWidth()) != Sum)
+        return nullptr;
+
+      // X if sum is zero, else X + newSum
+      Value *Inner =
+          Sum.isZero()
+              ? X
+              : Builder.CreateAdd(X, ConstantInt::get(X->getType(), newSum));
+
+      Value *NewZExt = Builder.CreateZExt(Inner, I.getType());
+      return replaceInstUsesWith(I, NewZExt);
     }
   }
 
