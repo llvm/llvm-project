@@ -258,8 +258,7 @@ define amdgpu_kernel void @max_32regs_mfma32(ptr addrspace(1) %arg) #3 {
 ; GFX908-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v4, v4, a[0:31]
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 0
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 5
+; GFX908-NEXT:    s_nop 13
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v5
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
@@ -339,8 +338,7 @@ define amdgpu_kernel void @max_32regs_mfma32(ptr addrspace(1) %arg) #3 {
 ; GFX90A-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v2, a[0:31]
-; GFX90A-NEXT:    s_nop 7
-; GFX90A-NEXT:    s_nop 7
+; GFX90A-NEXT:    s_nop 15
 ; GFX90A-NEXT:    s_nop 2
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a1, v3
 ; GFX90A-NEXT:    ;;#ASMSTART

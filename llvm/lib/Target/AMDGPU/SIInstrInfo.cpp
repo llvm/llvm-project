@@ -1932,8 +1932,9 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
                               unsigned Quantity) const {
   DebugLoc DL = MBB.findDebugLoc(MI);
+  unsigned MaxSNopCount = 1u << ST.getSNopBits();
   while (Quantity > 0) {
-    unsigned Arg = std::min(Quantity, 8u);
+    unsigned Arg = std::min(Quantity, MaxSNopCount);
     Quantity -= Arg;
     BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg - 1);
   }
