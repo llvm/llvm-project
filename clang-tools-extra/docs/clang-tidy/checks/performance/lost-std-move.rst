@@ -39,9 +39,9 @@ Options
 
 .. option:: StrictMode
 
-   A variable X can be referenced by another variable R. In this case the last
-   variable usage might be not from X, but from R. It is quite difficult to
-   find in a large function, so if the plugin sees some R references X, then
-   it will not emit a warning for X not to provoke false positive. If you're
-   sure that such references don't extend X' lifetime and ready to handle possible
+   A variable ``X`` can be referenced by another variable ``R``. In this case the last
+   variable usage might be not from ``X``, but from ``R``. It is quite difficult to
+   find in a large function, so if the plugin sees some ``R`` references ``X``, then
+   it will not emit a warning for ``X`` not to provoke false positive. If you're
+   sure that such references don't extend ``X`` lifetime and ready to handle possible
    false positives, then set `StrictMode` to `false`. Defaults to `true`.
