@@ -238,11 +238,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
     Gen->HandleTranslationUnit(C);
 
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount -= 1;
-      if (LLVMIRGenerationRefCount == 0)
-        LLVMIRGeneration.stopTimer();
-    }
+    if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+      LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
   }
 
   // Silently ignore if we weren't initialized for some reason.
