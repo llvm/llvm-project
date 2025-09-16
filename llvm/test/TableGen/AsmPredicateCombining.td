@@ -63,7 +63,7 @@ def AsmPred4 : Predicate<"Pred4">, AssemblerPredicate<(all_of AsmCond4, (not (an
 // MATCHER-NEXT:   Features.set(Feature_AsmPred4Bit);
 
 def insn1 : TestInsn<1, [AsmPred1]>;
-// DISASS: return FB[arch::AsmCond1]
+// DISASS: return FB[arch::AsmCond1];
 
 def insn2 : TestInsn<2, [AsmPred2]>;
 // DISASS: return FB[arch::AsmCond2a] && FB[arch::AsmCond2b];
