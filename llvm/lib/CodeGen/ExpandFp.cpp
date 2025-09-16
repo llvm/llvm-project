@@ -82,7 +82,7 @@ public:
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
-    assert(canExpandType(Ty));
+    assert(canExpandType(Ty) && "Expected supported floating point type");
 
     // The type to use for the computation of the remainder. This may be
     // wider than the input/result type which affects the ...
@@ -357,7 +357,8 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
 
   Type *Ty = I.getType();
-  assert(FRemExpander::canExpandType(Ty));
+  assert(FRemExpander::canExpandType(Ty) &&
+         "Expected supported floating point type");
 
   FastMathFlags FMF = I.getFastMathFlags();
   // TODO Make use of those flags for optimization?
@@ -926,15 +927,18 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Worklist) 
   Value *Result = PoisonValue::get(VTy);
   for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
     Value *Ext = Builder.CreateExtractElement(I->getOperand(0), Idx);
-    auto *BinOp = dyn_cast<BinaryOperator>(I);
-    Value *NewOp;
-    if (BinOp)
+
+    Value *NewOp = nullptr;
+    if (auto *BinOp = dyn_cast<BinaryOperator>(I))
       NewOp = Builder.CreateBinOp(
           BinOp->getOpcode(), Ext,
           Builder.CreateExtractElement(I->getOperand(1), Idx));
-    else
-      NewOp = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
+    else if (auto *CastI = dyn_cast<CastInst>(I))
+      NewOp = Builder.CreateCast(CastI->getOpcode(), Ext,
                                  I->getType()->getScalarType());
+    else
+      llvm_unreachable("Unsupported instruction type");
+
     Result = Builder.CreateInsertElement(Result, NewOp, Idx);
     if (auto *ScalarizedI = dyn_cast<Instruction>(NewOp)) {
       ScalarizedI->copyIRFlags(I, true);
