@@ -2213,7 +2213,10 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   QualType IdxTy = E->getIdx()->getType();
 
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
-    CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
+    CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/ true);
+
+  // Emit array bounds constraints for vector element access.
+  CGF.EmitArrayBoundsConstraints(E, Idx, /*Accessed=*/true);
 
   Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
 
