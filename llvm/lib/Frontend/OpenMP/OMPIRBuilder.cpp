@@ -321,6 +321,12 @@ getTargetKernelExecMode(Function &Kernel) {
   return static_cast<OMPTgtExecModeFlags>(KernelMode->getZExtValue());
 }
 
+static bool isGenericKernel(Function &Fn) {
+  std::optional<omp::OMPTgtExecModeFlags> ExecMode =
+      getTargetKernelExecMode(Fn);
+  return !ExecMode || (*ExecMode & OMP_TGT_EXEC_MODE_GENERIC);
+}
+
 /// Make \p Source branch to \p Target.
 ///
 /// Handles two situations:
@@ -1615,11 +1621,9 @@ static void targetParallelCallback(
       IfCondition ? Builder.CreateSExtOrTrunc(IfCondition, OMPIRBuilder->Int32)
                   : Builder.getInt32(1);
 
-  // If this is not a Generic kernel, we can skip generating the wrapper.
-  std::optional<omp::OMPTgtExecModeFlags> ExecMode =
-      getTargetKernelExecMode(*OuterFn);
+  // If this is a Generic kernel, we can generate the wrapper.
   Value *WrapperFn;
-  if (ExecMode && (*ExecMode & OMP_TGT_EXEC_MODE_GENERIC))
+  if (isGenericKernel(*OuterFn))
     WrapperFn = createTargetParallelWrapper(OMPIRBuilder, OutlinedFn);
   else
     WrapperFn = Constant::getNullValue(PtrTy);
@@ -1893,13 +1897,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   auto OI = [&]() -> std::unique_ptr<OutlineInfo> {
     if (Config.isTargetDevice()) {
-      std::optional<omp::OMPTgtExecModeFlags> ExecMode =
-          getTargetKernelExecMode(*OuterFn);
-
-      // If OuterFn is not a Generic kernel, skip custom allocation. This causes
-      // the CodeExtractor to follow its default behavior. Otherwise, we need to
-      // use device shared memory to allocate argument structures.
-      if (ExecMode && *ExecMode & OMP_TGT_EXEC_MODE_GENERIC)
+      // If OuterFn is a Generic kernel, we need to use device shared memory to
+      // allocate argument structures. Otherwise, we use stack allocations as
+      // usual.
+      if (isGenericKernel(*OuterFn))
         return std::make_unique<DeviceSharedMemOutlineInfo>(*this);
     }
     return std::make_unique<OutlineInfo>();
@@ -8556,8 +8557,9 @@ static Expected<Function *> createOutlinedFunction(
     Argument &Arg = std::get<1>(InArg);
     Value *InputCopy = nullptr;
 
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-        ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP());
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = ArgAccessorFuncCB(
+        Arg, Input, InputCopy, AllocaIP, Builder.saveIP(),
+        OpenMPIRBuilder::InsertPointTy(ExitBB, ExitBB->begin()));
     if (!AfterIP)
       return AfterIP.takeError();
     Builder.restoreIP(*AfterIP);
