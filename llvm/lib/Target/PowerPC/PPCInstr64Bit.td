@@ -693,66 +693,66 @@ def ADD8TLS  : XOForm_1<31, 266, 0, (outs g8rc:$RT), (ins g8rc_nox0:$RA, tlsreg:
                         "add $RT, $RA, $RB", IIC_IntSimple,
                         [(set i64:$RT, (add i64:$RA, tglobaltlsaddr:$RB))]>;
 let mayLoad = 1 in {
-def LBZXTLS : XForm_1<31,  87, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LBZXTLS : XForm_1<31,  87, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lbzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LHZXTLS : XForm_1<31, 279, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LHZXTLS : XForm_1<31, 279, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lhzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LHAXTLS : XForm_1<31, 343, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LHAXTLS : XForm_1<31, 343, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lhax $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LWZXTLS : XForm_1<31,  23, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LWZXTLS : XForm_1<31,  23, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lwzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LWAXTLS : XForm_1<31, 341, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LWAXTLS : XForm_1<31, 341, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lwax $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LDXTLS  : XForm_1<31,  21, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LDXTLS  : XForm_1<31,  21, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "ldx $RST, $RA, $RB", IIC_LdStLD, []>, isPPC64;
-def LBZXTLS_32 : XForm_1<31,  87, (outs gprc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LBZXTLS_32 : XForm_1<31,  87, (outs gprc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                          "lbzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LHZXTLS_32 : XForm_1<31, 279, (outs gprc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LHZXTLS_32 : XForm_1<31, 279, (outs gprc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                          "lhzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LHAXTLS_32 : XForm_1<31, 343, (outs gprc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LHAXTLS_32 : XForm_1<31, 343, (outs gprc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                          "lhax $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LWZXTLS_32 : XForm_1<31,  23, (outs gprc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LWZXTLS_32 : XForm_1<31,  23, (outs gprc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                          "lwzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LWAXTLS_32 : XForm_1<31, 341, (outs gprc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LWAXTLS_32 : XForm_1<31, 341, (outs gprc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                          "lwax $RST, $RA, $RB", IIC_LdStLoad, []>;
 
 }
 let mayLoad = 1, Predicates = [HasFPU] in {
-def LFSXTLS : XForm_25<31, 535, (outs f4rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LFSXTLS : XForm_25<31, 535, (outs f4rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                        "lfsx $RST, $RA, $RB", IIC_LdStLFD, []>;
-def LFDXTLS : XForm_25<31, 599, (outs f8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LFDXTLS : XForm_25<31, 599, (outs f8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                        "lfdx $RST, $RA, $RB", IIC_LdStLFD, []>;
 }
 
 let mayStore = 1 in {
-def STBXTLS : XForm_8<31, 215, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STBXTLS : XForm_8<31, 215, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                       "stbx $RST, $RA, $RB", IIC_LdStStore, []>,
                       PPC970_DGroup_Cracked;
-def STHXTLS : XForm_8<31, 407, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STHXTLS : XForm_8<31, 407, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                       "sthx $RST, $RA, $RB", IIC_LdStStore, []>,
                       PPC970_DGroup_Cracked;
-def STWXTLS : XForm_8<31, 151, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STWXTLS : XForm_8<31, 151, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                       "stwx $RST, $RA, $RB", IIC_LdStStore, []>,
                       PPC970_DGroup_Cracked;
-def STDXTLS  : XForm_8<31, 149, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STDXTLS  : XForm_8<31, 149, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                        "stdx $RST, $RA, $RB", IIC_LdStSTD, []>, isPPC64,
                        PPC970_DGroup_Cracked;
-def STBXTLS_32 : XForm_8<31, 215, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STBXTLS_32 : XForm_8<31, 215, (outs), (ins gprc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                          "stbx $RST, $RA, $RB", IIC_LdStStore, []>,
                          PPC970_DGroup_Cracked;
-def STHXTLS_32 : XForm_8<31, 407, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STHXTLS_32 : XForm_8<31, 407, (outs), (ins gprc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                          "sthx $RST, $RA, $RB", IIC_LdStStore, []>,
                          PPC970_DGroup_Cracked;
-def STWXTLS_32 : XForm_8<31, 151, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STWXTLS_32 : XForm_8<31, 151, (outs), (ins gprc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                          "stwx $RST, $RA, $RB", IIC_LdStStore, []>,
                          PPC970_DGroup_Cracked;
 
 }
 let mayStore = 1, Predicates = [HasFPU] in {
-def STFSXTLS : XForm_8<31, 663, (outs), (ins f4rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STFSXTLS : XForm_8<31, 663, (outs), (ins f4rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                        "stfsx $RST, $RA, $RB", IIC_LdStSTFD, []>,
                        PPC970_DGroup_Cracked;
-def STFDXTLS : XForm_8<31, 727, (outs), (ins f8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STFDXTLS : XForm_8<31, 727, (outs), (ins f8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                        "stfdx $RST, $RA, $RB", IIC_LdStSTFD, []>,
                        PPC970_DGroup_Cracked;
 }
@@ -825,47 +825,47 @@ def ADD8TLS_ : XOForm_1<31, 266, 0, (outs g8rc:$RT), (ins g8rc:$RA, tlsreg:$RB),
                         "add $RT, $RA, $RB", IIC_IntSimple, []>;
 
 let mayLoad = 1 in {
-def LBZXTLS_ : XForm_1<31,  87, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LBZXTLS_ : XForm_1<31,  87, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lbzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LHZXTLS_ : XForm_1<31, 279, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LHZXTLS_ : XForm_1<31, 279, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lhzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LHAXTLS_ : XForm_1<31, 343, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LHAXTLS_ : XForm_1<31, 343, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                        "lhax $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LWZXTLS_ : XForm_1<31,  23, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LWZXTLS_ : XForm_1<31,  23, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "lwzx $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LWAXTLS_ : XForm_1<31, 341, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LWAXTLS_ : XForm_1<31, 341, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                        "lwax $RST, $RA, $RB", IIC_LdStLoad, []>;
-def LDXTLS_  : XForm_1<31,  21, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LDXTLS_  : XForm_1<31,  21, (outs g8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                       "ldx $RST, $RA, $RB", IIC_LdStLD, []>, isPPC64;
 }
 
 let mayLoad = 1, Predicates = [HasFPU] in {
-def LFSXTLS_ : XForm_25<31, 535, (outs f4rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LFSXTLS_ : XForm_25<31, 535, (outs f4rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                         "lfsx $RST, $RA, $RB", IIC_LdStLFD, []>;
-def LFDXTLS_ : XForm_25<31, 599, (outs f8rc:$RST), (ins ptr_rc_nor0:$RA, tlsreg:$RB),
+def LFDXTLS_ : XForm_25<31, 599, (outs f8rc:$RST), (ins PtrOpNoR0:$RA, tlsreg:$RB),
                         "lfdx $RST, $RA, $RB", IIC_LdStLFD, []>;
 }
 
 let mayStore = 1 in {
-def STBXTLS_ : XForm_8<31, 215, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STBXTLS_ : XForm_8<31, 215, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                       "stbx $RST, $RA, $RB", IIC_LdStStore, []>,
                       PPC970_DGroup_Cracked;
-def STHXTLS_ : XForm_8<31, 407, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STHXTLS_ : XForm_8<31, 407, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                       "sthx $RST, $RA, $RB", IIC_LdStStore, []>,
                       PPC970_DGroup_Cracked;
-def STWXTLS_ : XForm_8<31, 151, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STWXTLS_ : XForm_8<31, 151, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                       "stwx $RST, $RA, $RB", IIC_LdStStore, []>,
                       PPC970_DGroup_Cracked;
-def STDXTLS_  : XForm_8<31, 149, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STDXTLS_  : XForm_8<31, 149, (outs), (ins g8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                        "stdx $RST, $RA, $RB", IIC_LdStSTD, []>, isPPC64,
                        PPC970_DGroup_Cracked;
 }
 
 let mayStore = 1, Predicates = [HasFPU] in {
-def STFSXTLS_ : XForm_8<31, 663, (outs), (ins f4rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STFSXTLS_ : XForm_8<31, 663, (outs), (ins f4rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                         "stfsx $RST, $RA, $RB", IIC_LdStSTFD, []>,
                         PPC970_DGroup_Cracked;
-def STFDXTLS_ : XForm_8<31, 727, (outs), (ins f8rc:$RST, ptr_rc_nor0:$RA, tlsreg:$RB),
+def STFDXTLS_ : XForm_8<31, 727, (outs), (ins f8rc:$RST, PtrOpNoR0:$RA, tlsreg:$RB),
                         "stfdx $RST, $RA, $RB", IIC_LdStSTFD, []>,
                         PPC970_DGroup_Cracked;
 }
@@ -1309,18 +1309,18 @@ def LWAX_32 : XForm_1_memOp<31, 341, (outs gprc:$RST), (ins (memrr $RA, $RB):$ad
 // Update forms.
 let mayLoad = 1, hasSideEffects = 0 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
-def LHAU8 : DForm_1<43, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LHAU8 : DForm_1<43, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lhau $RST, $addr", IIC_LdStLHAU,
                     []>, RegConstraint<"$addr.reg = $ea_result">;
 // NO LWAU!
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
-def LHAUX8 : XForm_1_memOp<31, 375, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LHAUX8 : XForm_1_memOp<31, 375, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lhaux $RST, $addr", IIC_LdStLHAUX,
                           []>, RegConstraint<"$addr.ptrreg = $ea_result">;
-def LWAUX : XForm_1_memOp<31, 373, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LWAUX : XForm_1_memOp<31, 373, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lwaux $RST, $addr", IIC_LdStLHAUX,
                           []>, RegConstraint<"$addr.ptrreg = $ea_result">, isPPC64;
@@ -1359,28 +1359,28 @@ def LWZX8 : XForm_1_memOp<31,  23, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr
 
 // Update forms.
 let mayLoad = 1, hasSideEffects = 0 in {
-def LBZU8 : DForm_1<35, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LBZU8 : DForm_1<35, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lbzu $RST, $addr", IIC_LdStLoadUpd,
                     []>, RegConstraint<"$addr.reg = $ea_result">;
-def LHZU8 : DForm_1<41, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LHZU8 : DForm_1<41, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lhzu $RST, $addr", IIC_LdStLoadUpd,
                     []>, RegConstraint<"$addr.reg = $ea_result">;
-def LWZU8 : DForm_1<33, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LWZU8 : DForm_1<33, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                     (ins (memri $D, $RA):$addr),
                     "lwzu $RST, $addr", IIC_LdStLoadUpd,
                     []>, RegConstraint<"$addr.reg = $ea_result">;
 
-def LBZUX8 : XForm_1_memOp<31, 119, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LBZUX8 : XForm_1_memOp<31, 119, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lbzux $RST, $addr", IIC_LdStLoadUpdX,
                           []>, RegConstraint<"$addr.ptrreg = $ea_result">;
-def LHZUX8 : XForm_1_memOp<31, 311, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LHZUX8 : XForm_1_memOp<31, 311, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lhzux $RST, $addr", IIC_LdStLoadUpdX,
                           []>, RegConstraint<"$addr.ptrreg = $ea_result">;
-def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                           (ins (memrr $RA, $RB):$addr),
                           "lwzux $RST, $addr", IIC_LdStLoadUpdX,
                           []>, RegConstraint<"$addr.ptrreg = $ea_result">;
@@ -1432,12 +1432,12 @@ def LWBRX8 : XForm_1_memOp<31,  534, (outs g8rc:$RST), (ins (memrr $RA, $RB):$ad
 }
 
 let mayLoad = 1, hasSideEffects = 0 in {
-def LDU  : DSForm_1<58, 1, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LDU  : DSForm_1<58, 1, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                     (ins (memrix $D, $RA):$addr),
                     "ldu $RST, $addr", IIC_LdStLDU,
                     []>, RegConstraint<"$addr.reg = $ea_result">, isPPC64;
 
-def LDUX : XForm_1_memOp<31, 53, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
+def LDUX : XForm_1_memOp<31, 53, (outs g8rc:$RST, PtrOpNoR0:$ea_result),
                         (ins (memrr $RA, $RB):$addr),
                         "ldux $RST, $addr", IIC_LdStLDUX,
                         []>, RegConstraint<"$addr.ptrreg = $ea_result">, isPPC64;
@@ -1704,40 +1704,40 @@ def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, ForceXForm:$dst),
 // Stores with Update (pre-inc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-def STBU8 : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
+def STBU8 : DForm_1<39, (outs PtrOpNoR0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stbu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">;
-def STHU8 : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
+def STHU8 : DForm_1<45, (outs PtrOpNoR0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "sthu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">;
-def STWU8 : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
+def STWU8 : DForm_1<37, (outs PtrOpNoR0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stwu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">;
 
-def STBUX8: XForm_8_memOp<31, 247, (outs ptr_rc_nor0:$ea_res),
+def STBUX8: XForm_8_memOp<31, 247, (outs PtrOpNoR0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stbux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
-def STHUX8: XForm_8_memOp<31, 439, (outs ptr_rc_nor0:$ea_res),
+def STHUX8: XForm_8_memOp<31, 439, (outs PtrOpNoR0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "sthux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
-def STWUX8: XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
+def STWUX8: XForm_8_memOp<31, 183, (outs PtrOpNoR0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stwux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
 } // Interpretation64Bit
 
-def STDU : DSForm_1<62, 1, (outs ptr_rc_nor0:$ea_res),
+def STDU : DSForm_1<62, 1, (outs PtrOpNoR0:$ea_res),
                    (ins g8rc:$RST, (memrix $D, $RA):$addr),
                    "stdu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">,
                    isPPC64;
 
-def STDUX : XForm_8_memOp<31, 181, (outs ptr_rc_nor0:$ea_res),
+def STDUX : XForm_8_memOp<31, 181, (outs PtrOpNoR0:$ea_res),
                           (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stdux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,

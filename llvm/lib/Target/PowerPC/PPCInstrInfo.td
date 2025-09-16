@@ -1950,61 +1950,61 @@ def LFD : DForm_1<50, (outs f8rc:$RST), (ins (memri $D, $RA):$addr),
 
 // Unindexed (r+i) Loads with Update (preinc).
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
-def LBZU : DForm_1<35, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
+def LBZU : DForm_1<35, (outs gprc:$RST, PtrOpNoR0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lbzu $RST, $addr", IIC_LdStLoadUpd,
                    []>, RegConstraint<"$RA = $ea_result">;
 
-def LHAU : DForm_1<43, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
+def LHAU : DForm_1<43, (outs gprc:$RST, PtrOpNoR0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lhau $RST, $addr", IIC_LdStLHAU,
                    []>, RegConstraint<"$addr.reg = $ea_result">;
 
-def LHZU : DForm_1<41, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
+def LHZU : DForm_1<41, (outs gprc:$RST, PtrOpNoR0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lhzu $RST, $addr", IIC_LdStLoadUpd,
                    []>, RegConstraint<"$addr.reg = $ea_result">;
 
-def LWZU : DForm_1<33, (outs gprc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
+def LWZU : DForm_1<33, (outs gprc:$RST, PtrOpNoR0:$ea_result), (ins (memri $D, $RA):$addr),
                    "lwzu $RST, $addr", IIC_LdStLoadUpd,
                    []>, RegConstraint<"$addr.reg = $ea_result">;
 
 let Predicates = [HasFPU] in {
-def LFSU : DForm_1<49, (outs f4rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
+def LFSU : DForm_1<49, (outs f4rc:$RST, PtrOpNoR0:$ea_result), (ins (memri $D, $RA):$addr),
                   "lfsu $RST, $addr", IIC_LdStLFDU,
                   []>, RegConstraint<"$addr.reg = $ea_result">;
 
-def LFDU : DForm_1<51, (outs f8rc:$RST, ptr_rc_nor0:$ea_result), (ins (memri $D, $RA):$addr),
+def LFDU : DForm_1<51, (outs f8rc:$RST, PtrOpNoR0:$ea_result), (ins (memri $D, $RA):$addr),
                   "lfdu $RST, $addr", IIC_LdStLFDU,
                   []>, RegConstraint<"$addr.reg = $ea_result">;
 }
 
 
 // Indexed (r+r) Loads with Update (preinc).
-def LBZUX : XForm_1_memOp<31, 119, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
+def LBZUX : XForm_1_memOp<31, 119, (outs gprc:$RST, PtrOpNoR0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lbzux $RST, $addr", IIC_LdStLoadUpdX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
-def LHAUX : XForm_1_memOp<31, 375, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
+def LHAUX : XForm_1_memOp<31, 375, (outs gprc:$RST, PtrOpNoR0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lhaux $RST, $addr", IIC_LdStLHAUX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
-def LHZUX : XForm_1_memOp<31, 311, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
+def LHZUX : XForm_1_memOp<31, 311, (outs gprc:$RST, PtrOpNoR0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lhzux $RST, $addr", IIC_LdStLoadUpdX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
-def LWZUX : XForm_1_memOp<31, 55, (outs gprc:$RST, ptr_rc_nor0:$ea_result),
+def LWZUX : XForm_1_memOp<31, 55, (outs gprc:$RST, PtrOpNoR0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lwzux $RST, $addr", IIC_LdStLoadUpdX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
 let Predicates = [HasFPU] in {
-def LFSUX : XForm_1_memOp<31, 567, (outs f4rc:$RST, ptr_rc_nor0:$ea_result),
+def LFSUX : XForm_1_memOp<31, 567, (outs f4rc:$RST, PtrOpNoR0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lfsux $RST, $addr", IIC_LdStLFDUX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">;
 
-def LFDUX : XForm_1_memOp<31, 631, (outs f8rc:$RST, ptr_rc_nor0:$ea_result),
+def LFDUX : XForm_1_memOp<31, 631, (outs f8rc:$RST, PtrOpNoR0:$ea_result),
                    (ins (memrr $RA, $RB):$addr),
                    "lfdux $RST, $addr", IIC_LdStLFDUX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">;
@@ -2086,20 +2086,20 @@ def STFD : DForm_1<54, (outs), (ins f8rc:$RST, (memri $D, $RA):$dst),
 
 // Unindexed (r+i) Stores with Update (preinc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
-def STBU  : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
+def STBU  : DForm_1<39, (outs PtrOpNoR0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "stbu $RST, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">;
-def STHU  : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
+def STHU  : DForm_1<45, (outs PtrOpNoR0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "sthu $RST, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">;
-def STWU  : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
+def STWU  : DForm_1<37, (outs PtrOpNoR0:$ea_res), (ins gprc:$RST, (memri $D, $RA):$dst),
                     "stwu $RST, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">;
 let Predicates = [HasFPU] in {
-def STFSU : DForm_1<53, (outs ptr_rc_nor0:$ea_res), (ins f4rc:$RST, (memri $D, $RA):$dst),
+def STFSU : DForm_1<53, (outs PtrOpNoR0:$ea_res), (ins f4rc:$RST, (memri $D, $RA):$dst),
                     "stfsu $RST, $dst", IIC_LdStSTFDU, []>,
                     RegConstraint<"$dst.reg = $ea_res">;
-def STFDU : DForm_1<55, (outs ptr_rc_nor0:$ea_res), (ins f8rc:$RST, (memri $D, $RA):$dst),
+def STFDU : DForm_1<55, (outs PtrOpNoR0:$ea_res), (ins f8rc:$RST, (memri $D, $RA):$dst),
                     "stfdu $RST, $dst", IIC_LdStSTFDU, []>,
                     RegConstraint<"$dst.reg = $ea_res">;
 }
@@ -2159,28 +2159,28 @@ def STFDX : XForm_28_memOp<31, 727, (outs), (ins f8rc:$RST, (memrr $RA, $RB):$ad
 
 // Indexed (r+r) Stores with Update (preinc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
-def STBUX : XForm_8_memOp<31, 247, (outs ptr_rc_nor0:$ea_res),
+def STBUX : XForm_8_memOp<31, 247, (outs PtrOpNoR0:$ea_res),
                           (ins gprc:$RST, (memrr $RA, $RB):$addr),
                           "stbux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
-def STHUX : XForm_8_memOp<31, 439, (outs ptr_rc_nor0:$ea_res),
+def STHUX : XForm_8_memOp<31, 439, (outs PtrOpNoR0:$ea_res),
                           (ins gprc:$RST, (memrr $RA, $RB):$addr),
                           "sthux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
-def STWUX : XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
+def STWUX : XForm_8_memOp<31, 183, (outs PtrOpNoR0:$ea_res),
                           (ins gprc:$RST, (memrr $RA, $RB):$addr),
                           "stwux $RST, $addr", IIC_LdStSTUX, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
 let Predicates = [HasFPU] in {
-def STFSUX: XForm_8_memOp<31, 695, (outs ptr_rc_nor0:$ea_res),
+def STFSUX: XForm_8_memOp<31, 695, (outs PtrOpNoR0:$ea_res),
                           (ins f4rc:$RST, (memrr $RA, $RB):$addr),
                           "stfsux $RST, $addr", IIC_LdStSTFDU, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
                           PPC970_DGroup_Cracked;
-def STFDUX: XForm_8_memOp<31, 759, (outs ptr_rc_nor0:$ea_res),
+def STFDUX: XForm_8_memOp<31, 759, (outs PtrOpNoR0:$ea_res),
                           (ins f8rc:$RST, (memrr $RA, $RB):$addr),
                           "stfdux $RST, $addr", IIC_LdStSTFDU, []>,
                           RegConstraint<"$addr.ptrreg = $ea_res">,
