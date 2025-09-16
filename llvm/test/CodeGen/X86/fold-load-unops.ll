@@ -89,7 +89,7 @@ define float @rcpss_size(ptr %a) optsize {
 ;
 ; AVX-LABEL: rcpss_size:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrcpss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load float, ptr %a
     %ins = insertelement <4 x float> undef, float %ld, i32 0
@@ -106,7 +106,7 @@ define <4 x float> @rcpss_full_size(ptr %a) optsize {
 ;
 ; AVX-LABEL: rcpss_full_size:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrcpss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load <4 x float>, ptr %a
     %res = tail call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %ld)
@@ -121,7 +121,7 @@ define float @rcpss_pgso(ptr %a) !prof !14 {
 ;
 ; AVX-LABEL: rcpss_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrcpss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load float, ptr %a
     %ins = insertelement <4 x float> undef, float %ld, i32 0
@@ -138,7 +138,7 @@ define <4 x float> @rcpss_full_pgso(ptr %a) !prof !14 {
 ;
 ; AVX-LABEL: rcpss_full_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrcpss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load <4 x float>, ptr %a
     %res = tail call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %ld)
@@ -153,7 +153,7 @@ define float @rsqrtss_size(ptr %a) optsize {
 ;
 ; AVX-LABEL: rsqrtss_size:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrsqrtss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load float, ptr %a
     %ins = insertelement <4 x float> undef, float %ld, i32 0
@@ -170,7 +170,7 @@ define <4 x float> @rsqrtss_full_size(ptr %a) optsize {
 ;
 ; AVX-LABEL: rsqrtss_full_size:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrsqrtss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load <4 x float>, ptr %a
     %res = tail call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %ld)
@@ -185,7 +185,7 @@ define float @rsqrtss_pgso(ptr %a) !prof !14 {
 ;
 ; AVX-LABEL: rsqrtss_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrsqrtss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load float, ptr %a
     %ins = insertelement <4 x float> undef, float %ld, i32 0
@@ -202,7 +202,7 @@ define <4 x float> @rsqrtss_full_pgso(ptr %a) !prof !14 {
 ;
 ; AVX-LABEL: rsqrtss_full_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vrsqrtss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load <4 x float>, ptr %a
     %res = tail call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %ld)
@@ -217,7 +217,7 @@ define float @sqrtss_size(ptr %a) optsize{
 ;
 ; AVX-LABEL: sqrtss_size:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vsqrtss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load float, ptr %a
     %ins = insertelement <4 x float> undef, float %ld, i32 0
@@ -268,7 +268,7 @@ define float @sqrtss_pgso(ptr %a) !prof !14 {
 ;
 ; AVX-LABEL: sqrtss_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vsqrtss (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load float, ptr %a
     %ins = insertelement <4 x float> undef, float %ld, i32 0
@@ -319,7 +319,7 @@ define double @sqrtsd_size(ptr %a) optsize {
 ;
 ; AVX-LABEL: sqrtsd_size:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vsqrtsd (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load double, ptr %a
     %ins = insertelement <2 x double> undef, double %ld, i32 0
@@ -370,7 +370,7 @@ define double @sqrtsd_pgso(ptr %a) !prof !14 {
 ;
 ; AVX-LABEL: sqrtsd_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vsqrtsd (%rdi), %xmm15, %xmm0
 ; AVX-NEXT:    retq
     %ld = load double, ptr %a
     %ins = insertelement <2 x double> undef, double %ld, i32 0

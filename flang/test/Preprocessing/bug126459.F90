@@ -1,5 +1,5 @@
-! RUN: %flang -E -fopenmp %s 2>&1 | FileCheck %s
-!CHECK: NDIR=0
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp %s 2>&1 | FileCheck %s
+!CHECK: ndir=0
 #define BLANKMACRO
-BLANKMACRO !$ NDIR=0
+BLANKMACRO !$ ndir=0
 end

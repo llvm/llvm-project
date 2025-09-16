@@ -12,9 +12,15 @@
 
 #include "LanaiSelectionDAGInfo.h"
 
+#define GET_SDNODE_DESC
+#include "LanaiGenSDNodeInfo.inc"
+
 #define DEBUG_TYPE "lanai-selectiondag-info"
 
-namespace llvm {
+using namespace llvm;
+
+LanaiSelectionDAGInfo::LanaiSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(LanaiGenSDNodeInfo) {}
 
 SDValue LanaiSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG & /*DAG*/, const SDLoc & /*dl*/, SDValue /*Chain*/,
@@ -28,5 +34,3 @@ SDValue LanaiSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   return SDValue();
 }
-
-} // namespace llvm

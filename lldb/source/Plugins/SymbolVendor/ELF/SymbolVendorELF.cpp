@@ -103,14 +103,14 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   module_spec.GetSymbolFileSpec() = fspec;
   module_spec.GetUUID() = uuid;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-  FileSpec dsym_fspec =
-      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+  FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+      module_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
   if (!dsym_fspec || IsDwpSymbolFile(module_sp, dsym_fspec)) {
     // If we have a stripped binary or if we have a DWP file, SymbolLocator
     // plugins may be able to give us an unstripped binary or an
     // 'only-keep-debug' stripped file.
-    ModuleSpec unstripped_spec =
-        PluginManager::LocateExecutableObjectFile(module_spec);
+    ModuleSpec unstripped_spec = PluginManager::LocateExecutableObjectFile(
+        module_spec, module_sp->GetSymbolLocatorStatistics());
     if (!unstripped_spec)
       return nullptr;
     // The default SymbolLocator plugin returns the original binary if no other
@@ -127,7 +127,6 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
       dsym_file_data_sp, dsym_file_data_offset);
   if (!dsym_objfile_sp)
     return nullptr;
-
   // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
   // be able to figure this out consistently as the symbol file may not
   // have stripped the code sections, etc.

@@ -94,8 +94,9 @@ RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
 template <int KIND> struct StoreIntegerAt {
   RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
       std::size_t at, std::int64_t value) const {
-    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
-        Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
+    *result.ZeroBasedIndexedElement<
+        Fortran::runtime::CppTypeFor<common::TypeCategory::Integer, KIND>>(at) =
+        value;
   }
 };
 
@@ -103,8 +104,9 @@ template <int KIND> struct StoreIntegerAt {
 template <int KIND> struct StoreFloatingPointAt {
   RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
       std::size_t at, std::double_t value) const {
-    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
-        Fortran::common::TypeCategory::Real, KIND>>(at) = value;
+    *result.ZeroBasedIndexedElement<
+        Fortran::runtime::CppTypeFor<common::TypeCategory::Real, KIND>>(at) =
+        value;
   }
 };
 
@@ -136,7 +138,7 @@ static inline RT_API_ATTRS std::int64_t GetInt64(
   }
 }
 
-static inline RT_API_ATTRS Fortran::common::optional<std::int64_t> GetInt64Safe(
+static inline RT_API_ATTRS common::optional<std::int64_t> GetInt64Safe(
     const char *p, std::size_t bytes, Terminator &terminator) {
   switch (bytes) {
   case 1:
@@ -154,7 +156,7 @@ static inline RT_API_ATTRS Fortran::common::optional<std::int64_t> GetInt64Safe(
     if (static_cast<Int128>(result) == n) {
       return result;
     }
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
   default:
     terminator.Crash("GetInt64Safe: no case for %zd bytes", bytes);
@@ -392,8 +394,7 @@ inline RT_API_ATTRS RESULT ApplyLogicalKind(
 }
 
 // Calculate result type of (X op Y) for *, //, DOT_PRODUCT, &c.
-Fortran::common::optional<
-    std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
+common::optional<std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
 GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
   int maxKind{std::max(xKind, yKind)};
   switch (xCat) {
@@ -467,18 +468,18 @@ GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
     if (yCat == TypeCategory::Character) {
       return std::make_pair(TypeCategory::Character, maxKind);
     } else {
-      return Fortran::common::nullopt;
+      return common::nullopt;
     }
   case TypeCategory::Logical:
     if (yCat == TypeCategory::Logical) {
       return std::make_pair(TypeCategory::Logical, maxKind);
     } else {
-      return Fortran::common::nullopt;
+      return common::nullopt;
     }
   default:
     break;
   }
-  return Fortran::common::nullopt;
+  return common::nullopt;
 }
 
 // Accumulate floating-point results in (at least) double precision
@@ -511,10 +512,13 @@ inline RT_API_ATTRS const char *FindCharacter(
 // Copy payload data from one allocated descriptor to another.
 // Assumes element counts and element sizes match, and that both
 // descriptors are allocated.
+template <typename P = char, int RANK = -1>
 RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from);
+template <typename P = char, int RANK = -1>
 RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
     const Descriptor &to, const Descriptor &from);
+template <typename P = char, int RANK = -1>
 RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
     const Descriptor &to, const Descriptor &from);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
@@ -556,9 +560,9 @@ RT_API_ATTRS void CopyAndPad(
       to[j] = static_cast<TO>(' ');
     }
   } else if (toChars <= fromChars) {
-    std::memcpy(to, from, toChars * sizeof(TO));
+    runtime::memcpy(to, from, toChars * sizeof(TO));
   } else {
-    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    runtime::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }

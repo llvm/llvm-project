@@ -14,13 +14,20 @@
 #ifndef MLIR_INITALLTRANSLATIONS_H
 #define MLIR_INITALLTRANSLATIONS_H
 
+#include "mlir/Target/IRDLToCpp/TranslationRegistration.h"
+
 namespace mlir {
 
 void registerFromLLVMIRTranslation();
 void registerFromSPIRVTranslation();
+void registerFromWasmTranslation();
 void registerToCppTranslation();
 void registerToLLVMIRTranslation();
 void registerToSPIRVTranslation();
+
+namespace smt {
+void registerExportSMTLIBTranslation();
+}
 
 // This function should be called before creating any MLIRContext if one
 // expects all the possible translations to be made available to the context
@@ -29,9 +36,12 @@ inline void registerAllTranslations() {
   static bool initOnce = []() {
     registerFromLLVMIRTranslation();
     registerFromSPIRVTranslation();
+    registerIRDLToCppTranslation();
+    registerFromWasmTranslation();
     registerToCppTranslation();
     registerToLLVMIRTranslation();
     registerToSPIRVTranslation();
+    smt::registerExportSMTLIBTranslation();
     return true;
   }();
   (void)initOnce;

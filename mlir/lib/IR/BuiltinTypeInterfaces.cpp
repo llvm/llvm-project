@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/Sequence.h"
 
 using namespace mlir;
 using namespace mlir::detail;

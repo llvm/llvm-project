@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/TypeRange.h"
-#include "mlir/IR/Operation.h"
 
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
 // TypeRange
+//===----------------------------------------------------------------------===//
 
 TypeRange::TypeRange(ArrayRef<Type> types)
     : TypeRange(types.data(), types.size()) {

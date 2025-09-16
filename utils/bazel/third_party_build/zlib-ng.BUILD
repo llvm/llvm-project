@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
-load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -20,12 +20,12 @@ config_setting(
     flag_values = {":llvm_enable_zlib": "true"},
 )
 
-genrule(
+copy_file(
     # The input template is identical to the CMake output.
     name = "zconf_gen",
-    srcs = ["zconf.h.in"],
-    outs = ["zconf.h"],
-    cmd = "cp $(SRCS) $(OUTS)",
+    src = "zconf.h.in",
+    out = "zconf.h",
+    allow_symlink = True,
 )
 
 cc_library(

@@ -99,7 +99,6 @@ TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
   uint64_t double_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  LIBC_NAMESPACE::libc_errno = 0;
   auto double_result =
       internal::simple_decimal_conversion<double>("123456789012345678900");
 

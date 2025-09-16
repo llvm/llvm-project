@@ -2480,3 +2480,55 @@ define void @bitcast_gep(ptr %p, ptr %dest) {
   store i32 %trunc, ptr %dest, align 4
   ret void
 }
+
+define i1 @loadCombine_4consecutive_rev_icmp0(ptr %p) {
+; LE-LABEL: @loadCombine_4consecutive_rev_icmp0(
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; LE-NEXT:    [[C:%.*]] = icmp eq i32 [[L1]], 0
+; LE-NEXT:    ret i1 [[C]]
+;
+; BE-LABEL: @loadCombine_4consecutive_rev_icmp0(
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
+; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
+; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; BE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
+; BE-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; BE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
+; BE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
+; BE-NEXT:    [[O1:%.*]] = or i32 [[S4]], [[S3]]
+; BE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S2]]
+; BE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[E1]]
+; BE-NEXT:    [[C:%.*]] = icmp eq i32 [[O3]], 0
+; BE-NEXT:    ret i1 [[C]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %p2 = getelementptr i8, ptr %p, i32 2
+  %p3 = getelementptr i8, ptr %p, i32 3
+  %l1 = load i8, ptr %p
+  %l2 = load i8, ptr %p1
+  %l3 = load i8, ptr %p2
+  %l4 = load i8, ptr %p3
+
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i8 %l2 to i32
+  %e3 = zext i8 %l3 to i32
+  %e4 = zext i8 %l4 to i32
+
+  %s2 = shl i32 %e2, 8
+  %s3 = shl i32 %e3, 16
+  %s4 = shl i32 %e4, 24
+
+  %o1 = or i32 %s4, %s3
+  %o2 = or i32 %o1, %s2
+  %o3 = or i32 %o2, %e1
+
+  %c = icmp eq i32 %o3, 0
+  ret i1 %c
+}

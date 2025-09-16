@@ -9,6 +9,9 @@ void consume_obj(SomeObj*);
 CFMutableArrayRef provide_cf();
 void consume_cf(CFMutableArrayRef);
 
+CGImageRef provideImage();
+NSString *stringForImage(CGImageRef);
+
 void some_function();
 
 namespace simple {
@@ -271,6 +274,16 @@ namespace cxx_member_operator_call {
   }
 }
 
+namespace cxx_assignment_op {
+
+  SomeObj* provide();
+  void foo() {
+    RetainPtr<SomeObj> ptr;
+    ptr = provide();
+  }
+
+}
+
 namespace call_with_ptr_on_ref {
   RetainPtr<SomeObj> provideProtected();
   RetainPtr<CFMutableArrayRef> provideProtectedCF();
@@ -316,13 +329,17 @@ namespace call_with_adopt_ref {
   }
 }
 
+#define YES 1
+
 namespace call_with_cf_constant {
   void bar(const NSArray *);
   void baz(const NSDictionary *);
+  void boo(NSNumber *);
   void foo() {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
+    boo(@YES);
   }
 }
 
@@ -375,9 +392,110 @@ namespace alloc_class {
   }
 }
 
+namespace ptr_conversion {
+
+SomeObj *provide_obj();
+
+void dobjc(SomeObj* obj) {
+  [dynamic_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+void cobjc(SomeObj* obj) {
+  [checked_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+unsigned dcf(CFTypeRef obj) {
+  return CFArrayGetCount(dynamic_cf_cast<CFArrayRef>(obj));
+}
+
+unsigned ccf(CFTypeRef obj) {
+  return CFArrayGetCount(checked_cf_cast<CFArrayRef>(obj));
+}
+
+void some_function(id);
+void idcf(CFTypeRef obj) {
+  some_function(bridge_id_cast(obj));
+}
+
+} // ptr_conversion
+
+namespace const_global {
+
+extern NSString * const SomeConstant;
+extern CFDictionaryRef const SomeDictionary;
+void doWork(NSString *str, CFDictionaryRef dict);
+void use_const_global() {
+  doWork(SomeConstant, SomeDictionary);
+}
+
+NSString *provide_str();
+CFDictionaryRef provide_dict();
+void use_const_local() {
+  doWork(provide_str(), provide_dict());
+  // expected-warning@-1{{Call argument for parameter 'str' is unretained and unsafe}}
+  // expected-warning@-2{{Call argument for parameter 'dict' is unretained and unsafe}}
+}
+
+} // namespace const_global
+
+namespace var_decl_ref_singleton {
+
+static Class initSomeObject() { return nil; }
+static Class (*getSomeObjectClassSingleton)() = initSomeObject;
+
+bool foo(NSString *obj) {
+  return [obj isKindOfClass:getSomeObjectClassSingleton()];
+}
+
+class Bar {
+public:
+  Class someObject();
+  static Class staticSomeObject();
+};
+typedef Class (Bar::*SomeObjectSingleton)();
+
+bool bar(NSObject *obj, Bar *bar, SomeObjectSingleton someObjSingleton) {
+  return [obj isKindOfClass:(bar->*someObjSingleton)()];
+  // expected-warning@-1{{Call argument for parameter 'aClass' is unretained and unsafe}}
+}
+
+bool baz(NSObject *obj) {
+  Class (*someObjectSingleton)() = Bar::staticSomeObject;
+  return [obj isKindOfClass:someObjectSingleton()];
+}
+
+} // namespace var_decl_ref_singleton
+
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+
+void foo() {
+  consumeNS(provideNS());
+  consumeCF(provideCF());
+}
+
+struct Base {
+  NSString *provideStr() NS_RETURNS_RETAINED;
+};
+
+struct Derived : Base {
+  void consumeStr(NSString *);
+
+  void foo() {
+    consumeStr(provideStr());
+  }
+};
+
+} // namespace ns_retained_return_value
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
+- (SomeObj *)getSomeObj;
 @end
 
 @implementation TestObject
@@ -392,6 +510,24 @@ namespace alloc_class {
   // expected-warning@-1{{Call argument is unretained and unsafe}}
   // expected-warning@-2{{Call argument is unretained and unsafe}}
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get()];
+  [self doWork:__null];
+  [self doWork:nil];
 }
 
+- (SomeObj *)getSomeObj {
+    return RetainPtr<SomeObj *>(provide()).autorelease();
+}
+
+- (void)doWorkOnSomeObj {
+    [[self getSomeObj] doWork];
+}
+
+- (CGImageRef)createImage {
+  return provideImage();
+}
+
+- (NSString *)convertImage {
+  RetainPtr<CGImageRef> image = [self createImage];
+  return stringForImage(image.get());
+}
 @end

@@ -50,7 +50,8 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
 }
 
 def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
+       [AttrSizedOperandSegments,
+        DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -58,14 +59,16 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
     using the options provided as attributes.
   }];
 
-  let arguments =
-    (ins TransformHandleTypeInterface:$target,
-        DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
+  let arguments = (ins 
+      Variadic<TransformHandleTypeInterface>:$targets,
+      Variadic<TransformHandleTypeInterface>:$loops,
+      DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
   let results = (outs TransformHandleTypeInterface:$consumer,
                       TransformHandleTypeInterface:$fused_consumer);
 
   let assemblyFormat = [{
-    $target (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
+    $targets `in` `(` $loops `)`
+    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
     attr-dict `:` functional-type(operands, results)
   }];
 }
@@ -119,6 +122,30 @@ def TestFuseUsingForallOp : Op<Transform_Dialect, "test.fuse_using_forall",
   let assemblyFormat = [{
     $root_op ($tile_sizes^)? (`interchange` $interchange^)?
     (`mapping` `=` $mapping^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def TestTileAndFuseOuterParallelPartialReductionOp : Op<
+    Transform_Dialect, "test.tile_and_fuse_outer_parallel_partial_reduction",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Test operation to tile an operation using partial reduction with
+    outer parallel strategy, and to fuse its producers.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$root_op,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$reduction_dims,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
+                   OptionalAttr<DeviceMappingArrayAttr>:$mapping);
+
+  let results = (outs TransformHandleTypeInterface:$tiled_ops,
+                 Variadic<TransformHandleTypeInterface>:$loops);
+  let assemblyFormat = [{
+    $root_op (`reduction_dims` `=` $reduction_dims^)?
+    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)?
     attr-dict `:` functional-type(operands, results)
   }];
 }

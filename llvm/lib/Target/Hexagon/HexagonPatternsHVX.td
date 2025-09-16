@@ -426,6 +426,21 @@ let Predicates = [UseHVX] in {
            (V6_vmux HvxQR:$Qu, HvxVR:$Vt, HvxVR:$Vs)>;
 }
 
+let Predicates = [UseHVX] in {
+  def: OpR_RR_pat_sat<V6_vaddubsat,    uaddsat, VecI8,   HVI8>;
+  def: OpR_RR_pat_sat<V6_vadduhsat,    uaddsat, VecI16,  HVI16>;
+  def: OpR_RR_pat_sat<V6_vadduwsat,    uaddsat, VecI32,  HVI32>;
+  def: OpR_RR_pat_sat<V6_vaddbsat,     saddsat, VecI8,   HVI8>;
+  def: OpR_RR_pat_sat<V6_vaddhsat,     saddsat, VecI16,  HVI16>;
+  def: OpR_RR_pat_sat<V6_vaddwsat,     saddsat, VecI32,  HVI32>;
+  def: OpR_RR_pat_sat<V6_vaddubsat_dv, uaddsat, VecPI8,  HWI8>;
+  def: OpR_RR_pat_sat<V6_vadduhsat_dv, uaddsat, VecPI16, HWI16>;
+  def: OpR_RR_pat_sat<V6_vadduwsat_dv, uaddsat, VecPI32, HWI32>;
+  def: OpR_RR_pat_sat<V6_vaddbsat_dv,  saddsat, VecPI8,  HWI8>;
+  def: OpR_RR_pat_sat<V6_vaddhsat_dv,  saddsat, VecPI16, HWI16>;
+  def: OpR_RR_pat_sat<V6_vaddwsat_dv,  saddsat, VecPI32, HWI32>;
+}
+
 // For now, we always deal with vector floating point in SF mode.
 class OpR_RR_pat_conv<InstHexagon MI, PatFrag Op, ValueType ResType,
                       PatFrag RsPred, PatFrag RtPred = RsPred>
@@ -508,10 +523,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXQFloat] in {
     defm: MinMax_pats<V6_vmin_sf, V6_vmax_sf, vselect,  setgt, VecQ32, HVF32>;
     defm: MinMax_pats<V6_vmin_sf, V6_vmax_sf, vselect, setogt, VecQ32, HVF32>;
   }
-  def: OpR_RR_pat<V6_vmin_hf, pf2<fminnum>, VecF16, HVF16>;
-  def: OpR_RR_pat<V6_vmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
-  def: OpR_RR_pat<V6_vmin_sf, pf2<fminnum>, VecF32, HVF32>;
-  def: OpR_RR_pat<V6_vmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmin_hf, pf2<fminimumnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
 }
 
 let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
@@ -521,10 +536,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
     defm: MinMax_pats<V6_vfmin_sf, V6_vfmax_sf, vselect,  setgt, VecQ32, HVF32>;
     defm: MinMax_pats<V6_vfmin_sf, V6_vfmax_sf, vselect, setogt, VecQ32, HVF32>;
   }
-  def: OpR_RR_pat<V6_vfmin_hf, pf2<fminnum>, VecF16, HVF16>;
-  def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
-  def: OpR_RR_pat<V6_vfmin_sf, pf2<fminnum>, VecF32, HVF32>;
-  def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmin_hf, pf2<fminimumnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
 }
 
 let Predicates = [UseHVX] in {

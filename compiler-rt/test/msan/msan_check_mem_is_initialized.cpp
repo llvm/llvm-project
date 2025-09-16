@@ -12,7 +12,7 @@ int main(void) {
   __msan_poison(p + 10, 2);
 
   __msan_check_mem_is_initialized(p, 10);
-  __msan_check_mem_is_initialized(p + 12, 30);
+  __msan_check_mem_is_initialized(p + 12, 20);
 #ifdef POSITIVE
   __msan_check_mem_is_initialized(p + 5, 20);
   // CHECK: Uninitialized bytes in __msan_check_mem_is_initialized at offset 5 inside [0x{{.*}}, 20)

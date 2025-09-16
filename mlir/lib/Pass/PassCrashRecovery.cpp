@@ -8,16 +8,13 @@
 
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
@@ -414,23 +411,19 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
-  // Notify the context to disable the use of thread-local storage while the
-  // pass manager is running in a crash recovery context thread. Re-enable the
-  // thread local storage upon function exit. This is required to persist any
-  // attribute storage allocated during passes beyond the lifetime of the
-  // recovery context thread.
-  MLIRContext *ctx = getContext();
-  ctx->disableThreadLocalStorage();
-  auto guard =
-      llvm::make_scope_exit([ctx]() { ctx->enableThreadLocalStorage(); });
+  const bool threadingEnabled = getContext()->isMultithreadingEnabled();
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.
   LogicalResult passManagerResult = failure();
   llvm::CrashRecoveryContext recoveryContext;
-  recoveryContext.RunSafelyOnThread(
-      [&] { passManagerResult = runPasses(op, am); });
+  const auto runPassesFn = [&] { passManagerResult = runPasses(op, am); };
+  if (threadingEnabled)
+    recoveryContext.RunSafelyOnThread(runPassesFn);
+  else
+    recoveryContext.RunSafely(runPassesFn);
   crashReproGenerator->finalize(op, passManagerResult);
+
   return passManagerResult;
 }
 
@@ -452,7 +445,8 @@ makeReproducerStreamFactory(StringRef outputFile) {
 
 void printAsTextualPipeline(
     raw_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes);
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false);
 
 std::string mlir::makeReproducer(
     StringRef anchorName,

@@ -31,6 +31,12 @@ ARM64EC-SAME: -machine:arm64ec
 ARM64EC-SAME: -alternatename:__image_base__=__ImageBase
 ARM64EC-SAME: foo.o
 
+RUN: ld.lld -### foo.o -m arm64xpe 2>&1 | FileCheck -check-prefix=ARM64X %s
+ARM64X:      -out:a.exe
+ARM64X-SAME: -machine:arm64x
+ARM64X-SAME: -alternatename:__image_base__=__ImageBase
+ARM64X-SAME: foo.o
+
 RUN: ld.lld -### foo.o -m i386pep -shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --dll 2>&1 | FileCheck -check-prefix=SHARED %s
@@ -290,6 +296,7 @@ RUN: not ld.lld -m i386pep --foo 2>&1 | FileCheck -check-prefix UNKNOWN_ARG %s
 UNKNOWN_ARG: error: unknown argument: --foo
 
 RUN: not ld.lld -m i386pep 2>&1 | FileCheck -check-prefix NO_INPUT_FILES %s
+RUN: not ld.lld -m mipspe 2>&1 | FileCheck -check-prefix NO_INPUT_FILES %s
 NO_INPUT_FILES: error: no input files
 
 RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix ENABLE_AUTO_IMPORT %s

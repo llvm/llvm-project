@@ -52,8 +52,8 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
       return nullptr;
     SmallVector<OpFoldResult> resultStrides(resultOffsets.size(),
                                             b.getIndexAttr(1));
-    Value inserted = b.create<tensor::InsertSliceOp>(
-        loc, result, resultOperands[index], resultOffsets, resultSizes,
+    Value inserted = tensor::InsertSliceOp::create(
+        b, loc, result, resultOperands[index], resultOffsets, resultSizes,
         resultStrides);
     results.push_back(inserted);
   }

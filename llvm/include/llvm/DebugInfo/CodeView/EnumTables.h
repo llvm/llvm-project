@@ -12,43 +12,44 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
 template <typename T> struct EnumEntry;
 namespace codeview {
 
-ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames();
-ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames();
-ArrayRef<EnumEntry<uint16_t>> getRegisterNames(CPUType Cpu);
-ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames();
-ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames();
-ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames();
-ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames();
-ArrayRef<EnumEntry<SourceLanguage>> getSourceLanguageNames();
-ArrayRef<EnumEntry<uint32_t>> getCompileSym2FlagNames();
-ArrayRef<EnumEntry<uint32_t>> getCompileSym3FlagNames();
-ArrayRef<EnumEntry<uint32_t>> getFileChecksumNames();
-ArrayRef<EnumEntry<unsigned>> getCPUTypeNames();
-ArrayRef<EnumEntry<uint32_t>> getFrameProcSymFlagNames();
-ArrayRef<EnumEntry<uint16_t>> getExportSymFlagNames();
-ArrayRef<EnumEntry<uint32_t>> getModuleSubstreamKindNames();
-ArrayRef<EnumEntry<uint8_t>> getThunkOrdinalNames();
-ArrayRef<EnumEntry<uint16_t>> getTrampolineNames();
-ArrayRef<EnumEntry<COFF::SectionCharacteristics>>
+LLVM_ABI ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames();
+LLVM_ABI ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getRegisterNames(CPUType Cpu);
+LLVM_ABI ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames();
+LLVM_ABI ArrayRef<EnumEntry<SourceLanguage>> getSourceLanguageNames();
+LLVM_ABI ArrayRef<EnumEntry<uint32_t>> getCompileSym2FlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint32_t>> getCompileSym3FlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint32_t>> getFileChecksumNames();
+LLVM_ABI ArrayRef<EnumEntry<unsigned>> getCPUTypeNames();
+LLVM_ABI ArrayRef<EnumEntry<uint32_t>> getFrameProcSymFlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getExportSymFlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint32_t>> getModuleSubstreamKindNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getThunkOrdinalNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getTrampolineNames();
+LLVM_ABI ArrayRef<EnumEntry<COFF::SectionCharacteristics>>
 getImageSectionCharacteristicNames();
-ArrayRef<EnumEntry<uint16_t>> getClassOptionNames();
-ArrayRef<EnumEntry<uint8_t>> getMemberAccessNames();
-ArrayRef<EnumEntry<uint16_t>> getMethodOptionNames();
-ArrayRef<EnumEntry<uint16_t>> getMemberKindNames();
-ArrayRef<EnumEntry<uint8_t>> getPtrKindNames();
-ArrayRef<EnumEntry<uint8_t>> getPtrModeNames();
-ArrayRef<EnumEntry<uint16_t>> getPtrMemberRepNames();
-ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames();
-ArrayRef<EnumEntry<uint8_t>> getCallingConventions();
-ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum();
-ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum();
-ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getClassOptionNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getMemberAccessNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getMethodOptionNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getMemberKindNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getPtrKindNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getPtrModeNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getPtrMemberRepNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getCallingConventions();
+LLVM_ABI ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getJumpTableEntrySizeNames();
 
 } // end namespace codeview
 } // end namespace llvm

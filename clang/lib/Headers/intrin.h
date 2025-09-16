@@ -30,6 +30,10 @@
 #include <arm64intr.h>
 #endif
 
+#if defined(__ARM_ACLE)
+#include <arm_acle.h>
+#endif
+
 /* For the definition of jmp_buf. */
 #if __STDC_HOSTED__
 #include <setjmp.h>
@@ -370,10 +374,29 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 \*----------------------------------------------------------------------------*/
 #if defined(__aarch64__) || defined(__arm64ec__)
 unsigned __int64 __getReg(int);
-long _InterlockedAdd(long volatile *Addend, long Value);
-__int64 _InterlockedAdd64(__int64 volatile *Addend, __int64 Value);
+unsigned char _interlockedbittestandreset_acq(long volatile *, long);
+unsigned char _interlockedbittestandreset_nf(long volatile *, long);
+unsigned char _interlockedbittestandreset_rel(long volatile *, long);
+unsigned char _interlockedbittestandreset64_acq(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandreset64_nf(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandreset64_rel(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandset_acq(long volatile *, long);
+unsigned char _interlockedbittestandset_nf(long volatile *, long);
+unsigned char _interlockedbittestandset_rel(long volatile *, long);
+unsigned char _interlockedbittestandset64_acq(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandset64_nf(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandset64_rel(__int64 volatile *, __int64);
+long _InterlockedAdd(long volatile *, long);
+long _InterlockedAdd_acq(long volatile *, long);
+long _InterlockedAdd_nf(long volatile *, long);
+long _InterlockedAdd_rel(long volatile *, long);
+__int64 _InterlockedAdd64(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_acq(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
+unsigned int __sys(int, __int64);
 
 unsigned short __cdecl _byteswap_ushort(unsigned short val);
 unsigned long __cdecl _byteswap_ulong (unsigned long val);

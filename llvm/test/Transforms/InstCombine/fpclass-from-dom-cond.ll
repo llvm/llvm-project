@@ -131,10 +131,10 @@ define i1 @test5(double %x, i1 %cond) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X]], i32 408)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[Y:%.*]] = phi double [ -1.000000e+00, [[ENTRY:%.*]] ], [ [[X]], [[IF_END]] ]
-; CHECK-NEXT:    [[RET:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[Y]], i32 408)
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF_END]] ]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -391,11 +391,9 @@ define float @test_signbit_check_fail(float %x, i1 %cond) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN2:%.*]], label [[IF_END]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[FNEG2:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[VALUE:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[FNEG2]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[X]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %i32 = bitcast float %x to i32

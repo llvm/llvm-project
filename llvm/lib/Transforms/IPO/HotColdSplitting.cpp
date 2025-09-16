@@ -199,7 +199,7 @@ static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
     F.addFnAttr(Attribute::Cold);
     Changed = true;
   }
-  if (!F.hasFnAttribute(Attribute::MinSize)) {
+  if (!F.hasMinSize()) {
     F.addFnAttr(Attribute::MinSize);
     Changed = true;
   }

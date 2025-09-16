@@ -23,21 +23,21 @@ entry:
   %scevgep = getelementptr %Struct, ptr %this, i64 0, i32 2, i64 8, i32 0
   %vec1 = tail call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0(ptr %scevgep)
   %ev1 = extractvalue { <4 x float>, <4 x float> } %vec1, 1
-  %fm1 = fmul <4 x float> %f, %ev1
-  %av1 = fadd <4 x float> %f, %fm1
+  %fm1 = fmul contract <4 x float> %f, %ev1
+  %av1 = fadd contract <4 x float> %f, %fm1
   %ev2 = extractvalue { <4 x float>, <4 x float> } %vec1, 0
-  %fm2 = fmul <4 x float> %f, %ev2
-  %av2 = fadd <4 x float> %f, %fm2
+  %fm2 = fmul contract <4 x float> %f, %ev2
+  %av2 = fadd contract <4 x float> %f, %fm2
   %scevgep2 = getelementptr %Struct, ptr %this, i64 0, i32 3, i64 8, i32 0
   tail call void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float> %av2, <4 x float> %av1, ptr %scevgep2)
   %scevgep3 = getelementptr %Struct, ptr %this, i64 0, i32 2, i64 12, i32 0
   %vec2 = tail call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0(ptr %scevgep3)
   %ev3 = extractvalue { <4 x float>, <4 x float> } %vec2, 1
-  %fm3 = fmul <4 x float> %f, %ev3
-  %av3 = fadd <4 x float> %f, %fm3
+  %fm3 = fmul contract <4 x float> %f, %ev3
+  %av3 = fadd contract <4 x float> %f, %fm3
   %ev4 = extractvalue { <4 x float>, <4 x float> } %vec2, 0
-  %fm4 = fmul <4 x float> %f, %ev4
-  %av4 = fadd <4 x float> %f, %fm4
+  %fm4 = fmul contract <4 x float> %f, %ev4
+  %av4 = fadd contract <4 x float> %f, %fm4
   %scevgep4 = getelementptr %Struct, ptr %this, i64 0, i32 3, i64 12, i32 0
   tail call void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float> %av4, <4 x float> %av3, ptr %scevgep4)
   ret void
@@ -49,6 +49,6 @@ declare { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0(ptr) #2
 ; Function Attrs: nounwind
 declare void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float>, <4 x float>, ptr nocapture) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }

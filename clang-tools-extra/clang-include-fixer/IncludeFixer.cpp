@@ -53,7 +53,7 @@ public:
 
     Compiler->createSema(getTranslationUnitKind(), CompletionConsumer);
     SemaSource->setCompilerInstance(Compiler);
-    Compiler->getSema().addExternalSource(SemaSource.get());
+    Compiler->getSema().addExternalSource(SemaSource);
 
     clang::ParseAST(Compiler->getSema(), Compiler->getFrontendOpts().ShowStats,
                     Compiler->getFrontendOpts().SkipFunctionBodies);
@@ -89,8 +89,7 @@ bool IncludeFixerActionFactory::runInvocation(
   assert(Invocation->getFrontendOpts().Inputs.size() == 1);
 
   // Set up Clang.
-  clang::CompilerInstance Compiler(PCHContainerOps);
-  Compiler.setInvocation(std::move(Invocation));
+  CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
   Compiler.setFileManager(Files);
 
   // Create the compiler's actual diagnostics engine. We want to drop all

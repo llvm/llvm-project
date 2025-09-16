@@ -1,5 +1,5 @@
-; RUN: not --crash llc -mtriple powerpc-ibm-aix-xcoff < %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple powerpc-ibm-aix-xcoff < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple powerpc64-ibm-aix-xcoff < %s 2>&1 | FileCheck %s
 
 @v = global i8 0
 
@@ -9,4 +9,4 @@ define void @foo() {
   ret void
 }
 
-; CHECK: LLVM ERROR: associated data of XXStructor list is not yet supported on AIX
+; CHECK: error: associated data of XXStructor list is not yet supported on AIX

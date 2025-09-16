@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS
   Analysis
   Core
+  FrontendHLSL
+  FrontendOffloading
   FrontendOpenACC
   FrontendOpenMP
   Passes
@@ -10,12 +12,17 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(LLVMFrontendTests
+  HLSLBindingTest.cpp
+  HLSLRootSignatureDumpTest.cpp
   OpenACCTest.cpp
   OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp
   OpenMPParsingTest.cpp
   OpenMPCompositionTest.cpp
   OpenMPDecompositionTest.cpp
+  OpenMPDirectiveNameTest.cpp
+  OpenMPDirectiveNameParserTest.cpp
+  PropertySetRegistryTest.cpp
 
   DEPENDS
   acc_gen

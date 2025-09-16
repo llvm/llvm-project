@@ -48,11 +48,10 @@ StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
   return nullptr;
 }
 
-bool ScriptInterpreter::LoadScriptingModule(const char *filename,
-                                            const LoadScriptOptions &options,
-                                            lldb_private::Status &error,
-                                            StructuredData::ObjectSP *module_sp,
-                                            FileSpec extra_search_dir) {
+bool ScriptInterpreter::LoadScriptingModule(
+    const char *filename, const LoadScriptOptions &options,
+    lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
+    FileSpec extra_search_dir, lldb::TargetSP loaded_into_target_sp) {
   error = Status::FromErrorString(
       "This script interpreter does not support importing modules.");
   return false;
@@ -115,6 +114,13 @@ lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
   }
 
   return nullptr;
+}
+
+SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
+    const lldb::SBSymbolContext &sb_sym_ctx) const {
+  if (sb_sym_ctx.m_opaque_up)
+    return *sb_sym_ctx.m_opaque_up;
+  return {};
 }
 
 std::optional<MemoryRegionInfo>
@@ -221,7 +227,7 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
     m_input_file_sp = debugger.GetInputFileSP();
 
     Pipe pipe;
-    Status pipe_result = pipe.CreateNew(false);
+    Status pipe_result = pipe.CreateNew();
 #if defined(_WIN32)
     lldb::file_t read_file = pipe.GetReadNativeHandle();
     pipe.ReleaseReadFileDescriptor();

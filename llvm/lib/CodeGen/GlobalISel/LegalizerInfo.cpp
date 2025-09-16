@@ -34,6 +34,12 @@ cl::opt<bool> llvm::DisableGISelLegalityCheck(
     cl::desc("Don't verify that MIR is fully legal between GlobalISel passes"),
     cl::Hidden);
 
+cl::opt<bool> VerboseVerifyLegalizerInfo(
+    "verbose-gisel-verify-legalizer-info",
+    cl::desc("Print more information to dbgs about GlobalISel legalizer rules "
+             "being verified"),
+    cl::Hidden);
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
   switch (Action) {
   case Legal:
@@ -211,20 +217,28 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
 bool LegalizeRuleSet::verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const {
 #ifndef NDEBUG
   if (Rules.empty()) {
-    LLVM_DEBUG(
-        dbgs() << ".. type index coverage check SKIPPED: no rules defined\n");
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << ".. type index coverage check SKIPPED: "
+                        << "no rules defined\n");
+    }
     return true;
   }
   const int64_t FirstUncovered = TypeIdxsCovered.find_first_unset();
   if (FirstUncovered < 0) {
-    LLVM_DEBUG(dbgs() << ".. type index coverage check SKIPPED:"
-                         " user-defined predicate detected\n");
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << ".. type index coverage check SKIPPED:"
+                           " user-defined predicate detected\n");
+    }
     return true;
   }
   const bool AllCovered = (FirstUncovered >= NumTypeIdxs);
-  if (NumTypeIdxs > 0)
-    LLVM_DEBUG(dbgs() << ".. the first uncovered type index: " << FirstUncovered
-                      << ", " << (AllCovered ? "OK" : "FAIL") << "\n");
+  if (NumTypeIdxs > 0) {
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << ".. the first uncovered type index: "
+                        << FirstUncovered << ", "
+                        << (AllCovered ? "OK" : "FAIL") << "\n");
+    }
+  }
   return AllCovered;
 #else
   return true;
@@ -234,19 +248,25 @@ bool LegalizeRuleSet::verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const {
 bool LegalizeRuleSet::verifyImmIdxsCoverage(unsigned NumImmIdxs) const {
 #ifndef NDEBUG
   if (Rules.empty()) {
-    LLVM_DEBUG(
-        dbgs() << ".. imm index coverage check SKIPPED: no rules defined\n");
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << ".. imm index coverage check SKIPPED: "
+                        << "no rules defined\n");
+    }
     return true;
   }
   const int64_t FirstUncovered = ImmIdxsCovered.find_first_unset();
   if (FirstUncovered < 0) {
-    LLVM_DEBUG(dbgs() << ".. imm index coverage check SKIPPED:"
-                         " user-defined predicate detected\n");
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << ".. imm index coverage check SKIPPED:"
+                           " user-defined predicate detected\n");
+    }
     return true;
   }
   const bool AllCovered = (FirstUncovered >= NumImmIdxs);
-  LLVM_DEBUG(dbgs() << ".. the first uncovered imm index: " << FirstUncovered
-                    << ", " << (AllCovered ? "OK" : "FAIL") << "\n");
+  if (VerboseVerifyLegalizerInfo) {
+    LLVM_DEBUG(dbgs() << ".. the first uncovered imm index: " << FirstUncovered
+                      << ", " << (AllCovered ? "OK" : "FAIL") << "\n");
+  }
   return AllCovered;
 #else
   return true;
@@ -274,8 +294,10 @@ unsigned LegalizerInfo::getOpcodeIdxForOpcode(unsigned Opcode) const {
 unsigned LegalizerInfo::getActionDefinitionsIdx(unsigned Opcode) const {
   unsigned OpcodeIdx = getOpcodeIdxForOpcode(Opcode);
   if (unsigned Alias = RulesForOpcode[OpcodeIdx].getAlias()) {
-    LLVM_DEBUG(dbgs() << ".. opcode " << Opcode << " is aliased to " << Alias
-                      << "\n");
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << ".. opcode " << Opcode << " is aliased to " << Alias
+                        << "\n");
+    }
     OpcodeIdx = getOpcodeIdxForOpcode(Alias);
     assert(RulesForOpcode[OpcodeIdx].getAlias() == 0 && "Cannot chain aliases");
   }
@@ -396,11 +418,13 @@ void LegalizerInfo::verify(const MCInstrInfo &MII) const {
                      ? std::max(OpInfo.getGenericImmIndex() + 1U, Acc)
                      : Acc;
         });
-    LLVM_DEBUG(dbgs() << MII.getName(Opcode) << " (opcode " << Opcode
-                      << "): " << NumTypeIdxs << " type ind"
-                      << (NumTypeIdxs == 1 ? "ex" : "ices") << ", "
-                      << NumImmIdxs << " imm ind"
-                      << (NumImmIdxs == 1 ? "ex" : "ices") << "\n");
+    if (VerboseVerifyLegalizerInfo) {
+      LLVM_DEBUG(dbgs() << MII.getName(Opcode) << " (opcode " << Opcode
+                        << "): " << NumTypeIdxs << " type ind"
+                        << (NumTypeIdxs == 1 ? "ex" : "ices") << ", "
+                        << NumImmIdxs << " imm ind"
+                        << (NumImmIdxs == 1 ? "ex" : "ices") << "\n");
+    }
     const LegalizeRuleSet &RuleSet = getActionDefinitions(Opcode);
     if (!RuleSet.verifyTypeIdxsCoverage(NumTypeIdxs))
       FailedOpcodes.push_back(Opcode);
@@ -413,8 +437,9 @@ void LegalizerInfo::verify(const MCInstrInfo &MII) const {
       errs() << " " << MII.getName(Opcode);
     errs() << "\n";
 
-    report_fatal_error("ill-defined LegalizerInfo"
-                       ", try -debug-only=legalizer-info for details");
+    report_fatal_error("ill-defined LegalizerInfo, try "
+                       "-debug-only=legalizer-info and "
+                       "-verbose-gisel-verify-legalizer-info for details");
   }
 #endif
 }

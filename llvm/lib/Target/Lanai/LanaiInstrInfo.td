@@ -212,7 +212,6 @@ def MemImmAsmOperand : AsmOperandClass {
   let ParserMethod  = "parseMemoryOperand";
 }
 def MEMi : Operand<i32> {
-  let MIOperandInfo = (ops i32lo21:$offset);
   let ParserMatchClass = MemImmAsmOperand;
   let PrintMethod   = "printMemImmOperand";
 }
@@ -402,7 +401,7 @@ def : Pat<(LanaiSubbF GPR:$Rs1, i32lo16z:$imm),
 def : Pat<(LanaiSubbF GPR:$Rs1, i32hi16:$imm),
           (SUBB_F_I_HI GPR:$Rs1, i32hi16:$imm)>;
 
-def : InstAlias<"mov $src, $dst", (ADD_R GPR:$dst, GPR:$src, R0, 0)>;
+def : InstAlias<"mov $src, $dst", (ADD_R GPR:$dst, GPR:$src, R0, (pred 0))>;
 
 let isAsCheapAsAMove = 1, Rs1 = R0.Num, isCodeGenOnly = 1, H = 1, F = 0,
   isReMaterializable = 1 in
@@ -845,7 +844,7 @@ def : Pat<(extloadi16 ADDRspls:$src), (i32 (LDHz_RI ADDRspls:$src))>;
 // Loads up to 32-bits are already atomic.
 // TODO: This is a workaround for a particular failing case and should be
 // handled more generally.
-def : Pat<(atomic_load_8  ADDRspls:$src), (i32 (LDBz_RI ADDRspls:$src))>;
+def : Pat<(atomic_load_azext_8  ADDRspls:$src), (i32 (LDBz_RI ADDRspls:$src))>;
 
 // GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
 def : Pat<(LanaiHi tglobaladdr:$dst), (MOVHI tglobaladdr:$dst)>;

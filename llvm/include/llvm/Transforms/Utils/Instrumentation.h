@@ -19,6 +19,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -33,35 +34,35 @@ class CallBase;
 class Module;
 
 /// Check if module has flag attached, if not add the flag.
-bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
+LLVM_ABI bool checkIfAlreadyInstrumented(Module &M, StringRef Flag);
 
 /// Instrumentation passes often insert conditional checks into entry blocks.
 /// Call this function before splitting the entry block to move instructions
 /// that must remain in the entry block up before the split point. Static
 /// allocas and llvm.localescape calls, for example, must remain in the entry
 /// block.
-BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
-                                              BasicBlock::iterator IP);
+LLVM_ABI BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
+                                                       BasicBlock::iterator IP);
 
 // Create a constant for Str so that we can pass it to the run-time lib.
-GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
-                                             bool AllowMerging,
-                                             Twine NamePrefix = "");
+LLVM_ABI GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
+                                                      bool AllowMerging,
+                                                      Twine NamePrefix = "");
 
 // Returns F.getComdat() if it exists.
 // Otherwise creates a new comdat, sets F's comdat, and returns it.
 // Returns nullptr on failure.
-Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
+LLVM_ABI Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 
 // Place global in a large section for x86-64 ELF binaries to mitigate
 // relocation overflow pressure. This can be be used for metadata globals that
 // aren't directly accessed by code, which has no performance impact.
-void setGlobalVariableLargeSection(const Triple &TargetTriple,
-                                   GlobalVariable &GV);
+LLVM_ABI void setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                            GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
-  static GCOVOptions getDefault();
+  LLVM_ABI static GCOVOptions getDefault();
 
   // Specify whether to emit .gcno files.
   bool EmitNotes;
@@ -106,9 +107,10 @@ namespace pgo {
 // If \p AttachProfToDirectCall is true, a prof metadata is attached to the
 // new direct call to contain \p Count.
 // Returns the promoted direct call instruction.
-CallBase &promoteIndirectCall(CallBase &CB, Function *F, uint64_t Count,
-                              uint64_t TotalCount, bool AttachProfToDirectCall,
-                              OptimizationRemarkEmitter *ORE);
+LLVM_ABI CallBase &promoteIndirectCall(CallBase &CB, Function *F,
+                                       uint64_t Count, uint64_t TotalCount,
+                                       bool AttachProfToDirectCall,
+                                       OptimizationRemarkEmitter *ORE);
 } // namespace pgo
 
 /// Options for the frontend instrumentation based profiling pass.
@@ -135,7 +137,7 @@ struct InstrProfOptions {
 };
 
 // Create the variable for profile sampling.
-void createProfileSamplingVar(Module &M);
+LLVM_ABI void createProfileSamplingVar(Module &M);
 
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
@@ -162,29 +164,10 @@ struct SanitizerCoverageOptions {
   bool TraceStores = false;
   bool CollectControlFlow = false;
   bool GatedCallbacks = false;
+  int StackDepthCallbackMin = 0;
 
   SanitizerCoverageOptions() = default;
 };
-
-/// Calculate what to divide by to scale counts.
-///
-/// Given the maximum count, calculate a divisor that will scale all the
-/// weights to strictly less than std::numeric_limits<uint32_t>::max().
-static inline uint64_t calculateCountScale(uint64_t MaxCount) {
-  return MaxCount < std::numeric_limits<uint32_t>::max()
-             ? 1
-             : MaxCount / std::numeric_limits<uint32_t>::max() + 1;
-}
-
-/// Scale an individual branch count.
-///
-/// Scale a 64-bit weight down to 32-bits using \c Scale.
-///
-static inline uint32_t scaleBranchCount(uint64_t Count, uint64_t Scale) {
-  uint64_t Scaled = Count / Scale;
-  assert(Scaled <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
-  return Scaled;
-}
 
 // Use to ensure the inserted instrumentation has a DebugLocation; if none is
 // attached to the source instruction, try to use a DILocation with offset 0

@@ -10,13 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -1155,6 +1151,14 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
+    if (BuiltinID == PPC::BI__builtin_mma_dmmr ||
+        BuiltinID == PPC::BI__builtin_mma_dmxor ||
+        BuiltinID == PPC::BI__builtin_mma_disassemble_dmr) {
+      Address Addr = EmitPointerWithAlignment(E->getArg(1));
+      Ops[1] = Builder.CreateLoad(Addr);
+    }
+    if (BuiltinID == PPC::BI__builtin_mma_disassemble_dmr)
+      return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
     for (unsigned i=1; i<Ops.size(); i++)
       CallOps.push_back(Ops[i]);
     llvm::Function *F = CGM.getIntrinsic(ID);

@@ -1,4 +1,4 @@
-//===--- TimeSubtractionCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,11 +22,14 @@ class TimeSubtractionCheck : public ClangTidyCheck {
 public:
   TimeSubtractionCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void emitDiagnostic(const Expr* Node, llvm::StringRef Replacement);
+  void emitDiagnostic(const Expr *Node, llvm::StringRef Replacement);
 };
 
 } // namespace clang::tidy::abseil
