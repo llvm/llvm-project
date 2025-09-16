@@ -79,6 +79,8 @@ static void zapAllInstructionInDeadBasicBlock(BasicBlock *BB) {
 static void deleteBasicBlockFromSuccessor(
     BasicBlock *BB, SmallVectorImpl<DominatorTree::UpdateType> *Updates,
     bool KeepOneInputPHIs) {
+  // Loop through all of our successors and make sure they know that one
+  // of their predecessors is going away.
   SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
   for (BasicBlock *Succ : successors(BB)) {
     Succ->removePredecessor(BB, KeepOneInputPHIs);
@@ -94,12 +96,51 @@ static void replaceFuncletPadsRetWithUnreachable(
   for (User *User : make_early_inc_range(I.users())) {
     Instruction *ReturnInstr = dyn_cast<Instruction>(User);
     // If we have a cleanupret or catchret block, replace it with just an
-    // unreachable.
+    // unreachable. The other alternative, that may use a catchpad is a 
+    // catchswitch. That is not handled here.
     if (isa<CatchReturnInst>(ReturnInstr) ||
         isa<CleanupReturnInst>(ReturnInstr)) {
       BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
       // This catchret or catchpad basic block is detached now. Let the
       // successors know it.
+      // This basic block also may have some predecessors too. For
+      // example the following LLVM-IR legit:
+      //
+      //   +-------------------------------------------+
+      //   | funclet:                    %unreachable  |
+      //   |   %cleanuppad = cleanuppad within none [] |
+      //   |   br label %middle_block                  |
+      //   +-------------------------------------------+
+      //                          |
+      //             +-------------------------+
+      //             | middle_block:           |
+      //             |   br label %funclet_end |
+      //             +-------------------------+
+      //                          |
+      // +------------------------------------------------+
+      // | funclet_end:                                   |
+      // |   cleanupret from %cleanuppad unwind to caller |
+      // +------------------------------------------------+
+      //
+      // The IR after the cleanup will look like this:
+      //
+      //   +-------------------------------------------+
+      //   | funclet:                    %unreachable  |
+      //   |   %cleanuppad = cleanuppad within none [] |
+      //   |   br label %middle_block                  |
+      //   +-------------------------------------------+
+      //                          |
+      //             +-------------------------+
+      //             | middle_block:           |
+      //             |   br label %funclet_end |
+      //             +-------------------------+
+      //                          |
+      //                   +-------------+
+      //                   | unreachable |
+      //                   +-------------+
+      //
+      // So middle_block will lead to an unreachable block, which is also legit.
+
       deleteBasicBlockFromSuccessor(ReturnInstrBB, Updates, KeepOneInputPHIs);
       zapAllInstructionInDeadBasicBlock(ReturnInstrBB);
     }
@@ -110,9 +151,6 @@ void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
                             SmallVectorImpl<DominatorTree::UpdateType> *Updates,
                             bool KeepOneInputPHIs) {
   for (auto *BB : BBs) {
-    // Loop through all of our successors and make sure they know that one
-    // of their predecessors is going away.
-    SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
     auto NonFirstPhiIt = BB->getFirstNonPHIIt();
     if (NonFirstPhiIt != BB->end()) {
       Instruction &I = *NonFirstPhiIt;
