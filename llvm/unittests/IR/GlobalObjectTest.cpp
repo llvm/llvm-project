@@ -48,10 +48,10 @@ TEST_F(GlobalObjectTest, SectionPrefix) {
   ASSERT_NE(Foo, nullptr);
   ASSERT_THAT(Foo->getSectionPrefix(), Optional(StrEq("hot")));
 
-  // No actual update.
-  EXPECT_FALSE(Foo->updateSectionPrefix("hot"));
+  // Test that set method returns false since existing section prefix is hot.
+  EXPECT_FALSE(Foo->setSectionPrefix("hot"));
 
-  // Update prefix from hot to unlikely.
+  // Set prefix from hot to unlikely.
   Foo->setSectionPrefix("unlikely");
   EXPECT_THAT(Foo->getSectionPrefix(), Optional(StrEq("unlikely")));
 
@@ -66,16 +66,15 @@ TEST_F(GlobalObjectTest, SectionPrefix) {
   ASSERT_NE(Bar, nullptr);
   ASSERT_THAT(Bar->getSectionPrefix(), Eq(std::nullopt));
 
-  // Test that update method returns false since Bar doesn't have prefix
-  // metadata.
-  EXPECT_FALSE(Bar->updateSectionPrefix(""));
+  // Test that set method returns false since Bar doesn't have prefix metadata.
+  EXPECT_FALSE(Bar->setSectionPrefix(""));
 
-  // Update from empty to hot.
-  EXPECT_TRUE(Bar->updateSectionPrefix("hot"));
+  // Set from empty to hot.
+  EXPECT_TRUE(Bar->setSectionPrefix("hot"));
   EXPECT_THAT(Bar->getSectionPrefix(), Optional(StrEq("hot")));
 
-  // Teset that update method returns true and section prefix is cleared.
-  EXPECT_TRUE(Bar->updateSectionPrefix(""));
+  // Test that set method returns true and section prefix is cleared.
+  EXPECT_TRUE(Bar->setSectionPrefix(""));
   EXPECT_THAT(Bar->getSectionPrefix(), Eq(std::nullopt));
 }
 } // namespace
