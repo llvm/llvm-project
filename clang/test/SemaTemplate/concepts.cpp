@@ -1263,12 +1263,7 @@ C auto x = 0;
 // expected-error@#T_Type {{type 'int' cannot be used prior to '::'}} \
 // expected-note@-1 {{in instantiation of default argument}}
 
-// This will be fixed when we merge https://github.com/llvm/llvm-project/pull/141776
-// Which makes us behave like GCC.
 static_assert(f(0));
-// expected-error@-1 {{no matching function for call}} \
-// expected-note@#GH61824_f {{constraints not satisfied}} \
-// expected-note@#T_Type {{type 'int' cannot be used prior to '::'}}
 
 }
 
