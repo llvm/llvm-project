@@ -114,8 +114,8 @@ define amdgpu_kernel void @loop_mix_i1(ptr addrspace(1) %filter.coerce, ptr addr
   ; GFX1200-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY killed $sgpr4_sgpr5
   ; GFX1200-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY killed $vgpr0
   ; GFX1200-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM killed [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.filter.coerce.kernarg.offset1, addrspace 4)
-  ; GFX1200-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_LOAD_DWORDX4_IMM]].sub0, %subreg.sub0, [[S_LOAD_DWORDX4_IMM]].sub1, %subreg.sub1
-  ; GFX1200-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY killed [[REG_SEQUENCE]]
+  ; GFX1200-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[S_LOAD_DWORDX4_IMM]].sub0, %subreg.sub0, [[S_LOAD_DWORDX4_IMM]].sub1, %subreg.sub1
+  ; GFX1200-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[REG_SEQUENCE]]
   ; GFX1200-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1023, killed [[COPY1]](s32), implicit $exec
   ; GFX1200-NEXT:   [[V_CMP_GT_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_GT_U32_e64 6, [[V_AND_B32_e64_]], implicit $exec
   ; GFX1200-NEXT:   SI_BRCOND %bb.4, killed [[V_CMP_GT_U32_e64_]]
@@ -155,7 +155,7 @@ define amdgpu_kernel void @loop_mix_i1(ptr addrspace(1) %filter.coerce, ptr addr
   ; GFX1200-NEXT:   successors: %bb.5(0x80000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 2, [[V_AND_B32_e64_]], implicit $exec
-  ; GFX1200-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[COPY2]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.arrayidx7, addrspace 1)
+  ; GFX1200-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.arrayidx7, addrspace 1)
   ; GFX1200-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_LT_I32_e64 2, killed [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
   ; GFX1200-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed [[V_CMP_LT_I32_e64_]], implicit $exec
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY killed [[V_CNDMASK_B32_e64_1]]

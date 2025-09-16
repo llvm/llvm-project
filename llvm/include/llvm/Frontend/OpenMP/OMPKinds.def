@@ -26,7 +26,7 @@
 #endif
 
 #define __OMP_TYPE(VarName) OMP_TYPE(VarName, Type::get##VarName##Ty(Ctx))
-#define __OMP_PTR_TYPE(VarName) OMP_TYPE(VarName, PointerType::get(Ctx, 0))
+#define __OMP_PTR_TYPE(VarName) OMP_TYPE(VarName, PointerType::get(Ctx, DefaultTargetAS))
 
 __OMP_TYPE(Void)
 __OMP_TYPE(Int1)
@@ -1365,10 +1365,6 @@ __OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt, SExt, SExt, SExt,
                            AttributeSet(), AttributeSet(), AttributeSet(),
                            SizeTyExt))
-__OMP_RTL_ATTRS(__kmpc_parallel_60, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(AttributeSet(), SExt, SExt, SExt, SExt,
-                           AttributeSet(), AttributeSet(), AttributeSet(),
-                           SizeTyExt, SExt, SExt, AttributeSet()))
 __OMP_RTL_ATTRS(__kmpc_serialized_parallel, InaccessibleArgOnlyAttrs,
                 AttributeSet(), ParamAttrs(ReadOnlyPtrAttrs, SExt))
 __OMP_RTL_ATTRS(__kmpc_end_serialized_parallel, InaccessibleArgOnlyAttrs,

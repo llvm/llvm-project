@@ -232,7 +232,7 @@ body: |
   bb.0:
     liveins: $sgpr30_sgpr31
     ; W32-LABEL: name: multiple_blocks
-    ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255
+    ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -268,14 +268,6 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
@@ -284,10 +276,18 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
     ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr256
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr257
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr258
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr259
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr260
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr261
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr262
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr263
     ; W32-NEXT: $m0 = S_MOV_B32 3
-    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 64, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.0, align 4, addrspace 5)
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec_lo, 32, 2048
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec_lo, 32, 2080
+    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec_lo, 32, 1024
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec_lo, 32, 1056
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr42
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr43
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr44
@@ -303,14 +303,14 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr62
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr63
     ; W32-NEXT: $m0 = S_MOV_B32 65
-    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $sgpr32, 36, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.1, align 4, addrspace 5)
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr104, 32, $exec_lo, 32, 1152
+    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.1, align 4, addrspace 5)
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr104, 32, $exec_lo, 32, 128
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr105
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr106
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr107
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr108
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr109
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr110, 32, $exec_lo, 32, 1344
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr110, 32, $exec_lo, 32, 320
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr111
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr120
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr121
@@ -320,9 +320,9 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr125
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr126
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr127
-    ; W32-NEXT: $m0 = S_MOV_B32 256
-    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.2, align 4, addrspace 5)
-    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr232, 32, $exec_lo, 32, 256
+    ; W32-NEXT: $m0 = S_MOV_B32 1
+    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.2, align 4, addrspace 5)
+    ; W32-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr232, 32, $exec_lo, 32, 0
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr233
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr234
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr235
@@ -339,16 +339,16 @@ body: |
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr254
     ; W32-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr255
     ; W32-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr104, implicit-def $vgpr110, implicit-def $vgpr232
-    ; W32-NEXT: $m0 = S_MOV_B32 256
-    ; W32-NEXT: $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr233, implicit $vgpr234, implicit $vgpr235, implicit $vgpr236, implicit $vgpr237, implicit $vgpr238, implicit $vgpr239, implicit $vgpr248, implicit $vgpr249, implicit $vgpr250, implicit $vgpr251, implicit $vgpr252, implicit $vgpr253, implicit $vgpr254, implicit $vgpr255 :: (load (s1024) from %stack.2, align 4, addrspace 5)
+    ; W32-NEXT: $m0 = S_MOV_B32 1
+    ; W32-NEXT: $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr233, implicit $vgpr234, implicit $vgpr235, implicit $vgpr236, implicit $vgpr237, implicit $vgpr238, implicit $vgpr239, implicit $vgpr248, implicit $vgpr249, implicit $vgpr250, implicit $vgpr251, implicit $vgpr252, implicit $vgpr253, implicit $vgpr254, implicit $vgpr255 :: (load (s1024) from %stack.2, align 4, addrspace 5)
     ; W32-NEXT: $m0 = S_MOV_B32 65
-    ; W32-NEXT: $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 36, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr105, implicit $vgpr106, implicit $vgpr107, implicit $vgpr108, implicit $vgpr109, implicit $vgpr111, implicit $vgpr120, implicit $vgpr121, implicit $vgpr122, implicit $vgpr123, implicit $vgpr124, implicit $vgpr125, implicit $vgpr126, implicit $vgpr127 :: (load (s1024) from %stack.1, align 4, addrspace 5)
+    ; W32-NEXT: $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr105, implicit $vgpr106, implicit $vgpr107, implicit $vgpr108, implicit $vgpr109, implicit $vgpr111, implicit $vgpr120, implicit $vgpr121, implicit $vgpr122, implicit $vgpr123, implicit $vgpr124, implicit $vgpr125, implicit $vgpr126, implicit $vgpr127 :: (load (s1024) from %stack.1, align 4, addrspace 5)
     ; W32-NEXT: $m0 = S_MOV_B32 3
-    ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.0, align 4, addrspace 5)
+    ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.0, align 4, addrspace 5)
     ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
     ;
     ; W64-LABEL: name: multiple_blocks
-    ; W64: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255
+    ; W64: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -384,14 +384,6 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
@@ -400,10 +392,18 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
     ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr256
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr257
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr258
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr259
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr260
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr261
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr262
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr263
     ; W64-NEXT: $m0 = S_MOV_B32 3
-    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 64, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.0, align 4, addrspace 5)
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec, 64, 4096
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec, 64, 4160
+    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr40, 32, $exec, 64, 2048
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec, 64, 2112
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr42
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr43
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr44
@@ -419,14 +419,14 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr62
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr63
     ; W64-NEXT: $m0 = S_MOV_B32 65
-    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $sgpr32, 36, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.1, align 4, addrspace 5)
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr104, 32, $exec, 64, 2304
+    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.1, align 4, addrspace 5)
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr104, 32, $exec, 64, 256
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr105
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr106
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr107
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr108
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr109
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr110, 32, $exec, 64, 2688
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr110, 32, $exec, 64, 640
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr111
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr120
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr121
@@ -436,9 +436,9 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr125
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr126
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr127
-    ; W64-NEXT: $m0 = S_MOV_B32 256
-    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.2, align 4, addrspace 5)
-    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr232, 32, $exec, 64, 512
+    ; W64-NEXT: $m0 = S_MOV_B32 1
+    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.2, align 4, addrspace 5)
+    ; W64-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr232, 32, $exec, 64, 0
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr233
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr234
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr235
@@ -455,12 +455,12 @@ body: |
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr254
     ; W64-NEXT: frame-setup CFI_INSTRUCTION same_value $vgpr255
     ; W64-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr104, implicit-def $vgpr110, implicit-def $vgpr232
-    ; W64-NEXT: $m0 = S_MOV_B32 256
-    ; W64-NEXT: $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr233, implicit $vgpr234, implicit $vgpr235, implicit $vgpr236, implicit $vgpr237, implicit $vgpr238, implicit $vgpr239, implicit $vgpr248, implicit $vgpr249, implicit $vgpr250, implicit $vgpr251, implicit $vgpr252, implicit $vgpr253, implicit $vgpr254, implicit $vgpr255 :: (load (s1024) from %stack.2, align 4, addrspace 5)
+    ; W64-NEXT: $m0 = S_MOV_B32 1
+    ; W64-NEXT: $vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239_vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247_vgpr248_vgpr249_vgpr250_vgpr251_vgpr252_vgpr253_vgpr254_vgpr255_vgpr256_vgpr257_vgpr258_vgpr259_vgpr260_vgpr261_vgpr262_vgpr263 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr233, implicit $vgpr234, implicit $vgpr235, implicit $vgpr236, implicit $vgpr237, implicit $vgpr238, implicit $vgpr239, implicit $vgpr248, implicit $vgpr249, implicit $vgpr250, implicit $vgpr251, implicit $vgpr252, implicit $vgpr253, implicit $vgpr254, implicit $vgpr255 :: (load (s1024) from %stack.2, align 4, addrspace 5)
     ; W64-NEXT: $m0 = S_MOV_B32 65
-    ; W64-NEXT: $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 36, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr105, implicit $vgpr106, implicit $vgpr107, implicit $vgpr108, implicit $vgpr109, implicit $vgpr111, implicit $vgpr120, implicit $vgpr121, implicit $vgpr122, implicit $vgpr123, implicit $vgpr124, implicit $vgpr125, implicit $vgpr126, implicit $vgpr127 :: (load (s1024) from %stack.1, align 4, addrspace 5)
+    ; W64-NEXT: $vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111_vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr105, implicit $vgpr106, implicit $vgpr107, implicit $vgpr108, implicit $vgpr109, implicit $vgpr111, implicit $vgpr120, implicit $vgpr121, implicit $vgpr122, implicit $vgpr123, implicit $vgpr124, implicit $vgpr125, implicit $vgpr126, implicit $vgpr127 :: (load (s1024) from %stack.1, align 4, addrspace 5)
     ; W64-NEXT: $m0 = S_MOV_B32 3
-    ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.0, align 4, addrspace 5)
+    ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr42, implicit $vgpr43, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.0, align 4, addrspace 5)
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
     S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr104, implicit-def $vgpr110, implicit-def $vgpr232
     S_SETPC_B64_return $sgpr30_sgpr31

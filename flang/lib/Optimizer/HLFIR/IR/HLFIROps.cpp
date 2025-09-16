@@ -856,6 +856,50 @@ void hlfir::CmpCharOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// CharTrimOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::CharTrimOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value chr) {
+  unsigned kind = getCharacterKind(chr.getType());
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind,
+                              fir::CharacterType::unknownLen()),
+      /*polymorphic=*/false);
+  build(builder, result, resultType, chr);
+}
+
+void hlfir::CharTrimOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// IndexOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::IndexOp::verify() {
+  mlir::Value substr = getSubstr();
+  mlir::Value str = getStr();
+
+  unsigned charKind = getCharacterKind(substr.getType());
+  if (charKind != getCharacterKind(str.getType()))
+    return emitOpError("character arguments must have the same KIND");
+
+  return mlir::success();
+}
+
+void hlfir::IndexOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // NumericalReductionOp
 //===----------------------------------------------------------------------===//
 

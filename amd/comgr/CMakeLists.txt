@@ -13,26 +13,31 @@ project(amd_comgr VERSION "${ver_major}.${ver_minor}.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 # Get git branch and commit hash to add to log for easier debugging.
-# Modeled after https://github.com/pmirshad/cmake-with-git-metadata.
-# Current working branch
-if(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
-execute_process(
-  COMMAND git rev-parse --abbrev-ref HEAD
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE AMD_COMGR_GIT_BRANCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-# Shortened commit hash
 execute_process(
   COMMAND git log -1 --format=%h
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   OUTPUT_VARIABLE AMD_COMGR_GIT_COMMIT
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE GIT_REV_PARSE_EXITCODE
 )
-else(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
+
+if (${GIT_REV_PARSE_EXITCODE} EQUAL 0)
+  execute_process(
+    COMMAND git log -1 --format=%h
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE AMD_COMGR_GIT_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  execute_process(
+    COMMAND git name-rev --name-only HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE AMD_COMGR_GIT_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+else()
   set(AMD_COMGR_GIT_BRANCH "not-available")
   set(AMD_COMGR_GIT_COMMIT "not-available")
-endif(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
+endif()
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

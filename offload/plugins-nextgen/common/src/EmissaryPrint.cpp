@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../../DeviceRTL/include/EmissaryIds.h"
 #include "Emissary.h"
 
 static service_rc emissary_printf(uint *rc, emisArgBuf_t *ab);

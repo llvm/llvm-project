@@ -39,6 +39,10 @@ class Loop;
 class LoopAnalysis;
 class LoopInfo;
 
+namespace vfs {
+class FileSystem;
+} // namespace vfs
+
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
 ///
@@ -122,15 +126,18 @@ public:
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
 
-  /// Separator used between all of the rest consecutive parts of a name
+  /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
-  // Grid Value for the GPU target
+  // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
   /// When compilation is being done for the OpenMP host (i.e. `IsTargetDevice =
   /// false`), this contains the list of offloading triples associated, if any.
   SmallVector<Triple> TargetTriples;
+
+  // Default address space for the target.
+  unsigned DefaultTargetAS = 0;
 
   LLVM_ABI OpenMPIRBuilderConfig();
   LLVM_ABI OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
@@ -161,6 +168,8 @@ public:
     assert(GridValue.has_value() && "GridValue is not set");
     return *GridValue;
   }
+
+  unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
 
   bool hasRequiresFlags() const { return RequiresFlags; }
   LLVM_ABI bool hasRequiresReverseOffload() const;
@@ -199,6 +208,7 @@ public:
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
   void setGridValue(omp::GV G) { GridValue = G; }
+  void setDefaultTargetAS(unsigned AS) { DefaultTargetAS = AS; }
 
   LLVM_ABI void setHasRequiresReverseOffload(bool Value);
   LLVM_ABI void setHasRequiresUnifiedAddress(bool Value);
@@ -1076,11 +1086,13 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NoLoop   If true, no-loop code is generated.
   ///
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType);
+                                         omp::WorksharingLoopType LoopType,
+                                         bool NoLoop);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1200,6 +1212,7 @@ public:
   ///                         present.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NoLoop If true, no-loop code is generated.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1210,7 +1223,8 @@ public:
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
       bool HasOrderedClause = false,
       omp::WorksharingLoopType LoopType =
-          omp::WorksharingLoopType::ForStaticLoop);
+          omp::WorksharingLoopType::ForStaticLoop,
+      bool NoLoop = false);
 
   /// Tile a loop nest.
   ///
@@ -3644,7 +3658,8 @@ public:
   /// \param HostFilePath The path to the host IR file,
   /// used to load in offload metadata for the device, allowing host and device
   /// to maintain the same metadata mapping.
-  LLVM_ABI void loadOffloadInfoMetadata(StringRef HostFilePath);
+  LLVM_ABI void loadOffloadInfoMetadata(vfs::FileSystem &VFS,
+                                        StringRef HostFilePath);
 
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
@@ -3764,6 +3779,9 @@ private:
   BasicBlock *Latch = nullptr;
   BasicBlock *Exit = nullptr;
 
+  // Hold the MLIR value for the `lastiter` of the canonical loop.
+  Value *LastIter = nullptr;
+
   /// Add the control blocks of this loop to \p BBs.
   ///
   /// This does not include any block from the body, including the one returned
@@ -3796,6 +3814,18 @@ private:
   void mapIndVar(llvm::function_ref<Value *(Instruction *)> Updater);
 
 public:
+  /// Sets the last iteration variable for this loop.
+  void setLastIter(Value *IterVar) { LastIter = std::move(IterVar); }
+
+  /// Returns the last iteration variable for this loop.
+  /// Certain use-cases (like translation of linear clause) may access
+  /// this variable even after a loop transformation. Hence, do not guard
+  /// this getter function by `isValid`. It is the responsibility of the
+  /// callee to ensure this functionality is not invoked by a non-outlined
+  /// CanonicalLoopInfo object (in which case, `setLastIter` will never be
+  /// invoked and `LastIter` will be by default `nullptr`).
+  Value *getLastIter() { return LastIter; }
+
   /// Returns whether this object currently represents the IR of a loop. If
   /// returning false, it may have been consumed by a loop transformation or not
   /// been intialized. Do not use in this case;

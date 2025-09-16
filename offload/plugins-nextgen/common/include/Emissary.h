@@ -14,7 +14,7 @@
 #ifndef OFFLOAD_EMISSARY_H
 #define OFFLOAD_EMISSARY_H
 
-#include "../../../DeviceRTL/include/EmissaryIds.h"
+#include "../../../../openmp/device/include/EmissaryIds.h"
 
 extern "C" {
 

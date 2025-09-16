@@ -301,6 +301,7 @@ intermediate LLVM representation.
 
    AArch64SME
    AddingConstrainedIntrinsics
+   AdminTasks
    AdvancedBuilds
    AliasAnalysis
    AMDGPUUsage

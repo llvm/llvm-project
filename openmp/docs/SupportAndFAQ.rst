@@ -78,6 +78,13 @@ Clang will be built with all backends enabled. When building with
 ``LLVM_ENABLE_RUNTIMES="openmp"`` OpenMP should not be enabled in 
 ``LLVM_ENABLE_PROJECTS`` because it is enabled by default.
 
+Support for the device library comes from a separate build of the OpenMP library
+that targets the GPU architecture. Building it requires enabling the runtime
+targets, or setting the target manually when doing a standalone build. This is
+done with the ``LLVM_RUNTIME_TARGETS`` option and then enabling the OpenMP
+runtime for the GPU target. ``RUNTIMES_<triple>_LLVM_ENABLE_RUNTIMES``. Refer to
+the cache file for the specific invocation.
+
 For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
 For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 

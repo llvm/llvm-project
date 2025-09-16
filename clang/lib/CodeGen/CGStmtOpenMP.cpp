@@ -596,12 +596,13 @@ struct FunctionOptions {
   const StringRef FunctionName;
   /// Location of the non-debug version of the outlined function.
   SourceLocation Loc;
+  const bool IsDeviceKernel = false;
   explicit FunctionOptions(const CapturedStmt *S, bool UIntPtrCastRequired,
                            bool RegisterCastedArgsOnly, StringRef FunctionName,
-                           SourceLocation Loc)
+                           SourceLocation Loc, bool IsDeviceKernel)
       : S(S), UIntPtrCastRequired(UIntPtrCastRequired),
         RegisterCastedArgsOnly(UIntPtrCastRequired && RegisterCastedArgsOnly),
-        FunctionName(FunctionName), Loc(Loc) {}
+        FunctionName(FunctionName), Loc(Loc), IsDeviceKernel(IsDeviceKernel) {}
 };
 } // namespace
 
@@ -812,10 +813,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
           ? CGM.getTypes().arrangeLLVMFunctionInfo(
                 Ctx.VoidTy, FnInfoOpts::None, argCanQualTypes,
                 FunctionType::ExtInfo(), {}, RequiredArgs::All)
+          :
+      FO.IsDeviceKernel
+          ? CGM.getTypes().arrangeDeviceKernelCallerDeclaration(Ctx.VoidTy,
+                                                                TargetArgs)
           : CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy,
                                                              TargetArgs);
-
-  // Create the function declaration.
   llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);
 
   auto *F =
@@ -924,8 +927,9 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 }
 
 llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
-    const CapturedStmt &S, const OMPExecutableDirective &D, SourceLocation Loc,
+    const CapturedStmt &S, const OMPExecutableDirective &D,
     bool CanHaveMultiDeviceArgs, bool IsTopKernel) {
+  SourceLocation Loc = D.getBeginLoc();
   assert(
       CapturedStmtInfo &&
       "CapturedStmtInfo should be set when generating the captured function");
@@ -985,6 +989,11 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   bool IsMultiDeviceKernel =
       CGM.checkAndSetMultiDeviceKernel(D, CanHaveMultiDeviceArgs);
 
+  OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(D);
+  bool IsDeviceKernel = CGM.getOpenMPRuntime().isGPU() &&
+                        isOpenMPTargetExecutionDirective(EKind) &&
+                        D.getCapturedStmt(OMPD_target) == &S;
+
   CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
   llvm::Function *WrapperF = nullptr;
   if (NeedWrapperFunction) {
@@ -992,7 +1001,8 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     // OpenMPI-IR-Builder.
     FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
                               /*RegisterCastedArgsOnly=*/true,
-                              CapturedStmtInfo->getHelperName(), Loc);
+                              CapturedStmtInfo->getHelperName(), Loc,
+                              IsDeviceKernel);
     WrapperCGF.CapturedStmtInfo = CapturedStmtInfo;
     // TODO: Determine if the wrapper function needs to pass in multi-device
     // args in the meantime it is always false.
@@ -1003,7 +1013,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     Out << "_debug__";
   }
   FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,
-                     Out.str(), Loc);
+                     Out.str(), Loc, !NeedWrapperFunction && IsDeviceKernel);
 
   // Add multi-device args only if this is the team level or higher. For
   // outlined parallel level we should never emit multi device arguments even if
@@ -2290,7 +2300,8 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
   if (SimplifiedS == NextLoop) {
-    if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
+    if (auto *Dir =
+            dyn_cast<OMPCanonicalLoopNestTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
       SimplifiedS = CanonLoop->getLoopStmt();
@@ -6762,13 +6773,12 @@ void CodeGenFunction::EmitOMPDistributeDirective(
 
 static llvm::Function *
 emitOutlinedOrderedFunction(CodeGenModule &CGM, const CapturedStmt *S,
-                            const OMPExecutableDirective &D,
-                            SourceLocation Loc) {
+                            const OMPExecutableDirective &D) {
   CodeGenFunction CGF(CGM, /*suppressNewContext=*/true);
   CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
   CGF.CapturedStmtInfo = &CapStmtInfo;
-  llvm::Function *Fn =
-      CGF.GenerateOpenMPCapturedStmtFunction(*S, D, Loc,
+  llvm::Function *Fn = 
+      CGF.GenerateOpenMPCapturedStmtFunction(*S, D,
                                              /*CanHaveMultiDeviceArgs*/ false,
                                              /*IsTopKernel*/ false);
   Fn->setDoesNotRecurse();
@@ -6836,7 +6846,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
           llvm::SmallVector<llvm::Value *, 16> CapturedVars;
           GenerateOpenMPCapturedVars(*CS, CapturedVars, CGM.getOptKernelKey(S));
           llvm::Function *OutlinedFn =
-              emitOutlinedOrderedFunction(CGM, CS, S, S.getBeginLoc());
+              emitOutlinedOrderedFunction(CGM, CS, S);
           assert(S.getBeginLoc().isValid() &&
                  "Outlined function call location must be valid.");
           ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
@@ -6879,7 +6889,8 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
       llvm::SmallVector<llvm::Value *, 16> CapturedVars;
       CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars, CGM.getOptKernelKey(S));
       llvm::Function *OutlinedFn =
-          emitOutlinedOrderedFunction(CGM, CS, S, S.getBeginLoc());
+          emitOutlinedOrderedFunction(CGM, CS, S);
+
       CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, S.getBeginLoc(),
                                                       OutlinedFn, CapturedVars);
     } else {

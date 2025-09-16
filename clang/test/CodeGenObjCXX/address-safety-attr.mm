@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
-// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=address | FileCheck -check-prefix=ASAN %s
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s --implicit-check-not=sanitize_address
+// RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=address | FileCheck %s --check-prefixes=CHECK,ASAN
 
 // REQUIRES: more-investigation
 
@@ -9,16 +9,14 @@
 
 @implementation MyClass
 
-// WITHOUT:  +[MyClass load]{{.*}}#[[ATTR0:[0-9]+]]
-// ASAN: +[MyClass load]{{.*}}#[[ATTR1:[0-9]+]]
+// ASAN: ; Function Attrs:
+// ASAN-SAME: sanitize_address
+// CHECK-LABEL: define {{.*}}+[MyClass load]
 +(void) load { }
 
-// WITHOUT:  +[MyClass addressSafety:]{{.*}}#[[ATTR0]]
-// ASAN:  +[MyClass addressSafety:]{{.*}}#[[ATTR2:[0-9]+]]
+// ASAN: ; Function Attrs:
+// ASAN-SAME: sanitize_address
+// CHECK-LABEL: define {{.*}}+[MyClass addressSafety:]
 + (int) addressSafety:(int*)a { return *a; }
 
 @end
-
-// ASAN : attributes #[[ATTR1]] = {{.*}}sanitized_padded_global
-// ASAN : attributes #[[ATTR2]] = {{.*}}sanitize_address
-// WITHOUT-NOT: attributes #[[ATTR0]] = {{.*}}sanitize_address

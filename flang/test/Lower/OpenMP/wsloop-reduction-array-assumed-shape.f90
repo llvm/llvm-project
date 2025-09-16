@@ -1,6 +1,5 @@
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s | FileCheck %s
-! XFAIL: *
 
 program reduce_assumed_shape
 real(8), dimension(2) :: r

@@ -57,10 +57,10 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       [[FOR_COND_CLEANUP3]]:
 ; CHECK-NEXT:    [[INC13]] = add nuw nsw i64 [[I_023]], 1, !dbg [[DBG22]]
 ; CHECK-NEXT:      #dbg_value(i64 [[INC13]], [[META11]], !DIExpression(), [[META20]])
-; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG34:![0-9]+]]
-; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label %[[EXIT]], label %[[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK-NEXT:    [[EXITCOND24_NOT:%.*]] = icmp eq i64 [[INC13]], 23, !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND24_NOT]], label %[[EXIT]], label %[[FOR_COND1_PREHEADER]], !dbg [[DBG21]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void, !dbg [[DBG36:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG35:![0-9]+]]
 ;
 entry:
   call void @llvm.dbg.value(metadata i64 0, metadata !11, metadata !DIExpression()), !dbg !20
@@ -164,11 +164,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[DBG27]] = !DILocation(line: 11, column: 32, scope: [[META19]])
 ; CHECK: [[DBG28]] = !DILocation(line: 11, column: 26, scope: [[META19]])
 ; CHECK: [[DBG29]] = !DILocation(line: 11, column: 5, scope: [[META15]])
-; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[DBG21]], [[META31:![0-9]+]], [[META32:![0-9]+]], [[META33:![0-9]+]]}
-; CHECK: [[META31]] = !DILocation(line: 13, column: 13, scope: [[META12]])
-; CHECK: [[META32]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META33]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG34]] = !DILocation(line: 10, column: 24, scope: [[META16]])
-; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[DBG21]], [[META31]], [[META32]]}
-; CHECK: [[DBG36]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
+; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META31:![0-9]+]], [[META32:![0-9]+]]}
+; CHECK: [[META31]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META32]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[DBG33]] = !DILocation(line: 10, column: 24, scope: [[META16]])
+; CHECK: [[LOOP34]] = distinct !{[[LOOP34]], [[META32]], [[META31]]}
+; CHECK: [[DBG35]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])
 ;.

@@ -242,8 +242,8 @@ amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
 
 
   // TODO: Add a LIT test for this
-  if (IdentStr == "amdgcn-amd-amdhsa--amdgcnspirv" ||
-      IdentStr == "amdgcn-amd-amdhsa-unknown-amdgcnspirv") {
+  if (IdentStr == "spirv64-amd-amdhsa--amdgcnspirv" ||
+      IdentStr == "spirv64-amd-amdhsa-unknown-amdgcnspirv") {
     // Features not supported for SPIR-V
     if (!Ident.Features.empty())
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -922,7 +922,8 @@ amd_comgr_status_t AMD_COMGR_API
     return AMD_COMGR_STATUS_SUCCESS;
   }
 
-  if (StringRef(IsaName) == "amdgcn-amd-amdhsa--amdgcnspirv") {
+  if (StringRef(IsaName) == "spir64-amd-amdhsa--amdgcnspirv" ||
+      StringRef(IsaName )== "spir64-amd-amdhsa-unknown-amdgcnspirv") {
     return ActionP->setIsaName(IsaName);
   }
 
@@ -2037,6 +2038,8 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data, size_t *Count) {
     if (!RelaRangeOrError) {
       llvm::logAllUnhandledErrors(RelaRangeOrError.takeError(), llvm::errs(),
                                   "RelaRange creation error: ");
+      for (auto *Ptr : NameExpDataVec)
+        delete Ptr;
       return AMD_COMGR_STATUS_ERROR;
     }
     auto RelaRange = std::move(RelaRangeOrError.get());
@@ -2057,6 +2060,8 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data, size_t *Count) {
     if (!RodataOrError) {
       llvm::logAllUnhandledErrors(RodataOrError.takeError(), llvm::errs(),
                                   "Rodata creation error: ");
+      for (auto *Ptr : NameExpDataVec)
+        delete Ptr;
       return AMD_COMGR_STATUS_ERROR;
     }
     auto Rodata = std::move(RodataOrError.get());
@@ -2087,6 +2092,8 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data, size_t *Count) {
       }
     }
 
+    for (auto *Ptr : NameExpDataVec)
+      delete Ptr;
   } // end AMD_COMGR_DATA_KIND_EXECUTABLE conditional
 
   *Count = DataP->NameExpressionMap.size();

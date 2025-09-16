@@ -2379,10 +2379,17 @@ void mlir::vector::populateVectorReductionToContractPatterns(
       patterns.getContext(), benefit);
 }
 
+void mlir::vector::populateDropInnerMostUnitDimsXferOpPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+    patterns.add<DropInnerMostUnitDimsTransferRead,
+               DropInnerMostUnitDimsTransferWrite>(patterns.getContext(),
+                                                   benefit);
+}
+
 void mlir::vector::
     populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
         RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<DropInnerMostUnitDimsTransferRead,
+    patterns.add<DropInnerMostUnitDimsTransferRead,
                DropInnerMostUnitDimsTransferWrite>(patterns.getContext(),
                                                    benefit);
 }

@@ -12,8 +12,10 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
-#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -59,6 +61,16 @@ public:
                               truncatedArrayTy),
         trailingZerosNum);
   }
+
+  cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
+                                    cir::ArrayType arrayTy) const {
+    return cir::ConstArrayAttr::get(arrayTy, attrs);
+  }
+
+  mlir::Attribute getConstRecordOrZeroAttr(mlir::ArrayAttr arrayAttr,
+                                           bool packed = false,
+                                           bool padded = false,
+                                           mlir::Type type = {});
 
   cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
                                           bool packed = false,
@@ -126,9 +138,9 @@ public:
   ///
   /// If a record already exists and is complete, but the client tries to fetch
   /// it with a different set of attributes, this method will crash.
-  cir::RecordType getCompleteRecordTy(llvm::ArrayRef<mlir::Type> members,
-                                      llvm::StringRef name, bool packed,
-                                      bool padded) {
+  cir::RecordType getCompleteNamedRecordType(llvm::ArrayRef<mlir::Type> members,
+                                             bool packed, bool padded,
+                                             llvm::StringRef name) {
     const auto nameAttr = getStringAttr(name);
     auto kind = cir::RecordType::RecordKind::Struct;
     assert(!cir::MissingFeatures::astRecordDeclAttr());
@@ -149,6 +161,11 @@ public:
 
     return type;
   }
+
+  cir::RecordType getCompleteRecordType(mlir::ArrayAttr fields,
+                                        bool packed = false,
+                                        bool padded = false,
+                                        llvm::StringRef name = "");
 
   /// Get an incomplete CIR struct type. If we have a complete record
   /// declaration, we may create an incomplete type and then add the
@@ -287,6 +304,10 @@ public:
   cir::ConstantOp getUInt32(uint32_t c, mlir::Location loc) {
     return getConstantInt(loc, getUInt32Ty(), c);
   }
+  cir::ConstantOp getSInt64(uint64_t c, mlir::Location loc) {
+    cir::IntType sInt64Ty = getSInt64Ty();
+    return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(sInt64Ty, c));
+  }
 
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
@@ -359,6 +380,18 @@ public:
     return Address(baseAddr, destType, addr.getAlignment());
   }
 
+  mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
+                                 mlir::Value addr, uint64_t offset) {
+    return cir::VTTAddrPointOp::create(*this, loc, retTy,
+                                       mlir::FlatSymbolRefAttr{}, addr, offset);
+  }
+
+  mlir::Value createVTTAddrPoint(mlir::Location loc, mlir::Type retTy,
+                                 mlir::FlatSymbolRefAttr sym, uint64_t offset) {
+    return cir::VTTAddrPointOp::create(*this, loc, retTy, sym, mlir::Value{},
+                                       offset);
+  }
+
   /// Cast the element type of the given address to a different type,
   /// preserving information like the alignment.
   Address createElementBitCast(mlir::Location loc, Address addr,
@@ -377,6 +410,23 @@ public:
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
                                isVolatile, /*alignment=*/align,
                                /*mem_order=*/cir::MemOrderAttr{});
+  }
+
+  cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
+                                mlir::Value ptr, llvm::MaybeAlign align) {
+    if (ty != mlir::cast<cir::PointerType>(ptr.getType()).getPointee())
+      ptr = createPtrBitcast(ptr, ty);
+    uint64_t alignment = align ? align->value() : 0;
+    mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
+    return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
+                               /*isVolatile=*/false, alignAttr,
+                               /*mem_order=*/cir::MemOrderAttr{});
+  }
+
+  cir::LoadOp
+  createAlignedLoad(mlir::Location loc, mlir::Type ty, mlir::Value ptr,
+                    clang::CharUnits align = clang::CharUnits::One()) {
+    return createAlignedLoad(loc, ty, ptr, align.getAsAlign());
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,

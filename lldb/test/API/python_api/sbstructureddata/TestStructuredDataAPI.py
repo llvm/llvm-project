@@ -133,7 +133,6 @@ class TestStructuredDataAPI(TestBase):
 
         self.assertSuccess(example.SetFromJSON("null"))
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeNull)
-        self.assertFalse(example)
 
         example = lldb.SBStructuredData()
         example.SetUnsignedIntegerValue(1)
@@ -346,7 +345,7 @@ class TestStructuredDataAPI(TestBase):
             self.fail("wrong output: " + str(output))
 
     def test_round_trip_scalars(self):
-        for original in (0, 11, -1, 0.0, 4.5, -0.25, True, False):
+        for original in (0, 11, -1, 0.0, 4.5, -0.25):
             constructor = type(original)
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
@@ -370,24 +369,6 @@ class TestStructuredDataAPI(TestBase):
             data = lldb.SBStructuredData()
             data.SetFromJSON(json.dumps(original))
             self.assertEqual(float(data), float(original))
-
-    def test_round_trip_bool(self):
-        for original in (0, 11, -1, 0.0, 4.5, -0.25, "0.0", "4.5", "-0.25"):
-            data = lldb.SBStructuredData()
-            data.SetFromJSON(json.dumps(original))
-            self.assertEqual(bool(data), bool(original))
-
-        for original in ([], {}, [1], {1: 1}):
-            data = lldb.SBStructuredData()
-            data.SetFromJSON(json.dumps(original))
-            self.assertEqual(bool(data), bool(original))
-
-    def test_assert_false(self):
-        self.assertFalse(lldb.SBStructuredData())
-        for original in ("0", "0.0", '""', "[]", "{}"):
-            data = lldb.SBStructuredData()
-            data.SetFromJSON(original)
-            self.assertFalse(data)
 
     def test_iterate_array(self):
         array = [0, 1, 2]
