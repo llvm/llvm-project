@@ -443,24 +443,22 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
 }
 
-  TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
+TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
 #ifndef __EMSCRIPTEN__
   GTEST_SKIP() << "This test only applies to Emscripten builds.";
 #endif
 
   using Args = std::vector<const char *>;
-  Args ExtraArgs = {
-      "-std=c++20",
-      "-v",
-      "-fexceptions",
-      "-fcxx-exceptions",
-      "-mllvm", "-enable-emscripten-cxx-exceptions",
-      "-mllvm", "-enable-emscripten-sjlj"};
+  Args ExtraArgs = {"-std=c++20",   "-v",
+                    "-fexceptions", "-fcxx-exceptions",
+                    "-mllvm",       "-enable-emscripten-cxx-exceptions",
+                    "-mllvm",       "-enable-emscripten-sjlj"};
+
 
   std::unique_ptr<Interpreter> Interp = createInterpreter(ExtraArgs);
 
-  llvm::cantFail(Interp->ParseAndExecute(
-      "try { throw 1; } catch (...) { 0; }"));
+  llvm::cantFail(
+      Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
 }
 
 } // end anonymous namespace
