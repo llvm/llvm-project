@@ -52,6 +52,15 @@
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
 
+// RUN: %clang -### -S -fexperimental-loop-fusion %s 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
+// CHECK-FUSE-LOOPS: "-fexperimental-loop-fusion"
+//
+// RUN: %clang -c -fexperimental-loop-fusion -mllvm -print-pipeline-passes -O3 %s 2>&1 | FileCheck --check-prefixes=LOOP-FUSION-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O3 %s 2>&1 | FileCheck --check-prefixes=LOOP-FUSION-OFF %s
+
+// LOOP-FUSION-ON: loop-fusion
+// LOOP-FUSION-OFF-NOT: loop-fusion
+
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
