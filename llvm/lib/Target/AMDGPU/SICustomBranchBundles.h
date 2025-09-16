@@ -26,14 +26,17 @@ static inline MachineInstr &get_branch_with_dest(MachineBasicBlock &branching_MB
   llvm_unreachable("Don't call this if there's no branch to the destination.");
 }
 
-static inline void move_ins_before_phis(MachineInstr &MI,
-                                            MachineBasicBlock &MBB) {
+static inline void move_ins_before_phis(MachineInstr &MI) {
+  MachineBasicBlock& MBB = *MI.getParent();
   MachineFunction& MF = *MBB.getParent();
   auto& TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
-  if (MBB.size() == 0 || MBB.front().getOpcode() != AMDGPU::PHI /*do we need to check for debug instructions here?*/)
+  if (MBB.size() == 0 ||
+      MBB.front().getOpcode() !=
+          AMDGPU::PHI /*do we need to check for debug instructions here?*/) {
+    MI.removeFromParent();
     MBB.insert(MBB.begin(), &MI);
-  else
+  } else {
     for (auto* pred_MBB : MBB.predecessors())
     {
       MachineInstr& branch_MI = get_branch_with_dest(*pred_MBB,MBB);
@@ -43,8 +46,8 @@ static inline void move_ins_before_phis(MachineInstr &MI,
         cloned_MI->bundleWithPred();
       }
     }
-
-  MI.eraseFromParent();
+    MI.eraseFromParent();
+  }
 }
 
 static inline MachineBasicBlock::instr_iterator
@@ -132,13 +135,31 @@ static inline void normalize_ir_post_phi_elimination(MachineFunction &MF) {
       move_body(to_insert.body,MBB);
     else if (to_insert.body.size())
       cfg_rewrite_entries.push_back(to_insert);
+  }
 
   // Perform the journaled rewrites.
-  for (const auto &entry : cfg_rewrite_entries) {
+  for (auto &entry : cfg_rewrite_entries) {
     MachineBasicBlock *mezzanine_MBB = MF.CreateMachineBasicBlock();
-    for(MachineBasicBlock* pred_MBB : entry.pred_MBBs)
-    {
-      
+
+    // Deal with mezzanine to successor succession.
+    BuildMI(mezzanine_MBB, DebugLoc(), TII.get(AMDGPU::S_BRANCH)).addMBB(entry.succ_MBB);
+    mezzanine_MBB->addSuccessor(entry.succ_MBB);
+
+    // Move instructions to mezzanine block.
+    move_body(entry.body, *mezzanine_MBB);
+
+    for (MachineBasicBlock *pred_MBB : entry.pred_MBBs) {
+      //Deal with predecessor to mezzanine succession.
+      MachineInstr &branch_ins =
+          get_branch_with_dest(*pred_MBB, *entry.succ_MBB);
+      assert(branch_ins.getOperand(0).isMBB() && "Branch instruction isn't.");
+      branch_ins.getOperand(0).setMBB(mezzanine_MBB);
+      pred_MBB->replaceSuccessor(entry.succ_MBB, mezzanine_MBB);
+
+      // Delete instructions that were lowered from epilog
+      auto epilog_it = get_epilog_for_successor(*pred_MBB, *entry.succ_MBB);
+      while (!epilog_it.isEnd())
+        epilog_it++->eraseFromBundle();
     }
   }
 }
