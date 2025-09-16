@@ -9092,9 +9092,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
 
 // Helper class template that is used by Type::getAs to ensure that one does
 // not try to look through a qualified type to get to an array type.
-template <typename T>
-using TypeIsArrayType = std::bool_constant<std::is_same_v<T, ArrayType> ||
-                                           std::is_base_of_v<ArrayType, T>>;
+template <typename T> using TypeIsArrayType = std::is_base_of<ArrayType, T>;
 
 // Member-template getAs<specific type>'.
 template <typename T> const T *Type::getAs() const {
