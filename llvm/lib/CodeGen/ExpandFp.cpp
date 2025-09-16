@@ -74,11 +74,63 @@ class FRemExpander {
   /// Constant 1 of type \p ExTy.
   Value *One;
 
+  /// The frem argument/return types that can be expanded by this class.
+  // TODO The expansion could work for other floating point types
+  // as well, but this would require additional testing.
+  inline static const SmallVector<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
+                                                          MVT::f64};
+
+  /// Libcalls for frem instructions of the type at the corresponding
+  /// positions of ExpandableTypes.
+  inline static const SmallVector<RTLIB::Libcall, 3> FremLibcalls{
+      RTLIB::REM_F32, RTLIB::REM_F32, RTLIB::REM_F64};
+
+  /// Return the Libcall for frem instructions of expandable type \p VT or
+  /// std::nullopt if \p VT is not expandable.
+  static std::optional<RTLIB::Libcall> getFremLibcallForType(EVT VT) {
+    auto *It = find(ExpandableTypes, VT.getSimpleVT());
+    if (It == ExpandableTypes.end())
+      return {};
+
+    return FremLibcalls[It - ExpandableTypes.begin()];
+  };
+
 public:
   static bool canExpandType(Type *Ty) {
-    // TODO The expansion should work for other floating point types
-    // as well, but this would require additional testing.
-    return Ty->isIEEELikeFPTy() && !Ty->isBFloatTy() && !Ty->isFP128Ty();
+    EVT VT = EVT::getEVT(Ty);
+    assert(VT.isSimple() && "Can expand only simple types");
+
+    return find(ExpandableTypes, VT.getSimpleVT());
+  }
+
+  /// Return true if the pass should expand a frem instruction of the
+  /// given \p Ty for the target represented by \p TLI. Expansion
+  /// should happen if the legalization for the scalar type uses a
+  /// non-existing libcall.
+  static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
+    TargetLowering::LegalizeAction LA = TLI.getOperationAction(ISD::FREM, VT);
+    if (LA != TargetLowering::LegalizeAction::LibCall &&
+        LA != TargetLowering::LegalizeAction::Expand)
+      return false;
+
+    auto Libcall = getFremLibcallForType(VT);
+    bool MissingLibcall = Libcall.has_value() && !TLI.getLibcallName(*Libcall);
+    return MissingLibcall;
+  }
+
+  static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
+    // Consider scalar type for simplicity.
+    // It is very unlikely that a vector type can be legalized without a libcall
+    // if the scalar type cannot.
+    return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
+  }
+
+  /// Return true if the pass should expand "frem" instructions of some any for
+  /// the target represented by \p TLI.
+  static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
+    return std::any_of(
+        ExpandableTypes.begin(), ExpandableTypes.end(),
+        [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
@@ -959,45 +1011,6 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
   I->eraseFromParent();
 }
 
-// This covers all floating point types; more than we need here.
-// TODO Move somewhere else for general use?
-/// Return the Libcall for a frem instruction of
-/// type \p Ty.
-static RTLIB::Libcall fremToLibcall(Type *Ty) {
-  assert(Ty->isFloatingPointTy());
-  if (Ty->isFloatTy() || Ty->is16bitFPTy())
-    return RTLIB::REM_F32;
-  if (Ty->isDoubleTy())
-    return RTLIB::REM_F64;
-  if (Ty->isFP128Ty())
-    return RTLIB::REM_F128;
-  if (Ty->isX86_FP80Ty())
-    return RTLIB::REM_F80;
-  if (Ty->isPPC_FP128Ty())
-    return RTLIB::REM_PPCF128;
-
-  llvm_unreachable("Unknown floating point type");
-}
-
-/// Return true if the pass should expand a "frem" instruction of the
-/// given \p Ty for the target represented by \p TLI. Expansion
-/// should happen if the legalization for the scalar type uses a
-/// non-existing libcall. The scalar type is considered because it is
-/// easier to do so and it is highly unlikely that a vector type can
-/// be legalized without a libcall if the scalar type cannot.
-static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
-  Type *ScalarTy = Ty->getScalarType();
-  EVT VT = EVT::getEVT(ScalarTy);
-
-  TargetLowering::LegalizeAction LA = TLI.getOperationAction(ISD::FREM, VT);
-  if (LA != TargetLowering::LegalizeAction::LibCall &&
-      LA != TargetLowering::LegalizeAction::Expand)
-    return false;
-
-  bool MissingLibcall = !TLI.getLibcallName(fremToLibcall(ScalarTy));
-  return MissingLibcall && FRemExpander::canExpandType(ScalarTy);
-}
-
 static bool runImpl(Function &F, const TargetLowering &TLI,
                     AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Replace;
@@ -1009,18 +1022,25 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (ExpandFpConvertBits != llvm::IntegerType::MAX_INT_BITS)
     MaxLegalFpConvertBitWidth = ExpandFpConvertBits;
 
-  bool TargetSkipExpandLargeFp =
+  bool DisableExpandLargeFp =
       MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS;
+  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
+
+  if (DisableExpandLargeFp && DisableFrem)
+    return false;
 
   for (auto &I : instructions(F)) {
     switch (I.getOpcode()) {
     case Instruction::FRem: {
+      if (DisableFrem)
+        continue;
+
       Type *Ty = I.getType();
       // TODO: This pass doesn't handle scalable vectors.
       if (Ty->isScalableTy())
         continue;
 
-      if (!shouldExpandFremType(TLI, Ty))
+      if (!FRemExpander::shouldExpandFremType(TLI, Ty))
         continue;
 
       Replace.push_back(&I);
@@ -1030,7 +1050,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
-      if (TargetSkipExpandLargeFp)
+      if (DisableExpandLargeFp)
         continue;
 
       // TODO: This pass doesn't handle scalable vectors.
@@ -1050,7 +1070,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
     case Instruction::UIToFP:
     case Instruction::SIToFP: {
-      if (TargetSkipExpandLargeFp)
+      if (DisableExpandLargeFp)
         continue;
 
       // TODO: This pass doesn't handle scalable vectors.
