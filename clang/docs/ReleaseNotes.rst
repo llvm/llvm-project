@@ -537,6 +537,7 @@ OpenMP Support
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support for ``variable-category`` modifier in ``default clause``.
 - Added support for ``defaultmap`` directive implicit-behavior ``storage``.
+- Added support for ``defaultmap`` directive implicit-behavior ``private``.
 
 Improvements
 ^^^^^^^^^^^^
