@@ -884,7 +884,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
       X->getType()->getScalarSizeInBits() == 1)
     SI = SelectInst::Create(X, InstCombiner::AddOne(Op1C), Op1);
   // sext(bool) + C -> bool ? C - 1 : C
-  if (match(Op0, m_SExt(m_Value(X))) &&
+  if (!SI && match(Op0, m_SExt(m_Value(X))) &&
       X->getType()->getScalarSizeInBits() == 1)
     SI = SelectInst::Create(X, InstCombiner::SubOne(Op1C), Op1);
   if (SI) {
