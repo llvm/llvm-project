@@ -1853,6 +1853,47 @@ static void hoistConditionalLoadsStores(
   }
 }
 
+static bool hoistImplyingConditions(BranchInst *BI, IRBuilder<> &Builder,
+                                    const DataLayout &DL) {
+  if (!isa<ICmpInst>(BI->getCondition()))
+    return false;
+
+  ICmpInst *branchCond = cast<ICmpInst>(BI->getCondition());
+  BasicBlock *truePathBB = BI->getSuccessor(0);
+
+  for (auto &I : *truePathBB)
+    if (I.mayHaveSideEffects())
+      return false;
+
+  for (auto &I : *truePathBB) {
+    if (isa<ICmpInst>(I)) {
+      ICmpInst *impliedICmp = cast<ICmpInst>(&I);
+      if (impliedICmp->getPredicate() == branchCond->getPredicate() &&
+          impliedICmp->getOperand(0) == branchCond->getOperand(0) &&
+          impliedICmp->getOperand(1) == branchCond->getOperand(1)) {
+        // found the same condition, so we can skip processing this.
+        continue;
+      }
+
+      std::optional<bool> Imp = isImpliedCondition(impliedICmp, branchCond, DL);
+      if (Imp == true) {
+        Builder.SetInsertPoint(BI);
+        Value *newBranchCond = Builder.CreateICmp(impliedICmp->getPredicate(),
+                                                  impliedICmp->getOperand(0),
+                                                  impliedICmp->getOperand(1));
+
+        branchCond->replaceAllUsesWith(newBranchCond);
+        branchCond->eraseFromParent();
+        impliedICmp->replaceAllUsesWith(
+            ConstantInt::getTrue(truePathBB->getContext()));
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
   // Not handle volatile or atomic.
@@ -8120,6 +8161,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // Try to turn "br (X == 0 | X == 1), T, F" into a switch instruction.
   if (simplifyBranchOnICmpChain(BI, Builder, DL))
     return true;
+
+  if (hoistImplyingConditions(BI, Builder, DL))
+    return requestResimplify();
 
   // If this basic block has dominating predecessor blocks and the dominating
   // blocks' conditions imply BI's condition, we know the direction of BI.
