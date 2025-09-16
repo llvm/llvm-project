@@ -268,10 +268,8 @@ static bool isDestCapacityOverflows(const MatchFinder::MatchResult &Result) {
   // Assume that the destination array's capacity cannot overflow if the
   // expression of the memory allocation contains '+ 1'.
   StringRef DestCapacityExprStr = exprToStr(DestCapacityExpr, Result);
-  if (DestCapacityExprStr.contains("+1") || DestCapacityExprStr.contains("+ 1"))
-    return false;
-
-  return true;
+  return !(DestCapacityExprStr.contains("+1") ||
+           DestCapacityExprStr.contains("+ 1"));
 }
 
 static bool
@@ -533,10 +531,7 @@ AST_MATCHER_P(Expr, hasDefinition, ast_matchers::internal::Matcher<Expr>,
           hasLHS(declRefExpr(to(varDecl(equalsBoundNode(VarDeclName))))),
           hasRHS(ignoringImpCasts(InnerMatcher))))))));
 
-  if (DREHasDefinition.matches(*SimpleNode, Finder, Builder))
-    return true;
-
-  return false;
+  return DREHasDefinition.matches(*SimpleNode, Finder, Builder);
 }
 } // namespace
 

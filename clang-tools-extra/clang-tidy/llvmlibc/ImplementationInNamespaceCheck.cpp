@@ -39,7 +39,7 @@ void ImplementationInNamespaceCheck::check(
   }
 
   // Enforce that the namespace is the result of macro expansion
-  if (Result.SourceManager->isMacroBodyExpansion(NS->getLocation()) == false) {
+  if (!Result.SourceManager->isMacroBodyExpansion(NS->getLocation())) {
     diag(NS->getLocation(), "the outermost namespace should be the '%0' macro")
         << RequiredNamespaceDeclMacroName;
     return;
@@ -55,7 +55,7 @@ void ImplementationInNamespaceCheck::check(
   }
 
   // Lastly, make sure the namespace name actually has the __llvm_libc prefix
-  if (NS->getName().starts_with(RequiredNamespaceRefStart) == false) {
+  if (!NS->getName().starts_with(RequiredNamespaceRefStart)) {
     diag(NS->getLocation(), "the '%0' macro expansion should start with '%1'")
         << RequiredNamespaceDeclMacroName << RequiredNamespaceRefStart;
     return;
