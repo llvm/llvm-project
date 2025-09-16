@@ -1039,6 +1039,7 @@ class DebugCommunication(object):
         disableSTDIO=False,
         shellExpandArguments=False,
         console: Optional[str] = None,
+        stdio: Optional[list[str]] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -1090,6 +1091,8 @@ class DebugCommunication(object):
             args_dict["sourceMap"] = sourceMap
         if console:
             args_dict["console"] = console
+        if stdio:
+            args_dict["stdio"] = stdio
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
