@@ -2972,32 +2972,32 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   for (unsigned I = 0; I != DstLen; ++I) {
-    APSInt a, b, c;
+    APSInt ALane, BLane, CLane;
     INT_TYPE_SWITCH(DstElemT, {
-      a = A.elem<T>(I).toAPSInt();
-      b = B.elem<T>(I).toAPSInt();
-      c = C.elem<T>(I).toAPSInt();
+      ALane = A.elem<T>(I).toAPSInt();
+      BLane = B.elem<T>(I).toAPSInt();
+      CLane = C.elem<T>(I).toAPSInt();
     });
 
-    unsigned BitWidth = a.getBitWidth();
-    APInt R(BitWidth, 0);
-    bool DstUnsigned = a.isUnsigned();
+    unsigned BitWidth = ALane.getBitWidth();
+    APInt RLane(BitWidth, 0);
+    bool DstUnsigned = ALane.isUnsigned();
 
     if (U[I]) {
       for (unsigned Bit = 0; Bit != BitWidth; ++Bit) {
-        unsigned Idx = (a[Bit] << 2) | (b[Bit] << 1) | (c[Bit]);
-        R.setBitVal(Bit, Imm[Idx]);
+        unsigned Idx = (ALane[Bit] << 2) | (BLane[Bit] << 1) | (CLane[Bit]);
+        RLane.setBitVal(Bit, Imm[Idx]);
       }
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-        Dst.elem<T>(I) = static_cast<T>(APSInt(R, DstUnsigned));
+        Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
       });
     } else if (MaskZ) {
-      INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-        Dst.elem<T>(I) = static_cast<T>(APSInt(R, DstUnsigned));
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, { /* Zeroes lane */
+        Dst.elem<T>(I) = static_cast<T>(APSInt(RLane, DstUnsigned));
       });
     } else {
       INT_TYPE_SWITCH_NO_BOOL(DstElemT,
-                              { Dst.elem<T>(I) = static_cast<T>(a); });
+                              { Dst.elem<T>(I) = static_cast<T>(ALane); });
     }
   }
   Dst.initializeAllElements();
