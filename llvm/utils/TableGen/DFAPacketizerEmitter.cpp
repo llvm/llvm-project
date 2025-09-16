@@ -277,11 +277,8 @@ void DFAPacketizerEmitter::emitForItineraries(
        << Model->ModelName << "\n";
   }
   OS << "  };\n"
-     << "  auto It = std::lower_bound(\n"
-     << "      std::begin(" << TargetName << DFAName
-     << "ProcIdToProcResourceIdxTable),\n"
-     << "      std::end(" << TargetName << DFAName
-     << "ProcIdToProcResourceIdxTable), ProcID,\n"
+     << "  auto It = llvm::lower_bound(" << TargetName << DFAName
+     << "ProcIdToProcResourceIdxTable, ProcID,\n"
      << "      [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; "
         "});\n"
      << "  assert(*It[0] == ProcID);\n"

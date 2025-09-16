@@ -27,9 +27,7 @@ def Itin {
 // CHECK-NEXT:   static const unsigned TestTargetProcIdToProcResourceIdxTable[][2] = {
 // CHECK-NEXT:     { 2,  1 }, // TestItinerariesModel
 // CHECK-NEXT:   };
-// CHECK-NEXT:   auto It = std::lower_bound(
-// CHECK-NEXT:       std::begin(TestTargetProcIdToProcResourceIdxTable),
-// CHECK-NEXT:       std::end(TestTargetProcIdToProcResourceIdxTable), ProcID,
+// CHECK-NEXT:   auto It = llvm::lower_bound(TestTargetProcIdToProcResourceIdxTable, ProcID,
 // CHECK-NEXT:       [](const unsigned LHS[], unsigned Val) { return LHS[0] < Val; });
 // CHECK-NEXT:   assert(*It[0] == ProcID);
 // CHECK-NEXT:   return (*It)[1];
