@@ -58,7 +58,23 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
-static void zapAllInstructionInDeadBasicBlock(BasicBlock *BB) {
+/// Zap all the instructions in the block and replace them with an unreachable
+/// instruction and notify the basic block's successors that one of their
+/// predecessors is going away.
+static void
+emptyAndDetachBlock(BasicBlock *BB,
+                    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                    bool KeepOneInputPHIs) {
+  // Loop through all of our successors and make sure they know that one
+  // of their predecessors is going away.
+  SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
+  for (BasicBlock *Succ : successors(BB)) {
+    Succ->removePredecessor(BB, KeepOneInputPHIs);
+    if (Updates && UniqueSuccessors.insert(Succ).second)
+      Updates->push_back({DominatorTree::Delete, BB, Succ});
+  }
+
+  // Zap all the instructions in the block.
   while (!BB->empty()) {
     Instruction &I = BB->back();
     // If this instruction is used, replace uses with an arbitrary value.
@@ -76,77 +92,6 @@ static void zapAllInstructionInDeadBasicBlock(BasicBlock *BB) {
          "applying corresponding DTU updates.");
 }
 
-static void deleteBasicBlockFromSuccessor(
-    BasicBlock *BB, SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-    bool KeepOneInputPHIs) {
-  // Loop through all of our successors and make sure they know that one
-  // of their predecessors is going away.
-  SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
-  for (BasicBlock *Succ : successors(BB)) {
-    Succ->removePredecessor(BB, KeepOneInputPHIs);
-    if (Updates && UniqueSuccessors.insert(Succ).second)
-      Updates->push_back({DominatorTree::Delete, BB, Succ});
-  }
-}
-
-static void replaceFuncletPadsRetWithUnreachable(
-    Instruction &I, SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-    bool KeepOneInputPHIs) {
-  assert(isa<FuncletPadInst>(I) && "Instruction must be a funclet pad!");
-  for (User *User : make_early_inc_range(I.users())) {
-    Instruction *ReturnInstr = dyn_cast<Instruction>(User);
-    // If we have a cleanupret or catchret block, replace it with just an
-    // unreachable. The other alternative, that may use a catchpad is a 
-    // catchswitch. That is not handled here.
-    if (isa<CatchReturnInst>(ReturnInstr) ||
-        isa<CleanupReturnInst>(ReturnInstr)) {
-      BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
-      // This catchret or catchpad basic block is detached now. Let the
-      // successors know it.
-      // This basic block also may have some predecessors too. For
-      // example the following LLVM-IR legit:
-      //
-      //   +-------------------------------------------+
-      //   | funclet:                    %unreachable  |
-      //   |   %cleanuppad = cleanuppad within none [] |
-      //   |   br label %middle_block                  |
-      //   +-------------------------------------------+
-      //                          |
-      //             +-------------------------+
-      //             | middle_block:           |
-      //             |   br label %funclet_end |
-      //             +-------------------------+
-      //                          |
-      // +------------------------------------------------+
-      // | funclet_end:                                   |
-      // |   cleanupret from %cleanuppad unwind to caller |
-      // +------------------------------------------------+
-      //
-      // The IR after the cleanup will look like this:
-      //
-      //   +-------------------------------------------+
-      //   | funclet:                    %unreachable  |
-      //   |   %cleanuppad = cleanuppad within none [] |
-      //   |   br label %middle_block                  |
-      //   +-------------------------------------------+
-      //                          |
-      //             +-------------------------+
-      //             | middle_block:           |
-      //             |   br label %funclet_end |
-      //             +-------------------------+
-      //                          |
-      //                   +-------------+
-      //                   | unreachable |
-      //                   +-------------+
-      //
-      // So middle_block will lead to an unreachable block, which is also legit.
-
-      deleteBasicBlockFromSuccessor(ReturnInstrBB, Updates, KeepOneInputPHIs);
-      zapAllInstructionInDeadBasicBlock(ReturnInstrBB);
-    }
-  }
-}
-
 void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
                             SmallVectorImpl<DominatorTree::UpdateType> *Updates,
                             bool KeepOneInputPHIs) {
@@ -160,13 +105,47 @@ void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
       // basic blocks than the pad instruction. If we would only delete the
       // first block, the we would have possible cleanupret and catchret
       // instructions with poison arguments, which wouldn't be valid.
-      if (isa<FuncletPadInst>(I))
-        replaceFuncletPadsRetWithUnreachable(I, Updates, KeepOneInputPHIs);
+      if (isa<FuncletPadInst>(I)) {
+        for (User *User : make_early_inc_range(I.users())) {
+          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+          // If we have a cleanupret or catchret block, replace it with just an
+          // unreachable. The other alternative, that may use a catchpad is a
+          // catchswitch. That does not need special handling for now.
+          if (isa<CatchReturnInst>(ReturnInstr) ||
+              isa<CleanupReturnInst>(ReturnInstr)) {
+            BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+            // This catchret or catchpad basic block is detached now. Let the
+            // successors know it.
+            // This basic block also may have some predecessors too. For
+            // example the following LLVM-IR is valid:
+            //
+            //   [cleanuppad_block]
+            //            |
+            //    [regular_block]
+            //            |
+            //   [cleanupret_block]
+            //
+            // The IR after the cleanup will look like this:
+            //
+            //   [cleanuppad_block]
+            //            |
+            //    [regular_block]
+            //            |
+            //     [unreachable]
+            //
+            // So regular_block will lead to an unreachable block, which is also
+            // valid. There is no need to replace regular_block with unreachable
+            // in this context now.
+            // On the other hand, the cleanupret/catchret block's successors
+            // need to know about the deletion of their predecessors.
+            emptyAndDetachBlock(ReturnInstrBB, Updates, KeepOneInputPHIs);
+          }
+        }
+      }
     }
 
     // Detaching and emptying the current basic block.
-    deleteBasicBlockFromSuccessor(BB, Updates, KeepOneInputPHIs);
-    zapAllInstructionInDeadBasicBlock(BB);
+    emptyAndDetachBlock(BB, Updates, KeepOneInputPHIs);
   }
 }
 
