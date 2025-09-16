@@ -3847,6 +3847,9 @@ bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   }
 
   if (!CreateMethod)
+    // This can happen if someone creates a struct that looks like an HLSL
+    // resource record but does not have the required static create method.
+    // No binding will be generated for it.
     return false;
 
   IntegerLiteral *Space =
