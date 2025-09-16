@@ -3150,7 +3150,7 @@ class CodeCompletionResult(Structure):
 
 
 class CCRStructure(Structure):
-    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_int)]
+    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_uint)]
 
     results: NoSliceSequence[CodeCompletionResult]
     numResults: int
