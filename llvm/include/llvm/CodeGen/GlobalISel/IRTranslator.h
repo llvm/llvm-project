@@ -405,13 +405,13 @@ private:
       BranchProbability UnhandledProbs, SwitchCG::CaseClusterIt I,
       MachineBasicBlock *Fallthrough, bool FallthroughUnreachable);
 
-  bool lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I, Value *Cond,
-                                MachineBasicBlock *Fallthrough,
-                                bool FallthroughUnreachable,
-                                BranchProbability UnhandledProbs,
-                                MachineBasicBlock *CurMBB,
-                                MachineIRBuilder &MIB,
-                                MachineBasicBlock *SwitchMBB);
+  bool lowerSwitchAndOrRangeWorkItem(SwitchCG::CaseClusterIt I, Value *Cond,
+                                     MachineBasicBlock *Fallthrough,
+                                     bool FallthroughUnreachable,
+                                     BranchProbability UnhandledProbs,
+                                     MachineBasicBlock *CurMBB,
+                                     MachineIRBuilder &MIB,
+                                     MachineBasicBlock *SwitchMBB);
 
   bool lowerBitTestWorkItem(
       SwitchCG::SwitchWorkListItem W, MachineBasicBlock *SwitchMBB,
