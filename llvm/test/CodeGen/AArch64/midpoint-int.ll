@@ -15,7 +15,7 @@ define i32 @scalar_i32_signed_reg_reg(i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs w9, w0, w1
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cneg w9, w9, le
+; CHECK-NEXT:    cneg w9, w9, lt
 ; CHECK-NEXT:    cneg w8, w8, le
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
@@ -36,7 +36,7 @@ define i32 @scalar_i32_unsigned_reg_reg(i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs w9, w0, w1
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    cneg w9, w9, ls
+; CHECK-NEXT:    cneg w9, w9, lo
 ; CHECK-NEXT:    cneg w8, w8, ls
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
@@ -60,7 +60,7 @@ define i32 @scalar_i32_signed_mem_reg(ptr %a1_addr, i32 %a2) nounwind {
 ; CHECK-NEXT:    ldr w9, [x0]
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    subs w10, w9, w1
-; CHECK-NEXT:    cneg w10, w10, le
+; CHECK-NEXT:    cneg w10, w10, lt
 ; CHECK-NEXT:    cneg w8, w8, le
 ; CHECK-NEXT:    lsr w10, w10, #1
 ; CHECK-NEXT:    madd w0, w10, w8, w9
@@ -83,7 +83,7 @@ define i32 @scalar_i32_signed_reg_mem(i32 %a1, ptr %a2_addr) nounwind {
 ; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    subs w9, w0, w9
-; CHECK-NEXT:    cneg w9, w9, le
+; CHECK-NEXT:    cneg w9, w9, lt
 ; CHECK-NEXT:    cneg w8, w8, le
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
@@ -107,7 +107,7 @@ define i32 @scalar_i32_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; CHECK-NEXT:    ldr w10, [x1]
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    subs w10, w9, w10
-; CHECK-NEXT:    cneg w10, w10, le
+; CHECK-NEXT:    cneg w10, w10, lt
 ; CHECK-NEXT:    cneg w8, w8, le
 ; CHECK-NEXT:    lsr w10, w10, #1
 ; CHECK-NEXT:    madd w0, w10, w8, w9
@@ -136,7 +136,7 @@ define i64 @scalar_i64_signed_reg_reg(i64 %a1, i64 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x9, x0, x1
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    cneg x9, x9, le
+; CHECK-NEXT:    cneg x9, x9, lt
 ; CHECK-NEXT:    cneg x8, x8, le
 ; CHECK-NEXT:    lsr x9, x9, #1
 ; CHECK-NEXT:    madd x0, x9, x8, x0
@@ -157,7 +157,7 @@ define i64 @scalar_i64_unsigned_reg_reg(i64 %a1, i64 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x9, x0, x1
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    cneg x9, x9, ls
+; CHECK-NEXT:    cneg x9, x9, lo
 ; CHECK-NEXT:    cneg x8, x8, ls
 ; CHECK-NEXT:    lsr x9, x9, #1
 ; CHECK-NEXT:    madd x0, x9, x8, x0
@@ -181,7 +181,7 @@ define i64 @scalar_i64_signed_mem_reg(ptr %a1_addr, i64 %a2) nounwind {
 ; CHECK-NEXT:    ldr x9, [x0]
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    subs x10, x9, x1
-; CHECK-NEXT:    cneg x10, x10, le
+; CHECK-NEXT:    cneg x10, x10, lt
 ; CHECK-NEXT:    cneg x8, x8, le
 ; CHECK-NEXT:    lsr x10, x10, #1
 ; CHECK-NEXT:    madd x0, x10, x8, x9
@@ -204,7 +204,7 @@ define i64 @scalar_i64_signed_reg_mem(i64 %a1, ptr %a2_addr) nounwind {
 ; CHECK-NEXT:    ldr x9, [x1]
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    subs x9, x0, x9
-; CHECK-NEXT:    cneg x9, x9, le
+; CHECK-NEXT:    cneg x9, x9, lt
 ; CHECK-NEXT:    cneg x8, x8, le
 ; CHECK-NEXT:    lsr x9, x9, #1
 ; CHECK-NEXT:    madd x0, x9, x8, x0
@@ -228,7 +228,7 @@ define i64 @scalar_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; CHECK-NEXT:    ldr x10, [x1]
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    subs x10, x9, x10
-; CHECK-NEXT:    cneg x10, x10, le
+; CHECK-NEXT:    cneg x10, x10, lt
 ; CHECK-NEXT:    cneg x8, x8, le
 ; CHECK-NEXT:    lsr x10, x10, #1
 ; CHECK-NEXT:    madd x0, x10, x8, x9

@@ -698,6 +698,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i64, Custom);
   }
 
+  setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDS, MVT::i64, Custom);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, Custom);
+
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -7433,6 +7438,80 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      getCondCode(DAG, AArch64CC::PL), Cmp);
 }
 
+// Generate SUBS and CNEG for absolute difference.
+SDValue AArch64TargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+
+  bool IsSigned = Op.getOpcode() == ISD::ABDS;
+  if (VT.isVector()) {
+    if (IsSigned)
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
+    else
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+  }
+
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  // If the subtract doesn't overflow then just use abs(sub())
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  unsigned Opcode = AArch64ISD::SUBS;
+  // Check if RHS is a subtraction against 0: (0 - X)
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    // Check if it's 0 - X
+    if (isNullConstant(SubLHS)) {
+      bool CanUseAdd = false;
+      if (IsSigned) {
+        // For UCMP: only if X is known to never be INT_MIN (to avoid overflow)
+        if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
+                                                      .getSignedMinValue()
+                                                      .isMinSignedValue()) {
+          CanUseAdd = true;
+        }
+      } else {
+        // For UCMP: only if X is known to never be zero
+        if (DAG.isKnownNeverZero(SubRHS)) {
+          CanUseAdd = true;
+        }
+      }
+
+      if (CanUseAdd) {
+        Opcode = AArch64ISD::ADDS;
+        RHS = SubRHS; // Replace RHS with X, so we do LHS + X instead of
+                      // LHS - (0 - X)
+      }
+    }
+  }
+
+  // Generate SUBS and CSEL for absolute difference (like LowerABS)
+  // Compute a - b with flags
+  SDValue Cmp = DAG.getNode(Opcode, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+
+  // Compute b - a (negative of a - b)
+  SDValue Neg = DAG.getNegative(Cmp.getValue(0), DL, VT);
+
+  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
+  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  AArch64CC::CondCode CC = IsSigned ? AArch64CC::GE : AArch64CC::HS;
+
+  // CSEL: if a > b, select a-b, otherwise b-a
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Cmp.getValue(0), Neg,
+                     getCondCode(DAG, CC), Cmp.getValue(1));
+}
+
 static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -7885,9 +7964,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::ABS:
     return LowerABS(Op, DAG);
   case ISD::ABDS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+    return LowerABD(Op, DAG);
   case ISD::AVGFLOORS:
     return LowerAVG(Op, DAG, AArch64ISD::HADDS_PRED);
   case ISD::AVGFLOORU:
