@@ -14,5 +14,6 @@ add_libc_unittest(
     libc.src.dirent.opendir
     libc.src.dirent.readdir
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 

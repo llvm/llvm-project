@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - '.github/**'
   schedule:
     - cron: '30 0 * * *'
 

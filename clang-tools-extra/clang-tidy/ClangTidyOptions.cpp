@@ -99,6 +99,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     for (auto &Option : SortedOptions) {
       bool UseDefault = false;
       void *SaveInfo = nullptr;
+      // Requires 'llvm::yaml::IO' to accept 'StringRef'
+      // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
       IO.preflightKey(Option.first.data(), true, false, UseDefault, SaveInfo);
       IO.scalarString(Option.second, needsQuotes(Option.second));
       IO.postflightKey(SaveInfo);
@@ -116,6 +118,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
       for (StringRef Key : IO.keys()) {
+        // Requires 'llvm::yaml::IO' to accept 'StringRef'
+        // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
         IO.mapRequired(Key.data(), Val[Key].Value);
       }
       IO.endMapping();

@@ -213,8 +213,8 @@ public:
     for (int64_t off = offset, e = offset + size * stride; off < e;
          off += stride)
       offsets.push_back(off);
-    rewriter.replaceOpWithNewOp<ShuffleOp>(op, dstType, op.getVector(),
-                                           op.getVector(), offsets);
+    rewriter.replaceOpWithNewOp<ShuffleOp>(op, dstType, op.getSource(),
+                                           op.getSource(), offsets);
     return success();
   }
 };
@@ -250,7 +250,7 @@ public:
     SmallVector<Value> elements;
     elements.reserve(size);
     for (int64_t i = offset, e = offset + size * stride; i < e; i += stride)
-      elements.push_back(ExtractOp::create(rewriter, loc, op.getVector(), i));
+      elements.push_back(ExtractOp::create(rewriter, loc, op.getSource(), i));
 
     Value result = arith::ConstantOp::create(
         rewriter, loc, rewriter.getZeroAttr(op.getType()));
@@ -306,7 +306,7 @@ public:
     Value res = BroadcastOp::create(rewriter, loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
-      Value one = ExtractOp::create(rewriter, loc, op.getVector(), off);
+      Value one = ExtractOp::create(rewriter, loc, op.getSource(), off);
       Value extracted = ExtractStridedSliceOp::create(
           rewriter, loc, one, getI64SubArray(op.getOffsets(), /* dropFront=*/1),
           getI64SubArray(op.getSizes(), /* dropFront=*/1),

@@ -28,8 +28,6 @@
 ; - llvm.x86.avx512.mul.pd.512, llvm.x86.avx512.mul.ps.512
 ; - llvm.x86.avx512.permvar.df.512, llvm.x86.avx512.permvar.sf.512
 ; - llvm.x86.avx512.pternlog.d.512, llvm.x86.avx512.pternlog.q.512
-; - llvm.x86.avx512.rcp14.pd.512, llvm.x86.avx512.rcp14.ps.512
-; - llvm.x86.avx512.rsqrt14.ps.512
 ; - llvm.x86.avx512.sitofp.round.v16f32.v16i32
 ; - llvm.x86.avx512.sqrt.pd.512, llvm.x86.avx512.sqrt.ps.512
 ; - llvm.x86.avx512.sub.ps.512
@@ -682,15 +680,11 @@ define <16 x float> @test_rcp_ps_512(<16 x float> %a0) #0 {
 ; CHECK-LABEL: @test_rcp_ps_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i32> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <16 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i1> [[TMP2]] to <16 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <16 x i1> splat (i1 true), <16 x i32> [[TMP3]], <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float> [[A0:%.*]], <16 x float> zeroinitializer, i16 -1)
-; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <16 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x float> [[RES]]
 ;
   %res = call <16 x float> @llvm.x86.avx512.rcp14.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1) ; <<16 x float>> [#uses=1]
@@ -702,15 +696,11 @@ define <8 x double> @test_rcp_pd_512(<8 x double> %a0) #0 {
 ; CHECK-LABEL: @test_rcp_pd_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP2]] to <8 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> splat (i1 true), <8 x i64> [[TMP3]], <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x double> @llvm.x86.avx512.rcp14.pd.512(<8 x double> [[A0:%.*]], <8 x double> zeroinitializer, i8 -1)
-; CHECK-NEXT:    store <8 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i64> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x double> [[RES]]
 ;
   %res = call <8 x double> @llvm.x86.avx512.rcp14.pd.512(<8 x double> %a0, <8 x double> zeroinitializer, i8 -1) ; <<8 x double>> [#uses=1]
@@ -1021,15 +1011,11 @@ define <16 x float> @test_rsqrt_ps_512(<16 x float> %a0) #0 {
 ; CHECK-LABEL: @test_rsqrt_ps_512(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i32> [[TMP1]] to i512
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i512 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <16 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <16 x i1> [[TMP2]] to <16 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <16 x i1> splat (i1 true), <16 x i32> [[TMP3]], <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float> [[A0:%.*]], <16 x float> zeroinitializer, i16 -1)
-; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <16 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x float> [[RES]]
 ;
   %res = call <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1) ; <<16 x float>> [#uses=1]

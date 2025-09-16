@@ -63,10 +63,10 @@ void acceptBlockPtr(_Nonnull int *(^)(void));
 
 void testBlockFunctionPtrNullability(void) {
   float *fp;
-  fp = (function_pointer_type_3)0; // expected-warning{{from 'function_pointer_type_3' (aka 'int * _Nonnull (*)(int, int)')}}
+  fp = (function_pointer_type_3)0; // expected-error{{from 'function_pointer_type_3' (aka 'int * _Nonnull (*)(int, int)')}}
   fp = (block_type_3)0; // expected-error{{from incompatible type 'block_type_3' (aka 'int * _Nonnull (^)(int, int)')}}
-  fp = (function_pointer_type_4)0; // expected-warning{{from 'function_pointer_type_4' (aka 'int * _Nonnull (*)(int, int)')}}
-  fp = (function_pointer_type_5)0; // expected-warning{{from 'function_pointer_type_5' (aka 'void (*)(int * _Nonnull)')}}
+  fp = (function_pointer_type_4)0; // expected-error{{from 'function_pointer_type_4' (aka 'int * _Nonnull (*)(int, int)')}}
+  fp = (function_pointer_type_5)0; // expected-error{{from 'function_pointer_type_5' (aka 'void (*)(int * _Nonnull)')}}
   fp = (block_type_4)0; // expected-error{{from incompatible type 'block_type_4' (aka 'int_ptr  _Nonnull (^)(int, int)')}}
 
   acceptFunctionPtr(0); // no-warning
@@ -86,18 +86,18 @@ typedef int * _Nullable ambiguous_int_ptr;
 
 // Printing of nullability.
 float f;
-int * _Nonnull ip_1 = &f; // expected-warning{{incompatible pointer types initializing 'int * _Nonnull' with an expression of type 'float *'}}
+int * _Nonnull ip_1 = &f; // expected-error{{incompatible pointer types initializing 'int * _Nonnull' with an expression of type 'float *'}}
 
 // Check printing of nullability specifiers.
 void printing_nullability(void) {
   int * _Nonnull iptr;
-  float *fptr = iptr; // expected-warning{{incompatible pointer types initializing 'float *' with an expression of type 'int * _Nonnull'}}
+  float *fptr = iptr; // expected-error{{incompatible pointer types initializing 'float *' with an expression of type 'int * _Nonnull'}}
 
   int * * _Nonnull iptrptr;
-  float **fptrptr = iptrptr; // expected-warning{{incompatible pointer types initializing 'float **' with an expression of type 'int ** _Nonnull'}}
+  float **fptrptr = iptrptr; // expected-error{{incompatible pointer types initializing 'float **' with an expression of type 'int ** _Nonnull'}}
 
   int * _Nullable * _Nonnull iptrptr2;
-  float * *fptrptr2 = iptrptr2; // expected-warning{{incompatible pointer types initializing 'float **' with an expression of type 'int * _Nullable * _Nonnull'}}
+  float * *fptrptr2 = iptrptr2; // expected-error{{incompatible pointer types initializing 'float **' with an expression of type 'int * _Nullable * _Nonnull'}}
 }
 
 // Check passing null to a _Nonnull argument.

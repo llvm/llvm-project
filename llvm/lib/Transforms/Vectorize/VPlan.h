@@ -1795,6 +1795,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
 
+  /// This recipe generates a GEP instruction.
+  unsigned getOpcode() const { return Instruction::GetElementPtr; }
+
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
 

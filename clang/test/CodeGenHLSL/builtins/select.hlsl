@@ -10,12 +10,24 @@ int test_select_bool_int(bool cond0, int tVal, int fVal) {
 }
 
 struct S { int a; };
-// CHECK-LABEL: test_select_infer
-// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, ptr {{%.*}}, ptr {{%.*}}
-// CHECK: store ptr [[SELECT]]
+// CHECK-LABEL: test_select_infer_struct
+// CHECK: [[TRUE_VAL:%.*]] = load %struct.S, ptr {{%.*}}, align 1
+// CHECK: [[FALSE_VAL:%.*]] = load %struct.S, ptr {{%.*}}, align 1
+// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, %struct.S [[TRUE_VAL]], %struct.S [[FALSE_VAL]]
+// CHECK: store %struct.S [[SELECT]], ptr {{%.*}}, align 1
 // CHECK: ret void
-struct S test_select_infer(bool cond0, struct S tVal, struct S fVal) {
+struct S test_select_infer_struct(bool cond0, struct S tVal, struct S fVal) {
   return select(cond0, tVal, fVal);
+}
+
+// CHECK-LABEL: test_select_infer_array
+// CHECK: [[TRUE_VAL:%.*]] = load [3 x i32], ptr {{%.*}}, align 4
+// CHECK: [[FALSE_VAL:%.*]] = load [3 x i32], ptr {{%.*}}, align 4
+// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, [3 x i32] [[TRUE_VAL]], [3 x i32] [[FALSE_VAL]]
+// CHECK: store [3 x i32] [[SELECT]], ptr {{%.*}}, align 4
+// CHECK: ret void
+int test_select_infer_array(bool cond, int tVal[3], int fVal[3])[3] {
+  return select(cond, tVal, fVal);
 }
 
 // CHECK-LABEL: test_select_bool_vector

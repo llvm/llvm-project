@@ -18,7 +18,6 @@ libc_test(
         "//libc:close",
         "//libc:open",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -32,7 +31,6 @@ libc_test(
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -46,7 +44,6 @@ libc_test(
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -60,7 +57,6 @@ libc_test(
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -75,7 +71,6 @@ libc_test(
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -90,7 +85,6 @@ libc_test(
         "//libc:pwrite",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -104,7 +98,6 @@ libc_test(
         "//libc:read",
         "//libc:remove",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -116,7 +109,6 @@ libc_test(
         "//libc:link",
         "//libc:open",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -137,7 +129,6 @@ libc_test(
         "//libc:open",
         "//libc:symlink",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -152,7 +143,6 @@ libc_test(
         "//libc:truncate",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -163,7 +153,6 @@ libc_test(
         "//libc:close",
         "//libc:open",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -190,7 +179,6 @@ libc_test(
         "//libc:close",
         "//libc:isatty",
         "//libc:open",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 

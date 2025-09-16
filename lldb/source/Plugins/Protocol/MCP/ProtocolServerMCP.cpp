@@ -10,8 +10,6 @@
 #include "Resource.h"
 #include "Tool.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -60,7 +58,9 @@ void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
                                            "MCP initialization complete");
                                 });
   server.AddTool(
-      std::make_unique<CommandTool>("lldb_command", "Run an lldb command."));
+      std::make_unique<CommandTool>("command", "Run an lldb command."));
+  server.AddTool(std::make_unique<DebuggerListTool>(
+      "debugger_list", "List debugger instances with their debugger_id."));
   server.AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
 }
 
@@ -145,8 +145,8 @@ llvm::Error ProtocolServerMCP::Stop() {
   if (m_loop_thread.joinable())
     m_loop_thread.join();
 
+  m_server_info_handle.Remove();
   m_listen_handlers.clear();
-  m_server_info_handle = ServerInfoHandle();
   m_instances.clear();
 
   return llvm::Error::success();

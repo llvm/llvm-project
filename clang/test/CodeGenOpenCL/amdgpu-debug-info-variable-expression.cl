@@ -52,31 +52,31 @@ int *constant FileVar14 = 0;
 
 kernel void kernel1(
     // CHECK-DAG: ![[KERNELARG0:[0-9]+]] = !DILocalVariable(name: "KernelArg0", arg: {{[0-9]+}}, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-    // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[KERNELARG0]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+    // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[KERNELARG0]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
     global int *KernelArg0,
     // CHECK-DAG: ![[KERNELARG1:[0-9]+]] = !DILocalVariable(name: "KernelArg1", arg: {{[0-9]+}}, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-    // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[KERNELARG1]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+    // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[KERNELARG1]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
     constant int *KernelArg1,
     // CHECK-DAG: ![[KERNELARG2:[0-9]+]] = !DILocalVariable(name: "KernelArg2", arg: {{[0-9]+}}, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-    // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[KERNELARG2]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+    // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[KERNELARG2]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
     local int *KernelArg2) {
   private int *Tmp0;
   int *Tmp1;
 
   // CHECK-DAG: ![[FUNCVAR0:[0-9]+]] = !DILocalVariable(name: "FuncVar0", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR0]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR0]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   global int *FuncVar0 = KernelArg0;
   // CHECK-DAG: ![[FUNCVAR1:[0-9]+]] = !DILocalVariable(name: "FuncVar1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR1]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR1]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   constant int *FuncVar1 = KernelArg1;
   // CHECK-DAG: ![[FUNCVAR2:[0-9]+]] = !DILocalVariable(name: "FuncVar2", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR2]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR2]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   local int *FuncVar2 = KernelArg2;
   // CHECK-DAG: ![[FUNCVAR3:[0-9]+]] = !DILocalVariable(name: "FuncVar3", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR3]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR3]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   private int *FuncVar3 = Tmp0;
   // CHECK-DAG: ![[FUNCVAR4:[0-9]+]] = !DILocalVariable(name: "FuncVar4", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR4]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR4]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   int *FuncVar4 = Tmp1;
 
   // CHECK-DAG: ![[FUNCVAR5:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar5", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
@@ -96,34 +96,34 @@ kernel void kernel1(
   int *constant FuncVar9 = 0;
 
   // CHECK-DAG: ![[FUNCVAR10:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar10", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR10]], expr: !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef))
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR10]], expr: !DIExpression(DW_OP_constu, 3, DW_OP_swap, DW_OP_xderef))
   global int *local FuncVar10; FuncVar10 = KernelArg0;
   // CHECK-DAG: ![[FUNCVAR11:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar11", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR11]], expr: !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef))
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR11]], expr: !DIExpression(DW_OP_constu, 3, DW_OP_swap, DW_OP_xderef))
   constant int *local FuncVar11; FuncVar11 = KernelArg1;
   // CHECK-DAG: ![[FUNCVAR12:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar12", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR12]], expr: !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef))
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR12]], expr: !DIExpression(DW_OP_constu, 3, DW_OP_swap, DW_OP_xderef))
   local int *local FuncVar12; FuncVar12 = KernelArg2;
   // CHECK-DAG: ![[FUNCVAR13:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar13", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR13]], expr: !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef))
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR13]], expr: !DIExpression(DW_OP_constu, 3, DW_OP_swap, DW_OP_xderef))
   private int *local FuncVar13; FuncVar13 = Tmp0;
   // CHECK-DAG: ![[FUNCVAR14:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar14", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
-  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR14]], expr: !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef))
+  // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR14]], expr: !DIExpression(DW_OP_constu, 3, DW_OP_swap, DW_OP_xderef))
   int *local FuncVar14; FuncVar14 = Tmp1;
 
   // CHECK-DAG: ![[FUNCVAR15:[0-9]+]] = !DILocalVariable(name: "FuncVar15", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR15]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR15]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   global int *private FuncVar15 = KernelArg0;
   // CHECK-DAG: ![[FUNCVAR16:[0-9]+]] = !DILocalVariable(name: "FuncVar16", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR16]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR16]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   constant int *private FuncVar16 = KernelArg1;
   // CHECK-DAG: ![[FUNCVAR17:[0-9]+]] = !DILocalVariable(name: "FuncVar17", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR17]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR17]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   local int *private FuncVar17 = KernelArg2;
   // CHECK-DAG: ![[FUNCVAR18:[0-9]+]] = !DILocalVariable(name: "FuncVar18", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR18]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR18]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   private int *private FuncVar18 = Tmp0;
   // CHECK-DAG: ![[FUNCVAR19:[0-9]+]] = !DILocalVariable(name: "FuncVar19", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR19]], !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
+  // CHECK-DAG: #dbg_declare(ptr addrspace(5) {{.*}}, ![[FUNCVAR19]], !DIExpression(DW_OP_constu, 5, DW_OP_swap, DW_OP_xderef), !{{[0-9]+}}
   int *private FuncVar19 = Tmp1;
 }

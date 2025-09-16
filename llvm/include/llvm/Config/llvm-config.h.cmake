@@ -146,4 +146,7 @@
    coverage bugs, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
+/* Define to 1 to enable LLVM OnDisk Content Addressable Storage */
+#cmakedefine01 LLVM_ENABLE_ONDISK_CAS
+
 #endif

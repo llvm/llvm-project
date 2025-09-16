@@ -27,7 +27,7 @@ extern __kindof NSObject <NSCopying> *kindof_NSObject_NSCopying;
 
 #else
 void testPrettyPrint(int *ip) {
-  ip = kindof_NSObject_NSCopying; // expected-warning{{from '__kindof NSObject<NSCopying> *'}}
+  ip = kindof_NSObject_NSCopying; // expected-error{{from '__kindof NSObject<NSCopying> *'}}
 }
 
 #endif

@@ -265,4 +265,8 @@ def SameVariadicResultSizeOpFVFVF : TestOp<"same_variadic_result_fvfvf",
                  AnyType:$non_variadic3);
 }
 
+def ResultsVariadicOp : TestOp<"results_variadic"> {
+  let results = (outs Variadic<AnyType>:$res);
+}
+
 #endif // PYTHON_TEST_OPS

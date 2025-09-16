@@ -7,7 +7,7 @@ int printf(const char *, ...);
 int a, b, c;
 long d;
 int main() {
-  short *e = &a;
+  short *e = (short *)&a;
   int *f = &a;
   *f = 0;
   for (; b <= 9; b++) {

@@ -141,3 +141,9 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_nop_OP_reg) {
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_nop_OP_reg) {
   TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_nop, DW_OP_reg0}, "R0");
 }
+
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unknown_subop) {
+  TestExprPrinter({DW_OP_LLVM_user, DW_OP_LLVM_form_aspace_address},
+                  "<unknown op DW_OP_LLVM_user (233) subop "
+                  "DW_OP_LLVM_form_aspace_address (2)>");
+}

@@ -12,6 +12,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <cstdint>
 #include <fstream>
@@ -392,10 +393,14 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The counter of range samples for one function indexed by the range,
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
+// <<inst-addr, vtable-data-symbol>, count> map for data access samples.
+// The instruction address is the virtual address in the binary.
+using DataAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
   RangeSample RangeCounter;
   BranchSample BranchCounter;
+  DataAccessSample DataAccessCounter;
 
   void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
     assert(Start <= End && "Invalid instruction range");
@@ -403,6 +408,10 @@ struct SampleCounter {
   }
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
     BranchCounter[{Source, Target}] += Repeat;
+  }
+  void recordDataAccessCount(uint64_t InstAddr, StringRef DataSymbol,
+                             uint64_t Repeat) {
+    DataAccessCounter[{InstAddr, DataSymbol}] += Repeat;
   }
 };
 
@@ -569,6 +578,13 @@ public:
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
+
+  // Parse the <ip, vtable-data-symbol> from the data access perf trace file,
+  // and accumulate the data access count for each <ip, data-symbol> pair.
+  Error
+  parseDataAccessPerfTraces(StringRef DataAccessPerfFile,
+                            std::optional<int32_t> PIDFilter = std::nullopt);
+
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }
@@ -595,6 +611,14 @@ public:
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
+
+  // Parse a single line of a PERF_RECORD_MMAP event looking for a
+  // mapping between the binary name and its memory layout.
+  // TODO: Move this static method from PerScriptReader (subclass) to
+  // PerfReaderBase (superclass).
+  static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
+                                        MMapEvent &MMap);
+
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
                                               bool SkipPID, PerfInputFile &File,
@@ -608,23 +632,10 @@ public:
   static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
-  // The parsed MMap event
-  struct MMapEvent {
-    int64_t PID = 0;
-    uint64_t Address = 0;
-    uint64_t Size = 0;
-    uint64_t Offset = 0;
-    StringRef BinaryPath;
-  };
-
   // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
-  // Parse a single line of a PERF_RECORD_MMAP event looking for a
-  // mapping between the binary name and its memory layout.
-  static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
-                                        MMapEvent &MMap);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address

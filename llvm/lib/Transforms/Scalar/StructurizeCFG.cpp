@@ -308,6 +308,9 @@ class StructurizeCFG {
 
   void hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
 
+  bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
+                              BasicBlock *HoistTo);
+
   void orderNodes();
 
   void analyzeLoops(RegionNode *N);
@@ -415,11 +418,21 @@ public:
 
 } // end anonymous namespace
 
+char StructurizeCFGLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
+                      "Structurize the CFG", false, false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
+INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
+                    "Structurize the CFG", false, false)
+
 /// Checks whether an instruction is zero cost instruction and checks if the
 /// operands are from different BB. If so, this instruction can be coalesced
 /// if its hoisted to predecessor block. So, this returns true.
-static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
-                                   const TargetTransformInfo *TTI) {
+bool StructurizeCFG::isHoistableInstruction(Instruction *I, BasicBlock *BB,
+                                            BasicBlock *HoistTo) {
   if (I->getParent() != BB || isa<PHINode>(I))
     return false;
 
@@ -432,26 +445,17 @@ static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
   if (CostVal != 0)
     return false;
 
-  // Check if any operands are instructions defined in the same block.
+  // Check if all operands are available at the hoisting destination.
   for (auto &Op : I->operands()) {
     if (auto *OpI = dyn_cast<Instruction>(Op)) {
-      if (OpI->getParent() == BB)
+      // Operand must dominate the hoisting destination.
+      if (!DT->dominates(OpI->getParent(), HoistTo))
         return false;
     }
   }
 
   return true;
 }
-
-char StructurizeCFGLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
-                      "Structurize the CFG", false, false)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
-INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
-                    "Structurize the CFG", false, false)
 
 /// Structurization can introduce unnecessary VGPR copies due to register
 /// coalescing interference. For example, if the Else block has a zero-cost
@@ -478,7 +482,7 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
   for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
     auto *Inst = dyn_cast<Instruction>(ElseVal);
-    if (!Inst || !isHoistableInstruction(Inst, ElseBB, TTI))
+    if (!Inst || !isHoistableInstruction(Inst, ElseBB, CommonDominator))
       continue;
     Inst->removeFromParent();
     Inst->insertInto(CommonDominator, Term->getIterator());

@@ -5253,6 +5253,7 @@ private:
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
+              ::isCommutative(User) ||
               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
           EdgeInfo EI(TE, U.getOperandNo());
           if (!IsCommutativeUser && !isa<CmpInst>(User)) {
