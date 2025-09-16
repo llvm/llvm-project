@@ -9904,20 +9904,24 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SmallVector<SDValue, 16> Ops(16, C);
     SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
     unsigned IID;
+    EVT VT;
     switch (SplatSize) {
     default:
       llvm_unreachable("Unexpected type for vector constant.");
     case 2:
       IID = Intrinsic::ppc_altivec_vupklsb;
+      VT = MVT::v8i16;
       break;
     case 4:
       IID = Intrinsic::ppc_altivec_vextsb2w;
+      VT = MVT::v4i32;
       break;
     case 8:
       IID = Intrinsic::ppc_altivec_vextsb2d;
+      VT = MVT::v2i64;
       break;
     }
-    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl);
+    SDValue Extend = BuildIntrinsicOp(IID, BV, DAG, dl, VT);
     return DAG.getBitcast(Op->getValueType(0), Extend);
   }
   assert(!IsSplat64 && "Unhandled 64-bit splat pattern");
