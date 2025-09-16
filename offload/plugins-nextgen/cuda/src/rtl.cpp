@@ -81,8 +81,8 @@ CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
 struct CUDADeviceImageTy : public DeviceImageTy {
   /// Create the CUDA image with the id and the target image pointer.
   CUDADeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
-                    const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, Device, TgtImage), Module(nullptr) {}
+                    std::unique_ptr<MemoryBuffer> &&TgtImage)
+      : DeviceImageTy(ImageId, Device, std::move(TgtImage)), Module(nullptr) {}
 
   /// Load the image as a CUDA module.
   Error loadModule() {
@@ -385,6 +385,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = CUDAImage.unloadModule())
       return Err;
 
+    // Destroy the associated memory and invalidate the object.
+    Plugin.free(Image);
     return Plugin::success();
   }
 
@@ -418,20 +420,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
-    // Check for the presence of global destructors at initialization time. This
-    // is required when the image may be deallocated before destructors are run.
-    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (Handler.isSymbolInImage(*this, Image, "nvptx$device$fini"))
-      Image.setPendingGlobalDtors();
-
     return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
   }
 
   virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) override {
-    if (Image.hasPendingGlobalDtors())
-      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
-    return Plugin::success();
+    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
   }
 
   Expected<std::unique_ptr<MemoryBuffer>>
@@ -549,14 +543,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
   CUdevice getCUDADevice() const { return Device; }
 
   /// Load the binary image into the device and allocate an image object.
-  Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
-                                           int32_t ImageId) override {
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override {
     if (auto Err = setContext())
       return std::move(Err);
 
     // Allocate and initialize the image object.
     CUDADeviceImageTy *CUDAImage = Plugin.allocate<CUDADeviceImageTy>();
-    new (CUDAImage) CUDADeviceImageTy(ImageId, *this, TgtImage);
+    new (CUDAImage) CUDADeviceImageTy(ImageId, *this, std::move(TgtImage));
 
     // Load the CUDA module.
     if (auto Err = CUDAImage->loadModule())
@@ -1299,7 +1294,7 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'nvptx-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
+    if (!Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
 
     // The Nvidia backend cannot handle creating the ctor / dtor array
