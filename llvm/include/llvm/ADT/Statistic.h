@@ -131,8 +131,8 @@ protected:
 
 class NoopStatistic {
 public:
-  NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
-                const char * /*Desc*/) {}
+  constexpr NoopStatistic(const char * /*DebugType*/, const char * /*Name*/,
+                          const char * /*Desc*/) {}
 
   uint64_t getValue() const { return 0; }
 
