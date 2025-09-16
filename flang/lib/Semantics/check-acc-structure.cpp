@@ -136,10 +136,10 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
   }
 }
 
-bool AccStructureChecker::IsInsideParallelConstruct() const {
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
   if (auto directive = getParentComputeConstruct())
-    if (*directive == llvm::acc::ACCD_parallel ||
-        *directive == llvm::acc::ACCD_parallel_loop)
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop)
       return true;
   return false;
 }
@@ -293,7 +293,10 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
           bool invalid{false};
           if (parentClause == llvm::acc::Clause::ACCC_gang &&
               cl == llvm::acc::Clause::ACCC_gang) {
-            if (IsInsideParallelConstruct()) {
+            if (IsInsideKernelsConstruct()) {
+              context_.Say(GetContext().clauseSource,
+                  "Nested GANG loops are not allowed in the region of a KERNELS construct"_err_en_US);
+            } else {
               auto parentDim = getGangDimensionSize(parent);
               auto currentDim = getGangDimensionSize(GetContext());
               std::int64_t parentDimNum = 1, currentDimNum = 1;
@@ -317,8 +320,6 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
                     parentDimStr);
                 continue;
               }
-            } else {
-              invalid = true;
             }
           } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
               (cl == llvm::acc::Clause::ACCC_gang ||

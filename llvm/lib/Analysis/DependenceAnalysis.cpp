@@ -3698,8 +3698,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
-  Pair[0].Src = SrcSCEV;
-  Pair[0].Dst = DstSCEV;
+  Pair[0].Src = SrcEv;
+  Pair[0].Dst = DstEv;
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
@@ -3709,6 +3709,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
+    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
+    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
@@ -4111,8 +4113,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   SmallVector<Subscript, 2> Pair(Pairs);
   const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
-  Pair[0].Src = SrcSCEV;
-  Pair[0].Dst = DstSCEV;
+  Pair[0].Src = SE->removePointerBase(SrcSCEV);
+  Pair[0].Dst = SE->removePointerBase(DstSCEV);
 
   if (Delinearize) {
     if (tryDelinearize(Src, Dst, Pair)) {
@@ -4122,6 +4124,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
+    assert(Pair[P].Src->getType()->isIntegerTy() && "Src must be an integer");
+    assert(Pair[P].Dst->getType()->isIntegerTy() && "Dst must be an integer");
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
