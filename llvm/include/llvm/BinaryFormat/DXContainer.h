@@ -192,13 +192,6 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
     return true;
@@ -207,6 +200,10 @@ inline bool isValidParameterType(uint32_t V) {
 #include "DXContainerConstants.def"
   }
   return false;
+}
+
+inline bool isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
@@ -231,6 +228,16 @@ enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define FILTER(Val, Enum)                                                      \
+  case Val:                                                                    \
+    return true;
+inline bool isValidSamplerFilter(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
 
 #define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
@@ -240,6 +247,16 @@ enum class TextureAddressMode : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
 
+#define TEXTURE_ADDRESS_MODE(Val, Enum)                                        \
+  case Val:                                                                    \
+    return true;
+inline bool isValidAddress(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 #define COMPARISON_FUNC(Val, Enum) Enum = Val,
 enum class ComparisonFunc : uint32_t {
 #include "DXContainerConstants.def"
@@ -247,10 +264,30 @@ enum class ComparisonFunc : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
 
+#define COMPARISON_FUNC(Val, Enum)                                             \
+  case Val:                                                                    \
+    return true;
+inline bool isValidComparisonFunc(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
 enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+#define STATIC_BORDER_COLOR(Val, Enum)                                         \
+  case Val:                                                                    \
+    return true;
+inline bool isValidBorderColor(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
 
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 

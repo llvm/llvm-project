@@ -3016,6 +3016,14 @@ __m128h test_mm_mask_blend_ph(__mmask8 __U, __m128h __A, __m128h __W) {
   // CHECK:  %{{.*}} = select <8 x i1> %{{.*}}, <8 x half> %{{.*}}, <8 x half> %{{.*}}
   return _mm_mask_blend_ph(__U, __A, __W);
 }
+TEST_CONSTEXPR(match_m128h(
+  _mm_mask_blend_ph(
+    (__mmask8)0x01,
+    (__m128h)(__v8hf){2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f},
+    (__m128h)(__v8hf){10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f}
+  ),
+  10.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f
+));
 
 __m256h test_mm256_mask_blend_ph(__mmask16 __U, __m256h __A, __m256h __W) {
   // CHECK-LABEL: test_mm256_mask_blend_ph
@@ -3023,6 +3031,41 @@ __m256h test_mm256_mask_blend_ph(__mmask16 __U, __m256h __A, __m256h __W) {
   // CHECK:  %{{.*}} = select <16 x i1> %{{.*}}, <16 x half> %{{.*}}, <16 x half> %{{.*}}
   return _mm256_mask_blend_ph(__U, __A, __W);
 }
+TEST_CONSTEXPR(match_m256h(
+  _mm256_mask_blend_ph(
+    (__mmask16)0x0001,
+    (__m256h)(__v16hf){2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                       2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f},
+    (__m256h)(__v16hf){10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f,
+                       18.0f, 19.0f, 20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f}
+  ),
+  10.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+  2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f
+));
+
+__m512h test_mm512_mask_blend_ph(__mmask32 __U, __m512h __A, __m512h __W) {
+  // CHECK-LABEL: test_mm512_mask_blend_ph
+  // CHECK: %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
+  // CHECK: %{{.*}} = select <32 x i1> %{{.*}}, <32 x half> %{{.*}}, <32 x half> %{{.*}}
+  return _mm512_mask_blend_ph(__U, __A, __W);
+}
+TEST_CONSTEXPR(match_m512h(
+  _mm512_mask_blend_ph(
+    (__mmask32)0x00000001,
+    (__m512h)(__v32hf){2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                       2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                       2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                       2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f},
+    (__m512h)(__v32hf){10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f,
+                       18.0f, 19.0f, 20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f,
+                       26.0f, 27.0f, 28.0f, 29.0f, 30.0f, 31.0f, 32.0f, 33.0f,
+                       34.0f, 35.0f, 36.0f, 37.0f, 38.0f, 39.0f, 40.0f, 41.0f}
+  ),
+  10.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+  2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+  2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+  2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f
+));
 
 __m128h test_mm_permutex2var_ph(__m128h __A, __m128i __I, __m128h __B) {
   // CHECK-LABEL: test_mm_permutex2var_ph
