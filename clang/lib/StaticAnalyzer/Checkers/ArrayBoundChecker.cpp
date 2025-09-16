@@ -421,7 +421,8 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
   return true;
 }
 
-static Messages getNonTaintMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
+static Messages getNonTaintMsgs(const ASTContext &ACtx,
+                                const MemSpaceRegion *Space,
                                 const SubRegion *Region, NonLoc Offset,
                                 std::optional<NonLoc> Extent, SVal Location,
                                 BadOffsetKind Problem) {
