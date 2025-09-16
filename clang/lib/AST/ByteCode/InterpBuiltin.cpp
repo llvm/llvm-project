@@ -2971,7 +2971,7 @@ static bool interp__builtin_pternlog(InterpState &S, CodePtr OpPC,
 
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  for (unsigned I = 0; I < DstLen; ++I) {
+  for (unsigned I = 0; I != DstLen; ++I) {
     APSInt a, b, c;
     INT_TYPE_SWITCH(DstElemT, {
       a = A.elem<T>(I).toAPSInt();
