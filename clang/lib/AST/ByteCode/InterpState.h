@@ -67,7 +67,7 @@ public:
   Expr::EvalStatus &getEvalStatus() const override {
     return Parent.getEvalStatus();
   }
-  ASTContext &getASTContext() const override { return Parent.getASTContext(); }
+  ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
 
   // Forward status checks and updates to the walker.
   bool keepEvaluatingAfterFailure() const override {
