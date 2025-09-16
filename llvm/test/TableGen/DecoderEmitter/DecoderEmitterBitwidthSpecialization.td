@@ -1,6 +1,6 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-DEFAULT
-// RUN: llvm-tblgen -gen-disassembler -specialize-decoders-per-bitwidth -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-SPECIALIZE-NO-TABLE
-// RUN: llvm-tblgen -gen-disassembler -specialize-decoders-per-bitwidth -use-fn-table-in-decode-to-mcinst -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-SPECIALIZE-TABLE
+// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s --check-prefix=CHECK-DEFAULT
+// RUN: llvm-tblgen -gen-disassembler -specialize-decoders-per-bitwidth -I %p/../../../include %s | FileCheck %s --check-prefix=CHECK-SPECIALIZE-NO-TABLE
+// RUN: llvm-tblgen -gen-disassembler -specialize-decoders-per-bitwidth -use-fn-table-in-decode-to-mcinst -I %p/../../../include %s | FileCheck %s --check-prefix=CHECK-SPECIALIZE-TABLE
 
 
 include "llvm/Target/Target.td"

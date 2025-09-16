@@ -35,6 +35,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -1692,6 +1693,12 @@ template <typename R> constexpr size_t range_size(R &&Range) {
     return adl_size(Range);
   else
     return static_cast<size_t>(std::distance(adl_begin(Range), adl_end(Range)));
+}
+
+/// Wrapper for std::accumulate.
+template <typename R, typename E> auto accumulate(R &&Range, E &&Init) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init));
 }
 
 /// Provide wrappers to std::for_each which take ranges instead of having to

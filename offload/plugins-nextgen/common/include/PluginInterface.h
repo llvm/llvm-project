@@ -306,26 +306,18 @@ class DeviceImageTy {
   /// not unique between different device; they may overlap.
   int32_t ImageId;
 
-  /// The pointer to the raw __tgt_device_image.
-  const __tgt_device_image *TgtImage;
-  const __tgt_device_image *TgtImageBitcode;
+  /// The managed image data.
+  std::unique_ptr<MemoryBuffer> Image;
 
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
-  /// If this image has any global destructors that much be called.
-  /// FIXME: This is only required because we currently have no invariants
-  ///        towards the lifetime of the underlying image. We should either copy
-  ///        the image into memory locally or erase the pointers after init.
-  bool PendingGlobalDtors;
-
 public:
+  virtual ~DeviceImageTy() = default;
+
   DeviceImageTy(int32_t Id, GenericDeviceTy &Device,
-                const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr), Device(Device),
-        PendingGlobalDtors(false) {
-    assert(TgtImage && "Invalid target image");
-  }
+                std::unique_ptr<MemoryBuffer> &&Image)
+      : ImageId(Id), Image(std::move(Image)), Device(Device) {}
 
   /// Get the image identifier within the device.
   int32_t getId() const { return ImageId; }
@@ -333,33 +325,17 @@ public:
   /// Get the device that this image is loaded onto.
   GenericDeviceTy &getDevice() const { return Device; }
 
-  /// Get the pointer to the raw __tgt_device_image.
-  const __tgt_device_image *getTgtImage() const { return TgtImage; }
-
-  void setTgtImageBitcode(const __tgt_device_image *TgtImageBitcode) {
-    this->TgtImageBitcode = TgtImageBitcode;
-  }
-
-  const __tgt_device_image *getTgtImageBitcode() const {
-    return TgtImageBitcode;
-  }
-
   /// Get the image starting address.
-  void *getStart() const { return TgtImage->ImageStart; }
+  const void *getStart() const { return Image->getBufferStart(); }
 
   /// Get the image size.
-  size_t getSize() const {
-    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
-  }
+  size_t getSize() const { return Image->getBufferSize(); }
 
   /// Get a memory buffer reference to the whole image.
   MemoryBufferRef getMemoryBuffer() const {
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
   }
-  /// Accessors to the boolean value
-  bool setPendingGlobalDtors() { return PendingGlobalDtors = true; }
-  bool hasPendingGlobalDtors() const { return PendingGlobalDtors; }
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
@@ -831,9 +807,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Load the binary image into the device and return the target table.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       const __tgt_device_image *TgtImage);
+                                       StringRef TgtImage);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);

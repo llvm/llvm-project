@@ -157,14 +157,11 @@ struct ol_event_impl_t {
 
 struct ol_program_impl_t {
   ol_program_impl_t(plugin::DeviceImageTy *Image,
-                    std::unique_ptr<llvm::MemoryBuffer> ImageData,
-                    const __tgt_device_image &DeviceImage)
-      : Image(Image), ImageData(std::move(ImageData)),
-        DeviceImage(DeviceImage) {}
+                    llvm::MemoryBufferRef DeviceImage)
+      : Image(Image), DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
-  std::unique_ptr<llvm::MemoryBuffer> ImageData;
   std::mutex SymbolListMutex;
-  __tgt_device_image DeviceImage;
+  llvm::MemoryBufferRef DeviceImage;
   llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> KernelSymbols;
   llvm::StringMap<std::unique_ptr<ol_symbol_impl_t>> GlobalSymbols;
 };
@@ -891,28 +888,14 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
   // Make a copy of the program binary in case it is released by the caller.
-  auto ImageData = MemoryBuffer::getMemBufferCopy(
-      StringRef(reinterpret_cast<const char *>(ProgData), ProgDataSize));
-
-  auto DeviceImage = __tgt_device_image{
-      const_cast<char *>(ImageData->getBuffer().data()),
-      const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize, nullptr,
-      nullptr};
-
-  ol_program_handle_t Prog =
-      new ol_program_impl_t(nullptr, std::move(ImageData), DeviceImage);
-
-  auto Res =
-      Device->Device->loadBinary(Device->Device->Plugin, &Prog->DeviceImage);
-  if (!Res) {
-    delete Prog;
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+  Expected<plugin::DeviceImageTy *> Res =
+      Device->Device->loadBinary(Device->Device->Plugin, Buffer);
+  if (!Res)
     return Res.takeError();
-  }
-  assert(*Res != nullptr && "loadBinary returned nullptr");
+  assert(*Res && "loadBinary returned nullptr");
 
-  Prog->Image = *Res;
-  *Program = Prog;
-
+  *Program = new ol_program_impl_t(*Res, (*Res)->getMemoryBuffer());
   return Error::success();
 }
 

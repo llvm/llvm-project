@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s
 
 // Check that we don't generate invalid code of the form "( && Cond2)" when
 // emitting AssemblerPredicate conditions. In the example below, the invalid
