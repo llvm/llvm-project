@@ -2491,7 +2491,6 @@ class AccessSpecifier(BaseEnumeration):
     PUBLIC = 1
     PROTECTED = 2
     PRIVATE = 3
-    NONE = 4
 
 ### Type Kinds ###
 
