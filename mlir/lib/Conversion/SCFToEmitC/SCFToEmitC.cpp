@@ -21,6 +21,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFTOEMITC
@@ -415,16 +416,22 @@ private:
 
   // Convert SCF yield terminators to imperative assignments to update loop
   // variables, maintaining loop semantics while transitioning to emitc model.
-  void processYieldTerminator(Operation *terminator, ArrayRef<Value> vars,
-                              ConversionPatternRewriter &rewriter,
-                              Location loc) const {
+  LogicalResult processYieldTerminator(Operation *terminator,
+                                       ArrayRef<Value> vars,
+                                       ConversionPatternRewriter &rewriter,
+                                       Location loc) const {
     auto yieldOp = cast<scf::YieldOp>(terminator);
-    SmallVector<Value> yields(yieldOp.getOperands());
+    SmallVector<Value> yields;
+    if (failed(rewriter.getRemappedValues(yieldOp.getOperands(), yields)))
+      return rewriter.notifyMatchFailure(yieldOp,
+                                         "failed to lower yield operands");
     rewriter.eraseOp(yieldOp);
 
     rewriter.setInsertionPointToEnd(yieldOp->getBlock());
     for (auto [var, val] : llvm::zip(vars, yields))
       rewriter.create<emitc::AssignOp>(loc, var, val);
+
+    return success();
   }
 
   // Transfers final loop state from mutable variables to result variables,
@@ -500,7 +507,10 @@ private:
       ifBlock->eraseArguments(0, ifBlock->getNumArguments());
 
       // Convert scf.yield to variable assignments for state updates.
-      processYieldTerminator(ifBlock->getTerminator(), vars, rewriter, loc);
+      if (failed(processYieldTerminator(ifBlock->getTerminator(), vars,
+                                        rewriter, loc)))
+        return failure();
+
       rewriter.create<emitc::YieldOp>(loc);
     }
 
