@@ -89,47 +89,29 @@ void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
       declRefExpr(
           // not "return x;"
           unless(ReturnParent),
-
           unless(hasType(namedDecl(hasName("::std::string_view")))),
-
           // non-trivial type
           hasType(hasCanonicalType(hasDeclaration(cxxRecordDecl()))),
-
           // non-trivial X(X&&)
           unless(hasType(hasCanonicalType(
               hasDeclaration(cxxRecordDecl(hasTrivialMoveConstructor()))))),
-
           // Not in a cycle
-          unless(hasAncestor(forStmt())),
-
-          unless(hasAncestor(doStmt())),
-
+          unless(hasAncestor(forStmt())), unless(hasAncestor(doStmt())),
           unless(hasAncestor(whileStmt())),
-
           // Not in a body of lambda
           unless(hasAncestor(compoundStmt(hasAncestor(lambdaExpr())))),
-
           // only non-X&
           unless(hasDeclaration(
               varDecl(hasType(qualType(lValueReferenceType()))))),
-
           hasAncestor(LeafStatement.bind("leaf_statement")),
-
           hasDeclaration(
               varDecl(hasAncestor(functionDecl().bind("func"))).bind("decl")),
-
           anyOf(
-
               // f(x)
               hasParent(expr(hasParent(cxxConstructExpr())).bind("use_parent")),
-
               // f((x))
               hasParent(parenExpr(hasParent(
-                  expr(hasParent(cxxConstructExpr())).bind("use_parent"))))
-
-                  )
-
-              )
+                  expr(hasParent(cxxConstructExpr())).bind("use_parent"))))))
           .bind("use"),
       this);
 }
