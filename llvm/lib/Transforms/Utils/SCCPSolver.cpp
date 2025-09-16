@@ -314,16 +314,25 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
 
     if (auto CR = MatchTwoInstructionExactRangeCheck()) {
       ConstantRange LRange = GetRange(X);
+      // Early exit if we know nothing about X.
       if (LRange.isFullSet())
         return nullptr;
+      // We are allowed to refine the comparison to either true or false for out
+      // of range inputs. Here we refine the comparison to true, i.e. we relax
+      // the range check.
       auto NewCR = CR->exactUnionWith(LRange.inverse());
+      // TODO: Check if we can narrow the range check to an equality test.
+      // E.g, for X in [0, 4), X - 3 u< 2 -> X == 3
       if (!NewCR)
         return nullptr;
       // Avoid transforming cases which do not relax the range.
+      // Without this we may revert the transform
+      // (X - C) < Pow2 -> (X & -Pow2) == C.
       if (NewCR.value() == *CR)
         return nullptr;
       ICmpInst::Predicate Pred;
       APInt RHS;
+      // Check if we can represent NewCR as an icmp predicate.
       if (NewCR->getEquivalentICmp(Pred, RHS)) {
         IRBuilder<NoFolder> Builder(&Inst);
         Value *NewICmp =
