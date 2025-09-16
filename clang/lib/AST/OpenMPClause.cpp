@@ -1218,7 +1218,7 @@ OMPToClause *OMPToClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
-    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    Expr *IteratorModifier, ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
     ArrayRef<SourceLocation> MotionModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
@@ -1240,7 +1240,7 @@ OMPToClause *OMPToClause::Create(
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
@@ -1250,6 +1250,7 @@ OMPToClause *OMPToClause::Create(
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
   Clause->setClauseInfo(Declarations, ComponentLists);
+  Clause->setIteratorModifier(IteratorModifier);
   return Clause;
 }
 
@@ -1258,17 +1259,19 @@ OMPToClause *OMPToClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
-  return new (Mem) OMPToClause(Sizes);
+  OMPToClause *Clause = new (Mem) OMPToClause(Sizes);
+  Clause->setIteratorModifier(nullptr);
+  return Clause;
 }
 
 OMPFromClause *OMPFromClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
-    ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+    Expr *IteratorModifier, ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
     ArrayRef<SourceLocation> MotionModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId) {
   OMPMappableExprListSizeTy Sizes;
@@ -1290,7 +1293,7 @@ OMPFromClause *OMPFromClause::Create(
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
 
@@ -1301,6 +1304,7 @@ OMPFromClause *OMPFromClause::Create(
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
   Clause->setClauseInfo(Declarations, ComponentLists);
+  Clause->setIteratorModifier(IteratorModifier);
   return Clause;
 }
 
@@ -1310,10 +1314,12 @@ OMPFromClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
-  return new (Mem) OMPFromClause(Sizes);
+  OMPFromClause *Clause = new (Mem) OMPFromClause(Sizes);
+  Clause->setIteratorModifier(nullptr);
+  return Clause;
 }
 
 void OMPUseDevicePtrClause::setPrivateCopies(ArrayRef<Expr *> VL) {
@@ -2564,12 +2570,16 @@ template <typename T> void OMPClausePrinter::VisitOMPMotionClause(T *Node) {
     OS << '(';
     for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
       if (Node->getMotionModifier(I) != OMPC_MOTION_MODIFIER_unknown) {
+        if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+          PrintIterator(OS, Node, Policy);
+        else {
         OS << getOpenMPSimpleClauseTypeName(Node->getClauseKind(),
                                             Node->getMotionModifier(I));
         if (Node->getMotionModifier(I) == OMPC_MOTION_MODIFIER_mapper)
           PrintMapper(OS, Node, Policy);
         if (I < ModifierCount - 1)
           OS << ", ";
+        }
       }
     }
     OS << ':';
