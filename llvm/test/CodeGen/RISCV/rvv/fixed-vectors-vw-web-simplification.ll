@@ -64,7 +64,7 @@ define <4 x i32> @pr159152(<4 x i8> %x) {
 ; NO_FOLDING-LABEL: pr159152:
 ; NO_FOLDING:       # %bb.0:
 ; NO_FOLDING-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; NO_FOLDING-NEXT:    vzext.vf2 v9, v8
+; NO_FOLDING-NEXT:    vsext.vf2 v9, v8
 ; NO_FOLDING-NEXT:    li a0, 9
 ; NO_FOLDING-NEXT:    vwaddu.vx v8, v9, a0
 ; NO_FOLDING-NEXT:    ret
@@ -72,7 +72,7 @@ define <4 x i32> @pr159152(<4 x i8> %x) {
 ; FOLDING-LABEL: pr159152:
 ; FOLDING:       # %bb.0:
 ; FOLDING-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; FOLDING-NEXT:    vzext.vf2 v9, v8
+; FOLDING-NEXT:    vsext.vf2 v9, v8
 ; FOLDING-NEXT:    li a0, 9
 ; FOLDING-NEXT:    vwaddu.vx v8, v9, a0
 ; FOLDING-NEXT:    ret
