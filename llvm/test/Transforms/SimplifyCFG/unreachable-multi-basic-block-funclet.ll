@@ -22,6 +22,29 @@ funclet_end:
   cleanupret from %cleanuppad unwind to caller
 }
 
+define void @unreachable_cleanuppad_linear_middle_block(i64 %shapes.1) personality ptr null {
+; CHECK-LABEL: define void @unreachable_cleanuppad_linear_middle_block(
+; CHECK-SAME: i64 [[SHAPES_1:%.*]]) personality ptr null {
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    [[_7:%.*]] = icmp ult i64 0, [[SHAPES_1]]
+; CHECK-NEXT:    ret void
+;
+start:
+  %_7 = icmp ult i64 0, %shapes.1
+  ret void
+
+funclet:
+  %cleanuppad = cleanuppad within none []
+  br label %middle_block
+
+middle_block:
+  %tmp1 = add i64 %shapes.1, 42
+  br label %funclet_end
+
+funclet_end:
+  cleanupret from %cleanuppad unwind to caller
+}
+
 define void @unreachable_cleanuppad_multiple_predecessors(i64 %shapes.1) personality ptr null {
 ; CHECK-LABEL: define void @unreachable_cleanuppad_multiple_predecessors(
 ; CHECK-SAME: i64 [[SHAPES_1:%.*]]) personality ptr null {
@@ -172,10 +195,17 @@ bb13:
 declare x86_thiscallcc ptr @quux(ptr, ptr, i32)
 
 define x86_thiscallcc ptr @baz(ptr %arg, ptr %arg1, ptr %arg2, i1 %arg3, ptr %arg4) personality ptr null {
+; CHECK-LABEL: define x86_thiscallcc ptr @baz(
+; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], i1 [[ARG3:%.*]], ptr [[ARG4:%.*]]) personality ptr null {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x %struct.foo], align 4
+; CHECK-NEXT:    [[INVOKE:%.*]] = call x86_thiscallcc ptr @quux(ptr null, ptr null, i32 0) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    unreachable
+;
 bb:
   %alloca = alloca [2 x %struct.foo], align 4
   %invoke = invoke x86_thiscallcc ptr @quux(ptr null, ptr null, i32 0)
-          to label %bb5 unwind label %bb10
+  to label %bb5 unwind label %bb10
 
 bb5:                                              ; preds = %bb
   %getelementptr = getelementptr i8, ptr %arg, i32 20
