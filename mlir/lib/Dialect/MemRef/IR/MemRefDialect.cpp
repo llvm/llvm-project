@@ -10,13 +10,22 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefAttrs.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <optional>
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/MemRef/IR/MemRefAttrs.cpp.inc"
+
+#include "mlir/Dialect/MemRef/IR/MemRefInterfaces.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -45,6 +54,10 @@ void mlir::memref::MemRefDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
+      >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/MemRef/IR/MemRefAttrs.cpp.inc"
       >();
   addInterfaces<MemRefInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, MemRefDialect>();

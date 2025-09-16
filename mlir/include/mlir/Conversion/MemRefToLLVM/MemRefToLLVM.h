@@ -18,6 +18,9 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class SymbolTableCollection;
 
+#define GEN_PASS_DECL_CONVERTMEMREFALIASATTRIBUTESTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 #define GEN_PASS_DECL_FINALIZEMEMREFTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
 

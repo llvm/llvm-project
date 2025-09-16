@@ -32,6 +32,9 @@
 #define DEBUG_TYPE "memref-to-llvm"
 
 namespace mlir {
+#define GEN_PASS_DEF_CONVERTMEMREFALIASATTRIBUTESTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 #define GEN_PASS_DEF_FINALIZEMEMREFTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
@@ -878,6 +881,22 @@ struct GetGlobalMemrefOpLowering
   }
 };
 
+static FailureOr<std::pair<ArrayAttr, ArrayAttr>>
+getAliasScopes(Attribute attr) {
+  if (!attr)
+    return std::pair(ArrayAttr(), ArrayAttr());
+
+  auto aliasingAttr = cast<memref::AliasingAttr>(attr);
+  auto checkAttr = [](Attribute elem) -> bool {
+    return isa<LLVM::AliasScopeAttr>(elem);
+  };
+  if (!llvm::all_of(aliasingAttr.getAliasScopes(), checkAttr) ||
+      !llvm::all_of(aliasingAttr.getNoalias(), checkAttr))
+    return failure();
+
+  return std::pair(aliasingAttr.getAliasScopes(), aliasingAttr.getNoalias());
+}
+
 // Load operation is lowered to obtaining a pointer to the indexed element
 // and loading it.
 struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
@@ -887,6 +906,10 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
   matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
+    FailureOr<std::pair<ArrayAttr, ArrayAttr>> aliasScopes =
+        getAliasScopes(loadOp.getAliasAttr());
+    if (failed(aliasScopes))
+      return rewriter.notifyMatchFailure(loadOp, "invalid alias attribute");
 
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
@@ -894,9 +917,11 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
     Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
                                          adaptor.getMemref(),
                                          adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+    auto op = rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
         loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+    op.setAliasScopes(aliasScopes->first);
+    op.setNoAliasScopes(aliasScopes->second);
     return success();
   }
 };
@@ -907,19 +932,25 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
   using Base::Base;
 
   LogicalResult
-  matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
+  matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = op.getMemRefType();
+    auto type = storeOp.getMemRefType();
+    FailureOr<std::pair<ArrayAttr, ArrayAttr>> aliasScopes =
+        getAliasScopes(storeOp.getAliasAttr());
+    if (failed(aliasScopes))
+      return rewriter.notifyMatchFailure(storeOp, "invalid alias attribute");
 
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr =
-        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
-                             adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+    Value dataPtr = getStridedElementPtr(rewriter, storeOp.getLoc(), type,
+                                         adaptor.getMemref(),
+                                         adaptor.getIndices(), kNoWrapFlags);
+    auto op = rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        storeOp, adaptor.getValue(), dataPtr,
+        storeOp.getAlignment().value_or(0), false, storeOp.getNontemporal());
+    op.setAliasScopes(aliasScopes->first);
+    op.setNoAliasScopes(aliasScopes->second);
     return success();
   }
 };
@@ -1997,8 +2028,8 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
   patterns.add<
       AllocaOpLowering,
       AllocaScopeOpLowering,
-      AtomicRMWOpLowering,
       AssumeAlignmentOpLowering,
+      AtomicRMWOpLowering,
       ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
       ExtractStridedMetadataOpLowering,
@@ -2006,13 +2037,13 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
       GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
-      MemorySpaceCastOpLowering,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
+      MemorySpaceCastOpLowering,
       PrefetchOpLowering,
       RankOpLowering,
-      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       ReassociatingReshapeOpConversion<memref::CollapseShapeOp>,
+      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
       StoreOpLowering,
       SubViewOpLowering,
       TransposeOpLowering,
@@ -2059,6 +2090,63 @@ struct FinalizeMemRefToLLVMConversionPass
     target.addLegalOp<func::FuncOp>();
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
+  }
+};
+
+struct ConvertMemRefAliasAttributesToLLVMPass
+    : public impl::ConvertMemRefAliasAttributesToLLVMPassBase<
+          ConvertMemRefAliasAttributesToLLVMPass> {
+  using ConvertMemRefAliasAttributesToLLVMPassBase::
+      ConvertMemRefAliasAttributesToLLVMPassBase;
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *ctx = &getContext();
+    llvm::SmallDenseMap<memref::AliasDomainScopeOp, LLVM::AliasScopeDomainAttr>
+        aliasScopeMap;
+    auto visitor = [&](memref::AliasAnalysisOpInterface aliasOp) -> WalkResult {
+      memref::AliasingAttr aliasingAttr = aliasOp.getAliasingAttr();
+      if (!aliasingAttr)
+        return WalkResult::advance();
+
+      auto scope = aliasOp->getParentOfType<memref::AliasDomainScopeOp>();
+      if (!scope) {
+        aliasOp.emitError("alias scope not found");
+        return WalkResult::interrupt();
+      }
+
+      LLVM::AliasScopeDomainAttr domain = aliasScopeMap.lookup(scope);
+
+      if (!domain) {
+        domain =
+            LLVM::AliasScopeDomainAttr::get(ctx, scope.getDescriptionAttr());
+        aliasScopeMap[scope] = domain;
+      }
+
+      auto convertScope = [&](Attribute scope) -> Attribute {
+        auto memrefScope = dyn_cast_if_present<memref::AliasScopeAttr>(scope);
+        if (!memrefScope)
+          return scope;
+
+        return LLVM::AliasScopeAttr::get(ctx, memrefScope.getId(), domain,
+                                         memrefScope.getDescription());
+      };
+      SmallVector<Attribute> scopes =
+          llvm::map_to_vector(aliasingAttr.getAliasScopes(), convertScope);
+      SmallVector<Attribute> noaliasScopes =
+          llvm::map_to_vector(aliasingAttr.getNoalias(), convertScope);
+      auto newAliasingAttr =
+          memref::AliasingAttr::get(ctx, scopes, noaliasScopes);
+      aliasOp.setAliasingAttr(newAliasingAttr);
+      return WalkResult::advance();
+    };
+    if (op->walk(visitor).wasInterrupted())
+      return signalPassFailure();
+
+    PatternRewriter rewriter(ctx);
+    op->walk([&](memref::AliasDomainScopeOp scope) {
+      memref::AliasDomainScopeOp::inlineIntoParent(rewriter, scope);
+    });
   }
 };
 
