@@ -44958,7 +44958,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
-    KnownBits OrigKnownOp0, OrigKnownOp1;
     KnownBits KnownOp0, KnownOp1, KnownOp2;
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
@@ -44966,11 +44965,11 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     //  Only demand the lower 52-bits of operands 0 / 1 (and all 64-bits of
     //  operand 2).
     APInt Low52Bits = APInt::getLowBitsSet(BitWidth, 52);
-    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, OrigKnownOp0,
+    if (SimplifyDemandedBits(Op0, Low52Bits, OriginalDemandedElts, KnownOp0,
                              TLO, Depth + 1))
       return true;
 
-    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, OrigKnownOp1,
+    if (SimplifyDemandedBits(Op1, Low52Bits, OriginalDemandedElts, KnownOp1,
                              TLO, Depth + 1))
       return true;
 
@@ -44979,8 +44978,8 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return true;
 
     KnownBits KnownMul;
-    KnownOp0 = OrigKnownOp0.trunc(52);
-    KnownOp1 = OrigKnownOp1.trunc(52);
+    KnownOp0 = KnownOp0.trunc(52);
+    KnownOp1 = KnownOp1.trunc(52);
     KnownMul = Opc == X86ISD::VPMADD52L ? KnownBits::mul(KnownOp0, KnownOp1)
                                         : KnownBits::mulhu(KnownOp0, KnownOp1);
     KnownMul = KnownMul.zext(64);
@@ -44990,20 +44989,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (KnownMul.isConstant()) {
       SDValue C = TLO.DAG.getConstant(KnownMul.getConstant(), DL, VT);
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, C, Op2));
-    }
-
-    // C * X --> X * C
-    if (KnownOp0.isConstant()) {
-      std::swap(OrigKnownOp0, OrigKnownOp1);
-      std::swap(KnownOp0, KnownOp1);
-      std::swap(Op0, Op1);
-    }
-
-    // lo(X * 1) + Z --> lo(X) + Z --> X iff X == lo(X)
-    if (Opc == X86ISD::VPMADD52L && KnownOp1.isConstant() &&
-        KnownOp1.getConstant().isOne() &&
-        OrigKnownOp0.countMinLeadingZeros() >= 12) {
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ADD, DL, VT, Op0, Op2));
     }
 
     Known = KnownBits::add(KnownMul, KnownOp2);
@@ -60201,8 +60186,37 @@ static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVPMADD52LH(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   MVT VT = N->getSimpleValueType(0);
-  unsigned NumEltBits = VT.getScalarSizeInBits();
+
+  bool AddLow = N->getOpcode() == X86ISD::VPMADD52L;
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
+  SDLoc DL(N);
+
+  APInt C0, C1;
+  bool HasC0 = X86::isConstantSplat(Op0, C0),
+       HasC1 = X86::isConstantSplat(Op1, C1);
+
+  // lo/hi(C * X) + Z --> lo/hi(X * C) + Z
+  if (HasC0 && !HasC1)
+    return DAG.getNode(N->getOpcode(), DL, VT, Op1, Op0, Op2);
+
+  // Only keep the low 52 bits of C1
+  if (HasC1 && C1.countLeadingZeros() < 12) {
+    C1.clearBits(52, 64);
+    SDValue LowC1 = DAG.getConstant(C1, DL, VT);
+    return DAG.getNode(N->getOpcode(), DL, VT, Op0, LowC1, Op2);
+  }
+
+  // lo(X * 1) + Z --> lo(X) + Z iff X == lo(X)
+  if (AddLow && HasC1 && C1.isOne()) {
+    KnownBits KnownOp0 = DAG.computeKnownBits(Op0);
+    if (KnownOp0.countMinLeadingZeros() >= 12)
+      return DAG.getNode(ISD::ADD, DL, VT, Op0, Op2);
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  unsigned NumEltBits = VT.getScalarSizeInBits();
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnes(NumEltBits),
                                DCI))
     return SDValue(N, 0);
