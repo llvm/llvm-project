@@ -183,7 +183,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
 }
 
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
-  const auto &TC = getToolChain();
+  const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
   DiagnosticsEngine &Diags = D.getDiags();
   LTOKind LTOMode = D.getLTOMode();
@@ -196,10 +196,6 @@ void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
         Diags.getCustomDiagID(DiagnosticsEngine::Warning,
                               "the option '-flto=thin' is a work in progress"));
     CmdArgs.push_back("-flto=thin");
-  }
-  if (Args.hasArg(options::OPT_flto_partitions_EQ)) {
-    StringRef A = Args.getLastArgValue(options::OPT_flto_partitions_EQ, "8");
-    CmdArgs.push_back(Args.MakeArgString("-flto-partitions=" + A));
   }
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});

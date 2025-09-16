@@ -17,4 +17,5 @@
 ! ASM-NEXT: .Lllvm.embedded.object:
 ! ASM-NEXT:        .asciz  "BC
 ! ASM-NEXT: .size   .Lllvm.embedded.object
+program test
 end program
