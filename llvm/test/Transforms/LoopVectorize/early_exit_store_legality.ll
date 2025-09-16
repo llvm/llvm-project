@@ -631,16 +631,16 @@ invalid.block:
   unreachable
 }
 
-define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area) {
+define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area, i1 %skip.cond) {
 ; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit_argptr'
-; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
 entry:
   br label %for.body
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
   %ee.addr = getelementptr i8, ptr %load.area, i64 %iv
-  br i1 false, label %ee.block, label %invalid.block
+  br i1 %skip.cond, label %ee.block, label %invalid.block
 
 ee.block:
   %ee.val = load i8, ptr %ee.addr, align 1
