@@ -240,9 +240,8 @@ public:
     if (!Lexer->is(AsmToken::Identifier))
       return error("Expected label after .type directive, got: ",
                    Lexer->getTok());
-    auto WasmSym = cast<MCSymbolWasm>(
-                     getStreamer().getContext().getOrCreateSymbol(
-                       Lexer->getTok().getString()));
+    auto *WasmSym = cast<MCSymbolWasm>(
+        getStreamer().getContext().parseSymbol(Lexer->getTok().getString()));
     Lex();
     if (!(isNext(AsmToken::Comma) && isNext(AsmToken::At) &&
           Lexer->is(AsmToken::Identifier)))
