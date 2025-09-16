@@ -40,7 +40,7 @@ def InstB : TestInstruction {
 // CHECK-NEXT: /* 17 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: 1
 // CHECK-NEXT: };
 
-// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }
 
 
 // CHECK-LARGE:      /* 0 */       OPC_CheckField, 250, 3, 4, 0,
@@ -50,4 +50,4 @@ def InstB : TestInstruction {
 // CHECK-LARGE-NEXT: /* 18 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: 1
 // CHECK-LARGE-NEXT: };
 
-// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }

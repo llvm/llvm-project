@@ -41,7 +41,7 @@ def InstB : TestInstruction {
 // CHECK-NEXT: /* 15 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1,     // Opcode: InstA, DecodeIdx: 1
 // CHECK-NEXT: };
 
-// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }
 
 // CHECK:       unsigned NumToSkip = *Ptr++;
 // CHECK-NEXT:  NumToSkip |= (*Ptr++) << 8;
@@ -54,7 +54,7 @@ def InstB : TestInstruction {
 // CHECK-LARGE-NEXT: /* 16 */      OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1,    // Opcode: InstA, DecodeIdx: 1
 // CHECK-LARGE-NEXT: };
 
-// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }
 
 // CHECK-LARGE:       unsigned NumToSkip = *Ptr++;
 // CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 8;

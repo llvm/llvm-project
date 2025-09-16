@@ -865,7 +865,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
       "InsnType, uint64_t>;\n";
   StringRef DecodeParams =
       "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
-      "MCDisassembler *Decoder, bool &DecodeComplete";
+      "MCDisassembler *Decoder";
 
   // Print the name of the decode function to OS.
   auto PrintDecodeFnName = [&OS, BucketBitWidth](unsigned DecodeIdx) {
@@ -904,7 +904,6 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   OS << "// Handling " << Decoders.size() << " cases.\n";
   PrintTemplate();
   OS << "decodeToMCInst(unsigned Idx, " << DecodeParams << ") {\n";
-  OS << "  DecodeComplete = true;\n";
 
   if (UseFnTableInDecodeToMCInst) {
     // Build a table of function pointers
@@ -918,8 +917,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "  };\n";
     OS << "  if (Idx >= " << Decoders.size() << ")\n";
     OS << "    llvm_unreachable(\"Invalid decoder index!\");\n";
-    OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
-          "DecodeComplete);\n";
+    OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder);\n";
   } else {
     OS << "  " << TmpTypeDecl;
     OS << "  TmpType tmp;\n";
@@ -1052,9 +1050,7 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
   StringRef Decoder = OpInfo.Decoder;
   if (!Decoder.empty()) {
     OS << Indent << "if (!Check(S, " << Decoder
-       << "(MI, tmp, Address, Decoder))) { "
-       << (OpInfo.HasCompleteDecoder ? "" : "DecodeComplete = false; ")
-       << "return MCDisassembler::Fail; }\n";
+       << "(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }\n";
   } else {
     OS << Indent << "MI.addOperand(MCOperand::createImm(tmp));\n";
   }
@@ -1069,9 +1065,7 @@ static std::string getDecoderString(const InstructionEncoding &Encoding) {
   StringRef DecoderMethod = Encoding.getDecoderMethod();
   if (!DecoderMethod.empty()) {
     OS << Indent << "if (!Check(S, " << DecoderMethod
-       << "(MI, insn, Address, Decoder))) { "
-       << (Encoding.hasCompleteDecoder() ? "" : "DecodeComplete = false; ")
-       << "return MCDisassembler::Fail; }\n";
+       << "(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }\n";
   } else {
     for (const OperandInfo &Op : Encoding.getOperands())
       emitBinaryParser(OS, Indent, Encoding, Op);
@@ -1682,15 +1676,13 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
 
       MI.clear();
-      MI.setOpcode(Opc);
-      bool DecodeComplete;)";
+      MI.setOpcode(Opc);)";
   if (IsVarLenInst) {
     OS << "\n      unsigned Len = InstrLenTable[Opc];\n"
        << "      makeUp(insn, Len);";
   }
   OS << R"(
-      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
-      assert(DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm);
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": "
@@ -1707,18 +1699,15 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       // Perform the decode operation.
       MCInst TmpMI;
       TmpMI.setOpcode(Opc);
-      bool DecodeComplete;
-      S = decodeToMCInst(DecodeIdx, S, insn, TmpMI, Address, DisAsm, DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, TmpMI, Address, DisAsm);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_TryDecode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": ");
 
-      if (DecodeComplete) {
-        // Decoding complete.
-        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
+      if (S != MCDisassembler::Fail) {
+        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Success ? "Success\n" : "SoftFail\n"));
         MI = TmpMI;
         return S;
       }
-      assert(S == MCDisassembler::Fail);
       if (ScopeStack.empty()) {
         LLVM_DEBUG(dbgs() << "FAIL, returning FAIL\n");
         return MCDisassembler::Fail;

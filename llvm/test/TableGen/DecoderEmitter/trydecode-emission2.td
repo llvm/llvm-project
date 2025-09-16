@@ -39,8 +39,8 @@ def InstB : TestInstruction {
 // CHECK-NEXT: /* 19 */      OPC_CheckField, 3, 2, 0,
 // CHECK-NEXT: /* 23 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 1,
 
-// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-// CHECK: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }
 
 // CHECK-LARGE:      /* 0 */       OPC_CheckField, 2, 1, 0,
 // CHECK-LARGE-NEXT: /* 4 */       OPC_CheckField, 5, 3, 0,
@@ -51,5 +51,5 @@ def InstB : TestInstruction {
 // CHECK-LARGE-NEXT: /* 24 */      OPC_TryDecode, {{[0-9]+}}, {{[0-9]+}}, 1,
 // CHECK-LARGE-NEXT: };
 
-// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-// CHECK-LARGE: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }
+// CHECK-LARGE: if (!Check(S, DecodeInstA(MI, insn, Address, Decoder))) { return MCDisassembler::Fail; }

@@ -98,11 +98,11 @@ public:
   /// from Success->SoftFail ->Fail can be done with a simple
   /// bitwise-AND:
   ///
-  ///   LEFT & TOP =  | Success       Unpredictable   Fail
-  ///   --------------+-----------------------------------
-  ///   Success       | Success       Unpredictable   Fail
-  ///   Unpredictable | Unpredictable Unpredictable   Fail
-  ///   Fail          | Fail          Fail            Fail
+  ///   LEFT & TOP =  | Success    SoftFail   Fail
+  ///   --------------+-----------------------------
+  ///   Success       | Success    SoftFail   Fail
+  ///   SoftFail      | SoftFail   SoftFail   Fail
+  ///   Fail          | Fail           Fail   Fail
   ///
   /// An easy way of encoding this is as 0b11, 0b01, 0b00 for
   /// Success, SoftFail, Fail respectively.
