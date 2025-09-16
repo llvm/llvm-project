@@ -90,6 +90,6 @@ Options
 
 .. option:: PairTypes
 
-   A Semicolon-separated list of type names to be treated as pair-like for
+   A semicolon-separated list of type names to be treated as pair-like for
    structured binding suggestions. Example: `MyPairType;OtherPairType`. 
    Default is `std::pair`.
