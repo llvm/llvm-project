@@ -62,7 +62,7 @@ They meet the criteria for inclusion below. Knowing their handles help us keep t
    * - Alan Phipps
      - Texas Instruments
      - evodius96
-     - \-
+     - alanphipps
      - evodius96
    * - Carlos Andrés Ramírez
      - Woven by Toyota
