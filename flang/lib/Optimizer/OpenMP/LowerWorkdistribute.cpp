@@ -76,6 +76,17 @@ static bool isRuntimeCall(Operation *op) {
 // This is the single source of truth about whether we should parallelize an
 // operation nested in an omp.workdistribute region.
 static bool shouldParallelize(Operation *op) {
+  // True if the op is a runtime call to Assign
+  if (isRuntimeCall(op)) {
+    fir::CallOp runtimeCall = cast<fir::CallOp>(op);
+    if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
+        "_FortranAAssign") {
+      return true;
+    }
+  }
+  // We cannot parallelize ops with side effects.
+  // Parallelizable operations should not produce
+  // values that other operations depend on
   if (llvm::any_of(op->getResults(),
                    [](OpResult v) -> bool { return !v.use_empty(); }))
     return false;
@@ -85,11 +96,6 @@ static bool shouldParallelize(Operation *op) {
     if (!unordered)
       return false;
     return *unordered;
-  }
-  // True if the op is a runtime call to Assign
-  if (isRuntimeCall(op) &&
-      (op->getName().getStringRef() == "_FortranAAssign")) {
-    return true;
   }
   // We cannot parallise anything else.
   return false;
@@ -268,6 +274,7 @@ genLoopNestClauseOps(OpBuilder &rewriter, fir::DoLoopOp loop,
 }
 
 // Generate omp.wsloop operation with an empty region and
+// clone the body of fir.do_loop operation inside the loop nest region.
 static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
                         const mlir::omp::LoopNestOperands &clauseOps,
                         bool composite) {
@@ -349,6 +356,221 @@ WorkdistributeDoLower(omp::WorkdistributeOp workdistribute,
   return false;
 }
 
+// Check if the enclosed type in fir.ref is fir.box and fir.box encloses array
+static bool isEnclosedTypeRefToBoxArray(Type type) {
+  // Step 1: Check if it's a reference type
+  if (auto refType = dyn_cast<fir::ReferenceType>(type)) {
+    // Step 2: Get the referenced type (should be fir.box)
+    auto referencedType = refType.getEleTy();
+
+    // Step 3: Check if referenced type is a box
+    if (auto boxType = dyn_cast<fir::BoxType>(referencedType)) {
+      // Step 4: Get the boxed type and check if it's an array
+      auto boxedType = boxType.getEleTy();
+
+      // Step 5: Check if boxed type is a sequence (array)
+      return isa<fir::SequenceType>(boxedType);
+    }
+  }
+  return false;
+}
+
+// Check if the enclosed type in fir.box is scalar (not array)
+static bool isEnclosedTypeBoxScalar(Type type) {
+  // Step 1: Check if it's a box type
+  if (auto boxType = dyn_cast<fir::BoxType>(type)) {
+    // Step 2: Get the boxed type
+    auto boxedType = boxType.getEleTy();
+    // Step 3: Check if boxed type is NOT a sequence (array)
+    return !isa<fir::SequenceType>(boxedType);
+  }
+  return false;
+}
+
+// Check if the FortranAAssign call has src as scalar and dest as array
+static bool isFortranAssignSrcScalarAndDestArray(fir::CallOp callOp) {
+  if (callOp.getNumOperands() < 2)
+    return false;
+  auto srcArg = callOp.getOperand(1);
+  auto destArg = callOp.getOperand(0);
+  // Both operands should be fir.convert ops
+  auto srcConvert = srcArg.getDefiningOp<fir::ConvertOp>();
+  auto destConvert = destArg.getDefiningOp<fir::ConvertOp>();
+  if (!srcConvert || !destConvert) {
+    emitError(callOp->getLoc(),
+              "Unimplemented: FortranAssign to OpenMP lowering\n");
+    return false;
+  }
+  // Get the original types before conversion
+  auto srcOrigType = srcConvert.getValue().getType();
+  auto destOrigType = destConvert.getValue().getType();
+
+  // Check if src is scalar and dest is array
+  bool srcIsScalar = isEnclosedTypeBoxScalar(srcOrigType);
+  bool destIsArray = isEnclosedTypeRefToBoxArray(destOrigType);
+  return srcIsScalar && destIsArray;
+}
+
+// Convert a flat index to multi-dimensional indices for an array box
+// Example: 2D array with shape (2,4)
+//         Col 1  Col 2  Col 3  Col 4
+// Row 1:  (1,1)  (1,2)  (1,3)  (1,4)
+// Row 2:  (2,1)  (2,2)  (2,3)  (2,4)
+//
+// extents: (2,4)
+//
+// flatIdx:  0     1     2     3     4     5     6     7
+// Indices: (1,1) (1,2) (1,3) (1,4) (2,1) (2,2) (2,3) (2,4)
+static SmallVector<Value> convertFlatToMultiDim(OpBuilder &builder,
+                                                Location loc, Value flatIdx,
+                                                Value arrayBox) {
+  // Get array type and rank
+  auto boxType = cast<fir::BoxType>(arrayBox.getType());
+  auto seqType = cast<fir::SequenceType>(boxType.getEleTy());
+  int rank = seqType.getDimension();
+
+  // Get all extents
+  SmallVector<Value> extents;
+  // Get extents for each dimension
+  for (int i = 0; i < rank; ++i) {
+    auto dimIdx = arith::ConstantIndexOp::create(builder, loc, i);
+    auto boxDims = fir::BoxDimsOp::create(builder, loc, arrayBox, dimIdx);
+    extents.push_back(boxDims.getResult(1));
+  }
+
+  // Convert flat index to multi-dimensional indices
+  SmallVector<Value> indices(rank);
+  Value temp = flatIdx;
+  auto c1 = builder.create<arith::ConstantIndexOp>(loc, 1);
+
+  // Work backwards through dimensions (row-major order)
+  for (int i = rank - 1; i >= 0; --i) {
+    Value zeroBasedIdx = builder.create<arith::RemSIOp>(loc, temp, extents[i]);
+    // Convert to one-based index
+    indices[i] = builder.create<arith::AddIOp>(loc, zeroBasedIdx, c1);
+    if (i > 0) {
+      temp = builder.create<arith::DivSIOp>(loc, temp, extents[i]);
+    }
+  }
+
+  return indices;
+}
+
+// Calculate the total number of elements in the array box
+// (totalElems = extent(1) * extent(2) * ... * extent(n))
+static Value CalculateTotalElements(OpBuilder &builder, Location loc,
+                                    Value arrayBox) {
+  auto boxType = cast<fir::BoxType>(arrayBox.getType());
+  auto seqType = cast<fir::SequenceType>(boxType.getEleTy());
+  int rank = seqType.getDimension();
+
+  Value totalElems = nullptr;
+  for (int i = 0; i < rank; ++i) {
+    auto dimIdx = arith::ConstantIndexOp::create(builder, loc, i);
+    auto boxDims = fir::BoxDimsOp::create(builder, loc, arrayBox, dimIdx);
+    Value extent = boxDims.getResult(1);
+    if (i == 0) {
+      totalElems = extent;
+    } else {
+      totalElems = builder.create<arith::MulIOp>(loc, totalElems, extent);
+    }
+  }
+  return totalElems;
+}
+
+// Replace the FortranAAssign runtime call with an unordered do loop
+static void replaceWithUnorderedDoLoop(OpBuilder &builder, Location loc,
+                                       omp::TeamsOp teamsOp,
+                                       omp::WorkdistributeOp workdistribute,
+                                       fir::CallOp callOp) {
+  auto destConvert = callOp.getOperand(0).getDefiningOp<fir::ConvertOp>();
+  auto srcConvert = callOp.getOperand(1).getDefiningOp<fir::ConvertOp>();
+
+  Value destBox = destConvert.getValue();
+  Value srcBox = srcConvert.getValue();
+
+  builder.setInsertionPoint(teamsOp);
+  // Load destination array box and source scalar
+  auto arrayBox = builder.create<fir::LoadOp>(loc, destBox);
+  auto scalarValue = builder.create<fir::BoxAddrOp>(loc, srcBox);
+  auto scalar = builder.create<fir::LoadOp>(loc, scalarValue);
+
+  // Calculate total number of elements (flattened)
+  auto c0 = builder.create<arith::ConstantIndexOp>(loc, 0);
+  auto c1 = builder.create<arith::ConstantIndexOp>(loc, 1);
+  Value totalElems = CalculateTotalElements(builder, loc, arrayBox);
+
+  auto *workdistributeBlock = &workdistribute.getRegion().front();
+  builder.setInsertionPointToStart(workdistributeBlock);
+  // Create single unordered loop for flattened array
+  auto doLoop = fir::DoLoopOp::create(builder, loc, c0, totalElems, c1, true);
+  Block *loopBlock = &doLoop.getRegion().front();
+  builder.setInsertionPointToStart(doLoop.getBody());
+
+  auto flatIdx = loopBlock->getArgument(0);
+  SmallVector<Value> indices =
+      convertFlatToMultiDim(builder, loc, flatIdx, arrayBox);
+  // Use fir.array_coor for linear addressing
+  auto elemPtr = fir::ArrayCoorOp::create(
+      builder, loc, fir::ReferenceType::get(scalar.getType()), arrayBox,
+      nullptr, nullptr, ValueRange{indices}, ValueRange{});
+
+  builder.create<fir::StoreOp>(loc, scalar, elemPtr);
+}
+
+// WorkdistributeRuntimeCallLower method finds the runtime calls
+// nested in teams {workdistribute{}} and
+// lowers FortranAAssign to unordered do loop if src is scalar and dest is
+// array. Other runtime calls are not handled currently.
+static bool
+WorkdistributeRuntimeCallLower(omp::WorkdistributeOp workdistribute,
+                               SetVector<omp::TargetOp> &targetOpsToProcess) {
+  OpBuilder rewriter(workdistribute);
+  auto loc = workdistribute->getLoc();
+  auto teams = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp());
+  if (!teams) {
+    emitError(loc, "workdistribute not nested in teams\n");
+    return false;
+  }
+  if (workdistribute.getRegion().getBlocks().size() != 1) {
+    emitError(loc, "workdistribute with multiple blocks\n");
+    return false;
+  }
+  if (teams.getRegion().getBlocks().size() != 1) {
+    emitError(loc, "teams with multiple blocks\n");
+    return false;
+  }
+  auto *workdistributeBlock = &workdistribute.getRegion().front();
+  auto *terminator = workdistributeBlock->getTerminator();
+  bool changed = false;
+  omp::TargetOp targetOp;
+  // Get the target op parent of teams
+  if (auto teamsOp = dyn_cast<omp::TeamsOp>(workdistribute->getParentOp())) {
+    targetOp = dyn_cast<omp::TargetOp>(teamsOp->getParentOp());
+  }
+  for (auto &op : workdistribute.getOps()) {
+    if (&op == terminator) {
+      break;
+    }
+    if (isRuntimeCall(&op)) {
+      rewriter.setInsertionPoint(&op);
+      fir::CallOp runtimeCall = cast<fir::CallOp>(op);
+      if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
+          "_FortranAAssign") {
+        if (isFortranAssignSrcScalarAndDestArray(runtimeCall) && targetOp) {
+          // Record the target ops to process later
+          targetOpsToProcess.insert(targetOp);
+          replaceWithUnorderedDoLoop(rewriter, loc, teams, workdistribute,
+                                     runtimeCall);
+          op.erase();
+          return true;
+        }
+      }
+    }
+  }
+  return changed;
+}
+
 // TeamsWorkdistributeToSingleOp method hoists all the ops inside
 // teams {workdistribute{}} before teams op.
 //
@@ -367,13 +589,24 @@ WorkdistributeDoLower(omp::WorkdistributeOp workdistribute,
 // B()
 //
 // If only the terminator remains in teams after hoisting, we erase teams op.
-static bool TeamsWorkdistributeToSingleOp(omp::TeamsOp teamsOp) {
+static bool
+TeamsWorkdistributeToSingleOp(omp::TeamsOp teamsOp,
+                              SetVector<omp::TargetOp> &targetOpsToProcess) {
   auto workdistributeOp = getPerfectlyNested<omp::WorkdistributeOp>(teamsOp);
   if (!workdistributeOp)
     return false;
   // Get the block containing teamsOp (the parent block).
   Block *parentBlock = teamsOp->getBlock();
   Block &workdistributeBlock = *workdistributeOp.getRegion().begin();
+  // Record the target ops to process later
+  for (auto &op : workdistributeBlock.getOperations()) {
+    if (shouldParallelize(&op)) {
+      auto targetOp = dyn_cast<omp::TargetOp>(teamsOp->getParentOp());
+      if (targetOp) {
+        targetOpsToProcess.insert(targetOp);
+      }
+    }
+  }
   auto insertPoint = Block::iterator(teamsOp);
   // Get the range of operations to move (excluding the terminator).
   auto workdistributeBegin = workdistributeBlock.begin();
@@ -762,14 +995,6 @@ genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
   return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
 }
 
-// Generate LLVM constant operations for i64 type.
-static mlir::LLVM::ConstantOp
-genI64Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
-  mlir::Type i64Ty = rewriter.getI64Type();
-  mlir::IntegerAttr attr = rewriter.getI64IntegerAttr(value);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, i64Ty, attr);
-}
-
 // Given a box descriptor, extract the base address of the data it describes.
 // If the box descriptor is a reference, load it first.
 // The base address is returned as an i8* pointer.
@@ -912,6 +1137,46 @@ static void genOmpTargetMemcpyCall(fir::FirOpBuilder &builder,
   return;
 }
 
+// Generate code to replace a Fortran array assignment call with OpenMP
+// runtime calls to perform the equivalent operation on the device.
+// This involves extracting the source and destination pointers from the
+// Fortran array descriptors, retrieving their mapped device pointers (if any),
+// and invoking `omp_target_memcpy` to copy the data on the device.
+static void genFortranAssignOmpReplacement(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           fir::CallOp callOp,
+                                           mlir::Value device,
+                                           mlir::ModuleOp module) {
+  assert(callOp.getNumResults() == 0 &&
+         "Expected _FortranAAssign to have no results");
+  assert(callOp.getNumOperands() >= 2 &&
+         "Expected _FortranAAssign to have at least two operands");
+
+  // Extract the source and destination pointers from the call operands.
+  mlir::Value dest = callOp.getOperand(0);
+  mlir::Value src = callOp.getOperand(1);
+
+  // Get the base addresses of the source and destination arrays.
+  mlir::Value srcBase = genDescriptorGetBaseAddress(builder, loc, src);
+  mlir::Value destBase = genDescriptorGetBaseAddress(builder, loc, dest);
+
+  // Get the total size in bytes of the data to be copied.
+  mlir::Value dataSize = genDescriptorGetDataSizeInBytes(builder, loc, src);
+
+  // Retrieve the mapped device pointers for source and destination.
+  // If no mapping exists, the original host pointer is used.
+  Value destPtr =
+      genOmpGetMappedPtrIfPresent(builder, loc, destBase, device, module);
+  Value srcPtr =
+      genOmpGetMappedPtrIfPresent(builder, loc, srcBase, device, module);
+  Value zero = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
+                                                builder.getI64IntegerAttr(0));
+  // Generate the call to omp_target_memcpy to perform the data copy on the
+  // device.
+  genOmpTargetMemcpyCall(builder, loc, destPtr, srcPtr, dataSize, zero, zero,
+                         device, module);
+}
+
 // Struct to hold the host eval vars corresponding to loop bounds and steps
 struct HostEvalVars {
   SmallVector<Value> lbs;
@@ -1045,26 +1310,21 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter,
     }
     // Replace runtime calls with omp versions.
     else if (isRuntimeCall(op)) {
-      rewriter.setInsertionPoint(op);
       fir::CallOp runtimeCall = cast<fir::CallOp>(op);
-      SmallVector<Value> operands = runtimeCall.getOperands();
-      mlir::Location loc = runtimeCall.getLoc();
-      fir::FirOpBuilder builder{rewriter, op};
-      assert(operands.size() == 4);
-      auto fromBaseAddr =
-          genDescriptorGetBaseAddress(builder, loc, operands[1]);
-      auto toBaseAddr = genDescriptorGetBaseAddress(builder, loc, operands[0]);
-      auto dataSizeInBytes =
-          genDescriptorGetDataSizeInBytes(builder, loc, operands[1]);
+      if ((*runtimeCall.getCallee()).getRootReference().getValue() ==
+          "_FortranAAssign") {
+        rewriter.setInsertionPoint(op);
+        fir::FirOpBuilder builder{rewriter, op};
 
-      Value toPtr =
-          genOmpGetMappedPtrIfPresent(builder, loc, toBaseAddr, device, module);
-      Value fromPtr = genOmpGetMappedPtrIfPresent(builder, loc, fromBaseAddr,
-                                                  device, module);
-      Value zero = genI64Constant(loc, rewriter, 0);
-      genOmpTargetMemcpyCall(builder, loc, toPtr, fromPtr, dataSizeInBytes,
-                             zero, zero, device, module);
-      rewriter.eraseOp(op);
+        mlir::Location loc = runtimeCall.getLoc();
+        genFortranAssignOmpReplacement(builder, loc, runtimeCall, device,
+                                       module);
+        rewriter.eraseOp(op);
+      } else {
+        llvm_unreachable("Unhandled runtime call hoisting.");
+      }
+    } else {
+      llvm_unreachable("Unhandled op hoisting.");
     }
   }
 
@@ -1424,8 +1684,11 @@ static void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter,
         isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
     fissionTarget(res.postTargetOp, rewriter, module, isTargetDevice);
     return;
+  }
+  if (splitBefore) {
+    isolateOp(toIsolate, splitAfter, rewriter, module, isTargetDevice);
+    return;
   } else {
-    llvm::errs() << "Unhandled case in fissionTarget\n";
     llvm::report_fatal_error("Unhandled case in fissionTarget");
   }
 }
@@ -1443,12 +1706,15 @@ public:
       changed |= FissionWorkdistribute(workdistribute);
     });
     moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
+      changed |=
+          WorkdistributeRuntimeCallLower(workdistribute, targetOpsToProcess);
+    });
+    moduleOp->walk([&](mlir::omp::WorkdistributeOp workdistribute) {
       changed |= WorkdistributeDoLower(workdistribute, targetOpsToProcess);
     });
     moduleOp->walk([&](mlir::omp::TeamsOp teams) {
-      changed |= TeamsWorkdistributeToSingleOp(teams);
+      changed |= TeamsWorkdistributeToSingleOp(teams, targetOpsToProcess);
     });
-
     if (changed) {
       bool isTargetDevice =
           llvm::cast<mlir::omp::OffloadModuleInterface>(*moduleOp)
