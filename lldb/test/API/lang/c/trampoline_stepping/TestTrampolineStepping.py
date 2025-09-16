@@ -7,7 +7,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
+@skipIf(bugnumber = "rdar://160698178")
 class TestTrampoline(TestBase):
     def setup(self, bkpt_str):
         self.build()
