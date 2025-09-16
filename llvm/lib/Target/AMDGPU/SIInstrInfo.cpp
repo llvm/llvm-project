@@ -62,9 +62,29 @@ static cl::opt<bool> Fix16BitCopies(
   cl::init(true),
   cl::ReallyHidden);
 
+static cl::opt<unsigned> AMDGPULoadLatencyScaleFactor(
+    "amdgpu-load-latency-scale-factor",
+    cl::desc("Scale factor for load instruction latency. Final latency is "
+             "scalled by `Factor / 100 * Latency`."),
+    cl::init(100), cl::ReallyHidden);
+
+static cl::opt<unsigned> AMDGPUDSReadLatencyScaleFactor(
+    "amdgpu-ds-read-latency-scale-factor",
+    cl::desc("Scale factor for LDS (DS) read instruction latency. Final "
+             "latency is scaled by `Factor / 100 * Latency`."),
+    cl::init(100), cl::ReallyHidden);
+
+static cl::opt<unsigned> AMDGPUVMEMLoadLatencyScaleFactor(
+    "amdgpu-vmem-load-latency-scale-factor",
+    cl::desc("Scale factor for VMEM/BUFFER/FLAT load instruction latency. "
+             "Final latency is scaled by `Factor / 100 * Latency`."),
+    cl::init(100), cl::ReallyHidden);
+
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
-      RI(ST), ST(ST) {
+      RI(ST), ST(ST), LoadLatencyScaleFactor(AMDGPULoadLatencyScaleFactor),
+      DSReadLatencyScaleFactor(AMDGPUDSReadLatencyScaleFactor),
+      VMEMLoadLatencyScaleFactor(AMDGPUVMEMLoadLatencyScaleFactor) {
   SchedModel.init(&ST);
 }
 
@@ -10238,6 +10258,43 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+std::optional<unsigned>
+SIInstrInfo::getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                             const MachineInstr &MI) const {
+  auto LatencyOpt = TargetInstrInfo::getInstrLatency(TargetSchedModel, MI);
+  if (!LatencyOpt)
+    return std::nullopt;
+  unsigned Latency = *LatencyOpt;
+  if (MI.mayLoad()) {
+    unsigned Scale = LoadLatencyScaleFactor;
+    if (isDS(MI))
+      Scale = DSReadLatencyScaleFactor;
+    else if (isVMEM(MI) || isFLAT(MI))
+      Scale = VMEMLoadLatencyScaleFactor;
+    Latency = (Latency * Scale) / 100;
+  }
+  return Latency;
+}
+
+std::optional<unsigned> SIInstrInfo::getOperandLatency(
+    const TargetSchedModel &SchedModel, const MachineInstr *DefMI,
+    unsigned DefOperIdx, const MachineInstr *UseMI, unsigned UseOperIdx) const {
+  auto LatOpt = TargetInstrInfo::getOperandLatency(
+      SchedModel, DefMI, DefOperIdx, UseMI, UseOperIdx);
+  if (!LatOpt)
+    return std::nullopt;
+  unsigned Latency = *LatOpt;
+  if (DefMI && DefMI->mayLoad()) {
+    unsigned Scale = LoadLatencyScaleFactor;
+    if (isDS(*DefMI))
+      Scale = DSReadLatencyScaleFactor;
+    else if (isVMEM(*DefMI) || isFLAT(*DefMI))
+      Scale = VMEMLoadLatencyScaleFactor;
+    Latency = (Latency * Scale) / 100;
+  }
+  return Latency;
 }
 
 InstructionUniformity
