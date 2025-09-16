@@ -1063,8 +1063,11 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
   }
 }
 
-static void emitDecoder(raw_ostream &OS, indent Indent,
-                        const InstructionEncoding &Encoding) {
+static std::string getDecoderString(const InstructionEncoding &Encoding) {
+  std::string Decoder;
+  raw_string_ostream OS(Decoder);
+  indent Indent(UseFnTableInDecodeToMCInst ? 2 : 4);
+
   // If a custom instruction decoder was specified, use that.
   StringRef DecoderMethod = Encoding.getDecoderMethod();
   if (!DecoderMethod.empty()) {
@@ -1072,46 +1075,39 @@ static void emitDecoder(raw_ostream &OS, indent Indent,
        << "(MI, insn, Address, Decoder))) { "
        << (Encoding.hasCompleteDecoder() ? "" : "DecodeComplete = false; ")
        << "return MCDisassembler::Fail; }\n";
-    return;
+  } else {
+    for (const OperandInfo &Op : Encoding.getOperands())
+      emitBinaryParser(OS, Indent, Encoding, Op);
   }
-
-  for (const OperandInfo &Op : Encoding.getOperands())
-    emitBinaryParser(OS, Indent, Encoding, Op);
+  return Decoder;
 }
 
 static unsigned getDecoderIndex(const InstructionEncoding &Encoding,
                                 DecoderTableInfo &TableInfo) {
-  // Build up the predicate string.
-  SmallString<256> Decoder;
-  // FIXME: emitDecoder() function can take a buffer directly rather than
-  // a stream.
-  raw_svector_ostream S(Decoder);
-  indent Indent(UseFnTableInDecodeToMCInst ? 2 : 4);
-  emitDecoder(S, Indent, Encoding);
-
   // Using the full decoder string as the key value here is a bit
   // heavyweight, but is effective. If the string comparisons become a
   // performance concern, we can implement a mangling of the predicate
   // data easily enough with a map back to the actual string. That's
   // overkill for now, though.
+  std::string Decoder = getDecoderString(Encoding);
   TableInfo.insertDecoder(Decoder);
   return TableInfo.getDecoderIndex(Decoder);
 }
 
-// Returns true if there was any predicate emitted.
-static bool emitPredicateMatch(raw_ostream &OS,
-                               const InstructionEncoding &Encoding,
-                               StringRef TargetName) {
+static std::string getPredicateString(const InstructionEncoding &Encoding,
+                                      StringRef TargetName) {
   std::vector<const Record *> Predicates =
       Encoding.getRecord()->getValueAsListOfDefs("Predicates");
   auto It = llvm::find_if(Predicates, [](const Record *R) {
     return R->getValueAsBit("AssemblerMatcherPredicate");
   });
-  bool AnyAsmPredicate = It != Predicates.end();
-  if (!AnyAsmPredicate)
-    return false;
+  if (It == Predicates.end())
+    return std::string();
+
+  std::string Predicate;
+  raw_string_ostream OS(Predicate);
   SubtargetFeatureInfo::emitMCPredicateCheck(OS, TargetName, Predicates);
-  return true;
+  return Predicate;
 }
 
 static unsigned getPredicateIndex(StringRef Predicate,
@@ -1127,15 +1123,13 @@ static unsigned getPredicateIndex(StringRef Predicate,
 
 void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
-  // Build up the predicate string.
-  SmallString<256> Predicate;
-  raw_svector_ostream PS(Predicate);
-  if (!emitPredicateMatch(PS, Encoding, Target.getName()))
+  std::string Predicate = getPredicateString(Encoding, Target.getName());
+  if (Predicate.empty())
     return;
 
   // Figure out the index into the predicate table for the predicate just
   // computed.
-  unsigned PIdx = getPredicateIndex(PS.str(), TableInfo);
+  unsigned PIdx = getPredicateIndex(Predicate, TableInfo);
 
   TableInfo.Table.insertOpcode(OPC_CheckPredicate);
   TableInfo.Table.insertULEB128(PIdx);
