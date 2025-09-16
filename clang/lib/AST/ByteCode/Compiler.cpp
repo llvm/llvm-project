@@ -3986,6 +3986,10 @@ bool Compiler<Emitter>::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  // FIXME: Unary shuffle with mask not currently supported.
+  if (E->getNumSubExprs() == 2)
+    return this->emitInvalid(E);
+
   assert(Initializing);
   assert(E->getNumSubExprs() > 2);
 
