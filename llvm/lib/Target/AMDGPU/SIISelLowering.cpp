@@ -8159,25 +8159,14 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
     // it returns a wrong value (all zeroes?). The real value is in the upper 32
     // bits.
     //
-    // To work around the issue, directly emit a 64 bit mov from this register
+    // To work around the issue, emit a 64 bit copy from this register
     // then extract the high bits. Note that this shouldn't even result in a
     // shift being emitted and simply become a pair of registers (e.g.):
     //    s_mov_b64 s[6:7], src_shared_base
     //    v_mov_b32_e32 v1, s7
-    //
-    // FIXME: It would be more natural to emit a CopyFromReg here, but then copy
-    // coalescing would kick in and it would think it's okay to use the "HI"
-    // subregister directly (instead of extracting the HI 32 bits) which is an
-    // artificial (unusable) register.
-    //  Register TableGen definitions would need an overhaul to get rid of the
-    //  artificial "HI" aperture registers and prevent this kind of issue from
-    //  happening.
-    SDNode *Mov = DAG.getMachineNode(AMDGPU::S_MOV_B64, DL, MVT::i64,
-                                     DAG.getRegister(ApertureRegNo, MVT::i64));
-    return DAG.getNode(
-        ISD::TRUNCATE, DL, MVT::i32,
-        DAG.getNode(ISD::SRL, DL, MVT::i64,
-                    {SDValue(Mov, 0), DAG.getConstant(32, DL, MVT::i64)}));
+    SDValue Copy =
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, ApertureRegNo, MVT::v2i32);
+    return DAG.getExtractVectorElt(DL, MVT::i32, Copy, 1);
   }
 
   // For code object version 5, private_base and shared_base are passed through
