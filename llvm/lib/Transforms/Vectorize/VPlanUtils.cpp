@@ -226,7 +226,7 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
         return std::nullopt;
 
       VPValue *GEP = Load->getAddr();
-      if (!match(GEP, m_GetElementPtr(m_LoopInvVPValue(), m_VPValue())))
+      if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
         return std::nullopt;
 
       Recipes.push_back(Load);

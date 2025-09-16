@@ -345,6 +345,12 @@ m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
+m_AnyOf(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
 template <unsigned Opcode, typename Op0_t>
 inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
   return AllRecipe_match<Opcode, Op0_t>(Op0);
@@ -703,22 +709,14 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
 }
 
-struct loop_invariant_vpvalue {
+struct live_in_vpvalue {
   template <typename ITy> bool match(ITy *V) const {
     VPValue *Val = dyn_cast<VPValue>(V);
-    return Val && Val->isDefinedOutsideLoopRegions();
+    return Val && Val->isLiveIn();
   }
 };
 
-inline loop_invariant_vpvalue m_LoopInvVPValue() {
-  return loop_invariant_vpvalue();
-}
-
-template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
-m_AnyOf(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::AnyOf>(Op0);
-}
+inline live_in_vpvalue m_LiveIn() { return live_in_vpvalue(); }
 
 template <typename SubPattern_t> struct OneUse_match {
   SubPattern_t SubPattern;

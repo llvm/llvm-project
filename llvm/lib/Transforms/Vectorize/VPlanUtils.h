@@ -104,9 +104,10 @@ VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
-/// the canonical IV and it is deemed safe to copy those recipes into the
-/// vector preheader. The recipes are stored in \p Recipes, and recipes
-/// forming an address for a load are also added to \p GEPs.
+/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
+/// generating the values for the comparison. The recipes are stored in
+/// \p Recipes, and recipes forming an address for a load are also added to
+/// \p GEPs.
 std::optional<VPValue *>
 getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
