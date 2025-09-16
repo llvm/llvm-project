@@ -74,8 +74,7 @@ define double @max_of_loads(ptr %x, ptr %y, i64 %i) {
 ; CHECK-NEXT:    [[YI_PTR:%.*]] = getelementptr double, ptr [[Y:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[XI:%.*]] = load double, ptr [[XI_PTR]], align 8
 ; CHECK-NEXT:    [[YI:%.*]] = load double, ptr [[YI_PTR]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[XI]], [[YI]]
-; CHECK-NEXT:    [[XI_YI:%.*]] = select i1 [[CMP]], double [[XI]], double [[YI]]
+; CHECK-NEXT:    [[XI_YI:%.*]] = tail call double @llvm.maxnum.f64(double [[XI]], double [[YI]])
 ; CHECK-NEXT:    ret double [[XI_YI]]
 ;
 entry:

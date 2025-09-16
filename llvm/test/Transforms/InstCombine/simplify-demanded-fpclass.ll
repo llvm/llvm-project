@@ -851,8 +851,7 @@ define nofpclass(nan pinf pnorm psub pzero) float @ret_nofpclass_no_positives_no
 define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_negatives__select_clamp_neg_to_zero(float %x) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_nofpclass_negatives__select_clamp_neg_to_zero
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[IS_LT_ZERO:%.*]] = fcmp olt float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_LT_ZERO]], float 0.000000e+00, float [[X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call float @llvm.maxnum.f32(float [[X]], float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.lt.zero = fcmp olt float %x, 0.0
@@ -864,9 +863,7 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_negatives__select_c
 define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_negatives__select_clamp_pos_to_zero(float %x) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_nofpclass_negatives__select_clamp_pos_to_zero
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[IS_GT_ZERO:%.*]] = fcmp ogt float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_GT_ZERO]], float 0.000000e+00, float [[X]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %is.gt.zero = fcmp ogt float %x, 0.0
   %select = select i1 %is.gt.zero, float 0.0, float %x
@@ -877,9 +874,7 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_negatives__select_c
 define nofpclass(nan ninf nnorm nsub nzero) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_nofpclass_nan_negatives__select_clamp_pos_to_zero
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    [[IS_GT_ZERO:%.*]] = fcmp ogt float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_GT_ZERO]], float 0.000000e+00, float [[X]]
-; CHECK-NEXT:    ret float [[SELECT]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %is.gt.zero = fcmp ogt float %x, 0.0
   %select = select i1 %is.gt.zero, float 0.0, float %x
@@ -890,7 +885,7 @@ define nofpclass(nan ninf nnorm nsub nzero) float @ret_nofpclass_nan_negatives__
 define nofpclass(nan ninf nnorm nsub zero) float @ret_nofpclass_nan_negatives_zero__select_clamp_pos_to_zero(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero nsub nnorm) float @ret_nofpclass_nan_negatives_zero__select_clamp_pos_to_zero
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    ret float poison
 ;
   %is.gt.zero = fcmp ogt float %x, 0.0
   %select = select i1 %is.gt.zero, float 0.0, float %x
@@ -901,7 +896,7 @@ define nofpclass(nan ninf nnorm nsub zero) float @ret_nofpclass_nan_negatives_ze
 define nofpclass(ninf nnorm nsub zero) float @ret_nofpclass_negatives_zero__select_clamp_pos_to_zero(float %x) {
 ; CHECK-LABEL: define nofpclass(ninf zero nsub nnorm) float @ret_nofpclass_negatives_zero__select_clamp_pos_to_zero
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    ret float poison
 ;
   %is.gt.zero = fcmp ogt float %x, 0.0
   %select = select i1 %is.gt.zero, float 0.0, float %x

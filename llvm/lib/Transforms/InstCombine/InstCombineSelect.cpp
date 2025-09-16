@@ -3963,6 +3963,60 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
   return nullptr;
 }
 
+// fcmp + sel patterns into max/min intrinsic.
+static Value *foldSelectICmpIntoMaxMin(SelectInst &SI,
+                                       InstCombiner::BuilderTy &Builder) {
+
+  auto TryFoldIntoMaxMinIntrinsic =
+      [&Builder, &SI](CmpInst::Predicate Pred, Value *CmpLHS, Value *CmpRHS,
+                      Value *TVal, Value *FVal) -> Value * {
+    // Early exit if the operands are not in the expected form.
+    if ((CmpRHS != TVal || CmpLHS != FVal) &&
+        (CmpLHS != TVal || CmpRHS != FVal))
+      return nullptr;
+
+    bool isSwapped = (CmpLHS == FVal && CmpRHS == TVal);
+    // Only these relational predicates can be transformed into maxnum/minnum
+    // intrinsic.
+    // X > C ? X : C --> maxnum(X, C)
+    // X > C ? C : X --> minnum(X, C)
+    if (Pred == CmpInst::FCMP_OGT) {
+      Intrinsic::ID MaxMinIID =
+          isSwapped ? Intrinsic::minnum : Intrinsic::maxnum;
+      return Builder.CreateIntrinsic(SI.getType(), MaxMinIID, {TVal, FVal},
+                                     &SI);
+    }
+
+    // X < C ? X : C --> minnum(X, C)
+    // X < C ? C : X --> maxnum(X, C)
+    if (Pred == CmpInst::FCMP_OLT) {
+      Intrinsic::ID MaxMinIID =
+          isSwapped ? Intrinsic::maxnum : Intrinsic::minnum;
+      return Builder.CreateIntrinsic(SI.getType(), MaxMinIID, {TVal, FVal},
+                                     &SI);
+    }
+
+    return nullptr;
+  };
+
+  // select((fcmp Pred, X, Y), X, Y)
+  //      => minnum/maxnum(X, Y)
+  //
+  // Pred := OGT and OLT
+  Value *X, *Y;
+  Value *TVal, *FVal;
+  CmpPredicate Pred;
+
+  // Note: OneUse check for `Cmp` is necessary because it makes sure that other
+  // InstCombine folds don't undo this transformation and cause an infinite
+  // loop. Furthermore, it could also increase the operation count.
+  if (match(&SI, m_OneUse(m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Y))),
+                          m_Value(TVal), m_Value(FVal)))))
+    return TryFoldIntoMaxMinIntrinsic(Pred, X, Y, TVal, FVal);
+
+  return nullptr;
+}
+
 static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
                                 Value *FalseVal,
                                 InstCombiner::BuilderTy &Builder,
@@ -4453,6 +4507,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectIntoAddConstant(SI, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectICmpIntoMaxMin(SI, Builder))
     return replaceInstUsesWith(SI, V);
 
   // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)

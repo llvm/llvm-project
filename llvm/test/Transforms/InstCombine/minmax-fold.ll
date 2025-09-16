@@ -158,8 +158,7 @@ define <4 x i32> @bitcasts_fcmp_1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcasts_fcmp_1(
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast <2 x i64> [[A:%.*]] to <4 x float>
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x float>
-; CHECK-NEXT:    [[T2:%.*]] = fcmp olt <4 x float> [[T1]], [[T0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[T2]], <4 x float> [[T0]], <4 x float> [[T1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[T0]], <4 x float> [[T1]])
 ; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[T5]]
 ;
@@ -178,8 +177,7 @@ define <4 x i32> @bitcasts_fcmp_2(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcasts_fcmp_2(
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast <2 x i64> [[A:%.*]] to <4 x float>
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x float>
-; CHECK-NEXT:    [[T2:%.*]] = fcmp olt <4 x float> [[T0]], [[T1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[T2]], <4 x float> [[T0]], <4 x float> [[T1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[T0]], <4 x float> [[T1]])
 ; CHECK-NEXT:    [[T5:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[T5]]
 ;

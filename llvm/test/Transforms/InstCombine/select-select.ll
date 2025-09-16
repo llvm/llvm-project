@@ -3,10 +3,8 @@
 
 define float @foo1(float %a) {
 ; CHECK-LABEL: @foo1(
-; CHECK-NEXT:    [[B:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[B]], float [[A]], float 0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fcmp olt float [[C]], 1.000000e+00
-; CHECK-NEXT:    [[F:%.*]] = select i1 [[D]], float [[C]], float 1.000000e+00
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.maxnum.f32(float [[A:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[F:%.*]] = call float @llvm.minnum.f32(float [[C]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %b = fcmp ogt float %a, 0.0
@@ -19,8 +17,7 @@ define float @foo1(float %a) {
 define float @foo2(float %a) {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:    [[B:%.*]] = fcmp ule float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[A]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], float [[A]], float 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = call float @llvm.minnum.f32(float [[A]], float 1.000000e+00)
 ; CHECK-NEXT:    [[F:%.*]] = select i1 [[B]], float 0.000000e+00, float [[E]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
