@@ -3793,55 +3793,6 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   deduceAddressSpace(VD);
 }
 
-void SemaHLSL::createResourceRecordCtorArgs(
-    const Type *ResourceTy, StringRef VarName, HLSLResourceBindingAttr *RBA,
-    HLSLVkBindingAttr *VkBinding, uint32_t ArrayIndex,
-    llvm::SmallVectorImpl<Expr *> &Args) {
-  std::optional<uint32_t> RegisterSlot;
-  uint32_t SpaceNo = 0;
-  if (VkBinding) {
-    RegisterSlot = VkBinding->getBinding();
-    SpaceNo = VkBinding->getSet();
-  } else if (RBA) {
-    if (RBA->hasRegisterSlot())
-      RegisterSlot = RBA->getSlotNumber();
-    SpaceNo = RBA->getSpaceNumber();
-  }
-
-  ASTContext &AST = SemaRef.getASTContext();
-  uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
-  uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
-  IntegerLiteral *RangeSize = IntegerLiteral::Create(
-      AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
-  IntegerLiteral *Index =
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, ArrayIndex),
-                             AST.UnsignedIntTy, SourceLocation());
-  IntegerLiteral *Space =
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
-                             AST.UnsignedIntTy, SourceLocation());
-  StringLiteral *Name = StringLiteral::Create(
-      AST, VarName, StringLiteralKind::Ordinary, false,
-      AST.getStringLiteralArrayType(AST.CharTy.withConst(), VarName.size()),
-      SourceLocation());
-
-  // resource with explicit binding
-  if (RegisterSlot.has_value()) {
-    IntegerLiteral *RegSlot = IntegerLiteral::Create(
-        AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
-        SourceLocation());
-    Args.append({RegSlot, Space, RangeSize, Index, Name});
-  } else {
-    // resource with implicit binding
-    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
-                           ? RBA->getImplicitBindingOrderID()
-                           : getNextImplicitBindingOrderID();
-    IntegerLiteral *OrderId =
-        IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, OrderID),
-                               AST.UnsignedIntTy, SourceLocation());
-    Args.append({Space, RangeSize, Index, OrderId, Name});
-  }
-}
-
 bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   assert(VD->getType()->isHLSLResourceRecord() &&
          "expected resource record type");
@@ -3951,28 +3902,39 @@ bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {
 
   // Individual resources in a resource array are not initialized here. They
   // are initialized later on during codegen when the individual resources are
-  // accessed. Codegen will emit a call to the resource constructor with the
-  // specified array index. We need to make sure though that the constructor
+  // accessed. Codegen will emit a call to the resource initialization method
+  // with the specified array index. We need to make sure though that the method
   // for the specific resource type is instantiated, so codegen can emit a call
   // to it when the array element is accessed.
-  SmallVector<Expr *> Args;
-  QualType ResElementTy = VD->getASTContext().getBaseElementType(VD->getType());
-  createResourceRecordCtorArgs(ResElementTy.getTypePtr(), VD->getName(),
-                               VD->getAttr<HLSLResourceBindingAttr>(),
-                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
 
-  SourceLocation Loc = VD->getLocation();
-  InitializedEntity Entity =
-      InitializedEntity::InitializeTemporary(ResElementTy);
-  InitializationKind Kind = InitializationKind::CreateDirect(Loc, Loc, Loc);
-  InitializationSequence InitSeq(SemaRef, Entity, Kind, Args);
-  if (InitSeq.Failed())
+  // Find correct initialization method based on the resource binding
+  // information.
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType ResElementTy = AST.getBaseElementType(VD->getType());
+  CXXRecordDecl *ResourceDecl = ResElementTy->getAsCXXRecordDecl();
+
+  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+  HLSLVkBindingAttr *VkBinding = VD->getAttr<HLSLVkBindingAttr>();
+  CXXMethodDecl *CreateMethod = nullptr;
+
+  if (VkBinding || (RBA && RBA->hasRegisterSlot()))
+    // Resource has explicit binding.
+    CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding",
+                                VD->getLocation());
+  else
+    // Resource has implicit binding.
+    CreateMethod =
+        lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding",
+                     VD->getLocation());
+
+  if (!CreateMethod)
     return false;
 
-  // This takes care of instantiating and emitting of the constructor that will
-  // be called from codegen when the array is accessed.
-  ExprResult OneResInit = InitSeq.Perform(SemaRef, Entity, Kind, Args);
-  return !OneResInit.isInvalid();
+  // Make sure the create method template is instantiated and emitted.
+  if (!CreateMethod->isDefined() && CreateMethod->isTemplateInstantiation())
+    SemaRef.InstantiateFunctionDefinition(VD->getLocation(), CreateMethod,
+                                          true);
+  return true;
 }
 
 // Returns true if the initialization has been handled.
