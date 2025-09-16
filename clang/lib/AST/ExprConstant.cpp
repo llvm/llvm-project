@@ -12187,6 +12187,9 @@ static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
 }
 
 bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  // FIXME: Unary shuffle with mask not currently supported.
+  if (E->getNumSubExprs() == 2)
+    return Error(E);
   APValue VecVal1;
   const Expr *Vec1 = E->getExpr(0);
   if (!EvaluateAsRValue(Info, Vec1, VecVal1))

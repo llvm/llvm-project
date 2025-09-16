@@ -731,6 +731,19 @@ permitted in a constexpr context}}
         vector4charConst1,
         vector4charConst2, -1, -1, -1, -1);
 
+namespace UnaryShuffleUnsupported {
+  typedef int vi6 __attribute__((ext_vector_type(2)));
+  constexpr int foo() { // expected-error {{never produces a constant expression}}
+    vi6 a = {1,2};
+    vi6 b = {3,4};
+    vi6 r = __builtin_shufflevector(a, b); // expected-note 2{{subexpression not valid in a constant expression}}
+
+    return r[0] + r[1];
+  }
+  static_assert(foo() == 0); // expected-error {{not an integral constant expression}} \
+                             // expected-note {{in call to}}
+}
+
 static_assert(__builtin_reduce_add((vector4char){}) == 0);
 static_assert(__builtin_reduce_add((vector4char){1, 2, 3, 4}) == 10);
 static_assert(__builtin_reduce_add((vector4short){10, 20, 30, 40}) == 100);
