@@ -130,14 +130,16 @@ struct Messages {
   std::string Short, Full;
 };
 
-enum class BadOffsetKind {Negative, Overflowing, Indeterminate};
+enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
 
-constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing", "a negative or overflowing"};
+constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
+                                              "a negative or overflowing"};
 StringRef asAdjective(BadOffsetKind Problem) {
   return Adjectives[static_cast<int>(Problem)];
 }
 
-constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of", "around"};
+constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
+                                                "around"};
 StringRef asPreposition(BadOffsetKind Problem) {
   return Prepositions[static_cast<int>(Problem)];
 }
@@ -420,9 +422,9 @@ static bool tryDividePair(std::optional<int64_t> &Val1,
 }
 
 static Messages getNonTaintMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
-                               const SubRegion *Region, NonLoc Offset,
-                               std::optional<NonLoc> Extent, SVal Location,
-                               BadOffsetKind Problem) {
+                                const SubRegion *Region, NonLoc Offset,
+                                std::optional<NonLoc> Extent, SVal Location,
+                                BadOffsetKind Problem) {
   std::string RegName = getRegionName(Space, Region);
   const auto *EReg = Location.getAsRegion()->getAs<ElementRegion>();
   assert(EReg && "this checker only handles element access");
@@ -471,8 +473,7 @@ static Messages getNonTaintMsgs(ASTContext &ACtx, const MemSpaceRegion *Space,
   }
 
   return {formatv("Out of bound access to memory {0} {1}",
-                  asPreposition(Problem),
-                  RegName),
+                  asPreposition(Problem), RegName),
           std::string(Buf)};
 }
 
@@ -642,7 +643,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
           Messages Msgs = getNonTaintMsgs(C.getASTContext(), Space, Reg,
-              ByteOffset, /*Extent=*/std::nullopt, Location, BadOffsetKind::Negative);
+                                          ByteOffset, /*Extent=*/std::nullopt,
+                                          Location, BadOffsetKind::Negative);
           reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
           return;
         }
@@ -684,10 +686,12 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
           return;
         }
 
-        BadOffsetKind Problem = AlsoMentionUnderflow ? BadOffsetKind::Indeterminate : BadOffsetKind::Overflowing;
+        BadOffsetKind Problem = AlsoMentionUnderflow
+                                    ? BadOffsetKind::Indeterminate
+                                    : BadOffsetKind::Overflowing;
         Messages Msgs =
             getNonTaintMsgs(C.getASTContext(), Space, Reg, ByteOffset,
-                           *KnownSize, Location, Problem);
+                            *KnownSize, Location, Problem);
         reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }
