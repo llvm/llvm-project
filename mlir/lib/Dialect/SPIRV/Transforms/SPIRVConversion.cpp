@@ -1495,8 +1495,6 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     RewritePatternSet patterns(context);
     auto options = vector::UnrollVectorOptions().setNativeShapeFn(
         [](auto op) { return mlir::spirv::getNativeVectorShape(op); });
-    vector::populateVectorFromElementsLoweringPatterns(patterns);
-    vector::populateVectorToElementsLoweringPatterns(patterns);
     populateVectorUnrollPatterns(patterns, options);
     if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
