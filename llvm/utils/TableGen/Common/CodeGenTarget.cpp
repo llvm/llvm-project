@@ -224,7 +224,7 @@ const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
 
   const Record *RegClass = VDefInit->getDef();
   if (RegClass->isSubClassOf("RegisterOperand"))
-    RegClass = RegClass->getValueAsDef("RegClass");
+    return RegClass->getValueAsDef("RegClass");
 
   return RegClass->isSubClassOf("RegisterClassLike") ? RegClass : nullptr;
 }
