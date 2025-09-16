@@ -1649,7 +1649,7 @@ func.func @move_multi_resource_comprehensive() attributes {} {
     // CHECK: "test.test_effects_write_EF"() : () -> ()
     // CHECK: "test.test_effects_read_EF"() : () -> ()
 
-    // Both of these should be moved out of their parent
+    // Both of these should be empty and moved out of their parent
     scf.for %arg1 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
       scf.for %arg2 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
         "test.test_effects_write_CD"() : () -> ()
@@ -1676,13 +1676,13 @@ func.func @move_multi_resource_comprehensive() attributes {} {
         // CHECK: "test.test_effects_write_A"() : () -> ()
         // CHECK: "test.test_effects_read_A"() : () -> ()
         
-        // Loop should be moved out of parent
+        // emptyoop should be empty and moved out of parent
         scf.for %arg4 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_A"() : () -> ()
           "test.test_effects_read_A"() : () -> ()
         }
 
-        // Loop should be moved out of parent
+        // Loop should be empty and moved out of parent
         scf.for %arg5 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {          
           "test.test_effects_write_B"() : () -> ()
           "test.test_effects_read_B"() : () -> ()
@@ -1691,7 +1691,7 @@ func.func @move_multi_resource_comprehensive() attributes {} {
         // CHECK: "test.test_effects_write_AC"() : () -> ()
         // CHECK: "test.test_effects_read_AC"() : () -> ()
 
-        // Loop should be moved out of parent
+        // Loop should be empty and moved out of parent
         scf.for %arg6 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
           "test.test_effects_write_AC"() : () -> ()
           "test.test_effects_read_AC"() : () -> ()
@@ -1717,14 +1717,17 @@ func.func @move_multi_resource_write_conflicts() attributes {} {
   %c1_i32 = arith.constant 10 : i32
   %c2_i32 = arith.constant 1 : i32
 
+  // CHECK: %{{.*}} = arith.constant 7 : index
+
   // CHECK: "test.test_effects_write_B"() : () -> ()
   // CHECK: "test.test_effects_read_B"() : () -> ()
+
+  // CHECK: "test.test_effects_write_A_with_input"(%c7) : (index) -> ()
+  // CHECK: "test.test_effects_read_A"() : () -> ()
+
   // CHECK: scf.for
 
   scf.for %arg0 = %c0_i32 to %c1_i32 step %c2_i32  : i32 {
-    // CHECK: "test.test_effects_write_A_with_input"(%c7) : (index) -> ()
-    // CHECK: "test.test_effects_read_A"() : () -> ()
-
     %input = arith.constant 7 : index
     "test.test_effects_write_A_with_input"(%input) : (index) -> ()
     "test.test_effects_read_A"() : () -> ()

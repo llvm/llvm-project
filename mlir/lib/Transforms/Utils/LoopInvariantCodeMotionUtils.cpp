@@ -225,7 +225,7 @@ size_t mlir::moveLoopInvariantCode(
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
     function_ref<void(Operation *, Region *)> moveOutOfRegion) {
-  size_t numMoved = 0;
+  size_t numMovedTotal = 0;
 
   // TODO: see if this can be spec'd in a meaningful way to add back later.
   //
@@ -236,62 +236,71 @@ size_t mlir::moveLoopInvariantCode(
     << " has constant bounds and steps? isZeroTrip()? " << (isDead.has_value() ? (isDead.value() ? "YES, YES" : "YES, NO") : "NO, NULL");
 
   if (isDead.has_value() && isDead.value())
-    return numMoved;
+    return numMovedTotal;
 
-  // Go through loop body and map out resource usages.
-  // op->regions are essentially merged sequentially.
-  // E.g., an if's "then" and "else" regions are treated like one
-  // continuous region --> need to add fork checking.
-  //
-  // loop "do" and "then" regions also merged.
-  DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
-      resourceConflicts;
-  gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
+  int numMoved = 0;
 
-  auto regions = loopLike.getLoopRegions();
-  for (Region *region : regions) {
-    LDBG() << "Original loop:\n" << *region->getParentOp();
+  do {
+    // reset value for iteration
+    numMoved = 0;
 
-    std::queue<Operation *> worklist;
-    // Add top-level operations in the loop body to the worklist.
-    for (Operation &op : region->getOps())
-      worklist.push(&op);
+    // Go through loop body and map out resource usages.
+    // op->regions are essentially merged sequentially.
+    // E.g., an if's "then" and "else" regions are treated like one
+    // continuous region --> need to add fork checking.
+    //
+    // loop "do" and "then" regions also merged.
+    DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
+        resourceConflicts;
+    gatherResourceConflicts(loopLike, loopLike.getOperation(), resourceConflicts);
 
-    auto definedOutside = [&](Value value) {
-      return isDefinedOutsideRegion(value, region);
-    };
+    auto regions = loopLike.getLoopRegions();
+    for (Region *region : regions) {
+      LDBG() << "Original loop:\n" << *region->getParentOp();
 
-    while (!worklist.empty()) {
-      Operation *op = worklist.front();
-      worklist.pop();
-      // Skip ops that have already been moved. Check if the op can be hoisted.
-      if (op->getParentRegion() != region)
-        continue;
+      std::queue<Operation *> worklist;
+      // Add top-level operations in the loop body to the worklist.
+      for (Operation &op : region->getOps())
+        worklist.push(&op);
 
-      LDBG() << "Checking op: "
-             << OpWithFlags(op, OpPrintingFlags().skipRegions());
+      auto definedOutside = [&](Value value) {
+        return isDefinedOutsideRegion(value, region);
+      };
 
-      bool noMemoryConflicts =
-          isMemoryEffectFree(op) ||
-          !mayHaveMemoryEffectConflict(op, resourceConflicts);
+      while (!worklist.empty()) {
+        Operation *op = worklist.front();
+        worklist.pop();
+        // Skip ops that have already been moved. Check if the op can be hoisted.
+        if (op->getParentRegion() != region)
+          continue;
 
-      if (!noMemoryConflicts || !shouldMoveOutOfRegion(op, region) ||
-          !canBeHoisted(op, definedOutside))
-        continue;
+        LDBG() << "Checking op: "
+              << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
-      LDBG() << "Moving loop-invariant op: " << *op;
-      moveOutOfRegion(op, region);
-      ++numMoved;
+        bool noMemoryConflicts =
+            isMemoryEffectFree(op) ||
+            !mayHaveMemoryEffectConflict(op, resourceConflicts);
 
-      // Since the op has been moved, we need to check its users within the
-      // top-level of the loop body.
-      for (Operation *user : op->getUsers())
-        if (user->getParentRegion() == region)
-          worklist.push(user);
+        if (!noMemoryConflicts || !shouldMoveOutOfRegion(op, region) ||
+            !canBeHoisted(op, definedOutside))
+          continue;
+
+        LDBG() << "Moving loop-invariant op: " << *op;
+        moveOutOfRegion(op, region);
+        ++numMoved;
+
+        // Since the op has been moved, we need to check its users within the
+        // top-level of the loop body.
+        for (Operation *user : op->getUsers())
+          if (user->getParentRegion() == region)
+            worklist.push(user);
+      }
     }
-  }
 
-  return numMoved;
+    numMovedTotal += numMoved;
+  } while (numMoved > 0);
+
+  return numMovedTotal;
 }
 
 size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
