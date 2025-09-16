@@ -182,8 +182,7 @@ CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
       PrintFatalError(R->getLoc(), "not enough arguments for instruction!");
 
     const Record *Op = OpInfo.Rec;
-    if (Op->isSubClassOf("Operand") && OpInfo.MIOperandInfo &&
-        !OpInfo.MIOperandInfo->arg_empty()) {
+    if (Op->isSubClassOf("Operand") && !OpInfo.MIOperandInfo->arg_empty()) {
       // Complex operand (a subclass of Operand with non-empty MIOperandInfo).
       // The argument can be a DAG or a subclass of Operand.
       if (auto *ArgDag = dyn_cast<DagInit>(Result->getArg(ArgIdx))) {

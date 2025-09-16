@@ -19,9 +19,8 @@ include "llvm/Target/Target.td"
 // INSTRINFO: { MyTarget::XRegs_EvenRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_UNKNOWN, 0 },
+// INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-
 
 // INSTRINFO: extern const int16_t MyTargetRegClassByHwModeTables[4][3] = {
 // INSTRINFO-NEXT:  { // DefaultMode
@@ -104,8 +103,8 @@ include "llvm/Target/Target.td"
 // ASMMATCHER: if (Operand.isReg()) {
 
 // ASMMATCHER: static const MatchEntry MatchTable0[] = {
-// ASMMATCHER: /* also_my_load_1 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__Imm1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_Imm }, },
-// ASMMATCHER: /* also_my_load_2 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__Imm1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_Imm }, },
+// ASMMATCHER: /* also_my_load_1 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC }, },
+// ASMMATCHER: /* also_my_load_2 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC }, },
 // ASMMATCHER: /* always_all */, MyTarget::ALWAYS_ALL, Convert__Reg1_0, AMFBS_None, { MCK_XRegs }, },
 // ASMMATCHER: /* always_even */, MyTarget::ALWAYS_EVEN, Convert__Reg1_0, AMFBS_None, { MCK_XRegs_Even }, },
 // ASMMATCHER: /* custom_decode */, MyTarget::CUSTOM_DECODE, Convert__RegByHwMode_YRegs_EvenIfRequired1_0, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired }, },
@@ -358,10 +357,10 @@ def PtrRegs32 : RegisterClass<"MyTarget", [i32], 32, (add P0_32, P1_32, P2_32, P
 def PtrRegs64 : RegisterClass<"MyTarget", [i64], 64, (add P0_64, P1_64, P2_64, P3_64)>;
 
 def MyPtrRC : RegClassByHwMode<[DefaultMode, Ptr64],
-                               [PtrRegs32, PtrRegs64]>, Operand<iPTR>;
+                               [PtrRegs32, PtrRegs64]>;
 
 
-def PtrRegOperand : RegisterOperand<MyPtrRC>, Operand<iPTR>;
+def PtrRegOperand : RegisterOperand<MyPtrRC>;
 
 
 def CustomDecodeYEvenIfRequired : RegisterOperand<YRegs_EvenIfRequired> {
