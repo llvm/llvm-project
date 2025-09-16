@@ -3659,7 +3659,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pternlogq128_mask:
   case X86::BI__builtin_ia32_pternlogq256_mask:
   case X86::BI__builtin_ia32_pternlogq512_mask:
-    return interp__builtin_pternlog(S, OpPC, Call, false);
+    return interp__builtin_pternlog(S, OpPC, Call, /*MaskZ=*/false);
   case X86::BI__builtin_ia32_pternlogd128_maskz:
   case X86::BI__builtin_ia32_pternlogd256_maskz:
   case X86::BI__builtin_ia32_pternlogd512_maskz:
