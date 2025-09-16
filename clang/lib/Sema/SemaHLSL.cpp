@@ -769,6 +769,26 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
+bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D) {
+  const auto *AnnotationAttr = D->getAttr<HLSLAnnotationAttr>();
+  if (AnnotationAttr) {
+    CheckSemanticAnnotation(FD, D, AnnotationAttr);
+    return true;
+  }
+
+  const Type *T = D->getType()->getUnqualifiedDesugaredType();
+  const RecordType *RT = dyn_cast<RecordType>(T);
+  if (!RT)
+    return false;
+
+  const RecordDecl *RD = RT->getOriginalDecl();
+  for (FieldDecl *Field : RD->fields()) {
+    if (!isSemanticValid(FD, Field))
+      return false;
+  }
+  return true;
+}
+
 void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
@@ -832,11 +852,7 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   }
 
   for (ParmVarDecl *Param : FD->parameters()) {
-    if (const auto *AnnotationAttr = Param->getAttr<HLSLAnnotationAttr>()) {
-      CheckSemanticAnnotation(FD, Param, AnnotationAttr);
-    } else {
-      // FIXME: Handle struct parameters where annotations are on struct fields.
-      // See: https://github.com/llvm/llvm-project/issues/57875
+    if (!isSemanticValid(FD, Param)) {
       Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
@@ -1212,6 +1228,15 @@ struct PerVisibilityBindingChecker {
   }
 };
 
+static CXXMethodDecl *lookupMethod(Sema &S, CXXRecordDecl *RecordDecl,
+                                   StringRef Name, SourceLocation Loc) {
+  DeclarationName DeclName(&S.getASTContext().Idents.get(Name));
+  LookupResult Result(S, DeclName, Loc, Sema::LookupMemberName);
+  if (!S.LookupQualifiedName(Result, static_cast<DeclContext *>(RecordDecl)))
+    return nullptr;
+  return cast<CXXMethodDecl>(Result.getFoundDecl());
+}
+
 } // end anonymous namespace
 
 bool SemaHLSL::handleRootSignatureElements(
@@ -1295,9 +1320,8 @@ bool SemaHLSL::handleRootSignatureElements(
         ReportError(Loc, 1, 0xfffffffe);
       }
 
-      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
-              Version, llvm::to_underlying(Clause->Type),
-              llvm::to_underlying(Clause->Flags)))
+      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(Version, Clause->Type,
+                                                          Clause->Flags))
         ReportFlagError(Loc);
     }
   }
@@ -1596,18 +1620,8 @@ bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
   return true;
 }
 
-void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
-  auto *VD = cast<ValueDecl>(D);
-  if (!diagnoseInputIDType(VD->getType(), AL))
-    return;
-
-  D->addAttr(::new (getASTContext())
-                 HLSLSV_DispatchThreadIDAttr(getASTContext(), AL));
-}
-
 bool SemaHLSL::diagnosePositionType(QualType T, const ParsedAttr &AL) {
   const auto *VT = T->getAs<VectorType>();
-
   if (!T->hasFloatingRepresentation() || (VT && VT->getNumElements() > 4)) {
     Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
         << AL << "float/float1/float2/float3/float4";
@@ -1617,29 +1631,70 @@ bool SemaHLSL::diagnosePositionType(QualType T, const ParsedAttr &AL) {
   return true;
 }
 
-void SemaHLSL::handleSV_PositionAttr(Decl *D, const ParsedAttr &AL) {
-  auto *VD = cast<ValueDecl>(D);
-  if (!diagnosePositionType(VD->getType(), AL))
-    return;
+void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                          std::optional<unsigned> Index) {
+  std::string SemanticName = AL.getAttrName()->getName().upper();
 
-  D->addAttr(::new (getASTContext()) HLSLSV_PositionAttr(getASTContext(), AL));
+  auto *VD = cast<ValueDecl>(D);
+  QualType ValueType = VD->getType();
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    ValueType = FD->getReturnType();
+
+  bool IsOutput = false;
+  if (HLSLParamModifierAttr *MA = D->getAttr<HLSLParamModifierAttr>()) {
+    if (MA->isOut()) {
+      IsOutput = true;
+      ValueType = cast<ReferenceType>(ValueType)->getPointeeType();
+    }
+  }
+
+  Attr *Attribute = nullptr;
+  if (SemanticName == "SV_DISPATCHTHREADID") {
+    diagnoseInputIDType(ValueType, AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
+    Attribute = createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, Index);
+  } else if (SemanticName == "SV_GROUPINDEX") {
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
+    Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, Index);
+  } else if (SemanticName == "SV_GROUPTHREADID") {
+    diagnoseInputIDType(ValueType, AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
+    Attribute = createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, Index);
+  } else if (SemanticName == "SV_GROUPID") {
+    diagnoseInputIDType(ValueType, AL);
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
+    Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, Index);
+  } else if (SemanticName == "SV_POSITION") {
+    const auto *VT = ValueType->getAs<VectorType>();
+    if (!ValueType->hasFloatingRepresentation() ||
+        (VT && VT->getNumElements() > 4))
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
+          << AL << "float/float1/float2/float3/float4";
+    Attribute = createSemanticAttr<HLSLSV_PositionAttr>(AL, Index);
+  } else
+    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+
+  if (!Attribute)
+    return;
+  D->addAttr(Attribute);
 }
 
-void SemaHLSL::handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL) {
-  auto *VD = cast<ValueDecl>(D);
-  if (!diagnoseInputIDType(VD->getType(), AL))
-    return;
+void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t IndexValue, ExplicitIndex;
+  SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue);
+  SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), ExplicitIndex);
+  assert(IndexValue > 0 ? ExplicitIndex : true);
+  std::optional<unsigned> Index =
+      ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
 
-  D->addAttr(::new (getASTContext())
-                 HLSLSV_GroupThreadIDAttr(getASTContext(), AL));
-}
-
-void SemaHLSL::handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL) {
-  auto *VD = cast<ValueDecl>(D);
-  if (!diagnoseInputIDType(VD->getType(), AL))
-    return;
-
-  D->addAttr(::new (getASTContext()) HLSLSV_GroupIDAttr(getASTContext(), AL));
+  if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
+    diagnoseSystemSemanticAttr(D, AL, Index);
+  else
+    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
@@ -3738,26 +3793,6 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   deduceAddressSpace(VD);
 }
 
-static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
-                                MutableArrayRef<Expr *> Args) {
-  InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
-  InitializationKind Kind = InitializationKind::CreateDirect(
-      VD->getLocation(), SourceLocation(), SourceLocation());
-
-  InitializationSequence InitSeq(S, Entity, Kind, Args);
-  if (InitSeq.Failed())
-    return false;
-
-  ExprResult Init = InitSeq.Perform(S, Entity, Kind, Args);
-  if (!Init.get())
-    return false;
-
-  VD->setInit(S.MaybeCreateExprWithCleanups(Init.get()));
-  VD->setInitStyle(VarDecl::CallInit);
-  S.CheckCompleteVariableDeclaration(VD);
-  return true;
-}
-
 void SemaHLSL::createResourceRecordCtorArgs(
     const Type *ResourceTy, StringRef VarName, HLSLResourceBindingAttr *RBA,
     HLSLVkBindingAttr *VkBinding, uint32_t ArrayIndex,
@@ -3808,11 +3843,106 @@ void SemaHLSL::createResourceRecordCtorArgs(
 }
 
 bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
-  SmallVector<Expr *> Args;
-  createResourceRecordCtorArgs(VD->getType().getTypePtr(), VD->getName(),
-                               VD->getAttr<HLSLResourceBindingAttr>(),
-                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
-  return initVarDeclWithCtor(SemaRef, VD, Args);
+  assert(VD->getType()->isHLSLResourceRecord() &&
+         "expected resource record type");
+
+  ASTContext &AST = SemaRef.getASTContext();
+  uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
+  uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
+
+  // Gather resource binding information from attributes.
+  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+  HLSLVkBindingAttr *VkBinding = VD->getAttr<HLSLVkBindingAttr>();
+  std::optional<uint32_t> RegisterSlot;
+  uint32_t SpaceNo = 0;
+  if (VkBinding) {
+    RegisterSlot = VkBinding->getBinding();
+    SpaceNo = VkBinding->getSet();
+  } else if (RBA) {
+    if (RBA->hasRegisterSlot())
+      RegisterSlot = RBA->getSlotNumber();
+    SpaceNo = RBA->getSpaceNumber();
+  }
+
+  // Find correct initialization method and create its arguments.
+  QualType ResourceTy = VD->getType();
+  CXXRecordDecl *ResourceDecl = ResourceTy->getAsCXXRecordDecl();
+  CXXMethodDecl *CreateMethod = nullptr;
+  llvm::SmallVector<Expr *> Args;
+
+  if (RegisterSlot.has_value()) {
+    // The resource has explicit binding.
+    CreateMethod = lookupMethod(SemaRef, ResourceDecl, "__createFromBinding",
+                                VD->getLocation());
+    IntegerLiteral *RegSlot = IntegerLiteral::Create(
+        AST, llvm::APInt(UIntTySize, RegisterSlot.value()), AST.UnsignedIntTy,
+        SourceLocation());
+    Args.push_back(RegSlot);
+  } else {
+    // The resource has implicit binding.
+    CreateMethod =
+        lookupMethod(SemaRef, ResourceDecl, "__createFromImplicitBinding",
+                     VD->getLocation());
+    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
+                           ? RBA->getImplicitBindingOrderID()
+                           : getNextImplicitBindingOrderID();
+    IntegerLiteral *OrderId =
+        IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, OrderID),
+                               AST.UnsignedIntTy, SourceLocation());
+    Args.push_back(OrderId);
+  }
+
+  if (!CreateMethod)
+    // This can happen if someone creates a struct that looks like an HLSL
+    // resource record but does not have the required static create method.
+    // No binding will be generated for it.
+    return false;
+
+  IntegerLiteral *Space =
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
+                             AST.UnsignedIntTy, SourceLocation());
+  Args.push_back(Space);
+
+  IntegerLiteral *RangeSize = IntegerLiteral::Create(
+      AST, llvm::APInt(IntTySize, 1), AST.IntTy, SourceLocation());
+  Args.push_back(RangeSize);
+
+  IntegerLiteral *Index = IntegerLiteral::Create(
+      AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy, SourceLocation());
+  Args.push_back(Index);
+
+  StringRef VarName = VD->getName();
+  StringLiteral *Name = StringLiteral::Create(
+      AST, VarName, StringLiteralKind::Ordinary, false,
+      AST.getStringLiteralArrayType(AST.CharTy.withConst(), VarName.size()),
+      SourceLocation());
+  ImplicitCastExpr *NameCast = ImplicitCastExpr::Create(
+      AST, AST.getPointerType(AST.CharTy.withConst()), CK_ArrayToPointerDecay,
+      Name, nullptr, VK_PRValue, FPOptionsOverride());
+  Args.push_back(NameCast);
+
+  // Make sure the create method template is instantiated and emitted.
+  if (!CreateMethod->isDefined() && CreateMethod->isTemplateInstantiation())
+    SemaRef.InstantiateFunctionDefinition(VD->getLocation(), CreateMethod,
+                                          true);
+
+  // Create CallExpr with a call to the static method and set it as the decl
+  // initialization.
+  DeclRefExpr *DRE = DeclRefExpr::Create(
+      AST, NestedNameSpecifierLoc(), SourceLocation(), CreateMethod, false,
+      CreateMethod->getNameInfo(), CreateMethod->getType(), VK_PRValue);
+
+  auto *ImpCast = ImplicitCastExpr::Create(
+      AST, AST.getPointerType(CreateMethod->getType()),
+      CK_FunctionToPointerDecay, DRE, nullptr, VK_PRValue, FPOptionsOverride());
+
+  CallExpr *InitExpr =
+      CallExpr::Create(AST, ImpCast, Args, ResourceTy, VK_PRValue,
+                       SourceLocation(), FPOptionsOverride());
+  VD->setInit(InitExpr);
+  VD->setInitStyle(VarDecl::CallInit);
+  SemaRef.CheckCompleteVariableDeclaration(VD);
+  return true;
 }
 
 bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {

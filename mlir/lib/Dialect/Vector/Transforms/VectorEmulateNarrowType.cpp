@@ -96,7 +96,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
              maskOp)) {
     if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
-      maskOp = extractOp.getVector().getDefiningOp();
+      maskOp = extractOp.getSource().getDefiningOp();
       extractOps.push_back(extractOp);
     }
   }
