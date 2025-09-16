@@ -775,6 +775,10 @@ HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
                                            DeclaratorDecl *TargetDecl) {
   std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
 
+  if (dyn_cast<HLSLUserSemanticAttr>(Info.Semantic))
+    return createSemanticAttr<HLSLUserSemanticAttr>(*Info.Semantic, TargetDecl,
+                                                    Info.Index);
+
   if (SemanticName == "SV_DISPATCHTHREADID") {
     return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(
         *Info.Semantic, TargetDecl, Info.Index);
@@ -818,6 +822,33 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   checkSemanticAnnotation(FD, D, A);
   FD->addAttr(A);
+
+  unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
+  unsigned ElementCount = AT ? AT->getZExtSize() : 1;
+  ActiveSemantic.Index = Location + ElementCount;
+
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  for (unsigned I = 0; I < ElementCount; ++I) {
+    Twine VariableName = BaseName.concat(Twine(Location + I));
+
+    auto It = ActiveInputSemantics.find(FD);
+    if (It == ActiveInputSemantics.end()) {
+      llvm::StringSet<> Set({VariableName.str()});
+      auto Item = std::make_pair(FD, std::move(Set));
+      ActiveInputSemantics.insert(std::move(Item));
+      continue;
+    }
+
+    auto [_, Inserted] = ActiveInputSemantics[FD].insert(VariableName.str());
+    if (!Inserted) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
+          << VariableName.str();
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -947,6 +978,8 @@ void SemaHLSL::checkSemanticAnnotation(FunctionDecl *EntryPoint,
       return;
     DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Pixel});
     break;
+  case attr::HLSLUserSemantic:
+    return;
   default:
     llvm_unreachable("Unknown SemanticAttr");
   }
@@ -1766,7 +1799,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+    D->addAttr(createSemanticAttr<HLSLUserSemanticAttr>(AL, nullptr, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {

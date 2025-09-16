@@ -20,7 +20,9 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -243,6 +245,8 @@ private:
   uint32_t ImplicitBindingNextOrderID = 0;
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
+
+  llvm::DenseMap<FunctionDecl *, llvm::StringSet<>> ActiveInputSemantics;
 
   struct SemanticInfo {
     HLSLSemanticAttr *Semantic;
