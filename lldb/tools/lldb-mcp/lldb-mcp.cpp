@@ -68,9 +68,8 @@ FileSpec driverPath() {
   // to the current binary.
   std::string lldb_exe_path = host_env.lookup("LLDB_EXE_PATH");
   auto &fs = FileSystem::Instance();
-  if (fs.Exists(lldb_exe_path)) {
+  if (fs.Exists(lldb_exe_path)) 
     return FileSpec(lldb_exe_path);
-  }
 
   FileSpec lldb_exec_spec = lldb_private::HostInfo::GetProgramFileSpec();
   lldb_exec_spec.SetFilename("lldb");
