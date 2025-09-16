@@ -1082,18 +1082,6 @@ static std::string getDecoderString(const InstructionEncoding &Encoding) {
   return Decoder;
 }
 
-static unsigned getDecoderIndex(const InstructionEncoding &Encoding,
-                                DecoderTableInfo &TableInfo) {
-  // Using the full decoder string as the key value here is a bit
-  // heavyweight, but is effective. If the string comparisons become a
-  // performance concern, we can implement a mangling of the predicate
-  // data easily enough with a map back to the actual string. That's
-  // overkill for now, though.
-  std::string Decoder = getDecoderString(Encoding);
-  TableInfo.insertDecoder(Decoder);
-  return TableInfo.getDecoderIndex(Decoder);
-}
-
 static std::string getPredicateString(const InstructionEncoding &Encoding,
                                       StringRef TargetName) {
   std::vector<const Record *> Predicates =
@@ -1110,29 +1098,22 @@ static std::string getPredicateString(const InstructionEncoding &Encoding,
   return Predicate;
 }
 
-static unsigned getPredicateIndex(StringRef Predicate,
-                                  DecoderTableInfo &TableInfo) {
-  // Using the full predicate string as the key value here is a bit
-  // heavyweight, but is effective. If the string comparisons become a
-  // performance concern, we can implement a mangling of the predicate
-  // data easily enough with a map back to the actual string. That's
-  // overkill for now, though.
-  TableInfo.insertPredicate(Predicate);
-  return TableInfo.getPredicateIndex(Predicate);
-}
-
 void DecoderTableBuilder::emitPredicateTableEntry(unsigned EncodingID) const {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   std::string Predicate = getPredicateString(Encoding, Target.getName());
   if (Predicate.empty())
     return;
 
-  // Figure out the index into the predicate table for the predicate just
-  // computed.
-  unsigned PIdx = getPredicateIndex(Predicate, TableInfo);
+  // Using the full predicate string as the key value here is a bit
+  // heavyweight, but is effective. If the string comparisons become a
+  // performance concern, we can implement a mangling of the predicate
+  // data easily enough with a map back to the actual string. That's
+  // overkill for now, though.
+  TableInfo.insertPredicate(Predicate);
+  unsigned PredicateIndex = TableInfo.getPredicateIndex(Predicate);
 
   TableInfo.Table.insertOpcode(OPC_CheckPredicate);
-  TableInfo.Table.insertULEB128(PIdx);
+  TableInfo.Table.insertULEB128(PredicateIndex);
 }
 
 void DecoderTableBuilder::emitSoftFailTableEntry(unsigned EncodingID) const {
@@ -1175,7 +1156,14 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   // Check for soft failure of the match.
   emitSoftFailTableEntry(EncodingID);
 
-  unsigned DIdx = getDecoderIndex(Encoding, TableInfo);
+  // Using the full decoder string as the key value here is a bit
+  // heavyweight, but is effective. If the string comparisons become a
+  // performance concern, we can implement a mangling of the predicate
+  // data easily enough with a map back to the actual string. That's
+  // overkill for now, though.
+  std::string Decoder = getDecoderString(Encoding);
+  TableInfo.insertDecoder(Decoder);
+  unsigned DecoderIndex = TableInfo.getDecoderIndex(Decoder);
 
   // Produce OPC_Decode or OPC_TryDecode opcode based on the information
   // whether the instruction decoder is complete or not. If it is complete
@@ -1191,7 +1179,7 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   TableInfo.Table.insertOpcode(DecoderOp);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Target.getInstrIntValue(InstDef));
-  TableInfo.Table.insertULEB128(DIdx);
+  TableInfo.Table.insertULEB128(DecoderIndex);
 }
 
 std::unique_ptr<Filter>
