@@ -9103,24 +9103,23 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
     return {};
 
   // Emit a library call.
-  auto GetEntry = [](Type *Ty, SDValue &SDV) {
-    TargetLowering::ArgListEntry E;
-    E.Ty = Ty;
-    E.Node = SDV;
-    return E;
-  };
 
   PointerType *PT = PointerType::getUnqual(*getContext());
-  TargetLowering::ArgListTy Args = {GetEntry(PT, Src)};
+  TargetLowering::ArgListTy Args = {{Src, PT}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
   //  TODO: propagate tail call flag for targets where that is safe. Note
   //  that it is not safe on AIX which is the only current target.
-  CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
-      getExternalSymbol(LibCallName, TLI->getProgramPointerTy(getDataLayout())),
-      std::move(Args));
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::STRLEN), CI->getType(),
+                    getExternalSymbol(
+                        LibCallName, TLI->getProgramPointerTy(getDataLayout())),
+                    std::move(Args))
+      .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
 }
