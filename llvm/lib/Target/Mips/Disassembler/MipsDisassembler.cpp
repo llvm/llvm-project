@@ -1003,7 +1003,7 @@ static DecodeStatus DecodeMem(MCInst &Inst, unsigned Insn, uint64_t Address,
   Reg = getReg(Decoder, Mips::GPR32RegClassID, Reg);
   Base = getReg(Decoder, Mips::GPR32RegClassID, Base);
 
-  if (Inst.getOpcode() == Mips::SC ||
+  if (Inst.getOpcode() == Mips::SC || Inst.getOpcode() == Mips::SC64 ||
       Inst.getOpcode() == Mips::SCD)
     Inst.addOperand(MCOperand::createReg(Reg));
 
