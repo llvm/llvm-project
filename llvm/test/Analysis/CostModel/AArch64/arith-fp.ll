@@ -9,12 +9,12 @@ define void @fadd() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fadd float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fadd <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fadd <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fadd <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fadd <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fadd double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fadd <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fadd <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fadd fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F129 = fadd <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fadd <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = fadd fp128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F129 = fadd <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fadd float undef, undef
@@ -34,17 +34,17 @@ define void @fadd() {
 
 define void @fadd_fp16() {
 ; CHECK-BASE-LABEL: 'fadd_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fadd half undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fadd <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fadd <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fadd <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %F16 = fadd half undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %V4F16 = fadd <4 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:9 SizeLat:5 for: %V8F16 = fadd <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:7 Lat:15 SizeLat:7 for: %V16F16 = fadd <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fadd_fp16'
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fadd half undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fadd <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fadd <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fadd <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fadd <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fadd half undef, undef
@@ -59,12 +59,12 @@ define void @fsub() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fsub float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fsub <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fsub <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fsub <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fsub <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fsub double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fsub <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fsub <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fsub fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F129 = fsub <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fsub <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = fsub fp128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F129 = fsub <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fsub float undef, undef
@@ -84,17 +84,17 @@ define void @fsub() {
 
 define void @fsub_fp16() {
 ; CHECK-BASE-LABEL: 'fsub_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fsub <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %F16 = fsub half undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %V4F16 = fsub <4 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:9 SizeLat:5 for: %V8F16 = fsub <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:7 Lat:15 SizeLat:7 for: %V16F16 = fsub <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fsub_fp16'
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fsub <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fsub <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fsub half undef, undef
@@ -109,12 +109,12 @@ define void @fneg_idiom() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fsub float -0.000000e+00, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fsub <2 x float> splat (float -0.000000e+00), undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fsub <4 x float> splat (float -0.000000e+00), undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fsub <8 x float> splat (float -0.000000e+00), undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fsub <8 x float> splat (float -0.000000e+00), undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fsub double -0.000000e+00, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fsub <2 x double> splat (double -0.000000e+00), undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fsub <4 x double> splat (double -0.000000e+00), undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fsub fp128 0xL00000000000000008000000000000000, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F129 = fsub <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fsub <4 x double> splat (double -0.000000e+00), undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = fsub fp128 0xL00000000000000008000000000000000, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F129 = fsub <2 x fp128> splat (fp128 0xL00000000000000008000000000000000), undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fsub float -0.0, undef
@@ -134,9 +134,9 @@ define void @fneg_idiom() {
 
 define void @fneg_idiom_fp16() {
 ; CHECK-BASE-LABEL: 'fneg_idiom_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fsub half 0xH8000, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fsub <4 x half> splat (half 0xH8000), undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fsub <8 x half> splat (half 0xH8000), undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %F16 = fsub half 0xH8000, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V4F16 = fsub <4 x half> splat (half 0xH8000), undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:8 SizeLat:4 for: %V8F16 = fsub <8 x half> splat (half 0xH8000), undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fneg_idiom_fp16'
@@ -156,12 +156,12 @@ define void @fneg() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fneg float undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fneg <2 x float> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fneg <4 x float> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fneg <8 x float> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fneg <8 x float> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fneg double undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fneg <2 x double> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fneg <4 x double> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fneg fp128 undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V2F129 = fneg <2 x fp128> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fneg <4 x double> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fneg fp128 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V2F129 = fneg <2 x fp128> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fneg float undef
@@ -185,7 +185,7 @@ define void @fneg_fp16() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16 = fneg <2 x half> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fneg <4 x half> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fneg <8 x half> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fneg <16 x half> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fneg <16 x half> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fneg half undef
@@ -198,24 +198,24 @@ define void @fneg_fp16() {
 
 define void @fmulfneg() {
 ; CHECK-LABEL: 'fmulfneg'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fneg float undef
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %F32 = fneg float undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32M = fmul float %F32, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fneg <2 x float> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32M = fmul <2 x float> %V2F32, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fneg <4 x float> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32M = fmul <4 x float> %V4F32, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fneg <8 x float> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32M = fmul <8 x float> %V8F32, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fneg double undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fneg <8 x float> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32M = fmul <8 x float> %V8F32, undef
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %F64 = fneg double undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64M = fmul double %F64, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fneg <2 x double> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64M = fmul <2 x double> %V2F64, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fneg <4 x double> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64M = fmul <4 x double> %V4F64, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fneg fp128 undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128M = fmul fp128 %F128, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V2F128 = fneg <2 x fp128> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F128M = fmul <2 x fp128> %V2F128, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fneg <4 x double> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64M = fmul <4 x double> %V4F64, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fneg fp128 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128M = fmul fp128 %F128, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V2F128 = fneg <2 x fp128> undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F128M = fmul <2 x fp128> %V2F128, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fneg float undef
@@ -245,19 +245,19 @@ define void @fmulfneg() {
 define void @fmulneg_fp16() {
 ; CHECK-BASE-LABEL: 'fmulneg_fp16'
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fneg half undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %F16M = fmul half %F16, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %F16M = fmul half %F16, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16 = fneg <2 x half> undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16M = fmul <2 x half> %V2F16, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %V2F16M = fmul <2 x half> %V2F16, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fneg <4 x half> undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16M = fmul <4 x half> %V4F16, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %V4F16M = fmul <4 x half> %V4F16, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fneg <8 x half> undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16M = fmul <8 x half> %V8F16, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fneg <16 x half> undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16M = fmul <16 x half> %V16F16, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:5 Lat:9 SizeLat:5 for: %V8F16M = fmul <8 x half> %V8F16, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fneg <16 x half> undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:7 Lat:15 SizeLat:7 for: %V16F16M = fmul <16 x half> %V16F16, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fmulneg_fp16'
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fneg half undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 0 for: %F16 = fneg half undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16M = fmul half %F16, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16 = fneg <2 x half> undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16M = fmul <2 x half> %V2F16, undef
@@ -265,8 +265,8 @@ define void @fmulneg_fp16() {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16M = fmul <4 x half> %V4F16, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fneg <8 x half> undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16M = fmul <8 x half> %V8F16, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fneg <16 x half> undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16M = fmul <16 x half> %V16F16, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fneg <16 x half> undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16M = fmul <16 x half> %V16F16, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fneg half undef
@@ -285,23 +285,23 @@ define void @fmulneg_fp16() {
 define void @fnegfmul() {
 ; CHECK-LABEL: 'fnegfmul'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32M = fmul float undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fneg float %F32M
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %F32 = fneg float %F32M
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32M = fmul <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fneg <2 x float> %V2F32M
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32M = fmul <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fneg <4 x float> %V4F32M
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32M = fmul <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fneg <8 x float> %V8F32M
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32M = fmul <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fneg <8 x float> %V8F32M
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64M = fmul double undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fneg double %F64M
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %F64 = fneg double %F64M
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64M = fmul <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fneg <2 x double> %V2F64M
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64M = fmul <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fneg <4 x double> %V4F64M
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128M = fmul fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fneg fp128 %F128M
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F128M = fmul <2 x fp128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V2F128 = fneg <2 x fp128> %V2F128M
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64M = fmul <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fneg <4 x double> %V4F64M
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128M = fmul fp128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fneg fp128 %F128M
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F128M = fmul <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V2F128 = fneg <2 x fp128> %V2F128M
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32M = fmul float undef, undef
@@ -330,29 +330,29 @@ define void @fnegfmul() {
 
 define void @fnegfmul_fp16() {
 ; CHECK-BASE-LABEL: 'fnegfmul_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %F16M = fmul half undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %F16M = fmul half undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fneg half %F16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16M = fmul <2 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %V2F16M = fmul <2 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16 = fneg <2 x half> %V2F16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16M = fmul <4 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %V4F16M = fmul <4 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fneg <4 x half> %V4F16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16M = fmul <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:5 Lat:9 SizeLat:5 for: %V8F16M = fmul <8 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fneg <8 x half> %V8F16M
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16M = fmul <16 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fneg <16 x half> %V16F16M
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:7 Lat:15 SizeLat:7 for: %V16F16M = fmul <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fneg <16 x half> %V16F16M
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fnegfmul_fp16'
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16M = fmul half undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fneg half %F16M
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 0 for: %F16 = fneg half %F16M
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16M = fmul <2 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V2F16 = fneg <2 x half> %V2F16M
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16M = fmul <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fneg <4 x half> %V4F16M
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16M = fmul <8 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fneg <8 x half> %V8F16M
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16M = fmul <16 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fneg <16 x half> %V16F16M
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16M = fmul <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fneg <16 x half> %V16F16M
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16M = fmul half undef, undef
@@ -373,12 +373,12 @@ define void @fmul() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = fmul float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = fmul <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = fmul <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = fmul <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = fmul <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = fmul double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = fmul <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = fmul <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %F128 = fmul fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:3 SizeLat:1 for: %V2F128 = fmul <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = fmul <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = fmul fp128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F128 = fmul <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fmul float undef, undef
@@ -398,17 +398,17 @@ define void @fmul() {
 
 define void @fmul_fp16() {
 ; CHECK-BASE-LABEL: 'fmul_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fmul half undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fmul <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fmul <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fmul <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %F16 = fmul half undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:6 SizeLat:4 for: %V4F16 = fmul <4 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:5 Lat:9 SizeLat:5 for: %V8F16 = fmul <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:7 Lat:15 SizeLat:7 for: %V16F16 = fmul <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fmul_fp16'
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = fmul half undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = fmul <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = fmul <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = fmul <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = fmul <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fmul half undef, undef
@@ -420,15 +420,15 @@ define void @fmul_fp16() {
 
 define void @fdiv() {
 ; CHECK-LABEL: 'fdiv'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %F32 = fdiv float undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V2F32 = fdiv <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V4F32 = fdiv <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8F32 = fdiv <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %F64 = fdiv double undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V2F64 = fdiv <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4F64 = fdiv <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %F128 = fdiv fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %V2F128 = fdiv <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %F32 = fdiv float undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V2F32 = fdiv <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V4F32 = fdiv <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:8 SizeLat:8 for: %V8F32 = fdiv <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %F64 = fdiv double undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V2F64 = fdiv <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:8 SizeLat:8 for: %V4F64 = fdiv <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = fdiv fp128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F128 = fdiv <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = fdiv float undef, undef
@@ -448,17 +448,17 @@ define void @fdiv() {
 
 define void @fdiv_fp16() {
 ; CHECK-BASE-LABEL: 'fdiv_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %F16 = fdiv half undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %V4F16 = fdiv <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %V8F16 = fdiv <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V16F16 = fdiv <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:7 for: %F16 = fdiv half undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:7 SizeLat:7 for: %V4F16 = fdiv <4 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:5 Lat:11 SizeLat:11 for: %V8F16 = fdiv <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:7 Lat:19 SizeLat:19 for: %V16F16 = fdiv <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fdiv_fp16'
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %F16 = fdiv half undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V4F16 = fdiv <4 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %V8F16 = fdiv <8 x half> undef, undef
-; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %V16F16 = fdiv <16 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %F16 = fdiv half undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V4F16 = fdiv <4 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %V8F16 = fdiv <8 x half> undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:8 SizeLat:8 for: %V16F16 = fdiv <16 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = fdiv half undef, undef
@@ -470,15 +470,15 @@ define void @fdiv_fp16() {
 
 define void @frem() {
 ; CHECK-LABEL: 'frem'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %F32 = frem float undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:10 SizeLat:10 for: %F32 = frem float undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V2F32 = frem <2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:4 Lat:4 SizeLat:4 for: %V4F32 = frem <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:104 CodeSize:4 Lat:4 SizeLat:4 for: %V8F32 = frem <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %F64 = frem double undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:10 SizeLat:10 for: %F64 = frem double undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:4 SizeLat:4 for: %V2F64 = frem <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:4 Lat:4 SizeLat:4 for: %V4F64 = frem <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %F128 = frem fp128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:4 Lat:4 SizeLat:4 for: %V2F128 = frem <2 x fp128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = frem fp128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:20 SizeLat:20 for: %V2F128 = frem <2 x fp128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = frem float undef, undef
@@ -498,14 +498,14 @@ define void @frem() {
 
 define void @frem_fp16() {
 ; CHECK-BASE-LABEL: 'frem_fp16'
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:4 Lat:4 SizeLat:4 for: %F16 = frem half undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:55 CodeSize:4 Lat:4 SizeLat:4 for: %V4F16 = frem <4 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:4 Lat:4 SizeLat:4 for: %V8F16 = frem <8 x half> undef, undef
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:220 CodeSize:4 Lat:4 SizeLat:4 for: %V16F16 = frem <16 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:7 Lat:13 SizeLat:13 for: %F16 = frem half undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:55 CodeSize:7 Lat:7 SizeLat:7 for: %V4F16 = frem <4 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:7 Lat:7 SizeLat:7 for: %V8F16 = frem <8 x half> undef, undef
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:220 CodeSize:7 Lat:7 SizeLat:7 for: %V16F16 = frem <16 x half> undef, undef
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'frem_fp16'
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %F16 = frem half undef, undef
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:10 SizeLat:10 for: %F16 = frem half undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:4 Lat:4 SizeLat:4 for: %V4F16 = frem <4 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:108 CodeSize:4 Lat:4 SizeLat:4 for: %V8F16 = frem <8 x half> undef, undef
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:216 CodeSize:4 Lat:4 SizeLat:4 for: %V16F16 = frem <16 x half> undef, undef
@@ -666,10 +666,10 @@ define void @fma() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = call float @llvm.fma.f32(float undef, float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = call double @llvm.fma.f64(double undef, double undef, double undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: %F128 = call fp128 @llvm.fma.f128(fp128 undef, fp128 undef, fp128 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:20 SizeLat:20 for: %V2F128 = call <2 x fp128> @llvm.fma.v2f128(<2 x fp128> undef, <2 x fp128> undef, <2 x fp128> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
@@ -701,7 +701,7 @@ define void @fma_fp16() {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = call half @llvm.fma.f16(half undef, half undef, half undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = call <8 x half> @llvm.fma.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = call half @llvm.fma.f16(half undef, half undef, half undef)
@@ -716,12 +716,12 @@ define void @fmuladd() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F32 = call float @llvm.fmuladd.f32(float undef, float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F32 = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V8F32 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V8F32 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F64 = call double @llvm.fmuladd.f64(double undef, double undef, double undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V4F64 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:6 SizeLat:2 for: %F128 = call fp128 @llvm.fmuladd.f128(fp128 undef, fp128 undef, fp128 undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:2 Lat:6 SizeLat:2 for: %V2F128 = call <2 x fp128> @llvm.fmuladd.v2f128(<2 x fp128> undef, <2 x fp128> undef, <2 x fp128> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V4F64 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:20 SizeLat:20 for: %F128 = call fp128 @llvm.fmuladd.f128(fp128 undef, fp128 undef, fp128 undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:2 Lat:40 SizeLat:40 for: %V2F128 = call <2 x fp128> @llvm.fmuladd.v2f128(<2 x fp128> undef, <2 x fp128> undef, <2 x fp128> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F32 = call float @llvm.fmuladd.f32(float undef, float undef, float undef)
@@ -742,16 +742,16 @@ define void @fmuladd() {
 define void @fmuladd_fp16() {
 ; CHECK-BASE-LABEL: 'fmuladd_fp16'
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 1 for: %F16 = call half @llvm.fmuladd.f16(half undef, half undef, half undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:2 Lat:6 SizeLat:2 for: %V4F16 = call <4 x half> @llvm.fmuladd.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:2 Lat:6 SizeLat:2 for: %V8F16 = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = call <16 x half> @llvm.fmuladd.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:8 Lat:12 SizeLat:8 for: %V4F16 = call <4 x half> @llvm.fmuladd.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:10 Lat:18 SizeLat:10 for: %V8F16 = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:14 Lat:30 SizeLat:14 for: %V16F16 = call <16 x half> @llvm.fmuladd.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fmuladd_fp16'
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %F16 = call half @llvm.fmuladd.f16(half undef, half undef, half undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V4F16 = call <4 x half> @llvm.fmuladd.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %V8F16 = call <8 x half> @llvm.fmuladd.v8f16(<8 x half> undef, <8 x half> undef, <8 x half> undef)
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %V16F16 = call <16 x half> @llvm.fmuladd.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:6 SizeLat:2 for: %V16F16 = call <16 x half> @llvm.fmuladd.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %F16 = call half @llvm.fmuladd.f32(half undef, half undef, half undef)

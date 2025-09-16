@@ -43,7 +43,7 @@ define <16 x i8> @t4(<16 x i8> %a, <16 x i8> %b)  {
 
 define <32 x i8> @t5(<32 x i8> %a, <32 x i8> %b)  {
 ; CHECK-LABEL: 't5'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %1 = mul <32 x i8> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %1 = mul <32 x i8> %a, %b
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %1
 ;
   %1 = mul <32 x i8> %a, %b
@@ -79,7 +79,7 @@ define <8 x i16> @t8(<8 x i16> %a, <8 x i16> %b)  {
 
 define <16 x i16> @t9(<16 x i16> %a, <16 x i16> %b)  {
 ; CHECK-LABEL: 't9'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %1 = mul <16 x i16> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %1 = mul <16 x i16> %a, %b
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %1
 ;
   %1 = mul <16 x i16> %a, %b
@@ -106,7 +106,7 @@ define <4 x i32> @t11(<4 x i32> %a, <4 x i32> %b)  {
 
 define <8 x i32> @t12(<8 x i32> %a, <8 x i32> %b)  {
 ; CHECK-LABEL: 't12'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %1 = mul <8 x i32> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %1 = mul <8 x i32> %a, %b
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %1
 ;
   %1 = mul <8 x i32> %a, %b
@@ -115,7 +115,7 @@ define <8 x i32> @t12(<8 x i32> %a, <8 x i32> %b)  {
 
 define <2 x i64> @t13(<2 x i64> %a, <2 x i64> %b)  {
 ; CHECK-LABEL: 't13'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %1 = mul nsw <2 x i64> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:14 SizeLat:14 for: %1 = mul nsw <2 x i64> %a, %b
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <2 x i64> %1
 ;
   %1 = mul nsw <2 x i64> %a, %b
@@ -124,7 +124,7 @@ define <2 x i64> @t13(<2 x i64> %a, <2 x i64> %b)  {
 
 define <4 x i64> @t14(<4 x i64> %a, <4 x i64> %b)  {
 ; CHECK-LABEL: 't14'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:1 SizeLat:1 for: %1 = mul nsw <4 x i64> %a, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:28 SizeLat:28 for: %1 = mul nsw <4 x i64> %a, %b
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i64> %1
 ;
   %1 = mul nsw <4 x i64> %a, %b
