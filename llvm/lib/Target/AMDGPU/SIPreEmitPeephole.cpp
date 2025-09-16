@@ -623,7 +623,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // def and uses. Conservatively ensures that we do not incorrectly
     // read/write registers.
     for (const MachineOperand &InstrMO : Instr.operands()) {
-      if (InstrMO.isReg() && !InstrMO.isDef()) {
+      if (InstrMO.isReg()) {
         for (unsigned i = 0; i < RegsOverlappedByMFMADef.size(); ++i) {
           if (TRI->regsOverlap(RegsOverlappedByMFMADef[i], InstrMO.getReg())) {
             if (isUnpackingSupportedInstr(Instr))
