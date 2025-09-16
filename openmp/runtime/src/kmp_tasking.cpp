@@ -1816,7 +1816,7 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
 
         __kmp_free(old_record);
 
-        for (kmp_int i = old_size; i < new_size; i++) {
+        for (kmp_uint i = old_size; i < new_size; i++) {
           kmp_int32 *successorsList = (kmp_int32 *)__kmp_allocate(
               __kmp_successors_size * sizeof(kmp_int32));
           new_record[i].task = nullptr;
