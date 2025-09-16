@@ -94,7 +94,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorStepLoweringPatterns(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
-    populateVectorFromElementsLoweringPatterns(patterns);
+    populateVectorFromElementsUnrollPatterns(patterns);
     populateVectorToElementsUnrollPatterns(patterns);
     if (armI8MM) {
       if (armNeon)
