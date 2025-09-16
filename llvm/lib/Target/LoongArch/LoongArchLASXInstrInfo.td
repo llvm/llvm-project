@@ -1389,6 +1389,14 @@ def : Pat<(xor (vt LASX256:$xj), (vt LASX256:$xk)),
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in
 def : Pat<(vnot (or (vt LASX256:$xj), (vt LASX256:$xk))),
           (XVNOR_V LASX256:$xj, LASX256:$xk)>;
+// XVANDN_V
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+def : Pat<(and (vt (vnot LASX256:$xj)), (vt LASX256:$xk)),
+          (XVANDN_V LASX256:$xj, LASX256:$xk)>;
+// XVORN_V
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in
+def : Pat<(or (vt LASX256:$xj), (vt (vnot LASX256:$xk))),
+          (XVORN_V LASX256:$xj, LASX256:$xk)>;
 
 // XVANDI_B
 def : Pat<(and (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),

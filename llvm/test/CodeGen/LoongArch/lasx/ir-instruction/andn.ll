@@ -7,8 +7,7 @@ define void @andn_v32i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -25,9 +24,7 @@ define void @andn_v16i16(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvrepli.b $xr2, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -44,9 +41,7 @@ define void @andn_v8i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvrepli.b $xr2, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -63,9 +58,7 @@ define void @andn_v4i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvrepli.b $xr2, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
