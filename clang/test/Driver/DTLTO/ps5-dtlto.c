@@ -1,5 +1,8 @@
 // REQUIRES: lld
 
+/// https://github.com/llvm/llvm-project/issues/159125.
+// XFAIL: llvm-driver
+
 /// Check DTLTO options are forwarded to the linker.
 
 /// Check that options are forwarded as expected with --thinlto-distributor=.
@@ -10,7 +13,7 @@
 
 // FORWARD: prospero-lld
 // FORWARD-SAME: "--thinlto-distributor=d.exe"
-// FORWARD-SAME: "--thinlto-remote-compiler={{[^"]+}}"
+// FORWARD-SAME: "--thinlto-remote-compiler={{.*}}clang{{[^\"]*}}"
 // FORWARD-SAME: "--thinlto-distributor-arg=a1"
 // FORWARD-SAME: "--thinlto-distributor-arg=a2"
 // FORWARD-SAME: "--thinlto-distributor-arg=a3"
