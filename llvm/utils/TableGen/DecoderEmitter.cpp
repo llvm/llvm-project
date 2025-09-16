@@ -1674,10 +1674,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
        << "      makeUp(insn, Len);";
   }
   OS << R"(
-      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
+      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm,
+                         DecodeComplete);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
-                   << ", using decoder " << DecodeIdx << ": "
-                   << (S ? "PASS, " : "FAIL, "));
+                        << ", using decoder " << DecodeIdx << ": "
+                        << (S ? "PASS, " : "FAIL, "));
 
       if (DecodeComplete) {
         LLVM_DEBUG(dbgs() << "decoding complete\n");
