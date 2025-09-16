@@ -56,7 +56,7 @@ static bool isDwarfSection(StringRef SectionName) {
 }
 
 template <typename ELFT> Error fixUp(StringRef Buffer, LinkGraph &LG) {
-
+  using SectionHeader = typename ELFT::Shdr;
   Error Err = Error::success();
 
   // TODO:replace debugObj
