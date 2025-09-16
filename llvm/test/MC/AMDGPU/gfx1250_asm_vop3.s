@@ -713,6 +713,9 @@ v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], 0xcf00
 v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 scale_sel:7
 // GFX1250: v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 scale_sel:7 ; encoding: [0x0a,0x38,0xab,0xd6,0x14,0x11,0x02,0x00]
 
+v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 scale_sel:8
+// GFX1250: v_cvt_scale_pk8_f16_bf8 v[10:13], v[20:21], v8 scale_sel:8 ; encoding: [0x0a,0x40,0xab,0xd6,0x14,0x11,0x02,0x00]
+
 v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8
 // GFX1250: v_cvt_scale_pk8_bf16_bf8 v[10:13], v[20:21], v8 ; encoding: [0x0a,0x00,0xac,0xd6,0x14,0x11,0x02,0x00]
 
@@ -757,6 +760,9 @@ v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], 0xcf00
 
 v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 scale_sel:7
 // GFX1250: v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 scale_sel:7 ; encoding: [0x0a,0x38,0xad,0xd6,0x14,0x11,0x02,0x00]
+
+v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 scale_sel:8
+// GFX1250: v_cvt_scale_pk8_f32_bf8 v[10:17], v[20:21], v8 scale_sel:8 ; encoding: [0x0a,0x40,0xad,0xd6,0x14,0x11,0x02,0x00]
 
 v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8
 // GFX1250: v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8 ; encoding: [0x0a,0x00,0xa1,0xd6,0x14,0x11,0x02,0x00]
