@@ -31,9 +31,14 @@ static inline void move_ins_before_phis(MachineInstr &MI) {
   MachineFunction& MF = *MBB.getParent();
   auto& TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
 
-  if (MBB.size() == 0 ||
-      MBB.front().getOpcode() !=
-          AMDGPU::PHI /*do we need to check for debug instructions here?*/) {
+  bool phi_seen = false;
+  for (MachineInstr &maybe_phi : MBB)
+    if (maybe_phi.getOpcode() == AMDGPU::PHI) {
+      phi_seen = true;
+      break;
+    }
+  
+  if (!phi_seen) {
     MI.removeFromParent();
     MBB.insert(MBB.begin(), &MI);
   } else {
