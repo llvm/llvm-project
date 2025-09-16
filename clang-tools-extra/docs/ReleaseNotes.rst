@@ -176,12 +176,6 @@ New checks
   Finds uses of ``long double`` and suggests against their use due to lack of
   portability.
 
-- New :doc:`performance-lost-std-move
-  <clang-tidy/checks/performance/lost-std-move>` check.
-
-  Warns if copy constructor is used instead of ``std::move()`` and suggests a fix.
-  It honours cycles, lambdas, and unspecified call order in compound expressions.
-
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
@@ -199,6 +193,11 @@ New checks
 
   Finds virtual function overrides with different visibility than the function
   in the base class.
+
+- New :doc:`performance-lost-std-move
+  <clang-tidy/checks/performance/lost-std-move>` check.
+
+  Warns if copy constructor is used instead of ``std::move()`` and suggests a fix.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
