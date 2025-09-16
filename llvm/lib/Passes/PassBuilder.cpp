@@ -480,6 +480,26 @@ public:
 
 } // namespace
 
+static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  return StringSwitch<std::optional<OptimizationLevel>>(S)
+      .Case("O0", OptimizationLevel::O0)
+      .Case("O1", OptimizationLevel::O1)
+      .Case("O2", OptimizationLevel::O2)
+      .Case("O3", OptimizationLevel::O3)
+      .Case("Os", OptimizationLevel::Os)
+      .Case("Oz", OptimizationLevel::Oz)
+      .Default(std::nullopt);
+}
+
+static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
+  std::optional<OptimizationLevel> OptLevel = parseOptLevel(S);
+  if (OptLevel)
+    return *OptLevel;
+  return make_error<StringError>(
+      formatv("invalid optimization level '{}'", S).str(),
+      inconvertibleErrorCode());
+}
+
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
@@ -529,31 +549,18 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #include "llvm/Passes/MachinePassRegistry.def"
     });
   }
-  auto parseLevelParam = [](StringRef P) -> Expected<OptimizationLevel> {
-    auto OptLevel = llvm::StringSwitch<std::optional<OptimizationLevel>>(P)
-                        .Case("O0", OptimizationLevel::O0)
-                        .Case("O1", OptimizationLevel::O1)
-                        .Case("O2", OptimizationLevel::O2)
-                        .Case("O3", OptimizationLevel::O3)
-                        .Case("Os", OptimizationLevel::Os)
-                        .Case("Oz", OptimizationLevel::Oz)
-                        .Default(std::nullopt);
-    if (!OptLevel)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "invalid optimization level '%s'",
-                                     P.str().c_str());
-    return *OptLevel;
-  };
 
   // Module-level callbacks without LTO phase
   registerPipelineParsingCallback(
-      [this, parseLevelParam](StringRef Name, ModulePassManager &PM,
-                              ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef Name, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
 #define MODULE_CALLBACK(NAME, INVOKE)                                          \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
-    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);    \
-    if (!L)                                                                    \
-      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);  \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
     INVOKE(PM, L.get());                                                       \
     return true;                                                               \
   }
@@ -564,13 +571,15 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 
   // Module-level callbacks with LTO phase (use Phase::None for string API)
   registerPipelineParsingCallback(
-      [this, parseLevelParam](StringRef Name, ModulePassManager &PM,
-                              ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef Name, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
 #define MODULE_LTO_CALLBACK(NAME, INVOKE)                                      \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
-    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);    \
-    if (!L)                                                                    \
-      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);  \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
     INVOKE(PM, L.get(), ThinOrFullLTOPhase::None);                             \
     return true;                                                               \
   }
@@ -581,13 +590,15 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 
   // Function-level callbacks
   registerPipelineParsingCallback(
-      [this, parseLevelParam](StringRef Name, FunctionPassManager &PM,
-                              ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef Name, FunctionPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
 #define FUNCTION_CALLBACK(NAME, INVOKE)                                        \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
-    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);    \
-    if (!L)                                                                    \
-      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);  \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
     INVOKE(PM, L.get());                                                       \
     return true;                                                               \
   }
@@ -598,13 +609,15 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 
   // CGSCC-level callbacks
   registerPipelineParsingCallback(
-      [this, parseLevelParam](StringRef Name, CGSCCPassManager &PM,
-                              ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef Name, CGSCCPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
 #define CGSCC_CALLBACK(NAME, INVOKE)                                           \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
-    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);    \
-    if (!L)                                                                    \
-      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);  \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
     INVOKE(PM, L.get());                                                       \
     return true;                                                               \
   }
@@ -615,13 +628,15 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 
   // Loop-level callbacks
   registerPipelineParsingCallback(
-      [this, parseLevelParam](StringRef Name, LoopPassManager &PM,
-                              ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef Name, LoopPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
 #define LOOP_CALLBACK(NAME, INVOKE)                                            \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
-    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);    \
-    if (!L)                                                                    \
-      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);  \
+    auto L = PassBuilder::parsePassParameters(parseOptLevelParam, Name, NAME); \
+    if (!L) {                                                                  \
+      errs() << NAME ": " << toString(L.takeError()) << '\n';                  \
+      return false;                                                            \
+    }                                                                          \
     INVOKE(PM, L.get());                                                       \
     return true;                                                               \
   }
@@ -714,25 +729,6 @@ static std::optional<int> parseDevirtPassName(StringRef Name) {
   return Count;
 }
 
-static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
-  return StringSwitch<std::optional<OptimizationLevel>>(S)
-      .Case("O0", OptimizationLevel::O0)
-      .Case("O1", OptimizationLevel::O1)
-      .Case("O2", OptimizationLevel::O2)
-      .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
-      .Default(std::nullopt);
-}
-
-static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
-  std::optional<OptimizationLevel> OptLevel = parseOptLevel(S);
-  if (OptLevel)
-    return *OptLevel;
-  return make_error<StringError>(
-      formatv("invalid optimization level '{}'", S).str(),
-      inconvertibleErrorCode());
-}
 
 Expected<bool> PassBuilder::parseSinglePassOption(StringRef Params,
                                                   StringRef OptionName,
