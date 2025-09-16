@@ -34,6 +34,15 @@ __declspec(dllimport) void *__cdecl __asan_recalloc(void *const ptr,
                                                     const size_t nmemb,
                                                     const size_t size);
 
+__declspec(dllimport) void *__cdecl __asan_recalloc(void *const ptr,
+                                                    const size_t nmemb,
+                                                    const size_t size);
+__declspec(dllexport) void *__cdecl __asan_aligned_malloc(
+    const size_t size, const size_t alignment);
+
+__declspec(dllexport) void *__cdecl __asan_aligned_realloc(
+    void *const ptr, const size_t size, const size_t alignment);
+
 // Avoid tailcall optimization to preserve stack frames.
 #  pragma optimize("", off)
 
@@ -139,6 +148,70 @@ STATIC_MALLOC_INTERFACE void *_expand(void *, size_t) {
 STATIC_MALLOC_INTERFACE void *_expand_dbg(void *, size_t, int, const char *,
                                           int) {
   return nullptr;
+}
+
+// _aligned_malloc
+
+STATIC_MALLOC_INTERFACE void *_aligned_malloc(size_t size, size_t alignment) {
+  return __asan_aligned_malloc(size, alignment);
+}
+
+STATIC_MALLOC_INTERFACE void *_aligned_malloc_dbg(size_t size,
+                                                  size_t alignment) {
+  return _aligned_malloc(size, alignment);
+}
+
+// _aligned_realloc
+
+STATIC_MALLOC_INTERFACE void *_aligned_realloc(void *p, size_t size,
+                                               size_t alignment) {
+  return __asan_aligned_realloc(p, size, alignment);
+}
+
+STATIC_MALLOC_INTERFACE void *_aligned_realloc_dbg(void *p, size_t size,
+                                                   size_t alignment) {
+  return _aligned_realloc(p, size, alignment);
+}
+
+// _aligned_offset_malloc
+
+STATIC_MALLOC_INTERFACE void *_aligned_offset_malloc(size_t size,
+                                                     size_t alignment,
+                                                     size_t offset) {
+  const size_t total = offset + size;
+  if (total && (total - offset) != size)
+    return nullptr;
+  void *p = _aligned_malloc(total, alignment);
+  if (p)
+    return ((char *)p) + offset;
+
+  return nullptr;
+}
+
+STATIC_MALLOC_INTERFACE void *_aligned_offset_malloc_dbg(size_t size,
+                                                         size_t alignment,
+                                                         size_t offset) {
+  return _aligned_offset_malloc(size, alignment, offset);
+}
+
+// _aligned_free
+
+STATIC_MALLOC_INTERFACE void _aligned_free(void *p) {
+  void *b = const_cast<void *>(
+      __sanitizer_get_allocated_begin(const_cast<void *>(p)));
+  __asan_free(b);
+}
+
+STATIC_MALLOC_INTERFACE void _aligned_free_dbg(void *p) { _aligned_free(p); }
+
+// _aligned_msize
+
+STATIC_MALLOC_INTERFACE size_t _aligned_msize(void *p) {
+  return __asan_msize(p);
+}
+
+STATIC_MALLOC_INTERFACE size_t _aligned_msize_dbg(void *p) {
+  return __asan_msize(p);
 }
 
 // We need to provide symbols for all the debug CRT functions if we decide to
