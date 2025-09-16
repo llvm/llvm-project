@@ -134,13 +134,13 @@ enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
 
 constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
                                               "a negative or overflowing"};
-StringRef asAdjective(BadOffsetKind Problem) {
+static StringRef asAdjective(BadOffsetKind Problem) {
   return Adjectives[static_cast<int>(Problem)];
 }
 
 constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
                                                 "around"};
-StringRef asPreposition(BadOffsetKind Problem) {
+static StringRef asPreposition(BadOffsetKind Problem) {
   return Prepositions[static_cast<int>(Problem)];
 }
 
