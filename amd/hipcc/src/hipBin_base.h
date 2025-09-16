@@ -391,8 +391,9 @@ void HipBinBase::getSystemInfo() const {
     cout << endl << "== Windows Display Drivers" << endl;
     cout << "Hostname      :";
     system("hostname");
-    system("wmic path win32_VideoController get AdapterCompatibility,"
-    "InstalledDisplayDrivers,Name | findstr /B /C:\"Advanced Micro Devices\"");
+    system("powershell -c \"Get-CIMInstance -query 'SELECT * FROM win32_VideoController' | "
+           "ft AdapterCompatibility,InstalledDisplayDrivers,Name | "
+           "Out-String -Width 1000 | findstr /B /C:'Advanced Micro Devices'\"");
   } else {
     assert(os == lnx);
     cout << endl << "== Linux Kernel" << endl;
