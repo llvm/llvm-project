@@ -3156,6 +3156,9 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   const auto &SrcPtr = S.Stk.pop<Pointer>();
   const auto &DestPtr = S.Stk.peek<Pointer>();
 
+  if (SrcPtr.isDummy() || DestPtr.isDummy())
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
@@ -3566,17 +3569,28 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
-                        uint32_t ResultBitWidth,
-                        const llvm::fltSemantics *Sem) {
+                        uint32_t ResultBitWidth, const llvm::fltSemantics *Sem,
+                        const Type *TargetType) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
   if (!CheckLoad(S, OpPC, FromPtr))
     return false;
 
   if constexpr (std::is_same_v<T, Pointer>) {
+    if (!TargetType->isNullPtrType()) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_bit_cast_invalid_type)
+          << /*IsToType=*/true << /*IsReference=*/false << 1 /*Pointer*/;
+      return false;
+    }
     // The only pointer type we can validly bitcast to is nullptr_t.
     S.Stk.push<Pointer>();
     return true;
+  } else if constexpr (std::is_same_v<T, MemberPointer>) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_bit_cast_invalid_type)
+        << /*IsToType=*/true << /*IsReference=*/false << 2 /*MemberPointer*/;
+    return false;
   } else {
 
     size_t BuffSize = ResultBitWidth / 8;
