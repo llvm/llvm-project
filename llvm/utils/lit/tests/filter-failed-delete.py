@@ -7,7 +7,7 @@
 # RUN: not %{lit} --filter-failed %{inputs}/filter-failed-delete > %s.rerun.log
 # RUN: mv %{inputs}/filter-failed-delete/fail.txt.bk %{inputs}/filter-failed-delete/fail.txt
 #
-# RUN: cat %s.rerun.log | FileCheck %s --check-prefix=CHECK-RERUN
+# RUN: FileCheck %s --input-file=%s.rerun.log --check-prefix=CHECK-RERUN
 
 # CHECK-FIRST: FAIL: filter-failed-delete :: fail.txt
 

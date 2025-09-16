@@ -9,8 +9,8 @@
 # RUN: not %{lit} --filter-failed %{inputs}/filter-failed-rerun > %s.rerun-2.log
 # RUN: mv %{inputs}/filter-failed-rerun/fail.txt.bk %{inputs}/filter-failed-rerun/fail.txt
 #
-# RUN: cat %s.rerun-1.log | FileCheck %s --check-prefix=CHECK-RERUN1
-# RUN: cat %s.rerun-2.log | FileCheck %s --check-prefix=CHECK-RERUN2
+# RUN: FileCheck %s --input-file=%s.rerun-1.log --check-prefix=CHECK-RERUN1
+# RUN: FileCheck %s --input-file=%s.rerun-2.log --check-prefix=CHECK-RERUN2
 
 # CHECK-FIRST: FAIL: filter-failed-rerun :: fail.txt
 
