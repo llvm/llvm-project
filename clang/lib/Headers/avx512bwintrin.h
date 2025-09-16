@@ -1459,8 +1459,9 @@ _mm512_maskz_slli_epi16(__mmask32 __U, __m512i __A, unsigned int __B) {
                                          (__v32hi)_mm512_setzero_si512());
 }
 
-#define _mm512_bslli_epi128(a, imm) \
-  ((__m512i)__builtin_ia32_pslldqi512_byteshift((__v8di)(__m512i)(a), (int)(imm)))
+#define _mm512_bslli_epi128(a, imm)                                            \
+  ((__m512i)__builtin_ia32_pslldqi512_byteshift((__v64qi)(__m512i)(a),         \
+                                                (int)(imm)))
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_srlv_epi16(__m512i __A, __m512i __B)
@@ -1590,8 +1591,9 @@ _mm512_maskz_srli_epi16(__mmask32 __U, __m512i __A, int __B) {
                                          (__v32hi)_mm512_setzero_si512());
 }
 
-#define _mm512_bsrli_epi128(a, imm) \
-  ((__m512i)__builtin_ia32_psrldqi512_byteshift((__v8di)(__m512i)(a), (int)(imm)))
+#define _mm512_bsrli_epi128(a, imm)                                            \
+  ((__m512i)__builtin_ia32_psrldqi512_byteshift((__v64qi)(__m512i)(a),         \
+                                                (int)(imm)))
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_mask_mov_epi16 (__m512i __W, __mmask32 __U, __m512i __A)
