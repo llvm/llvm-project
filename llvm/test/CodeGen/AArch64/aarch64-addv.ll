@@ -501,8 +501,7 @@ define i16 @addv_zero_lanes_v4i16(ptr %arr)  {
 ;
 ; CHECK-GI-LABEL: addv_zero_lanes_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldrb w8, [x0]
-; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ldr b0, [x0]
 ; CHECK-GI-NEXT:    addv h0, v0.4h
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -521,8 +520,7 @@ define i8 @addv_zero_lanes_v8i8(ptr %arr)  {
 ;
 ; CHECK-GI-LABEL: addv_zero_lanes_v8i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldrb w8, [x0]
-; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ldr b0, [x0]
 ; CHECK-GI-NEXT:    addv b0, v0.8b
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -633,8 +631,7 @@ define i32 @addv_zero_lanes_v2i32(ptr %arr)  {
 ;
 ; CHECK-GI-LABEL: addv_zero_lanes_v2i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr w8, [x0]
-; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ldr s0, [x0]
 ; CHECK-GI-NEXT:    addp v0.2s, v0.2s, v0.2s
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret

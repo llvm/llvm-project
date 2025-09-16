@@ -201,8 +201,7 @@ define void @ctpop_i32() {
 ; CHECK-SDAG:       // %bb.0:
 ; CHECK-SDAG-NEXT:    adrp x8, :got:var32
 ; CHECK-SDAG-NEXT:    ldr x8, [x8, :got_lo12:var32]
-; CHECK-SDAG-NEXT:    ldr w9, [x8]
-; CHECK-SDAG-NEXT:    fmov d0, x9
+; CHECK-SDAG-NEXT:    ldr s0, [x8]
 ; CHECK-SDAG-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SDAG-NEXT:    addv b0, v0.8b
 ; CHECK-SDAG-NEXT:    str s0, [x8]
@@ -212,8 +211,7 @@ define void @ctpop_i32() {
 ; CHECK-GISEL:       // %bb.0:
 ; CHECK-GISEL-NEXT:    adrp x8, :got:var32
 ; CHECK-GISEL-NEXT:    ldr x8, [x8, :got_lo12:var32]
-; CHECK-GISEL-NEXT:    ldr w9, [x8]
-; CHECK-GISEL-NEXT:    fmov d0, x9
+; CHECK-GISEL-NEXT:    ldr s0, [x8]
 ; CHECK-GISEL-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GISEL-NEXT:    uaddlv h0, v0.8b
 ; CHECK-GISEL-NEXT:    str s0, [x8]
