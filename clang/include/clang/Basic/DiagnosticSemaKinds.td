@@ -3976,6 +3976,9 @@ def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
   " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def err_sme_streaming_transition_vl_mismatch : Error<
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is invalid because the non-streaming vector length (%1) and streaming vector length (%2) differ">;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
   " behaviour when the streaming and non-streaming vector lengths are different at runtime">,

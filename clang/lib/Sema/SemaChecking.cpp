@@ -3756,6 +3756,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // If the call requires a streaming-mode change and has scalable vector
     // arguments or return values, then warn the user that the streaming and
     // non-streaming vector lengths may be different.
+    // When both streaming and non-streaming vector lengths are defined and
+    // mismatched, produce an error.
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
     if (CallerFD && (!FD || !FD->getBuiltinID()) &&
         (IsScalableArg || IsScalableRet)) {
@@ -3768,12 +3770,26 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (!IsCalleeStreamingCompatible &&
           (CallerFnType == SemaARM::ArmStreamingCompatible ||
            ((CallerFnType == SemaARM::ArmStreaming) ^ IsCalleeStreaming))) {
-        if (IsScalableArg)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/true;
-        if (IsScalableRet)
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-              << /*IsArg=*/false;
+        const LangOptions &LO = getLangOpts();
+        auto VL = LO.VScaleMin * 128;
+        auto SVL = LO.VScaleStreamingMin * 128;
+
+        if (IsScalableArg) {
+          if (VL && SVL && VL != SVL)
+            Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
+                << /*IsArg=*/true << VL << SVL;
+          else
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+                << /*IsArg=*/true;
+        }
+        if (IsScalableRet) {
+          if (VL && SVL && VL != SVL)
+            Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
+                << /*IsArg=*/false << VL << SVL;
+          else
+            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+                << /*IsArg=*/false;
+        }
       }
     }
 
