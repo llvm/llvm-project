@@ -13,6 +13,7 @@
 
 #include "OpGenHelpers.h"
 
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringSet.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <regex>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -61,10 +63,11 @@ from ._{0}_ops_gen import _Dialect
 
 /// Template for operation class:
 ///   {0} is the Python class name;
-///   {1} is the operation name.
+///   {1} is the operation name;
+///   {2} is the docstring for this operation.
 constexpr const char *opClassTemplate = R"Py(
 @_ods_cext.register_operation(_Dialect)
-class {0}(_ods_ir.OpView):
+class {0}(_ods_ir.OpView):{2}
   OPERATION_NAME = "{1}"
 )Py";
 
@@ -1031,9 +1034,31 @@ static void emitValueBuilder(const Operator &op,
   }
 }
 
+/// Retrieve the description of the given op and generate a docstring for it.
+static std::string makeDocStringForOp(const Operator &op) {
+  if (!op.hasDescription())
+    return "";
+
+  auto desc = op.getDescription().rtrim(" \t").str();
+  // Replace all """ with \"\"\" to avoid early termination of the literal.
+  desc = std::regex_replace(desc, std::regex(R"(""")"), R"(\"\"\")");
+
+  std::string docString = "\n";
+  llvm::raw_string_ostream os(docString);
+  raw_indented_ostream identedOs(os);
+  os << R"(  r""")" << "\n";
+  identedOs.printReindented(desc, "  ");
+  if (!StringRef(desc).ends_with("\n"))
+    os << "\n";
+  os << R"(  """)" << "\n";
+
+  return docString;
+}
+
 /// Emits bindings for a specific Op to the given output stream.
 static void emitOpBindings(const Operator &op, raw_ostream &os) {
-  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName());
+  os << formatv(opClassTemplate, op.getCppClassName(), op.getOperationName(),
+                makeDocStringForOp(op));
 
   // Sized segments.
   if (op.getTrait(attrSizedTraitForKind("operand")) != nullptr) {

@@ -254,6 +254,34 @@ def DeriveResultTypesVariadicOp : TestOp<"derive_result_types_variadic_op", [Fir
 // CHECK:   op = DeriveResultTypesVariadicOp(res=res, _gen_res_1=_gen_res_1, type_=type_, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
+
+// CHECK: class DescriptionOp(_ods_ir.OpView):
+// CHECK:   r"""
+// CHECK:   This is a long description.
+// CHECK:   It has multiple lines.
+// CHECK:   A code block (to test the indent).
+// CHECK:   ```mlir
+// CHECK:   test.loop {
+// CHECK:     test.yield
+// CHECK:   }
+// CHECK:   ```
+// CHECK:   Add \"\"\" will not terminate the description.
+// CHECK:   """
+def DescriptionOp : TestOp<"description"> {
+  let description = [{
+    This is a long description.
+    It has multiple lines.
+
+    A code block (to test the indent).
+    ```mlir
+    test.loop {
+      test.yield
+    }
+    ```
+    Add """ will not terminate the description.
+  }];
+}
+
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class EmptyOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.empty"
