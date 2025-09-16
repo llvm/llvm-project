@@ -24,7 +24,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-static constexpr float16 rsqrtf16(float16 x) {
+LIBC_INLINE static constexpr float16 rsqrtf16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 
@@ -56,9 +56,8 @@ static constexpr float16 rsqrtf16(float16 x) {
   }
 
   // x = +inf => rsqrt(x) = 0
-  if (LIBC_UNLIKELY(xbits.is_inf())) {
+  if (LIBC_UNLIKELY(xbits.is_inf()))
     return FPBits::zero().get_val();
-  }
 
   // TODO: add integer based implementation when LIBC_TARGET_CPU_HAS_FPU_FLOAT
   // is not defined
@@ -67,9 +66,9 @@ static constexpr float16 rsqrtf16(float16 x) {
   // Targeted post-corrections to ensure correct rounding in half for specific
   // mantissa patterns
   const uint16_t half_mantissa = x_abs & 0x3ff;
-  if (half_mantissa == 0x011F) {
+  if (LIBC_UNLIKELY(half_mantissa == 0x011F)) {
     result = fputil::multiply_add(result, 0x1.0p-21f, result);
-  } else if (half_mantissa == 0x0313) {
+  } else if (LIBC_UNLIKELY(half_mantissa == 0x0313)) {
     result = fputil::multiply_add(result, -0x1.0p-21f, result);
   }
 
