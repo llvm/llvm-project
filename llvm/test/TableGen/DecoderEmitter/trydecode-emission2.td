@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s
-// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-LARGE
+// RUN: llvm-tblgen -gen-disassembler -I %p/../../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../../include %s | FileCheck %s --check-prefix=CHECK-LARGE
 
 include "llvm/Target/Target.td"
 
