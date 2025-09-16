@@ -1350,7 +1350,7 @@ exit:
 define void @assume_align(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
 ; FNATTRS-LABEL: define void @assume_align
-; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR21:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[P:%.*]]) #[[ATTR21:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -1367,7 +1367,7 @@ define void @assume_align(ptr %p) {
 define void @assume_dereferenceable(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
 ; FNATTRS-LABEL: define void @assume_dereferenceable
-; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR21]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[P:%.*]]) #[[ATTR21]] {
 ; FNATTRS-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8) ]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -1384,7 +1384,7 @@ define void @assume_dereferenceable(ptr %p) {
 define void @assume_nonnull(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
 ; FNATTRS-LABEL: define void @assume_nonnull
-; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR21]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[P:%.*]]) #[[ATTR21]] {
 ; FNATTRS-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
 ; FNATTRS-NEXT:    ret void
 ;
