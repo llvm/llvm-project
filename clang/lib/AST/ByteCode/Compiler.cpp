@@ -2429,7 +2429,7 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   // and the RHS is our SubExpr.
   for (size_t I = 0; I != Size; ++I) {
     ArrayIndexScope<Emitter> IndexScope(this, I);
-    BlockScope<Emitter> BS(this);
+    LocalScope<Emitter> BS(this);
 
     if (!this->visitArrayElemInit(I, SubExpr, SubExprT))
       return false;
@@ -4140,7 +4140,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
-  BlockScope<Emitter> BS(this);
+  LocalScope<Emitter> BS(this);
   StmtExprScope<Emitter> SS(this);
 
   const CompoundStmt *CS = E->getSubStmt();
@@ -5111,7 +5111,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  BlockScope<Emitter> CallScope(this, ScopeKind::Call);
+  LocalScope<Emitter> CallScope(this, ScopeKind::Call);
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   OptPrimType T = classify(ReturnType);
@@ -5475,7 +5475,7 @@ template <class Emitter> bool Compiler<Emitter>::visitStmt(const Stmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
-  BlockScope<Emitter> Scope(this);
+  LocalScope<Emitter> Scope(this);
   for (const auto *InnerStmt : S->body())
     if (!visitStmt(InnerStmt))
       return false;
@@ -6211,7 +6211,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   InitLinkScope<Emitter> InitScope(this, InitLink::This());
   for (const auto *Init : Ctor->inits()) {
     // Scope needed for the initializers.
-    BlockScope<Emitter> Scope(this);
+    LocalScope<Emitter> Scope(this);
 
     const Expr *InitExpr = Init->getInit();
     if (const FieldDecl *Member = Init->getMember()) {

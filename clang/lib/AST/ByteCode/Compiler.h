@@ -624,14 +624,6 @@ public:
   UnsignedOrNone Idx = std::nullopt;
 };
 
-/// Scope for storage declared in a compound statement.
-// FIXME: Remove?
-template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
-public:
-  BlockScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : LocalScope<Emitter>(Ctx, Kind) {}
-};
-
 template <class Emitter> class ArrayIndexScope final {
 public:
   ArrayIndexScope(Compiler<Emitter> *Ctx, uint64_t Index) : Ctx(Ctx) {
