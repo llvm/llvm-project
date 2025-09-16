@@ -5,8 +5,7 @@
 define <32 x i8> @xvusub_b(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: xvusub_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvmax.bu $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvssub.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %ret = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   ret <32 x i8> %ret
@@ -15,8 +14,7 @@ define <32 x i8> @xvusub_b(<32 x i8> %a, <32 x i8> %b) {
 define <16 x i16> @xvusub_h(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: xvusub_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvmax.hu $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsub.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvssub.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %ret = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   ret <16 x i16> %ret
@@ -25,8 +23,7 @@ define <16 x i16> @xvusub_h(<16 x i16> %a, <16 x i16> %b) {
 define <8 x i32> @xvusub_w(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: xvusub_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvmax.wu $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsub.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvssub.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %ret = call <8 x i32> @llvm.usub.sat.v8i32(<8 x i32> %a, <8 x i32> %b)
   ret <8 x i32> %ret
@@ -35,8 +32,7 @@ define <8 x i32> @xvusub_w(<8 x i32> %a, <8 x i32> %b) {
 define <4 x i64> @xvusub_d(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: xvusub_d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvmax.du $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvsub.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvssub.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %ret = call <4 x i64> @llvm.usub.sat.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %ret
