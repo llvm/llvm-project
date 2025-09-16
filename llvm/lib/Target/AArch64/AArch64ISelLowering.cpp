@@ -18996,9 +18996,10 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
       return R;
   }
 
-  // uaddv(a) --> a if all lanes of a is known to zero except the 0th lane.
+  // uaddv(A) --> A if all lanes of A is known to zero except the 0th lane.
   MVT VT = N->getSimpleValueType(0);
-  APInt Mask = APInt::getAllOnes(VT.getVectorNumElements());
+  MVT OpVT = A.getSimpleValueType();
+  APInt Mask = APInt::getAllOnes(OpVT.getVectorNumElements());
   Mask.clearBit(0);
   KnownBits KnownLeadingLanes = DAG.computeKnownBits(A, Mask);
   if (KnownLeadingLanes.isZero())
