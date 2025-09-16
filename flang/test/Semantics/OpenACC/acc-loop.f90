@@ -340,10 +340,10 @@ program openacc_loop_validity
 
   !$acc kernels loop gang(dim:3)
   do i = 1, n
-    !ERROR: GANG clause is not allowed in the region of a loop with the GANG clause
+    !ERROR: Nested GANG loops are not allowed in the region of a KERNELS construct
     !$acc loop gang(dim:2)
     do j = 1, n
-      !ERROR: GANG clause is not allowed in the region of a loop with the GANG clause
+      !ERROR: Nested GANG loops are not allowed in the region of a KERNELS construct
       !$acc loop gang(dim:1) worker vector
       do k = 1, i
       end do
