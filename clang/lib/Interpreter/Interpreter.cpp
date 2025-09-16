@@ -146,20 +146,14 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 static llvm::Error HandleFrontendOptions(const CompilerInstance &CI) {
   const auto &FrontendOpts = CI.getFrontendOpts();
 
-  if (FrontendOpts.ShowHelp) {
-    driver::getDriverOptTable().printHelp(
-        llvm::outs(), "clang -cc1 [options] file...",
-        "LLVM 'Clang' Compiler: http://clang.llvm.org",
-        /*ShowHidden=*/false, /*ShowAllAliases=*/false,
-        llvm::opt::Visibility(driver::options::CC1Option));
-    return llvm::createStringError(llvm::errc::not_supported, "Help displayed");
-  }
-
-  if (FrontendOpts.ShowVersion) {
-    llvm::cl::PrintVersionMessage();
-    return llvm::createStringError(llvm::errc::not_supported,
-                                   "Version displayed");
-  }
+  // FIXME: Temporary duplication to honor -mllvm in clang-repl.
+  // clang/flang handle -mllvm in their tool-side ExecuteCompilerInvocation
+  // paths. clang-repl currently lacks that step, so we minimally parse
+  // FrontendOpts.LLVMArgs here to ensure -mllvm options take effect.
+  // Follow-up work:
+  // Move this -mllvm handling into a shared, driver/tool-level facility
+  // used by clang, clang-repl, flang, etc., and remove this library-side
+  // duplication.
 
   if (!FrontendOpts.LLVMArgs.empty()) {
     unsigned NumArgs = FrontendOpts.LLVMArgs.size();
@@ -167,7 +161,6 @@ static llvm::Error HandleFrontendOptions(const CompilerInstance &CI) {
     Args[0] = "clang-repl (LLVM option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i) {
       Args[i + 1] = FrontendOpts.LLVMArgs[i].c_str();
-      // remove the leading '-' from the option name
       if (Args[i + 1][0] == '-') {
         auto *option = static_cast<llvm::cl::opt<bool> *>(
             llvm::cl::getRegisteredOptions()[Args[i + 1] + 1]);
@@ -489,7 +482,7 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
       Config.OrcRuntimePath = *OrcRuntimePathOrErr;
     }
   }
-  
+
   llvm::Error Err = HandleFrontendOptions(*CI);
   if (Err) {
     return std::move(Err);
