@@ -810,17 +810,47 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ToElementsOp op,
+                                PatternRewriter &rewriter) const override {
+
+    TypedValue<VectorType> source = op.getSource();
+    FailureOr<SmallVector<Value>> result =
+        vector::unrollVectorValue(source, rewriter);
+    if (failed(result)) {
+      return failure();
+    }
+    SmallVector<Value> vectors = *result;
+
+    SmallVector<Value> results;
+    for (const Value &vector : vectors) {
+      auto subElements =
+          vector::ToElementsOp::create(rewriter, op.getLoc(), vector);
+      llvm::append_range(results, subElements.getResults());
+    }
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options,
     PatternBenefit benefit) {
-  populateVectorToElementsLoweringPatterns(patterns);
   populateVectorFromElementsLoweringPatterns(patterns);
+  patterns.add<UnrollToElements>(patterns.getContext(), benefit);
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
                UnrollStorePattern, UnrollBroadcastPattern>(
       patterns.getContext(), options, benefit);
+}
+
+void mlir::vector::populateVectorToElementsUnrollPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<UnrollToElements>(patterns.getContext(), benefit);
 }
