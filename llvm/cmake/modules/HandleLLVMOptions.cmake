@@ -889,6 +889,14 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     endif()
   endif()
 
+  # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
+  # to produce a large number of false positives.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
+      append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
+    endif()
+  endif()
+
   # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
   # remove std::move in code like
   # "A foo(ConvertibleToA a) { return std::move(a); }",
@@ -900,6 +908,22 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.1)
       append("-Wno-redundant-move" CMAKE_CXX_FLAGS)
       append("-Wno-pessimizing-move" CMAKE_CXX_FLAGS)
+    endif()
+  endif()
+
+  # Disable -Warray-bounds on GCC; this warning exists since a very long time,
+  # but since GCC 11, it produces a lot of very noisy, seemingly false positive
+  # warnings (potentially originating in libstdc++).
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    append("-Wno-array-bounds" CMAKE_CXX_FLAGS)
+  endif()
+
+  # Disable -Wstringop-overread on GCC; this warning produces a number of very
+  # noisy diagnostics when -Warray-bounds is disabled above; this option exists
+  # since GCC 11.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
+      append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
   endif()
 

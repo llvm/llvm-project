@@ -35,6 +35,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -57,26 +58,6 @@ template <typename T> struct make_const_ptr {
 template <typename T> struct make_const_ref {
   using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
-
-namespace detail {
-template <class, template <class...> class Op, class... Args> struct detector {
-  using value_t = std::false_type;
-};
-template <template <class...> class Op, class... Args>
-struct detector<std::void_t<Op<Args...>>, Op, Args...> {
-  using value_t = std::true_type;
-};
-} // end namespace detail
-
-/// Detects if a given trait holds for some set of arguments 'Args'.
-/// For example, the given trait could be used to detect if a given type
-/// has a copy assignment operator:
-///   template<class T>
-///   using has_copy_assign_t = decltype(std::declval<T&>()
-///                                                 = std::declval<const T&>());
-///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
-template <template <class...> class Op, class... Args>
-using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
 /// This class provides various trait information about a callable object.
 ///   * To access the number of arguments: Traits::num_args
@@ -133,15 +114,6 @@ using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 template <typename T, typename... Ts>
 using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 
-namespace detail {
-template <typename T, typename... Us> struct TypesAreDistinct;
-template <typename T, typename... Us>
-struct TypesAreDistinct
-    : std::integral_constant<bool, !is_one_of<T, Us...>::value &&
-                                       TypesAreDistinct<Us...>::value> {};
-template <typename T> struct TypesAreDistinct<T> : std::true_type {};
-} // namespace detail
-
 /// Determine if all types in Ts are distinct.
 ///
 /// Useful to statically assert when Ts is intended to describe a non-multi set
@@ -151,9 +123,10 @@ template <typename T> struct TypesAreDistinct<T> : std::true_type {};
 /// asserted once per instantiation of a type which requires it.
 template <typename... Ts> struct TypesAreDistinct;
 template <> struct TypesAreDistinct<> : std::true_type {};
-template <typename... Ts>
-struct TypesAreDistinct
-    : std::integral_constant<bool, detail::TypesAreDistinct<Ts...>::value> {};
+template <typename T, typename... Us>
+struct TypesAreDistinct<T, Us...>
+    : std::conjunction<std::negation<is_one_of<T, Us...>>,
+                       TypesAreDistinct<Us...>> {};
 
 /// Find the first index where a type appears in a list of types.
 ///
@@ -543,31 +516,22 @@ public:
 
 namespace detail {
 
-template <bool is_bidirectional> struct fwd_or_bidi_tag_impl {
-  using type = std::forward_iterator_tag;
-};
-
-template <> struct fwd_or_bidi_tag_impl<true> {
-  using type = std::bidirectional_iterator_tag;
-};
-
-/// Helper which sets its type member to forward_iterator_tag if the category
-/// of \p IterT does not derive from bidirectional_iterator_tag, and to
-/// bidirectional_iterator_tag otherwise.
-template <typename IterT> struct fwd_or_bidi_tag {
-  using type = typename fwd_or_bidi_tag_impl<std::is_base_of<
-      std::bidirectional_iterator_tag,
-      typename std::iterator_traits<IterT>::iterator_category>::value>::type;
-};
+/// A type alias which is std::bidirectional_iterator_tag if the category of
+/// \p IterT derives from it, and std::forward_iterator_tag otherwise.
+template <typename IterT>
+using fwd_or_bidi_tag = std::conditional_t<
+    std::is_base_of_v<std::bidirectional_iterator_tag,
+                      typename std::iterator_traits<IterT>::iterator_category>,
+    std::bidirectional_iterator_tag, std::forward_iterator_tag>;
 
 } // namespace detail
 
 /// Defines filter_iterator to a suitable specialization of
 /// filter_iterator_impl, based on the underlying iterator's category.
 template <typename WrappedIteratorT, typename PredicateT>
-using filter_iterator = filter_iterator_impl<
-    WrappedIteratorT, PredicateT,
-    typename detail::fwd_or_bidi_tag<WrappedIteratorT>::type>;
+using filter_iterator =
+    filter_iterator_impl<WrappedIteratorT, PredicateT,
+                         detail::fwd_or_bidi_tag<WrappedIteratorT>>;
 
 /// Convenience function that takes a range of elements and a predicate,
 /// and return a new filter_iterator range.
@@ -1729,6 +1693,12 @@ template <typename R> constexpr size_t range_size(R &&Range) {
     return adl_size(Range);
   else
     return static_cast<size_t>(std::distance(adl_begin(Range), adl_end(Range)));
+}
+
+/// Wrapper for std::accumulate.
+template <typename R, typename E> auto accumulate(R &&Range, E &&Init) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init));
 }
 
 /// Provide wrappers to std::for_each which take ranges instead of having to

@@ -241,9 +241,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID,
-                         DependentTemplateSpecializationType *>
-      DependentTemplateSpecializationTypes;
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
@@ -1904,7 +1901,8 @@ public:
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(
-      TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
+      ElaboratedTypeKeyword Keyword, TemplateName T,
+      ArrayRef<TemplateArgument> CanonicalArgs) const;
 
   QualType
   getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
@@ -1934,13 +1932,6 @@ public:
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier NNS,
                                 const IdentifierInfo *Name) const;
-
-  QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
-      ArrayRef<TemplateArgumentLoc> Args) const;
-  QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
-      ArrayRef<TemplateArgument> Args, bool IsCanonical = false) const;
 
   TemplateArgument getInjectedTemplateArg(NamedDecl *ParamDecl) const;
 
