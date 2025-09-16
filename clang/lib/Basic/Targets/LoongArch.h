@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_LOONGARCH_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_LOONGARCH_H
 
+#include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -159,6 +160,8 @@ public:
     IntMaxType = Int64Type = SignedLong;
     HasUnalignedAccess = true;
     resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
+    if (Triple.isUEFI())
+      resetDataLayout("e-m:w-p:64:64-i64:64-i128:128-n32:64-S128");
     // TODO: select appropriate ABI.
     setABI("lp64d");
   }
