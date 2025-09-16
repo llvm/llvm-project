@@ -38,13 +38,14 @@ allDeclRefExprsHonourLambda(const VarDecl &VarDecl, const Decl &Decl,
 
 static llvm::SmallPtrSet<const VarDecl *, 16>
 allVarDeclsExprs(const VarDecl &VarDecl, const Decl &Decl,
-                            ASTContext &Context) {
+                 ASTContext &Context) {
   auto Matches = match(
-      decl(forEachDescendant(
-          declRefExpr(to(varDecl(equalsNode(&VarDecl))),
-                      hasParent(decl(varDecl(hasType(qualType(referenceType()))).bind("varDecl"))),
-                      unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
-                          capturesVar(varDecl(equalsNode(&VarDecl))))))))))),
+      decl(forEachDescendant(declRefExpr(
+          to(varDecl(equalsNode(&VarDecl))),
+          hasParent(decl(
+              varDecl(hasType(qualType(referenceType()))).bind("varDecl"))),
+          unless(hasAncestor(lambdaExpr(hasAnyCapture(
+              lambdaCapture(capturesVar(varDecl(equalsNode(&VarDecl))))))))))),
       Decl, Context);
   llvm::SmallPtrSet<const class VarDecl *, 16> VarDecls;
   extractNodesByIdTo(Matches, "varDecl", VarDecls);
@@ -69,13 +70,12 @@ AST_MATCHER(CXXRecordDecl, hasTrivialMoveConstructor) {
   return Node.hasDefinition() && Node.hasTrivialMoveConstructor();
 }
 
-void LostStdMoveCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
+void LostStdMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
 }
 
 LostStdMoveCheck::LostStdMoveCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
+    : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", true)) {}
 
 void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
