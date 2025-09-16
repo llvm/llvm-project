@@ -5303,7 +5303,6 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   ConstantSDNode *SDConstant = dyn_cast<ConstantSDNode>(N);
   ConstantFPSDNode *SDFPConstant = dyn_cast<ConstantFPSDNode>(N);
   auto &ST = DAG.getSubtarget<GCNSubtarget>();
-  bool isInlineable = false;
   const auto *TII = ST.getInstrInfo();
 
   if (!ST.hasMovB64() || (!SDConstant && !SDFPConstant))
