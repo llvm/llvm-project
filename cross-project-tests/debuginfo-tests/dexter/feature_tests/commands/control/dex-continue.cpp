@@ -9,7 +9,7 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run -v --binary %t -- %s 2>&1 | FileCheck %s
+// RUN: %dexter_regression_test_run -v --binary %t -- %s 2>&1 | FileCheck --dump-input-context=999999999 %s
 
 int g = 0;
 int c(int) {
@@ -59,6 +59,6 @@ int main() {
 // CHECK-NEXT: .   .   .   [4, "c(int)", "{{.*}}dex-continue.cpp", 19, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
 // CHECK-NEXT: .   .   .   [5, "c(int)", "{{.*}}dex-continue.cpp", 20, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
 // CHECK-NEXT: .   [6, "a(int)", "{{.*}}dex-continue.cpp", 33, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
-// CHECK-NEXT: .   [8, "f()", "{{.*}}dex-continue.cpp", 38, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
-// CHECK-NEXT: .   [9, "f()", "{{.*}}dex-continue.cpp", 39, 1, "StopReason.STEP", "StepKind.VERTICAL_FORWARD", []]
+// CHECK-NEXT: .   [7, "f()", "{{.*}}dex-continue.cpp", 38, 3, "StopReason.BREAKPOINT", "StepKind.VERTICAL_FORWARD", []]
+// CHECK-NEXT: .   [8, "f()", "{{.*}}dex-continue.cpp", 39, 1, "StopReason.STEP", "StepKind.VERTICAL_FORWARD", []]
 // CHECK-NEXT: ## END (9 steps) ##

@@ -1344,6 +1344,16 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 
+// TODO: These cases should use default target alignment
+def VGPROp_16 : RegisterOperand<VGPR_16>;
+def VGPROp_32 : RegisterOperand<VGPR_32>;
+
+foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
+  def VGPROp_#size : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
+  def VGPROp_#size#_Align1 : RegisterOperand<!cast<RegisterClass>("VReg_"#size)>;
+  def VGPROp_#size#_Align2 : RegisterOperand<!cast<RegisterClass>("VReg_"#size#_Align2)>;
+}
+
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//
@@ -1423,11 +1433,14 @@ class AVLdStOperand<RegisterClass regClass>
   : AVOperand<regClass, "decodeAVLdSt">;
 
 def AVLdSt_32 : AVLdStOperand<AV_32>;
-def AVLdSt_64 : AVLdStOperand<AV_64>;
-def AVLdSt_96 : AVLdStOperand<AV_96>;
-def AVLdSt_128 : AVLdStOperand<AV_128>;
-def AVLdSt_160 : AVLdStOperand<AV_160>;
-def AVLdSt_1024 : AVLdStOperand<AV_1024>;
+
+foreach size = ["64", "96", "128", "160", "256", "1024" ] in {
+  // TODO: These cases should use target align variant
+  def AVLdSt_#size : AVLdStOperand<!cast<RegisterClass>("AV_"#size)>;
+
+  def AVLdSt_#size#_Align1 : AVLdStOperand<!cast<RegisterClass>("AV_"#size)>;
+  def AVLdSt_#size#_Align2 : AVLdStOperand<!cast<RegisterClass>("AV_"#size#_Align2)>;
+}
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant
@@ -1446,3 +1459,59 @@ def AISrc_512_f32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_FP32">;
 def AISrc_512_b32 : SrcRegOrImmA9 <AReg_512, "OPERAND_REG_INLINE_AC_INT32">;
 def AISrc_1024_f32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_FP32">;
 def AISrc_1024_b32 : SrcRegOrImmA9 <AReg_1024, "OPERAND_REG_INLINE_AC_INT32">;
+
+//===----------------------------------------------------------------------===//
+//  Tablegen programming utilities
+//===----------------------------------------------------------------------===//
+
+/// Helper function to extract the register class from an
+/// instruction's operand list, which may be a RegisterOperand or a
+/// direct RegisterClass reference.
+class getRegClassFromOp<DAGOperand Op> {
+  SIRegisterClass ret = !if(
+    !isa<RegisterOperand>(Op),
+    !cast<SIRegisterClass>(!cast<RegisterOperand>(Op).RegClass),
+    !cast<SIRegisterClass>(Op));
+}
+
+/// Check if the operand will use an AV_* class.
+class OperandIsAV<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasAGPR, reg_class.HasVGPR);
+}
+
+/// Check if the operand will use an AGPR class.
+class OperandIsAGPR<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasAGPR, !not(reg_class.HasVGPR));
+}
+
+/// Check if the operand will use a VGPR class.
+class OperandIsVGPR<DAGOperand Op> {
+  defvar reg_class = getRegClassFromOp<Op>.ret;
+  bit ret = !and(reg_class.HasVGPR, !not(reg_class.HasAGPR));
+}
+
+class VDstOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class VDstOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
+}
+
+class Data0OperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class Data0OperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
+}
+
+class VDataOperandIsAV<dag OperandList> {
+  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
+}
+
+class VDataOperandIsAGPR<dag OperandList> {
+  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdata")>.ret;
+}

@@ -123,19 +123,6 @@ struct StatsSuccessFail {
   uint32_t failures = 0;
 };
 
-/// Holds statistics about DWO (Debug With Object) files.
-struct DWOStats {
-  uint32_t loaded_dwo_file_count = 0;
-  uint32_t dwo_file_count = 0;
-  uint32_t dwo_error_count = 0;
-
-  DWOStats operator+(const DWOStats &rhs) const {
-    return DWOStats{loaded_dwo_file_count + rhs.loaded_dwo_file_count,
-                    dwo_file_count + rhs.dwo_file_count,
-                    dwo_error_count + rhs.dwo_error_count};
-  }
-};
-
 /// A class that represents statistics for a since lldb_private::Module.
 struct ModuleStats {
   llvm::json::Value ToJSON() const;
@@ -166,7 +153,8 @@ struct ModuleStats {
   bool symtab_stripped = false;
   bool debug_info_had_variable_errors = false;
   bool debug_info_had_incomplete_types = false;
-  DWOStats dwo_stats;
+  uint32_t dwo_file_count = 0;
+  uint32_t loaded_dwo_file_count = 0;
 };
 
 struct ConstStringStats {

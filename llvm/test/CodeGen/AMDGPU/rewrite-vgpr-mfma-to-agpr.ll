@@ -884,6 +884,917 @@ define amdgpu_kernel void @test_rewrite_mfma_direct_copy_from_agpr_class_copy_ba
   ret void
 }
 
+;---------------------------------------------------------------------
+; Comprehensively test all MFMA intrinsics are in the rewrite table
+;---------------------------------------------------------------------
+
+define void @test_rewrite_mfma_f32_32x32x1f32(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x1f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
+; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, a[0:31]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:31]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <32 x float>, ptr addrspace(1) %ptr
+  %mai = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float %arg0, float %arg1, <32 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<32 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x1f32(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x1f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[0:15], v0, v1, a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float %arg0, float %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_4x4x1f32(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_4x4x1f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 a[0:3], v0, v1, a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float %arg0, float %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x2f32(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x2f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x2_f32 a[0:15], v0, v1, a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x2f32(float %arg0, float %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x4f32(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x4f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x4_f32 a[0:3], v0, v1, a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x4f32(float %arg0, float %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x4f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
+; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[4:5], off offset:96
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[4:5], off offset:64
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x4_2b_f16 a[0:31], v[0:1], v[2:3], a[0:31]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:31]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <32 x float>, ptr addrspace(1) %ptr
+  %mai = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half> %arg0, <4 x half> %arg1, <32 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<32 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x4f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x4_4b_f16 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4f16(<4 x half> %arg0, <4 x half> %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_4x4x4f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_4x4x4f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_4x4x4_16b_f16 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.4x4x4f16(<4 x half> %arg0, <4 x half> %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x8f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x8f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x8_f16 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> %arg0, <4 x half> %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x16f16(<4 x half> %arg0, <4 x half> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x16f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> %arg0, <4 x half> %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_i32_32x32x4i8(i32 %arg0, i32 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_i32_32x32x4i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[2:3], off offset:112
+; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[2:3], off offset:96
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[2:3], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[2:3], off offset:64
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_i32_32x32x4_2b_i8 a[0:31], v0, v1, a[0:31]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:31]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <32 x i32>, ptr addrspace(1) %ptr
+  %mai = call <32 x i32> @llvm.amdgcn.mfma.i32.32x32x4i8(i32 %arg0, i32 %arg1, <32 x i32> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<32 x i32> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_i32_16x16x4i8(i32 %arg0, i32 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_i32_16x16x4i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[2:3], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[2:3], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[2:3], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_i32_16x16x4_4b_i8 a[0:15], v0, v1, a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x i32>, ptr addrspace(1) %ptr
+  %mai = call <16 x i32> @llvm.amdgcn.mfma.i32.16x16x4i8(i32 %arg0, i32 %arg1, <16 x i32> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x i32> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_i32_4x4x4i8(i32 %arg0, i32 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_i32_4x4x4i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_i32_4x4x4_16b_i8 a[0:3], v0, v1, a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x i32>, ptr addrspace(1) %ptr
+  %mai = call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 %arg0, i32 %arg1, <4 x i32> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x i32> %mai)
+  ret void
+}
+
+;---------------------------------------------------------------------
+; gfx90a intrinsics
+;---------------------------------------------------------------------
+
+define void @test_rewrite_mfma_f32_32x32x4bf16_1k(<4 x i16> %arg0, <4 x i16> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4bf16_1k:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v[4:5], off offset:112
+; CHECK-NEXT:    global_load_dwordx4 a[24:27], v[4:5], off offset:96
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v[4:5], off offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[16:19], v[4:5], off offset:64
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x4_2b_bf16 a[0:31], v[0:1], v[2:3], a[0:31]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:31]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <32 x float>, ptr addrspace(1) %ptr
+  %mai = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16.1k(<4 x i16> %arg0, <4 x i16> %arg1, <32 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<32 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x4bf16_1k(<4 x i16> %arg0, <4 x i16> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x4bf16_1k:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x4_4b_bf16 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4bf16.1k(<4 x i16> %arg0, <4 x i16> %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_4x4x4bf16_1k(<4 x i16> %arg0, <4 x i16> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_4x4x4bf16_1k:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_4x4x4_16b_bf16 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.4x4x4bf16.1k(<4 x i16> %arg0, <4 x i16> %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x8bf16_1k(<4 x i16> %arg0, <4 x i16> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x8bf16_1k:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x8_bf16 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8bf16.1k(<4 x i16> %arg0, <4 x i16> %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x16bf16_1k(<4 x i16> %arg0, <4 x i16> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x16bf16_1k:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x16_bf16 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16bf16.1k(<4 x i16> %arg0, <4 x i16> %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f64_16x16x4f64(double %arg0, double %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f64_16x16x4f64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x double>, ptr addrspace(1) %ptr
+  %mai = call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %arg0, double %arg1, <4 x double> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x double> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f64_4x4xf64(double %arg0, double %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f64_4x4xf64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx2 a[0:1], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], v[2:3], a[0:1]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:1]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load double, ptr addrspace(1) %ptr
+  %mai = call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %arg0, double %arg1, double %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(double %mai)
+  ret void
+}
+
+;---------------------------------------------------------------------
+; gfx942 intrinsics
+;---------------------------------------------------------------------
+
+define void @test_rewrite_mfma_i32_16x16x32_i8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_i32_16x16x32_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_i32_16x16x32_i8 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x i32>, ptr addrspace(1) %ptr
+  %mai = call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x32.i8(i64 %arg0, i64 %arg1, <4 x i32> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x i32> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_i32_32x32x16_i8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_i32_32x32x16_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_i32_32x32x16_i8 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x i32>, ptr addrspace(1) %ptr
+  %mai = call <16 x i32> @llvm.amdgcn.mfma.i32.32x32x16.i8(i64 %arg0, i64 %arg1, <16 x i32> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x i32> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x8_xf32(<2 x float> %arg0, <2 x float> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x8_xf32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x8_xf32 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x8.xf32(<2 x float> %arg0, <2 x float> %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x4_xf32(<2 x float> %arg0, <2 x float> %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x4_xf32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x4_xf32 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x4.xf32(<2 x float> %arg0, <2 x float> %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x32_bf8_bf8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x32_bf8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x32_bf8_bf8 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf8.bf8(i64 %arg0, i64 %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x32_bf8_fp8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x32_bf8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x32_bf8_fp8 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf8.fp8(i64 %arg0, i64 %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x32_fp8_bf8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x32_fp8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x32_fp8_bf8 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.fp8.bf8(i64 %arg0, i64 %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_16x16x32_fp8_fp8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_16x16x32_fp8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_16x16x32_fp8_fp8 a[0:3], v[0:1], v[2:3], a[0:3]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.fp8.fp8(i64 %arg0, i64 %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x16_bf8_bf8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_bf8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x16_bf8_bf8 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf8.bf8(i64 %arg0, i64 %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x16_bf8_fp8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_bf8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x16_bf8_fp8 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf8.fp8(i64 %arg0, i64 %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x16_fp8_bf8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_fp8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x16_fp8_bf8 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.fp8.bf8(i64 %arg0, i64 %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_mfma_f32_32x32x16_fp8_fp8(i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_f32_32x32x16_fp8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[4:5], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[4:5], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[4:5], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_32x32x16_fp8_fp8 a[0:15], v[0:1], v[2:3], a[0:15]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.fp8.fp8(i64 %arg0, i64 %arg1, <16 x float> %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_f32_16x16x32_f16(<4 x half> %arg0, <8 x half> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_f32_16x16x32_f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_16x16x32_f16 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x32.f16(<4 x half> %arg0, <8 x half> %arg1, <4 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_f32_32x32x16_f16(<4 x half> %arg0, <8 x half> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_f32_32x32x16_f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_32x32x16_f16 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x16.f16(<4 x half> %arg0, <8 x half> %arg1, <16 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_f32_16x16x32_bf16(<4 x i16> %arg0, <8 x i16> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_f32_16x16x32_bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_16x16x32_bf16 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x32.bf16(<4 x i16> %arg0, <8 x i16> %arg1, <4 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_f32_32x32x16_bf16(<4 x i16> %arg0, <8 x i16> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_f32_32x32x16_bf16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_32x32x16_bf16 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x16.bf16(<4 x i16> %arg0, <8 x i16> %arg1, <16 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_i32_16x16x64_i8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_i32_16x16x64_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_i32_16x16x64_i8 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x i32>, ptr addrspace(1) %ptr
+  %mai = call <4 x i32> @llvm.amdgcn.smfmac.i32.16x16x64.i8(<2 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x i32> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_i32_32x32x32_i8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_i32_32x32x32_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_i32_32x32x32_i8 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x i32>, ptr addrspace(1) %ptr
+  %mai = call <16 x i32> @llvm.amdgcn.smfmac.i32.32x32x32.i8(<2 x i32> %arg0, <4 x i32> %arg1, <16 x i32> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x i32> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_16x16x64_bf8_bf8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_16x16x64_bf8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_16x16x64_bf8_bf8 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.bf8(<2 x i32> %arg0, <4 x i32> %arg1, <4 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_16x16x64_bf8_fp8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_16x16x64_bf8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_16x16x64_bf8_fp8 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.bf8.fp8(<2 x i32> %arg0, <4 x i32> %arg1, <4 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_16x16x64_fp8_bf8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_16x16x64_fp8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_16x16x64_fp8_bf8 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.bf8(<2 x i32> %arg0, <4 x i32> %arg1, <4 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_16x16x64_fp8_fp8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_16x16x64_fp8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_16x16x64_fp8_fp8 a[0:3], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x64.fp8.fp8(<2 x i32> %arg0, <4 x i32> %arg1, <4 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<4 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_32x32x32_bf8_bf8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_32x32x32_bf8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_32x32x32_bf8_bf8 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.bf8(<2 x i32> %arg0, <4 x i32> %arg1, <16 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_32x32x32_bf8_fp8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_32x32x32_bf8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_32x32x32_bf8_fp8 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.bf8.fp8(<2 x i32> %arg0, <4 x i32> %arg1, <16 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_32x32x32_fp8_bf8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_32x32x32_fp8_bf8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_32x32x32_fp8_bf8 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.bf8(<2 x i32> %arg0, <4 x i32> %arg1, <16 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
+define void @test_rewrite_smfmac_32x32x32_fp8_fp8(<2 x i32> %arg0, <4 x i32> %arg1, i32 %arg2, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_smfmac_32x32x32_fp8_fp8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v9, v8
+; CHECK-NEXT:    v_mov_b32_e32 v8, v7
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v[8:9], off offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[8:11], v[8:9], off offset:32
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v[8:9], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[0:3], v[8:9], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_smfmac_f32_32x32x32_fp8_fp8 a[0:15], v[0:1], v[2:5], v6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <16 x float>, ptr addrspace(1) %ptr
+  %mai = tail call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x32.fp8.fp8(<2 x i32> %arg0, <4 x i32> %arg1, <16 x float> %src2, i32 %arg2, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(<16 x float> %mai)
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half>, <4 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg) #2
 declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #2
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32 immarg, i32 immarg, i32 immarg) #2

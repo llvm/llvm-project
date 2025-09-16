@@ -719,12 +719,12 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseBoundsCheckingOptions,
     "trap;rt;rt-abort;min-rt;min-rt-abort;merge;guard=N")
-    FUNCTION_PASS_WITH_PARAMS(
+FUNCTION_PASS_WITH_PARAMS(
     "expand-fp", "ExpandFpPass",
     [TM = TM](CodeGenOptLevel OL) {
       return ExpandFpPass(TM, OL);
     },
-    parseExpandFpOptions, "opt-level")
+    parseExpandFpOptions, "opt-level=N")
     
 #undef FUNCTION_PASS_WITH_PARAMS
 

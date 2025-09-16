@@ -304,6 +304,12 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Reduction &x) {
+    const auto &objectList{std::get<parser::AccObjectList>(x.v.t)};
+    ResolveAccObjectList(objectList, Symbol::Flag::AccReduction);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
 private:
@@ -2517,14 +2523,15 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     return false;
   };
 
-  if (checkSymbol(symbol)) {
-    const auto *hostAssoc{symbol.detailsIf<HostAssocDetails>()};
-    if (hostAssoc) {
-      return checkSymbol(hostAssoc->symbol());
-    }
-    return true;
-  }
-  return false;
+  return common::visit(
+      common::visitors{
+          [&](const UseDetails &x) -> bool { return checkSymbol(x.symbol()); },
+          [&](const HostAssocDetails &x) -> bool {
+            return checkSymbol(x.symbol());
+          },
+          [&](const auto &) -> bool { return checkSymbol(symbol); },
+      },
+      symbol.details());
 }
 
 void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {

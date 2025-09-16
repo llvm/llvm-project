@@ -10,6 +10,7 @@
 import abc
 from collections import defaultdict
 import copy
+import io
 import json
 import os
 import shlex
@@ -50,6 +51,7 @@ class DAPMessageLogger:
         self.prefix_recv: str = "<-"
         self.out_handle = None
         self.open = False
+        self.text = io.StringIO() # In-process copy of the message log.
         self.lock = threading.Lock()
 
     def _custom_enter(self):
@@ -91,6 +93,8 @@ class DAPMessageLogger:
         message_str = json.dumps(
             self._colorize_dap_message(message), indent=self.indent
         ).replace("\\u001b", "\033")
+
+        self.text.write(f"{prefix} {message_str}\n")
         if self.out_handle is not None and self.open:
             with self.lock:
                 self.out_handle.write(f"{prefix} {message_str}\n")

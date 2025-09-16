@@ -134,6 +134,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMAtomicCmpXchgLowering
+    : public mlir::OpConversionPattern<cir::AtomicCmpXchg> {
+public:
+  using mlir::OpConversionPattern<cir::AtomicCmpXchg>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AtomicCmpXchg op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrCondOpLowering
     : public mlir::OpConversionPattern<cir::BrCondOp> {
 public:

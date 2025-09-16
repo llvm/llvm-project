@@ -17,5 +17,5 @@ set(CLANG_DEFAULT_LINKER "lld" CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB "compiler-rt" STRING "")
 
 set(LLVM_RUNTIME_TARGETS default;amdgcn-amd-amdhsa CACHE STRING "")
-set(RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "compiler-rt;libc" CACHE STRING "")
+set(RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "compiler-rt;openmp;libc" CACHE STRING "")
 set(RUNTIMES_amdgcn-amd-amdhsa_LIBC_GPU_TEST_JOBS 4 CACHE STRING "")

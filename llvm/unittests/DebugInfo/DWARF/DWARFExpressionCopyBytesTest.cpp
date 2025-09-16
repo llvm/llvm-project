@@ -45,13 +45,15 @@ namespace {
 /// debug info from input to output binary.
 class DWARFExpressionCopyBytesTest : public ::testing::Test {
 public:
-  const char *TripleName = "x86_64-pc-linux";
+  static constexpr char TripleName[] = "x86_64-pc-linux";
+  Triple TheTriple;
+
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<const MCSubtargetInfo> STI;
   const Target *TheTarget;
 
-  DWARFExpressionCopyBytesTest() {
+  DWARFExpressionCopyBytesTest() : TheTriple(TripleName) {
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();
@@ -61,9 +63,9 @@ public:
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+    MRI.reset(TheTarget->createMCRegInfo(TheTriple));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCTargetOptions()));
+    STI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   }
 
   struct StreamerContext {

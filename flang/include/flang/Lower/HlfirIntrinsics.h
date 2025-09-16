@@ -105,6 +105,17 @@ struct PreparedActualArgument {
     return typeParams[0];
   }
 
+  void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
+                           llvm::SmallVectorImpl<mlir::Value> &result) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
+      hlfir::genLengthParameters(loc, builder, *actualEntity, result);
+      return;
+    }
+    for (mlir::Value len :
+         std::get<hlfir::ElementalAddrOp>(actual).getTypeparams())
+      result.push_back(len);
+  }
+
   /// When the argument is polymorphic, get mold value with the same dynamic
   /// type.
   mlir::Value getPolymorphicMold(mlir::Location loc) const {

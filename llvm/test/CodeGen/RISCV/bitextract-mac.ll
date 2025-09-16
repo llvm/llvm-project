@@ -107,7 +107,7 @@ define i32 @f(i32 %A, i32 %B, i32 %C) {
 ;
 ; RV64XTHEADBB-LABEL: f:
 ; RV64XTHEADBB:       # %bb.0: # %entry
-; RV64XTHEADBB-NEXT:    mul a0, a1, a0
+; RV64XTHEADBB-NEXT:    mulw a0, a1, a0
 ; RV64XTHEADBB-NEXT:    th.extu a1, a0, 5, 2
 ; RV64XTHEADBB-NEXT:    th.extu a0, a0, 11, 5
 ; RV64XTHEADBB-NEXT:    mul a0, a1, a0
@@ -116,7 +116,7 @@ define i32 @f(i32 %A, i32 %B, i32 %C) {
 ;
 ; RV64XTHEAD-LABEL: f:
 ; RV64XTHEAD:       # %bb.0: # %entry
-; RV64XTHEAD-NEXT:    mul a0, a1, a0
+; RV64XTHEAD-NEXT:    mulw a0, a1, a0
 ; RV64XTHEAD-NEXT:    th.extu a1, a0, 5, 2
 ; RV64XTHEAD-NEXT:    th.extu a0, a0, 11, 5
 ; RV64XTHEAD-NEXT:    th.mulah a2, a1, a0
