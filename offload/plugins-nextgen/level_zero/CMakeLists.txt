@@ -1,5 +1,5 @@
 if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-return()
+  return()
 endif()
 
 # Create the library and add the default arguments.
