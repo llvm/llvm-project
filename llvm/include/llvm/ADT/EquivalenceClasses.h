@@ -293,6 +293,19 @@ public:
     return member_iterator(ECV.getLeader());
   }
 
+  /// Erase the class containing \p V, i.e. erase all members of the class from
+  /// the set.
+  void eraseClass(const ElemTy &V) {
+    if (TheMapping.find(V) == TheMapping.end())
+      return;
+    iterator_range<member_iterator> LeaderI = members(V);
+    for (member_iterator MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
+      const ElemTy &ToErase = *MI;
+      ++MI;
+      TheMapping.erase(ToErase);
+    }
+  }
+
   /// union - Merge the two equivalence sets for the specified values, inserting
   /// them if they do not already exist in the equivalence set.
   member_iterator unionSets(const ElemTy &V1, const ElemTy &V2) {

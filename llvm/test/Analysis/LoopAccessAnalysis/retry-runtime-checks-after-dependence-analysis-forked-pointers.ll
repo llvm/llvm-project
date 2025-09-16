@@ -26,14 +26,9 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:      Check 3:
 ; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
-; CHECK-NEXT:      Check 5:
+; CHECK-NEXT:      Check 4:
 ; CHECK-NEXT:        Comparing group GRP2:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
 ; CHECK-NEXT:        Against group GRP3:
@@ -104,14 +99,9 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:      Check 3:
 ; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
-; CHECK-NEXT:      Check 5:
+; CHECK-NEXT:      Check 4:
 ; CHECK-NEXT:        Comparing group GRP2:
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
 ; CHECK-NEXT:        Against group GRP3:
