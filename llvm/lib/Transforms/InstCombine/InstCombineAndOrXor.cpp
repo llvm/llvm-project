@@ -1320,7 +1320,8 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
 Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
                                                      ICmpInst *ICmp2,
                                                      bool IsAnd) {
-  auto MatchRangeCheck =
+  // Return (V, CR) for a range check idiom V in CR.
+  auto MatchExactRangeCheck =
       [](ICmpInst *ICmp) -> std::optional<std::pair<Value *, ConstantRange>> {
     const APInt *C;
     if (!match(ICmp->getOperand(1), m_APInt(C)))
@@ -1340,26 +1341,32 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
     }
     ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
     // Match (add X, C1) pred C
+    // TODO: investigate whether we should apply the one-use check on m_AddLike.
     const APInt *C1;
     if (match(LHS, m_AddLike(m_Value(X), m_APInt(C1))))
       return std::make_pair(X, CR.subtract(*C1));
     return std::make_pair(LHS, CR);
   };
 
-  auto RC1 = MatchRangeCheck(ICmp1);
+  auto RC1 = MatchExactRangeCheck(ICmp1);
   if (!RC1)
     return nullptr;
 
-  auto RC2 = MatchRangeCheck(ICmp2);
+  auto RC2 = MatchExactRangeCheck(ICmp2);
   if (!RC2)
     return nullptr;
 
-  if (RC1->first != RC2->first)
+  auto &[V1, CR1] = *RC1;
+  auto &[V2, CR2] = *RC2;
+  if (V1 != V2)
     return nullptr;
 
-  Value *V = RC1->first;
-  auto CR1 = IsAnd ? RC1->second.inverse() : RC1->second;
-  auto CR2 = IsAnd ? RC2->second.inverse() : RC2->second;
+  Value *V = V1;
+  // For 'and', we use the De Morgan's Laws to simplify the implementation.
+  if (IsAnd) {
+    CR1 = CR1.inverse();
+    CR2 = CR2.inverse();
+  }
 
   Type *Ty = V->getType();
   Value *NewV = V;
