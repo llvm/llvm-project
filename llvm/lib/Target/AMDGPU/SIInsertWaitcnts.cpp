@@ -846,7 +846,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
     assert(Size % 16 == 0);
     Result.second = Result.first + (Size / 16);
 
-    if (Size == 16 && Context->ST->has16bitD16HWBug()) {
+    if (Size == 16 && Context->ST->hasD16Writes32BitVgpr()) {
       // Regardless of which lo16/hi16 is used, consider the full 32-bit
       // register used.
       if (AMDGPU::isHi16Reg(MCReg, *TRI))

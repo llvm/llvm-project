@@ -586,8 +586,8 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
-def Feature16bitD16HWBug : SubtargetFeature<"d16-hw-bug",
-  "Enable16bitD16HWBug",
+def FeatureD16Writes32BitVgpr : SubtargetFeature<"d16-write-vgpr32",
+  "EnableD16Writes32BitVgpr",
   "true",
   "D16 instructions potentially have 32-bit data dependencies"
 >;
@@ -1941,7 +1941,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureRealTrue16Insts,
-   Feature16bitD16HWBug,
+   FeatureD16Writes32BitVgpr,
 ]>;
 
 // There are few workarounds that need to be
@@ -2578,10 +2578,10 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
-def Has16bitD16HWBug: Predicate<"Subtarget->has16bitD16HWBug()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, Feature16bitD16HWBug)>;
-def NotHas16bitD16HWBug: Predicate<"!Subtarget->has16bitD16HWBug()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not Feature16bitD16HWBug))>;
+def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
+def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, (not FeatureD16Writes32BitVgpr))>;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;
