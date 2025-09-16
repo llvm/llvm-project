@@ -138,7 +138,7 @@ public:
   /// Returns information about the operands' contribution to this encoding.
   ArrayRef<OperandInfo> getOperands() const { return Operands; }
 
-  /// \returns the effective value of the DecoderMethod field.t If DecoderMethod
+  /// \returns the effective value of the DecoderMethod field. If DecoderMethod
   /// is an explictly set value, return false for second.
   static std::pair<std::string, bool>
   findOperandDecoderMethod(const CodeGenTarget &Target, const Record *Record);

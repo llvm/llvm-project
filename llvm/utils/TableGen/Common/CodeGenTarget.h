@@ -156,8 +156,8 @@ public:
   /// it's a RegisterOperand, or a direct RegisterClass reference), return the
   /// Record for that RegisterClass.
   ///
-  /// AssumeRegClassByHwModeIsDefault is a hack which should be removed. It's
-  /// only happens to be adequate for the current GlobalISel usage.
+  /// AssumeRegClassByHwModeIsDefault is a hack which should be removed. It only
+  /// happens to be adequate for the current GlobalISel usage.
   const Record *
   getInitValueAsRegClass(const Init *V,
                          bool AssumeRegClassByHwModeIsDefault = false) const;
