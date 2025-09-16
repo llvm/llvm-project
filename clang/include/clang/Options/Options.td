@@ -1625,6 +1625,11 @@ defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
   BothFlags<[], [ClangOption, CLOption]>>;
 
 def fassume_sane_operator_new : Flag<["-"], "fassume-sane-operator-new">, Group<f_Group>;
+defm assume_array_bounds : BoolFOption<"assume-array-bounds",
+  CodeGenOpts<"AssumeArrayBounds">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Generate llvm.assume for array bounds to enable optimizations (may break code with intentional out-of-bounds access)">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 def fastcp : Flag<["-"], "fastcp">, Group<f_Group>;
 def fastf : Flag<["-"], "fastf">, Group<f_Group>;
 def fast : Flag<["-"], "fast">, Group<f_Group>;
