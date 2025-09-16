@@ -223,6 +223,8 @@ public:
 
   bool expandCtSelectVector(MachineInstr &MI) const;
 
+  bool expandCtSelectThumb(MachineInstr &MI) const;
+
   bool expandCtSelect(MachineInstr &MI) const;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;

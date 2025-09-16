@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=armv7-none-eabi -verify-machineinstrs | FileCheck --check-prefixes=CT %s
 ; RUN: llc < %s -mtriple=armv8.6a-none-eabi -verify-machineinstrs | FileCheck --check-prefixes=BFLOAT-F16-NATIVE %s
 ; RUN: llc < %s -mtriple=armv8.2a-none-eabi -verify-machineinstrs | FileCheck --check-prefixes=F16-NATIVE %s
+; RUN: llc < %s -mtriple=thumbv6m-none-eabi -verify-machineinstrs | FileCheck --check-prefix=THUMB1 %s
+; RUN: llc < %s -mtriple=thumbv7m-none-eabi -verify-machineinstrs | FileCheck --check-prefix=THUMB2 %s
 
 define half @ct_half(i1 %cond, half %a, half %b) {
 ; CT-LABEL: ct_half:
@@ -30,6 +32,30 @@ define half @ct_half(i1 %cond, half %a, half %b) {
 ; F16-NATIVE-NEXT:    bic r12, r2, r12
 ; F16-NATIVE-NEXT:    orr r0, r0, r12
 ; F16-NATIVE-NEXT:    bx lr
+;
+; THUMB1-LABEL: ct_half:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    .save {r4, lr}
+; THUMB1-NEXT:    push {r4, lr}
+; THUMB1-NEXT:    movs r3, #1
+; THUMB1-NEXT:    ands r3, r0
+; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    ands r0, r4
+; THUMB1-NEXT:    mov r1, r2
+; THUMB1-NEXT:    bics r1, r4
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    pop {r4, pc}
+;
+; THUMB2-LABEL: ct_half:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    and r3, r0, #1
+; THUMB2-NEXT:    rsb.w r12, r3, #0
+; THUMB2-NEXT:    and.w r0, r1, r12
+; THUMB2-NEXT:    bic.w r12, r2, r12
+; THUMB2-NEXT:    orr.w r0, r0, r12
+; THUMB2-NEXT:    bx lr
+; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call half @llvm.ct.select.f16(i1 %cond, half %a, half %b)
   ret half %sel
@@ -67,6 +93,30 @@ define bfloat @ct_bf16(i1 %cond, bfloat %a, bfloat %b) {
 ; F16-NATIVE-NEXT:    bic r12, r2, r12
 ; F16-NATIVE-NEXT:    orr r0, r0, r12
 ; F16-NATIVE-NEXT:    bx lr
+;
+; THUMB1-LABEL: ct_bf16:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    .save {r4, lr}
+; THUMB1-NEXT:    push {r4, lr}
+; THUMB1-NEXT:    movs r3, #1
+; THUMB1-NEXT:    ands r3, r0
+; THUMB1-NEXT:    rsbs r4, r3, #0
+; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:    ands r0, r4
+; THUMB1-NEXT:    mov r1, r2
+; THUMB1-NEXT:    bics r1, r4
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    pop {r4, pc}
+;
+; THUMB2-LABEL: ct_bf16:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    and r3, r0, #1
+; THUMB2-NEXT:    rsb.w r12, r3, #0
+; THUMB2-NEXT:    and.w r0, r1, r12
+; THUMB2-NEXT:    bic.w r12, r2, r12
+; THUMB2-NEXT:    orr.w r0, r0, r12
+; THUMB2-NEXT:    bx lr
+; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call bfloat @llvm.ct.select.bf16(i1 %cond, bfloat %a, bfloat %b)
   ret bfloat %sel
@@ -156,6 +206,77 @@ define <4 x half> @ct_v4f16(i1 %cond, <4 x half> %a, <4 x half> %b) {
 ; F16-NATIVE-NEXT:    vmov.u16 r2, d18[2]
 ; F16-NATIVE-NEXT:    vmov.u16 r3, d18[3]
 ; F16-NATIVE-NEXT:    pop {r4, r5, r6, pc}
+;
+; THUMB1-LABEL: ct_v4f16:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    .save {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    push {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    .pad #4
+; THUMB1-NEXT:    sub sp, #4
+; THUMB1-NEXT:    movs r4, #1
+; THUMB1-NEXT:    ands r4, r0
+; THUMB1-NEXT:    ldr r1, [sp, #32]
+; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    ands r0, r5
+; THUMB1-NEXT:    mov r2, r1
+; THUMB1-NEXT:    bics r2, r5
+; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    ldr r2, [sp, #36]
+; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    ands r1, r5
+; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    bics r3, r5
+; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    ldr r3, [sp, #40]
+; THUMB1-NEXT:    ldr r5, [sp, #24]
+; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    ands r2, r6
+; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    bics r5, r6
+; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    ldr r5, [sp, #44]
+; THUMB1-NEXT:    ldr r6, [sp, #28]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    ands r3, r7
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    bics r6, r7
+; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    add sp, #4
+; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
+;
+; THUMB2-LABEL: ct_v4f16:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    .save {r4, r5, r7, lr}
+; THUMB2-NEXT:    push {r4, r5, r7, lr}
+; THUMB2-NEXT:    and r12, r0, #1
+; THUMB2-NEXT:    ldrh.w r1, [sp, #24]
+; THUMB2-NEXT:    rsb.w lr, r12, #0
+; THUMB2-NEXT:    rsb.w r4, r12, #0
+; THUMB2-NEXT:    and.w r0, r2, lr
+; THUMB2-NEXT:    bic.w lr, r1, lr
+; THUMB2-NEXT:    ldrh.w r2, [sp, #28]
+; THUMB2-NEXT:    orr.w r0, r0, lr
+; THUMB2-NEXT:    rsb.w lr, r12, #0
+; THUMB2-NEXT:    rsb.w r5, r12, #0
+; THUMB2-NEXT:    and.w r1, r3, lr
+; THUMB2-NEXT:    bic.w lr, r2, lr
+; THUMB2-NEXT:    orr.w r1, r1, lr
+; THUMB2-NEXT:    ldrh.w r3, [sp, #16]
+; THUMB2-NEXT:    ldrh.w lr, [sp, #32]
+; THUMB2-NEXT:    and.w r2, r3, r4
+; THUMB2-NEXT:    bic.w r4, lr, r4
+; THUMB2-NEXT:    ldrh.w lr, [sp, #36]
+; THUMB2-NEXT:    orrs r2, r4
+; THUMB2-NEXT:    ldrh.w r4, [sp, #20]
+; THUMB2-NEXT:    and.w r3, r4, r5
+; THUMB2-NEXT:    bic.w r5, lr, r5
+; THUMB2-NEXT:    orrs r3, r5
+; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <4 x half> @llvm.ct.select.v4f16(i1 %cond, <4 x half> %a, <4 x half> %b)
   ret <4 x half> %sel
@@ -230,6 +351,77 @@ define <4 x bfloat> @ct_v4bf16(i1 %cond, <4 x bfloat> %a, <4 x bfloat> %b) {
 ; F16-NATIVE-NEXT:    vmov.u16 r2, d18[2]
 ; F16-NATIVE-NEXT:    vmov.u16 r3, d18[3]
 ; F16-NATIVE-NEXT:    pop {r4, r5, r6, pc}
+;
+; THUMB1-LABEL: ct_v4bf16:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    .save {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    push {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    .pad #4
+; THUMB1-NEXT:    sub sp, #4
+; THUMB1-NEXT:    movs r4, #1
+; THUMB1-NEXT:    ands r4, r0
+; THUMB1-NEXT:    ldr r1, [sp, #32]
+; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r0, r2
+; THUMB1-NEXT:    ands r0, r5
+; THUMB1-NEXT:    mov r2, r1
+; THUMB1-NEXT:    bics r2, r5
+; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    ldr r2, [sp, #36]
+; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r1, r3
+; THUMB1-NEXT:    ands r1, r5
+; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    bics r3, r5
+; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    ldr r3, [sp, #40]
+; THUMB1-NEXT:    ldr r5, [sp, #24]
+; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r2, r5
+; THUMB1-NEXT:    ands r2, r6
+; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    bics r5, r6
+; THUMB1-NEXT:    orrs r2, r5
+; THUMB1-NEXT:    ldr r5, [sp, #44]
+; THUMB1-NEXT:    ldr r6, [sp, #28]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r3, r6
+; THUMB1-NEXT:    ands r3, r7
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    bics r6, r7
+; THUMB1-NEXT:    orrs r3, r6
+; THUMB1-NEXT:    add sp, #4
+; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
+;
+; THUMB2-LABEL: ct_v4bf16:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    .save {r4, r5, r7, lr}
+; THUMB2-NEXT:    push {r4, r5, r7, lr}
+; THUMB2-NEXT:    and r12, r0, #1
+; THUMB2-NEXT:    ldrh.w r1, [sp, #24]
+; THUMB2-NEXT:    rsb.w lr, r12, #0
+; THUMB2-NEXT:    rsb.w r4, r12, #0
+; THUMB2-NEXT:    and.w r0, r2, lr
+; THUMB2-NEXT:    bic.w lr, r1, lr
+; THUMB2-NEXT:    ldrh.w r2, [sp, #28]
+; THUMB2-NEXT:    orr.w r0, r0, lr
+; THUMB2-NEXT:    rsb.w lr, r12, #0
+; THUMB2-NEXT:    rsb.w r5, r12, #0
+; THUMB2-NEXT:    and.w r1, r3, lr
+; THUMB2-NEXT:    bic.w lr, r2, lr
+; THUMB2-NEXT:    orr.w r1, r1, lr
+; THUMB2-NEXT:    ldrh.w r3, [sp, #16]
+; THUMB2-NEXT:    ldrh.w lr, [sp, #32]
+; THUMB2-NEXT:    and.w r2, r3, r4
+; THUMB2-NEXT:    bic.w r4, lr, r4
+; THUMB2-NEXT:    ldrh.w lr, [sp, #36]
+; THUMB2-NEXT:    orrs r2, r4
+; THUMB2-NEXT:    ldrh.w r4, [sp, #20]
+; THUMB2-NEXT:    and.w r3, r4, r5
+; THUMB2-NEXT:    bic.w r5, lr, r5
+; THUMB2-NEXT:    orrs r3, r5
+; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <4 x bfloat> @llvm.ct.select.v4bf16(i1 %cond, <4 x bfloat> %a, <4 x bfloat> %b)
   ret <4 x bfloat> %sel
@@ -364,6 +556,149 @@ define <8 x half> @ct_v8f16(i1 %cond, <8 x half> %a, <8 x half> %b) {
 ; F16-NATIVE-NEXT:    vorr q10, q10, q11
 ; F16-NATIVE-NEXT:    vst1.64 {d20, d21}, [r0:128]
 ; F16-NATIVE-NEXT:    pop {r4, r5, r6, r7, r8, pc}
+;
+; THUMB1-LABEL: ct_v8f16:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    .save {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    push {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    .pad #4
+; THUMB1-NEXT:    sub sp, #4
+; THUMB1-NEXT:    movs r4, #1
+; THUMB1-NEXT:    ands r4, r1
+; THUMB1-NEXT:    ldr r1, [sp, #76]
+; THUMB1-NEXT:    ldr r5, [sp, #44]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #14]
+; THUMB1-NEXT:    ldr r1, [sp, #72]
+; THUMB1-NEXT:    ldr r5, [sp, #40]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #12]
+; THUMB1-NEXT:    ldr r1, [sp, #68]
+; THUMB1-NEXT:    ldr r5, [sp, #36]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #10]
+; THUMB1-NEXT:    ldr r1, [sp, #64]
+; THUMB1-NEXT:    ldr r5, [sp, #32]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #8]
+; THUMB1-NEXT:    ldr r1, [sp, #60]
+; THUMB1-NEXT:    ldr r5, [sp, #28]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #6]
+; THUMB1-NEXT:    ldr r1, [sp, #56]
+; THUMB1-NEXT:    ldr r5, [sp, #24]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #4]
+; THUMB1-NEXT:    ldr r1, [sp, #52]
+; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    ands r5, r6
+; THUMB1-NEXT:    mov r3, r1
+; THUMB1-NEXT:    bics r3, r6
+; THUMB1-NEXT:    orrs r5, r3
+; THUMB1-NEXT:    strh r5, [r0, #2]
+; THUMB1-NEXT:    ldr r1, [sp, #48]
+; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    ands r3, r5
+; THUMB1-NEXT:    mov r2, r1
+; THUMB1-NEXT:    bics r2, r5
+; THUMB1-NEXT:    orrs r3, r2
+; THUMB1-NEXT:    strh r3, [r0]
+; THUMB1-NEXT:    add sp, #4
+; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
+;
+; THUMB2-LABEL: ct_v8f16:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    .save {r4, r5, r7, lr}
+; THUMB2-NEXT:    push {r4, r5, r7, lr}
+; THUMB2-NEXT:    and lr, r1, #1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #68]
+; THUMB2-NEXT:    ldrh.w r1, [sp, #36]
+; THUMB2-NEXT:    rsb.w r5, lr, #0
+; THUMB2-NEXT:    and.w r4, r1, r5
+; THUMB2-NEXT:    bic.w r5, r12, r5
+; THUMB2-NEXT:    orrs r4, r5
+; THUMB2-NEXT:    ldrh.w r12, [sp, #64]
+; THUMB2-NEXT:    ldrh.w r5, [sp, #32]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #14]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #60]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #28]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #12]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #56]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #24]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #10]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #52]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #20]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #8]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #48]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #16]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #6]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r1, [sp, #44]
+; THUMB2-NEXT:    strh r4, [r0, #4]
+; THUMB2-NEXT:    rsb.w r4, lr, #0
+; THUMB2-NEXT:    and.w r5, r3, r4
+; THUMB2-NEXT:    bic.w r4, r1, r4
+; THUMB2-NEXT:    orrs r5, r4
+; THUMB2-NEXT:    ldrh.w r1, [sp, #40]
+; THUMB2-NEXT:    strh r5, [r0, #2]
+; THUMB2-NEXT:    rsb.w r5, lr, #0
+; THUMB2-NEXT:    and.w r3, r2, r5
+; THUMB2-NEXT:    bic.w r5, r1, r5
+; THUMB2-NEXT:    orrs r3, r5
+; THUMB2-NEXT:    strh r3, [r0]
+; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <8 x half> @llvm.ct.select.v8f16(i1 %cond, <8 x half> %a, <8 x half> %b)
   ret <8 x half> %sel
@@ -471,6 +806,149 @@ define <8 x bfloat> @ct_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat> %b) {
 ; F16-NATIVE-NEXT:    vorr q10, q10, q11
 ; F16-NATIVE-NEXT:    vst1.64 {d20, d21}, [r0:128]
 ; F16-NATIVE-NEXT:    pop {r4, r5, r6, r7, r8, pc}
+;
+; THUMB1-LABEL: ct_v8bf16:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    .save {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    push {r4, r5, r6, r7, lr}
+; THUMB1-NEXT:    .pad #4
+; THUMB1-NEXT:    sub sp, #4
+; THUMB1-NEXT:    movs r4, #1
+; THUMB1-NEXT:    ands r4, r1
+; THUMB1-NEXT:    ldr r1, [sp, #76]
+; THUMB1-NEXT:    ldr r5, [sp, #44]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #14]
+; THUMB1-NEXT:    ldr r1, [sp, #72]
+; THUMB1-NEXT:    ldr r5, [sp, #40]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #12]
+; THUMB1-NEXT:    ldr r1, [sp, #68]
+; THUMB1-NEXT:    ldr r5, [sp, #36]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #10]
+; THUMB1-NEXT:    ldr r1, [sp, #64]
+; THUMB1-NEXT:    ldr r5, [sp, #32]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #8]
+; THUMB1-NEXT:    ldr r1, [sp, #60]
+; THUMB1-NEXT:    ldr r5, [sp, #28]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #6]
+; THUMB1-NEXT:    ldr r1, [sp, #56]
+; THUMB1-NEXT:    ldr r5, [sp, #24]
+; THUMB1-NEXT:    rsbs r7, r4, #0
+; THUMB1-NEXT:    mov r6, r5
+; THUMB1-NEXT:    ands r6, r7
+; THUMB1-NEXT:    mov r5, r1
+; THUMB1-NEXT:    bics r5, r7
+; THUMB1-NEXT:    orrs r6, r5
+; THUMB1-NEXT:    strh r6, [r0, #4]
+; THUMB1-NEXT:    ldr r1, [sp, #52]
+; THUMB1-NEXT:    rsbs r6, r4, #0
+; THUMB1-NEXT:    mov r5, r3
+; THUMB1-NEXT:    ands r5, r6
+; THUMB1-NEXT:    mov r3, r1
+; THUMB1-NEXT:    bics r3, r6
+; THUMB1-NEXT:    orrs r5, r3
+; THUMB1-NEXT:    strh r5, [r0, #2]
+; THUMB1-NEXT:    ldr r1, [sp, #48]
+; THUMB1-NEXT:    rsbs r5, r4, #0
+; THUMB1-NEXT:    mov r3, r2
+; THUMB1-NEXT:    ands r3, r5
+; THUMB1-NEXT:    mov r2, r1
+; THUMB1-NEXT:    bics r2, r5
+; THUMB1-NEXT:    orrs r3, r2
+; THUMB1-NEXT:    strh r3, [r0]
+; THUMB1-NEXT:    add sp, #4
+; THUMB1-NEXT:    pop {r4, r5, r6, r7, pc}
+;
+; THUMB2-LABEL: ct_v8bf16:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    .save {r4, r5, r7, lr}
+; THUMB2-NEXT:    push {r4, r5, r7, lr}
+; THUMB2-NEXT:    and lr, r1, #1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #68]
+; THUMB2-NEXT:    ldrh.w r1, [sp, #36]
+; THUMB2-NEXT:    rsb.w r5, lr, #0
+; THUMB2-NEXT:    and.w r4, r1, r5
+; THUMB2-NEXT:    bic.w r5, r12, r5
+; THUMB2-NEXT:    orrs r4, r5
+; THUMB2-NEXT:    ldrh.w r12, [sp, #64]
+; THUMB2-NEXT:    ldrh.w r5, [sp, #32]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #14]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #60]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #28]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #12]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #56]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #24]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #10]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #52]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #20]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #8]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    ldrh.w r12, [sp, #48]
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r5, [sp, #16]
+; THUMB2-NEXT:    rsb.w r1, lr, #0
+; THUMB2-NEXT:    strh r4, [r0, #6]
+; THUMB2-NEXT:    and.w r4, r5, r1
+; THUMB2-NEXT:    bic.w r1, r12, r1
+; THUMB2-NEXT:    orrs r4, r1
+; THUMB2-NEXT:    ldrh.w r1, [sp, #44]
+; THUMB2-NEXT:    strh r4, [r0, #4]
+; THUMB2-NEXT:    rsb.w r4, lr, #0
+; THUMB2-NEXT:    and.w r5, r3, r4
+; THUMB2-NEXT:    bic.w r4, r1, r4
+; THUMB2-NEXT:    orrs r5, r4
+; THUMB2-NEXT:    ldrh.w r1, [sp, #40]
+; THUMB2-NEXT:    strh r5, [r0, #2]
+; THUMB2-NEXT:    rsb.w r5, lr, #0
+; THUMB2-NEXT:    and.w r3, r2, r5
+; THUMB2-NEXT:    bic.w r5, r1, r5
+; THUMB2-NEXT:    orrs r3, r5
+; THUMB2-NEXT:    strh r3, [r0]
+; THUMB2-NEXT:    pop {r4, r5, r7, pc}
+; THUMB2-NOT: it{{[te]+}}
 entry:
   %sel = call <8 x bfloat> @llvm.ct.select.v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat> %b)
   ret <8 x bfloat> %sel

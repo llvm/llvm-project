@@ -1550,6 +1550,8 @@ bool ARMBaseInstrInfo::expandCtSelectVector(MachineInstr &MI) const {
     BroadcastOp = ARM::VDUP32q;
   }
 
+  unsigned RsbOp = Subtarget.isThumb2() ? ARM::t2RSBri : ARM::RSBri;
+
   // Any vector pseudo has: ((outs $dst, $tmp_mask, $bcast_mask), (ins $src1, $src2, $cond))
   Register VectorMaskReg = MI.getOperand(2).getReg(); 
   Register Src1Reg = MI.getOperand(3).getReg();
@@ -1561,7 +1563,8 @@ bool ARMBaseInstrInfo::expandCtSelectVector(MachineInstr &MI) const {
   // 1. mask = 0 - cond
   // When cond = 0: mask = 0x00000000.
   // When cond = 1: mask = 0xFFFFFFFF.
-  BuildMI(*MBB, MI, DL, get(ARM::RSBri), MaskReg)
+
+  BuildMI(*MBB, MI, DL, get(RsbOp), MaskReg)
     .addReg(CondReg)
     .addImm(0)
     .add(predOps(ARMCC::AL))
@@ -1599,6 +1602,66 @@ bool ARMBaseInstrInfo::expandCtSelectVector(MachineInstr &MI) const {
   return true;
 }
 
+// Expands the ctselect pseudo for thumb1, post-RA.
+bool ARMBaseInstrInfo::expandCtSelectThumb(MachineInstr &MI) const {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // pseudos in thumb1 mode have: (outs $dst, $tmp_mask), (ins $src1, $src2, $cond))
+  // register class here is always tGPR.
+  Register DestReg = MI.getOperand(0).getReg();
+  Register MaskReg = MI.getOperand(1).getReg();
+  Register Src1Reg = MI.getOperand(2).getReg();
+  Register Src2Reg = MI.getOperand(3).getReg();
+  Register CondReg = MI.getOperand(4).getReg();
+
+  // The following sequence of steps yields: (src1 & mask) | (src2 & ~mask)
+  // 1. mask = -cond
+  BuildMI(*MBB, MI, DL, get(ARM::tRSB), MaskReg)
+    .add(t1CondCodeOp())
+    .addReg(CondReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  BuildMI(*MBB, MI, DL, get(ARM::tMOVr), DestReg)
+    .addReg(Src1Reg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+    
+  // 2. A = src1 & mask
+  BuildMI(*MBB, MI, DL, get(ARM::tAND), DestReg)
+    .add(t1CondCodeOp())
+    .addReg(DestReg, RegState::Kill)
+    .addReg(MaskReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // 3. B = src2 & ~mask
+  Register BICScratch = Src1Reg;
+  BuildMI(*MBB, MI, DL, get(ARM::tMOVr), BICScratch)
+    .addReg(Src2Reg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+    
+  BuildMI(*MBB, MI, DL, get(ARM::tBIC), BICScratch)
+    .add(t1CondCodeOp())
+    .addReg(BICScratch, RegState::Kill)
+    .addReg(MaskReg)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  // 4. result = A | B
+  BuildMI(*MBB, MI, DL, get(ARM::tORR), DestReg)
+    .add(t1CondCodeOp())
+    .addReg(DestReg, RegState::Kill)
+    .addReg(BICScratch)
+    .add(predOps(ARMCC::AL))
+    .setMIFlag(MachineInstr::MIFlag::NoMerge);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 // Expands the ctselect pseudo, post-RA.
 bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
@@ -1610,11 +1673,19 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
   Register Src1Reg, Src2Reg, CondReg;
 
   // These operations will differ by operand register size.
+  unsigned RsbOp = ARM::RSBri;
   unsigned AndOp = ARM::ANDrr;
   unsigned BicOp = ARM::BICrr;
   unsigned OrrOp = ARM::ORRrr;
-  unsigned Opcode = MI.getOpcode();
 
+  if (Subtarget.isThumb2()) {
+    RsbOp = ARM::t2RSBri;
+    AndOp = ARM::t2ANDrr;
+    BicOp = ARM::t2BICrr;
+    OrrOp = ARM::t2ORRrr;
+  }
+
+  unsigned Opcode = MI.getOpcode();
   bool IsFloat = Opcode == ARM::CTSELECTf32 || Opcode == ARM::CTSELECTf16 || Opcode == ARM::CTSELECTbf16;
   if (IsFloat) {
     // Each float pseudo has: (outs $dst, $tmp_mask, $scratch1, $scratch2), (ins $src1, $src2, $cond))
@@ -1657,7 +1728,7 @@ bool ARMBaseInstrInfo::expandCtSelect(MachineInstr &MI) const {
   // 1. mask = 0 - cond
   // When cond = 0: mask = 0x00000000.
   // When cond = 1: mask = 0xFFFFFFFF.
-  BuildMI(*MBB, MI, DL, get(ARM::RSBri), MaskReg)
+  BuildMI(*MBB, MI, DL, get(RsbOp), MaskReg)
     .addReg(CondReg)
     .addImm(0)
     .add(predOps(ARMCC::AL))
@@ -1714,8 +1785,17 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
 
-  if (opcode == ARM::CTSELECTf64  || 
-      opcode == ARM::CTSELECTv8i8  ||
+  if (opcode == ARM::CTSELECTf64) {
+    if (Subtarget.isThumb1Only()) {
+      LLVM_DEBUG(dbgs() << "Opcode (thumb1 subtarget) " << opcode << "replaced by: " << MI);
+      return expandCtSelectThumb(MI);
+    } else {
+      LLVM_DEBUG(dbgs() << "Opcode (vector) " << opcode << "replaced by: " << MI);
+      return expandCtSelectVector(MI);
+    }
+  }
+
+  if (opcode == ARM::CTSELECTv8i8  ||
       opcode == ARM::CTSELECTv4i16 ||
       opcode == ARM::CTSELECTv2i32 ||
       opcode == ARM::CTSELECTv1i64 ||
@@ -1738,8 +1818,13 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       opcode == ARM::CTSELECTf16  ||
       opcode == ARM::CTSELECTbf16 ||
       opcode == ARM::CTSELECTf32) {
-    LLVM_DEBUG(dbgs() << "Opcode " << opcode << "replaced by: " << MI);
-    return expandCtSelect(MI);
+    if (Subtarget.isThumb1Only()) {
+      LLVM_DEBUG(dbgs() << "Opcode (thumb1 subtarget) " << opcode << "replaced by: " << MI);
+      return expandCtSelectThumb(MI);
+    } else {
+      LLVM_DEBUG(dbgs() << "Opcode " << opcode << "replaced by: " << MI);
+      return expandCtSelect(MI);
+    }
   }
 
   // This hook gets to expand COPY instructions before they become
