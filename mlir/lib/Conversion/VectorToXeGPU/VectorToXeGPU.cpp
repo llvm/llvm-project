@@ -97,8 +97,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-// Common preconditions for the lowering of vector.gather and vector.scatter:
-//  1. Source is a memref.
 static LogicalResult gatherScatterPreconditions(PatternRewriter &rewriter,
                                                 Operation *op, Type baseType) {
   auto srcTy = dyn_cast<MemRefType>(baseType);
