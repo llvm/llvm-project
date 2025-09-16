@@ -92,7 +92,7 @@ if (PIC) {
     return true;                                                               \
   }
 
-PB.registerPipelineParsingCallback([=](StringRef Name, ModulePassManager &PM,
+PB.registerPipelineParsingCallback([&](StringRef Name, ModulePassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
 #define MODULE_PASS(NAME, CREATE_PASS) ADD_PASS(NAME, CREATE_PASS)
 #include GET_PASS_REGISTRY
@@ -109,7 +109,7 @@ PB.registerPipelineParsingCallback([=](StringRef Name, ModulePassManager &PM,
   return false;
 });
 
-PB.registerPipelineParsingCallback([=](StringRef Name, FunctionPassManager &PM,
+PB.registerPipelineParsingCallback([&](StringRef Name, FunctionPassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
 #define FUNCTION_PASS(NAME, CREATE_PASS) ADD_PASS(NAME, CREATE_PASS)
 #include GET_PASS_REGISTRY
@@ -130,41 +130,6 @@ PB.registerPipelineParsingCallback([=](StringRef Name, LoopPassManager &PM,
                                        ArrayRef<PassBuilder::PipelineElement>) {
 #define LOOP_PASS(NAME, CREATE_PASS) ADD_PASS(NAME, CREATE_PASS)
 #include GET_PASS_REGISTRY
-  return false;
-});
-
-PB.registerPipelineParsingCallback([=](StringRef Name, ModulePassManager &PM,
-                                       ArrayRef<PassBuilder::PipelineElement>) {
-#define MODULE_CALLBACK(NAME, INVOKE) if (Name == NAME) { PB.INVOKE(PM, OptimizationLevel::O2); return true; }
-#include GET_PASS_REGISTRY
-#undef MODULE_CALLBACK
-#define MODULE_LTO_CALLBACK(NAME, INVOKE) if (Name == NAME) { PB.INVOKE(PM, OptimizationLevel::O2, ThinOrFullLTOPhase::None); return true; }
-#include GET_PASS_REGISTRY
-#undef MODULE_LTO_CALLBACK
-  return false;
-});
-
-PB.registerPipelineParsingCallback([=](StringRef Name, FunctionPassManager &PM,
-                                       ArrayRef<PassBuilder::PipelineElement>) {
-#define FUNCTION_CALLBACK(NAME, INVOKE) if (Name == NAME) { PB.INVOKE(PM, OptimizationLevel::O2); return true; }
-#include GET_PASS_REGISTRY
-#undef FUNCTION_CALLBACK
-  return false;
-});
-
-
-PB.registerPipelineParsingCallback([=](StringRef Name, CGSCCPassManager &CGPM,
-                                       ArrayRef<PassBuilder::PipelineElement>) {
-#define CGSCC_CALLBACK(NAME, INVOKE) if (Name == NAME) { PB.INVOKE(CGPM, OptimizationLevel::O2); return true; }
-#include GET_PASS_REGISTRY
-#undef CGSCC_CALLBACK
-  return false;
-});
-PB.registerPipelineParsingCallback([=](StringRef Name, LoopPassManager &PM,
-                                       ArrayRef<PassBuilder::PipelineElement>) {
-#define LOOP_CALLBACK(NAME, INVOKE) if (Name == NAME) { PB.INVOKE(PM, OptimizationLevel::O2); return true; }
-#include GET_PASS_REGISTRY
-#undef LOOP_CALLBACK
   return false;
 });
 

@@ -528,6 +528,102 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #include "llvm/Passes/MachinePassRegistry.def"
     });
   }
+  auto parseLevelParam = [](StringRef P) -> Expected<OptimizationLevel> {
+    if (P == "O0") return OptimizationLevel::O0;
+    if (P == "O1") return OptimizationLevel::O1;
+    if (P == "O2") return OptimizationLevel::O2;
+    if (P == "O3") return OptimizationLevel::O3;
+    if (P == "Os") return OptimizationLevel::Os;
+    if (P == "Oz") return OptimizationLevel::Oz;
+    return make_error<StringError>(
+        formatv("invalid optimization level '{}'", P).str(),
+        inconvertibleErrorCode());
+  };
+
+  // Module-level callbacks without LTO phase
+  this->registerPipelineParsingCallback(
+      [this, parseLevelParam](StringRef Name, ModulePassManager &PM,
+              ArrayRef<PassBuilder::PipelineElement>) {
+#define MODULE_CALLBACK(NAME, INVOKE)                                             \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                       \
+    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);       \
+    if (!L)                                                                       \
+      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);    \
+    this->INVOKE(PM, L.get());                                                    \
+    return true;                                                                  \
+  }
+#include "PassRegistry.def"
+#undef MODULE_CALLBACK
+        return false;
+      });
+
+  // Module-level callbacks with LTO phase (use Phase::None for string API)
+  this->registerPipelineParsingCallback(
+      [this, parseLevelParam](StringRef Name, ModulePassManager &PM,
+              ArrayRef<PassBuilder::PipelineElement>) {
+#define MODULE_LTO_CALLBACK(NAME, INVOKE)                                         \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                       \
+    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);       \
+    if (!L)                                                                       \
+      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);    \
+    this->INVOKE(PM, L.get(), ThinOrFullLTOPhase::None);                          \
+    return true;                                                                  \
+  }
+#include "PassRegistry.def"
+#undef MODULE_LTO_CALLBACK
+        return false;
+      });
+
+  // Function-level callbacks
+  this->registerPipelineParsingCallback(
+      [this, parseLevelParam](StringRef Name, FunctionPassManager &PM,
+              ArrayRef<PassBuilder::PipelineElement>) {
+#define FUNCTION_CALLBACK(NAME, INVOKE)                                           \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                       \
+    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);       \
+    if (!L)                                                                       \
+      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);    \
+    this->INVOKE(PM, L.get());                                                    \
+    return true;                                                                  \
+  }
+#include "PassRegistry.def"
+#undef FUNCTION_CALLBACK
+        return false;
+      });
+
+  // CGSCC-level callbacks
+  this->registerPipelineParsingCallback(
+      [this, parseLevelParam](StringRef Name, CGSCCPassManager &PM,
+              ArrayRef<PassBuilder::PipelineElement>) {
+#define CGSCC_CALLBACK(NAME, INVOKE)                                              \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                       \
+    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);       \
+    if (!L)                                                                       \
+      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);    \
+    this->INVOKE(PM, L.get());                                                    \
+    return true;                                                                  \
+  }
+#include "PassRegistry.def"
+#undef CGSCC_CALLBACK
+        return false;
+      });
+
+  // Loop-level callbacks
+  this->registerPipelineParsingCallback(
+      [this, parseLevelParam](StringRef Name, LoopPassManager &PM,
+              ArrayRef<PassBuilder::PipelineElement>) {
+#define LOOP_CALLBACK(NAME, INVOKE)                                               \
+  if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                       \
+    auto L = PassBuilder::parsePassParameters(parseLevelParam, Name, NAME);       \
+    if (!L)                                                                       \
+      return (errs() << NAME ": " << toString(L.takeError()) << '\n', false);    \
+    this->INVOKE(PM, L.get());                                                    \
+    return true;                                                                  \
+  }
+#include "PassRegistry.def"
+#undef LOOP_CALLBACK
+        return false;
+      });
 }
 
 void PassBuilder::registerModuleAnalyses(ModuleAnalysisManager &MAM) {
