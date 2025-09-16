@@ -110,14 +110,18 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_DIST_SCHEDULE_KIND(Name) .Case(#Name, OMPC_DIST_SCHEDULE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DIST_SCHEDULE_unknown);
-  case OMPC_defaultmap:
-    return llvm::StringSwitch<unsigned>(Str)
+  case OMPC_defaultmap: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_DEFAULTMAP_KIND(Name)                                           \
   .Case(#Name, static_cast<unsigned>(OMPC_DEFAULTMAP_##Name))
 #define OPENMP_DEFAULTMAP_MODIFIER(Name)                                       \
   .Case(#Name, static_cast<unsigned>(OMPC_DEFAULTMAP_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
-        .Default(OMPC_DEFAULTMAP_unknown);
+                        .Default(OMPC_DEFAULTMAP_unknown);
+    if (LangOpts.OpenMP < 60 && Type == OMPC_DEFAULTMAP_MODIFIER_storage)
+      return OMPC_DEFAULTMAP_MODIFIER_unknown;
+    return Type;
+  }
   case OMPC_atomic_default_mem_order:
      return llvm::StringSwitch<OpenMPAtomicDefaultMemOrderClauseKind>(Str)
 #define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)       \
