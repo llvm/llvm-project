@@ -150,12 +150,13 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison
-  // (here, vp<%4>) back to the canonical induction for the vector body so that
-  // we can copy them to a preheader and rotate the address in the loop to the
-  // next vector iteration.
+  // (here, vp<%4>) back to either live-ins or the address nodes for the load
+  // used as part of the uncountable exit comparison so that we can copy them
+  // to a preheader and rotate the address in the loop to the next vector
+  // iteration.
   //
-  // Currently, the address of the load is restricted to a GEP with 2 terms and
-  // a loop invariant base address. This constraint may be relaxed later.
+  // Currently, the address of the load is restricted to a GEP with 2 operands
+  // and a loop invariant base address. This constraint may be relaxed later.
   //
   // VPlan ' for UF>=1' {
   // Live-in vp<%0> = VF

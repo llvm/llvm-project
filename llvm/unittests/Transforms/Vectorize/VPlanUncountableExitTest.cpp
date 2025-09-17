@@ -61,5 +61,42 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
   ASSERT_EQ(Recipes.size(), 3ull);
 }
 
+TEST_F(VPUncountableExitTest, NoUncountableExit) {
+  const char *ModuleString =
+      "define void @f(ptr %array, ptr %pred) {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]\n"
+      "  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv\n"
+      "  %data = load i16, ptr %st.addr, align 2\n"
+      "  %inc = add nsw i16 %data, 1\n"
+      "  store i16 %inc, ptr %st.addr, align 2\n"
+      "  %iv.next = add nuw nsw i64 %iv, 1\n"
+      "  %countable.cond = icmp eq i64 %iv.next, 20\n"
+      " br i1 %countable.cond, label %exit, label %for.body\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n";
+
+  Module &M = parseModule(ModuleString);
+
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  auto Plan = buildVPlan(LoopHeader);
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
+      Plan, [](PHINode *P) { return nullptr; }, *TLI);
+  VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
+
+  SmallVector<VPRecipeBase *, 8> Recipes;
+  SmallVector<VPRecipeBase *, 2> GEPs;
+
+  std::optional<VPValue *> UncountableCondition =
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+  ASSERT_FALSE(UncountableCondition.has_value());
+  ASSERT_EQ(GEPs.size(), 0ull);
+  ASSERT_EQ(Recipes.size(), 0ull);
+}
+
 } // namespace
 } // namespace llvm
