@@ -720,7 +720,6 @@ void CodeGenAction::generateLLVMIR() {
   const CodeGenOptions &opts = invoc.getCodeGenOpts();
   const auto &mathOpts = invoc.getLoweringOpts().getMathOptions();
   llvm::OptimizationLevel level = mapToLevel(opts);
-  const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
   mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
 
@@ -739,7 +738,8 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
-  config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
+  llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
+  config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);
 
   if (auto vsr = getVScaleRange(ci)) {
