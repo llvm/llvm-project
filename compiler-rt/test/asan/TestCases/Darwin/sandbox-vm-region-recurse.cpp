@@ -11,8 +11,7 @@
 // UNSUPPORTED: ios
 
 // x86_64 does not use ASAN_SHADOW_OFFSET_DYNAMIC
-// UNSUPPORTED: x86_64-darwin
-// UNSUPPORTED: x86_64h-darwin
+// UNSUPPORTED: x86_64-darwin || x86_64h-darwin
 
 #include <stdlib.h>
 

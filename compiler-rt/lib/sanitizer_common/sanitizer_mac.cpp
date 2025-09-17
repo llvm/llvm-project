@@ -61,6 +61,7 @@ extern char ***_NSGetArgv(void);
 #  include <libkern/OSAtomic.h>
 #  include <mach-o/dyld.h>
 #  include <mach/mach.h>
+#  include <mach/mach_error.h>
 #  include <mach/mach_time.h>
 #  include <mach/vm_statistics.h>
 #  include <malloc/malloc.h>
@@ -1286,8 +1287,9 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
       Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
       Die();
     } else {
-      Report("WARNING: mach_vm_region_recurse returned unexpected code %d\n",
-             kr);
+      Report(
+          "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
+          kr, mach_error_string(kr));
       DCHECK(false && "mach_vm_region_recurse returned unexpected code");
       break;  // address is not valid unless KERN_SUCCESS, therefore we must not
               // use it.
