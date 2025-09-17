@@ -467,6 +467,10 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
+  // Replace -mcpu=native with Host CPU.
+  if (MCPU == "native")
+    MCPU = std::string(llvm::sys::getHostCPUName());
+
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
   assert(STI && "Unable to create subtarget info!");
