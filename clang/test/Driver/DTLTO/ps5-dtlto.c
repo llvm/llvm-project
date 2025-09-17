@@ -1,8 +1,5 @@
 // REQUIRES: lld
 
-/// https://github.com/llvm/llvm-project/issues/159125.
-// XFAIL: llvm-driver
-
 /// Check DTLTO options are forwarded to the linker.
 
 /// Check that options are forwarded as expected with --thinlto-distributor=.
@@ -15,7 +12,7 @@
 // FORWARD: filename.py:[[CLANG:.*]]
 // FORWARD: prospero-lld
 // FORWARD-SAME: "--thinlto-distributor=d.exe"
-// FORWARD-SAME: "--thinlto-remote-compiler={{.*}}[[CLANG]]"
+// FORWARD-SAME: "--thinlto-remote-compiler={{[^"]*}}[[CLANG]]"
 // FORWARD-SAME: "--thinlto-distributor-arg=a1"
 // FORWARD-SAME: "--thinlto-distributor-arg=a2"
 // FORWARD-SAME: "--thinlto-distributor-arg=a3"
@@ -42,7 +39,7 @@
 // DEFAULT: filename.py:[[CLANG:.*]]
 // DEFAULT: prospero-lld
 // DEFAULT-SAME: "--thinlto-distributor=d.exe"
-// DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}[[CLANG]]"
+// DEFAULT-SAME: "--thinlto-remote-compiler={{[^"]*}}[[CLANG]]"
 
 /// Check that the arguments are forwarded unconditionally even when the
 /// compiler is not in LTO mode.
