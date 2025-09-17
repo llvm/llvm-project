@@ -250,6 +250,9 @@ Removed Compiler Flags
 
 Attribute Changes in Clang
 --------------------------
+- The definition of a function declaration with ``[[clang::cfi_unchecked_callee]]`` inherits this
+  attribute, allowing the attribute to only be attached to the declaration. Prior, this would be
+  treated as an error where the definition and declaration would have differing types.
 
 Improvements to Clang's diagnostics
 -----------------------------------
