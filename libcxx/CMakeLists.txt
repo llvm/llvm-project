@@ -639,6 +639,9 @@ else()
 endif()
 
 # Link system libraries =======================================================
+include(CheckLibraryExists)
+check_library_exists("m" "lgamma_r" "" LIBCXX_HAS_MATH_LIB)
+
 function(cxx_link_system_libraries target)
   if (NOT MSVC)
     target_link_libraries(${target} PRIVATE "-nostdlib++")
@@ -666,6 +669,10 @@ function(cxx_link_system_libraries target)
 
   if (LIBCXX_HAS_ATOMIC_LIB)
     target_link_libraries(${target} PRIVATE atomic)
+  endif()
+
+  if (LIBCXX_HAS_MATH_LIB)
+    target_link_libraries(${target} PRIVATE m)
   endif()
 
   if (MINGW)
