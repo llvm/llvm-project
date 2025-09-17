@@ -1096,7 +1096,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Returns true if the plugin can guarantee that the associated
   /// storage is accessible
   bool isAccessiblePtr(const void *Ptr, size_t Size);
-  virtual bool isAccessiblePtrImpl(const void *Ptr, size_t Size) { return false; }
+  virtual bool isAccessiblePtrImpl(const void *Ptr, size_t Size) {
+    return false;
+  }
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {

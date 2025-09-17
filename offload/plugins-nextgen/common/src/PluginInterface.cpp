@@ -1607,7 +1607,9 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
-bool GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) { return isAccessiblePtrImpl(Ptr, Size); }
+bool GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return isAccessiblePtrImpl(Ptr, Size);
+}
 
 Error GenericPluginTy::init() {
   if (Initialized)
@@ -2161,7 +2163,8 @@ int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
 }
 
-int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size) {
+int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
+                                           size_t Size) {
   return getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
 }
 
