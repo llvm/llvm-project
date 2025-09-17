@@ -500,7 +500,6 @@ static bool cannotHoistCondition(const PredicateMatcher &Condition,
                                  const Matcher &M) {
   // The condition can't be hoisted if it is a C++ predicate that refers to
   // operands and the operands are registered within the matcher.
-
   return Condition.dependsOnOperands() && M.recordsOperand();
 }
 
