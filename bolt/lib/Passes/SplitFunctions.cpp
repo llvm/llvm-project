@@ -85,7 +85,6 @@ static cl::opt<unsigned> SplitThreshold(
              "size is reduced. Note that on some architectures the size can "
              "increase after splitting."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
- 
 
 static cl::opt<double> CallScale(
     "call-scale",
