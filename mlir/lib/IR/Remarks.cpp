@@ -236,7 +236,13 @@ void RemarkEngine::reportImpl(const Remark &remark) {
 }
 
 void RemarkEngine::report(const Remark &remark) {
-  report(remark, /*forcePrintPostponedRemarks=*/false);
+  // Postponed remarks are deferred to the end of pipeline.
+  if (remark.isPostponed()) {
+    postponedRemarks.push_back(remark);
+    return;
+  }
+
+  reportImpl(remark);
 }
 
 void RemarkEngine::emitPostponedRemarks() {
