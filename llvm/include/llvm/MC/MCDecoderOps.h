@@ -24,7 +24,6 @@ enum DecoderOps {
                          //                uleb128 Val)
   OPC_CheckPredicate,    // OPC_CheckPredicate(uleb128 PIdx)
   OPC_Decode,            // OPC_Decode(uleb128 Opcode, uleb128 DIdx)
-  OPC_TryDecode,         // OPC_TryDecode(uleb128 Opcode, uleb128 DIdx)
   OPC_SoftFail,          // OPC_SoftFail(uleb128 PMask, uleb128 NMask)
 };
 
