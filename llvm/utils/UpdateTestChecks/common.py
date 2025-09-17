@@ -882,6 +882,7 @@ class function_body(object):
 
 class FunctionTestBuilder:
     def __init__(self, run_list, flags, scrubber_args, path, ginfo):
+        self._run_list = run_list
         self._verbose = flags.verbose
         self._record_args = flags.function_signature
         self._check_attributes = flags.check_attributes
@@ -918,14 +919,52 @@ class FunctionTestBuilder:
                 self._global_var_dict.update({prefix: dict()})
 
     def finish_and_get_func_dict(self):
-        for prefix in self.get_failed_prefixes():
-            warn(
-                "Prefix %s had conflicting output from different RUN lines for all functions in test %s"
-                % (
-                    prefix,
-                    self._path,
+        all_funcs = set()
+        for prefix in self._func_dict:
+            all_funcs.update(self._func_dict[prefix].keys())
+
+        warnings_to_print = collections.defaultdict(list)
+        for func in sorted(list(all_funcs)):
+            for i, run_info in enumerate(self._run_list):
+                prefixes = run_info[0]
+                if not prefixes:
+                    continue
+
+                # Check if this RUN line produces this function at all.
+                run_contains_func = True
+                for p in prefixes:
+                    if func not in self._func_dict.get(p, {}):
+                        run_contains_func = False
+                        break
+                if not run_contains_func:
+                    continue
+
+                # Check if this RUN line can print any checks for this
+                # function. It can't if all of its prefixes have conflicting
+                # (None) output.
+                can_print_for_this_run = False
+                for p in prefixes:
+                    if self._func_dict[p].get(func) is not None:
+                        can_print_for_this_run = True
+                        break
+
+                if not can_print_for_this_run:
+                    warnings_to_print[func].append((i, prefixes))
+
+        for func, warning_info in warnings_to_print.items():
+            conflict_strs = []
+            for run_index, prefixes in warning_info:
+                conflict_strs.append(
+                    "RUN #{} (prefixes: {})".format(
+                        run_index + 1, ", ".join(prefixes)
+                    )
                 )
+            warn(
+                "For function '{}', the following RUN lines will not generate checks due to conflicting output: {}".format(
+                    func, ", ".join(conflict_strs)),
+                test_file=self._path,
             )
+
         return self._func_dict
 
     def func_order(self):
@@ -1077,20 +1116,6 @@ class FunctionTestBuilder:
         outputs for all RUN lines.
         """
         self._processed_prefixes.update(prefixes)
-
-    def get_failed_prefixes(self):
-        # This returns the list of those prefixes that failed to match any function,
-        # because there were conflicting bodies produced by different RUN lines, in
-        # all instances of the prefix.
-        for prefix in self._func_dict:
-            if self._func_dict[prefix] and (
-                not [
-                    fct
-                    for fct in self._func_dict[prefix]
-                    if self._func_dict[prefix][fct] is not None
-                ]
-            ):
-                yield prefix
 
 
 ##### Generator of LLVM IR CHECK lines
