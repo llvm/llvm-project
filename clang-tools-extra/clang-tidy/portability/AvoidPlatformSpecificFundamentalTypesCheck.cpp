@@ -148,23 +148,24 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   assert(BT);
   if (BT->isFloatingPoint()) {
     const auto Replacement = getFloatReplacement(BT, *Result.Context);
-    if (Replacement.has_value()) {
-      auto Diag =
-          diag(Loc, "avoid using platform-dependent floating point type '%0'; "
-                    "consider using '%1' instead")
-          << TypeName << Replacement;
 
-      if (TypeRange.isValid())
-        Diag << FixItHint::CreateReplacement(TypeRange, Replacement.value());
-
-      if (auto IncludeFixit = IncludeInserter.createIncludeInsertion(
-              Result.SourceManager->getFileID(Loc), "<stdfloat>")) {
-        Diag << *IncludeFixit;
-      }
-    } else {
+    if (!Replacement.has_value()) {
       diag(Loc, "avoid using platform-dependent floating point type '%0'; "
                 "consider using a type alias or fixed-width type instead")
           << TypeName;
+    }
+
+    auto Diag =
+        diag(Loc, "avoid using platform-dependent floating point type '%0'; "
+                  "consider using '%1' instead")
+        << TypeName << Replacement;
+
+    if (TypeRange.isValid())
+      Diag << FixItHint::CreateReplacement(TypeRange, Replacement.value());
+
+    if (auto IncludeFixit = IncludeInserter.createIncludeInsertion(
+            Result.SourceManager->getFileID(Loc), "<stdfloat>")) {
+      Diag << *IncludeFixit;
     }
   } else if (QT->isCharType() || QT->isWideCharType()) {
     diag(Loc, "avoid using platform-dependent character type '%0'; "
