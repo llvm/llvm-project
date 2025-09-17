@@ -94,10 +94,22 @@ Neutral analysis results.
 
 ***
 
+Here’s a cleaned-up and grammatically improved version of your text:
+
+---
+
 ## Emitting Remarks
 
-The `remark::*` helpers return an **in-flight remark**.
-You append strings or key–value metrics using `<<`.
+The `remark::*` helpers return an **`InFlightRemark`**. You can append strings
+or key–value metrics using the `<<` operator.
+
+By default, the remark is emitted as soon as the `InFlightRemark` object is
+destroyed (typically at the end of its scope). However, it can sometimes be
+useful to postpone emitting the remark until the end of the compilation—for example,
+to collect all remarks, sort them, and emit them differently later.
+
+If this behavior is desired, the `RemarkEngine` can be used to store postponed remarks.
+[See this example of postponing remark emission](#example-postpone-remarks-emitting).
 
 ### Remark Options
 
@@ -108,8 +120,9 @@ When constructing a remark, you typically provide four fields that are `StringRe
 3. **Sub-category** – more fine-grained classification
 4. **Function name** – the function where the remark originates
 
+### Examples
 
-### Example
+#### Emitting remarks
 
 ```c++
 #include "mlir/IR/Remarks.h"
@@ -143,6 +156,19 @@ LogicalResult MyPass::runOnOperation() {
 
   return success();
 }
+```
+
+#### Example: Postpone remarks emitting
+
+`RemarkOpts` has `postpone` option. When it is set, the remark emissing will be
+postponed until the end of the compilation.
+
+```c++
+
+  remark::passed(loc, remark::RemarkOpts::name("")
+                            .category(categoryLoopunroll)
+                            .subCategory(myPassname2)
+                            .postpone())
 ```
 
 ***
@@ -189,7 +215,42 @@ metric("Remark", "vectorized loop")
 
 ***
 
-## Enabling Remarks
+## Enabling Remarks with `mlir-opt`
+
+`mlir-opt` provides flags to enable and configure remarks. The available flags
+are shown below:
+
+```bash
+$> mlir-opt --help
+  ...
+Remark Options:
+Filter remarks by regular expression (llvm::Regex syntax).
+
+  --remark-format=<value>                     - Specify the format for remark output.
+    =emitRemark                               -   Print as emitRemark to the command line
+    =yaml                                     -   Print as a YAML file
+    =bitstream                                -   Print as a bitstream file
+  --remarks-filter=<string>                   - Show all remarks: passed, missed, failed, analysis
+  --remarks-filter-analyse=<string>           - Show analysis remarks
+  --remarks-filter-failed=<string>             - Show failed remarks
+  --remarks-filter-missed=<string>             - Show missed remarks
+  --remarks-filter-passed=<string>             - Show passed remarks
+  --remarks-output-file=<string>               - Output file for YAML and bitstream remark formats (default: mlir-remarks.yaml or mlir-remarks.bitstream)
+```
+
+There are five filter flags to select specific categories. The
+`--remarks-filter` flag is a general shortcut that applies to all remark
+categories. Their usage is as follows:
+
+```bash
+# This will only match remarks in the "my-interesting-category" category
+mlir-opt --remarks-filter="my-interesting-category"
+
+# You can also use "*" to match categories starting with "my"
+mlir-opt --remarks-filter="my*"
+```
+
+## Enabling Remarks for downstream compilers via APIs
 
 ### 1. **With LLVMRemarkStreamer (YAML or Bitstream)**
 
