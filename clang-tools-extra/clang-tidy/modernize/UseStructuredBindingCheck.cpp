@@ -14,37 +14,29 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
-namespace {
-constexpr const char *DefaultPairTypes = "std::pair";
-constexpr llvm::StringLiteral PairDeclName = "PairVarD";
-constexpr llvm::StringLiteral PairVarTypeName = "PairVarType";
-constexpr llvm::StringLiteral FirstVarDeclName = "FirstVarDecl";
-constexpr llvm::StringLiteral SecondVarDeclName = "SecondVarDecl";
-constexpr llvm::StringLiteral FirstDeclStmtName = "FirstDeclStmt";
-constexpr llvm::StringLiteral SecondDeclStmtName = "SecondDeclStmt";
-constexpr llvm::StringLiteral FirstTypeName = "FirstType";
-constexpr llvm::StringLiteral SecondTypeName = "SecondType";
-constexpr llvm::StringLiteral ScopeBlockName = "ScopeBlock";
-constexpr llvm::StringLiteral StdTieAssignStmtName = "StdTieAssign";
-constexpr llvm::StringLiteral StdTieExprName = "StdTieExpr";
-constexpr llvm::StringLiteral ForRangeStmtName = "ForRangeStmt";
 
-/// What qualifiers and specifiers are used to create structured binding
-/// declaration, it only supports the following four cases now.
-enum TransferType : uint8_t {
-  TT_ByVal,
-  TT_ByConstVal,
-  TT_ByRef,
-  TT_ByConstRef
-};
+static constexpr const char *DefaultPairTypes = "std::pair";
+static constexpr llvm::StringLiteral PairDeclName = "PairVarD";
+static constexpr llvm::StringLiteral PairVarTypeName = "PairVarType";
+static constexpr llvm::StringLiteral FirstVarDeclName = "FirstVarDecl";
+static constexpr llvm::StringLiteral SecondVarDeclName = "SecondVarDecl";
+static constexpr llvm::StringLiteral FirstDeclStmtName = "FirstDeclStmt";
+static constexpr llvm::StringLiteral SecondDeclStmtName = "SecondDeclStmt";
+static constexpr llvm::StringLiteral FirstTypeName = "FirstType";
+static constexpr llvm::StringLiteral SecondTypeName = "SecondType";
+static constexpr llvm::StringLiteral ScopeBlockName = "ScopeBlock";
+static constexpr llvm::StringLiteral StdTieAssignStmtName = "StdTieAssign";
+static constexpr llvm::StringLiteral StdTieExprName = "StdTieExpr";
+static constexpr llvm::StringLiteral ForRangeStmtName = "ForRangeStmt";
 
 /// Try to match exactly two VarDecl inside two DeclStmts, and set binding for
 /// the used DeclStmts.
-bool matchTwoVarDecl(const DeclStmt *DS1, const DeclStmt *DS2,
-                     ast_matchers::internal::Matcher<VarDecl> InnerMatcher1,
-                     ast_matchers::internal::Matcher<VarDecl> InnerMatcher2,
-                     internal::ASTMatchFinder *Finder,
-                     internal::BoundNodesTreeBuilder *Builder) {
+static bool
+matchTwoVarDecl(const DeclStmt *DS1, const DeclStmt *DS2,
+                ast_matchers::internal::Matcher<VarDecl> InnerMatcher1,
+                ast_matchers::internal::Matcher<VarDecl> InnerMatcher2,
+                internal::ASTMatchFinder *Finder,
+                internal::BoundNodesTreeBuilder *Builder) {
   SmallVector<std::pair<const VarDecl *, const DeclStmt *>, 2> Vars;
   auto CollectVarsInDeclStmt = [&Vars](const DeclStmt *DS) -> bool {
     if (!DS)
@@ -81,6 +73,16 @@ bool matchTwoVarDecl(const DeclStmt *DS1, const DeclStmt *DS2,
 
   return false;
 }
+
+namespace {
+/// What qualifiers and specifiers are used to create structured binding
+/// declaration, it only supports the following four cases now.
+enum TransferType : uint8_t {
+  TT_ByVal,
+  TT_ByConstVal,
+  TT_ByRef,
+  TT_ByConstRef
+};
 
 /// Matches a Stmt whose parent is a CompoundStmt, and which is directly
 /// following two VarDecls matching the inner matcher, at the same time set
