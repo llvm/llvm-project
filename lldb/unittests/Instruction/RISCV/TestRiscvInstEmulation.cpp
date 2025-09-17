@@ -46,7 +46,7 @@ void TestRiscvInstEmulation::TearDownTestCase() {
 
 TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   ArchSpec arch("riscv64-unknown-linux-gnu");
-  // Enable compressed instruction support (RVC extension)
+  // Enable compressed instruction support (RVC extension).
   arch.SetFlags(ArchSpec::eRISCV_rvc);
   std::unique_ptr<UnwindAssemblyInstEmulation> engine(
       static_cast<UnwindAssemblyInstEmulation *>(
@@ -114,7 +114,7 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
       sample_range, data, sizeof(data), unwind_plan));
 
-  // CFA=sp+0 => fp=<same> ra=<same>
+  // CFA=sp+0 => fp=<same> ra=<same>.
   row = unwind_plan.GetRowForFunctionOffset(0);
   EXPECT_EQ(0, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);
@@ -127,7 +127,7 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
-  // CFA=sp+16 => fp=<same> ra=<same>
+  // CFA=sp+16 => fp=<same> ra=<same>.
   row = unwind_plan.GetRowForFunctionOffset(2);
   EXPECT_EQ(2, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);
@@ -140,7 +140,7 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
   EXPECT_TRUE(regloc.IsSame());
 
-  // CFA=sp+16 => fp=<same> ra=[CFA-8]
+  // CFA=sp+16 => fp=<same> ra=[CFA-8].
   row = unwind_plan.GetRowForFunctionOffset(4);
   EXPECT_EQ(4, row->GetOffset());
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_riscv);

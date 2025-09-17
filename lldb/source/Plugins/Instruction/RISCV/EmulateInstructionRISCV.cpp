@@ -117,6 +117,8 @@ static std::optional<RegisterInfo>
 GPREncodingToRegisterInfo(EmulateInstructionRISCV &emulator,
                           uint32_t reg_encode) {
   uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
+  if (lldb_reg == LLDB_INVALID_REGNUM)
+    return std::nullopt;
   return emulator.GetRegisterInfo(eRegisterKindLLDB, lldb_reg);
 }
 
@@ -243,7 +245,7 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   if (!addr)
     return false;
 
-  // Set up context for the load operation, similar to ARM64
+  // Set up context for the load operation, similar to ARM64.
   EmulateInstructionRISCV::Context context;
 
   // Get register info for base register
@@ -253,7 +255,7 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   if (!reg_info_rs1)
     return false;
 
-  // Set context type based on whether this is a stack-based load
+  // Set context type based on whether this is a stack-based load.
   if (inst.rs1.rs == RISCV_GPR_SP)
     context.type = EmulateInstruction::eContextPopRegisterOffStack;
   else
@@ -262,7 +264,7 @@ Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   // Set the context address information
   context.SetAddress(*addr);
 
-  // Read from memory with context and write to register
+  // Read from memory with context and write to register.
   bool success = false;
   uint64_t value =
       emulator.ReadMemoryUnsigned(context, *addr, sizeof(T), 0, &success);
@@ -279,10 +281,10 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   if (!addr)
     return false;
 
-  // Set up context for the store operation, similar to ARM64
+  // Set up context for the store operation, similar to ARM64.
   EmulateInstructionRISCV::Context context;
 
-  // Get register info for source and base registers
+  // Get register info for source and base registers.
   std::optional<RegisterInfo> reg_info_rs1 =
       GPREncodingToRegisterInfo(emulator, inst.rs1.rs);
   std::optional<RegisterInfo> reg_info_rs2 =
@@ -291,14 +293,14 @@ Store(EmulateInstructionRISCV &emulator, I inst) {
   if (!reg_info_rs1 || !reg_info_rs2)
     return false;
 
-  // Set context type based on whether this is a stack-based store
-  if (inst.rs1.rs == RISCV_GPR_SP) // x2 is the stack pointer in RISC-V
+  // Set context type based on whether this is a stack-based store.
+  if (inst.rs1.rs == RISCV_GPR_SP)
     context.type = EmulateInstruction::eContextPushRegisterOnStack;
   else
     context.type = EmulateInstruction::eContextRegisterStore;
 
   // Set the context to show which register is being stored to which base
-  // register + offset
+  // register + offset.
   context.SetRegisterToRegisterPlusOffset(*reg_info_rs2, *reg_info_rs1,
                                           SignExt(inst.imm));
 
@@ -803,7 +805,7 @@ public:
                inst.rs1.ReadI64(m_emu),
                [&](int64_t rs1) {
                  int64_t result = rs1 + int64_t(SignExt(inst.imm));
-                 // Check if this is a stack pointer adjustment
+                 // Check if this is a stack pointer adjustment.
                  if (inst.rd.rd == RISCV_GPR_SP &&
                      inst.rs1.rs == RISCV_GPR_SP) {
                    EmulateInstruction::Context context;
@@ -816,8 +818,8 @@ public:
                    return m_emu.WriteRegister(context, eRegisterKindLLDB,
                                               sp_lldb_reg, registerValue);
                  }
-                 // Check if this is setting up the frame pointer
-                 // addi fp, sp, imm -> fp = sp + imm (frame pointer setup)
+                 // Check if this is setting up the frame pointer.
+                 // addi fp, sp, imm -> fp = sp + imm (frame pointer setup).
                  if (inst.rd.rd == RISCV_GPR_FP &&
                      inst.rs1.rs == RISCV_GPR_SP) {
                    EmulateInstruction::Context context;
@@ -834,7 +836,7 @@ public:
                    return m_emu.WriteRegister(context, eRegisterKindLLDB,
                                               fp_lldb_reg, registerValue);
                  }
-                 // Regular ADDI instruction
+                 // Regular ADDI instruction.
                  return inst.rd.Write(m_emu, result);
                })
         .value_or(false);
@@ -1843,34 +1845,34 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
 bool EmulateInstructionRISCV::SetInstruction(const Opcode &opcode,
                                              const Address &inst_addr,
                                              Target *target) {
-  // Call the base class implementation
+  // Call the base class implementation.
   if (!EmulateInstruction::SetInstruction(opcode, inst_addr, target))
     return false;
 
-  // Extract instruction data from the opcode
+  // Extract instruction data from the opcode.
   uint32_t inst_data = 0;
   const void *opcode_data = m_opcode.GetOpcodeBytes();
   if (!opcode_data)
     return false;
 
   if (m_opcode.GetByteSize() == 2) {
-    // 16-bit compressed instruction
+    // 16-bit compressed instruction.
     const uint16_t *data = static_cast<const uint16_t *>(opcode_data);
     inst_data = *data;
   } else if (m_opcode.GetByteSize() == 4) {
-    // 32-bit instruction
+    // 32-bit instruction.
     const uint32_t *data = static_cast<const uint32_t *>(opcode_data);
     inst_data = *data;
   } else {
     return false;
   }
 
-  // Decode the instruction
+  // Decode the instruction.
   auto decoded_inst = Decode(inst_data);
   if (!decoded_inst)
     return false;
 
-  // Store the decoded result
+  // Store the decoded result.
   m_decoded = *decoded_inst;
   return true;
 }
