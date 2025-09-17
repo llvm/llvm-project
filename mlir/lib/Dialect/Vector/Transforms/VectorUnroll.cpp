@@ -829,7 +829,7 @@ struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
     SmallVector<Value> vectors = *result;
 
     SmallVector<Value> results;
-    for (const Value &vector : vectors) {
+    for (Value vector : vectors) {
       auto subElements =
           vector::ToElementsOp::create(rewriter, op.getLoc(), vector);
       llvm::append_range(results, subElements.getResults());
