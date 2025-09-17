@@ -3580,6 +3580,32 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &F, const APSInt &T, const APSInt &C) {
           return ((APInt)C).isNegative() ? T : F;
         });
+  case X86::BI__builtin_ia32_ptestz128:
+  case X86::BI__builtin_ia32_ptestz256:
+
+  // case X86::BI__builtin_ia32_ptestc128:
+  // case X86::BI__builtin_ia32_ptestc256:
+
+  // case X86::BI__builtin_ia32_ptestnzc128:
+  // case X86::BI__builtin_ia32_ptestnzc256:
+
+  // case X86::BI__builtin_ia32_vtestzps:
+  // case X86::BI__builtin_ia32_vtestzps256:
+
+  // case X86::BI__builtin_ia32_vtestcps:
+  // case X86::BI__builtin_ia32_vtestcps256:
+
+  // case X86::BI__builtin_ia32_vtestnzcps:
+  // case X86::BI__builtin_ia32_vtestnzcps256:
+
+  // case X86::BI__builtin_ia32_vtestzpd:
+  // case X86::BI__builtin_ia32_vtestzpd256:
+
+  // case X86::BI__builtin_ia32_vtestcpd:
+  // case X86::BI__builtin_ia32_vtestcpd256:
+
+  // case X86::BI__builtin_ia32_vtestnzcpd:
+  // case X86::BI__builtin_ia32_vtestnzcpd256:
 
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
