@@ -203,3 +203,39 @@ func.func @double_use(%p : !emitc.ptr<i32>) -> i32 {
 // CHECK:           %[[VAL_15:.*]] = emitc.load %[[VAL_13]] : <i32>
 // CHECK:           return %[[VAL_15]] : i32
 // CHECK:         }
+
+emitc.func @payload_empty_after_region() -> i1 {
+  %true = emitc.literal "true" : i1
+  return %true : i1
+}
+
+func.func @empty_after_region() {
+  scf.while () : () -> () {
+    %condition = emitc.call @payload_empty_after_region() : () -> i1
+    scf.condition(%condition)
+  } do {
+  ^bb0():
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL:   emitc.func @payload_empty_after_region() -> i1 {
+// CHECK:           %[[VAL_0:.*]] = literal "true" : i1
+// CHECK:           return %[[VAL_0]] : i1
+// CHECK:         }
+
+// CHECK-LABEL:   func.func @empty_after_region() {
+// CHECK:           %[[VAL_0:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i1>
+// CHECK:           emitc.do {
+// CHECK:             %[[VAL_1:.*]] = call @payload_empty_after_region() : () -> i1
+// CHECK:             assign %[[VAL_1]] : i1 to %[[VAL_0]] : <i1>
+// CHECK:           } while {
+// CHECK:             %[[VAL_2:.*]] = expression %[[VAL_0]] : (!emitc.lvalue<i1>) -> i1 {
+// CHECK:               %[[VAL_3:.*]] = load %[[VAL_0]] : <i1>
+// CHECK:               yield %[[VAL_3]] : i1
+// CHECK:             }
+// CHECK:             yield %[[VAL_2]] : i1
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

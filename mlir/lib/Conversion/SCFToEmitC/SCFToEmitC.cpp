@@ -474,7 +474,7 @@ private:
 
     auto loweredDo = rewriter.create<emitc::DoOp>(loc);
 
-    // Lower before region as body.
+    // Lower before-region as body.
     rewriter.inlineRegionBefore(whileOp.getBefore(), loweredDo.getBodyRegion(),
                                 loweredDo.getBodyRegion().end());
 
@@ -489,14 +489,13 @@ private:
     Value condition = rewriter.getRemappedValue(condOp.getCondition());
     rewriter.create<emitc::AssignOp>(loc, conditionVal, condition);
 
-    // Wrap body region in conditional to preserve scf semantics.
-    auto ifOp = rewriter.create<emitc::IfOp>(loc, condition, false, false);
+    // Wrap body region in conditional to preserve scf semantics. Only create
+    // ifOp if after-region is non-empty.
+    if (whileOp.getAfterBody()->getOperations().size() > 1) {
+      auto ifOp = rewriter.create<emitc::IfOp>(loc, condition, false, false);
+      rewriter.inlineRegionBefore(whileOp.getAfter(), ifOp.getBodyRegion(),
+                                  ifOp.getBodyRegion().begin());
 
-    // Lower after region as then-block of conditional.
-    rewriter.inlineRegionBefore(whileOp.getAfter(), ifOp.getBodyRegion(),
-                                ifOp.getBodyRegion().begin());
-
-    if (!ifOp.getBodyRegion().empty()) {
       Block *ifBlock = &ifOp.getBodyRegion().front();
 
       // Handle argument mapping from condition op to body region.
