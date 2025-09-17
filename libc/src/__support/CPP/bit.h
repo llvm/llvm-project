@@ -16,6 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/sanitizer.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -36,7 +37,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<
     To>
 bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
-#if __has_builtin(__builtin_bit_cast)
+#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
   return __builtin_bit_cast(To, from);
 #else
   To to{};

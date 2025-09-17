@@ -123,6 +123,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
