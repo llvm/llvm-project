@@ -96,208 +96,6 @@ static bool checkLayout(Value val) {
          isa<StridedLayoutAttr>(type.getLayout());
 }
 
-/// Compute the expanded sizes of the given expand_shape for the reassociation
-/// group `groupId`. Portions adapted from
-/// `lib/Dialect/MemRef/Transforms/ExpandStridedMetadata.cpp` to avoid a direct
-/// dependency from the MemRef dialect on the Affine dialect.
-static SmallVector<OpFoldResult>
-getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
-                 ArrayRef<OpFoldResult> origSizes, unsigned groupId) {
-  ArrayRef<int64_t> reassocGroup =
-      expandShape.getReassociationIndices()[groupId];
-  assert(!reassocGroup.empty() &&
-         "Reassociation group should have at least one dimension");
-
-  unsigned groupSize = reassocGroup.size();
-  SmallVector<OpFoldResult> expandedSizes(groupSize);
-
-  uint64_t productOfAllStaticSizes = 1;
-  std::optional<unsigned> dynSizeIdx;
-  MemRefType expandShapeType = expandShape.getResultType();
-
-  for (unsigned i = 0; i < groupSize; ++i) {
-    uint64_t dimSize = expandShapeType.getDimSize(reassocGroup[i]);
-    if (ShapedType::isDynamic(dimSize)) {
-      assert(!dynSizeIdx && "there must be at most one dynamic size per group");
-      dynSizeIdx = i;
-      continue;
-    }
-    productOfAllStaticSizes *= dimSize;
-    expandedSizes[i] = builder.getIndexAttr(dimSize);
-  }
-
-  if (dynSizeIdx) {
-    AffineExpr s0 = builder.getAffineSymbolExpr(0);
-    expandedSizes[*dynSizeIdx] = affine::makeComposedFoldedAffineApply(
-        builder, expandShape.getLoc(), s0.floorDiv(productOfAllStaticSizes),
-        origSizes[groupId]);
-  }
-
-  return expandedSizes;
-}
-
-/// Compute the expanded strides of the given expand_shape for the reassociation
-/// group `groupId`.
-static SmallVector<OpFoldResult>
-getExpandedStrides(memref::ExpandShapeOp expandShape, OpBuilder &builder,
-                   ArrayRef<OpFoldResult> origSizes,
-                   ArrayRef<OpFoldResult> origStrides, unsigned groupId) {
-  ArrayRef<int64_t> reassocGroup =
-      expandShape.getReassociationIndices()[groupId];
-  assert(!reassocGroup.empty() &&
-         "Reassociation group should have at least one dimension");
-
-  unsigned groupSize = reassocGroup.size();
-  MemRefType expandShapeType = expandShape.getResultType();
-
-  std::optional<int64_t> dynSizeIdx;
-  uint64_t currentStride = 1;
-  SmallVector<OpFoldResult> expandedStrides(groupSize);
-  for (int i = groupSize - 1; i >= 0; --i) {
-    expandedStrides[i] = builder.getIndexAttr(currentStride);
-    uint64_t dimSize = expandShapeType.getDimSize(reassocGroup[i]);
-    if (ShapedType::isDynamic(dimSize)) {
-      assert(!dynSizeIdx && "there must be at most one dynamic size per group");
-      dynSizeIdx = i;
-      continue;
-    }
-    currentStride *= dimSize;
-  }
-
-  auto sourceType = expandShape.getSrcType();
-  auto [strides, offset] = sourceType.getStridesAndOffset();
-  (void)offset;
-
-  OpFoldResult origStride = ShapedType::isDynamic(strides[groupId])
-                                ? origStrides[groupId]
-                                : builder.getIndexAttr(strides[groupId]);
-
-  int64_t doneStrideIdx = 0;
-  if (dynSizeIdx) {
-    int64_t productOfAllStaticSizes = currentStride;
-    assert(ShapedType::isDynamic(sourceType.getDimSize(groupId)) &&
-           "dynamic reassociation must originate from dynamic source dim");
-    OpFoldResult origSize = origSizes[groupId];
-
-    AffineExpr s0 = builder.getAffineSymbolExpr(0);
-    AffineExpr s1 = builder.getAffineSymbolExpr(1);
-    for (; doneStrideIdx < *dynSizeIdx; ++doneStrideIdx) {
-      auto baseAttr = expandedStrides[doneStrideIdx].dyn_cast<Attribute>();
-      assert(baseAttr && "expected attribute stride");
-      int64_t baseExpandedStride = cast<IntegerAttr>(baseAttr).getInt();
-      expandedStrides[doneStrideIdx] = affine::makeComposedFoldedAffineApply(
-          builder, expandShape.getLoc(),
-          (s0 * baseExpandedStride).floorDiv(productOfAllStaticSizes) * s1,
-          {origSize, origStride});
-    }
-  }
-
-  AffineExpr s0 = builder.getAffineSymbolExpr(0);
-  for (; doneStrideIdx < groupSize; ++doneStrideIdx) {
-    auto baseAttr = expandedStrides[doneStrideIdx].dyn_cast<Attribute>();
-    assert(baseAttr && "expected attribute stride");
-    int64_t baseExpandedStride = cast<IntegerAttr>(baseAttr).getInt();
-    expandedStrides[doneStrideIdx] = affine::makeComposedFoldedAffineApply(
-        builder, expandShape.getLoc(), s0 * baseExpandedStride,
-        {origStride});
-  }
-
-  return expandedStrides;
-}
-
-/// Produce an OpFoldResult representing the product of the values or constants
-/// referenced by `indices`. `staticShape` provides the statically known sizes
-/// for the source memref, while `values` contains the mixed (value/attribute)
-/// representation produced by `memref.extract_strided_metadata`.
-static OpFoldResult getProductOfValues(ArrayRef<int64_t> indices,
-                                       OpBuilder &builder, Location loc,
-                                       ArrayRef<int64_t> staticShape,
-                                       ArrayRef<OpFoldResult> values) {
-  AffineExpr product = builder.getAffineConstantExpr(1);
-  SmallVector<OpFoldResult> inputs;
-  unsigned numSymbols = 0;
-  for (int64_t idx : indices) {
-    product = product * builder.getAffineSymbolExpr(numSymbols++);
-    if (ShapedType::isDynamic(staticShape[idx]))
-      inputs.push_back(values[idx]);
-    else
-      inputs.push_back(builder.getIndexAttr(staticShape[idx]));
-  }
-  return affine::makeComposedFoldedAffineApply(builder, loc, product, inputs);
-}
-
-/// Return the collapsed size (as OpFoldResult) for the reassociation group
-/// `groupId` of `collapseShapeOp`.
-static SmallVector<OpFoldResult>
-getCollapsedSize(memref::CollapseShapeOp collapseShapeOp, OpBuilder &builder,
-                 ArrayRef<OpFoldResult> origSizes, unsigned groupId) {
-  SmallVector<OpFoldResult> collapsedSize;
-
-  MemRefType resultType = collapseShapeOp.getResultType();
-  int64_t dimSize = resultType.getDimSize(groupId);
-  if (!ShapedType::isDynamic(dimSize)) {
-    collapsedSize.push_back(builder.getIndexAttr(dimSize));
-    return collapsedSize;
-  }
-
-  auto sourceType = collapseShapeOp.getSrcType();
-  ArrayRef<int64_t> staticShape = sourceType.getShape();
-  ArrayRef<int64_t> reassocGroup =
-      collapseShapeOp.getReassociationIndices()[groupId];
-
-  collapsedSize.push_back(getProductOfValues(reassocGroup, builder,
-                                             collapseShapeOp.getLoc(),
-                                             staticShape, origSizes));
-  return collapsedSize;
-}
-
-/// Return the collapsed stride (as OpFoldResult) for the reassociation group
-/// `groupId` of `collapseShapeOp`.
-static SmallVector<OpFoldResult> getCollapsedStride(
-    memref::CollapseShapeOp collapseShapeOp, OpBuilder &builder,
-    ArrayRef<OpFoldResult> origSizes, ArrayRef<OpFoldResult> origStrides,
-    unsigned groupId) {
-  ArrayRef<int64_t> reassocGroup =
-      collapseShapeOp.getReassociationIndices()[groupId];
-  assert(!reassocGroup.empty() &&
-         "reassociation group must contain at least one dimension");
-
-  auto sourceType = collapseShapeOp.getSrcType();
-  auto [strides, offset] = sourceType.getStridesAndOffset();
-  (void)offset;
-  ArrayRef<int64_t> srcShape = sourceType.getShape();
-
-  OpFoldResult lastValidStride = nullptr;
-  for (int64_t dim : reassocGroup) {
-    if (srcShape[dim] == 1)
-      continue;
-    int64_t currentStride = strides[dim];
-    if (ShapedType::isDynamic(currentStride))
-      lastValidStride = origStrides[dim];
-    else
-      lastValidStride = builder.getIndexAttr(currentStride);
-  }
-
-  if (!lastValidStride) {
-    MemRefType collapsedType = collapseShapeOp.getResultType();
-    auto [collapsedStrides, collapsedOffset] =
-        collapsedType.getStridesAndOffset();
-    (void)collapsedOffset;
-    int64_t finalStride = collapsedStrides[groupId];
-    if (ShapedType::isDynamic(finalStride)) {
-      for (int64_t dim : reassocGroup) {
-        assert(srcShape[dim] == 1 && "expected size-one dimensions");
-        if (ShapedType::isDynamic(strides[dim]))
-          return {origStrides[dim]};
-      }
-      llvm_unreachable("expected to find a dynamic stride");
-    }
-    return {builder.getIndexAttr(finalStride)};
-  }
-
-  return {lastValidStride};
-}
-
 namespace {
 static Value getTargetMemref(Operation *op) {
   return llvm::TypeSwitch<Operation *, Value>(op)
@@ -521,9 +319,9 @@ struct FlattenCollapseShape final
     collapsedStrides.reserve(numGroups);
     for (unsigned i = 0; i < numGroups; ++i) {
       SmallVector<OpFoldResult> groupSizes =
-          getCollapsedSize(op, rewriter, origSizes, i);
+          memref::getCollapsedSize(op, rewriter, origSizes, i);
       SmallVector<OpFoldResult> groupStrides =
-          getCollapsedStride(op, rewriter, origSizes, origStrides, i);
+          memref::getCollapsedStride(op, rewriter, origSizes, origStrides, i);
       collapsedSizes.append(groupSizes.begin(), groupSizes.end());
       collapsedStrides.append(groupStrides.begin(), groupStrides.end());
     }
@@ -556,9 +354,9 @@ struct FlattenExpandShape final : public OpRewritePattern<memref::ExpandShapeOp>
 
     for (unsigned i = 0; i < numGroups; ++i) {
       SmallVector<OpFoldResult> groupSizes =
-          getExpandedSizes(op, rewriter, origSizes, i);
+          memref::getExpandedSizes(op, rewriter, origSizes, i);
       SmallVector<OpFoldResult> groupStrides =
-          getExpandedStrides(op, rewriter, origSizes, origStrides, i);
+          memref::getExpandedStrides(op, rewriter, origSizes, origStrides, i);
       expandedSizes.append(groupSizes.begin(), groupSizes.end());
       expandedStrides.append(groupStrides.begin(), groupStrides.end());
     }
@@ -568,6 +366,40 @@ struct FlattenExpandShape final : public OpRewritePattern<memref::ExpandShapeOp>
     return success();
   }
 };
+
+
+/*
+// Flattens memref subspan ops with more than 1 dimensions to 1 dimension.
+struct FlattenSubView final : public OpConversionPattern<memref::SubViewOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::SubViewOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isRankZeroOrOneMemRef(adaptor.getSource().getType())) {
+      return rewriter.notifyMatchFailure(
+          op, "expected converted memref of rank <= 1");
+    }
+    Type neededResultType =
+        getTypeConverter()->convertType(op.getResult().getType());
+    if (!neededResultType || !isRankZeroOrOneMemRef(neededResultType))
+      return failure();
+    Value size = createTotalElementCountValue(op.getType(), op.getSizes(),
+                                              op.getLoc(), rewriter);
+    SmallVector<Value> offsets = mlir::getValueOrCreateConstantIndexOp(
+        rewriter, op.getLoc(), op.getMixedOffsets());
+    Value linearOffset =
+        linearizeIndices(op.getSource(), offsets, op.getLoc(), rewriter);
+    Value stride = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 1);
+    Value newSubView = memref::SubViewOp::create(
+        rewriter, op.getLoc(), adaptor.getSource(), ValueRange({linearOffset}),
+        ValueRange({size}), ValueRange({stride}));
+    rewriter.replaceOpWithNewOp<memref::CastOp>(op, neededResultType,
+                                                newSubView);
+    return success();
+  }
+};
+*/
 
 struct FlattenMemrefsPass
     : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
@@ -646,6 +478,7 @@ void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
                   MemRefRewritePattern<memref::DeallocOp>,
                   FlattenExpandShape,
                   FlattenCollapseShape,
+                  //FlattenSubView,
                   FlattenGetGlobal,
                   FlattenGlobal>(
       patterns.getContext());
