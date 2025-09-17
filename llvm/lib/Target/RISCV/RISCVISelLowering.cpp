@@ -21571,8 +21571,9 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case RISCVISD::SHL_ADD: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::shl(Known, Known2);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    Known <<= ShAmt;
+    Known.Zero.setLowBits(ShAmt); // the <<= operator left these bits unknown
     Known2 = DAG.computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
     Known = KnownBits::add(Known, Known2);
     break;
