@@ -2522,8 +2522,7 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // sequentially consistent, and no other thread can access scratch
   // memory.
 
-  // Other address spaces do not have a cache.
-  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+  if (AddrSpace == SIAtomicAddrSpace::SCRATCH)
     return false;
 
   if (Pos == Position::AFTER)
