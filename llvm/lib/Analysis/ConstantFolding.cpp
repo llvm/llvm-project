@@ -2177,7 +2177,7 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
     return PoisonValue::get(VT->getElementType());
 
   // TODO: Handle undef.
-  if (!isa<ConstantVector>(Op) && !isa<ConstantDataVector>(Op))
+  if (!isa<ConstantVector, ConstantDataVector, ConstantInt>(Op))
     return nullptr;
 
   auto *EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
@@ -3059,9 +3059,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       Val = Val | Val << 1;
       return ConstantInt::get(Ty, Val);
     }
-
-    default:
-      return nullptr;
     }
   }
 
@@ -3082,9 +3079,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   }
 
   // Support ConstantVector in case we have an Undef in the top.
-  if (isa<ConstantVector>(Operands[0]) ||
-      isa<ConstantDataVector>(Operands[0]) ||
-      isa<ConstantAggregateZero>(Operands[0])) {
+  if (isa<ConstantVector, ConstantDataVector, ConstantAggregateZero,
+          ConstantInt>(Operands[0])) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
