@@ -117,16 +117,15 @@ SmallVector<Value> loadValues(const SmallVector<Value> &variables,
 
 static LogicalResult lowerYield(Operation *op, ValueRange resultVariables,
                                 ConversionPatternRewriter &rewriter,
-                                scf::YieldOp yield) {
+                                scf::YieldOp yield, bool createYield = true) {
   Location loc = yield.getLoc();
 
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(yield);
 
   SmallVector<Value> yieldOperands;
-  if (failed(rewriter.getRemappedValues(yield.getOperands(), yieldOperands))) {
+  if (failed(rewriter.getRemappedValues(yield.getOperands(), yieldOperands)))
     return rewriter.notifyMatchFailure(op, "failed to lower yield operands");
-  }
 
   assignValues(yieldOperands, resultVariables, rewriter, loc);
 
@@ -414,26 +413,6 @@ private:
     block->eraseArguments(0, block->getNumArguments());
   }
 
-  // Convert SCF yield terminators to imperative assignments to update loop
-  // variables, maintaining loop semantics while transitioning to emitc model.
-  LogicalResult processYieldTerminator(Operation *terminator,
-                                       ArrayRef<Value> vars,
-                                       ConversionPatternRewriter &rewriter,
-                                       Location loc) const {
-    auto yieldOp = cast<scf::YieldOp>(terminator);
-    SmallVector<Value> yields;
-    if (failed(rewriter.getRemappedValues(yieldOp.getOperands(), yields)))
-      return rewriter.notifyMatchFailure(yieldOp,
-                                         "failed to lower yield operands");
-    rewriter.eraseOp(yieldOp);
-
-    rewriter.setInsertionPointToEnd(yieldOp->getBlock());
-    for (auto [var, val] : llvm::zip(vars, yields))
-      rewriter.create<emitc::AssignOp>(loc, var, val);
-
-    return success();
-  }
-
   // Transfers final loop state from mutable variables to result variables,
   // then returns the final SSA values to replace the original scf::while
   // results.
@@ -505,12 +484,9 @@ private:
 
       ifBlock->eraseArguments(0, ifBlock->getNumArguments());
 
-      // Convert scf.yield to variable assignments for state updates.
-      if (failed(processYieldTerminator(ifBlock->getTerminator(), vars,
-                                        rewriter, loc)))
+      if (failed(lowerYield(whileOp, vars, rewriter,
+                            cast<scf::YieldOp>(ifBlock->getTerminator()))))
         return failure();
-
-      rewriter.create<emitc::YieldOp>(loc);
     }
 
     rewriter.eraseOp(condOp);
