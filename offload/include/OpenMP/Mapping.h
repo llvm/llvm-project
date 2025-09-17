@@ -493,6 +493,10 @@ struct AttachInfoTy {
   /// Key: host pointer, Value: allocation size.
   llvm::DenseMap<void *, int64_t> NewAllocations;
 
+  /// Key: host pointer, Value: target pointer for PRIVATE | ATTACH map entries, 
+  /// which need special initialization during ATTACH processing.
+  llvm::DenseMap<void *, void *> PrivateAttachAllocations;
+
   AttachInfoTy() = default;
 
   // Delete copy constructor and copy assignment operator to prevent copying
