@@ -1026,7 +1026,7 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expand16BitIsInf(Orig);
     break;
   case Intrinsic::dx_isnan:
-    Result = expand16BitIsInf(Orig);
+    Result = expand16BitIsNaN(Orig);
     break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);

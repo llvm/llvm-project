@@ -5086,7 +5086,7 @@ def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
 def HLSLIsnan : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isnan"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "int(...)";
+  let Prototype = "void(...)";
 }
 
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
