@@ -225,14 +225,7 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &remark,
-                          bool forcePrintPostponedRemarks) {
-  // Postponed remarks are shown at the end of pipeline, unless overridden.
-  if (remark.isPostponed() && !forcePrintPostponedRemarks) {
-    postponedRemarks.push_back(remark);
-    return;
-  }
-
+void RemarkEngine::reportImpl(const Remark &remark) {
   // Stream the remark
   if (remarkStreamer)
     remarkStreamer->streamOptimizationRemark(remark);
