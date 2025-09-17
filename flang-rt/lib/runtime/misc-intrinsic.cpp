@@ -15,8 +15,6 @@
 #include <cstdio>
 #include <cstring>
 
-#include "../../include/flang-rt/runtime/descriptor.h"
-
 namespace Fortran::runtime {
 
 static RT_API_ATTRS void TransferImpl(Descriptor &result,
