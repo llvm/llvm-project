@@ -46,9 +46,9 @@ define i32 @NegBin(i1 %C) !prof !0 {
   ret i32 %V
 }
 
-define i32 @select_C_minus_1_or_C_from_bool(i1 %x) {
+define i32 @select_C_minus_1_or_C_from_bool(i1 %x) !prof !0 {
 ; CHECK-LABEL: define i32 @select_C_minus_1_or_C_from_bool(
-; CHECK-SAME: i1 [[X:%.*]]) {
+; CHECK-SAME: i1 [[X:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[X]], i32 41, i32 42, !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -57,9 +57,9 @@ define i32 @select_C_minus_1_or_C_from_bool(i1 %x) {
   ret i32 %add
 }
 
-define i5 @and_add(i1 %x, i1 %y) {
+define i5 @and_add(i1 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: define i5 @and_add(
-; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) {
+; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X]], true
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i5 -2, i5 0, !prof [[PROF2]]
@@ -72,10 +72,21 @@ define i5 @and_add(i1 %x, i1 %y) {
   ret i5 %r
 }
 
-define i32 @add_zext_zext_i1(i1 %a) {
+define i32 @add_zext_zext_i1(i1 %a) !prof !0 {
 ; CHECK-LABEL: define i32 @add_zext_zext_i1(
-; CHECK-SAME: i1 [[A:%.*]]) {
+; CHECK-SAME: i1 [[A:%.*]]) !prof [[PROF0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[A]], i32 2, i32 0, !prof [[PROF2]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %zext = zext i1 %a to i32
+  %add = add i32 %zext, %zext
+  ret i32 %add
+}
+
+define i32 @no_count_no_branch_weights(i1 %a) {
+; CHECK-LABEL: define i32 @no_count_no_branch_weights(
+; CHECK-SAME: i1 [[A:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[A]], i32 2, i32 0
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %zext = zext i1 %a to i32

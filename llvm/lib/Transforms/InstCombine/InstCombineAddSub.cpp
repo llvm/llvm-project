@@ -888,7 +888,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
       X->getType()->getScalarSizeInBits() == 1)
     SI = SelectInst::Create(X, InstCombiner::SubOne(Op1C), Op1);
   if (SI) {
-    setExplicitlyUnknownBranchWeights(*SI, DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, Add, DEBUG_TYPE);
     return SI;
   }
 

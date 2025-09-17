@@ -1255,7 +1255,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       auto *NewC = Builder.CreateShl(ConstantInt::get(Ty, 1), C1);
       auto *SI = SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
-      setExplicitlyUnknownBranchWeights(*SI, DEBUG_TYPE);
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, I, DEBUG_TYPE);
       return SI;
     }
   }
