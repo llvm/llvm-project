@@ -845,6 +845,15 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
     assert(Size % 16 == 0);
     Result.second = Result.first + (Size / 16);
+
+    if (Size == 16 && Context->ST->hasD16Writes32BitVgpr()) {
+      // Regardless of which lo16/hi16 is used, consider the full 32-bit
+      // register used.
+      if (AMDGPU::isHi16Reg(MCReg, *TRI))
+        Result.first -= 1;
+      else
+        Result.second += 1;
+    }
   } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && RegIdx < SQ_MAX_PGM_SGPRS) {
     // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
     // sources like SRC_PRIVATE_BASE.

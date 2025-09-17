@@ -40,6 +40,10 @@ class Value;
 /// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = TypeConverter;
+
   virtual ~TypeConverter() = default;
   TypeConverter() = default;
   // Copy the registered conversions, but not the caches
@@ -679,6 +683,10 @@ protected:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpConversionPattern;
+
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
@@ -729,6 +737,10 @@ private:
 template <typename SourceOp>
 class OpInterfaceConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpInterfaceConversionPattern;
+
   OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchInterfaceOpTypeTag(),
                           SourceOp::getInterfaceID(), benefit, context) {}
@@ -773,6 +785,10 @@ private:
 template <template <typename> class TraitType>
 class OpTraitConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpTraitConversionPattern;
+
   OpTraitConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchTraitOpTypeTag(),
                           TypeID::get<TraitType>(), benefit, context) {}

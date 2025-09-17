@@ -2723,7 +2723,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   return nullptr;
 }
 
-/// Return the identity numeric value associated to the give op.
+/// Returns the identity numeric value of the given op.
 std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
   std::optional<AtomicRMWKind> maybeKind =
       llvm::TypeSwitch<Operation *, std::optional<AtomicRMWKind>>(op)

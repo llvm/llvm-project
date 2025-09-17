@@ -2060,8 +2060,9 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
 /// \param imm
 ///     An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_slli_si256(a, imm) \
-  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm)))
+#define _mm256_slli_si256(a, imm)                                              \
+  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v32qi)(__m256i)(a),         \
+                                                (int)(imm)))
 
 /// Shifts each 128-bit half of the 256-bit integer vector \a a left by
 ///    \a imm bytes, shifting in zero bytes, and returns the result. If \a imm
@@ -2080,8 +2081,9 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
 /// \param imm
 ///    An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_bslli_epi128(a, imm) \
-  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm)))
+#define _mm256_bslli_epi128(a, imm)                                            \
+  ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v32qi)(__m256i)(a),         \
+                                                (int)(imm)))
 
 /// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
 ///    left by \a __count bits, shifting in zero bits, and returns the result.
@@ -2299,8 +2301,9 @@ _mm256_sra_epi32(__m256i __a, __m128i __count)
 /// \param imm
 ///    An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_srli_si256(a, imm) \
-  ((__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm)))
+#define _mm256_srli_si256(a, imm)                                              \
+  ((__m256i)__builtin_ia32_psrldqi256_byteshift((__v32qi)(__m256i)(a),         \
+                                                (int)(imm)))
 
 /// Shifts each 128-bit half of the 256-bit integer vector in \a a right by
 ///    \a imm bytes, shifting in zero bytes, and returns the result. If
@@ -2319,8 +2322,9 @@ _mm256_sra_epi32(__m256i __a, __m128i __count)
 /// \param imm
 ///     An unsigned immediate value specifying the shift count (in bytes).
 /// \returns A 256-bit integer vector containing the result.
-#define _mm256_bsrli_epi128(a, imm) \
-  ((__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm)))
+#define _mm256_bsrli_epi128(a, imm)                                            \
+  ((__m256i)__builtin_ia32_psrldqi256_byteshift((__v32qi)(__m256i)(a),         \
+                                                (int)(imm)))
 
 /// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
 ///    right by \a __count bits, shifting in zero bits, and returns the result.

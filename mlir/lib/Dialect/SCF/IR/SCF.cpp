@@ -19,6 +19,8 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ParallelCombiningOpInterface.h"
@@ -26,6 +28,9 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/DebugLog.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -103,6 +108,24 @@ static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
   if (terminatorOperation)
     diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
   return nullptr;
+}
+
+/// Helper function to compute the difference between two values. This is used
+/// by the loop implementations to compute the trip count.
+static std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub,
+                                                    bool isSigned) {
+  llvm::APSInt diff;
+  auto addOp = ub.getDefiningOp<arith::AddIOp>();
+  if (!addOp)
+    return std::nullopt;
+  if ((isSigned && !addOp.hasNoSignedWrap()) ||
+      (!isSigned && !addOp.hasNoUnsignedWrap()))
+    return std::nullopt;
+
+  if (addOp.getLhs() != lb ||
+      !matchPattern(addOp.getRhs(), m_ConstantInt(&diff)))
+    return std::nullopt;
+  return diff;
 }
 
 //===----------------------------------------------------------------------===//
@@ -408,10 +431,18 @@ std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// it can be determined that the loop has a single iteration.
 LogicalResult ForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
-  std::optional<int64_t> tripCount =
-      constantTripCount(getLowerBound(), getUpperBound(), getStep());
-  if (!tripCount.has_value() || tripCount != 1)
+  std::optional<APInt> tripCount = getStaticTripCount();
+  LDBG() << "promoteIfSingleIteration tripCount is " << tripCount
+         << " for loop "
+         << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions());
+  if (!tripCount.has_value() || tripCount->getSExtValue() > 1)
     return failure();
+
+  if (*tripCount == 0) {
+    rewriter.replaceAllUsesWith(getResults(), getInitArgs());
+    rewriter.eraseOp(*this);
+    return success();
+  }
 
   // Replace all results with the yielded values.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -646,7 +677,8 @@ SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
   for (auto [lb, ub, step] :
        llvm::zip(getMixedLowerBound(), getMixedUpperBound(), getMixedStep())) {
-    auto tripCount = constantTripCount(lb, ub, step);
+    auto tripCount =
+        constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
     if (!tripCount.has_value() || *tripCount != 1)
       return failure();
   }
@@ -1003,27 +1035,6 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
   }
 };
 
-/// Util function that tries to compute a constant diff between u and l.
-/// Returns std::nullopt when the difference between two AffineValueMap is
-/// dynamic.
-static std::optional<APInt> computeConstDiff(Value l, Value u) {
-  IntegerAttr clb, cub;
-  if (matchPattern(l, m_Constant(&clb)) && matchPattern(u, m_Constant(&cub))) {
-    llvm::APInt lbValue = clb.getValue();
-    llvm::APInt ubValue = cub.getValue();
-    return ubValue - lbValue;
-  }
-
-  // Else a simple pattern match for x + c or c + x
-  llvm::APInt diff;
-  if (matchPattern(
-          u, m_Op<arith::AddIOp>(matchers::m_Val(l), m_ConstantInt(&diff))) ||
-      matchPattern(
-          u, m_Op<arith::AddIOp>(m_ConstantInt(&diff), matchers::m_Val(l))))
-    return diff;
-  return std::nullopt;
-}
-
 /// Rewriting pattern that erases loops that are known not to iterate, replaces
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
@@ -1032,34 +1043,21 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp op,
                                 PatternRewriter &rewriter) const override {
-    // If the upper bound is the same as the lower bound, the loop does not
-    // iterate, just remove it.
-    if (op.getLowerBound() == op.getUpperBound()) {
+    std::optional<APInt> tripCount = op.getStaticTripCount();
+    if (!tripCount.has_value())
+      return rewriter.notifyMatchFailure(op,
+                                         "can't compute constant trip count");
+
+    if (tripCount->isZero()) {
+      LDBG() << "SimplifyTrivialLoops tripCount is 0 for loop "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       rewriter.replaceOp(op, op.getInitArgs());
       return success();
     }
 
-    std::optional<APInt> diff =
-        computeConstDiff(op.getLowerBound(), op.getUpperBound());
-    if (!diff)
-      return failure();
-
-    // If the loop is known to have 0 iterations, remove it.
-    bool zeroOrLessIterations =
-        diff->isZero() || (!op.getUnsignedCmp() && diff->isNegative());
-    if (zeroOrLessIterations) {
-      rewriter.replaceOp(op, op.getInitArgs());
-      return success();
-    }
-
-    std::optional<llvm::APInt> maybeStepValue = op.getConstantStep();
-    if (!maybeStepValue)
-      return failure();
-
-    // If the loop is known to have 1 iteration, inline its body and remove the
-    // loop.
-    llvm::APInt stepValue = *maybeStepValue;
-    if (stepValue.sge(*diff)) {
+    if (tripCount->getSExtValue() == 1) {
+      LDBG() << "SimplifyTrivialLoops tripCount is 1 for loop "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getInitArgs().size() + 1);
       blockArgs.push_back(op.getLowerBound());
@@ -1072,11 +1070,14 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     Block &block = op.getRegion().front();
     if (!llvm::hasSingleElement(block))
       return failure();
-    // If the loop is empty, iterates at least once, and only returns values
+    // The loop is empty and iterates at least once, if it only returns values
     // defined outside of the loop, remove it and replace it with yield values.
     if (llvm::any_of(op.getYieldedValues(),
                      [&](Value v) { return !op.isDefinedOutsideOfLoop(v); }))
       return failure();
+    LDBG() << "SimplifyTrivialLoops empty body loop allows replacement with "
+              "yield operands for loop "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     rewriter.replaceOp(op, op.getYieldedValues());
     return success();
   }
@@ -1170,6 +1171,11 @@ Speculation::Speculatability ForOp::getSpeculatability() {
   // For Step != 1, the loop may not terminate.  We can add more smarts here if
   // needed.
   return Speculation::NotSpeculatable;
+}
+
+std::optional<APInt> ForOp::getStaticTripCount() {
+  return constantTripCount(getLowerBound(), getUpperBound(), getStep(),
+                           /*isSigned=*/!getUnsignedCmp(), computeUbMinusLb);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1768,7 +1774,8 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
-      auto numIterations = constantTripCount(lb, ub, step);
+      auto numIterations =
+          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {
@@ -1839,7 +1846,8 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
                    op.getMixedStep(), op.getInductionVars())) {
       if (iv.hasNUses(0))
         continue;
-      auto numIterations = constantTripCount(lb, ub, step);
+      auto numIterations =
+          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
       if (!numIterations.has_value() || numIterations.value() != 1) {
         continue;
       }
@@ -3084,7 +3092,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
                    op.getInductionVars())) {
-      auto numIterations = constantTripCount(lb, ub, step);
+      auto numIterations =
+          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {

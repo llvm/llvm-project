@@ -67,8 +67,7 @@ struct DirectiveNameScope {
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OmpBeginLoopDirective &x) {
-    auto &dir{std::get<OmpLoopDirective>(x.t)};
-    return MakeName(dir.source, dir.v);
+    return x.DirName();
   }
 
   static OmpDirectiveName GetOmpDirectiveName(const OpenMPSectionConstruct &x) {

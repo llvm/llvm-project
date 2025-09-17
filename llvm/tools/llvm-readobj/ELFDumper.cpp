@@ -1114,6 +1114,7 @@ const EnumEntry<unsigned> ElfOSABI[] = {
     {"FenixOS", "FenixOS", ELF::ELFOSABI_FENIXOS},
     {"CloudABI", "CloudABI", ELF::ELFOSABI_CLOUDABI},
     {"CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA},
+    {"CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA_V2},
     {"Standalone", "Standalone App", ELF::ELFOSABI_STANDALONE}};
 
 const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
@@ -1654,6 +1655,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
@@ -1679,19 +1681,60 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
 };
 
 const EnumEntry<unsigned> ElfHeaderNVPTXFlags[] = {
-    ENUM_ENT(EF_CUDA_SM20, "sm_20"),   ENUM_ENT(EF_CUDA_SM21, "sm_21"),
-    ENUM_ENT(EF_CUDA_SM30, "sm_30"),   ENUM_ENT(EF_CUDA_SM32, "sm_32"),
-    ENUM_ENT(EF_CUDA_SM35, "sm_35"),   ENUM_ENT(EF_CUDA_SM37, "sm_37"),
-    ENUM_ENT(EF_CUDA_SM50, "sm_50"),   ENUM_ENT(EF_CUDA_SM52, "sm_52"),
-    ENUM_ENT(EF_CUDA_SM53, "sm_53"),   ENUM_ENT(EF_CUDA_SM60, "sm_60"),
-    ENUM_ENT(EF_CUDA_SM61, "sm_61"),   ENUM_ENT(EF_CUDA_SM62, "sm_62"),
-    ENUM_ENT(EF_CUDA_SM70, "sm_70"),   ENUM_ENT(EF_CUDA_SM72, "sm_72"),
-    ENUM_ENT(EF_CUDA_SM75, "sm_75"),   ENUM_ENT(EF_CUDA_SM80, "sm_80"),
-    ENUM_ENT(EF_CUDA_SM86, "sm_86"),   ENUM_ENT(EF_CUDA_SM87, "sm_87"),
-    ENUM_ENT(EF_CUDA_SM89, "sm_89"),   ENUM_ENT(EF_CUDA_SM90, "sm_90"),
-    ENUM_ENT(EF_CUDA_SM100, "sm_100"), ENUM_ENT(EF_CUDA_SM101, "sm_101"),
-    ENUM_ENT(EF_CUDA_SM103, "sm_103"), ENUM_ENT(EF_CUDA_SM120, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM20, "sm_20"),
+    ENUM_ENT(EF_CUDA_SM21, "sm_21"),
+    ENUM_ENT(EF_CUDA_SM30, "sm_30"),
+    ENUM_ENT(EF_CUDA_SM32, "sm_32"),
+    ENUM_ENT(EF_CUDA_SM35, "sm_35"),
+    ENUM_ENT(EF_CUDA_SM37, "sm_37"),
+    ENUM_ENT(EF_CUDA_SM50, "sm_50"),
+    ENUM_ENT(EF_CUDA_SM52, "sm_52"),
+    ENUM_ENT(EF_CUDA_SM53, "sm_53"),
+    ENUM_ENT(EF_CUDA_SM60, "sm_60"),
+    ENUM_ENT(EF_CUDA_SM61, "sm_61"),
+    ENUM_ENT(EF_CUDA_SM62, "sm_62"),
+    ENUM_ENT(EF_CUDA_SM70, "sm_70"),
+    ENUM_ENT(EF_CUDA_SM72, "sm_72"),
+    ENUM_ENT(EF_CUDA_SM75, "sm_75"),
+    ENUM_ENT(EF_CUDA_SM80, "sm_80"),
+    ENUM_ENT(EF_CUDA_SM86, "sm_86"),
+    ENUM_ENT(EF_CUDA_SM87, "sm_87"),
+    ENUM_ENT(EF_CUDA_SM88, "sm_88"),
+    ENUM_ENT(EF_CUDA_SM89, "sm_89"),
+    ENUM_ENT(EF_CUDA_SM90, "sm_90"),
+    ENUM_ENT(EF_CUDA_SM100, "sm_100"),
+    ENUM_ENT(EF_CUDA_SM101, "sm_101"),
+    ENUM_ENT(EF_CUDA_SM103, "sm_103"),
+    ENUM_ENT(EF_CUDA_SM110, "sm_110"),
+    ENUM_ENT(EF_CUDA_SM120, "sm_120"),
     ENUM_ENT(EF_CUDA_SM121, "sm_121"),
+    ENUM_ENT(EF_CUDA_SM20 << EF_CUDA_SM_OFFSET, "sm_20"),
+    ENUM_ENT(EF_CUDA_SM21 << EF_CUDA_SM_OFFSET, "sm_21"),
+    ENUM_ENT(EF_CUDA_SM30 << EF_CUDA_SM_OFFSET, "sm_30"),
+    ENUM_ENT(EF_CUDA_SM32 << EF_CUDA_SM_OFFSET, "sm_32"),
+    ENUM_ENT(EF_CUDA_SM35 << EF_CUDA_SM_OFFSET, "sm_35"),
+    ENUM_ENT(EF_CUDA_SM37 << EF_CUDA_SM_OFFSET, "sm_37"),
+    ENUM_ENT(EF_CUDA_SM50 << EF_CUDA_SM_OFFSET, "sm_50"),
+    ENUM_ENT(EF_CUDA_SM52 << EF_CUDA_SM_OFFSET, "sm_52"),
+    ENUM_ENT(EF_CUDA_SM53 << EF_CUDA_SM_OFFSET, "sm_53"),
+    ENUM_ENT(EF_CUDA_SM60 << EF_CUDA_SM_OFFSET, "sm_60"),
+    ENUM_ENT(EF_CUDA_SM61 << EF_CUDA_SM_OFFSET, "sm_61"),
+    ENUM_ENT(EF_CUDA_SM62 << EF_CUDA_SM_OFFSET, "sm_62"),
+    ENUM_ENT(EF_CUDA_SM70 << EF_CUDA_SM_OFFSET, "sm_70"),
+    ENUM_ENT(EF_CUDA_SM72 << EF_CUDA_SM_OFFSET, "sm_72"),
+    ENUM_ENT(EF_CUDA_SM75 << EF_CUDA_SM_OFFSET, "sm_75"),
+    ENUM_ENT(EF_CUDA_SM80 << EF_CUDA_SM_OFFSET, "sm_80"),
+    ENUM_ENT(EF_CUDA_SM86 << EF_CUDA_SM_OFFSET, "sm_86"),
+    ENUM_ENT(EF_CUDA_SM87 << EF_CUDA_SM_OFFSET, "sm_87"),
+    ENUM_ENT(EF_CUDA_SM88 << EF_CUDA_SM_OFFSET, "sm_88"),
+    ENUM_ENT(EF_CUDA_SM89 << EF_CUDA_SM_OFFSET, "sm_89"),
+    ENUM_ENT(EF_CUDA_SM90 << EF_CUDA_SM_OFFSET, "sm_90"),
+    ENUM_ENT(EF_CUDA_SM100 << EF_CUDA_SM_OFFSET, "sm_100"),
+    ENUM_ENT(EF_CUDA_SM101 << EF_CUDA_SM_OFFSET, "sm_101"),
+    ENUM_ENT(EF_CUDA_SM103 << EF_CUDA_SM_OFFSET, "sm_103"),
+    ENUM_ENT(EF_CUDA_SM110 << EF_CUDA_SM_OFFSET, "sm_110"),
+    ENUM_ENT(EF_CUDA_SM120 << EF_CUDA_SM_OFFSET, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM121 << EF_CUDA_SM_OFFSET, "sm_121"),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {

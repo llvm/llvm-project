@@ -604,12 +604,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *OpTrue =
         RValTrue.isScalar()
             ? RValTrue.getScalarVal()
-            : RValTrue.getAggregatePointer(E->getArg(1)->getType(), *this);
+            : Builder.CreateLoad(RValTrue.getAggregateAddress(), "true_val");
     RValue RValFalse = EmitAnyExpr(E->getArg(2));
     Value *OpFalse =
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
-            : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+            : Builder.CreateLoad(RValFalse.getAggregateAddress(), "false_val");
     if (auto *VTy = E->getType()->getAs<VectorType>()) {
       if (!OpTrue->getType()->isVectorTy())
         OpTrue =

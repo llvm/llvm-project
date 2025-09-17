@@ -5169,7 +5169,7 @@ enum class SpellingKind : size_t {
 static const size_t NumSpellingKinds = (size_t)SpellingKind::NumSpellingKinds;
 
 class SpellingList {
-  std::vector<std::string> Spellings[NumSpellingKinds];
+  std::array<std::vector<std::string>, NumSpellingKinds> Spellings;
 
 public:
   ArrayRef<std::string> operator[](SpellingKind K) const {
@@ -5217,11 +5217,7 @@ public:
   }
 
   bool hasSpelling() const {
-    for (size_t Kind = 0; Kind < NumSpellingKinds; ++Kind) {
-      if (Spellings[Kind].size() > 0)
-        return true;
-    }
-    return false;
+    return llvm::any_of(Spellings, [](const auto &L) { return !L.empty(); });
   }
 };
 

@@ -1583,6 +1583,14 @@ def : Pat<(xor (vt LSX128:$vj), (vt LSX128:$vk)),
 foreach vt = [v16i8, v8i16, v4i32, v2i64] in
 def : Pat<(vnot (or (vt LSX128:$vj), (vt LSX128:$vk))),
           (VNOR_V LSX128:$vj, LSX128:$vk)>;
+// VANDN_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(and (vt (vnot LSX128:$vj)), (vt LSX128:$vk)),
+          (VANDN_V LSX128:$vj, LSX128:$vk)>;
+// VORN_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(or (vt LSX128:$vj), (vt (vnot LSX128:$vk))),
+          (VORN_V LSX128:$vj, LSX128:$vk)>;
 
 // VANDI_B
 def : Pat<(and (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
@@ -2146,6 +2154,12 @@ def : Pat<(f64 f64imm_vldi:$in),
 // VABSD_{B/H/W/D}[U]
 defm : PatVrVr<abds, "VABSD">;
 defm : PatVrVrU<abdu, "VABSD">;
+
+// VSADD_{B/H/W/D}[U], VSSUB_{B/H/W/D}[U]
+defm : PatVrVr<saddsat, "VSADD">;
+defm : PatVrVr<ssubsat, "VSSUB">;
+defm : PatVrVrU<uaddsat, "VSADD">;
+defm : PatVrVrU<usubsat, "VSSUB">;
 
 // Vector mask set by condition
 def : Pat<(loongarch_vmskltz (v16i8 LSX128:$vj)), (PseudoVMSKLTZ_B LSX128:$vj)>;

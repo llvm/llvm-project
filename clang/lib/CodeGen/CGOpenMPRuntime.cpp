@@ -1037,12 +1037,15 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
       CGM.getLangOpts().OpenMPOffloadMandatory,
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
+  Config.setDefaultTargetAS(
+      CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
+
+  OMPBuilder.setConfig(Config);
   OMPBuilder.initialize();
   OMPBuilder.loadOffloadInfoMetadata(*CGM.getFileSystem(),
                                      CGM.getLangOpts().OpenMPIsTargetDevice
                                          ? CGM.getLangOpts().OMPHostIRFile
                                          : StringRef{});
-  OMPBuilder.setConfig(Config);
 
   // The user forces the compiler to behave as if omp requires
   // unified_shared_memory was given.

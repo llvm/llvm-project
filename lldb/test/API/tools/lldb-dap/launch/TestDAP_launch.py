@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 import os
+import pathlib
 import re
 import tempfile
 
@@ -143,6 +144,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
         self.assertTrue(found, "verified program working directory")
 
+    @skipIfWindows # https://github.com/llvm/llvm-project/issues/137660
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
@@ -624,3 +626,18 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
             # Verify the initCommands were executed
             self.verify_commands("initCommands", output, initCommands)
+
+    def test_stdio_redirection(self):
+        """
+        Test stdio redirection.
+        """
+        self.build_and_create_debug_adapter()
+        program = self.getBuildArtifact("a.out")
+
+        with tempfile.NamedTemporaryFile("rt") as f:
+            self.launch(program, stdio=[None, f.name, None])
+            self.continue_to_exit()
+            lines = f.readlines()
+            self.assertIn(
+                program, lines[0], "make sure program path is in first argument"
+            )
