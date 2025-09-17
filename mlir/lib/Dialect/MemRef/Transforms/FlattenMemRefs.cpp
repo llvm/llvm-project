@@ -99,7 +99,8 @@ namespace {
 static Value getTargetMemref(Operation *op) {
   return llvm::TypeSwitch<Operation *, Value>(op)
       .template Case<memref::LoadOp, memref::StoreOp, memref::AllocaOp,
-                     memref::AllocOp>([](auto op) { return op.getMemref(); })
+                     memref::AllocOp, memref::DeallocOp>(
+          [](auto op) { return op.getMemref(); })
       .template Case<vector::LoadOp, vector::StoreOp, vector::MaskedLoadOp,
                      vector::MaskedStoreOp, vector::TransferReadOp,
                      vector::TransferWriteOp>(
@@ -189,6 +190,10 @@ static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
             rewriter, loc, op.getVector(), flatMemref, ValueRange{offset});
         rewriter.replaceOp(op, newTransferWrite);
       })
+      .template Case<memref::DeallocOp>([&](auto op) {
+        auto newDealloc = memref::DeallocOp::create(rewriter, loc, flatMemref);
+        rewriter.replaceOp(op, newDealloc);
+      })
       .Default([&](auto op) {
         op->emitOpError("unimplemented: do not know how to replace op.");
       });
@@ -197,7 +202,8 @@ static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
 template <typename T>
 static ValueRange getIndices(T op) {
   if constexpr (std::is_same_v<T, memref::AllocaOp> ||
-                std::is_same_v<T, memref::AllocOp>) {
+                std::is_same_v<T, memref::AllocOp> ||
+                std::is_same_v<T, memref::DeallocOp>) {
     return ValueRange{};
   } else {
     return op.getIndices();
@@ -286,7 +292,8 @@ void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
   patterns.insert<MemRefRewritePattern<memref::LoadOp>,
                   MemRefRewritePattern<memref::StoreOp>,
                   MemRefRewritePattern<memref::AllocOp>,
-                  MemRefRewritePattern<memref::AllocaOp>>(
+                  MemRefRewritePattern<memref::AllocaOp>,
+                  MemRefRewritePattern<memref::DeallocOp>>(
       patterns.getContext());
 }
 

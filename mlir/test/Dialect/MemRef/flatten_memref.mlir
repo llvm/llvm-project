@@ -298,3 +298,41 @@ func.func @load_scalar_from_memref_static_dim_col_major(%input: memref<4x8xf32, 
 // CHECK: %[[IDX:.*]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG1]]]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1] : memref<4x8xf32, strided<[1, 4], offset: 100>> to memref<32xf32, strided<[1], offset: 100>>
 // CHECK: memref.load %[[REINT]][%[[IDX]]] : memref<32xf32, strided<[1], offset: 100>>
+
+// -----
+
+func.func @dealloc_static_memref(%input: memref<4x8xf32>) {
+  memref.dealloc %input : memref<4x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @dealloc_static_memref
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32>)
+// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [32], strides: [1] : memref<4x8xf32> to memref<32xf32, strided<[1]>>
+// CHECK-NEXT: memref.dealloc %[[REINT]] : memref<32xf32, strided<[1]>>
+
+// -----
+
+func.func @dealloc_dynamic_memref(%input: memref<?x?xf32>) {
+  memref.dealloc %input : memref<?x?xf32>
+  return
+}
+
+// CHECK-LABEL: func @dealloc_dynamic_memref
+// CHECK-SAME: (%[[ARG0:.*]]: memref<?x?xf32>)
+// CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG0]]
+// CHECK: %[[SIZE:.*]] = affine.max #{{.*}}()[%[[STRIDES]]#0, %[[SIZES]]#0, %[[SIZES]]#1]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [0], sizes: [%[[SIZE]]], strides: [1] : memref<?x?xf32> to memref<?xf32, strided<[1]>>
+// CHECK: memref.dealloc %[[REINT]] : memref<?xf32, strided<[1]>>
+
+// -----
+
+func.func @dealloc_strided_memref(%input: memref<4x8xf32, strided<[8, 1], offset: 100>>) {
+  memref.dealloc %input : memref<4x8xf32, strided<[8, 1], offset: 100>>
+  return
+}
+
+// CHECK-LABEL: func @dealloc_strided_memref
+// CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32, strided<[8, 1], offset: 100>>)
+// CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1] : memref<4x8xf32, strided<[8, 1], offset: 100>> to memref<32xf32, strided<[1], offset: 100>>
+// CHECK-NEXT: memref.dealloc %[[REINT]] : memref<32xf32, strided<[1], offset: 100>>
