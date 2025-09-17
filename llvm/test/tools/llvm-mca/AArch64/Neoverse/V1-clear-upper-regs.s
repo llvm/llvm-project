@@ -58,7 +58,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      41
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.88
 # CHECK-NEXT: IPC:               4.88
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -134,7 +134,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -211,7 +211,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -288,7 +288,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -365,7 +365,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -442,7 +442,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -519,7 +519,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -596,7 +596,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -673,7 +673,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.50
 # CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -750,7 +750,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        300
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.30
 # CHECK-NEXT: IPC:               0.20
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -805,9 +805,9 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [1,0]     D==========eeeeeeeeER    .    .    .    . .   ld1	{ v0.b }[0], [sp]
 # CHECK-NEXT: [1,1]     D==================eeER  .    .    .    . .   add	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [2,0]     D====================eeeeeeeeER    .    . .   ld1	{ v0.b }[0], [sp]
-# CHECK-NEXT: [2,1]     D============================eeER  .    . .   add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT: [3,0]     D==============================eeeeeeeeER .   ld1	{ v0.b }[0], [sp]
-# CHECK-NEXT: [3,1]     D======================================eeER   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [2,1]     .D===========================eeER  .    . .   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [3,0]     .D=============================eeeeeeeeER .   ld1	{ v0.b }[0], [sp]
+# CHECK-NEXT: [3,1]     .D=====================================eeER   add	v0.16b, v0.16b, v0.16b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -816,6 +816,6 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     16.0   0.3    0.0       ld1	{ v0.b }[0], [sp]
-# CHECK-NEXT: 1.     4     24.0   0.0    0.0       add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:        4     20.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     4     15.8   0.3    0.0       ld1	{ v0.b }[0], [sp]
+# CHECK-NEXT: 1.     4     23.5   0.0    0.0       add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:        4     19.6   0.1    0.0       <total>
