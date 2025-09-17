@@ -4711,10 +4711,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         if (Tail.isUsable()) {
           Data.IteratorExpr = Tail.get();
           TPA.Commit();
-        }
-        else 
-          TPA.revert();
-        }
+        } else
+          TPA.Revert();
       } else {
         ConsumeToken();
         if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
