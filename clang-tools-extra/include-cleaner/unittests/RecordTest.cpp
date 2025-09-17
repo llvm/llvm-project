@@ -625,9 +625,10 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
                                                  *Diags, "clang"));
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
-  Clang->createDiagnostics(*VFS);
+  Clang->createVirtualFileSystem(VFS);
+  Clang->createDiagnostics();
 
-  auto *FM = Clang->createFileManager(VFS);
+  auto *FM = Clang->createFileManager();
   ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));
   EXPECT_THAT(
       PI.getExporters(llvm::cantFail(FM->getFileRef("foo.h")), *FM),

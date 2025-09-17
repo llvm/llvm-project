@@ -613,8 +613,8 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
     std::optional<llvm::cas::CASID> *OutMCOutputID) {
   CompilerInstance Clang(std::move(Invok));
   llvm::raw_svector_ostream DiagOS(DiagText);
+  Clang.createVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Clang.createDiagnostics(
-      *llvm::vfs::getRealFileSystem(),
       new TextDiagnosticPrinter(DiagOS, Clang.getDiagnosticOpts()));
   Clang.setVerboseOutputStream(DiagOS);
 
