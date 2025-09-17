@@ -367,14 +367,22 @@ def get_python_module_path(options):
             "Python",
             "lldb")
     else:
-        from distutils.sysconfig import get_python_lib
+        if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+            from sysconfig import get_path
 
-        if options.prefix is not None:
-            module_path = get_python_lib(True, False, options.prefix)
+            if options.prefix is not None:
+                module_path = get_path("platlib", vars={"prefix": options.prefix})
+            else:
+                module_path = get_path("platlib")
+
         else:
-            module_path = get_python_lib(True, False)
-        return os.path.normcase(
-            os.path.join(module_path, "lldb"))
+            from distutils.sysconfig import get_python_lib
+
+            if options.prefix is not None:
+                module_path = get_python_lib(True, False, options.prefix)
+            else:
+                module_path = get_python_lib(True, False)
+            return os.path.normcase(os.path.join(module_path, "lldb"))
 
 
 def main(options):
