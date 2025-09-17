@@ -204,8 +204,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // setbc instruction.
   if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-    if (isPPC64)
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
+    if (isPPC64){
       setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+      setOperationAction(ISD::SADDO, MVT::i64, Custom);
+    }
   }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
@@ -12614,6 +12617,31 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
 }
 
+SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue Add = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
+
+  SDValue Xor1 = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+  SDValue NotXor1 = DAG.getNOT(dl, Xor1, VT);
+  SDValue Xor2 = DAG.getNode(ISD::XOR, dl, VT, Add, LHS);
+
+  SDValue And = DAG.getNode(ISD::AND, dl, VT, NotXor1, Xor2);
+
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, And,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+
+  return DAG.getMergeValues({Add, OverflowTrunc}, dl);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12638,6 +12666,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
     return LowerSSUBO(Op, DAG);
+  case ISD::SADDO:
+    return LowerSADDO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
