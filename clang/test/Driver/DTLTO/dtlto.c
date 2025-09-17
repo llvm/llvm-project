@@ -1,8 +1,5 @@
 // REQUIRES: lld
 
-/// https://github.com/llvm/llvm-project/issues/159125.
-// XFAIL: llvm-driver
-
 /// Check DTLTO options are forwarded to the linker.
 
 /// Check that options are forwarded as expected with --thinlto-distributor=.
