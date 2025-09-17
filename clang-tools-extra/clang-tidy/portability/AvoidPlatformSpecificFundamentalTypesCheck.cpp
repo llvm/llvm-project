@@ -19,8 +19,7 @@ namespace {
 
 AST_MATCHER(clang::QualType, isBuiltinInt) {
   const auto *BT = Node->getAs<clang::BuiltinType>();
-  if (!BT)
-    return false;
+  assert(BT);
 
   // BT->isInteger() would detect char and bool
   switch (BT->getKind()) {
@@ -40,8 +39,7 @@ AST_MATCHER(clang::QualType, isBuiltinInt) {
 
 AST_MATCHER(clang::QualType, isBuiltinFloat) {
   const auto *BT = Node->getAs<clang::BuiltinType>();
-  if (!BT)
-    return false;
+  assert(BT);
 
   return BT->isFloatingPoint();
 }
