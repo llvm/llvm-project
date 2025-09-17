@@ -4710,6 +4710,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                                            /*DiscardedValue=*/false);
         if (Tail.isUsable()) {
           Data.IteratorExpr = Tail.get();
+          TPA.Commit();
+        }
+        else 
+          TPA.revert();
         }
       } else {
         ConsumeToken();
