@@ -71,6 +71,10 @@ enum type) are set to 0.
 
   struct Struct1 S1 = {1}; // warn: element 'b' is initialized to 0
 
+
+Options
+-------
+
 .. option:: IgnoredEnums
 
   Semicolon-separated list of regexes specifying enums for which this check won't be
