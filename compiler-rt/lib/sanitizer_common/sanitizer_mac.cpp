@@ -1360,6 +1360,29 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   return 0;
 }
 
+// Returns true if the address is definitely mapped, and false if it is not
+// mapped or could not be determined.
+bool IsAddressInMappedRegion(uptr addr) {
+  mach_vm_size_t vmsize = 0;
+  natural_t depth = 0;
+  vm_region_submap_short_info_data_64_t vminfo;
+  mach_msg_type_number_t count = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64;
+  mach_vm_address_t address = addr;
+
+  kern_return_t kr =
+      mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
+                             (vm_region_info_t)&vminfo, &count);
+
+  if (kr == KERN_DENIED) {
+    Report(
+        "WARN: mach_vm_region_recurse returned KERN_DENIED when checking "
+        "whether an address is mapped.\n");
+    Report("HINT: Is mach_vm_region_recurse allowed by sandbox?\n");
+  }
+
+  return (kr == KERN_SUCCESS && addr >= address && addr < address + vmsize);
+}
+
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
