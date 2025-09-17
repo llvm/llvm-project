@@ -39,7 +39,7 @@ in a range-based for loop:
 
 .. code-block:: c++
 
-  for (autop : vecOfPairs) {
+  for (auto p : vecOfPairs) {
     int x = p.first;
     int y = p.second;
     // ...
