@@ -1232,7 +1232,7 @@ void Writer::createMiscChunks() {
   // Create Debug Information Chunks
   if (config->mingw) {
     debugInfoSec = buildidSec;
-  } else if (config->mergeDebugDirectory) {
+  } else if (!config->mergeDebugDirectory) {
     debugInfoSec = cvinfoSec;
   } else {
     debugInfoSec = rdataSec;

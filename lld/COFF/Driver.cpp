@@ -2339,7 +2339,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
 
   // Handle /nodbgdirmerge
-  config->mergeDebugDirectory = args.hasArg(OPT_nodbgdirmerge);
+  config->mergeDebugDirectory = !args.hasArg(OPT_nodbgdirmerge);
 
   if (!config->dynamicBase &&
       (config->machine == ARMNT || isAnyArm64(config->machine)))
