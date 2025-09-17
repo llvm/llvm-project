@@ -51,9 +51,9 @@ multiclass BccImmPat<CondCode Cond, Branch_imm Inst> {
 defm CC_Imm5_Zibi : SelectCC_GPR_riirr<GPR, imm5_zibi>;
 
 class SelectZibi<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), imm5_zibi:$cimm, Cond,
               (XLenVT GPR:$truev), GPR:$falsev),
-          (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, uimm7:$cimm,
+          (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, imm5_zibi:$cimm,
               (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 let Predicates = [HasStdExtZibi] in {
