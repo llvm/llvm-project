@@ -5033,7 +5033,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 
   // getelementptr poison, idx -> poison
   // getelementptr baseptr, poison -> poison
-  if (isa<PoisonValue>(Ptr) || any_of(Indices, match_fn(m_Poison())))
+  if (isa<PoisonValue>(Ptr) || any_of(Indices, IsaPred<PoisonValue>))
     return PoisonValue::get(GEPTy);
 
   // getelementptr undef, idx -> undef
@@ -5120,7 +5120,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   }
 
   // Check to see if this is constant foldable.
-  if (!isa<Constant>(Ptr) || !all_of(Indices, match_fn(m_Constant())))
+  if (!isa<Constant>(Ptr) || !all_of(Indices, IsaPred<Constant>))
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
@@ -5658,7 +5658,7 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
                               RoundingMode Rounding) {
   // Poison is independent of anything else. It always propagates from an
   // operand to a math result.
-  if (any_of(Ops, match_fn(m_Poison())))
+  if (any_of(Ops, IsaPred<PoisonValue>))
     return PoisonValue::get(Ops[0]->getType());
 
   for (Value *V : Ops) {
@@ -7122,7 +7122,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 
   switch (I->getOpcode()) {
   default:
-    if (all_of(NewOps, match_fn(m_Constant()))) {
+    if (all_of(NewOps, IsaPred<Constant>)) {
       SmallVector<Constant *, 8> NewConstOps(NewOps.size());
       transform(NewOps, NewConstOps.begin(),
                 [](Value *V) { return cast<Constant>(V); });

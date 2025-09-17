@@ -340,7 +340,7 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
 Instruction *InstCombinerImpl::foldPHIArgIntToPtrToPHI(PHINode &PN) {
   // convert ptr2int ( phi[ int2ptr(ptr2int(x))] ) --> ptr2int ( phi [ x ] )
   // Make sure all uses of phi are ptr2int.
-  if (!all_of(PN.users(), match_fn(m_PtrToInt(m_Value()))))
+  if (!all_of(PN.users(), IsaPred<PtrToIntInst>))
     return nullptr;
 
   // Iterating over all operands to check presence of target pointers for
@@ -1299,7 +1299,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   //          \       /
   //       phi [v1] [v2]
   // Make sure all inputs are constants.
-  if (!all_of(PN.operands(), match_fn(m_ConstantInt())))
+  if (!all_of(PN.operands(), IsaPred<ConstantInt>))
     return nullptr;
 
   BasicBlock *BB = PN.getParent();
