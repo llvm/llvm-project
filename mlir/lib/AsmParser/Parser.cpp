@@ -2089,14 +2089,14 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       while (regIt != regEnd && loadIt != loadEnd) {
         StringRef reg = *regIt;
         StringRef load = (*loadIt)->getNamespace();
-        if (reg < load) {
-          mergedDialects.emplace_back(*regIt++, isRegistered);
-        } else if (load < reg) {
+        if (load < reg) {
           mergedDialects.emplace_back(load, isOnlyLoaded);
-          loadIt++;
+          ++loadIt;
         } else {
-          mergedDialects.emplace_back(*regIt++, isRegistered);
-          loadIt++;
+          mergedDialects.emplace_back(reg, isRegistered);
+          ++regIt;
+          if (reg == load)
+            ++loadIt;
         }
       }
       for (; regIt != regEnd; ++regIt)
