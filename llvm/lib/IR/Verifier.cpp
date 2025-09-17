@@ -1767,12 +1767,13 @@ void Verifier::visitComdat(const Comdat &C) {
   if (TT.isOSBinFormatCOFF()) {
     const GlobalValue *GV = M.getNamedValue(C.getName());
     bool IsDefined = GV != nullptr && !GV->isDeclarationForLinker();
-    Check(IsDefined || C.getUsers().empty(),
-          "COFF comdats must have a defined global value with the same name",
-          GV);
     if (IsDefined)
       Check(!GV->hasPrivateLinkage(), "comdat global value has private linkage",
             GV);
+    else
+      Check(C.getUsers().empty(),
+          "COFF comdats must have a defined global value with the same name",
+          GV);
   }
 }
 
