@@ -49,7 +49,7 @@
 # RUN: lldb-test symbols --name=UnionType --find=type %t > %t.stdout
 # RUN: cat %t.stdout | FileCheck --check-prefix=STDOUT %s
 # RUN: lldb-test symbols --name=UnionType --find=type %t 2> %t.stderr
-# RUN: cat %t.stderr | FileCheck --check-prefix=STDERR %s
+# RUN: cat %t.stderr | FileCheck --allow-empty --check-prefix=STDERR %s
 
 # STDOUT: Found 1 types:
 # STDOUT: 0x{{[0-9a-fA-F]+}}: Type{0x0000002b} , name = "UnionType", size = 32, compiler_type = 0x{{[0-9a-fA-F]+}} union UnionType {
