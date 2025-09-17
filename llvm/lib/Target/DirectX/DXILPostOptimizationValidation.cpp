@@ -160,8 +160,9 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
-static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
-                                            dxbc::RootFlags Mask) {
+static void reportIfDeniedShaderStageAccess(Module &M,
+                                            const dxbc::RootFlags &Flags,
+                                            const dxbc::RootFlags &Mask) {
   if ((Flags & Mask) != Mask)
     return;
 
@@ -172,7 +173,7 @@ static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static dxbc::RootFlags
+static std::optional<dxbc::RootFlags>
 getEnvironmentDenyFlagMask(Triple::EnvironmentType ShaderProfile) {
   switch (ShaderProfile) {
   case Triple::Pixel:
@@ -190,7 +191,7 @@ getEnvironmentDenyFlagMask(Triple::EnvironmentType ShaderProfile) {
   case Triple::Amplification:
     return dxbc::RootFlags::DenyAmplificationShaderRootAccess;
   default:
-    llvm_unreachable("Invalid triple to shader stage conversion");
+    return std::nullopt;
   }
 }
 
@@ -293,13 +294,14 @@ static void validateRootSignature(Module &M,
 
     HasBindings = true;
   }
+  const std::optional<dxbc::RootFlags> Mask =
+      getEnvironmentDenyFlagMask(MMI.ShaderProfile);
 
-  if (HasBindings && MMI.ShaderProfile != Triple::Compute) {
-    const dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
-    const dxbc::RootFlags Mask = getEnvironmentDenyFlagMask(MMI.ShaderProfile);
+  if (!Mask.has_value() || !HasBindings)
+    return;
 
-    reportIfDeniedShaderStageAccess(M, Flags, Mask);
-  }
+  const dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
+  reportIfDeniedShaderStageAccess(M, Flags, Mask.value());
 }
 
 static mcdxbc::RootSignatureDesc *
