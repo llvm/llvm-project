@@ -220,23 +220,11 @@ public:
     newOperands.push_back(zeroOp.getResult());
     newOperands.push_back(operands[1]);
 
-    if (shuffleType.isInteger()) {
-      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
-          loc, shuffleType,
-          mlir::StringAttr::get(context, "llvm.ripple.ishuffle"),
-          ValueRange(newOperands));
+    auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
+        loc, shuffleType, mlir::StringAttr::get(context, "llvm.ripple.shuffle"),
+        ValueRange(newOperands));
 
-      rewriter.replaceOp(op, callIntrOpRef);
-    } else if (shuffleType.isFloat()) {
-      auto callIntrOpRef = rewriter.create<LLVM::CallIntrinsicOp>(
-          loc, shuffleType,
-          mlir::StringAttr::get(context, "llvm.ripple.fshuffle"),
-          ValueRange(newOperands));
-
-      rewriter.replaceOp(op, callIntrOpRef);
-    } else {
-      return failure();
-    }
+    rewriter.replaceOp(op, callIntrOpRef);
 
     return success();
   }

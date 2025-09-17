@@ -13,7 +13,7 @@ func.func @transpose8x8(%k : i32, %n : i32) -> i32 {
 
 // CHECK-LABEL:   func @transpose_tile
 // CHECK:           %[[FUNC:.*]] = llvm.mlir.addressof @transpose8x8 : !llvm.ptr
-// CHECK:           llvm.call_intrinsic "llvm.ripple.ishuffle"(%{{.*}}, %{{.*}}, %false, %[[FUNC]])
+// CHECK:           llvm.call_intrinsic "llvm.ripple.shuffle"(%{{.*}}, %{{.*}}, %false, %[[FUNC]])
 func.func @transpose_tile(%tile_addr : memref<256xi32>, %v : i32) -> i32 {
     %peid = arith.constant 0 : i32
     %dim = arith.constant 1 : i32
