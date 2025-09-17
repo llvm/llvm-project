@@ -13,6 +13,7 @@
 // MSVC: @1 = private unnamed_addr constant [60 x i8] c"_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_\00", align 1
 // MSVC: @2 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg1MUlvE_EEvT_\00", align 1
 // MSVC: @3 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg2MUlvE_EEvT_\00", align 1
+
 __device__ float d0(float x) {
   return [](float x) { return x + 1.f; }(x);
 }
