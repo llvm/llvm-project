@@ -1334,7 +1334,7 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
     if (ICmpInst::isEquality(Pred) &&
         match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
         C->countr_zero() >= Mask->countr_zero()) {
-      ConstantRange CR{*C, *C - *Mask};
+      ConstantRange CR(*C, *C - *Mask);
       if (Pred == ICmpInst::ICMP_NE)
         CR = CR.inverse();
       return std::make_pair(X, CR);
@@ -1361,15 +1361,14 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1,
   if (V1 != V2)
     return nullptr;
 
-  Value *V = V1;
   // For 'and', we use the De Morgan's Laws to simplify the implementation.
   if (IsAnd) {
     CR1 = CR1.inverse();
     CR2 = CR2.inverse();
   }
 
-  Type *Ty = V->getType();
-  Value *NewV = V;
+  Type *Ty = V1->getType();
+  Value *NewV = V1;
   std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
     if (!(ICmp1->hasOneUse() && ICmp2->hasOneUse()) || CR1.isWrappedSet() ||
