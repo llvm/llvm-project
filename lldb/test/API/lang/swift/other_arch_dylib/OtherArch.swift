@@ -1,3 +1,2 @@
-public func foo() {
-  print("break here")
+public func foo() { // break here
 }
