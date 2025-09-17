@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -93,6 +94,99 @@ static bool checkLayout(Value val) {
   auto type = cast<MemRefType>(val.getType());
   return type.getLayout().isIdentity() ||
          isa<StridedLayoutAttr>(type.getLayout());
+}
+
+/// Produce an OpFoldResult representing the product of the values or constants
+/// referenced by `indices`. `staticShape` provides the statically known sizes
+/// for the source memref, while `values` contains the mixed (value/attribute)
+/// representation produced by `memref.extract_strided_metadata`.
+static OpFoldResult getProductOfValues(ArrayRef<int64_t> indices,
+                                       OpBuilder &builder, Location loc,
+                                       ArrayRef<int64_t> staticShape,
+                                       ArrayRef<OpFoldResult> values) {
+  AffineExpr product = builder.getAffineConstantExpr(1);
+  SmallVector<OpFoldResult> inputs;
+  unsigned numSymbols = 0;
+  for (int64_t idx : indices) {
+    product = product * builder.getAffineSymbolExpr(numSymbols++);
+    if (ShapedType::isDynamic(staticShape[idx]))
+      inputs.push_back(values[idx]);
+    else
+      inputs.push_back(builder.getIndexAttr(staticShape[idx]));
+  }
+  return affine::makeComposedFoldedAffineApply(builder, loc, product, inputs);
+}
+
+/// Return the collapsed size (as OpFoldResult) for the reassociation group
+/// `groupId` of `collapseShapeOp`.
+static SmallVector<OpFoldResult>
+getCollapsedSize(memref::CollapseShapeOp collapseShapeOp, OpBuilder &builder,
+                 ArrayRef<OpFoldResult> origSizes, unsigned groupId) {
+  SmallVector<OpFoldResult> collapsedSize;
+
+  MemRefType resultType = collapseShapeOp.getResultType();
+  int64_t dimSize = resultType.getDimSize(groupId);
+  if (!ShapedType::isDynamic(dimSize)) {
+    collapsedSize.push_back(builder.getIndexAttr(dimSize));
+    return collapsedSize;
+  }
+
+  auto sourceType = collapseShapeOp.getSrcType();
+  ArrayRef<int64_t> staticShape = sourceType.getShape();
+  ArrayRef<int64_t> reassocGroup =
+      collapseShapeOp.getReassociationIndices()[groupId];
+
+  collapsedSize.push_back(getProductOfValues(reassocGroup, builder,
+                                             collapseShapeOp.getLoc(),
+                                             staticShape, origSizes));
+  return collapsedSize;
+}
+
+/// Return the collapsed stride (as OpFoldResult) for the reassociation group
+/// `groupId` of `collapseShapeOp`.
+static SmallVector<OpFoldResult> getCollapsedStride(
+    memref::CollapseShapeOp collapseShapeOp, OpBuilder &builder,
+    ArrayRef<OpFoldResult> origSizes, ArrayRef<OpFoldResult> origStrides,
+    unsigned groupId) {
+  ArrayRef<int64_t> reassocGroup =
+      collapseShapeOp.getReassociationIndices()[groupId];
+  assert(!reassocGroup.empty() &&
+         "reassociation group must contain at least one dimension");
+
+  auto sourceType = collapseShapeOp.getSrcType();
+  auto [strides, offset] = sourceType.getStridesAndOffset();
+  (void)offset;
+  ArrayRef<int64_t> srcShape = sourceType.getShape();
+
+  OpFoldResult lastValidStride = nullptr;
+  for (int64_t dim : reassocGroup) {
+    if (srcShape[dim] == 1)
+      continue;
+    int64_t currentStride = strides[dim];
+    if (ShapedType::isDynamic(currentStride))
+      lastValidStride = origStrides[dim];
+    else
+      lastValidStride = builder.getIndexAttr(currentStride);
+  }
+
+  if (!lastValidStride) {
+    MemRefType collapsedType = collapseShapeOp.getResultType();
+    auto [collapsedStrides, collapsedOffset] =
+        collapsedType.getStridesAndOffset();
+    (void)collapsedOffset;
+    int64_t finalStride = collapsedStrides[groupId];
+    if (ShapedType::isDynamic(finalStride)) {
+      for (int64_t dim : reassocGroup) {
+        assert(srcShape[dim] == 1 && "expected size-one dimensions");
+        if (ShapedType::isDynamic(strides[dim]))
+          return {origStrides[dim]};
+      }
+      llvm_unreachable("expected to find a dynamic stride");
+    }
+    return {builder.getIndexAttr(finalStride)};
+  }
+
+  return {lastValidStride};
 }
 
 namespace {
@@ -256,6 +350,82 @@ struct MemRefRewritePattern : public OpRewritePattern<T> {
   }
 };
 
+/// Flattens memref global ops with more than 1 dimensions to 1 dimension.
+struct FlattenGlobal final : public OpRewritePattern<memref::GlobalOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  static Attribute flattenAttribute(Attribute value, ShapedType newType) {
+    if (!value)
+      return value;
+    if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(value)) {
+      return splatAttr.reshape(newType);
+    } else if (auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(value)) {
+      return denseAttr.reshape(newType);
+    } else if (auto denseResourceAttr =
+                   llvm::dyn_cast<DenseResourceElementsAttr>(value)) {
+      return DenseResourceElementsAttr::get(newType,
+                                            denseResourceAttr.getRawHandle());
+    }
+    return {};
+  }
+
+  LogicalResult
+  matchAndRewrite(memref::GlobalOp globalOp,
+                  PatternRewriter &rewriter) const override {
+    auto oldType = llvm::dyn_cast<MemRefType>(globalOp.getType());
+    if (!oldType || !oldType.getLayout().isIdentity() || oldType.getRank() <= 1)
+      return failure();
+
+    auto tensorType = RankedTensorType::get({oldType.getNumElements()},
+                                            oldType.getElementType());
+    auto memRefType =
+        MemRefType::get({oldType.getNumElements()}, oldType.getElementType(),
+                        AffineMap(), oldType.getMemorySpace());
+    auto newInitialValue =
+        flattenAttribute(globalOp.getInitialValueAttr(), tensorType);
+    rewriter.replaceOpWithNewOp<memref::GlobalOp>(
+        globalOp, globalOp.getSymName(), globalOp.getSymVisibilityAttr(),
+        memRefType, newInitialValue, globalOp.getConstant(),
+        /*alignment=*/IntegerAttr());
+    return success();
+  }
+};
+
+struct FlattenCollapseShape final
+    : public OpRewritePattern<memref::CollapseShapeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::CollapseShapeOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    memref::ExtractStridedMetadataOp metadata =
+        memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getSrc());
+
+    SmallVector<OpFoldResult> origSizes = metadata.getConstifiedMixedSizes();
+    SmallVector<OpFoldResult> origStrides = metadata.getConstifiedMixedStrides();
+    OpFoldResult offset = metadata.getConstifiedMixedOffset();
+
+    SmallVector<OpFoldResult> collapsedSizes;
+    SmallVector<OpFoldResult> collapsedStrides;
+    unsigned numGroups = op.getReassociationIndices().size();
+    collapsedSizes.reserve(numGroups);
+    collapsedStrides.reserve(numGroups);
+    for (unsigned i = 0; i < numGroups; ++i) {
+      SmallVector<OpFoldResult> groupSizes =
+          getCollapsedSize(op, rewriter, origSizes, i);
+      SmallVector<OpFoldResult> groupStrides =
+          getCollapsedStride(op, rewriter, origSizes, origStrides, i);
+      collapsedSizes.append(groupSizes.begin(), groupSizes.end());
+      collapsedStrides.append(groupStrides.begin(), groupStrides.end());
+    }
+
+    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
+        op, op.getType(), op.getSrc(), offset, collapsedSizes,
+        collapsedStrides);
+    return success();
+  }
+};
+
 struct FlattenMemrefsPass
     : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
   using Base::Base;
@@ -288,12 +458,52 @@ void memref::populateFlattenVectorOpsOnMemrefPatterns(
       patterns.getContext());
 }
 
+/// Special pattern for GetGlobalOp to avoid infinite loops
+struct FlattenGetGlobal : public OpRewritePattern<memref::GetGlobalOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::GetGlobalOp op,
+                               PatternRewriter &rewriter) const override {
+    // Check if this get_global references a multi-dimensional global
+    auto module = op->template getParentOfType<ModuleOp>();
+    auto globalOp = module.template lookupSymbol<memref::GlobalOp>(op.getName());
+    if (!globalOp) {
+      return failure();
+    }
+
+    auto globalType = globalOp.getType();
+    auto resultType = op.getType();
+
+    // Only apply if the global has been flattened but the get_global hasn't
+    if (globalType.getRank() == 1 && resultType.getRank() > 1) {
+      auto newGetGlobal = memref::GetGlobalOp::create(
+          rewriter, op.getLoc(), globalType, op.getName());
+
+      // Cast the flattened result back to the original shape
+      memref::ExtractStridedMetadataOp stridedMetadata =
+          memref::ExtractStridedMetadataOp::create(rewriter, op.getLoc(), op.getResult());
+      auto castResult = memref::ReinterpretCastOp::create(
+          rewriter, op.getLoc(), resultType, newGetGlobal,
+          /*offset=*/rewriter.getIndexAttr(0),
+          stridedMetadata.getConstifiedMixedSizes(),
+          stridedMetadata.getConstifiedMixedStrides());
+      rewriter.replaceOp(op, castResult);
+      return success();
+    }
+
+    return failure();
+  }
+};
+
 void memref::populateFlattenMemrefOpsPatterns(RewritePatternSet &patterns) {
   patterns.insert<MemRefRewritePattern<memref::LoadOp>,
                   MemRefRewritePattern<memref::StoreOp>,
                   MemRefRewritePattern<memref::AllocOp>,
                   MemRefRewritePattern<memref::AllocaOp>,
-                  MemRefRewritePattern<memref::DeallocOp>>(
+                  MemRefRewritePattern<memref::DeallocOp>,
+                  FlattenCollapseShape,
+                  FlattenGetGlobal,
+                  FlattenGlobal>(
       patterns.getContext());
 }
 

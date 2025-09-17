@@ -194,6 +194,35 @@ func.func @mask_load_vector_from_memref_dynamic(%input: memref<3x7xi2>, %row: in
 
 // -----
 
+func.func @collapse_shape_static(%arg0: memref<2x3x4xf32>) -> memref<6x4xf32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]]
+      : memref<2x3x4xf32> into memref<6x4xf32>
+  return %0 : memref<6x4xf32>
+}
+// CHECK-LABEL: func @collapse_shape_static
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [0], sizes: [6, 4], strides: [4, 1]
+// CHECK: return %[[REINT]]
+
+// -----
+
+func.func @collapse_shape_dynamic(
+    %arg0: memref<2x?x4xf32, strided<[?, ?, ?], offset: ?>>) ->
+    memref<?x4xf32, strided<[?, ?], offset: ?>> {
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]]
+      : memref<2x?x4xf32, strided<[?, ?, ?], offset: ?>>
+        into memref<?x4xf32, strided<[?, ?], offset: ?>>
+  return %0 : memref<?x4xf32, strided<[?, ?], offset: ?>>
+}
+// CHECK: #map = affine_map<()[s0] -> (s0 * 2)>
+// CHECK: #map1 = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
+// CHECK-LABEL: func @collapse_shape_dynamic
+// CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %arg0
+// CHECK: %[[SIZE:.*]] = affine.apply #map()[%[[SIZES]]#1]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]], 4], strides: [%[[STRIDES]]#1, %[[STRIDES]]#2]
+// CHECK: return %[[REINT]]
+
+// -----
+
 func.func @transfer_read_memref(%input: memref<4x8xi2>, %value: vector<8xi2>, %row: index, %col: index) -> vector<8xi2> {
    %c0 = arith.constant 0 : i2
    %0 = vector.transfer_read %input[%col, %row], %c0 {in_bounds = [true]} : memref<4x8xi2>, vector<8xi2>
@@ -336,3 +365,22 @@ func.func @dealloc_strided_memref(%input: memref<4x8xf32, strided<[8, 1], offset
 // CHECK-SAME: (%[[ARG0:.*]]: memref<4x8xf32, strided<[8, 1], offset: 100>>)
 // CHECK-NEXT: %[[REINT:.*]] = memref.reinterpret_cast %[[ARG0]] to offset: [100], sizes: [32], strides: [1] : memref<4x8xf32, strided<[8, 1], offset: 100>> to memref<32xf32, strided<[1], offset: 100>>
 // CHECK-NEXT: memref.dealloc %[[REINT]] : memref<32xf32, strided<[1], offset: 100>>
+
+// -----
+
+memref.global "private" constant @constant_3x3x1x1xf32 : memref<3x3x1x1xf32> = dense<[[[[-1.000000e+00]], [[0.000000e+00]], [[1.000000e+00]]], [[[-2.000000e+00]], [[0.000000e+00]], [[2.000000e+00]]], [[[-1.000000e+00]], [[0.000000e+00]], [[1.000000e+00]]]]>
+func.func @load_global_with_offset(%i0: index, %i1: index, %i2: index, %i3: index) -> f32 {
+  %global = memref.get_global @constant_3x3x1x1xf32 : memref<3x3x1x1xf32>
+  %val = memref.load %global[%i0, %i1, %i2, %i3] : memref<3x3x1x1xf32>
+  return %val: f32
+}
+
+//      CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1, s2, s3] -> (s0 * 3 + s1 + s2 + s3)>
+//      CHECK: memref.global "private" constant @constant_3x3x1x1xf32 : memref<9xf32> = dense<[-1.000000e+00, 0.000000e+00, 1.000000e+00, -2.000000e+00, 0.000000e+00, 2.000000e+00, -1.000000e+00, 0.000000e+00, 1.000000e+00]>
+//CHECK-LABEL: func.func @load_global_with_offset
+// CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index, %[[I2:.+]]: index, %[[I3:.+]]: index)
+//      CHECK:   %[[GLOBAL:.+]] = memref.get_global @constant_3x3x1x1xf32 : memref<9xf32>
+//      CHECK:   %[[INDEX:.+]] = affine.apply #[[$MAP]]()[%[[I0]], %[[I1]], %[[I2]], %[[I3]]]
+//      CHECK:   %[[REINTERPRET:.+]] = memref.reinterpret_cast %[[GLOBAL]] to offset: [0], sizes: [9], strides: [1] : memref<9xf32> to memref<9xf32, strided<[1]>>
+//      CHECK:   %[[LOAD:.+]] = memref.load %[[REINTERPRET]][%[[INDEX]]] : memref<9xf32, strided<[1]>>
+//      CHECK:   return %[[LOAD]]
