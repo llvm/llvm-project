@@ -98,10 +98,14 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
                            : AMDGPU::FeatureWavefrontSize64);
   } else if (IsWave64 && IsWave32) {
     // The wave size is mutually exclusive. If both somehow end up set, wave64
-    // wins.
-    //
-    // FIXME: This should really just be an error.
-    STI->ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    // wins if supported.
+    STI->ToggleFeature(AMDGPU::supportsWave32(*STI)
+                           ? AMDGPU::FeatureWavefrontSize64
+                           : AMDGPU::FeatureWavefrontSize32);
+
+    // If both wavesizes were manually requested, hack in a feature to permit
+    // assembling modules with mixed wavesizes.
+    STI->ToggleFeature(AMDGPU::FeatureAssemblerPermissiveWavesize);
   }
 
   assert((STI->hasFeature(AMDGPU::FeatureWavefrontSize64) !=
