@@ -214,11 +214,40 @@ func.func @collapse_shape_dynamic(
   return %0 : memref<?x4xf32, strided<[?, ?], offset: ?>>
 }
 // CHECK: #map = affine_map<()[s0] -> (s0 * 2)>
-// CHECK: #map1 = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
 // CHECK-LABEL: func @collapse_shape_dynamic
 // CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %arg0
 // CHECK: %[[SIZE:.*]] = affine.apply #map()[%[[SIZES]]#1]
 // CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]], 4], strides: [%[[STRIDES]]#1, %[[STRIDES]]#2]
+// CHECK: return %[[REINT]]
+
+// -----
+
+func.func @expand_shape_static(%arg0: memref<6x4xf32>) -> memref<2x3x4xf32> {
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 3, 4]
+      : memref<6x4xf32> into memref<2x3x4xf32>
+  return %0 : memref<2x3x4xf32>
+}
+// CHECK-LABEL: func @expand_shape_static
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [0], sizes: [2, 3, 4], strides: [12, 4, 1]
+// CHECK: return %[[REINT]]
+
+// -----
+
+func.func @expand_shape_dynamic(
+    %arg0: memref<?x4xf32, strided<[?, ?], offset: ?>>, %size: index) ->
+    memref<?x3x4xf32, strided<[?, ?, ?], offset: ?>> {
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [%size, 3, 4]
+      : memref<?x4xf32, strided<[?, ?], offset: ?>>
+        into memref<?x3x4xf32, strided<[?, ?, ?], offset: ?>>
+  return %0 : memref<?x3x4xf32, strided<[?, ?, ?], offset: ?>>
+}
+// CHECK: #map = affine_map<()[s0] -> (s0 floordiv 3)>
+// CHECK: #map1 = affine_map<()[s0] -> (s0 * 3)>
+// CHECK-LABEL: func @expand_shape_dynamic
+// CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %arg0
+// CHECK: %[[SIZE:.*]] = affine.apply #map()[%[[SIZES]]#0]
+// CHECK: %[[STRIDE:.*]] = affine.apply #map1()[%[[STRIDES]]#0]
+// CHECK: %[[REINT:.*]] = memref.reinterpret_cast %arg0 to offset: [%[[OFFSET]]], sizes: [%[[SIZE]], 3, 4], strides: [%[[STRIDE]], %[[STRIDES]]#0, %[[STRIDES]]#1]
 // CHECK: return %[[REINT]]
 
 // -----
