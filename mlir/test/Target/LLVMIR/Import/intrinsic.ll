@@ -567,11 +567,11 @@ define void @annotate_intrinsics(ptr %var, ptr %ptr, i16 %int, ptr %annotation, 
 
 ; CHECK-LABEL:  llvm.func @trap_intrinsics
 define void @trap_intrinsics() {
-  ; CHECK:  llvm.intr.trap
+  ; CHECK: llvm.intr.trap
   call void @llvm.trap()
   ; CHECK: llvm.intr.debugtrap
   call void @llvm.debugtrap()
-  ; CHECK: llvm.intr.ubsantrap {failureKind = 1 : i8}
+  ; CHECK: llvm.intr.ubsantrap <{failureKind = 1 : i8}>
   call void @llvm.ubsantrap(i8 1)
   ret void
 }
