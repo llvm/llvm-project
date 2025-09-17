@@ -167,7 +167,7 @@ META_PROJECTS = {
     ("llvm", "utils", "gn"): "gn",
     (".github", "workflows", "premerge.yaml"): ".ci",
     ("third-party",): ".ci",
-    ("llvm", "utils", "lit"): "lit"
+    ("llvm", "utils", "lit"): "lit",
 }
 
 # Projects that should run tests but cannot be explicitly built.
