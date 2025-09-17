@@ -16,9 +16,13 @@ void doOmpWorkWithCritical(int *a_lockCtr, int *b_lockCtr) {
 #pragma omp parallel num_threads(NUM_THREADS)
   {
 #pragma omp critical(a_lock)
-    { *a_lockCtr = *a_lockCtr + 1; }
+    {
+      *a_lockCtr = *a_lockCtr + 1;
+    }
 #pragma omp critical(b_lock)
-    { *b_lockCtr = *b_lockCtr + 1; }
+    {
+      *b_lockCtr = *b_lockCtr + 1;
+    }
   }
 }
 
@@ -47,7 +51,8 @@ void test_omp_get_thread_num_after_omp_hard_pause_resource_all() {
 
 // use omp to do some work, guarantees omp initialization
 #pragma omp parallel num_threads(NUM_THREADS)
-  {}
+  {
+  }
 
   // omp hard pause should succeed
   int rc = omp_pause_resource_all(omp_pause_hard);
@@ -62,7 +67,8 @@ void test_omp_get_thread_num_after_omp_hard_pause_resource_all() {
 void test_omp_parallel_num_threads_after_omp_hard_pause_resource_all() {
 // use omp to do some work
 #pragma omp parallel num_threads(NUM_THREADS)
-  {}
+  {
+  }
 
   // omp hard pause should succeed
   int rc = omp_pause_resource_all(omp_pause_hard);
@@ -70,7 +76,8 @@ void test_omp_parallel_num_threads_after_omp_hard_pause_resource_all() {
 
 // this should not trigger any omp asserts
 #pragma omp parallel num_threads(NUM_THREADS)
-  {}
+  {
+  }
 }
 
 void test_KMP_INIT_AT_FORK_with_fork_after_omp_hard_pause_resource_all() {
@@ -106,7 +113,8 @@ void test_KMP_INIT_AT_FORK_with_fork_after_omp_hard_pause_resource_all() {
 void test_fork_child_exiting_after_omp_hard_pause_resource_all() {
 // use omp to do some work
 #pragma omp parallel num_threads(NUM_THREADS)
-  {}
+  {
+  }
 
   // omp hard pause should succeed
   int rc = omp_pause_resource_all(omp_pause_hard);

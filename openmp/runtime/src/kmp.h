@@ -4561,6 +4561,7 @@ static inline void __kmp_resume_if_hard_paused() {
     __kmp_pause_status = kmp_not_paused;
   }
 }
+extern void __kmp_hard_pause_reinitialize(const bool in_child_atfork_andler);
 
 extern void __kmp_omp_display_env(int verbose);
 
