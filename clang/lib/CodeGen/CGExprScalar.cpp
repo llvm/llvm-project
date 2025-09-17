@@ -217,7 +217,7 @@ getOverflowBehaviorConsideringType(const CodeGenFunction &CGF,
 
   switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
   case LangOptions::SignedOverflowBehaviorTy::SOB_Defined:
-    return LangOptions::OverflowBehaviorKind::OB_FWrapv;
+    return LangOptions::OverflowBehaviorKind::OB_SignedAndDefined;
   case LangOptions::SignedOverflowBehaviorTy::SOB_Undefined:
     return LangOptions::OverflowBehaviorKind::OB_Unset;
   case LangOptions::SignedOverflowBehaviorTy::SOB_Trapping:
@@ -820,7 +820,7 @@ public:
       switch (getOverflowBehaviorConsideringType(CGF, Ops.Ty)) {
       case LangOptions::OB_Wrap:
         return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
-      case LangOptions::OB_FWrapv:
+      case LangOptions::OB_SignedAndDefined:
         if (!hasSan)
           return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
         [[fallthrough]];
@@ -3058,7 +3058,7 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   switch (getOverflowBehaviorConsideringType(CGF, Ty)) {
   case LangOptions::OB_Wrap:
     return Builder.CreateAdd(InVal, Amount, Name);
-  case LangOptions::OB_FWrapv:
+  case LangOptions::OB_SignedAndDefined:
     if (!hasSan)
       return Builder.CreateAdd(InVal, Amount, Name);
     [[fallthrough]];
@@ -4533,7 +4533,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
     switch (getOverflowBehaviorConsideringType(CGF, op.Ty)) {
     case LangOptions::OB_Wrap:
       return Builder.CreateAdd(op.LHS, op.RHS, "add");
-    case LangOptions::OB_FWrapv:
+    case LangOptions::OB_SignedAndDefined:
       if (!hasSan)
         return Builder.CreateAdd(op.LHS, op.RHS, "add");
       [[fallthrough]];
@@ -4693,7 +4693,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
       switch (getOverflowBehaviorConsideringType(CGF, op.Ty)) {
       case LangOptions::OB_Wrap:
         return Builder.CreateSub(op.LHS, op.RHS, "sub");
-      case LangOptions::OB_FWrapv:
+      case LangOptions::OB_SignedAndDefined:
         if (!hasSan)
           return Builder.CreateSub(op.LHS, op.RHS, "sub");
         [[fallthrough]];

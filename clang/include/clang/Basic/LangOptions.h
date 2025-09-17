@@ -128,7 +128,7 @@ public:
     // by sanitizers (PR82432). This field is needed to disambiguate canonical
     // wrapping type behaviors from -fwrapv behaviors.
     // -fwrapv
-    OB_FWrapv
+    OB_SignedAndDefined
   };
 
   // FIXME: Unify with TUKind.

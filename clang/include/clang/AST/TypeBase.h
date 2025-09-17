@@ -9057,8 +9057,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getOriginalDecl());
 
-  if (const OverflowBehaviorType *OBT =
-          dyn_cast<OverflowBehaviorType>(CanonicalType))
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
     return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
 
   return isBitIntType();

@@ -1416,8 +1416,8 @@ static QualType handleOverflowBehaviorTypeConversion(Sema &S, ExprResult &LHS,
   QualType LHSType = LHS.get()->getType().getUnqualifiedType();
   QualType RHSType = RHS.get()->getType().getUnqualifiedType();
 
-  const OverflowBehaviorType *LhsOBT = LHSType->getAs<OverflowBehaviorType>();
-  const OverflowBehaviorType *RhsOBT = RHSType->getAs<OverflowBehaviorType>();
+  const auto *LhsOBT = LHSType->getAs<OverflowBehaviorType>();
+  const auto *RhsOBT = RHSType->getAs<OverflowBehaviorType>();
 
   assert(LHSType->isIntegerType() && RHSType->isIntegerType() &&
          "Non-integer type conversion not supported for OverflowBehaviorTypes");
@@ -1697,9 +1697,8 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     LHSType = AtomicLHS->getValueType();
 
   // If both types are identical, no conversion is needed.
-  if (Context.hasSameType(LHSType, RHSType)) {
+  if (Context.hasSameType(LHSType, RHSType))
     return Context.getCommonSugaredType(LHSType, RHSType);
-  }
 
   // If either side is a non-arithmetic type (e.g. a pointer), we are done.
   // The caller can deal with this (e.g. pointer + int).

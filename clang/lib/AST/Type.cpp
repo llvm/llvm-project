@@ -2137,9 +2137,8 @@ bool Type::isIntegralOrUnscopedEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isInteger();
 
-  if (const OverflowBehaviorType *OBT =
-          dyn_cast<OverflowBehaviorType>(CanonicalType))
-    return OBT->getUnderlyingType()->isIntegralOrUnscopedEnumerationType();
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isIntegerType();
 
   if (isBitIntType())
     return true;

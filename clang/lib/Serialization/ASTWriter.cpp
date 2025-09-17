@@ -605,7 +605,7 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
-  // Nothing to do.
+  addSourceLocation(TL.getAttrLoc());
 }
 
 void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
