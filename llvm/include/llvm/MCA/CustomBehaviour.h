@@ -130,9 +130,6 @@ public:
 
   virtual ~Instrument() = default;
 
-  virtual bool canCustomize() const { return false; }
-  virtual void customize(InstrDesc &) const {}
-
   StringRef getDesc() const { return Desc; }
   StringRef getData() const { return Data; }
 };
@@ -154,15 +151,8 @@ public:
       Latency = L;
   }
 
-  bool canCustomize() const override { return bool(Latency); }
-  void customize(InstrDesc &ID) const override {
-    if (Latency) {
-      // TODO Allow to customize a subset of ID.Writes
-      for (auto &W : ID.Writes)
-        W.Latency = *Latency;
-      ID.MaxLatency = *Latency;
-    }
-  }
+  bool hasValue() const { return bool(Latency); }
+  unsigned getLatency() { return *Latency; }
 };
 
 using UniqueInstrument = std::unique_ptr<Instrument>;
@@ -178,7 +168,7 @@ protected:
 
 public:
   InstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-                    bool EnableInstruments = false)
+                    bool EnableInstruments = true)
       : STI(STI), MCII(MCII), EnableInstruments(EnableInstruments) {};
 
   virtual ~InstrumentManager() = default;

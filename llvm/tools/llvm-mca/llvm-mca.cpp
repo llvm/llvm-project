@@ -516,12 +516,12 @@ int main(int argc, char **argv) {
     if (!IM) {
       // If the target doesn't have its own IM implemented we use base class
       // with instruments enabled.
-      IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII, true);
+      IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
     }
   } else {
-    // If the -disable-cb flag is set then we use the default base class
-    // implementation (which does nothing).
-    IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+    // If the -disable-im flag is set then we use the default base class
+    // implementation and disable the instruments.
+    IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII, /*EnableInstruments=*/false);
   }
 
   // Parse the input and create InstrumentRegion that llvm-mca
