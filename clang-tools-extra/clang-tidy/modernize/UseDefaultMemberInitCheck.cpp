@@ -8,17 +8,52 @@
 
 #include "UseDefaultMemberInitCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+static bool isExprAllowedInMemberInit(const Expr *E) {
+  if (E == nullptr)
+    return false;
+  if (isa<IntegerLiteral, FloatingLiteral, CXXBoolLiteralExpr,
+          CXXNullPtrLiteralExpr, CharacterLiteral, StringLiteral>(E))
+    return true;
+  if (isa<ImplicitValueInitExpr>(E))
+    return true;
+  if (const auto *PE = dyn_cast<ParenExpr>(E))
+    return isExprAllowedInMemberInit(PE->getSubExpr());
+  if (const auto *UO = dyn_cast<UnaryOperator>(E); UO && UO->isArithmeticOp())
+    return isExprAllowedInMemberInit(UO->getSubExpr());
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
+    return isExprAllowedInMemberInit(BO->getLHS()) &&
+           isExprAllowedInMemberInit(BO->getRHS());
+  if (const auto *CE = dyn_cast<CastExpr>(E))
+    return isExprAllowedInMemberInit(CE->getSubExpr());
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (const ValueDecl *D = DRE->getDecl()) {
+      if (isa<EnumConstantDecl>(D))
+        return true;
+      if (const auto *VD = dyn_cast<VarDecl>(D))
+        return VD->isConstexpr() || VD->getStorageClass() == SC_Static;
+    }
+    return false;
+  }
+  return false;
+}
+
 namespace {
+
 AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
   return Node.getNumInits() == N;
 }
+
+AST_MATCHER(Expr, allowedInitExpr) { return isExprAllowedInMemberInit(&Node); }
+
 } // namespace
 
 static StringRef getValueOfValueInit(const QualType InitType) {
@@ -206,30 +241,10 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto NumericLiteral = anyOf(integerLiteral(), floatLiteral());
-  auto UnaryNumericLiteral = unaryOperator(hasAnyOperatorName("+", "-"),
-                                           hasUnaryOperand(NumericLiteral));
-
-  auto ConstExprRef = varDecl(anyOf(isConstexpr(), isStaticStorageClass()));
-  auto ImmutableRef =
-      declRefExpr(to(decl(anyOf(enumConstantDecl(), ConstExprRef))));
-
-  auto BinaryNumericExpr = binaryOperator(
-      hasOperands(anyOf(NumericLiteral, ImmutableRef, binaryOperator()),
-                  anyOf(NumericLiteral, ImmutableRef, binaryOperator())));
-
-  auto InitBase =
-      anyOf(stringLiteral(), characterLiteral(), NumericLiteral,
-            UnaryNumericLiteral, cxxBoolLiteral(), cxxNullPtrLiteralExpr(),
-            implicitValueInitExpr(), ImmutableRef, BinaryNumericExpr);
-
-  auto ExplicitCastExpr = castExpr(hasSourceExpression(InitBase));
-  auto InitMatcher = anyOf(InitBase, ExplicitCastExpr);
-
-  auto Init =
-      anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitMatcher)),
-                               initCountIs(0), hasType(arrayType()))),
-            InitBase, ExplicitCastExpr);
+  auto Init = anyOf(
+      initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, allowedInitExpr())),
+                         initCountIs(0), hasType(arrayType()))),
+      allowedInitExpr());
 
   Finder->addMatcher(
       cxxConstructorDecl(forEachConstructorInitializer(
