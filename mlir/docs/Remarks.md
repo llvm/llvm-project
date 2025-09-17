@@ -94,10 +94,6 @@ Neutral analysis results.
 
 ***
 
-Here’s a cleaned-up and grammatically improved version of your text:
-
----
-
 ## Emitting Remarks
 
 The `remark::*` helpers return an **`InFlightRemark`**. You can append strings
@@ -160,7 +156,7 @@ LogicalResult MyPass::runOnOperation() {
 
 #### Example: Postpone remarks emitting
 
-`RemarkOpts` has `postpone` option. When it is set, the remark emissing will be
+`RemarkOpts` has `postpone` option. When it is set, the remark emission will be
 postponed until the end of the compilation.
 
 ```c++
@@ -168,7 +164,7 @@ postponed until the end of the compilation.
   remark::passed(loc, remark::RemarkOpts::name("")
                             .category(categoryLoopunroll)
                             .subCategory(myPassname2)
-                            .postpone())
+                            .postpone()) << "loop is unrolled";
 ```
 
 ***
