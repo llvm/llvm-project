@@ -4041,13 +4041,9 @@ LexStart:
     MIOpt.ReadToken();
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
 
-    // Check eof token first, because eof token may be encountered in
-    // LexIdentifierContinue, and the current lexer will be deleted in
-    // HandleEndOfFile, causing members(eg. LangOpts) to become an inaccessible
-    // dangling reference.
-    //
-    // FIXME: Whether a more reasonable memory management method needed? such as
-    // delaying the deletion of the current Lexer.
+    // Check eof token first, because EOF may be encountered in
+    // LexIdentifierContinue, and the current lexer may then be made invalid by
+    // HandleEndOfFile.
     if (returnedToken && Result.isNot(tok::eof) &&
         Result.isModuleContextualKeyword(LangOpts) && !LexingRawMode &&
         !Is_PragmaLexer && !ParsingPreprocessorDirective && PP &&

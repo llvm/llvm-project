@@ -54,19 +54,19 @@ import rightpad;        // preprocessing directive
 import :part;           // preprocessing directive
 
 //--- module_decl_not_in_same_line.cpp
-module                  // expected-error {{the module directive is ill-formed, module contextual keyword must be immediately followed on the same line by an identifier, or a ';' after being at the start of a line, or preceded by an export keyword at the start of a line}}
-;export module M;       // expected-error {{the module directive is ill-formed, module contextual keyword must be immediately followed on the same line by an identifier, or a ';' after being at the start of a line, or preceded by an export keyword at the start of a line}}
+module                  // expected-error {{the module directive is ill-formed, module keyword must be immediately followed on the same line by an identifier, or a ';' after being at the start of a line, or preceded by an export keyword at the start of a line}}
+;export module M;       // expected-error {{the module directive is ill-formed, module keyword must be immediately followed on the same line by an identifier, or a ';' after being at the start of a line, or preceded by an export keyword at the start of a line}}
 
 //--- foo.cppm
 export module foo;
 
 //--- import_decl_not_in_same_line.cpp
 export module M;
-export                  // expected-error {{the import directive is ill-formed, import contextual keyword must be immediately followed on the same line by an identifier, '<', '"', or ':', but not '::', after being at the start of a line or preceded by an export at the start of the line}}
+export                  // expected-error {{the import directive is ill-formed, import keyword must be immediately followed on the same line by an identifier, '<', '"', or ':', but not '::', after being at the start of a line or preceded by an export at the start of the line}}
 import
 foo;
 
-export                  // expected-error {{the import directive is ill-formed, import contextual keyword must be immediately followed on the same line by an identifier, '<', '"', or ':', but not '::', after being at the start of a line or preceded by an export at the start of the line}}
+export                  // expected-error {{the import directive is ill-formed, import keyword must be immediately followed on the same line by an identifier, '<', '"', or ':', but not '::', after being at the start of a line or preceded by an export at the start of the line}}
 import foo;
 
 //--- not_import.cpp
