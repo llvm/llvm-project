@@ -83,7 +83,6 @@ func.func @two_results() -> i32 {
   
   return %res1 : i32
 }
-
 // CHECK-LABEL:   emitc.func @payload_two_results(
 // CHECK-SAME:      %[[ARG0:.*]]: i32) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = add %[[ARG0]], %[[ARG0]] : (i32, i32) -> i32
@@ -156,7 +155,6 @@ func.func @double_use(%p : !emitc.ptr<i32>) -> i32 {
   }
   return %res : i32
 }
-
 // CHECK-LABEL:   emitc.func @payload_double_use(
 // CHECK-SAME:      %[[ARG0:.*]]: i32) -> i32 {
 // CHECK:           %[[VAL_0:.*]] = add %[[ARG0]], %[[ARG0]] : (i32, i32) -> i32
@@ -219,7 +217,6 @@ func.func @empty_after_region() {
   }
   return
 }
-
 // CHECK-LABEL:   emitc.func @payload_empty_after_region() -> i1 {
 // CHECK:           %[[VAL_0:.*]] = literal "true" : i1
 // CHECK:           return %[[VAL_0]] : i1
