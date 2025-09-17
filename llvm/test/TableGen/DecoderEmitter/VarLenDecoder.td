@@ -81,8 +81,8 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
 // CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = 0x0;
-// CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 11, 16), 16, 16);
-// CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 27, 16), 0, 16);
+// CHECK-NEXT: tmp |= fieldFromInstruction(insn, 11, 16) << 16;
+// CHECK-NEXT: tmp |= fieldFromInstruction(insn, 27, 16);
 // CHECK-NEXT: MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT: return S;
 

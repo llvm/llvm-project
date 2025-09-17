@@ -1041,9 +1041,13 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     // insert the variable parts into it.
     OS << Indent << "tmp = " << format_hex(OpInfo.InitValue.value_or(0), 0)
        << ";\n";
-    for (auto [Base, Width, Offset] : OpInfo.fields())
-      OS << Indent << "insertBits(tmp, fieldFromInstruction(insn, " << Base
-         << ", " << Width << "), " << Offset << ", " << Width << ");\n";
+    for (auto [Base, Width, Offset] : OpInfo.fields()) {
+      OS << Indent << "tmp |= fieldFromInstruction(insn, " << Base << ", "
+         << Width << ')';
+      if (Offset)
+        OS << " << " << Offset;
+      OS << ";\n";
+    }
   }
 
   StringRef Decoder = OpInfo.Decoder;
