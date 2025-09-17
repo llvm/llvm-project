@@ -856,7 +856,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 }
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
-  DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage->ImageStart));
+  DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage.bytes_begin()));
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {

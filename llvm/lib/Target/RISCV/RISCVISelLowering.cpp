@@ -378,13 +378,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
-  // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
-  // pattern match it directly in isel.
   setOperationAction(ISD::BSWAP, XLenVT,
-                     (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
-                      Subtarget.hasVendorXTHeadBb())
-                         ? Legal
-                         : Expand);
+                     Subtarget.hasREV8Like() ? Legal : Expand);
 
   if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXqcibm()) &&
       !Subtarget.is64Bit()) {
@@ -9150,10 +9145,22 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
-    // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV) && (!HasCZero || isSimm12Constant(TrueV))) {
-      SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
+    if (isNullConstant(FalseV)) {
+      // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
+      if (auto *TrueC = dyn_cast<ConstantSDNode>(TrueV)) {
+        uint64_t TrueM1 = TrueC->getZExtValue() - 1;
+        if (isPowerOf2_64(TrueM1)) {
+          unsigned ShAmount = Log2_64(TrueM1);
+          if (Subtarget.hasShlAdd(ShAmount))
+            return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, CondV,
+                               DAG.getConstant(ShAmount, DL, VT), CondV);
+        }
+      }
+      // (select c, y, 0) -> -c & y
+      if (!HasCZero || isSimm12Constant(TrueV)) {
+        SDValue Neg = DAG.getNegative(CondV, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
+      }
     }
   }
 

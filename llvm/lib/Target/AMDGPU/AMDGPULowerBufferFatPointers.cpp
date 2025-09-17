@@ -2328,6 +2328,12 @@ void SplitPtrStructs::processFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Splitting pointer structs in function: " << F.getName()
                     << "\n");
   for (Instruction *I : Originals) {
+    // In some cases, instruction order doesn't reflect program order,
+    // so the visit() call will have already visited coertain instructions
+    // by the time this loop gets to them. Avoid re-visiting these so as to,
+    // for example, avoid processing the same conditional twice.
+    if (SplitUsers.contains(I))
+      continue;
     auto [Rsrc, Off] = visit(I);
     assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
            "Can't have a resource but no offset");

@@ -840,3 +840,11 @@ func.func @verify_declare_enter(%arg0 : memref<i32>) {
   acc.declare_exit token(%0) dataOperands(%arg0 : memref<i32>)
   return
 }
+
+func.func @verify_data(%arg0 : memref<i32>) {
+// expected-error @below {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+  acc.data dataOperands(%arg0 : memref<i32>) {
+    acc.terminator
+  }
+  return
+}

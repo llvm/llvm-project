@@ -455,3 +455,29 @@ loop:
 exit:
   ret float %sum
 }
+
+define void @dominance_not_in_program_order(ptr addrspace(7) inreg %arg) {
+; CHECK-LABEL: define void @dominance_not_in_program_order
+; CHECK-SAME: ({ ptr addrspace(8), i32 } inreg [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  .preheader15:
+; CHECK-NEXT:    [[ARG_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[ARG]], 0
+; CHECK-NEXT:    [[ARG_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[ARG]], 1
+; CHECK-NEXT:    br label [[DOTLR_PH18:%.*]]
+; CHECK:       .loopexit:
+; CHECK-NEXT:    [[SCEVGEP12:%.*]] = add i32 [[LSR_IV11_OFF:%.*]], 16
+; CHECK-NEXT:    br label [[DOTLR_PH18]]
+; CHECK:       .lr.ph18:
+; CHECK-NEXT:    [[LSR_IV11_OFF]] = phi i32 [ [[ARG_OFF]], [[DOTLOOPEXIT:%.*]] ], [ [[ARG_OFF]], [[DOTPREHEADER15:%.*]] ]
+; CHECK-NEXT:    br label [[DOTLOOPEXIT]]
+;
+.preheader15:
+  br label %.lr.ph18
+
+.loopexit:                                        ; preds = %.lr.ph18
+  %scevgep12 = getelementptr i8, ptr addrspace(7) %lsr.iv11, i32 16
+  br label %.lr.ph18
+
+.lr.ph18:                                         ; preds = %.loopexit, %.preheader15
+  %lsr.iv11 = phi ptr addrspace(7) [ %arg, %.loopexit ], [ %arg, %.preheader15 ]
+  br label %.loopexit
+}

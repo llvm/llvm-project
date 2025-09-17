@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "amdgpu-lower-intrinsics"
 
@@ -49,7 +50,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
-    AU.setPreservesCFG();
   }
 };
 
@@ -73,6 +73,7 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
     case Intrinsic::amdgcn_s_barrier_wait:
+    case Intrinsic::amdgcn_s_cluster_barrier:
       forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitBarrier(*II); });
       break;
     }
@@ -81,13 +82,14 @@ bool AMDGPULowerIntrinsicsImpl::run() {
   return Changed;
 }
 
-// Optimize barriers and lower s_barrier to a sequence of split barrier
-// intrinsics.
+// Optimize barriers and lower s_(cluster_)barrier to a sequence of split
+// barrier intrinsics.
 bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
   assert(I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier ||
          I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal ||
          I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal_isfirst ||
-         I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait);
+         I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait ||
+         I.getIntrinsicID() == Intrinsic::amdgcn_s_cluster_barrier);
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
   bool IsSingleWaveWG = false;
@@ -99,7 +101,59 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
 
   IRBuilder<> B(&I);
 
-  if (IsSingleWaveWG) {
+  // Lower the s_cluster_barrier intrinsic first. There is no corresponding
+  // hardware instruction in any subtarget.
+  if (I.getIntrinsicID() == Intrinsic::amdgcn_s_cluster_barrier) {
+    // The default cluster barrier expects one signal per workgroup. So we need
+    // a workgroup barrier first.
+    if (IsSingleWaveWG) {
+      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {});
+    } else {
+      Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::WORKGROUP);
+      Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::WORKGROUP);
+      Value *IsFirst = B.CreateIntrinsic(
+          B.getInt1Ty(), Intrinsic::amdgcn_s_barrier_signal_isfirst,
+          {BarrierID_32});
+      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait,
+                        {BarrierID_16});
+
+      Instruction *ThenTerm =
+          SplitBlockAndInsertIfThen(IsFirst, I.getIterator(), false);
+      B.SetInsertPoint(ThenTerm);
+    }
+
+    // Now we can signal the cluster barrier from a single wave and wait for the
+    // barrier in all waves.
+    Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::CLUSTER);
+    Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::CLUSTER);
+    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_signal,
+                      {BarrierID_32});
+
+    B.SetInsertPoint(&I);
+    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait,
+                      {BarrierID_16});
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  bool IsWorkgroupScope = false;
+
+  if (I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait ||
+      I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal ||
+      I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal_isfirst) {
+    int BarrierID = cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
+    if (BarrierID == AMDGPU::Barrier::TRAP ||
+        BarrierID == AMDGPU::Barrier::WORKGROUP ||
+        (BarrierID >= AMDGPU::Barrier::NAMED_BARRIER_FIRST &&
+         BarrierID <= AMDGPU::Barrier::NAMED_BARRIER_LAST))
+      IsWorkgroupScope = true;
+  } else {
+    assert(I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier);
+    IsWorkgroupScope = true;
+  }
+
+  if (IsWorkgroupScope && IsSingleWaveWG) {
     // Down-grade waits, remove split signals.
     if (I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier ||
         I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait) {
@@ -134,9 +188,7 @@ PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,
   AMDGPULowerIntrinsicsImpl Impl(M, TM);
   if (!Impl.run())
     return PreservedAnalyses::all();
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return PreservedAnalyses::none();
 }
 
 bool AMDGPULowerIntrinsicsLegacy::runOnModule(Module &M) {

@@ -51,8 +51,8 @@ llvm::json::Value toJSON(const InvalidatedEventBody &IEB) {
   json::Object Result{{"areas", IEB.areas}};
   if (IEB.threadId)
     Result.insert({"threadID", IEB.threadId});
-  if (IEB.frameId)
-    Result.insert({"frameId", IEB.frameId});
+  if (IEB.stackFrameId)
+    Result.insert({"stackFrameId", IEB.stackFrameId});
   return Result;
 }
 

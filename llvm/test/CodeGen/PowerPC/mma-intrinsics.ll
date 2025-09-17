@@ -394,18 +394,18 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-NEXT:    xxsetaccz acc2
 ; CHECK-NEXT:    xxsetaccz acc1
 ; CHECK-NEXT:    addi r6, r6, 6
+; CHECK-NEXT:    add r8, r5, r7
 ; CHECK-NEXT:    lxvx vs0, r5, r7
-; CHECK-NEXT:    add r7, r5, r7
-; CHECK-NEXT:    lxv vs1, 16(r7)
-; CHECK-NEXT:    xvf32gerpp acc2, vs0, vs1
-; CHECK-NEXT:    lxv vs0, 32(r7)
-; CHECK-NEXT:    lxv vs1, 48(r7)
-; CHECK-NEXT:    xvf32gerpn acc1, vs0, vs1
-; CHECK-NEXT:    lxv vs12, 64(r7)
-; CHECK-NEXT:    lxv vs13, 80(r7)
-; CHECK-NEXT:    xxsetaccz acc0
 ; CHECK-NEXT:    rldic r7, r4, 6, 26
 ; CHECK-NEXT:    addi r4, r4, 3
+; CHECK-NEXT:    lxv vs1, 16(r8)
+; CHECK-NEXT:    xvf32gerpp acc2, vs0, vs1
+; CHECK-NEXT:    lxv vs0, 32(r8)
+; CHECK-NEXT:    lxv vs1, 48(r8)
+; CHECK-NEXT:    xvf32gerpn acc1, vs0, vs1
+; CHECK-NEXT:    lxv vs12, 64(r8)
+; CHECK-NEXT:    lxv vs13, 80(r8)
+; CHECK-NEXT:    xxsetaccz acc0
 ; CHECK-NEXT:    add r8, r3, r7
 ; CHECK-NEXT:    xxmfacc acc2
 ; CHECK-NEXT:    xvf32gernp acc0, vs12, vs13
@@ -443,18 +443,18 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-BE-NEXT:    xxsetaccz acc2
 ; CHECK-BE-NEXT:    xxsetaccz acc1
 ; CHECK-BE-NEXT:    addi r6, r6, 6
+; CHECK-BE-NEXT:    add r8, r5, r7
 ; CHECK-BE-NEXT:    lxvx vs0, r5, r7
-; CHECK-BE-NEXT:    add r7, r5, r7
-; CHECK-BE-NEXT:    lxv vs1, 16(r7)
-; CHECK-BE-NEXT:    xvf32gerpp acc2, vs0, vs1
-; CHECK-BE-NEXT:    lxv vs0, 32(r7)
-; CHECK-BE-NEXT:    lxv vs1, 48(r7)
-; CHECK-BE-NEXT:    xvf32gerpn acc1, vs0, vs1
-; CHECK-BE-NEXT:    lxv vs12, 64(r7)
-; CHECK-BE-NEXT:    lxv vs13, 80(r7)
-; CHECK-BE-NEXT:    xxsetaccz acc0
 ; CHECK-BE-NEXT:    rldic r7, r4, 6, 26
 ; CHECK-BE-NEXT:    addi r4, r4, 3
+; CHECK-BE-NEXT:    lxv vs1, 16(r8)
+; CHECK-BE-NEXT:    xvf32gerpp acc2, vs0, vs1
+; CHECK-BE-NEXT:    lxv vs0, 32(r8)
+; CHECK-BE-NEXT:    lxv vs1, 48(r8)
+; CHECK-BE-NEXT:    xvf32gerpn acc1, vs0, vs1
+; CHECK-BE-NEXT:    lxv vs12, 64(r8)
+; CHECK-BE-NEXT:    lxv vs13, 80(r8)
+; CHECK-BE-NEXT:    xxsetaccz acc0
 ; CHECK-BE-NEXT:    add r8, r3, r7
 ; CHECK-BE-NEXT:    xxmfacc acc2
 ; CHECK-BE-NEXT:    xvf32gernp acc0, vs12, vs13

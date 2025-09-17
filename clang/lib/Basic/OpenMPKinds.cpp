@@ -118,7 +118,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   .Case(#Name, static_cast<unsigned>(OMPC_DEFAULTMAP_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
                         .Default(OMPC_DEFAULTMAP_unknown);
-    if (LangOpts.OpenMP < 60 && Type == OMPC_DEFAULTMAP_MODIFIER_storage)
+    if (LangOpts.OpenMP < 60 && (Type == OMPC_DEFAULTMAP_MODIFIER_storage ||
+                                 Type == OMPC_DEFAULTMAP_MODIFIER_private))
       return OMPC_DEFAULTMAP_MODIFIER_unknown;
     return Type;
   }

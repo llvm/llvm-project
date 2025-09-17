@@ -35,22 +35,22 @@ class I<dag out_ops, dag in_ops> : Instruction {
 // CHECK-NEXT: /* 7 */  OPC_Scope, 8, 0,                       // end scope at 18
 // CHECK-NEXT: /* 10 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
 // CHECK-NEXT: /* 14 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 18 */ OPC_TryDecode, {{[0-9]+}}, 2, 1,       // Opcode: SHIFT0, DecodeIdx: 1
+// CHECK-NEXT: /* 18 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT0, DecodeIdx: 1
 // CHECK-NEXT: /* 22 */ OPC_FilterValueOrSkip, 1, 15, 0,       // if Field != 0x1 skip to 41
 // CHECK-NEXT: /* 26 */ OPC_Scope, 8, 0,                       // end scope at 37
 // CHECK-NEXT: /* 29 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
 // CHECK-NEXT: /* 33 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 37 */ OPC_TryDecode, {{[0-9]+}}, 2, 1,       // Opcode: SHIFT1, DecodeIdx: 1
+// CHECK-NEXT: /* 37 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT1, DecodeIdx: 1
 // CHECK-NEXT: /* 41 */ OPC_FilterValueOrSkip, 2, 15, 0,       // if Field != 0x2 skip to 60
 // CHECK-NEXT: /* 45 */ OPC_Scope, 8, 0,                       // end scope at 56
 // CHECK-NEXT: /* 48 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
 // CHECK-NEXT: /* 52 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 56 */ OPC_TryDecode, {{[0-9]+}}, 2, 1,       // Opcode: SHIFT2, DecodeIdx: 1
+// CHECK-NEXT: /* 56 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT2, DecodeIdx: 1
 // CHECK-NEXT: /* 60 */ OPC_FilterValue, 3,                    // if Field != 0x3
 // CHECK-NEXT: /* 62 */ OPC_Scope, 8, 0,                       // end scope at 73
 // CHECK-NEXT: /* 65 */ OPC_CheckField, 6, 6, 0,               // if Inst{11-6} != 0x0
 // CHECK-NEXT: /* 69 */ OPC_Decode, {{[0-9]+}}, 2, 0,          // Opcode: {{.*}}:NOP, DecodeIdx: 0
-// CHECK-NEXT: /* 73 */ OPC_TryDecode, {{[0-9]+}}, 2, 1,       // Opcode: SHIFT3, DecodeIdx: 1
+// CHECK-NEXT: /* 73 */ OPC_Decode, {{[0-9]+}}, 2, 1,          // Opcode: SHIFT3, DecodeIdx: 1
 
 
 class SHIFT<bits<2> opc> : I<(outs), (ins ShAmtOp:$shamt)>, EncSHIFT<opc>;

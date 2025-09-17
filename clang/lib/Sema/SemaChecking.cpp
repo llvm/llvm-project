@@ -177,9 +177,7 @@ bool Sema::checkArgCount(CallExpr *Call, unsigned DesiredArgCount) {
 static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
   bool HasError = false;
 
-  for (unsigned I = 0; I < Call->getNumArgs(); ++I) {
-    Expr *Arg = Call->getArg(I);
-
+  for (const Expr *Arg : Call->arguments()) {
     if (Arg->isValueDependent())
       continue;
 

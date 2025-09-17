@@ -103,6 +103,32 @@ public:
   }
 };
 
+class ConvertTosaConstWithIntegerTensorType
+    : public OpConversionPattern<tosa::ConstOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ConstOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    const ElementsAttr oldAttr = op.getValues();
+    const auto oldTy = llvm::cast<ShapedType>(oldAttr.getType());
+    const auto newTy =
+        llvm::cast<ShapedType>(typeConverter->convertType(oldTy));
+    if (oldTy == newTy)
+      return success();
+
+    ElementsAttr newAttr = oldAttr;
+    if (auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(oldAttr)) {
+      newAttr = DenseElementsAttr::get(newTy, denseAttr.getRawData());
+    } else {
+      return rewriter.notifyMatchFailure(op, "unknown elements attribute type");
+    }
+
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, newTy, newAttr);
+    return success();
+  }
+};
+
 class TosaConvertIntegerTypeToSignless
     : public impl::TosaConvertIntegerTypeToSignlessBase<
           TosaConvertIntegerTypeToSignless> {
@@ -116,6 +142,10 @@ public:
       return typeConverter.isSignatureLegal(op.getFunctionType()) &&
              typeConverter.isLegal(&op.getBody());
     });
+    target.addDynamicallyLegalOp<tosa::ConstOp>([&](tosa::ConstOp op) {
+      return typeConverter.isLegal(op.getType()) &&
+             typeConverter.isLegal(op.getValues().getType());
+    });
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
       return typeConverter.isLegal(op->getOperandTypes()) &&
              typeConverter.isLegal(op->getResultTypes());
@@ -125,6 +155,7 @@ public:
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);
     patterns.add<ConvertGenericOpWithIntegerTensorType>(typeConverter, context);
+    patterns.add<ConvertTosaConstWithIntegerTensorType>(typeConverter, context);
 
     if (failed(
             applyFullConversion(getOperation(), target, std::move(patterns))))

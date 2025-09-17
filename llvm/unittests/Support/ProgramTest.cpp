@@ -680,4 +680,22 @@ TEST_F(ProgramEnvTest, TestExecuteWithNoStacktraceHandler) {
   ASSERT_EQ(0, RetCode);
 }
 
+TEST_F(ProgramEnvTest, TestExecuteEmptyEnvironment) {
+  using namespace llvm::sys;
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=" // A null invocation to avoid infinite recursion
+  };
+
+  std::string Error;
+  bool ExecutionFailed;
+  int RetCode = ExecuteAndWait(Executable, argv, ArrayRef<StringRef>{}, {}, 0,
+                               0, &Error, &ExecutionFailed);
+  EXPECT_FALSE(ExecutionFailed) << Error;
+  ASSERT_EQ(0, RetCode);
+}
+
 } // end anonymous namespace
