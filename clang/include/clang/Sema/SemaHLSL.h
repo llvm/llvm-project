@@ -260,11 +260,6 @@ private:
 
   bool initGlobalResourceDecl(VarDecl *VD);
   bool initGlobalResourceArrayDecl(VarDecl *VD);
-  void createResourceRecordCtorArgs(const Type *ResourceTy, StringRef VarName,
-                                    HLSLResourceBindingAttr *RBA,
-                                    HLSLVkBindingAttr *VkBinding,
-                                    uint32_t ArrayIndex,
-                                    llvm::SmallVectorImpl<Expr *> &Args);
 };
 
 } // namespace clang

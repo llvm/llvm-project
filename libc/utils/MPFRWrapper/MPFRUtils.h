@@ -56,6 +56,7 @@ enum class Operation : int {
   ModPIOver4,
   Round,
   RoundEven,
+  Rsqrt,
   Sin,
   Sinpi,
   Sinh,
