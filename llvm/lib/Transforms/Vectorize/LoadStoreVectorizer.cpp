@@ -930,9 +930,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       }
 
       Chain ExtendingLoadsStores;
-      bool ExtendChain = IsLoadChain
-                             ? ExtendLoads
-                             : ExtendStores;
+      bool ExtendChain = IsLoadChain ? ExtendLoads : ExtendStores;
       if (ExtendChain && NumVecElems < TargetVF && NumVecElems % 2 != 0 &&
           VecElemBits >= 8) {
         // TargetVF may be a lot higher than NumVecElems,
@@ -1047,8 +1045,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
   // If we are left with a two-element chain, and one of the elements is an
   // extra element, we don't want to vectorize
-  if (C.size() == 2 && (ExtraElements.contains(C[0].Inst) ||
-                        ExtraElements.contains(C[1].Inst)))
+  if (C.size() == 2 &&
+      (ExtraElements.contains(C[0].Inst) || ExtraElements.contains(C[1].Inst)))
     return false;
 
   sortChainInOffsetOrder(C);
