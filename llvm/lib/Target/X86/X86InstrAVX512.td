@@ -12379,8 +12379,8 @@ multiclass VBMI2_shift_imm<bits<8> wOp, bits<8> dqOp, string Prefix,
 }
 
 // Concat & Shift
-defm VPSHLDV : VBMI2_shift_var<0x70, 0x71, "vpshldv", X86VShldv, SchedWriteVecIMul>;
-defm VPSHRDV : VBMI2_shift_var<0x72, 0x73, "vpshrdv", X86VShrdv, SchedWriteVecIMul>;
+defm VPSHLDV : VBMI2_shift_var<0x70, 0x71, "vpshldv", fshl, SchedWriteVecIMul>;
+defm VPSHRDV : VBMI2_shift_var<0x72, 0x73, "vpshrdv", fshr, SchedWriteVecIMul>;
 defm VPSHLD  : VBMI2_shift_imm<0x70, 0x71, "vpshld", X86VShld, SchedWriteVecIMul>;
 defm VPSHRD  : VBMI2_shift_imm<0x72, 0x73, "vpshrd", X86VShrd, SchedWriteVecIMul>;
 
