@@ -281,13 +281,13 @@ static void validateRootSignature(Module &M,
     const auto *ParamInfo =
         static_cast<const mcdxbc::RootParameterInfo *>(Reg->Cookie);
 
-    const bool IsRootSRVOrUAV =
+    const bool IsSRVOrUAV =
         RC == ResourceClass::SRV || RC == ResourceClass::UAV;
     const bool IsDescriptorTable =
         ParamInfo->Type == dxbc::RootParameterType::DescriptorTable;
     const bool IsRawOrStructuredBuffer =
         RK != ResourceKind::RawBuffer && RK != ResourceKind::StructuredBuffer;
-    if (IsRootSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer) {
+    if (IsSRVOrUAV && !IsDescriptorTable && IsRawOrStructuredBuffer) {
       reportInvalidHandleTyError(M, RC, Binding);
       continue;
     }
