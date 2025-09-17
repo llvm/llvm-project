@@ -1,6 +1,6 @@
 ## Tests how --call-graph-info prints the call graph information.
 # RUN: yaml2obj --docnum=1 %s -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
+# llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=LLVM -DFILE=%t
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines --check-prefix=JSON -DFILE=%t
 

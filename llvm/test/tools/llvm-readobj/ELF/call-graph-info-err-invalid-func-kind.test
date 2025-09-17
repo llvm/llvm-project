@@ -6,7 +6,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 
-# ERR: {{.*}}llvm-readelf: warning: '[[FILE]]': Unknown function kind in .callgraph section.
+# ERR: {{.*}}llvm-readelf: error: 'While reading call graph info's [FunctionKind] for function at [0x0]': Unknown value [4].
 
 .text
 .globl _Z3foov
@@ -17,5 +17,5 @@ _Z3foov:
 .section	.callgraph,"o",@progbits,.text
 .quad	0   #< Format version number.
 .quad 0   #< Function entry address.
-.quad 3   #< Invalid function kind: must be one of 0, 1, 2.
+.quad 4   #< Invalid function kind: must be one of 0, 1, 2, 3.
 .text
