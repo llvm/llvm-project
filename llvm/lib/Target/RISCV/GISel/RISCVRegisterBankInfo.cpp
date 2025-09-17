@@ -503,27 +503,26 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC: {
     Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
-    if (auto *II = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+    if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+            RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
       unsigned ScalarIdx = -1;
       if (II->hasScalarOperand()) {
         ScalarIdx = II->ScalarOperand + 2;
       }
       for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
-        auto &MO = MI.getOperand(Idx);
-        if (!MO.isReg() || !MO.getReg())
+        const MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isReg())
           continue;
         LLT Ty = MRI.getType(MO.getReg());
-        if (!Ty.isValid())
-          continue;
-
-        if (Ty.isVector())
+        if (Ty.isVector()) {
           OpdsMapping[Idx] =
               getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
-        // Chose the right FPR for scalar operand of RVV intrinsics.
-        else if (II->IsFPIntrinsic && ScalarIdx == Idx)
+        } else if (II->IsFPIntrinsic && ScalarIdx == Idx) {
+          // Chose the right FPR for scalar operand of RVV intrinsics.
           OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
-        else
+        } else {
           OpdsMapping[Idx] = GPRValueMapping;
+        }
       }
     }
     break;

@@ -723,7 +723,8 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
-  if (auto *II = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+  if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+          RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
     if (II->hasScalarOperand() && !II->IsFPIntrinsic) {
       MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
       MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
