@@ -13,6 +13,7 @@
 // XFAIL: darwin
 // XFAIL: freebsd
 // XFAIL: windows
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 #include <uchar.h>
 
