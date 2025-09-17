@@ -732,7 +732,7 @@ def _expandLateSubstitutions(cmd, arguments, cwd):
             try:
                 with open(filePath) as fileHandle:
                     return fileHandle.read()
-            except FileNotFoundError as error:
+            except FileNotFoundError:
                 raise InternalShellError(cmd, "File does not exist: %s" % filePath)
 
         arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
