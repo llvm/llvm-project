@@ -876,52 +876,42 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
 
-  # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
     append("-Wno-nonnull" CMAKE_CXX_FLAGS)
-  endif()
 
-  # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
-  # LLVM's ADT classes.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
+    # LLVM's ADT classes.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.1)
       append("-Wno-class-memaccess" CMAKE_CXX_FLAGS)
     endif()
-  endif()
 
-  # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
-  # to produce a large number of false positives.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wdangling-reference, a C++-only warning from GCC 13 that seems
+    # to produce a large number of false positives.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.1)
       append("-Wno-dangling-reference" CMAKE_CXX_FLAGS)
     endif()
-  endif()
 
-  # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
-  # remove std::move in code like
-  # "A foo(ConvertibleToA a) { return std::move(a); }",
-  # but this code does not compile (or uses the copy
-  # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
-  # -Wpessimizing-move, but they only fire when the types match exactly, so we
-  # can keep them here.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
+    # remove std::move in code like
+    # "A foo(ConvertibleToA a) { return std::move(a); }",
+    # but this code does not compile (or uses the copy
+    # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
+    # -Wpessimizing-move, but they only fire when the types match exactly, so we
+    # can keep them here.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 9.1)
       append("-Wno-redundant-move" CMAKE_CXX_FLAGS)
       append("-Wno-pessimizing-move" CMAKE_CXX_FLAGS)
     endif()
-  endif()
 
-  # Disable -Warray-bounds on GCC; this warning exists since a very long time,
-  # but since GCC 11, it produces a lot of very noisy, seemingly false positive
-  # warnings (potentially originating in libstdc++).
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Warray-bounds on GCC; this warning exists since a very long time,
+    # but since GCC 11, it produces a lot of very noisy, seemingly false positive
+    # warnings (potentially originating in libstdc++).
     append("-Wno-array-bounds" CMAKE_CXX_FLAGS)
-  endif()
 
-  # Disable -Wstringop-overread on GCC; this warning produces a number of very
-  # noisy diagnostics when -Warray-bounds is disabled above; this option exists
-  # since GCC 11.
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable -Wstringop-overread on GCC; this warning produces a number of very
+    # noisy diagnostics when -Warray-bounds is disabled above; this option exists
+    # since GCC 11.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
       append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
