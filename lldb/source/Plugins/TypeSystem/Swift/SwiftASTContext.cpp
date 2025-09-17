@@ -2980,7 +2980,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
             os << llvm::Triple::getOSTypeName(preferred_triple.getOS());
             os << platform_version.getAsString();
           }
-          computed_triple = llvm::Triple(buffer.data());
+          computed_triple = llvm::Triple(buffer.str());
         } else if (preferred_triple.getObjectFormat() == llvm::Triple::MachO) {
           LOG_PRINTF(GetLog(LLDBLog::Types),
                      "Completing triple based on main binary load commands.");
