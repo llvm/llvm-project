@@ -19,8 +19,11 @@ module addition { header "addition.h" }
 //--- addition.h
 // empty
 
-//--- tu.c
+//--- hidden/tu.c
 #include "root.h"
+
+//--- hidden/additional.h
+#include "addition.h"
 
 //--- root/textual.h
 // This is here to verify that the "root" directory doesn't clash with name of
@@ -28,17 +31,60 @@ module addition { header "addition.h" }
 
 //--- cdb.json.template
 [{
-  "file": "",
+  "file": "DIR/test.c",
   "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c -c"
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c DIR/test.c -c"
 }]
 
+//--- cdb2.json.template
+[{
+  "file": "DIR/test.c",
+  "directory": "DIR",
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -include DIR/pre.h -I DIR -x c DIR/test.c -c"
+}]
+
+//--- vfs.yaml.template
+{
+  'version': 0,
+  'roots': [
+    { 'name': 'DIR', 'type': 'directory',
+      'contents': [
+        { 'name': 'test.c', 'type': 'file',
+          'use-external-name': false,
+          'external-contents': 'DIR/hidden/tu.c'
+        },
+        { 'name': 'pre.h', 'type': 'file',
+          'use-external-name': false,
+          'external-contents': 'DIR/hidden/additional.h'
+        },
+      ]
+    }
+  ]
+}
+
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -tu-buffer-path %t/tu.c > %t/result.json
+// RUN: sed "s|DIR|%/t|g" %t/vfs.yaml.template > %t/vfs.yaml
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -vfs-overlay-path %t/vfs.yaml > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s --check-prefix=CHECK
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb2.json.template > %t/cdb2.json
+// RUN: clang-scan-deps -compilation-database %t/cdb2.json -format experimental-full -vfs-overlay-path %t/vfs.yaml > %t/result2.json
+// RUN: cat %t/result2.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s --check-prefix=CHECK --check-prefix=ADDITION
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
+// ADDITION-NEXT:   {
+// ADDITION-NEXT:     "clang-module-deps": [],
+// ADDITION-NEXT:     "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
+// ADDITION-NEXT:     "command-line": [
+// ADDITION:          ],
+// ADDITION-NEXT:     "context-hash": "{{.*}}",
+// ADDITION-NEXT:     "file-deps": [
+// ADDITION-NEXT:       "[[PREFIX]]/module.modulemap"
+// ADDITION-NEXT:       "[[PREFIX]]/addition.h"
+// ADDITION-NEXT:     ],
+// ADDITION:          "name": "addition"
+// ADDITION-NEXT:  },
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
@@ -93,6 +139,10 @@ module addition { header "addition.h" }
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:           "clang-module-deps": [
+// ADDITION-NEXT:          {
+// ADDITION-NEXT:            "context-hash": "{{.*}}",
+// ADDITION-NEXT:            "module-name": "addition"
+// ADDITION-NEXT:          },
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "context-hash": "{{.*}}",
 // CHECK-NEXT:               "module-name": "root"
@@ -101,9 +151,10 @@ module addition { header "addition.h" }
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
 // CHECK:                "file-deps": [
-// CHECK-NEXT:             [[PREFIX]]/tu.c
+// CHECK-NEXT:             [[PREFIX]]/test.c
+// ADDITION-NEXT:          [[PREFIX]]/pre.h
 // CHECK-NEXT:           ],
-// CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.c"
+// CHECK-NEXT:           "input-file": "[[PREFIX]]/test.c"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }

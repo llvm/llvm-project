@@ -144,11 +144,11 @@ DependencyScanningTool::getTranslationUnitDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
-    std::optional<llvm::MemoryBufferRef> TUBuffer) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, TUBuffer);
+  llvm::Error Result = Worker.computeDependencies(
+      CWD, CommandLine, Consumer, Controller, std::move(OverlayFS));
 
   if (Result)
     return std::move(Result);

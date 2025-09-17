@@ -90,10 +90,9 @@ public:
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Run the dependency scanning tool for a given clang driver command-line,
-  /// and report the discovered dependencies to the provided consumer. If
-  /// TUBuffer is not nullopt, it is used as TU input for the dependency
-  /// scanning. Otherwise, the input should be included as part of the
-  /// command-line.
+  /// and report the discovered dependencies to the provided consumer. An
+  /// additional OverlayFS can be provided to add additional virtual files to
+  /// the dependency scanning.
   ///
   /// \returns false if clang errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
@@ -101,7 +100,7 @@ public:
       StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
   /// Run the dependency scanning tool for a given clang driver command-line
   /// for a specific module.
@@ -123,7 +122,7 @@ public:
   llvm::Error computeDependencies(
       StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
   /// Run the dependency scanning tool for a given clang driver command-line
   /// for a specific module.

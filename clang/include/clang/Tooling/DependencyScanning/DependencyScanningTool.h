@@ -139,9 +139,9 @@ public:
   /// \param LookupModuleOutput This function is called to fill in
   ///                           "-fmodule-file=", "-o" and other output
   ///                           arguments for dependencies.
-  /// \param TUBuffer Optional memory buffer for translation unit input. If
-  ///                 TUBuffer is nullopt, the input should be included in the
-  ///                 Commandline already.
+  /// \param OverlayFS An optional VFS that overlays on top of WorkerFS to
+  ///                  provide additional virtual files to the scanning of the
+  ///                  translation unit.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c TranslationUnitDeps otherwise.
@@ -149,7 +149,7 @@ public:
       const std::vector<std::string> &CommandLine, StringRef CWD,
       const llvm::DenseSet<ModuleID> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the

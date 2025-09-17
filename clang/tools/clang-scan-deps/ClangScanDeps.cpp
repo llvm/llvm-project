@@ -89,7 +89,7 @@ static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleName;
 static std::vector<std::string> ModuleDepTargets;
-static std::string TranslationUnitFile;
+static std::string VFSOverlayFile;
 static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
@@ -210,8 +210,8 @@ static void ParseArgs(int argc, char **argv) {
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
     ModuleDepTargets.emplace_back(A->getValue());
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_tu_buffer_path_EQ))
-    TranslationUnitFile = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_vfs_overlay_path_EQ))
+    VFSOverlayFile = A->getValue();
 
   DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
 
@@ -1082,24 +1082,23 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
       } else {
-        std::unique_ptr<llvm::MemoryBuffer> TU;
-        std::optional<llvm::MemoryBufferRef> TUBuffer;
-        if (!TranslationUnitFile.empty()) {
-          auto MaybeTU =
-              llvm::MemoryBuffer::getFile(TranslationUnitFile, /*IsText=*/true);
-          if (!MaybeTU) {
-            llvm::errs() << "cannot open input translation unit: "
-                         << MaybeTU.getError().message() << "\n";
+        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS;
+        if (!VFSOverlayFile.empty()) {
+          auto YAMLFile =
+              llvm::MemoryBuffer::getFile(VFSOverlayFile, /*IsText=*/true);
+          if (!YAMLFile) {
+            llvm::errs() << "cannot open vfs overlay yaml: "
+                         << YAMLFile.getError().message() << "\n";
             HadErrors = true;
             continue;
           }
-          TU = std::move(*MaybeTU);
-          TUBuffer = TU->getMemBufferRef();
-          Filename = TU->getBufferIdentifier();
+          OverlayFS = llvm::vfs::RedirectingFileSystem::create(
+              std::move(*YAMLFile), nullptr, "", nullptr,
+              llvm::vfs::getRealFileSystem());
         }
         auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
             Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-            TUBuffer);
+            OverlayFS);
         if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
                                         DependencyOS, Errs))
           HadErrors = true;

@@ -627,7 +627,7 @@ createDiagOptions(const std::vector<std::string> &CommandLine) {
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
-    std::optional<llvm::MemoryBufferRef> TUBuffer) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
   std::string DiagnosticOutput;
@@ -636,7 +636,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinter, TUBuffer))
+                          DiagPrinter, std::move(OverlayFS)))
     return llvm::Error::success();
   return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
                                              llvm::inconvertibleErrorCode());
@@ -788,41 +788,26 @@ bool DependencyScanningWorker::scanDependencies(
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
+    DiagnosticConsumer &DC,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
-  std::optional<std::vector<std::string>> ModifiedCommandLine;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  if (TUBuffer) {
-    auto OverlayFS =
+  // If an OverlayFS is provided, create a new FS that has the overlay on the
+  // top layer.
+  if (OverlayFS) {
+    auto NewFS =
         llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-    auto InMemoryFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-    InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-    auto InputPath = TUBuffer->getBufferIdentifier();
-    InMemoryFS->addFile(
-        InputPath, 0,
-        llvm::MemoryBuffer::getMemBufferCopy(TUBuffer->getBuffer()));
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay =
-        InMemoryFS;
-
-    OverlayFS->pushOverlay(InMemoryOverlay);
-    ModifiedFS = OverlayFS;
-    ModifiedCommandLine = CommandLine;
-    ModifiedCommandLine->emplace_back(InputPath);
+    NewFS->pushOverlay(std::move(OverlayFS));
+    NewFS->setCurrentWorkingDirectory(WorkingDirectory);
+    ModifiedFS = NewFS;
   }
 
-  const std::vector<std::string> &FinalCommandLine =
-      ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
   auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
-  return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
-                          Controller, DC, FinalFS, /*ModuleName=*/std::nullopt);
+  return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
+                          DC, FinalFS, /*ModuleName=*/std::nullopt);
 }
 
 bool DependencyScanningWorker::computeDependencies(
