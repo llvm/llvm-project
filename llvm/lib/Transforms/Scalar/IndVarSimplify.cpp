@@ -1884,7 +1884,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
             if (!I.mayHaveSideEffects())
               return false;
             if (auto *CB = dyn_cast<CallBase>(&I)) {
-              if (CB->onlyAccessesInaccessibleMemOrArgMem() &&
+              if (CB->onlyAccessesInaccessibleMemory() &&
                   llvm::all_of(CB->args(), [](const llvm::Use &U) {
                     return isa<Constant>(U.get());
                   }))
