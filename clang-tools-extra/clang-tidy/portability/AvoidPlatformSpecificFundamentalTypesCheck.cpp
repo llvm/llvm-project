@@ -78,15 +78,15 @@ void AvoidPlatformSpecificFundamentalTypesCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
-static std::string getFloatReplacement(const BuiltinType *BT,
-                                       ASTContext &Context) {
+static std::optional<std::string> getFloatReplacement(const BuiltinType *BT,
+                                                      ASTContext &Context) {
   const TargetInfo &Target = Context.getTargetInfo();
 
-  auto GetReplacementType = [](unsigned Width) {
+  auto GetReplacementType = [](unsigned Width) -> std::optional<std::string> {
     switch (Width) {
     // This is ambiguous by default since it could be bfloat16 or float16
     case 16U:
-      return "";
+      return std::nullopt;
     case 32U:
       return "float32_t";
     case 64U:
@@ -94,7 +94,7 @@ static std::string getFloatReplacement(const BuiltinType *BT,
     case 128U:
       return "float128_t";
     default:
-      return "";
+      return std::nullopt;
     }
   };
 
@@ -109,7 +109,7 @@ static std::string getFloatReplacement(const BuiltinType *BT,
   case BuiltinType::Double:
     return GetReplacementType(Target.getDoubleWidth());
   default:
-    return "";
+    return std::nullopt;
   }
 }
 
@@ -147,15 +147,15 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
 
   assert(BT);
   if (BT->isFloatingPoint()) {
-    const std::string Replacement = getFloatReplacement(BT, *Result.Context);
-    if (!Replacement.empty()) {
+    const auto Replacement = getFloatReplacement(BT, *Result.Context);
+    if (Replacement.has_value()) {
       auto Diag =
           diag(Loc, "avoid using platform-dependent floating point type '%0'; "
                     "consider using '%1' instead")
           << TypeName << Replacement;
 
       if (TypeRange.isValid())
-        Diag << FixItHint::CreateReplacement(TypeRange, Replacement);
+        Diag << FixItHint::CreateReplacement(TypeRange, Replacement.value());
 
       if (auto IncludeFixit = IncludeInserter.createIncludeInsertion(
               Result.SourceManager->getFileID(Loc), "<stdfloat>")) {
