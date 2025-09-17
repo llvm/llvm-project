@@ -1189,10 +1189,12 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // Ensure that Clang has a FileManager with the right VFS, which may have
   // changed above in AddImplicitPreamble.  If VFS is nullptr, rely on
   // createFileManager to create one.
-  if (VFS && FileMgr && &FileMgr->getVirtualFileSystem() == VFS)
+  if (VFS && FileMgr && &FileMgr->getVirtualFileSystem() == VFS) {
+    Clang->setVirtualFileSystem(std::move(VFS));
     Clang->setFileManager(FileMgr);
-  else {
-    Clang->createFileManager(std::move(VFS));
+  } else {
+    Clang->setVirtualFileSystem(std::move(VFS));
+    Clang->createFileManager();
     FileMgr = Clang->getFileManagerPtr();
   }
 
