@@ -150,7 +150,8 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
 
   bool succeeded = true;
 
-  if (!options.omitUsesFromAbove) {
+  if (!options.omitUsesFromAbove &&
+      !op->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     llvm::for_each(op->getRegions(), [&](Region &region) {
       // Walk this region recursively to collect the regions that descend from
       // this op's nested regions (inclusive).
