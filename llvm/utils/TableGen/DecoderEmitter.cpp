@@ -1663,6 +1663,11 @@ void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
     return;
   }
 
+  // TODO: Emit single OPC_Scope and check at runtime where the scope ends.
+  //   Not that it would save much space: OPC_Scope means we've resolved
+  //   a conflict, and there aren't many of them. AMDGPU is an exception,
+  //   it has ~3.5K OPC_Scope opcodes, but most, if not all scopes contain
+  //   only two children.
   for (const DecoderTreeNode *Child : drop_end(N->children())) {
     emitOpcode("OPC_Scope");
     emitULEB128(computeNodeSize(Child));
