@@ -5075,12 +5075,6 @@ struct OpenMPAtomicConstruct : public OmpBlockConstruct {
   mutable Analysis analysis;
 };
 
-// OpenMP directives that associate with loop(s)
-struct OmpLoopDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpLoopDirective, llvm::omp::Directive);
-  CharBlock source;
-};
-
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
 struct OpenMPCancellationPointConstruct {
   WRAPPER_CLASS_BOILERPLATE(
