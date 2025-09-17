@@ -756,7 +756,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 
   // When the caller specifies the old value of `remove`, disallow its
   // increment.
-  if (remove >= 6 && rvc && isInt<12>(displace) && rd == 0) {
+  if (remove >= 6 && rvc && isInt<12>(displace) && rd == X_X0) {
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0xa001); // c.j
     remove = 6;
@@ -1036,6 +1036,7 @@ void RISCV::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
     rela.setSymbolAndType(0, R_RISCV_ALIGN, false);
     rela.r_addend = r.second;
   }
+  synthesizedAligns.clear();
   // Replace the old relocation section with the new one in the output section.
   // addOrphanSections ensures that the output relocation section is processed
   // after osec.

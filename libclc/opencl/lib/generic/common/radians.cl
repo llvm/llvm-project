@@ -9,7 +9,7 @@
 #include <clc/common/clc_radians.h>
 #include <clc/opencl/common/radians.h>
 
-#define FUNCTION radians
+#define __CLC_FUNCTION radians
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

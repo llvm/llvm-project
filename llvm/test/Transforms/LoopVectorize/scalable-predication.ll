@@ -9,7 +9,7 @@ define void @foo(i32 %val, ptr dereferenceable(1024) %ptr) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 -257, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -29,7 +29,6 @@ define void @foo(i32 %val, ptr dereferenceable(1024) %ptr) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]

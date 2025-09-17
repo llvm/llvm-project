@@ -105,6 +105,21 @@ MPFRNumber MPFRNumber::asinh() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::asinpi() const {
+  MPFRNumber result(*this);
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  mpfr_asinpi(result.value, value, mpfr_rounding);
+  return result;
+#else
+  MPFRNumber value_asin(0.0, 1280);
+  mpfr_asin(value_asin.value, value, MPFR_RNDN);
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_div(result.value, value_asin.value, value_pi.value, mpfr_rounding);
+  return result;
+#endif
+}
+
 MPFRNumber MPFRNumber::atan() const {
   MPFRNumber result(*this);
   mpfr_atan(result.value, value, mpfr_rounding);
@@ -121,6 +136,21 @@ MPFRNumber MPFRNumber::atanh() const {
   MPFRNumber result(*this);
   mpfr_atanh(result.value, value, mpfr_rounding);
   return result;
+}
+
+MPFRNumber MPFRNumber::atanpi() const {
+  MPFRNumber result(*this);
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  mpfr_atanpi(result.value, value, mpfr_rounding);
+  return result;
+#else
+  MPFRNumber value_atan(0.0, mpfr_precision * 3);
+  mpfr_atan(value_atan.value, value, MPFR_RNDN);
+  MPFRNumber value_pi(0.0, mpfr_precision * 3);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_div(result.value, value_atan.value, value_pi.value, mpfr_rounding);
+  return result;
+#endif
 }
 
 MPFRNumber MPFRNumber::cbrt() const {
@@ -360,6 +390,12 @@ bool MPFRNumber::round_to_long(mpfr_rnd_t rnd, long &result) const {
 MPFRNumber MPFRNumber::rint(mpfr_rnd_t rnd) const {
   MPFRNumber result(*this);
   mpfr_rint(result.value, value, rnd);
+  return result;
+}
+
+MPFRNumber MPFRNumber::rsqrt() const {
+  MPFRNumber result(*this);
+  mpfr_rec_sqrt(result.value, value, mpfr_rounding);
   return result;
 }
 

@@ -104,7 +104,7 @@ define amdgpu_ps void @flat_load_monitor_b32(ptr %addr, ptr addrspace(1) %use) {
 ; GFX1250-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX1250-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
+  %gep = getelementptr inbounds i64, ptr addrspace(0) %addr, i32 4
   %val = call i32 @llvm.amdgcn.flat.load.monitor.b32.i32(ptr addrspace(0) %gep, i32 10)
   store i32 %val, ptr addrspace(1) %use
   ret void
@@ -118,7 +118,7 @@ define amdgpu_ps void @flat_load_monitor_b64(ptr %addr, ptr addrspace(1) %use) {
 ; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX1250-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
+  %gep = getelementptr inbounds i64, ptr addrspace(0) %addr, i32 4
   %val = call <2 x i32> @llvm.amdgcn.flat.load.monitor.b64.v2i32(ptr addrspace(0) %gep, i32 22)
   store <2 x i32> %val, ptr addrspace(1) %use
   ret void
@@ -132,7 +132,7 @@ define amdgpu_ps void @flat_load_monitor_b128(ptr %addr, ptr addrspace(1) %use) 
 ; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
 ; GFX1250-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
+  %gep = getelementptr inbounds i64, ptr addrspace(0) %addr, i32 4
   %val = call <4 x i32> @llvm.amdgcn.flat.load.monitor.b128.v4i32(ptr addrspace(0) %gep, i32 27)
   store <4 x i32> %val, ptr addrspace(1) %use
   ret void

@@ -19,6 +19,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
@@ -272,10 +273,15 @@ bool ClauseProcessor::processCancelDirectiveName(
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::LoopRelatedClauseOps &result,
+    mlir::omp::LoopRelatedClauseOps &loopResult,
+    mlir::omp::CollapseClauseOps &collapseResult,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
-  return collectLoopRelatedInfo(converter, currentLocation, eval, clauses,
-                                result, iv);
+
+  int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               clauses, loopResult, iv);
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
+  return numCollapse > 1;
 }
 
 bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,
@@ -521,6 +527,13 @@ bool ClauseProcessor::processProcBind(
   return false;
 }
 
+bool ClauseProcessor::processTileSizes(
+    lower::pft::Evaluation &eval, mlir::omp::LoopNestOperands &result) const {
+  auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
+  collectTileSizesFromOpenMPConstruct(ompCons, result.tileSizes, semaCtx);
+  return !result.tileSizes.empty();
+}
+
 bool ClauseProcessor::processSafelen(
     mlir::omp::SafelenClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Safelen>()) {
@@ -647,10 +660,8 @@ addAlignedClause(lower::AbstractConverter &converter,
 
   // The default alignment for some targets is equal to 0.
   // Do not generate alignment assumption if alignment is less than or equal to
-  // 0.
-  if (alignment > 0) {
-    // alignment value must be power of 2
-    assert((alignment & (alignment - 1)) == 0 && "alignment is not power of 2");
+  // 0 or not a power of two
+  if (alignment > 0 && ((alignment & (alignment - 1)) == 0)) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
     if (!objects.empty())
       genObjectList(objects, converter, alignedVars);
@@ -846,10 +857,12 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   }
   auto declDst = hlfir::DeclareOp::create(
       builder, loc, dst, copyFuncName + "_dst", shape, typeparams,
-      /*dummy_scope=*/nullptr, attrs);
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, attrs);
   auto declSrc = hlfir::DeclareOp::create(
       builder, loc, src, copyFuncName + "_src", shape, typeparams,
-      /*dummy_scope=*/nullptr, attrs);
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   mlir::func::ReturnOp::create(builder, loc);
   return funcOp;
@@ -1179,12 +1192,13 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
 }
 
 bool ClauseProcessor::processLink(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Link>(
       [&](const omp::clause::Link &clause, const parser::CharBlock &) {
         // Case: declare target link(var1, var2)...
         gatherFuncAndVarSyms(
-            clause.v, mlir::omp::DeclareTargetCaptureClause::link, result);
+            clause.v, mlir::omp::DeclareTargetCaptureClause::link, result,
+            /*automap=*/false);
       });
 }
 
@@ -1280,7 +1294,7 @@ void ClauseProcessor::processMapObjects(
     auto location = mlir::NameLoc::get(
         mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
         baseOp.getLoc());
-    mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+    mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
         firOpBuilder, location, baseOp,
         /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
         /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
@@ -1507,26 +1521,27 @@ bool ClauseProcessor::processTaskReduction(
 }
 
 bool ClauseProcessor::processTo(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::To>(
       [&](const omp::clause::To &clause, const parser::CharBlock &) {
         // Case: declare target to(func, var1, var2)...
         gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
-                             mlir::omp::DeclareTargetCaptureClause::to, result);
+                             mlir::omp::DeclareTargetCaptureClause::to, result,
+                             /*automap=*/false);
       });
 }
 
 bool ClauseProcessor::processEnter(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Enter>(
       [&](const omp::clause::Enter &clause, const parser::CharBlock &source) {
-        mlir::Location currentLocation = converter.genLocation(source);
-        if (std::get<std::optional<omp::clause::Enter::Modifier>>(clause.t))
-          TODO(currentLocation, "Declare target enter AUTOMAP modifier");
+        bool automap =
+            std::get<std::optional<omp::clause::Enter::Modifier>>(clause.t)
+                .has_value();
         // Case: declare target enter(func, var1, var2)...
         gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
                              mlir::omp::DeclareTargetCaptureClause::enter,
-                             result);
+                             result, automap);
       });
 }
 

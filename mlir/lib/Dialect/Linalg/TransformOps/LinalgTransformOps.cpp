@@ -36,6 +36,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -70,12 +71,7 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
   PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
   // We want to discourage direct use of PatternRewriter in APIs but In this
   // very specific case, an IRRewriter is not enough.
-  struct TrivialPatternRewriter : public PatternRewriter {
-  public:
-    explicit TrivialPatternRewriter(MLIRContext *context)
-        : PatternRewriter(context) {}
-  };
-  TrivialPatternRewriter rewriter(operation->getContext());
+  PatternRewriter rewriter(operation->getContext());
   rewriter.setInsertionPoint(operation);
   auto result = pattern.returningMatchAndRewrite(op, rewriter);
   if (failed(result))
@@ -3038,10 +3034,17 @@ void transform::TileReductionUsingForallOp::build(
 }
 
 DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
-    transform::TransformRewriter &rewriter, LinalgOp target,
+    transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
+
+  auto partialReductionOp = dyn_cast<PartialReductionOpInterface>(target);
+  if (!partialReductionOp) {
+    return emitSilenceableFailure(
+        target->getLoc(),
+        "Operation should implement PartialReductionOpInterface");
+  }
   SmallVector<OpFoldResult> numThreads =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getNumThreads()));
   SmallVector<OpFoldResult> tileSizes =
@@ -3063,14 +3066,14 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
       extractFromIntegerArrayAttr<unsigned>(getReductionDims());
   if (reductionDims.empty()) {
     for (auto [idx, iteratorType] :
-         llvm::enumerate(target.getIteratorTypesArray())) {
+         llvm::enumerate(partialReductionOp.getLoopIteratorTypes())) {
       if (iteratorType == utils::IteratorType::reduction)
         reductionDims.push_back(idx);
     }
   }
   options.setReductionDims(reductionDims);
-  FailureOr<scf::SCFTilingResult> result = scf::tileUsingSCF(
-      rewriter, cast<TilingInterface>(target.getOperation()), options);
+  FailureOr<scf::SCFTilingResult> result =
+      scf::tileUsingSCF(rewriter, partialReductionOp, options);
 
   if (failed(result)) {
     auto diag = emitSilenceableError() << "could not tile reduction";
@@ -4145,12 +4148,11 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // If we are inside an InParallel region, temporarily set the insertion point
-  // outside: only tensor.parallel_insert_slice ops are allowed in there.
-  if constexpr (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-    rewriter.setInsertionPoint(
-        target->template getParentOfType<scf::InParallelOp>());
-  }
+  // If we are inside a `ParallelCombiningOp` region, temporarily set the
+  // insertion point outside: only ops implementing ParallelCombiningOpInterface
+  // are allowed in there.
+  if (isa<mlir::ParallelCombiningOpInterface>(target.getOperation()))
+    rewriter.setInsertionPoint(target->getParentOp());
 
   Value extracted = tensor::ExtractSliceOp::create(
       rewriter, target.getLoc(), target.getDest(), target.getMixedOffsets(),

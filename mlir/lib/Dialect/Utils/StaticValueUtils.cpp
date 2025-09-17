@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -112,19 +114,28 @@ SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
 }
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
-std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+/// The boolean indicates whether the value is an index type.
+std::optional<std::pair<APInt, bool>> getConstantAPIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.
   if (auto val = llvm::dyn_cast_if_present<Value>(ofr)) {
-    APSInt intVal;
+    APInt intVal;
     if (matchPattern(val, m_ConstantInt(&intVal)))
-      return intVal.getSExtValue();
+      return std::make_pair(intVal, val.getType().isIndex());
     return std::nullopt;
   }
   // Case 2: Check for IntegerAttr.
   Attribute attr = llvm::dyn_cast_if_present<Attribute>(ofr);
   if (auto intAttr = dyn_cast_or_null<IntegerAttr>(attr))
-    return intAttr.getValue().getSExtValue();
+    return std::make_pair(intAttr.getValue(), intAttr.getType().isIndex());
   return std::nullopt;
+}
+
+/// If ofr is a constant integer or an IntegerAttr, return the integer.
+std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+  std::optional<std::pair<APInt, bool>> apInt = getConstantAPIntValue(ofr);
+  if (!apInt)
+    return std::nullopt;
+  return apInt->first.getSExtValue();
 }
 
 std::optional<SmallVector<int64_t>>
@@ -264,22 +275,109 @@ getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
 
 /// Return the number of iterations for a loop with a lower bound `lb`, upper
 /// bound `ub` and step `step`.
-std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
-                                         OpFoldResult step) {
+std::optional<APInt> constantTripCount(
+    OpFoldResult lb, OpFoldResult ub, OpFoldResult step, bool isSigned,
+    llvm::function_ref<std::optional<llvm::APSInt>(Value, Value, bool)>
+        computeUbMinusLb) {
+  // This is the bitwidth used to return 0 when loop does not execute.
+  // We infer it from the type of the bound if it isn't an index type.
+  auto getBitwidth = [&](OpFoldResult ofr) -> std::tuple<int, bool> {
+    if (auto intAttr =
+            dyn_cast_or_null<IntegerAttr>(dyn_cast<Attribute>(ofr))) {
+      if (auto intType = dyn_cast<IntegerType>(intAttr.getType()))
+        return std::make_tuple(intType.getWidth(), intType.isIndex());
+    } else {
+      auto val = cast<Value>(ofr);
+      if (auto intType = dyn_cast<IntegerType>(val.getType()))
+        return std::make_tuple(intType.getWidth(), intType.isIndex());
+    }
+    return std::make_tuple(IndexType::kInternalStorageBitWidth, true);
+  };
+  auto [bitwidth, isIndex] = getBitwidth(lb);
+  // This would better be an assert, but unfortunately it breaks scf.for_all
+  // which is missing attributes and SSA value optionally for its bounds, and
+  // uses Index type for the dynamic bounds but i64 for the static bounds. This
+  // is broken...
+  if (std::tie(bitwidth, isIndex) != getBitwidth(ub)) {
+    LDBG() << "mismatch between lb and ub bitwidth/type: " << ub << " vs "
+           << lb;
+    return std::nullopt;
+  }
   if (lb == ub)
-    return 0;
+    return APInt(bitwidth, 0);
 
-  std::optional<int64_t> lbConstant = getConstantIntValue(lb);
-  if (!lbConstant)
-    return std::nullopt;
-  std::optional<int64_t> ubConstant = getConstantIntValue(ub);
-  if (!ubConstant)
-    return std::nullopt;
-  std::optional<int64_t> stepConstant = getConstantIntValue(step);
-  if (!stepConstant)
-    return std::nullopt;
+  std::optional<std::pair<APInt, bool>> maybeStepCst =
+      getConstantAPIntValue(step);
 
-  return llvm::divideCeilSigned(*ubConstant - *lbConstant, *stepConstant);
+  if (maybeStepCst) {
+    auto &stepCst = maybeStepCst->first;
+    assert(static_cast<int>(stepCst.getBitWidth()) == bitwidth &&
+           "step must have the same bitwidth as lb and ub");
+    if (stepCst.isZero())
+      return stepCst;
+    if (stepCst.isNegative())
+      return APInt(bitwidth, 0);
+  }
+
+  if (isIndex) {
+    LDBG()
+        << "Computing loop trip count for index type may break with overflow";
+    // TODO: we can't compute the trip count for index type. We should fix this
+    // but too many tests are failing right now.
+    //   return {};
+  }
+
+  /// Compute the difference between the upper and lower bound: either from the
+  /// constant value or using the computeUbMinusLb callback.
+  llvm::APSInt diff;
+  std::optional<std::pair<APInt, bool>> maybeLbCst = getConstantAPIntValue(lb);
+  std::optional<std::pair<APInt, bool>> maybeUbCst = getConstantAPIntValue(ub);
+  if (maybeLbCst) {
+    // If one of the bounds is not a constant, we can't compute the trip count.
+    if (!maybeUbCst)
+      return std::nullopt;
+    APSInt lbCst(maybeLbCst->first, /*isUnsigned=*/!isSigned);
+    APSInt ubCst(maybeUbCst->first, /*isUnsigned=*/!isSigned);
+    if (!maybeUbCst)
+      return std::nullopt;
+    if (ubCst <= lbCst) {
+      LDBG() << "constantTripCount is 0 because ub <= lb (" << lbCst << "("
+             << lbCst.getBitWidth() << ") <= " << ubCst << "("
+             << ubCst.getBitWidth() << "), "
+             << (isSigned ? "isSigned" : "isUnsigned") << ")";
+      return APInt(bitwidth, 0);
+    }
+    diff = ubCst - lbCst;
+  } else {
+    if (maybeUbCst)
+      return std::nullopt;
+
+    /// Non-constant bound, let's try to compute the difference between the
+    /// upper and lower bound
+    std::optional<llvm::APSInt> maybeDiff =
+        computeUbMinusLb(cast<Value>(lb), cast<Value>(ub), isSigned);
+    if (!maybeDiff)
+      return std::nullopt;
+    diff = *maybeDiff;
+  }
+  LDBG() << "constantTripCount: " << (isSigned ? "isSigned" : "isUnsigned")
+         << ", ub-lb: " << diff << "(" << diff.getBitWidth() << "b)";
+  if (diff.isNegative()) {
+    LDBG() << "constantTripCount is 0 because ub-lb diff is negative";
+    return APInt(bitwidth, 0);
+  }
+  if (!maybeStepCst) {
+    LDBG()
+        << "constantTripCount can't be computed because step is not a constant";
+    return std::nullopt;
+  }
+  auto &stepCst = maybeStepCst->first;
+  llvm::APInt tripCount = diff.sdiv(stepCst);
+  llvm::APInt r = diff.srem(stepCst);
+  if (!r.isZero())
+    tripCount = tripCount + 1;
+  LDBG() << "constantTripCount found: " << tripCount;
+  return tripCount;
 }
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {

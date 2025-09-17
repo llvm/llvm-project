@@ -44,6 +44,10 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
+
+mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value refTime);
+
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
 
@@ -69,6 +73,9 @@ void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
 /// generate rename runtime call
 void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value path1, mlir::Value path2, mlir::Value status);
+
+mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value refTime);
 
 /// generate time runtime call
 mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);

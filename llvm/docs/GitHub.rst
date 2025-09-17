@@ -449,9 +449,9 @@ interface.
 
 Here is an example of making a PR using git and the GitHub web interface:
 
-First follow the instructions to [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository).
+First follow the instructions to `fork the repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository>`_.
 
-Next follow the instructions to [clone your forked repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository).
+Next follow the instructions to `clone your forked repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository>`_.
 
 Once you've cloned your forked repository,
 

@@ -62,14 +62,14 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ;
 ; CHECK: Executing best plan with VF=8, UF=2
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={8},UF={2}' {
-; CHECK-NEXT: Live-in ir<16> = VF * UF
 ; CHECK-NEXT: Live-in ir<%and> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-NEXT:   EMIT branch-on-cond ir<true>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<vector.ph>:
+; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:  EMIT vp<%n.mod.vf> = urem ir<%and>, ir<16>
 ; CHECK-NEXT:  EMIT vp<[[VTC:%.+]]> = sub ir<%and>, vp<%n.mod.vf>
 ; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + vp<[[VTC]]> * ir<-1>
@@ -82,9 +82,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
-; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer ir<%A>, ir<1>
 ; CHECK-NEXT:   WIDEN store ir<%A>, ir<%add>
-; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
+; CHECK-NEXT:   WIDEN store vp<[[VPTR2]]>, ir<%add>.1
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:

@@ -6,4 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE nan(__CLC_U_GENTYPE code);
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_GENTYPE nan(__CLC_U_GENTYPE code);

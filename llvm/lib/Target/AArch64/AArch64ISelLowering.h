@@ -23,6 +23,8 @@
 
 namespace llvm {
 
+class AArch64TargetMachine;
+
 namespace AArch64 {
 /// Possible values of current rounding mode, which is specified in bits
 /// 23:22 of FPCR.
@@ -63,6 +65,8 @@ class AArch64TargetLowering : public TargetLowering {
 public:
   explicit AArch64TargetLowering(const TargetMachine &TM,
                                  const AArch64Subtarget &STI);
+
+  const AArch64TargetMachine &getTM() const;
 
   /// Control the following reassociation of operands: (op (op x, c1), y) -> (op
   /// (op x, y), c1) where N0 is (op x, c1) and N1 is y.
@@ -164,6 +168,9 @@ public:
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  MachineBasicBlock *EmitCheckMatchingVL(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
@@ -173,6 +180,10 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
+
+  // Note: The following group of functions are only used as part of the old SME
+  // ABI lowering. They will be removed once -aarch64-new-sme-abi=true is the
+  // default.
   MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
@@ -181,6 +192,8 @@ public:
                                                MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const;
 
   /// Replace (0, vreg) discriminator components with the operands of blend
   /// or with (immediate, NoRegister) when possible.
@@ -220,11 +233,11 @@ public:
 
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices,
-                            unsigned Factor) const override;
+                            ArrayRef<unsigned> Indices, unsigned Factor,
+                            const APInt &GapMask) const override;
   bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                             ShuffleVectorInst *SVI,
-                             unsigned Factor) const override;
+                             ShuffleVectorInst *SVI, unsigned Factor,
+                             const APInt &GapMask) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
                                         IntrinsicInst *DI) const override;
@@ -344,7 +357,6 @@ public:
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
   void insertSSPDeclarations(Module &M) const override;
-  Value *getSDagStackGuard(const Module &M) const override;
   Function *getSSPStackGuardCheck(const Module &M) const override;
 
   /// If the target has a standard location for the unsafe stack pointer,
@@ -524,7 +536,7 @@ public:
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
                               SDValue Chain, SDValue InGlue, unsigned Condition,
-                              SDValue PStateSM = SDValue()) const;
+                              bool InsertVectorLengthCheck = false) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
@@ -565,6 +577,9 @@ private:
   void addQRType(MVT VT);
 
   bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
+
+  SDValue lowerEHPadEntry(SDValue Chain, SDLoc const &DL,
+                          SelectionDAG &DAG) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
@@ -726,6 +741,7 @@ private:
   SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLOOP_DEPENDENCE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
@@ -858,6 +874,12 @@ private:
                                          KnownBits &Known,
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
+
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 

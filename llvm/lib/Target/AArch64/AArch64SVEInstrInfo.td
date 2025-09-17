@@ -412,6 +412,7 @@ def SDT_AArch64PTest : SDTypeProfile<1, 2, [
 ]>;
 def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
+def AArch64ptest_first : SDNode<"AArch64ISD::PTEST_FIRST", SDT_AArch64PTest>;
 
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3,
   [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0, 1>]>;
@@ -650,7 +651,7 @@ let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
 
 let Predicates = [HasSVE_or_SME] in {
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add>;
-  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub>;
+  defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub, add>;
   defm SUBR_ZI  : sve_int_arith_imm0<0b011, "subr", AArch64subr>;
   defm SQADD_ZI : sve_int_arith_imm0_ssat<0b100, "sqadd", saddsat, ssubsat>;
   defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
@@ -1021,7 +1022,9 @@ let Predicates = [HasNonStreamingSVE_or_SME2p2] in {
 let Predicates = [HasSVE_or_SME] in {
   defm INSR_ZR : sve_int_perm_insrs<"insr", AArch64insr>;
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
-  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext>;
+  defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext, "EXT_ZZI_CONSTRUCTIVE">;
+
+  def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<ZPR8, imm0_255>;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;
@@ -1069,7 +1072,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
 
-  defm PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest, AArch64ptest_any>;
+  defm PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest, AArch64ptest_any, AArch64ptest_first>;
   defm PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
   defm PFIRST   : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT    : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
@@ -2131,21 +2134,37 @@ let Predicates = [HasSVE_or_SME] in {
             (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
 
   // Splice with lane bigger or equal to 0
-  foreach VT = [nxv16i8] in
+  foreach VT = [nxv16i8] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_255 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
+  foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_127 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
+  foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_63 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
-  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
+  foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in {
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
               (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+    let AddedComplexity = 1 in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z1, (i64 (sve_ext_imm_0_31 i32:$index)))),
+                (EXT_ZZI_CONSTRUCTIVE  ZPR:$Z1, imm0_255:$index)>;
+  }
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
@@ -4123,8 +4142,8 @@ let Predicates = [HasSVE2_or_SME] in {
   defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi, get_active_lane_mask>;
 
   // SVE2 pointer conflict compare
-  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", "int_aarch64_sve_whilewr">;
-  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
+  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", loop_dependence_war_mask>;
+  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", loop_dependence_raw_mask>;
 } // End HasSVE2_or_SME
 
 let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {
@@ -4218,6 +4237,13 @@ defm SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2
 defm UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1, int_aarch64_sve_udot_x2>;
 defm SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0, int_aarch64_sve_sdot_lane_x2>;
 defm UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1, int_aarch64_sve_udot_lane_x2>;
+
+let Predicates = [HasSVE2p1_or_SME2] in {
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+            (UDOT_ZZZ_HtoS $Acc, $MulLHS, $MulRHS)>;
+  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+            (SDOT_ZZZ_HtoS $Acc, $MulLHS, $MulRHS)>;
+} // End HasSVE2p1_or_SME2
 
 defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00, int_aarch64_sve_sqcvtn_x2>;
 defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01, int_aarch64_sve_uqcvtn_x2>;
@@ -4390,7 +4416,7 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 // Non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasSVEB16B16] in {
+let Predicates = [HasSVEB16B16, HasNonStreamingSVE_or_SME2] in {
 defm BFADD_ZZZ : sve_fp_3op_u_zd_bfloat<0b000, "bfadd", AArch64fadd>;
 defm BFSUB_ZZZ : sve_fp_3op_u_zd_bfloat<0b001, "bfsub", AArch64fsub>;
 defm BFMUL_ZZZ : sve_fp_3op_u_zd_bfloat<0b010, "bfmul", AArch64fmul>;
@@ -4423,9 +4449,9 @@ defm BFMLS_ZZZI : sve_fp_fma_by_indexed_elem_bfloat<"bfmls", 0b11, AArch64fmlsid
 defm BFMUL_ZZZI : sve_fp_fmul_by_indexed_elem_bfloat<"bfmul", AArch64fmulidx>;
 
 defm BFCLAMP_ZZZ : sve_fp_clamp_bfloat<"bfclamp", AArch64fclamp>;
-} // End HasSVEB16B16
+} // End HasSVEB16B16, HasNonStreamingSVE_or_SME2
 
-let Predicates = [HasSVEB16B16, UseExperimentalZeroingPseudos] in {
+let Predicates = [HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos] in {
 defm BFADD_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fadd>;
 defm BFSUB_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fsub>;
 defm BFMUL_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmul>;
@@ -4433,7 +4459,7 @@ defm BFMAXNM_ZPZZ : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmaxnm>;
 defm BFMINNM_ZPZZ : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fminnm>;
 defm BFMIN_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmin>;
 defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
-} // HasSVEB16B16, UseExperimentalZeroingPseudos
+} // HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEBFSCALE] in {
   def BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", DestructiveBinary>;

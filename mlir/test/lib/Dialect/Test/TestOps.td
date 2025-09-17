@@ -23,7 +23,6 @@ include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Interfaces/CopyOpInterface.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -1498,6 +1497,8 @@ def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
   let results = (outs I32);
   let hasFolder = 1;
 }
+def : Pat<(TestOpInPlaceSelfFold:$op $_),
+          (TestOpConstant ConstantAttr<I32Attr, "97">)>;
 
 // Test op that simply returns success.
 def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
@@ -2320,10 +2321,10 @@ def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
 }
 
 //===----------------------------------------------------------------------===//
-// Test CopyOpInterface
+// Copy Operation Test 
 //===----------------------------------------------------------------------===//
 
-def CopyOp : TEST_Op<"copy", [CopyOpInterface]> {
+def CopyOp : TEST_Op<"copy", []> {
   let description = [{
     Represents a copy operation.
   }];

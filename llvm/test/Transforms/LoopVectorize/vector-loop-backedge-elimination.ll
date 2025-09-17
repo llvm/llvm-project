@@ -66,9 +66,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP3]], align 1
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = add nsw <8 x i8> [[WIDE_LOAD1]], splat (i8 10)
-; VF8UF2-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i32 8
 ; VF8UF2-NEXT:    store <8 x i8> [[TMP4]], ptr [[A]], align 1
-; VF8UF2-NEXT:    store <8 x i8> [[TMP5]], ptr [[TMP7]], align 1
+; VF8UF2-NEXT:    store <8 x i8> [[TMP5]], ptr [[TMP3]], align 1
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
 ; VF8UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[AND]], [[N_VEC]]
@@ -148,7 +147,7 @@ exit:
 define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5, 10) %N) {
 ; VF8UF1-LABEL: define void @remove_loop_region_with_replicate_recipe(
 ; VF8UF1-SAME: ptr [[DST:%.*]], i64 range(i64 5, 10) [[N:%.*]]) {
-; VF8UF1-NEXT:  [[ENTRY:.*]]:
+; VF8UF1-NEXT:  [[ENTRY:.*:]]
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
 ; VF8UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
@@ -218,7 +217,6 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
 ; VF8UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
 ; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -232,7 +230,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ;
 ; VF8UF2-LABEL: define void @remove_loop_region_with_replicate_recipe(
 ; VF8UF2-SAME: ptr [[DST:%.*]], i64 range(i64 5, 10) [[N:%.*]]) {
-; VF8UF2-NEXT:  [[ENTRY:.*]]:
+; VF8UF2-NEXT:  [[ENTRY:.*:]]
 ; VF8UF2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
 ; VF8UF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
@@ -359,7 +357,6 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
 ; VF8UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF2:       [[SCALAR_PH]]:
-; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF2:       [[LOOP]]:
 ; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -373,7 +370,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ;
 ; VF16UF1-LABEL: define void @remove_loop_region_with_replicate_recipe(
 ; VF16UF1-SAME: ptr [[DST:%.*]], i64 range(i64 5, 10) [[N:%.*]]) {
-; VF16UF1-NEXT:  [[ENTRY:.*]]:
+; VF16UF1-NEXT:  [[ENTRY:.*:]]
 ; VF16UF1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -2
 ; VF16UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
@@ -499,7 +496,6 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
 ; VF16UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF16UF1:       [[SCALAR_PH]]:
-; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF16UF1:       [[LOOP]]:
 ; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -683,7 +679,7 @@ declare void @llvm.assume(i1)
 define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-LABEL: define void @scev_expand_step(
 ; VF8UF1-SAME: i64 [[X:%.*]], ptr [[DST:%.*]]) {
-; VF8UF1-NEXT:  [[ENTRY:.*]]:
+; VF8UF1-NEXT:  [[ENTRY:.*:]]
 ; VF8UF1-NEXT:    [[C:%.*]] = icmp eq i64 [[X]], 65536
 ; VF8UF1-NEXT:    call void @llvm.assume(i1 [[C]])
 ; VF8UF1-NEXT:    [[FR:%.*]] = freeze i64 [[X]]
@@ -782,7 +778,6 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
 ; VF8UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
 ; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -796,7 +791,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ;
 ; VF8UF2-LABEL: define void @scev_expand_step(
 ; VF8UF2-SAME: i64 [[X:%.*]], ptr [[DST:%.*]]) {
-; VF8UF2-NEXT:  [[ENTRY:.*]]:
+; VF8UF2-NEXT:  [[ENTRY:.*:]]
 ; VF8UF2-NEXT:    [[C:%.*]] = icmp eq i64 [[X]], 65536
 ; VF8UF2-NEXT:    call void @llvm.assume(i1 [[C]])
 ; VF8UF2-NEXT:    [[FR:%.*]] = freeze i64 [[X]]
@@ -976,7 +971,6 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
 ; VF8UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF2:       [[SCALAR_PH]]:
-; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF2:       [[LOOP]]:
 ; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -990,7 +984,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ;
 ; VF16UF1-LABEL: define void @scev_expand_step(
 ; VF16UF1-SAME: i64 [[X:%.*]], ptr [[DST:%.*]]) {
-; VF16UF1-NEXT:  [[ENTRY:.*]]:
+; VF16UF1-NEXT:  [[ENTRY:.*:]]
 ; VF16UF1-NEXT:    [[C:%.*]] = icmp eq i64 [[X]], 65536
 ; VF16UF1-NEXT:    call void @llvm.assume(i1 [[C]])
 ; VF16UF1-NEXT:    [[FR:%.*]] = freeze i64 [[X]]
@@ -1169,7 +1163,6 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
 ; VF16UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF16UF1:       [[SCALAR_PH]]:
-; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF16UF1:       [[LOOP]]:
 ; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

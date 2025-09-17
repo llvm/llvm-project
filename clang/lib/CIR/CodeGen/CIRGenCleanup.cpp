@@ -70,21 +70,44 @@ void EHScopeStack::deallocate(size_t size) {
 }
 
 void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
-  char *buffer = allocate(size);
+  char *buffer = allocate(EHCleanupScope::getSizeForCleanupSize(size));
+  bool isEHCleanup = kind & EHCleanup;
+  bool isLifetimeMarker = kind & LifetimeMarker;
 
-  // When the full implementation is upstreamed, this will allocate
-  // extra memory for and construct a wrapper object that is used to
-  // manage the cleanup generation.
-  assert(!cir::MissingFeatures::ehCleanupScope());
+  assert(!cir::MissingFeatures::innermostEHScope());
 
-  return buffer;
+  EHCleanupScope *scope = new (buffer) EHCleanupScope(size);
+
+  if (isLifetimeMarker)
+    cgf->cgm.errorNYI("push lifetime marker cleanup");
+
+  // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
+  if (cgf->getLangOpts().EHAsynch && isEHCleanup && !isLifetimeMarker &&
+      cgf->getTarget().getCXXABI().isMicrosoft())
+    cgf->cgm.errorNYI("push seh cleanup");
+
+  return scope->getCleanupBuffer();
 }
 
-static mlir::Block *getCurCleanupBlock(CIRGenFunction &cgf) {
-  mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
-  mlir::Block *cleanup =
-      cgf.curLexScope->getOrCreateCleanupBlock(cgf.getBuilder());
-  return cleanup;
+void EHScopeStack::popCleanup() {
+  assert(!empty() && "popping exception stack when not empty");
+
+  assert(isa<EHCleanupScope>(*begin()));
+  EHCleanupScope &cleanup = cast<EHCleanupScope>(*begin());
+  deallocate(cleanup.getAllocatedSize());
+
+  // Destroy the cleanup.
+  cleanup.destroy();
+
+  assert(!cir::MissingFeatures::ehCleanupBranchFixups());
+}
+
+static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup) {
+  // Ask the cleanup to emit itself.
+  assert(cgf.haveInsertPoint() && "expected insertion point");
+  assert(!cir::MissingFeatures::ehCleanupFlags());
+  cleanup->emit(cgf);
+  assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
 }
 
 /// Pops a cleanup block. If the block includes a normal cleanup, the
@@ -92,23 +115,56 @@ static mlir::Block *getCurCleanupBlock(CIRGenFunction &cgf) {
 /// any branch fixups on the cleanup.
 void CIRGenFunction::popCleanupBlock() {
   assert(!ehStack.empty() && "cleanup stack is empty!");
+  assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
+  EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
 
-  // The memory for the cleanup continues to be owned by the EHScopeStack
-  // allocator, so we just destroy the object rather than attempting to
-  // free it.
-  EHScopeStack::Cleanup &cleanup = *ehStack.begin();
+  // Remember activation information.
+  bool isActive = scope.isActive();
 
-  // The eventual implementation here will use the EHCleanupScope helper class.
-  assert(!cir::MissingFeatures::ehCleanupScope());
+  assert(!cir::MissingFeatures::ehCleanupBranchFixups());
 
-  mlir::OpBuilder::InsertionGuard guard(builder);
+  // - whether there's a fallthrough
+  mlir::Block *fallthroughSource = builder.getInsertionBlock();
+  bool hasFallthrough = fallthroughSource != nullptr && isActive;
+
+  bool requiresNormalCleanup = scope.isNormalCleanup() && hasFallthrough;
+
+  // If we don't need the cleanup at all, we're done.
+  assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
+  if (!requiresNormalCleanup) {
+    ehStack.popCleanup();
+    return;
+  }
+
+  // Copy the cleanup emission data out.  This uses either a stack
+  // array or malloc'd memory, depending on the size, which is
+  // behavior that SmallVector would provide, if we could use it
+  // here. Unfortunately, if you ask for a SmallVector<char>, the
+  // alignment isn't sufficient.
+  auto *cleanupSource = reinterpret_cast<char *>(scope.getCleanupBuffer());
+  alignas(EHScopeStack::ScopeStackAlignment) char
+      cleanupBufferStack[8 * sizeof(void *)];
+  std::unique_ptr<char[]> cleanupBufferHeap;
+  size_t cleanupSize = scope.getCleanupSize();
+  EHScopeStack::Cleanup *cleanup;
+
+  // This is necessary because we are going to deallocate the cleanup
+  // (in popCleanup) before we emit it.
+  if (cleanupSize <= sizeof(cleanupBufferStack)) {
+    memcpy(cleanupBufferStack, cleanupSource, cleanupSize);
+    cleanup = reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferStack);
+  } else {
+    cleanupBufferHeap.reset(new char[cleanupSize]);
+    memcpy(cleanupBufferHeap.get(), cleanupSource, cleanupSize);
+    cleanup =
+        reinterpret_cast<EHScopeStack::Cleanup *>(cleanupBufferHeap.get());
+  }
 
   assert(!cir::MissingFeatures::ehCleanupFlags());
-  mlir::Block *cleanupEntry = getCurCleanupBlock(*this);
-  builder.setInsertionPointToEnd(cleanupEntry);
-  cleanup.emit(*this);
 
-  ehStack.deallocate(cleanup.getSize());
+  ehStack.popCleanup();
+  scope.markEmitted();
+  emitCleanup(*this, cleanup);
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.

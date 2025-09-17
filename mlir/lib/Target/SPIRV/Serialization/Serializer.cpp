@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -112,7 +113,9 @@ LogicalResult Serializer::serialize() {
 
   // TODO: handle the other sections
   processCapability();
-  processExtension();
+  if (failed(processExtension())) {
+    return failure();
+  }
   processMemoryModel();
   processDebugInfo();
 
@@ -133,7 +136,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
                     extensions.size() + extendedSets.size() +
                     memoryModel.size() + entryPoints.size() +
                     executionModes.size() + decorations.size() +
-                    typesGlobalValues.size() + functions.size();
+                    typesGlobalValues.size() + functions.size() + graphs.size();
 
   binary.clear();
   binary.reserve(moduleSize);
@@ -151,6 +154,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(decorations.begin(), decorations.end());
   binary.append(typesGlobalValues.begin(), typesGlobalValues.end());
   binary.append(functions.begin(), functions.end());
+  binary.append(graphs.begin(), graphs.end());
 }
 
 #ifndef NDEBUG
@@ -204,13 +208,24 @@ void Serializer::processDebugInfo() {
   // TODO: Encode more debug instructions.
 }
 
-void Serializer::processExtension() {
+LogicalResult Serializer::processExtension() {
   llvm::SmallVector<uint32_t, 16> extName;
-  for (spirv::Extension ext : module.getVceTriple()->getExtensions()) {
+  llvm::SmallSet<Extension, 4> deducedExts(
+      llvm::from_range, module.getVceTriple()->getExtensions());
+  auto nonSemanticInfoExt = spirv::Extension::SPV_KHR_non_semantic_info;
+  if (options.emitDebugInfo && !deducedExts.contains(nonSemanticInfoExt)) {
+    TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(module);
+    if (!is_contained(targetEnvAttr.getExtensions(), nonSemanticInfoExt))
+      return module.emitError(
+          "SPV_KHR_non_semantic_info extension not available");
+    deducedExts.insert(nonSemanticInfoExt);
+  }
+  for (spirv::Extension ext : deducedExts) {
     extName.clear();
     spirv::encodeStringLiteralInto(extName, spirv::stringifyExtension(ext));
     encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
   }
+  return success();
 }
 
 void Serializer::processMemoryModel() {
@@ -495,6 +510,9 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
   if ((isa<FunctionType>(type) &&
        succeeded(prepareFunctionType(loc, cast<FunctionType>(type), typeEnum,
                                      operands))) ||
+      (isa<GraphType>(type) &&
+       succeeded(
+           prepareGraphType(loc, cast<GraphType>(type), typeEnum, operands))) ||
       succeeded(prepareBasicType(loc, type, typeID, typeEnum, operands,
                                  deferSerialization, serializationCtx))) {
     if (deferSerialization)
@@ -525,7 +543,7 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
     return success();
   }
 
-  return failure();
+  return emitError(loc, "failed to process type: ") << type;
 }
 
 LogicalResult Serializer::prepareBasicType(
@@ -861,6 +879,33 @@ Serializer::prepareFunctionType(Location loc, FunctionType type,
   return success();
 }
 
+LogicalResult
+Serializer::prepareGraphType(Location loc, GraphType type,
+                             spirv::Opcode &typeEnum,
+                             SmallVectorImpl<uint32_t> &operands) {
+  typeEnum = spirv::Opcode::OpTypeGraphARM;
+  assert(type.getNumResults() >= 1 &&
+         "serialization requires at least a return value");
+
+  operands.push_back(type.getNumInputs());
+
+  for (Type argType : type.getInputs()) {
+    uint32_t argTypeID = 0;
+    if (failed(processType(loc, argType, argTypeID)))
+      return failure();
+    operands.push_back(argTypeID);
+  }
+
+  for (Type resType : type.getResults()) {
+    uint32_t resTypeID = 0;
+    if (failed(processType(loc, resType, resTypeID)))
+      return failure();
+    operands.push_back(resTypeID);
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Constant
 //===----------------------------------------------------------------------===//
@@ -1118,6 +1163,41 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
   if (!isSpec) {
     constIDMap[intAttr] = resultID;
   }
+  return resultID;
+}
+
+uint32_t Serializer::prepareGraphConstantId(Location loc, Type graphConstType,
+                                            IntegerAttr intAttr) {
+  // De-duplicate graph constants.
+  if (uint32_t id = getGraphConstantARMId(intAttr)) {
+    return id;
+  }
+
+  // Process the type for this graph constant.
+  uint32_t typeID = 0;
+  if (failed(processType(loc, graphConstType, typeID))) {
+    return 0;
+  }
+
+  uint32_t resultID = getNextID();
+  APInt value = intAttr.getValue();
+  unsigned bitwidth = value.getBitWidth();
+  if (bitwidth > 32) {
+    emitError(loc, "Too wide attribute for OpGraphConstantARM: ")
+        << bitwidth << " bits";
+    return 0;
+  }
+  bool isSigned = value.isSignedIntN(bitwidth);
+
+  uint32_t word = 0;
+  if (isSigned) {
+    word = static_cast<int32_t>(value.getSExtValue());
+  } else {
+    word = static_cast<uint32_t>(value.getZExtValue());
+  }
+  encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpGraphConstantARM,
+                        {typeID, resultID, word});
+  graphConstIDMap[intAttr] = resultID;
   return resultID;
 }
 
@@ -1455,8 +1535,18 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processConstantCompositeReplicateOp(op);
       })
       .Case([&](spirv::FuncOp op) { return processFuncOp(op); })
+      .Case([&](spirv::GraphARMOp op) { return processGraphARMOp(op); })
+      .Case([&](spirv::GraphEntryPointARMOp op) {
+        return processGraphEntryPointARMOp(op);
+      })
+      .Case([&](spirv::GraphOutputsARMOp op) {
+        return processGraphOutputsARMOp(op);
+      })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
+      })
+      .Case([&](spirv::GraphConstantARMOp op) {
+        return processGraphConstantARMOp(op);
       })
       .Case([&](spirv::LoopOp op) { return processLoopOp(op); })
       .Case([&](spirv::ReferenceOfOp op) { return processReferenceOfOp(op); })

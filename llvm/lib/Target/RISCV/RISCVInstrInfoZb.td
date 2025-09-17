@@ -399,7 +399,7 @@ def MAX  : ALU_rr<0b0000101, 0b110, "max", Commutable=1>,
            Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
 def MAXU : ALU_rr<0b0000101, 0b111, "maxu", Commutable=1>,
            Sched<[WriteIMinMax, ReadIMinMax, ReadIMinMax]>;
-} // Predicates = [HasStdExtZbb]
+} // Predicates = [HasStdExtZbbOrP]
 
 let Predicates = [HasStdExtZbkbOrP] in
 def PACK  : ALU_rr<0b0000100, 0b100, "pack">,
@@ -459,15 +459,15 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 def : InstAlias<"zext.w $rd, $rs", (ADD_UW GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
-let Predicates = [HasStdExtZbb] in {
+let Predicates = [HasStdExtZbbOrZbkb] in {
 def : InstAlias<"ror $rd, $rs1, $shamt",
-                (RORI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
-} // Predicates = [HasStdExtZbb]
+                (RORI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
+} // Predicates = [HasStdExtZbbOrZbkb]
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
+let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
 def : InstAlias<"rorw $rd, $rs1, $shamt",
-                (RORIW  GPR:$rd, GPR:$rs1, uimm5:$shamt), 0>;
-} // Predicates = [HasStdExtZbb, IsRV64]
+                (RORIW GPR:$rd, GPR:$rs1, uimm5:$shamt), 0>;
+} // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbs] in {
 def : InstAlias<"bset $rd, $rs1, $shamt",
@@ -697,6 +697,16 @@ def : Pat<(i64 (or (or (zexti16 (XLenVT GPR:$rs1)),
                        (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
                    (sext_inreg (shl GPR:$op1rs1, (XLenVT 24)), i32))),
           (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+
+// Match a pattern of 2 halfwords being inserted into bits [63:32], with bits
+// bits [31:0] coming from a zero extended value. We can use pack with packw for
+// bits [63:32]. If bits [63:31] can also be a packw, it can be matched
+// separately.
+def : Pat<(or (or (shl GPR:$op1rs2, (i64 48)),
+                  (shl (zexti16 (i64 GPR:$op1rs1)), (i64 32))),
+              (zexti32 (i64 GPR:$rs1))),
+          (PACK (XLenVT GPR:$rs1),
+                (XLenVT (PACKW GPR:$op1rs1, GPR:$op1rs2)))>;
 } // Predicates = [HasStdExtZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV32] in

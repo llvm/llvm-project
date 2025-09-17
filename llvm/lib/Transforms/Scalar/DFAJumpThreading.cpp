@@ -60,7 +60,6 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -447,7 +446,7 @@ private:
   /// Also, collect select instructions to unfold.
   bool isCandidate(const SwitchInst *SI) {
     std::deque<std::pair<Value *, BasicBlock *>> Q;
-    SmallSet<Value *, 16> SeenValues;
+    SmallPtrSet<Value *, 16> SeenValues;
     SelectInsts.clear();
 
     Value *SICond = SI->getCondition();
@@ -511,7 +510,7 @@ private:
 
   void addToQueue(Value *Val, BasicBlock *BB,
                   std::deque<std::pair<Value *, BasicBlock *>> &Q,
-                  SmallSet<Value *, 16> &SeenValues) {
+                  SmallPtrSet<Value *, 16> &SeenValues) {
     if (SeenValues.insert(Val).second)
       Q.push_back({Val, BB});
   }
@@ -522,7 +521,7 @@ private:
 
     Instruction *SIUse = dyn_cast<Instruction>(SI->user_back());
     // The use of the select inst should be either a phi or another select.
-    if (!SIUse && !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
+    if (!SIUse || !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
       return false;
 
     BasicBlock *SIBB = SI->getParent();
@@ -583,12 +582,12 @@ struct AllSwitchPaths {
     // Get paths from the determinator BBs to SwitchPhiDefBB
     std::vector<ThreadingPath> PathsToPhiDef =
         getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
-    if (SwitchPhiDefBB == SwitchBlock) {
+    if (SwitchPhiDefBB == SwitchBlock || PathsToPhiDef.empty()) {
       TPaths = std::move(PathsToPhiDef);
       return;
     }
 
-    assert(MaxNumPaths >= PathsToPhiDef.size());
+    assert(MaxNumPaths >= PathsToPhiDef.size() && !PathsToPhiDef.empty());
     auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
     // Find and append paths from SwitchPhiDefBB to SwitchBlock.
     PathsType PathsToSwitchBB =
@@ -723,7 +722,7 @@ private:
 
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
-    SmallSet<BasicBlock *, 4> Successors;
+    SmallPtrSet<BasicBlock *, 4> Successors;
     for (BasicBlock *Succ : successors(BB)) {
       if (Res.size() >= PathsLimit)
         break;
@@ -772,7 +771,7 @@ private:
 
     SmallVector<PHINode *, 8> Stack;
     Stack.push_back(FirstDef);
-    SmallSet<Value *, 16> SeenValues;
+    SmallPtrSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
       PHINode *CurPhi = Stack.pop_back_val();
@@ -965,7 +964,7 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallSet<BasicBlock *, 16> BlocksToClean;
+    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -994,7 +993,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();
