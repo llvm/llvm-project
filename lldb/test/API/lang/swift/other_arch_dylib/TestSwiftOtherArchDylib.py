@@ -33,6 +33,5 @@ class TestSwiftOtherArchDylib(TestBase):
 
         # Check the types log.
         self.filecheck('platform shell cat "%s"' % types_log, __file__)
-        # CHECK: SwiftASTContextForExpressions::LogConfiguration() arm64-apple-macosx
-        # CHECK: Enabling per-module Swift scratch context
-        # CHECK: {{SwiftASTContextForExpressions..OtherArch..}}::LogConfiguration() arm64e-apple-macosx
+        # CHECK: SwiftASTContextForExpressions(module: "OtherArch", cu: "OtherArch.swift")::LogConfiguration(){{.*}}arm64e-apple-macos
+        # CHECK: SwiftASTContextForExpressions(module: "arm64-apple-macos{{.*}})::LogConfiguration(){{.*}}arm64-apple-macos
