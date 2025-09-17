@@ -14,6 +14,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ConstrainParamsOp(ConstrainParamsOp):
     def __init__(
