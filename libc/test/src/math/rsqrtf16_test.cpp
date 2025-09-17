@@ -19,8 +19,9 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 static constexpr uint16_t POS_START = 0x0000U;
 static constexpr uint16_t POS_STOP = 0x7c00U;
 
-// Range: [-Inf, 0]
-static constexpr uint16_t NEG_START = 0x8000U;
+// Range: [-Inf, 0)
+// rsqrt(-0.0) is -inf, not the same for mpfr.
+static constexpr uint16_t NEG_START = 0x8001U;
 static constexpr uint16_t NEG_STOP = 0xfc00U;
 
 TEST_F(LlvmLibcRsqrtf16Test, PositiveRange) {
