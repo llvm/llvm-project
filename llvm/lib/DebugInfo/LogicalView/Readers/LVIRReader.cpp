@@ -439,7 +439,7 @@ void LVIRReader::addAccess(LVElement *Element, DINode::DIFlags Flags) {
     Element->setAccessibilityCode(dwarf::DW_ACCESS_private);
   else if ((Flags & DINode::FlagAccessibility) == DINode::FlagPublic)
     Element->setAccessibilityCode(dwarf::DW_ACCESS_public);
-};
+}
 
 // getFile()
 //   DIScope
