@@ -19076,9 +19076,8 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   }
 
   // uaddv(A) --> A if all lanes of A are known to be zeros except the 0th lane.
-  MVT VT = N->getSimpleValueType(0);
   MVT OpVT = A.getSimpleValueType();
-  assert(VT == OpVT &&
+  assert(N->getSimpleValueType(0) == OpVT &&
          "The operand type should be consistent with the result type of UADDV");
   APInt Mask = APInt::getAllOnes(OpVT.getVectorNumElements());
   Mask.clearBit(0);
