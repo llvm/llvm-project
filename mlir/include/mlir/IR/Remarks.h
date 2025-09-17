@@ -408,6 +408,10 @@ private:
   /// Emit all postponed remarks.
   void emitPostponedRemarks();
 
+  /// Report a remark. When `forcePrintPostponedRemarks` is true, the remark
+  /// will be printed even if it is postponed.
+  void report(const Remark &remark, bool forcePrintPostponedRemarks);
+
 public:
   /// Default constructor is deleted, use the other constructor.
   RemarkEngine() = delete;
@@ -426,7 +430,7 @@ public:
                            std::string *errMsg);
 
   /// Report a remark.
-  void report(const Remark &remark, bool ignorePostpone = false);
+  void report(const Remark &remark);
 
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.

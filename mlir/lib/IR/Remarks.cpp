@@ -157,7 +157,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
 
 InFlightRemark::~InFlightRemark() {
   if (remark && owner)
-    owner->report(std::move(*remark));
+    owner->report(*remark);
   owner = nullptr;
 }
 
@@ -225,9 +225,10 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 // RemarkEngine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const Remark &remark, bool ignorePostpone) {
+void RemarkEngine::report(const Remark &remark,
+                          bool forcePrintPostponedRemarks) {
   // Postponed remarks are shown at the end of pipeline, unless overridden.
-  if (remark.isPostponed() && !ignorePostpone) {
+  if (remark.isPostponed() && !forcePrintPostponedRemarks) {
     postponedRemarks.push_back(remark);
     return;
   }
@@ -241,9 +242,13 @@ void RemarkEngine::report(const Remark &remark, bool ignorePostpone) {
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
+void RemarkEngine::report(const Remark &remark) {
+  report(remark, /*forcePrintPostponedRemarks=*/false);
+}
+
 void RemarkEngine::emitPostponedRemarks() {
   for (auto &remark : postponedRemarks)
-    report(remark, /*ignorePostpone=*/true);
+    report(remark, /*forcePrintPostponedRemarks=*/true);
   postponedRemarks.clear();
 }
 
