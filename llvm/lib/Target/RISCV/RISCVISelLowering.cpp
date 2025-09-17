@@ -17752,7 +17752,7 @@ static SDValue performVWABDACCCombine(SDNode *N, SelectionDAG &DAG,
   };
 
   SDValue Diff = IsABD(Op0);
-  Diff = Diff ? IsABD(Op1) : Diff;
+  Diff = Diff ? Diff : IsABD(Op1);
   if (!Diff)
     return SDValue();
   SDValue Acc = Diff == Op0 ? Op1 : Op0;
