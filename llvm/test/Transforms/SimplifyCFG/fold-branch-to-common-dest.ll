@@ -1030,11 +1030,10 @@ define void @pr49510() {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @global_pr49510, align 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP0]], 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_RHS:%.*]], label [[FOR_END:%.*]]
-; CHECK:       land.rhs:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[TMP0]], 0
-; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TOBOOL]], [[CMP]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_COND]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
