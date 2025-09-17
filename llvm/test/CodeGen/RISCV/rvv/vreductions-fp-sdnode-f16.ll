@@ -100,8 +100,9 @@ define half @vreduce_fminimum_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFH-NEXT:    vcpop.m a0, v9
 ; ZVFH-NEXT:    beqz a0, .LBB4_2
 ; ZVFH-NEXT:  # %bb.1:
-; ZVFH-NEXT:    lui a0, %hi(.LCPI4_0)
-; ZVFH-NEXT:    flh fa0, %lo(.LCPI4_0)(a0)
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -512
+; ZVFH-NEXT:    fmv.h.x fa0, a0
 ; ZVFH-NEXT:    ret
 ; ZVFH-NEXT:  .LBB4_2:
 ; ZVFH-NEXT:    vfredmin.vs v8, v8, v8
@@ -138,8 +139,9 @@ define half @vreduce_fmaximum_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFH-NEXT:    vcpop.m a0, v9
 ; ZVFH-NEXT:    beqz a0, .LBB5_2
 ; ZVFH-NEXT:  # %bb.1:
-; ZVFH-NEXT:    lui a0, %hi(.LCPI5_0)
-; ZVFH-NEXT:    flh fa0, %lo(.LCPI5_0)(a0)
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -512
+; ZVFH-NEXT:    fmv.h.x fa0, a0
 ; ZVFH-NEXT:    ret
 ; ZVFH-NEXT:  .LBB5_2:
 ; ZVFH-NEXT:    vfredmax.vs v8, v8, v8
