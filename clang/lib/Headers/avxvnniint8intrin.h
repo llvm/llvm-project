@@ -191,7 +191,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm_dpbsud_epi32(__W, __A, __B)                                        \
   ((__m128i)__builtin_ia32_vpdpbsud128((__v4si)(__W), (__v16qi)(__A),          \
                                        (__v16qu)(__B)))
@@ -227,7 +227,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm256_dpbsud_epi32(__W, __A, __B)                                     \
   ((__m256i)__builtin_ia32_vpdpbsud256((__v8si)(__W), (__v32qi)(__A),          \
                                        (__v32qu)(__B)))
@@ -264,7 +264,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm_dpbsuds_epi32(__W, __A, __B)                                       \
   ((__m128i)__builtin_ia32_vpdpbsuds128((__v4si)(__W), (__v16qi)(__A),         \
                                         (__v16qu)(__B)))
@@ -301,7 +301,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm256_dpbsuds_epi32(__W, __A, __B)                                    \
   ((__m256i)__builtin_ia32_vpdpbsuds256((__v8si)(__W), (__v32qi)(__A),         \
                                         (__v32qu)(__B)))
@@ -337,7 +337,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm_dpbuud_epi32(__W, __A, __B)                                        \
   ((__m128i)__builtin_ia32_vpdpbuud128((__v4si)(__W), (__v16qu)(__A),          \
                                        (__v16qu)(__B)))
@@ -373,7 +373,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm256_dpbuud_epi32(__W, __A, __B)                                     \
   ((__m256i)__builtin_ia32_vpdpbuud256((__v8si)(__W), (__v32qu)(__A),          \
                                        (__v32qu)(__B)))
@@ -410,7 +410,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm_dpbuuds_epi32(__W, __A, __B)                                       \
   ((__m128i)__builtin_ia32_vpdpbuuds128((__v4si)(__W), (__v16qu)(__A),         \
                                         (__v16qu)(__B)))
@@ -446,7 +446,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
-// clang-format off
+// clang-format on
 #define _mm256_dpbuuds_epi32(__W, __A, __B)                                    \
   ((__m256i)__builtin_ia32_vpdpbuuds256((__v8si)(__W), (__v32qu)(__A),         \
                                         (__v32qu)(__B)))
