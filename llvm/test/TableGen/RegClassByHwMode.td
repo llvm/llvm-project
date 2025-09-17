@@ -6,9 +6,13 @@
 
 include "llvm/Target/Target.td"
 
-// INSTRINFO: #if defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)
-// INSTRINFO-NEXT: namespace {
-// INSTRINFO-NEXT: enum RegClassByHwModeUses : uint16_t {
+// INSTRINFO: #ifdef GET_INSTRINFO_ENUM
+// INSTRINFO-NEXT: #undef GET_INSTRINFO_ENUM
+// INSTRINFO-NEXT: namespace llvm::MyTarget {
+// INSTRINFO-NEXT: enum {
+// INSTRINFO-NEXT: PHI
+// INSTRINFO: };
+// INSTRINFO: enum RegClassByHwModeUses : uint16_t {
 // INSTRINFO-NEXT:   MyPtrRC,
 // INSTRINFO-NEXT:   XRegs_EvenIfRequired,
 // INSTRINFO-NEXT:   YRegs_EvenIfRequired,
@@ -17,10 +21,10 @@ include "llvm/Target/Target.td"
 
 // INSTRINFO: { MyTarget::XRegsRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::XRegs_EvenRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+// INSTRINFO: { MyTarget::YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyTarget::MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+// INSTRINFO: { MyTarget::YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 
 // INSTRINFO: extern const int16_t MyTargetRegClassByHwModeTables[4][3] = {
 // INSTRINFO-NEXT:  { // DefaultMode

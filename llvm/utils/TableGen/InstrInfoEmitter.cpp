@@ -115,6 +115,7 @@ private:
 InstrInfoEmitter::OperandInfoTy
 InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
   OperandInfoTy Result;
+  StringRef Namespace = CDP.getTargetInfo().getInstNamespace();
 
   for (auto &Op : Inst.Operands) {
     // Handle aggregate operands and normal operands the same way by expanding
@@ -147,6 +148,8 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
         OpR = OpR->getValueAsDef("RegClass");
 
       if (OpR->isSubClassOf("RegClassByHwMode")) {
+        Res += Namespace;
+        Res += "::";
         Res += OpR->getName();
         Res += ", ";
       } else if (OpR->isSubClassOf("RegisterClass"))
@@ -934,13 +937,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "#if defined(GET_INSTRINFO_MC_DESC) || "
         "defined(GET_INSTRINFO_CTOR_DTOR)\n";
 
-  OS << "namespace {\n";
-  OS << "enum RegClassByHwModeUses : uint16_t {\n";
-  for (const Record *ClassByHwMode : Target.getAllRegClassByHwMode())
-    OS << "  " << ClassByHwMode->getName() << ",\n";
-  OS << "};\n";
-  OS << "}\n";
-
   OS << "namespace llvm {\n\n";
 
   OS << "struct " << TargetName << "InstrTable {\n";
@@ -1398,6 +1394,14 @@ void InstrInfoEmitter::emitEnums(
   }
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
   OS << "  };\n";
+
+  if (!Target.getAllRegClassByHwMode().empty()) {
+    OS << "  enum RegClassByHwModeUses : uint16_t {\n";
+    for (const Record *ClassByHwMode : Target.getAllRegClassByHwMode())
+      OS << indent(4) << ClassByHwMode->getName() << ",\n";
+    OS << "  };\n";
+  }
+
   OS << "} // end namespace llvm::" << Namespace << '\n';
   OS << "#endif // GET_INSTRINFO_ENUM\n\n";
 
