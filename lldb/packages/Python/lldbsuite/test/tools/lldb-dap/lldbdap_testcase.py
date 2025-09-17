@@ -248,6 +248,14 @@ class DAPTestCaseBase(TestBase):
         areas = event["body"].get("areas", [])
         self.assertEqual(set(expected_areas), set(areas))
 
+    def verify_memory_event(self, memoryReference):
+        if memoryReference is None:
+            self.assertIsNone(self.dap_server.memory_event)
+        event = self.dap_server.memory_event
+        self.dap_server.memory_event = None
+        self.assertIsNotNone(event)
+        self.assertEqual(memoryReference, event["body"].get("memoryReference"))
+
     def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
@@ -364,6 +372,7 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
         if response["success"]:
             self.verify_invalidated_event(["variables"])
+            self.verify_memory_event(response["body"].get("memoryReference"))
         return response
 
     def set_local(self, name, value, id=None):
