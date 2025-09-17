@@ -134,122 +134,135 @@ attributes #6 = { builtin }
 ; DUMP: Callsite Context Graph:
 ; DUMP: Node [[BAR:0x[a-z0-9]+]]
 ; DUMP: 	  %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
+; DUMP: 	NodeId: 1
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ:0x[a-z0-9]+]] AllocTypes: NotColdCold ContextIds: 1 2
+; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ:0x[a-z0-9]+]] AllocTypes: NotColdCold ContextIds: 1 2 (Caller NodeId: 2)
 
 ; DUMP: Node [[BAZ]]
 ; DUMP: 	  %call = call noundef ptr @_Z3barv()	(clone 0)
+; DUMP: 	NodeId: 2
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ]] AllocTypes: NotColdCold ContextIds: 1 2
+; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ]] AllocTypes: NotColdCold ContextIds: 1 2 (Callee NodeId: 1)
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO:0x[a-z0-9]+]] AllocTypes: NotColdCold ContextIds: 1 2
+; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO:0x[a-z0-9]+]] AllocTypes: NotColdCold ContextIds: 1 2 (Caller NodeId: 3)
 
 ; DUMP: Node [[FOO]]
 ; DUMP: 	  %call = call noundef ptr @_Z3bazv()	(clone 0)
+; DUMP: 	NodeId: 3
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO]] AllocTypes: NotColdCold ContextIds: 1 2
+; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO]] AllocTypes: NotColdCold ContextIds: 1 2 (Callee NodeId: 2)
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1
-; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 2
+; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1 (Caller NodeId: 4)
+; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 2 (Caller NodeId: 5)
 
 ; DUMP: Node [[MAIN1]]
 ; DUMP: 	  %call = call noundef ptr @_Z3foov()	(clone 0)
+; DUMP: 	NodeId: 4
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1]] AllocTypes: NotCold ContextIds: 1
+; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1]] AllocTypes: NotCold ContextIds: 1 (Callee NodeId: 3)
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
 ; DUMP: 	  %call1 = call noundef ptr @_Z3foov()	(clone 0)
+; DUMP: 	NodeId: 5
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 2
+; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 2 (Callee NodeId: 3)
 ; DUMP: 	CallerEdges:
 
 ; DUMP: CCG after cloning:
 ; DUMP: Callsite Context Graph:
 ; DUMP: Node [[BAR:0x[a-z0-9]+]]
 ; DUMP: 	  %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
+; DUMP: 	NodeId: 1
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1
-; DUMP:		Clones: [[BAR2:0x[a-z0-9]+]]
+; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1 (Caller NodeId: 2)
+; DUMP:		Clones: [[BAR2:0x[a-z0-9]+]] NodeId: 8
 
 ; DUMP: Node [[BAZ]]
 ; DUMP: 	  %call = call noundef ptr @_Z3barv()	(clone 0)
+; DUMP: 	NodeId: 2
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ]] AllocTypes: NotCold ContextIds: 1
+; DUMP: 		Edge from Callee [[BAR]] to Caller: [[BAZ]] AllocTypes: NotCold ContextIds: 1 (Callee NodeId: 1)
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1
-; DUMP:		Clones: [[BAZ2:0x[a-z0-9]+]]
+; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1 (Caller NodeId: 3)
+; DUMP:		Clones: [[BAZ2:0x[a-z0-9]+]] NodeId: 7
 
 ; DUMP: Node [[FOO]]
 ; DUMP: 	  %call = call noundef ptr @_Z3bazv()	(clone 0)
+; DUMP: 	NodeId: 3
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO]] AllocTypes: NotCold ContextIds: 1
+; DUMP: 		Edge from Callee [[BAZ]] to Caller: [[FOO]] AllocTypes: NotCold ContextIds: 1 (Callee NodeId: 2)
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1
-; DUMP:		Clones: [[FOO2:0x[a-z0-9]+]]
+; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1 (Caller NodeId: 4)
+; DUMP:		Clones: [[FOO2:0x[a-z0-9]+]] NodeId: 6
 
 ; DUMP: Node [[MAIN1]]
 ; DUMP: 	  %call = call noundef ptr @_Z3foov()	(clone 0)
+; DUMP: 	NodeId: 4
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 1
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1]] AllocTypes: NotCold ContextIds: 1
+; DUMP: 		Edge from Callee [[FOO]] to Caller: [[MAIN1]] AllocTypes: NotCold ContextIds: 1 (Callee NodeId: 3)
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[MAIN2]]
 ; DUMP: 	  %call1 = call noundef ptr @_Z3foov()	(clone 0)
+; DUMP: 	NodeId: 5
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 2
+; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 2 (Callee NodeId: 6)
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[FOO2]]
 ; DUMP: 	  %call = call noundef ptr @_Z3bazv()	(clone 0)
+; DUMP: 	NodeId: 6
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[BAZ2]] to Caller: [[FOO2]] AllocTypes: Cold ContextIds: 2
+; DUMP: 		Edge from Callee [[BAZ2]] to Caller: [[FOO2]] AllocTypes: Cold ContextIds: 2 (Callee NodeId: 7)
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 2
-; DUMP:		Clone of [[FOO]]
+; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 2 (Caller NodeId: 5)
+; DUMP:		Clone of [[FOO]] NodeId: 3
 
 ; DUMP: Node [[BAZ2]]
 ; DUMP: 	  %call = call noundef ptr @_Z3barv()	(clone 0)
+; DUMP: 	NodeId: 7
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[BAZ2]] AllocTypes: Cold ContextIds: 2
+; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[BAZ2]] AllocTypes: Cold ContextIds: 2 (Callee NodeId: 8)
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[BAZ2]] to Caller: [[FOO2]] AllocTypes: Cold ContextIds: 2
-; DUMP:		Clone of [[BAZ]]
+; DUMP: 		Edge from Callee [[BAZ2]] to Caller: [[FOO2]] AllocTypes: Cold ContextIds: 2 (Caller NodeId: 6)
+; DUMP:		Clone of [[BAZ]] NodeId: 2
 
 ; DUMP: Node [[BAR2]]
 ; DUMP: 	  %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6	(clone 0)
+; DUMP: 	NodeId: 8
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 2
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[BAZ2]] AllocTypes: Cold ContextIds: 2
-; DUMP:		Clone of [[BAR]]
+; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[BAZ2]] AllocTypes: Cold ContextIds: 2 (Caller NodeId: 7)
+; DUMP:		Clone of [[BAR]] NodeId: 1
 
 
 ; REMARKS: created clone _Z3barv.memprof.1
@@ -302,32 +315,32 @@ attributes #6 = { builtin }
 
 ; DOT: digraph "postbuild" {
 ; DOT: 	label="postbuild";
-; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
-; DOT: 	Node[[BAZ:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAZ]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 12481870273128938184\n_Z3bazv -\> _Z3barv}"];
+; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: Alloc0 NodeId: 1\n_Z3barv -\> _Znam}"];
+; DOT: 	Node[[BAZ:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAZ]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 12481870273128938184 NodeId: 2\n_Z3bazv -\> _Z3barv}"];
 ; DOT: 	Node[[BAZ]] -> Node[[BAR]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1",color="mediumorchid1"];
-; DOT: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 2732490490862098848\n_Z3foov -\> _Z3bazv}"];
+; DOT: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",label="{OrigId: 2732490490862098848 NodeId: 3\n_Z3foov -\> _Z3bazv}"];
 ; DOT: 	Node[[FOO]] -> Node[[BAZ]][tooltip="ContextIds: 1 2",fillcolor="mediumorchid1",color="mediumorchid1"];
-; DOT: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOT: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414 NodeId: 4\nmain -\> _Z3foov}"];
 ; DOT: 	Node[[MAIN1]] -> Node[[FOO]][tooltip="ContextIds: 1",fillcolor="brown1",color="brown1"];
-; DOT: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOT: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438 NodeId: 5\nmain -\> _Z3foov}"];
 ; DOT: 	Node[[MAIN2]] -> Node[[FOO]][tooltip="ContextIds: 2",fillcolor="cyan",color="cyan"];
 ; DOT: }
 
 
 ; DOTCLONED: digraph "cloned" {
 ; DOTCLONED: 	label="cloned";
-; DOTCLONED: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
-; DOTCLONED: 	Node[[BAZ:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAZ]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 12481870273128938184\n_Z3bazv -\> _Z3barv}"];
+; DOTCLONED: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: Alloc0 NodeId: 1\n_Z3barv -\> _Znam}"];
+; DOTCLONED: 	Node[[BAZ:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAZ]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 12481870273128938184 NodeId: 2\n_Z3bazv -\> _Z3barv}"];
 ; DOTCLONED: 	Node[[BAZ]] -> Node[[BAR]][tooltip="ContextIds: 1",fillcolor="brown1",color="brown1"];
-; DOTCLONED: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 2732490490862098848\n_Z3foov -\> _Z3bazv}"];
+; DOTCLONED: 	Node[[FOO:0x[a-z0-9]+]] [shape=record,tooltip="N[[FOO]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 2732490490862098848 NodeId: 3\n_Z3foov -\> _Z3bazv}"];
 ; DOTCLONED: 	Node[[FOO]] -> Node[[BAZ]][tooltip="ContextIds: 1",fillcolor="brown1",color="brown1"];
-; DOTCLONED: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414\nmain -\> _Z3foov}"];
+; DOTCLONED: 	Node[[MAIN1:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN1]] ContextIds: 1",fillcolor="brown1",style="filled",label="{OrigId: 8632435727821051414 NodeId: 4\nmain -\> _Z3foov}"];
 ; DOTCLONED: 	Node[[MAIN1]] -> Node[[FOO]][tooltip="ContextIds: 1",fillcolor="brown1",color="brown1"];
-; DOTCLONED: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438\nmain -\> _Z3foov}"];
+; DOTCLONED: 	Node[[MAIN2:0x[a-z0-9]+]] [shape=record,tooltip="N[[MAIN2]] ContextIds: 2",fillcolor="cyan",style="filled",label="{OrigId: 15025054523792398438 NodeId: 5\nmain -\> _Z3foov}"];
 ; DOTCLONED: 	Node[[MAIN2]] -> Node[[FOO2:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan",color="cyan"];
-; DOTCLONED: 	Node[[FOO2]] [shape=record,tooltip="N[[FOO2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: 0\n_Z3foov -\> _Z3bazv}"];
+; DOTCLONED: 	Node[[FOO2]] [shape=record,tooltip="N[[FOO2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: 0 NodeId: 6\n_Z3foov -\> _Z3bazv}"];
 ; DOTCLONED: 	Node[[FOO2]] -> Node[[BAZ2:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan",color="cyan"];
-; DOTCLONED: 	Node[[BAZ2]] [shape=record,tooltip="N[[BAZ2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: 0\n_Z3bazv -\> _Z3barv}"];
+; DOTCLONED: 	Node[[BAZ2]] [shape=record,tooltip="N[[BAZ2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: 0 NodeId: 7\n_Z3bazv -\> _Z3barv}"];
 ; DOTCLONED: 	Node[[BAZ2]] -> Node[[BAR2:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan",color="cyan"];
-; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> _Znam}"];
+; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0 NodeId: 8\n_Z3barv -\> _Znam}"];
 ; DOTCLONED: }

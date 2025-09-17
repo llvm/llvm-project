@@ -3511,6 +3511,9 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
       return outliner::InstrType::Illegal;
   }
 
+  if (isLPAD(MI))
+    return outliner::InstrType::Illegal;
+
   return outliner::InstrType::Legal;
 }
 
@@ -4489,7 +4492,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if (STI.hasStdExtZba() &&
+  } else if (STI.hasShlAdd(3) &&
              ((Amount % 3 == 0 && isPowerOf2_64(Amount / 3)) ||
               (Amount % 5 == 0 && isPowerOf2_64(Amount / 5)) ||
               (Amount % 9 == 0 && isPowerOf2_64(Amount / 9)))) {

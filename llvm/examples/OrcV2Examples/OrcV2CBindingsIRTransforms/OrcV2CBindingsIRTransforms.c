@@ -46,7 +46,8 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   LLVMValueRef Result = LLVMBuildAdd(Builder, SumArg0, SumArg1, "result");
   LLVMBuildRet(Builder, Result);
   LLVMDisposeBuilder(Builder);
-  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
+  LLVMOrcThreadSafeContextRef TSCtx =
+      LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
   LLVMOrcThreadSafeModuleRef TSM = LLVMOrcCreateNewThreadSafeModule(M, TSCtx);
   LLVMOrcDisposeThreadSafeContext(TSCtx);
   return TSM;
