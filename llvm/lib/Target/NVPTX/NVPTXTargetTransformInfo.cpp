@@ -588,10 +588,11 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
       return ConstantInt::get(II->getType(), *R);
     return nullptr;
   }
-  case Intrinsic::nvvm_prefetch_tensormap: {
-    IRBuilder<> Builder(II);
-    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+  const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST || NewAS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
                                         NewV);
+    return nullptr;
   }
   }
   return nullptr;

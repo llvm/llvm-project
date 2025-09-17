@@ -122,3 +122,44 @@ define void @prefetch_param_tensormap(ptr addrspace(101) %param_ptr) {
   tail call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
   ret void
 }
+
+define ptx_kernel void @prefetch_tensormap_kernel(ptr %ptr) {
+; CHECK-PTX64-LABEL: prefetch_tensormap_kernel(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_tensormap_kernel_param_0];
+; CHECK-PTX64-NEXT:    prefetch.tensormap [%rd1];
+; CHECK-PTX64-NEXT:    ret;
+  tail call void @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+  ret void
+}
+
+define ptx_kernel void @prefetch_const_tensormap_kernel(ptr addrspace(4) %const_ptr) {
+; CHECK-PTX64-LABEL: prefetch_const_tensormap_kernel(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_const_tensormap_kernel_param_0];
+; CHECK-PTX64-NEXT:    prefetch.const.tensormap [%rd1];
+; CHECK-PTX64-NEXT:    ret;
+  tail call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+  ret void
+}
+
+define ptx_kernel void @prefetch_param_tensormap_kernel(ptr addrspace(101) %param_ptr) {
+; CHECK-PTX64-LABEL: prefetch_param_tensormap_kernel(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_param_tensormap_kernel_param_0];
+; CHECK-PTX64-NEXT:    prefetch.param.tensormap [%rd1];
+; CHECK-PTX64-NEXT:    ret;
+  tail call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
+  ret void
+}
+
+
