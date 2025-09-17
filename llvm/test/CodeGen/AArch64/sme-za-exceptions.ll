@@ -639,7 +639,7 @@ return_normally:
 ; In this example we must execute __arm_sme_restore once we enter the catch block
 ; (before executing __arm_sme_save again, which would invalidate the prior save).
 define void @try_catch_agnostic_za() "aarch64_za_state_agnostic" personality ptr @__gxx_personality_v0 {
-; CHECK-LABEL: try_catch_agnostic_za_callee:
+; CHECK-LABEL: try_catch_agnostic_za:
 ; CHECK:       .Lfunc_begin4:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
@@ -673,7 +673,7 @@ define void @try_catch_agnostic_za() "aarch64_za_state_agnostic" personality ptr
 ; CHECK-NEXT:    bl __cxa_end_catch
 ; CHECK-NEXT:    b .LBB4_1
 ;
-; CHECK-SDAG-LABEL: try_catch_agnostic_za_callee:
+; CHECK-SDAG-LABEL: try_catch_agnostic_za:
 ; CHECK-SDAG:       .Lfunc_begin4:
 ; CHECK-SDAG-NEXT:    .cfi_startproc
 ; CHECK-SDAG-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
