@@ -1,0 +1,8 @@
+## Tests that readfile works with two substitutions on the same line to ensure the
+## regular expressions are set up correctly.
+# RUN: echo -n "hello" > %t.1
+# RUN: echo -n "bye" > %t.2
+# RUN: echo %{readfile:%t.1} %{readfile:%t.2}
+
+## Fail the test so we can assert on the output.
+# RUN: not echo return
