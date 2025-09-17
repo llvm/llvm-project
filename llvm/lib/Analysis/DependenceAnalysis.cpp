@@ -1288,7 +1288,40 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
       Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
   } else if (Delta->isZero()) {
-    // since 0/X == 0
+    // Check if coefficient could be zero. If so, 0/0 is undefined and we
+    // cannot conclude that only same-iteration dependencies exist.
+    // When coeff=0, all iterations access the same location.
+    if (isa<SCEVUnknown>(Coeff) && !SE->isKnownNonZero(Coeff)) {
+      // Use SCEV range analysis to prove coefficient != 0 in loop context.
+      const SCEV *Zero = SE->getZero(Coeff->getType());
+
+      // Ask SCEV's range analysis if it can prove Coeff != Zero.
+      if (SE->isKnownPredicate(ICmpInst::ICMP_NE, Coeff, Zero)) {
+        LLVM_DEBUG(
+            dbgs()
+            << "\t    Coefficient proven non-zero by SCEV range analysis\n");
+      } else {
+        // Cannot prove at compile time, would need runtime assumption.
+        if (UnderRuntimeAssumptions) {
+          const SCEVPredicate *Pred =
+              SE->getComparePredicate(ICmpInst::ICMP_NE, Coeff, Zero);
+          SmallVector<const SCEVPredicate *, 4> NewPreds(
+              Assumptions.getPredicates());
+          NewPreds.push_back(Pred);
+          const_cast<DependenceInfo *>(this)->Assumptions =
+              SCEVUnionPredicate(NewPreds, *SE);
+          LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
+                            << " != 0\n");
+        } else {
+          // Cannot add runtime assumptions, this test cannot handle this case.
+          // Let more complex tests try.
+          LLVM_DEBUG(dbgs() << "\t    Would need runtime assumption " << *Coeff
+                            << " != 0, but not allowed. Failing this test.\n");
+          return false;
+        }
+      }
+    }
+    // since 0/X == 0 (where X is known non-zero)
     Result.DV[Level].Distance = Delta;
     NewConstraint.setDistance(Delta, CurLoop);
     Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
@@ -3581,7 +3614,7 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 }
 
 SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
-  return SCEVUnionPredicate(Assumptions, *SE);
+  return Assumptions;
 }
 
 // depends -
@@ -3598,7 +3631,12 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
 std::unique_ptr<Dependence>
 DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                         bool UnderRuntimeAssumptions) {
-  SmallVector<const SCEVPredicate *, 4> Assume;
+  // Set the flag for whether we're allowed to add runtime assumptions.
+  this->UnderRuntimeAssumptions = UnderRuntimeAssumptions;
+
+  // Clear any previous assumptions
+  Assumptions = SCEVUnionPredicate({}, *SE);
+
   bool PossiblyLoopIndependent = true;
   if (Src == Dst)
     PossiblyLoopIndependent = false;
@@ -3610,8 +3648,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   if (!isLoadOrStore(Src) || !isLoadOrStore(Dst)) {
     // can only analyze simple loads and stores, i.e., no calls, invokes, etc.
     LLVM_DEBUG(dbgs() << "can only handle simple loads and stores\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
   }
 
   const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
@@ -3622,8 +3659,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
     LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
   case AliasResult::NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
     LLVM_DEBUG(dbgs() << "no alias\n");
@@ -3637,8 +3673,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     // The dependence test gets confused if the size of the memory accesses
     // differ.
     LLVM_DEBUG(dbgs() << "can't analyze must alias with different sizes\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
   }
 
   Value *SrcPtr = getLoadStorePointerOperand(Src);
@@ -3657,8 +3692,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     // We check this upfront so we don't crash in cases where getMinusSCEV()
     // returns a SCEVCouldNotCompute.
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
   }
 
   // Even if the base pointers are the same, they may not be loop-invariant. It
@@ -3670,8 +3704,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   if (!isLoopInvariant(SrcBase, SrcLoop) ||
       !isLoopInvariant(DstBase, DstLoop)) {
     LLVM_DEBUG(dbgs() << "The base pointer is not loop invariant.\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
   }
 
   uint64_t EltSize = SrcLoc.Size.toRaw();
@@ -3679,35 +3712,40 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
   // Check that memory access offsets are multiples of element sizes.
-  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+  SmallVector<const SCEVPredicate *, 4> TempAssumptions;
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize, TempAssumptions) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize, TempAssumptions)) {
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
+    return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
   }
 
-  if (!Assume.empty()) {
-    if (!UnderRuntimeAssumptions)
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    // Add non-redundant assumptions.
-    unsigned N = Assumptions.size();
-    for (const SCEVPredicate *P : Assume) {
-      bool Implied = false;
-      for (unsigned I = 0; I != N && !Implied; I++)
-        if (Assumptions[I]->implies(P, *SE))
-          Implied = true;
-      if (!Implied)
-        Assumptions.push_back(P);
+  // Add any new assumptions from the isKnownMultipleOf calls
+  if (!TempAssumptions.empty()) {
+    if (UnderRuntimeAssumptions) {
+      SmallVector<const SCEVPredicate *, 4> NewPreds(
+          Assumptions.getPredicates());
+      NewPreds.append(TempAssumptions.begin(), TempAssumptions.end());
+      const_cast<DependenceInfo *>(this)->Assumptions =
+          SCEVUnionPredicate(NewPreds, *SE);
+    } else {
+      // Runtime assumptions needed but not allowed.
+      // Return confused dependence since we cannot proceed with precise
+      // analysis.
+      LLVM_DEBUG(dbgs() << "Runtime assumptions needed for offset analysis but "
+                           "not allowed\n");
+      return std::make_unique<Dependence>(Src, Dst, getRuntimeAssumptions());
     }
   }
+
+  // Assert that we haven't added runtime assumptions when not allowed
+  assert(UnderRuntimeAssumptions || Assumptions.isAlwaysTrue());
 
   establishNestingLevels(Src, Dst);
   LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
   LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
 
-  FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
-                        PossiblyLoopIndependent, CommonLevels);
+  FullDependence Result(Src, Dst, Assumptions, PossiblyLoopIndependent,
+                        CommonLevels);
   ++TotalArrayPairs;
 
   unsigned Pairs = 1;
@@ -4052,6 +4090,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       return nullptr;
   }
 
+  // Assert that we haven't added runtime assumptions when not allowed
+  assert(UnderRuntimeAssumptions || Assumptions.isAlwaysTrue());
+
+  Result.Assumptions = getRuntimeAssumptions();
   return std::make_unique<FullDependence>(std::move(Result));
 }
 
