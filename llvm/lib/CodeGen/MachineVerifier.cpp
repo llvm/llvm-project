@@ -2433,7 +2433,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     const MachineOperand &SrcOp = MI->getOperand(1);
     const MachineOperand &LaneMaskOp = MI->getOperand(2);
     const Register SrcReg = SrcOp.getReg();
-    const Register DstReg = DstOp.getReg();
     const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
     LaneBitmask SrcMaxLanemask = LaneBitmask::getAll();
 
