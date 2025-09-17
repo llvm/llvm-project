@@ -86,7 +86,7 @@ add_mlir_python_modules(StandalonePythonModules
 # Everything here is very tightly coupled. See the ample descriptions at the bottom of
 # mlir/python/CMakeLists.txt.
 get_target_property(_standalone_extension_srcs StandalonePythonSources.NanobindExtension INTERFACE_SOURCES)
-generate_type_stubs(
+mlir_generate_type_stubs(
   MODULE_NAME mlir_standalone._mlir_libs._standaloneDialectsNanobind
   DEPENDS_TARGETS
     StandalonePythonModules.extension._mlir.dso

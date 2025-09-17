@@ -99,7 +99,7 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
-# Function: generate_type_stubs
+# Function: mlir_generate_type_stubs
 # Turns on automatic type stub generation for extension modules.
 # Specifically, performs add_custom_command to run nanobind's stubgen on an extension module.
 #
@@ -114,7 +114,7 @@ endfunction()
 #   IMPORT_PATHS: List of paths to add to PYTHONPATH for stubgen.
 # Outputs:
 #   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
-function(generate_type_stubs)
+function(mlir_generate_type_stubs)
   cmake_parse_arguments(ARG
     ""
     "MODULE_NAME;OUTPUT_DIR"
@@ -132,7 +132,7 @@ function(generate_type_stubs)
   elseif(EXISTS ${nanobind_SOURCE_DIR}/stubgen.py)
     set(NB_STUBGEN "${nanobind_SOURCE_DIR}/stubgen.py")
   else()
-    message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
+    message(FATAL_ERROR "mlir_generate_type_stubs(): could not locate 'stubgen.py'!")
   endif()
 
   file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)

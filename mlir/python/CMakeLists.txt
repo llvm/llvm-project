@@ -889,7 +889,7 @@ set(_core_type_stub_sources
 )
 
 # Note 1: INTERFACE_SOURCES is a genex ($<BUILD_INTERFACE> $<INSTALL_INTERFACE>)
-# which will be evaluated by file(GENERATE ...) inside generate_type_stubs. This will evaluate to the correct
+# which will be evaluated by file(GENERATE ...) inside mlir_generate_type_stubs. This will evaluate to the correct
 # thing in the build dir (i.e., actual source dir paths) and in the install dir (where it's a conventional path; see install/lib/cmake/mlir/MLIRTargets.cmake).
 #
 # Note 2: MLIRPythonExtension.Core is the target that is defined using target_sources(INTERFACE) **NOT** MLIRPythonModules.extension._mlir.dso.
@@ -908,7 +908,7 @@ get_target_property(_core_extension_srcs MLIRPythonExtension.Core INTERFACE_SOUR
 # Further note: this function creates file targets like "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/_mlir/__init__.pyi".
 # These must match the file targets that declare_mlir_python_sources expects, which are like "${ROOT_DIR}/${WHATEVER_SOURCE}".
 # This is why _mlir_libs is prepended below.
-generate_type_stubs(
+mlir_generate_type_stubs(
   MODULE_NAME _mlir_libs._mlir
   DEPENDS_TARGETS MLIRPythonModules.extension._mlir.dso
   OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs"
@@ -930,7 +930,7 @@ declare_mlir_python_sources(
 
 if(MLIR_INCLUDE_TESTS)
   get_target_property(_test_extension_srcs MLIRPythonTestSources.PythonTestExtensionNanobind INTERFACE_SOURCES)
-  generate_type_stubs(
+  mlir_generate_type_stubs(
     # This is the FQN path because dialect modules import _mlir when loaded. See above.
     MODULE_NAME mlir._mlir_libs._mlirPythonTestNanobind
     DEPENDS_TARGETS
