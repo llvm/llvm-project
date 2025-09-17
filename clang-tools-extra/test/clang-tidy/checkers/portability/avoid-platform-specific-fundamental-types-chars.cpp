@@ -136,6 +136,9 @@ void test_comprehensive_cases() {
   // Test auto with initializer
   auto auto_char = char{'x'};
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+
+  // Verify auto without initializer isn't flagged
+  auto auto_nonexplicit_char = 'x';
   
   char brace_init_char{};
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
