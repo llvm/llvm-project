@@ -1424,11 +1424,9 @@ define <32 x i8> @constant_shift_v32i8_pairs(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [512,16384,4096,1024,32768,16384,8192,4096]
 ; AVX1-NEXT:    vpmulhuw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15]
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmulhuw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: constant_shift_v32i8_pairs:
@@ -1487,11 +1485,9 @@ define <32 x i8> @constant_shift_v32i8_pairs(<32 x i8> %a) nounwind {
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [512,16384,4096,1024,32768,16384,8192,4096]
 ; X86-AVX1-NEXT:    vpmulhuw %xmm2, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15]
-; X86-AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpmulhuw %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: constant_shift_v32i8_pairs:
@@ -1508,11 +1504,10 @@ define <32 x i8> @constant_shift_v32i8_quads(<32 x i8> %a) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [8192,8192,16384,16384,32768,32768,u,u]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [512,512,1024,1024,2048,2048,4096,4096]
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: constant_shift_v32i8_quads:
@@ -1553,11 +1548,10 @@ define <32 x i8> @constant_shift_v32i8_quads(<32 x i8> %a) nounwind {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1 # [8192,8192,16384,16384,32768,32768,u,u]
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
-; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [512,512,1024,1024,2048,2048,4096,4096]
-; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: constant_shift_v32i8_quads:
@@ -1865,13 +1859,11 @@ define <16 x i16> @splatconstant_shift_v16i16(<16 x i16> %a) nounwind {
 define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-LABEL: splatconstant_shift_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsrlw $3, %xmm1, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31]
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splatconstant_shift_v32i8:
@@ -1909,13 +1901,11 @@ define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ;
 ; X86-AVX1-LABEL: splatconstant_shift_v32i8:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX1-NEXT:    vpsrlw $3, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31]
-; X86-AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm1
+; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; X86-AVX1-NEXT:    vpsrlw $3, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: splatconstant_shift_v32i8:
@@ -1977,6 +1967,67 @@ define <4 x i64> @shift32_v4i64(<4 x i64> %a) nounwind {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
+  %shift = lshr <4 x i64> %a, <i64 32, i64 32, i64 32, i64 32>
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @shift32_v4i64_concat(<2 x i64> %lo, <2 x i64> %hi) nounwind {
+; AVX1-LABEL: shift32_v4i64_concat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shift32_v4i64_concat:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; XOPAVX1-LABEL: shift32_v4i64_concat:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: shift32_v4i64_concat:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; XOPAVX2-NEXT:    retq
+;
+; AVX512-LABEL: shift32_v4i64_concat:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: shift32_v4i64_concat:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+;
+; X86-AVX1-LABEL: shift32_v4i64_concat:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: shift32_v4i64_concat:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; X86-AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; X86-AVX2-NEXT:    retl
+  %a = shufflevector <2 x i64> %lo, <2 x i64> %hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %shift = lshr <4 x i64> %a, <i64 32, i64 32, i64 32, i64 32>
   ret <4 x i64> %shift
 }

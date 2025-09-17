@@ -419,7 +419,6 @@ define <1 x i64> @insertelement_v1i64(<1 x i64> %op1) {
 ; CHECK-LABEL: insertelement_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #5 // =0x5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: insertelement_v1i64:

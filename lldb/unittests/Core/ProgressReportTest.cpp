@@ -57,8 +57,7 @@ protected:
 
   DebuggerSP m_debugger_sp;
   ListenerSP m_listener_sp;
-  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX, ProgressManager>
-      subsystems;
+  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
 };
 
 TEST_F(ProgressReportTest, TestReportCreation) {
@@ -309,119 +308,6 @@ TEST_F(ProgressReportTest, TestMinimumReportTime) {
   EXPECT_TRUE(data->IsFinite());
   EXPECT_EQ(data->GetCompleted(), 20U);
   EXPECT_EQ(data->GetTotal(), 20U);
-
-  ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
-}
-
-TEST_F(ProgressReportTest, TestProgressManager) {
-  ListenerSP listener_sp =
-      CreateListenerFor(lldb::eBroadcastBitProgressCategory);
-  EventSP event_sp;
-  const ProgressEventData *data;
-
-  // Create three progress events with the same category then try to pop 2
-  // events from the queue in a row before the progress reports are destroyed.
-  // Since only 1 event should've been broadcast for this category, the second
-  // GetEvent() call should return false.
-  {
-    Progress progress1("Progress report 1", "Starting report 1");
-    Progress progress2("Progress report 1", "Starting report 2");
-    Progress progress3("Progress report 1", "Starting report 3");
-    ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
-    ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
-  }
-
-  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-
-  EXPECT_EQ(data->GetDetails(), "");
-  EXPECT_FALSE(data->IsFinite());
-  EXPECT_FALSE(data->GetCompleted());
-  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
-  EXPECT_EQ(data->GetMessage(), "Progress report 1");
-
-  // Pop another event from the queue, this should be the event for the final
-  // report for this category.
-  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
-  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-
-  EXPECT_EQ(data->GetDetails(), "");
-  EXPECT_FALSE(data->IsFinite());
-  EXPECT_TRUE(data->GetCompleted());
-  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
-  EXPECT_EQ(data->GetMessage(), "Progress report 1");
-}
-
-TEST_F(ProgressReportTest, TestOverlappingEvents) {
-  ListenerSP listener_sp =
-      CreateListenerFor(lldb::eBroadcastBitProgressCategory);
-  EventSP event_sp;
-  const ProgressEventData *data;
-
-  // Create two progress reports of the same category that overlap with each
-  // other. Here we want to ensure that the ID broadcasted for the initial and
-  // final reports for this category are the same.
-  std::unique_ptr<Progress> overlap_progress1 =
-      std::make_unique<Progress>("Overlapping report 1", "Starting report 1");
-  std::unique_ptr<Progress> overlap_progress2 =
-      std::make_unique<Progress>("Overlapping report 1", "Starting report 2");
-  overlap_progress1.reset();
-
-  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
-  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-  // Get the ID used in the first report for this category.
-  uint64_t expected_progress_id = data->GetID();
-
-  EXPECT_EQ(data->GetDetails(), "");
-  EXPECT_FALSE(data->IsFinite());
-  EXPECT_FALSE(data->GetCompleted());
-  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
-  EXPECT_EQ(data->GetMessage(), "Overlapping report 1");
-
-  overlap_progress2.reset();
-
-  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
-  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-
-  EXPECT_EQ(data->GetDetails(), "");
-  EXPECT_FALSE(data->IsFinite());
-  EXPECT_TRUE(data->GetCompleted());
-  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
-  EXPECT_EQ(data->GetMessage(), "Overlapping report 1");
-  // The progress ID for the final report should be the same as that for the
-  // initial report.
-  EXPECT_EQ(data->GetID(), expected_progress_id);
-}
-
-TEST_F(ProgressReportTest, TestProgressManagerDisjointReports) {
-  ListenerSP listener_sp =
-      CreateListenerFor(lldb::eBroadcastBitProgressCategory);
-  EventSP event_sp;
-  const ProgressEventData *data;
-  uint64_t expected_progress_id;
-
-  { Progress progress("Coalesced report 1", "Starting report 1"); }
-  { Progress progress("Coalesced report 1", "Starting report 2"); }
-  { Progress progress("Coalesced report 1", "Starting report 3"); }
-
-  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
-  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-  expected_progress_id = data->GetID();
-
-  EXPECT_EQ(data->GetDetails(), "");
-  EXPECT_FALSE(data->IsFinite());
-  EXPECT_FALSE(data->GetCompleted());
-  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
-  EXPECT_EQ(data->GetMessage(), "Coalesced report 1");
-
-  ASSERT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
-  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-
-  EXPECT_EQ(data->GetID(), expected_progress_id);
-  EXPECT_EQ(data->GetDetails(), "");
-  EXPECT_FALSE(data->IsFinite());
-  EXPECT_TRUE(data->GetCompleted());
-  EXPECT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
-  EXPECT_EQ(data->GetMessage(), "Coalesced report 1");
 
   ASSERT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
 }

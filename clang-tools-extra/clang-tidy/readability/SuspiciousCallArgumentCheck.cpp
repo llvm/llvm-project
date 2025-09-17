@@ -1,4 +1,4 @@
-//===--- SuspiciousCallArgumentCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
-#include <sstream>
 
 using namespace clang::ast_matchers;
 namespace optutils = clang::tidy::utils::options;
@@ -218,7 +217,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   SmallVector<int, SmallVectorSize> ArgFlags(ArgLen);
   SmallVector<int, SmallVectorSize> ParamFlags(ParamLen);
   std::ptrdiff_t Range =
-      std::max(std::ptrdiff_t{0}, std::max(ArgLen, ParamLen) / 2 - 1);
+      std::max(std::ptrdiff_t{0}, (std::max(ArgLen, ParamLen) / 2) - 1);
 
   // Calculate matching characters.
   for (std::ptrdiff_t I = 0; I < ParamLen; ++I)
@@ -261,7 +260,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   // Calculate common string prefix up to 4 chars.
   L = 0;
   for (std::ptrdiff_t I = 0;
-       I < std::min(std::min(ArgLen, ParamLen), std::ptrdiff_t{4}); ++I)
+       I < std::min({ArgLen, ParamLen, std::ptrdiff_t{4}}); ++I)
     if (tolower(Arg[I]) == tolower(Param[I]))
       ++L;
 
@@ -414,10 +413,11 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
 
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
-    if ((ParamType->isEnumeralType() &&
-         ParamType->castAs<EnumType>()->getDecl()->isScoped()) ||
+    if ((ParamType->isEnumeralType() && ParamType->castAsCanonical<EnumType>()
+                                            ->getOriginalDecl()
+                                            ->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAs<EnumType>()->getDecl()->isScoped()))
+         ArgType->castAsCanonical<EnumType>()->getOriginalDecl()->isScoped()))
       return false;
 
     return true;

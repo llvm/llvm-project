@@ -13,12 +13,14 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=ALL,AVX,AVX1OR2,XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=ALL,AVX,AVX1OR2,XOP,XOPAVX2
 
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,SSE,SSE2
+
 define <16 x i8> @shuffle_v16i8_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i8> %a, <16 x i8> %b) {
 ; SSE2-LABEL: shuffle_v16i8_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v16i8_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
@@ -235,13 +237,13 @@ define <16 x i8> @shuffle_v16i8_0101010101010101(<16 x i8> %a, <16 x i8> %b) {
 ; SSE-LABEL: shuffle_v16i8_0101010101010101:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: shuffle_v16i8_0101010101010101:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: shuffle_v16i8_0101010101010101:
@@ -252,7 +254,7 @@ define <16 x i8> @shuffle_v16i8_0101010101010101(<16 x i8> %a, <16 x i8> %b) {
 ; XOPAVX1-LABEL: shuffle_v16i8_0101010101010101:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: shuffle_v16i8_0101010101010101:
@@ -2274,7 +2276,7 @@ define <16 x i8> @insert_dup_mem_v16i8_i32(ptr %ptr) {
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_mem_v16i8_i32:
@@ -2328,7 +2330,7 @@ define <16 x i8> @insert_dup_mem_v16i8_sext_i8(ptr %ptr) {
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_mem_v16i8_sext_i8:
@@ -2386,7 +2388,7 @@ define <16 x i8> @insert_dup_elt1_mem_v16i8_i32(ptr %ptr) {
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt1_mem_v16i8_i32:
@@ -2435,7 +2437,7 @@ define <16 x i8> @insert_dup_elt2_mem_v16i8_i32(ptr %ptr) {
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt2_mem_v16i8_i32:
@@ -2485,7 +2487,7 @@ define <16 x i8> @insert_dup_elt1_mem_v16i8_sext_i8(ptr %ptr) {
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt1_mem_v16i8_sext_i8:
@@ -2553,7 +2555,7 @@ define <16 x i8> @insert_dup_elt2_mem_v16i8_sext_i8(ptr %ptr) {
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_dup_elt2_mem_v16i8_sext_i8:

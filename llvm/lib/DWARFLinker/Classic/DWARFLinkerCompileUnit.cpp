@@ -10,7 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerDeclContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
@@ -183,6 +183,10 @@ void CompileUnit::noteRangeAttribute(const DIE &Die, PatchLocation Attr) {
 
 void CompileUnit::noteLocationAttribute(PatchLocation Attr) {
   LocationAttributes.emplace_back(Attr);
+}
+
+void CompileUnit::noteStmtSeqListAttribute(PatchLocation Attr) {
+  StmtSeqListAttributes.emplace_back(Attr);
 }
 
 void CompileUnit::addNamespaceAccelerator(const DIE *Die,

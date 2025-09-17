@@ -16,9 +16,9 @@ void test_dyn_cast(int* ptr) {
   (void)dyn_cast(ptr); // expected-error{{no matching function for call to 'dyn_cast'}}
 }
 
-template<int I, typename T> 
+template<int I, typename T>
   void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for template parameter 'I'}}
-template<template<class T> class, typename T> 
+template<template<class T> class, typename T>
   void get(const T&); // expected-note{{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
 
 void test_get(void *ptr) {
@@ -100,7 +100,7 @@ namespace PR15673 {
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
 #endif
-  // expected-note@+1 {{candidate template ignored: requirement 'a_trait<int>::value' was not satisfied [with T = int]}}
+  // expected-note@+1 {{candidate template ignored: requirement 'PR15673::a_trait<int>::value' was not satisfied [with T = int]}}
   void foo() {}
   void bar() { foo<int>(); } // expected-error {{no matching function for call to 'foo'}}
 
@@ -128,7 +128,7 @@ namespace PR15673 {
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{alias declarations are a C++11 extension}}
 #endif
-  // expected-note@+7 {{candidate template ignored: requirement 'some_trait<int>::value' was not satisfied [with T = int]}}
+  // expected-note@+7 {{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int]}}
 
   template<typename T,
            typename Requires = unicorns<T> >
@@ -148,7 +148,7 @@ namespace PR15673 {
   template<typename T,
            int n = 42,
            typename std::enable_if<n == 43 || (some_passing_trait<T>::value && some_trait<T>::value), int>::type = 0>
-  void almost_rangesv3(); // expected-note{{candidate template ignored: requirement '42 == 43 || (some_passing_trait<int>::value && some_trait<int>::value)' was not satisfied}}
+  void almost_rangesv3(); // expected-note{{candidate template ignored: requirement '42 == 43 || (PR15673::some_passing_trait<int>::value && PR15673::some_trait<int>::value)' was not satisfied}}
   void test_almost_rangesv3() { almost_rangesv3<int>(); } // expected-error{{no matching function for call to 'almost_rangesv3'}}
 
   #define CONCEPT_REQUIRES_(...)                                        \
@@ -161,6 +161,6 @@ namespace PR15673 {
 #endif
   template<typename T,
            CONCEPT_REQUIRES_(some_passing_trait<T>::value && some_trait<T>::value)>
-  void rangesv3(); // expected-note{{candidate template ignored: requirement 'some_trait<int>::value' was not satisfied [with T = int, x = 42]}}
+  void rangesv3(); // expected-note{{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int, x = 42]}}
   void test_rangesv3() { rangesv3<int>(); } // expected-error{{no matching function for call to 'rangesv3'}}
 }

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -O2 -target-cpu x86-64-v3 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -O2 -target-cpu x86-64-v3 -fclang-abi-compat=20 -o - | FileCheck --check-prefix CLANG-20 %s
 
 using UInt64x2 = unsigned long long __attribute__((__vector_size__(16), may_alias));
 
@@ -11,6 +12,7 @@ struct XMM2 : XMM1<0>, XMM1<1> {
 };
 
 // CHECK: define{{.*}} @_Z3foov({{.*}} [[ARG:%.*]]){{.*}}
+// CLANG-20: define{{.*}} <4 x double> @_Z3foov()
 // CHECK: entry:
 // CHECK-NEXT: store {{.*}}, ptr [[ARG]]{{.*}}
 // CHECK-NEXT: [[TMP1:%.*]] = getelementptr {{.*}}, ptr [[ARG]]{{.*}}

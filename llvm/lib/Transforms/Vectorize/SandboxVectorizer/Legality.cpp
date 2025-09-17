@@ -17,8 +17,6 @@
 
 namespace llvm::sandboxir {
 
-#define DEBUG_TYPE "SBVec:Legality"
-
 #ifndef NDEBUG
 void ShuffleMask::dump() const {
   print(dbgs());
@@ -83,6 +81,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::FPToUI:
   case Instruction::Opcode::FPToSI:
   case Instruction::Opcode::FPExt:
+  case Instruction::Opcode::PtrToAddr:
   case Instruction::Opcode::PtrToInt:
   case Instruction::Opcode::IntToPtr:
   case Instruction::Opcode::SIToFP:
@@ -191,13 +190,6 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   return std::nullopt;
 }
 
-#ifndef NDEBUG
-static void dumpBndl(ArrayRef<Value *> Bndl) {
-  for (auto *V : Bndl)
-    dbgs() << *V << "\n";
-}
-#endif // NDEBUG
-
 CollectDescr
 LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
   SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
@@ -220,18 +212,15 @@ LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
 const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
-  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); })) {
-    LLVM_DEBUG(dbgs() << "Not vectorizing: Not Instructions:\n";
-               dumpBndl(Bndl););
+  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
-  }
   // Pack if not in the same BB.
   auto *BB = cast<Instruction>(Bndl[0])->getParent();
   if (any_of(drop_begin(Bndl),
              [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
     return createLegalityResult<Pack>(ResultReason::DiffBBs);
   // Pack if instructions repeat, i.e., require some sort of broadcast.
-  SmallPtrSet<Value *, 8> Unique(Bndl.begin(), Bndl.end());
+  SmallPtrSet<Value *, 8> Unique(llvm::from_range, Bndl);
   if (Unique.size() != Bndl.size())
     return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 

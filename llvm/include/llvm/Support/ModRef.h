@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -53,7 +54,7 @@ enum class ModRefInfo : uint8_t {
 }
 
 /// Debug print ModRefInfo.
-raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
@@ -158,6 +159,16 @@ public:
     MemoryEffectsBase FRMB = none();
     FRMB.setModRef(Location::ArgMem, MR);
     FRMB.setModRef(Location::InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access argument or errno memory.
+  static MemoryEffectsBase
+  argumentOrErrnoMemOnly(ModRefInfo ArgMR = ModRefInfo::ModRef,
+                         ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ArgMem, ArgMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
     return FRMB;
   }
 
@@ -285,7 +296,7 @@ public:
 using MemoryEffects = MemoryEffectsBase<IRMemLocation>;
 
 /// Debug print MemoryEffects.
-raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;
@@ -326,7 +337,15 @@ inline bool capturesFullProvenance(CaptureComponents CC) {
   return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
+inline bool capturesAnyProvenance(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) != CaptureComponents::None;
+}
+
+inline bool capturesAll(CaptureComponents CC) {
+  return CC == CaptureComponents::All;
+}
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
 
 /// Represents which components of the pointer may be captured in which
 /// location. This represents the captures(...) attribute in IR.
@@ -349,6 +368,15 @@ public:
 
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Create CaptureInfo that may only capture via the return value.
+  static CaptureInfo
+  retOnly(CaptureComponents RetComponents = CaptureComponents::All) {
+    return CaptureInfo(CaptureComponents::None, RetComponents);
+  }
+
+  /// Whether the pointer is only captured via the return value.
+  bool isRetOnly() const { return capturesNothing(OtherComponents); }
 
   /// Get components potentially captured by the return value.
   CaptureComponents getRetComponents() const { return RetComponents; }
@@ -406,7 +434,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
 
 } // namespace llvm
 

@@ -24,7 +24,7 @@
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand large fp convert
+; CHECK-NEXT:       Expand fp
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:       RISC-V Zacas ABI fix 
 ; CHECK-NEXT:       Dominator Tree Construction
@@ -107,6 +107,9 @@
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
+; CHECK-NEXT:       Machine Trace Metrics 
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis 
+; CHECK-NEXT:       Machine InstCombiner 
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       MachineDominator Tree Construction
@@ -117,9 +120,6 @@
 ; CHECK-NEXT:       Machine code sinking
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
-; CHECK-NEXT:       Machine Trace Metrics
-; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
-; CHECK-NEXT:       Machine InstCombiner
 ; RV64-NEXT:        RISC-V Optimize W Instructions
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
@@ -182,6 +182,7 @@
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V post-regalloc pseudo instruction expansion pass
 ; CHECK-NEXT:       Insert KCFI indirect call checks
+; CHECK-NEXT:       RISC-V Load / Store Optimizer
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       PostRA Machine Instruction Scheduler
@@ -193,6 +194,8 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Machine Copy Propagation Pass
+; CHECK-NEXT:       RISC-V Late Branch Optimisation Pass
+; CHECK-NEXT:       RISC-V Indirect Branch Tracking
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       RISC-V Make Compressible
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
@@ -208,7 +211,6 @@
 ; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V Zcmp Push/Pop optimization pass
-; CHECK-NEXT:       RISC-V Indirect Branch Tracking
 ; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
 ; CHECK-NEXT:       Unpack machine instruction bundles

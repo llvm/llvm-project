@@ -48,6 +48,7 @@ mlirRewriterBaseGetContext(MlirRewriterBase rewriter);
 
 //===----------------------------------------------------------------------===//
 /// Insertion points methods
+//===----------------------------------------------------------------------===//
 
 // These do not include functions using Block::iterator or Region::iterator, as
 // they are not exposed by the C API yet. Similarly for methods using
@@ -101,6 +102,7 @@ mlirRewriterBaseGetBlock(MlirRewriterBase rewriter);
 
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
+//===----------------------------------------------------------------------===//
 
 // These functions do not include the IRMapper, as it is not yet exposed by the
 // C API.
@@ -298,6 +300,10 @@ mlirFreezeRewritePattern(MlirRewritePatternSet op);
 
 MLIR_CAPI_EXPORTED void
 mlirFrozenRewritePatternSetDestroy(MlirFrozenRewritePatternSet op);
+
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedilyWithOp(
+    MlirOperation op, MlirFrozenRewritePatternSet patterns,
+    MlirGreedyRewriteDriverConfig);
 
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
     MlirModule op, MlirFrozenRewritePatternSet patterns,

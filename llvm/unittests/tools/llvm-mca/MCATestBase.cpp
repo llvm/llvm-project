@@ -14,7 +14,7 @@ using namespace mca;
 
 const Target *MCATestBase::getLLVMTarget() const {
   std::string Error;
-  return TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+  return TargetRegistry::lookupTarget(TheTriple, Error);
 }
 
 mca::PipelineOptions MCATestBase::getDefaultPipelineOptions() {
@@ -31,17 +31,15 @@ void MCATestBase::SetUp() {
   TheTarget = getLLVMTarget();
   ASSERT_NE(TheTarget, nullptr);
 
-  StringRef TripleName = TheTriple.getTriple();
-
-  STI.reset(TheTarget->createMCSubtargetInfo(TripleName, CPUName, MAttr));
+  STI.reset(TheTarget->createMCSubtargetInfo(TheTriple, CPUName, MAttr));
   ASSERT_TRUE(STI);
   ASSERT_TRUE(STI->isCPUStringValid(CPUName));
 
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   ASSERT_TRUE(MRI);
 
   auto MCOptions = getMCTargetOptions();
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   ASSERT_TRUE(MAI);
 
   Ctx = std::make_unique<MCContext>(TheTriple, MAI.get(), MRI.get(), STI.get());

@@ -484,6 +484,21 @@ add_libc_test(
     libc.include.llvm-libc-macros.math_function_macros
 )
 
+add_libc_test(
+  math_constants_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    math_constants_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_macros
+)
+
 # Test `#include <...>` of each header in each available language mode.
 # This is gated on -DLLVM_LIBC_BUILD_HEADER_TESTS=ON until all the bugs
 # in headers are fixed so the tests all compile.

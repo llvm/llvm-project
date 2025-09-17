@@ -19,7 +19,7 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
@@ -29,17 +29,17 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: NullStmt
 
-#pragma acc enter data copyin(GlobalArray) pcopyin(readonly:PointerParam[Global]) present_or_copyin(Global)
+#pragma acc enter data copyin(GlobalArray) pcopyin(readonly:PointerParam[Global]) present_or_copyin(readonly, always: Global)
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
-  // CHECK-NEXT: present_or_copyin clause
+  // CHECK-NEXT: present_or_copyin clause modifiers: always, readonly 
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
 }
 
@@ -54,15 +54,15 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: ParmVarDecl{{.*}} referenced u 'U'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc data copyin(t) pcopyin(readonly: NTTP, u) present_or_copyin(u[0:t])
+#pragma acc data copyin(t) pcopyin(readonly: NTTP, u) present_or_copyin(readonly, always: u[0:t])
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
-  // CHECK-NEXT: present_or_copyin clause
+  // CHECK-NEXT: present_or_copyin clause modifiers: always, readonly
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
@@ -73,7 +73,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: present_or_copyin clause
@@ -98,12 +98,12 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
-  // CHECK-NEXT: present_or_copyin clause
+  // CHECK-NEXT: present_or_copyin clause modifiers: always, readonly
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
@@ -115,7 +115,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'

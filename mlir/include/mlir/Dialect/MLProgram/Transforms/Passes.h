@@ -23,8 +23,6 @@ namespace ml_program {
 // Registration
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<OperationPass<ModuleOp>> createMLProgramPipelineGlobalsPass();
-
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/MLProgram/Transforms/Passes.h.inc"

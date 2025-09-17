@@ -64,8 +64,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -134,8 +133,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   }
 
   // Get the undef operand's register class
-  const TargetRegisterClass *OpRC =
-    TII->getRegClass(MI->getDesc(), OpIdx, TRI, *MF);
+  const TargetRegisterClass *OpRC = TII->getRegClass(MI->getDesc(), OpIdx, TRI);
   assert(OpRC && "Not a valid register class");
 
   // If the instruction has a true dependency, we can hide the false depdency
@@ -286,7 +284,7 @@ bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
   TRI = MF->getSubtarget().getRegisterInfo();
   RDA = &getAnalysis<ReachingDefAnalysis>();
 
-  RegClassInfo.runOnMachineFunction(mf);
+  RegClassInfo.runOnMachineFunction(mf, /*Rev=*/true);
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 

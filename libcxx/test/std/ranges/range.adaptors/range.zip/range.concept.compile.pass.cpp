@@ -18,7 +18,7 @@
 #include <tuple>
 #include <utility>
 
-#include "types.h"
+#include "../range_adaptor_types.h"
 
 void testConceptPair() {
   int buffer1[2] = {1, 2};

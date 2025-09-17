@@ -16,10 +16,8 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
-#include <gtest/gtest.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/PassInstrumentation.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/PassTimingInfo.h>

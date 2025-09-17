@@ -64,7 +64,7 @@ static constexpr auto programUnit{
     construct<ProgramUnit>(indirect(subroutineSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<Submodule>{})) ||
     construct<ProgramUnit>(indirect(Parser<BlockData>{})) ||
-    lookAhead(validFunctionStmt) >>
+    lookAhead(maybe(label) >> validFunctionStmt) >>
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
 static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
@@ -108,7 +108,7 @@ constexpr auto actionStmtLookAhead{first(actionStmt >> ok,
     "ALLOCATE ("_tok, "CALL" >> name >> "("_tok, "GO TO"_tok, "OPEN ("_tok,
     "PRINT"_tok / space / !"("_tok, "READ ("_tok, "WRITE ("_tok)};
 constexpr auto execPartLookAhead{first(actionStmtLookAhead >> ok,
-    openaccConstruct >> ok, openmpConstruct >> ok, "ASSOCIATE ("_tok,
+    openaccConstruct >> ok, openmpExecDirective >> ok, "ASSOCIATE ("_tok,
     "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok,
     "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok, "!$CUF"_tok)};
 constexpr auto declErrorRecovery{

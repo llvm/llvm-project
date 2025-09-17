@@ -151,31 +151,34 @@ define i128 @test_i128(i128 %a, i128 %b) nounwind {
 ; X86-LABEL: test_i128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    cmpl %ebx, %edx
-; X86-NEXT:    movl %esi, %ebp
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl %edi, %ebp
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 40(%ebp), %ebx
+; X86-NEXT:    movl 44(%ebp), %edi
+; X86-NEXT:    cmpl 24(%ebp), %ebx
+; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    sbbl 28(%ebp), %esi
+; X86-NEXT:    movl 48(%ebp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    movl 36(%ebp), %esi
+; X86-NEXT:    movl 52(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sbbl %ebp, %eax
-; X86-NEXT:    cmovll %ebx, %edx
-; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmovll %ebp, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl %esi, %eax
+; X86-NEXT:    cmovll 24(%ebp), %ebx
+; X86-NEXT:    cmovll 28(%ebp), %edi
+; X86-NEXT:    cmovll 32(%ebp), %edx
+; X86-NEXT:    cmovll %esi, %ecx
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %ebx, (%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -717,29 +720,32 @@ define i128 @test_signbits_i128(i128 %a, i128 %b) nounwind {
 ;
 ; X86-LABEL: test_signbits_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    shrdl $28, %edi, %ecx
-; X86-NEXT:    sarl $28, %edi
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl 32(%ebp), %esi
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    movl 48(%ebp), %ecx
+; X86-NEXT:    movl 52(%ebp), %edx
+; X86-NEXT:    shrdl $28, %edx, %ecx
+; X86-NEXT:    sarl $28, %edx
 ; X86-NEXT:    cmpl %esi, %ecx
-; X86-NEXT:    movl %edi, %ebx
-; X86-NEXT:    sbbl %edx, %ebx
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    sbbl %eax, %edi
 ; X86-NEXT:    cmovll %esi, %ecx
-; X86-NEXT:    cmovll %edx, %edi
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    cmovll %eax, %edx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %edi, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
   %ax = ashr i128 %a, 64
   %bx = ashr i128 %b, 92

@@ -45,6 +45,10 @@ void NormalFunc() {
 #pragma acc kernels
     {}
   }
+  // CHECK-NEXT: OpenACCComputeConstruct {{.*}}kernels
+  // CHECK-NEXT: CompoundStmt
+  _Pragma("acc kernels")
+  {}
 }
 
 template<typename T>

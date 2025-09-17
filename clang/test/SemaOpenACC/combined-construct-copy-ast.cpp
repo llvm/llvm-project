@@ -14,18 +14,18 @@ void NormalUses(float *PointerParam) {
   // CHECK: ParmVarDecl
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc parallel loop copy(GlobalArray) pcopy(PointerParam[Global]) present_or_copy(Global)
+#pragma acc parallel loop copy(always:GlobalArray) pcopy(alwaysin:PointerParam[Global]) present_or_copy(alwaysout: Global)
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: copy clause
+  // CHECK-NEXT: copy clause modifiers: always
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
-  // CHECK-NEXT: pcopy clause
+  // CHECK-NEXT: pcopy clause modifiers: alwaysin
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
-  // CHECK-NEXT: present_or_copy clause
+  // CHECK-NEXT: present_or_copy clause modifiers: alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: ForStmt
   // CHECK:NullStmt
@@ -42,12 +42,12 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: ParmVarDecl{{.*}} referenced u 'U'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc parallel loop copy(t) pcopy(NTTP, u) present_or_copy(u[0:t])
+#pragma acc parallel loop copy(t) pcopy(always, alwaysin, alwaysout: NTTP, u) present_or_copy(u[0:t])
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: copy clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
-  // CHECK-NEXT: pcopy clause
+  // CHECK-NEXT: pcopy clause modifiers: always, alwaysin, alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: present_or_copy clause
@@ -75,7 +75,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: copy clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
-  // CHECK-NEXT: pcopy clause
+  // CHECK-NEXT: pcopy clause modifiers: always, alwaysin, alwaysout
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'

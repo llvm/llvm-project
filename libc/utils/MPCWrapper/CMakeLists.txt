@@ -2,6 +2,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
   add_library(libcMPCWrapper STATIC
     MPCUtils.cpp
     MPCUtils.h
+    mpc_inc.h
   )
   _get_common_test_compile_options(compile_options "" "")
   list(REMOVE_ITEM compile_options "-ffreestanding")
@@ -9,6 +10,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
   add_dependencies(
     libcMPCWrapper
     libcMPCommon
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.array
     libc.src.__support.CPP.string
     libc.src.__support.CPP.stringstream

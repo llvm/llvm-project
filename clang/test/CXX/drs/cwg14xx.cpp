@@ -6,6 +6,14 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-17,since-cxx11, -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx14-17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter
+
 namespace cwg1413 { // cwg1413: 12
   template<int> struct Check {
     typedef int type;
@@ -57,24 +65,36 @@ namespace cwg1423 { // cwg1423: 11
 
 // cwg1425: na abi
 
-namespace cwg1432 { // cwg1432: 16
+namespace cwg1432 { // cwg1432: 16 open 2022-11-11
 #if __cplusplus >= 201103L
-  template<typename T> T declval();
+  namespace class_template_partial_spec {
+    template<typename T> T declval();
 
-  template <class... T>
-  struct common_type;
+    template <class... T>
+    struct common_type;
 
-  template <class T, class U>
-  struct common_type<T, U> {
-   typedef decltype(true ? declval<T>() : declval<U>()) type;
-  };
+    template <class T, class U>
+    struct common_type<T, U> {
+     typedef decltype(true ? declval<T>() : declval<U>()) type;
+    };
 
-  template <class T, class U, class... V>
-  struct common_type<T, U, V...> {
-   typedef typename common_type<typename common_type<T, U>::type, V...>::type type;
-  };
+    template <class T, class U, class... V>
+    struct common_type<T, U, V...> {
+     typedef typename common_type<typename common_type<T, U>::type, V...>::type type;
+    };
 
-  template struct common_type<int, double>;
+    template struct common_type<int, double>;
+  } // namespace class_template_partial_spec
+  namespace function_template {
+    template <int I, class... Ts> struct A {};
+
+    template <int I, class... Ts> void f(A<I, Ts...>) = delete;
+    template <int I> void f(A<I>);
+
+    void test() {
+      f(A<0>());
+    }
+  } // namespace function_template
 #endif
 } // namespace cwg1432
 
@@ -95,6 +115,8 @@ void f() {
   constexpr int p = &*a;
   // since-cxx11-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
   constexpr A *p2 = &*a;
+  // since-cxx11-error@-1 {{constexpr variable 'p2' must be initialized by a constant expression}}
+  // since-cxx11-note@-2 {{dereferencing a null pointer}}
 }
 
 struct A {
@@ -648,14 +670,14 @@ namespace cwg1487 { // cwg1487: 3.3
 struct A { // #cwg1482-A
   struct B {
     using A::A;
-    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'B'}}
+    // since-cxx11-error@-1 {{using declaration refers into 'A', which is not a base class of 'B'}}
   };
 
   struct C : A {
   // since-cxx11-error@-1 {{base class has incomplete type}}
   //   since-cxx11-note@#cwg1482-A {{definition of 'cwg1487::A' is not complete until the closing '}'}}
     using A::A;
-    // since-cxx11-error@-1 {{using declaration refers into 'A::', which is not a base class of 'C'}}
+    // since-cxx11-error@-1 {{using declaration refers into 'A', which is not a base class of 'C'}}
   };
 
   struct D;

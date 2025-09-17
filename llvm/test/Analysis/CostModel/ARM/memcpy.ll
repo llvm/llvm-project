@@ -11,6 +11,22 @@ target triple = "thumbv7m-arm-unknown-eabi"
 ; Align 1, 1
 ;;;;;;;;;;;;
 
+define void @memcpy_0(ptr %d, ptr %s) {
+;
+; with/without strict-align:
+;
+; ldrb r1, [r1]
+; strb r1, [r0]
+;
+; COMMON-LABEL: 'memcpy_0'
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 1, i1 false)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+entry:
+  call void @llvm.memcpy.p0.p0.i32(ptr %d, ptr %s, i32 1, i1 false)
+  ret void
+}
+
 define void @memcpy_1(ptr %d, ptr %s) {
 ;
 ; with/without strict-align:

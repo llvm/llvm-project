@@ -19,10 +19,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
-#include <gtest/gtest.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/PassInstrumentation.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/PassTimingInfo.h>
@@ -33,15 +31,15 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<TargetMachine>
-createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
   std::string Error;
+  Triple TT(TargetStr);
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T)
     return nullptr;
   TargetOptions Options;
   return std::unique_ptr<TargetMachine>(
-      static_cast<TargetMachine *>(T->createTargetMachine(
-          TT, CPU, FS, Options, std::nullopt, std::nullopt)));
+      T->createTargetMachine(TT, CPU, FS, Options, std::nullopt, std::nullopt));
 }
 
 std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
@@ -126,7 +124,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -160,8 +158,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -275,7 +273,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -309,8 +307,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -418,7 +416,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -452,8 +450,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -561,7 +559,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -595,8 +593,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -706,7 +704,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -740,8 +738,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -851,7 +849,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -885,8 +883,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -997,7 +995,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -1031,8 +1029,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []

@@ -4,7 +4,7 @@ program basic
   return
 end program
 
-! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "basic"} {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "BASIC"} {
 ! CHECK:         return
 ! CHECK:       }
 

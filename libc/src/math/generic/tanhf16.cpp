@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/tanhf16.h"
-#include "expxf16.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -21,17 +20,21 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/expxf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr fputil::ExceptValues<float16, 2> TANHF16_EXCEPTS = {{
     // x = 0x1.f54p+0, tanhf16(x) = 0x1.ecp-1 (RZ)
     {0x3fd5U, 0x3bb0U, 1U, 0U, 0U},
     // x = -0x1.f54p+0, tanhf16(x) = -0x1.ecp-1 (RZ)
     {0xbfd5U, 0xbbb0U, 0U, 1U, 0U},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
+  using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
@@ -98,8 +101,10 @@ LLVM_LIBC_FUNCTION(float16, tanhf16, (float16 x)) {
     return fputil::cast<float16>(-0x1.ffcp-1);
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = TANHF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // For atanh(-1 + 2^(-11)) < x < atanh(1 - 2^(-11)), to compute tanh(x), we
   // perform the following range reduction: find hi, mid, lo, such that:

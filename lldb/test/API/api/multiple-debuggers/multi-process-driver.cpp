@@ -13,10 +13,11 @@
 // that are hit when lldb is being used to debug multiple processes
 // simultaneously.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
+#include <unistd.h>
 
 #include "lldb/API/LLDB.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -296,6 +297,9 @@ int main (int argc, char **argv)
                  NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
     }
 
-    SBDebugger::Terminate();
-    exit (1);
+    // We do not call SBDebugger::Terminate() here because it will destroy
+    // data that might be being used by threads that are still running. Which
+    // would change the timeout into an unrelated crash.
+    // _exit instead of exit, to skip more things that could cause a crash.
+    _exit(1);
 }

@@ -1,4 +1,4 @@
-//===--- UnconventionalAssignOperatorCheck.cpp - clang-tidy -----*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,11 +29,13 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
   const auto HasGoodReturnType =
       cxxMethodDecl(returns(hasCanonicalType(lValueReferenceType(pointee(
           unless(isConstQualified()),
-          anyOf(autoType(), hasDeclaration(equalsBoundNode("class"))))))));
+          anyOf(autoType(),
+                hasDeclaration(declaresSameEntityAsBoundNode("class"))))))));
 
   const auto IsSelf = qualType(hasCanonicalType(
-      anyOf(hasDeclaration(equalsBoundNode("class")),
-            referenceType(pointee(hasDeclaration(equalsBoundNode("class")))))));
+      anyOf(hasDeclaration(declaresSameEntityAsBoundNode("class")),
+            referenceType(pointee(
+                hasDeclaration(declaresSameEntityAsBoundNode("class")))))));
   const auto IsAssign =
       cxxMethodDecl(unless(anyOf(isDeleted(), isPrivate(), isImplicit())),
                     hasName("operator="), ofClass(recordDecl().bind("class")))
@@ -66,8 +68,11 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
                                 hasArgument(0, cxxThisExpr())),
             cxxOperatorCallExpr(
                 hasOverloadedOperatorName("="),
-                hasArgument(
-                    0, unaryOperator(hasOperatorName("*"),
+                hasArgument(0, unaryOperator(hasOperatorName("*"),
+                                             hasUnaryOperand(cxxThisExpr())))),
+            binaryOperator(
+                hasOperatorName("="),
+                hasLHS(unaryOperator(hasOperatorName("*"),
                                      hasUnaryOperand(cxxThisExpr())))))))));
   const auto IsGoodAssign = cxxMethodDecl(IsAssign, HasGoodReturnType);
 

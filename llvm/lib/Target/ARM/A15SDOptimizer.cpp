@@ -152,7 +152,7 @@ unsigned A15SDOptimizer::getDPRLaneFromSPR(unsigned SReg) {
 // Get the subreg type that is most likely to be coalesced
 // for an SPR register that will be used in VDUP32d pseudo.
 unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
-  if (!Register(SReg).isVirtual())
+  if (!Register::isVirtualRegister(SReg))
     return getDPRLaneFromSPR(SReg);
 
   MachineInstr *MI = MRI->getVRegDef(SReg);
@@ -166,7 +166,7 @@ unsigned A15SDOptimizer::getPrefSPRLane(unsigned SReg) {
     SReg = MI->getOperand(1).getReg();
   }
 
-  if (Register(SReg).isVirtual()) {
+  if (Register::isVirtualRegister(SReg)) {
     if (MO->getSubReg() == ARM::ssub_1) return ARM::ssub_1;
     return ARM::ssub_0;
   }
@@ -598,7 +598,7 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
     // we can end up with multiple defs of this DPR.
 
     SmallVector<MachineInstr *, 8> DefSrcs;
-    if (!Register(I).isVirtual())
+    if (!Register::isVirtualRegister(I))
       continue;
     MachineInstr *Def = MRI->getVRegDef(I);
     if (!Def)
@@ -617,10 +617,9 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
         continue;
 
       // Collect all the uses of this MI's DPR def for updating later.
-      SmallVector<MachineOperand*, 8> Uses;
       Register DPRDefReg = MI->getOperand(0).getReg();
-      for (MachineOperand &MO : MRI->use_operands(DPRDefReg))
-        Uses.push_back(&MO);
+      SmallVector<MachineOperand *, 8> Uses(
+          llvm::make_pointer_range(MRI->use_operands(DPRDefReg)));
 
       // We can optimize this.
       unsigned NewReg = optimizeSDPattern(MI);

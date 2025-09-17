@@ -275,7 +275,6 @@ void ReachingDefAnalysis::printAllReachingDefs(MachineFunction &MF) {
 
 bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
-  TRI = MF->getSubtarget().getRegisterInfo();
   const TargetSubtargetInfo &STI = MF->getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
@@ -646,7 +645,7 @@ bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
   if (From->getParent() != To->getParent() || From == To)
     return false;
 
-  SmallSet<int, 2> Defs;
+  SmallSet<Register, 2> Defs;
   // First check that From would compute the same value if moved.
   for (auto &MO : From->operands()) {
     if (!isValidReg(MO))

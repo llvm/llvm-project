@@ -1,0 +1,243 @@
+## Check parsing and dumping of SFrame Function Descriptor Entries.
+# RUN: yaml2obj --docnum=1 %s -o %t.1
+# RUN: llvm-readobj --sframe=.sframe_short --sframe=.sframe_section_relative \
+# RUN:   --sframe=.sframe_fde_relative %t.1 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
+# RUN:   -DFILE=%t.1 --check-prefix=CASE1
+
+## Check big-endian support.
+# RUN: yaml2obj --docnum=2 %s -o %t.2
+# RUN: llvm-readobj --sframe %t.2 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines \
+# RUN:   -DFILE=%t.2 --check-prefix=CASE2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+Sections:
+  - Name:  .sframe_short
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x02, 0x00,  # Preamble (magic, version, flags)
+      # Header:
+      0x03, 0x42, 0x47, 0x04,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x01, 0x00, 0x00, 0x00,  # Number of FDEs
+      0x10, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0x10, 0x00, 0x00,  # FRE length
+      0x00, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x01, 0x00, 0x00,  # FRE offset
+      0xde, 0xad, 0xbe, 0xef,  # AUX header
+      0x01, 0x02, 0x03, 0x04,  # Short FDE
+    ]
+# CASE1-LABEL:SFrame section '.sframe_short' {
+#       CASE1:  Header {
+#  CASE1-NEXT:    Magic: 0xDEE2
+#  CASE1-NEXT:    Version: V2 (0x2)
+#  CASE1-NEXT:    Flags [ (0x0)
+#  CASE1-NEXT:    ]
+#  CASE1-NEXT:    ABI: AMD64EndianLittle (0x3)
+#  CASE1-NEXT:    CFA fixed FP offset (unused): 66
+#  CASE1-NEXT:    CFA fixed RA offset: 71
+#  CASE1-NEXT:    Auxiliary header length: 4
+#  CASE1-NEXT:    Num FDEs: 1
+#  CASE1-NEXT:    Num FREs: 16
+#  CASE1-NEXT:    FRE subsection length: 4096
+#  CASE1-NEXT:    FDE subsection offset: 0
+#  CASE1-NEXT:    FRE subsection offset: 256
+#  CASE1-NEXT:    Auxiliary header: [0xDE, 0xAD, 0xBE, 0xEF]
+#  CASE1-NEXT:  }
+#  CASE1-NEXT:{{.*}}: warning: '[[FILE]]': unexpected end of data at offset 0x24 while reading [0x20, 0x34)
+#  CASE1-NEXT:}
+
+  - Name:  .sframe_section_relative
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x02, 0x00,  # Preamble (magic, version, flags)
+      # Header:
+      0x03, 0x42, 0x47, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x01, 0x00, 0x00, 0x00,  # Number of FDEs
+      0x10, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0x10, 0x00, 0x00,  # FRE length
+      0x04, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x01, 0x00, 0x00,  # FRE offset
+
+      0xff, 0xff, 0xff, 0xff,  # Unused data skipped due to the FDE offset field
+
+      # FDE:
+      0x00, 0xde, 0xad, 0x00,  # Start Address
+      0xbe, 0x01, 0x00, 0x00,  # Size
+      0x10, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x00, 0x00, 0x00, 0x00,  # Number of FREs
+      0x31, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+    ]
+## Also testing:
+## - dead space between the header and the FDE subsection.
+## - PCMask FDE types
+## - unused PAuth key handling
+# CASE1-LABEL:SFrame section '.sframe_section_relative' {
+#       CASE1:  Header {
+#  CASE1-NEXT:    Magic: 0xDEE2
+#  CASE1-NEXT:    Version: V2 (0x2)
+#  CASE1-NEXT:    Flags [ (0x0)
+#  CASE1-NEXT:    ]
+#  CASE1-NEXT:    ABI: AMD64EndianLittle (0x3)
+#  CASE1-NEXT:    CFA fixed FP offset (unused): 66
+#  CASE1-NEXT:    CFA fixed RA offset: 71
+#  CASE1-NEXT:    Auxiliary header length: 0
+#  CASE1-NEXT:    Num FDEs: 1
+#  CASE1-NEXT:    Num FREs: 16
+#  CASE1-NEXT:    FRE subsection length: 4096
+#  CASE1-NEXT:    FDE subsection offset: 4
+#  CASE1-NEXT:    FRE subsection offset: 256
+#  CASE1-NEXT:    Auxiliary header: []
+#  CASE1-NEXT:  }
+#  CASE1-NEXT:  Function Index [
+#  CASE1-NEXT:    FuncDescEntry [0] {
+#  CASE1-NEXT:      PC: 0xADDE24
+#  CASE1-NEXT:      Size: 0x1BE
+#  CASE1-NEXT:      Start FRE Offset: 0x10
+#  CASE1-NEXT:      Num FREs: 0
+#  CASE1-NEXT:      Info {
+#  CASE1-NEXT:        FRE Type: Addr2 (0x1)
+#  CASE1-NEXT:        FDE Type: PCMask (0x1)
+#  CASE1-NEXT:        Raw: 0x31
+#  CASE1-NEXT:      }
+#  CASE1-NEXT:      Repetitive block size: 0xDE
+#  CASE1-NEXT:      Padding2: 0xAD
+#  CASE1-NEXT:      FREs [
+#  CASE1-NEXT:      ]
+#  CASE1-NEXT:    }
+#  CASE1-NEXT:  ]
+#  CASE1-NEXT:}
+
+  - Name:  .sframe_fde_relative
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xe2, 0xde, 0x02, 0x04,  # Preamble (magic, version, flags)
+      # Header:
+      0x02, 0x42, 0x47, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x01, 0x00, 0x00, 0x00,  # Number of FDEs
+      0x10, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0x10, 0x00, 0x00,  # FRE length
+      0x04, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x01, 0x00, 0x00,  # FRE offset
+
+      0xff, 0xff, 0xff, 0xff,  # Unused data skipped due to the FDE offset field
+
+      # FDE:
+      0x00, 0xde, 0xad, 0x00,  # Start Address
+      0xbe, 0x01, 0x00, 0x00,  # Size
+      0x10, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x00, 0x00, 0x00, 0x00,  # Number of FREs
+      0x02, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+    ]
+## Also testing:
+## - PCInc FDE type
+## - AArch64 PAuth key handling
+# CASE1-LABEL:SFrame section '.sframe_fde_relative' {
+#       CASE1:  Header {
+#  CASE1-NEXT:    Magic: 0xDEE2
+#  CASE1-NEXT:    Version: V2 (0x2)
+#  CASE1-NEXT:    Flags [ (0x4)
+#  CASE1-NEXT:      FDEFuncStartPCRel (0x4){{ *}}
+#  CASE1-NEXT:    ]
+#  CASE1-NEXT:    ABI: AArch64EndianLittle (0x2)
+#  CASE1-NEXT:    CFA fixed FP offset (unused): 66
+#  CASE1-NEXT:    CFA fixed RA offset (unused): 71
+#  CASE1-NEXT:    Auxiliary header length: 0
+#  CASE1-NEXT:    Num FDEs: 1
+#  CASE1-NEXT:    Num FREs: 16
+#  CASE1-NEXT:    FRE subsection length: 4096
+#  CASE1-NEXT:    FDE subsection offset: 4
+#  CASE1-NEXT:    FRE subsection offset: 256
+#  CASE1-NEXT:    Auxiliary header: []
+#  CASE1-NEXT:  }
+#  CASE1-NEXT:  Function Index [
+#  CASE1-NEXT:    FuncDescEntry [0] {
+#  CASE1-NEXT:      PC: 0xADDE78
+#  CASE1-NEXT:      Size: 0x1BE
+#  CASE1-NEXT:      Start FRE Offset: 0x10
+#  CASE1-NEXT:      Num FREs: 0
+#  CASE1-NEXT:      Info {
+#  CASE1-NEXT:        FRE Type: Addr4 (0x2)
+#  CASE1-NEXT:        FDE Type: PCInc (0x0)
+#  CASE1-NEXT:        PAuth Key: A (0x0)
+#  CASE1-NEXT:        Raw: 0x2
+#  CASE1-NEXT:      }
+#  CASE1-NEXT:      Repetitive block size (unused): 0xDE
+#  CASE1-NEXT:      Padding2: 0xAD
+#  CASE1-NEXT:      FREs [
+#  CASE1-NEXT:      ]
+#  CASE1-NEXT:    }
+#  CASE1-NEXT:  ]
+#  CASE1-NEXT:}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2MSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .sframe
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xde, 0xe2, 0x02, 0x05,  # Preamble (magic, version, flags)
+      # Header:
+      0x01, 0x42, 0x47, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x00, 0x00, 0x00, 0x01,  # Number of FDEs
+      0x00, 0x00, 0x00, 0x10,  # Number of FREs
+      0x00, 0x00, 0x10, 0x00,  # FRE length
+      0x00, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x00, 0x01, 0x00,  # FRE offset
+
+      # FDE:
+      0x00, 0xde, 0xad, 0x00,  # Start Address
+      0x00, 0x00, 0x01, 0xbe,  # Size
+      0x00, 0x00, 0x00, 0x10,  # Start FRE Offset
+      0x00, 0x00, 0x00, 0x00,  # Number of FREs
+      0x02, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+    ]
+# CASE2-LABEL:SFrame section '.sframe' {
+#       CASE2:  Header {
+#  CASE2-NEXT:    Magic: 0xDEE2
+#  CASE2-NEXT:    Version: V2 (0x2)
+#  CASE2-NEXT:    Flags [ (0x5)
+#  CASE2-NEXT:      FDEFuncStartPCRel (0x4){{ *}}
+#  CASE2-NEXT:      FDESorted (0x1){{ *}}
+#  CASE2-NEXT:    ]
+#  CASE2-NEXT:    ABI: AArch64EndianBig (0x1)
+#  CASE2-NEXT:    CFA fixed FP offset (unused): 66
+#  CASE2-NEXT:    CFA fixed RA offset (unused): 71
+#  CASE2-NEXT:    Auxiliary header length: 0
+#  CASE2-NEXT:    Num FDEs: 1
+#  CASE2-NEXT:    Num FREs: 16
+#  CASE2-NEXT:    FRE subsection length: 4096
+#  CASE2-NEXT:    FDE subsection offset: 0
+#  CASE2-NEXT:    FRE subsection offset: 256
+#  CASE2-NEXT:    Auxiliary header: []
+#  CASE2-NEXT:  }
+#  CASE2-NEXT:  Function Index [
+#  CASE2-NEXT:    FuncDescEntry [0] {
+#  CASE2-NEXT:      PC: 0xDEAD1C
+#  CASE2-NEXT:      Size: 0x1BE
+#  CASE2-NEXT:      Start FRE Offset: 0x10
+#  CASE2-NEXT:      Num FREs: 0
+#  CASE2-NEXT:      Info {
+#  CASE2-NEXT:        FRE Type: Addr4 (0x2)
+#  CASE2-NEXT:        FDE Type: PCInc (0x0)
+#  CASE2-NEXT:        PAuth Key: A (0x0)
+#  CASE2-NEXT:        Raw: 0x2
+#  CASE2-NEXT:      }
+#  CASE2-NEXT:      Repetitive block size (unused): 0xDE
+#  CASE2-NEXT:      Padding2: 0xAD00
+#  CASE2-NEXT:      FREs [
+#  CASE2-NEXT:      ]
+#  CASE2-NEXT:    }
+#  CASE2-NEXT:  ]
+#  CASE2-NEXT:}

@@ -50,7 +50,7 @@ entry:
   br label %loop
 
 loop:
-  call void @llvm.lifetime.start(i64 8, ptr %stackvar0)
+  call void @llvm.lifetime.start(ptr %stackvar0)
 
   store i64 1234, ptr %stackvar0
 
@@ -58,7 +58,7 @@ loop:
   ; %stackvar1 and rely on it staying the same across suspension.
   call void @bar()
 
-  call void @llvm.lifetime.end(i64 8, ptr %stackvar0)
+  call void @llvm.lifetime.end(ptr %stackvar0)
 
   %save = call token @llvm.coro.save(ptr null)
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
@@ -81,5 +81,5 @@ declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 declare i1 @llvm.coro.end(ptr, i1, token)
-declare void @llvm.lifetime.start(i64, ptr nocapture)
-declare void @llvm.lifetime.end(i64, ptr nocapture)
+declare void @llvm.lifetime.start(ptr nocapture)
+declare void @llvm.lifetime.end(ptr nocapture)

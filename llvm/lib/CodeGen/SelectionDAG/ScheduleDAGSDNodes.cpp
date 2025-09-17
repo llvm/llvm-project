@@ -112,7 +112,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
                                       const TargetLowering &TLI,
-                                      unsigned &PhysReg, int &Cost) {
+                                      MCRegister &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
@@ -133,7 +133,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
       PhysReg = Reg;
   }
 
-  if (PhysReg != 0) {
+  if (PhysReg) {
     const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
     Cost = RC->getCopyCost();
@@ -487,20 +487,19 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         assert(OpVT != MVT::Glue && "Glued nodes should be in same sunit!");
         bool isChain = OpVT == MVT::Other;
 
-        unsigned PhysReg = 0;
+        MCRegister PhysReg;
         int Cost = 1;
         // Determine if this is a physical register dependency.
         const TargetLowering &TLI = DAG->getTargetLoweringInfo();
         CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
-        assert((PhysReg == 0 || !isChain) &&
-               "Chain dependence via physreg data?");
+        assert((!PhysReg || !isChain) && "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler
         // emits a copy from the physical register to a virtual register unless
         // it requires a cross class copy (cost < 0). That means we are only
         // treating "expensive to copy" register dependency as physical register
         // dependency. This may change in the future though.
         if (Cost >= 0 && !StressSched)
-          PhysReg = 0;
+          PhysReg = MCRegister();
 
         // If this is a ctrl dep, latency is 1.
         unsigned OpLatency = isChain ? 1 : OpSU->Latency;
@@ -889,7 +888,8 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForAdditionalCallInfo()) {
-      if (DAG->getTarget().Options.EmitCallSiteInfo)
+      if (DAG->getTarget().Options.EmitCallSiteInfo ||
+          DAG->getTarget().Options.EmitCallGraphSection)
         MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
 
       if (auto CalledGlobal = DAG->getCalledGlobal(Node))

@@ -37,8 +37,8 @@ static cl::opt<unsigned>
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
-SparcInstrInfo::SparcInstrInfo(SparcSubtarget &ST)
-    : SparcGenInstrInfo(SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(),
+SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
+    : SparcGenInstrInfo(ST, SP::ADJCALLSTACKDOWN, SP::ADJCALLSTACKUP), RI(ST),
       Subtarget(ST) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
@@ -435,8 +435,8 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
 
 void SparcInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned numSubRegs = 0;
   unsigned movOpc     = 0;
@@ -643,7 +643,7 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::LOAD_STACK_GUARD: {
-    assert(Subtarget.isTargetLinux() &&
+    assert(Subtarget.getTargetTriple().isOSLinux() &&
            "Only Linux target is expected to contain LOAD_STACK_GUARD");
     // offsetof(tcbhead_t, stack_guard) from sysdeps/sparc/nptl/tls.h in glibc.
     const int64_t Offset = Subtarget.is64Bit() ? 0x28 : 0x14;

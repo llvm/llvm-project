@@ -33,12 +33,12 @@ namespace test2 {
 
 namespace PR6063 {
   template <typename T> void f(T, T);
-  
-  namespace detail 
+
+  namespace detail
   {
     using PR6063::f;
   }
-  
+
   template <typename T>
   void g(T a, T b)
   {
@@ -51,7 +51,7 @@ namespace PR12291 {
   class Outer2 {
     template <typename V>
     template <typename W>
-    class Outer2<V>::Inner; // expected-error{{nested name specifier 'Outer2<V>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    class Outer2<V>::Inner; // expected-error{{nested name specifier 'Outer2<V>' for declaration does not refer into a class, class template or class template partial specialization}}
                             // expected-error@-1{{forward declaration of class cannot have a nested name specifier}}
   };
 }

@@ -177,7 +177,7 @@ lldb_private::Status SelectHelper::Select() {
 #endif
   // Set the FD bits in the fdsets for read/write/error
   for (auto &pair : m_fd_map) {
-    const lldb::socket_t fd = pair.first;
+    lldb::socket_t fd = pair.first;
 
     if (pair.second.read_set)
       FD_SET(fd, read_fdset_ptr);

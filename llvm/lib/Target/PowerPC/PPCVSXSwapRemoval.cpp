@@ -110,9 +110,7 @@ struct PPCVSXSwapRemoval : public MachineFunctionPass {
   // Swap entries are represented by their VSEId fields.
   EquivalenceClasses<int> *EC;
 
-  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {
-    initializePPCVSXSwapRemovalPass(*PassRegistry::getPassRegistry());
-  }
+  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize data structures.
@@ -157,7 +155,7 @@ private:
 
   // Return true iff the given register is in the given class.
   bool isRegInClass(unsigned Reg, const TargetRegisterClass *RC) {
-    if (Register(Reg).isVirtual())
+    if (Register::isVirtualRegister(Reg))
       return RC->hasSubClassEq(MRI->getRegClass(Reg));
     return RC->contains(Reg);
   }
@@ -211,6 +209,7 @@ public:
     return Changed;
   }
 };
+} // end anonymous namespace
 
 // Initialize data structures for this pass.  In particular, clear the
 // swap vector and allocate the equivalence class mapping before
@@ -560,7 +559,7 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
   if (!MI->isCopyLike())
     return SrcReg;
 
-  Register CopySrcReg;
+  unsigned CopySrcReg;
   if (MI->isCopy())
     CopySrcReg = MI->getOperand(1).getReg();
   else {
@@ -568,7 +567,7 @@ unsigned PPCVSXSwapRemoval::lookThruCopyLike(unsigned SrcReg,
     CopySrcReg = MI->getOperand(2).getReg();
   }
 
-  if (!CopySrcReg.isVirtual()) {
+  if (!Register::isVirtualRegister(CopySrcReg)) {
     if (!isScalarVecReg(CopySrcReg))
       SwapVector[VecIdx].MentionsPhysVR = 1;
     return CopySrcReg;
@@ -1060,8 +1059,6 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
   dbgs() << "\n";
 }
 #endif
-
-} // end default namespace
 
 INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
                       "PowerPC VSX Swap Removal", false, false)

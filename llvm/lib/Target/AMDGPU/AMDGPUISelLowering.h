@@ -97,9 +97,15 @@ protected:
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
+                            SelectionDAG &DAG) const;
+
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
+  /// Check whether value Val can be supported by v_mov_b64, for the current
+  /// target.
+  bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -209,15 +215,14 @@ public:
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 
-  MVT getVectorIdxTy(const DataLayout &) const override;
+  unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
-  bool shouldReduceLoadWidth(SDNode *Load,
-                             ISD::LoadExtType ExtType,
-                             EVT ExtVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
@@ -315,15 +320,20 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+  unsigned computeNumSignBitsForTargetInstr(GISelValueTracking &Analysis,
                                             Register R,
                                             const APInt &DemandedElts,
                                             const MachineRegisterInfo &MRI,
                                             unsigned Depth = 0) const override;
 
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
+
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
 
   bool isReassocProfitable(MachineRegisterInfo &MRI, Register N0,
@@ -387,6 +397,16 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    // FIXME: This is only partially true. If we have to do vector compares, any
+    // SGPR pair can be a condition register. If we have a uniform condition, we
+    // are better off doing SALU operations, where there is only one SCC. For
+    // now, we don't have a way of knowing during instruction selection if a
+    // condition will be uniform and we always use vector compares. Assume we
+    // are using vector compares until that is fixed.
+    return true;
+  }
 };
 
 namespace AMDGPUISD {
@@ -401,7 +421,9 @@ enum NodeType : unsigned {
   CALL,
   TC_RETURN,
   TC_RETURN_GFX,
+  TC_RETURN_GFX_WholeWave,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.
@@ -543,6 +565,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
+  PC_ADD_REL_OFFSET64,
   LDS,
 
   DUMMY_CHAIN,
@@ -605,6 +628,12 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
   LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
+
+  // Set up a whole wave function.
+  WHOLE_WAVE_SETUP,
+
+  // Return from a whole wave function.
+  WHOLE_WAVE_RETURN,
 };
 
 } // End namespace AMDGPUISD

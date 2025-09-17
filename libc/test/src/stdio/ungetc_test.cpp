@@ -17,7 +17,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcUngetcTest, UngetAndReadBack) {
-  constexpr char FILENAME[] = "testdata/ungetc_test.test";
+  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/ungetc_test.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char CONTENT[] = "abcdef";

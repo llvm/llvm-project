@@ -144,9 +144,8 @@ entry:
 define <2 x i64> @test_none(<2 x i64> %m) {
 ; CHECK-P9-LABEL: test_none:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; CHECK-P9-NEXT:    addi 3, 3, .LCPI5_0@toc@l
-; CHECK-P9-NEXT:    lxv 35, 0(3)
+; CHECK-P9-NEXT:    xxspltib 35, 16
+; CHECK-P9-NEXT:    vextsb2d 3, 3
 ; CHECK-P9-NEXT:    vsld 2, 2, 3
 ; CHECK-P9-NEXT:    vsrad 2, 2, 3
 ; CHECK-P9-NEXT:    blr

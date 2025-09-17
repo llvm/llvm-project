@@ -4,7 +4,8 @@
 REQUIRES: windows
 RUN: %cpp_compiler %S/UncaughtException.cpp -o %t-UncaughtException
 
+# Clang will fail the test with 'deadly signal', but other compilers may fail with different error messages.
+# For example, msvc fails with 'uncaught C++ exception'. So the error we check depends on the compiler target.
 RUN: not %run %t-UncaughtException 2>&1 | FileCheck %s
 
-CHECK: ERROR: libFuzzer: deadly signal
-CHECK: Test unit written to ./crash
+CHECK: ERROR: libFuzzer: {{deadly signal|uncaught C\+\+ exception}}

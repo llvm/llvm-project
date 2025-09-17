@@ -63,9 +63,9 @@ struct PrintingPolicy {
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
         SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
-        SuppressElaboration(false), SuppressInitializers(false),
-        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
-        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
+        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
+        AnonymousTagLocations(true), SuppressStrongLifetime(false),
+        SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
@@ -76,7 +76,7 @@ struct PrintingPolicy {
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
-        PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
+        PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
@@ -144,16 +144,11 @@ struct PrintingPolicy {
 
   /// Suppress printing parts of scope specifiers that correspond
   /// to inline namespaces.
-  /// If Redudant, where the name is unambiguous with the specifier removed.
+  /// If Redundant, where the name is unambiguous with the specifier removed.
   /// If All, even if the name is ambiguous with the specifier
   /// removed.
   LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
   unsigned SuppressInlineNamespace : 2;
-
-  /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
-  /// instead letting the underlying type print as normal.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressElaboration : 1;
 
   /// Suppress printing of variable initializers.
   ///
@@ -310,9 +305,9 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned FullyQualifiedName : 1;
 
-  /// Whether to print types as written or canonically.
+  /// Whether to print entities as written or canonically.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned PrintCanonicalTypes : 1;
+  unsigned PrintAsCanonical : 1;
 
   /// Whether to print an InjectedClassNameType with template arguments or as
   /// written. When a template argument is unnamed, printing it results in

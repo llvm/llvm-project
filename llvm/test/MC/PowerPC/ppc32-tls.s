@@ -16,7 +16,7 @@ bl __tls_get_addr(d@tlsld)@PLT+32768
 bl __tls_get_addr+32768(e@tlsld)@plt  # gcc -fPIC
 
 ## These are not present in the wild, but just to test we can parse them.
-# ASM: bl __tls_get_addr(f@tlsld)@PLT+1+(-2)
+# ASM: bl __tls_get_addr(f@tlsld)@PLT+1+-2
 bl __tls_get_addr+1(f@tlsld)@PLT+-2
 # ASM: bl __tls_get_addr(g@tlsld)@PLT+1+(y-x)
 x:

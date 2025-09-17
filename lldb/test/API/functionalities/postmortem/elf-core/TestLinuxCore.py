@@ -696,6 +696,43 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+    @skipIfLLVMTargetMissing("ARM")
+    def test_arm_core_vfp(self):
+        # check reading VFP registers
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-arm-vfp.core")
+
+        values = {
+            "d0": "0.5",
+            "d1": "1.5",
+            "d14": "14.5",
+            "d15": "15.5",
+            "s4": "4.5",
+            "s5": "5.5",
+            "s6": "6.5",
+            "s7": "7.5",
+            "fpscr": "0x20000000",
+            # s0 and s1 overlap d0, s2 and s3 overlap d1 and so on. Therefore,
+            # the following values are not as neat as those in the explicitly
+            # set registers.
+            "s0": "0",
+            "s1": "1.75",
+            "s2": "0",
+            "s3": "1.9375",
+            "s28": "0",
+            "s29": "2.703125",
+            "s30": "0",
+            "s31": "2.734375",
+        }
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        self.expect("register read --all")
+
     @skipIfLLVMTargetMissing("RISCV")
     def test_riscv64_regs_gpr_fpr(self):
         # check basic registers using 64 bit RISC-V core file
@@ -866,41 +903,42 @@ class LinuxCoreTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
         process = target.LoadCore("linux-loongarch64.core")
 
-        values = {}
-        values["r0"] = "0x0000000000000000"
-        values["r1"] = "0x000000012000016c"
-        values["r2"] = "0x0000000000000000"
-        values["r3"] = "0x00007ffffb8249e0"
-        values["r4"] = "0x0000000000000000"
-        values["r5"] = "0x000000012000010c"
-        values["r6"] = "0x0000000000000000"
-        values["r7"] = "0x0000000000000000"
-        values["r8"] = "0x0000000000000000"
-        values["r9"] = "0x0000000000000000"
-        values["r10"] = "0x0000000000000000"
-        values["r11"] = "0x00000000000000dd"
-        values["r12"] = "0x0000000000000000"
-        values["r13"] = "0x000000000000002f"
-        values["r14"] = "0x0000000000000000"
-        values["r15"] = "0x0000000000000000"
-        values["r16"] = "0x0000000000000000"
-        values["r17"] = "0x0000000000000000"
-        values["r18"] = "0x0000000000000000"
-        values["r19"] = "0x0000000000000000"
-        values["r20"] = "0x0000000000000000"
-        values["r21"] = "0x0000000000000000"
-        values["r22"] = "0x00007ffffb824a10"
-        values["r23"] = "0x0000000000000000"
-        values["r24"] = "0x0000000000000000"
-        values["r25"] = "0x0000000000000000"
-        values["r26"] = "0x0000000000000000"
-        values["r27"] = "0x0000000000000000"
-        values["r28"] = "0x0000000000000000"
-        values["r29"] = "0x0000000000000000"
-        values["r30"] = "0x0000000000000000"
-        values["r31"] = "0x0000000000000000"
-        values["orig_a0"] = "0x0000555556b62d50"
-        values["pc"] = "0x000000012000012c"
+        values = {
+            "r0": ("0x0000000000000000", "zero"),
+            "r1": ("0x000000012000016c", "ra"),
+            "r2": ("0x0000000000000000", "tp"),
+            "r3": ("0x00007ffffb8249e0", "sp"),
+            "r4": ("0x0000000000000000", "a0"),
+            "r5": ("0x000000012000010c", "a1"),
+            "r6": ("0x0000000000000000", "a2"),
+            "r7": ("0x0000000000000000", "a3"),
+            "r8": ("0x0000000000000000", "a4"),
+            "r9": ("0x0000000000000000", "a5"),
+            "r10": ("0x0000000000000000", "a6"),
+            "r11": ("0x00000000000000dd", "a7"),
+            "r12": ("0x0000000000000000", "t0"),
+            "r13": ("0x000000000000002f", "t1"),
+            "r14": ("0x0000000000000000", "t2"),
+            "r15": ("0x0000000000000000", "t3"),
+            "r16": ("0x0000000000000000", "t4"),
+            "r17": ("0x0000000000000000", "t5"),
+            "r18": ("0x0000000000000000", "t6"),
+            "r19": ("0x0000000000000000", "t7"),
+            "r20": ("0x0000000000000000", "t8"),
+            "r21": ("0x0000000000000000", None),
+            "r22": ("0x00007ffffb824a10", "fp"),
+            "r23": ("0x0000000000000000", "s0"),
+            "r24": ("0x0000000000000000", "s1"),
+            "r25": ("0x0000000000000000", "s2"),
+            "r26": ("0x0000000000000000", "s3"),
+            "r27": ("0x0000000000000000", "s4"),
+            "r28": ("0x0000000000000000", "s5"),
+            "r29": ("0x0000000000000000", "s6"),
+            "r30": ("0x0000000000000000", "s7"),
+            "r31": ("0x0000000000000000", "s8"),
+            "orig_a0": ("0x0000555556b62d50", None),
+            "pc": ("0x000000012000012c", None),
+        }
 
         fpr_values = {}
         fpr_values["f0"] = "0x00000000ffffff05"
@@ -945,11 +983,17 @@ class LinuxCoreTestCase(TestBase):
         fpr_values["fcc7"] = "0x01"
         fpr_values["fcsr"] = "0x00000000"
 
-        for regname, value in values.items():
+        for regname in values:
+            value, alias = values[regname]
             self.expect(
                 "register read {}".format(regname),
                 substrs=["{} = {}".format(regname, value)],
             )
+            if alias:
+                self.expect(
+                    "register read {}".format(alias),
+                    substrs=["{} = {}".format(regname, value)],
+                )
 
         for regname, value in fpr_values.items():
             self.expect(
@@ -969,6 +1013,34 @@ class LinuxCoreTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
         self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_read_only_cstring(self):
+        """
+        Test that we can show the summary for a cstring variable that points
+        to a read-only memory page which is not dumped to a core file.
+        """
+        target = self.dbg.CreateTarget("altmain2.out")
+        process = target.LoadCore("altmain2.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertEqual(frame.GetFunctionName(), "_start")
+
+        var = frame.FindVariable("F")
+
+        # The variable points to a read-only segment that is not dumped to
+        # the core file and thus 'process.ReadCStringFromMemory()' cannot get
+        # the value.
+        error = lldb.SBError()
+        cstr = process.ReadCStringFromMemory(var.GetValueAsUnsigned(), 256, error)
+        self.assertFailure(error, error_str="core file does not contain 0x804a000")
+        self.assertEqual(cstr, "")
+
+        # Nevertheless, when getting the summary, the value can be read from the
+        # application binary.
+        cstr = var.GetSummary()
+        self.assertEqual(cstr, '"_start"')
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

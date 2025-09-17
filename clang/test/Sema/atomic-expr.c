@@ -114,6 +114,23 @@ void func_16(void) {
   (void)sizeof(xp->val);
   (void)sizeof(y.ival);
   (void)sizeof(yp->ival);
+
+  // Also, do not diagnose in unreachable code paths.
+  {
+    if (0) {
+      x.val = 12;
+      xp->val = 12;
+      (void)y.ival;
+      (void)yp->ival;
+    }
+
+    return;
+
+    x.val = 12;
+    xp->val = 12;
+    (void)y.ival;
+    (void)yp->ival;
+  }
 }
 
 // Ensure that we correctly implement assignment constraints from C2x 6.5.16.1.
@@ -142,7 +159,7 @@ void func_17(void) {
   _Atomic(const int *) acip = cip;
   _Atomic(const int *) bad_acip = vcip; // expected-warning {{initializing '_Atomic(const int *)' with an expression of type 'const volatile int *' discards qualifiers}}
   _Atomic(const int *) acip2 = cicp;
-  _Atomic(int *) aip = &i; // expected-warning {{incompatible pointer types initializing '_Atomic(int *)' with an expression of type '_Atomic(int) *'}} \
+  _Atomic(int *) aip = &i; // expected-error {{incompatible pointer types initializing '_Atomic(int *)' with an expression of type '_Atomic(int) *'}} \
 
   // the left operand has atomic ... pointer type, and (considering the type
   // the left operand would have after lvalue conversion) one operand is a
@@ -203,7 +220,7 @@ _Atomic(const int *) acip2 = cvp; // expected-error {{initializer element is not
 // initializer, but the bit-cast inserted due to the pointer conversion is
 // tripping up the test for whether the initializer is a constant expression.
 // The warning is correct but the error is not.
-_Atomic(int *) aip3 = &ai; /* expected-warning {{incompatible pointer types initializing '_Atomic(int *)' with an expression of type '_Atomic(int) *'}}
+_Atomic(int *) aip3 = &ai; /* expected-error {{incompatible pointer types initializing '_Atomic(int *)' with an expression of type '_Atomic(int) *'}}
                               expected-error {{initializer element is not a compile-time constant}}
                             */
 

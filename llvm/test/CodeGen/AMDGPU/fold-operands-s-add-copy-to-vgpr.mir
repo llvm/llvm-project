@@ -394,8 +394,10 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_s_or_b32__mov_fi_const_copy_to_virt_vgpr
-    ; CHECK: [[V_OR_B32_e32_:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 128, %stack.0, implicit $exec
-    ; CHECK-NEXT: SI_RETURN implicit [[V_OR_B32_e32_]]
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
+    ; CHECK-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_MOV_B32_]], 128, implicit-def dead $scc
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
+    ; CHECK-NEXT: SI_RETURN implicit [[COPY]]
     %0:sreg_32 = S_MOV_B32 %stack.0
     %1:sreg_32 = S_OR_B32 %0, 128, implicit-def dead $scc
     %2:vgpr_32 = COPY %1
@@ -410,8 +412,10 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_s_or_b32__const_copy_mov_fi_to_virt_vgpr
-    ; CHECK: [[V_OR_B32_e32_:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 128, %stack.0, implicit $exec
-    ; CHECK-NEXT: SI_RETURN implicit [[V_OR_B32_e32_]]
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
+    ; CHECK-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 128, [[S_MOV_B32_]], implicit-def dead $scc
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
+    ; CHECK-NEXT: SI_RETURN implicit [[COPY]]
     %0:sreg_32 = S_MOV_B32 %stack.0
     %1:sreg_32 = S_OR_B32 128, %0, implicit-def dead $scc
     %2:vgpr_32 = COPY %1
@@ -426,8 +430,8 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_s_or_b32__fi_imm_copy_to_virt_vgpr
-    ; CHECK: %1:vgpr_32 = disjoint V_OR_B32_e64 64, %stack.0, implicit $exec
-    ; CHECK-NEXT: SI_RETURN implicit %1
+    ; CHECK: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = disjoint V_OR_B32_e64 64, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_OR_B32_e64_]]
     %0:sreg_32 = disjoint S_OR_B32 %stack.0, 64, implicit-def dead $scc
     %1:vgpr_32 = COPY %0
     SI_RETURN implicit %1
@@ -441,8 +445,8 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_s_or_b32__imm_fi_copy_to_virt_vgpr
-    ; CHECK: %1:vgpr_32 = disjoint V_OR_B32_e64 64, %stack.0, implicit $exec
-    ; CHECK-NEXT: SI_RETURN implicit %1
+    ; CHECK: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = disjoint V_OR_B32_e64 64, %stack.0, implicit $exec
+    ; CHECK-NEXT: SI_RETURN implicit [[V_OR_B32_e64_]]
     %0:sreg_32 = disjoint S_OR_B32 64, %stack.0, implicit-def dead $scc
     %1:vgpr_32 = COPY %0
     SI_RETURN implicit %1
@@ -521,8 +525,10 @@ stack:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_s_and_b32__mov_fi_const_copy_to_virt_vgpr
-    ; CHECK: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 128, %stack.0, implicit $exec
-    ; CHECK-NEXT: SI_RETURN implicit [[V_AND_B32_e32_]]
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
+    ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_MOV_B32_]], 128, implicit-def dead $scc
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
+    ; CHECK-NEXT: SI_RETURN implicit [[COPY]]
     %0:sreg_32 = S_MOV_B32 %stack.0
     %1:sreg_32 = S_AND_B32 %0, 128, implicit-def dead $scc
     %2:vgpr_32 = COPY %1
@@ -552,8 +558,8 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]].sub0, implicit $exec
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]].sub1, implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]].sub1, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
   ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE]], [[COPY]], implicit $exec
   ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[V_CMP_EQ_U64_e64_]], implicit-def $exec, implicit-def $scc, implicit $exec
@@ -576,8 +582,8 @@ body:             |
     %3:sreg_64_xexec = S_MOV_B64 $exec
 
   bb.1:
-    %4:sgpr_32 = V_READFIRSTLANE_B32 %0.sub0, implicit $exec
-    %5:sgpr_32 = V_READFIRSTLANE_B32 %0.sub1, implicit $exec
+    %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %0.sub0, implicit $exec
+    %5:sreg_32_xm0 = V_READFIRSTLANE_B32 %0.sub1, implicit $exec
     %6:sgpr_64 = REG_SEQUENCE %4, %subreg.sub0, %5, %subreg.sub1
     %7:sreg_64_xexec = V_CMP_EQ_U64_e64 %6, %0, implicit $exec
     %8:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed %7, implicit-def $exec, implicit-def $scc, implicit $exec

@@ -376,7 +376,7 @@ define i1 @test8(ptr %in, i64 %offset) {
 ; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[IN:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[LD]] to i32
 ; CHECK-NEXT:    [[CASTI8:%.*]] = inttoptr i32 [[TMP0]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[OFFSET:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[OFFSET:%.*]] to i32
 ; CHECK-NEXT:    [[GEPI8:%.*]] = getelementptr inbounds i8, ptr [[CASTI8]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[LD]] to i32
 ; CHECK-NEXT:    [[PTRCAST:%.*]] = inttoptr i32 [[TMP2]] to ptr

@@ -697,7 +697,7 @@ class TargetRegisterClass;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
@@ -706,7 +706,12 @@ class TargetRegisterClass;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+    bool isLegalAddImmediate(int64_t Imm) const override;
+
     unsigned getJumpTableEncoding() const override;
+    SDValue getPICJumpTableRelocBase(SDValue Table,
+                                     SelectionDAG &DAG) const override;
     bool useSoftFloat() const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {

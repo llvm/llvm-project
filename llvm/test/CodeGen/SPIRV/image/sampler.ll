@@ -6,7 +6,7 @@
 ; CHECK-DAG: %[[#ptrv4i32:]] = OpTypePointer CrossWorkgroup %[[#v4i32]]
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#typesampled:]] = OpTypeSampledImage
-; CHECK-DAG: %[[#const0:]] = OpConstant %[[#float]] 0
+; CHECK-DAG: %[[#const0:]] = OpConstantNull %[[#float]]
 ; CHECK: OpFunction
 ; CHECK: OpFunctionParameter
 ; CHECK: %[[#arg1:]] = OpFunctionParameter

@@ -1,21 +1,14 @@
 ; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK-FINAL --input-file=%t %s --implicit-check-not=#dbg_value
 
-; RUN: opt < %s -S --write-experimental-debuginfo=false > %t.intrinsics.ll
-; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=INTRINSIC-INTERESTINGNESS --test-arg %s --test-arg --input-file %t.intrinsics.ll -o %t
-; RUN: FileCheck --check-prefixes=INTRINSIC-FINAL --input-file=%t %s --implicit-check-not=#dbg_value
-
 ; Test that we can, in RemoveDIs mode / DbgVariableRecords mode (where variable location
 ; information isn't an instruction), remove one variable location assignment
 ; but not another.
 
 ; CHECK-INTERESTINGNESS:     #dbg_value(i32 %added,
-; INTRINSIC-INTERESTINGNESS: llvm.dbg.value(metadata i32 %added,
 
 ; CHECK-FINAL:      %added = add
 ; CHECK-FINAL-NEXT: #dbg_value(i32 %added,
-; INTRINSIC-FINAL:      %added = add
-; INTRINSIC-FINAL-NEXT: llvm.dbg.value(metadata i32 %added,
 
 define i32 @main() !dbg !7 {
 entry:

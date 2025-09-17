@@ -49,6 +49,10 @@
 #error "wrong value for __cpp_placeholder_variables"
 #endif
 
+#if check(trivial_relocatability, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
+#error "wrong value for __cpp_trivial_relocatability"
+#endif
+
 // --- C++23 features ---
 
 #if check(auto_cast, 0, 0, 0, 0, 0, 202110, 202110)
@@ -314,7 +318,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
+#if check(constexpr, 0, 200704, 201304, 201603, 202002, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 

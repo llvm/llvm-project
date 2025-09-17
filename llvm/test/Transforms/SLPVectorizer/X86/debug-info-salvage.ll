@@ -7,7 +7,7 @@ define void @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[COND_END_I:.*]]
 ; CHECK:       [[COND_END_I]]:
-; CHECK-NEXT:      #dbg_value(!DIArgList(i32 0, i32 undef), [[META3:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_or, DW_OP_stack_value), [[META5:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(!DIArgList(i32 0, i32 poison), [[META3:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_or, DW_OP_stack_value), [[META5:![0-9]+]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> zeroinitializer, <2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> zeroinitializer, <2 x i32> zeroinitializer, <2 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], <i32 0, i32 16>

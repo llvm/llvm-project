@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-SDAG
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -global-isel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-GISEL
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-SDAG
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -global-isel < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-GISEL
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
 declare i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 %clamp)
 declare i32 @llvm.amdgcn.workitem.id.x()
@@ -58,7 +58,7 @@ entry:
   %b.val = load <2 x i16>, ptr addrspace(1) %b.gep
   %b.elt0 = extractelement <2 x i16> %b.val, i32 0
   %b.elt1 = extractelement <2 x i16> %b.val, i32 1
-  %b0 = insertelement <2 x i16> undef, i16 %b.elt1, i32 0
+  %b0 = insertelement <2 x i16> poison, i16 %b.elt1, i32 0
   %b1 = insertelement <2 x i16> %b0, i16 %b.elt0, i32 1
   %r.val = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 1, i16 1>, <2 x i16> %b1, i32 %c, i1 0)
   store i32 %r.val, ptr addrspace(1) %r

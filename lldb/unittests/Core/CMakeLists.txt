@@ -1,8 +1,6 @@
-if (LLVM_BUILD_TELEMETRY)
-  set(TELEMETRY_DEPS Telemetry)
-endif()
 
 add_lldb_unittest(LLDBCoreTests
+  DebuggerTest.cpp
   CommunicationTest.cpp
   DiagnosticEventTest.cpp
   DumpDataExtractorTest.cpp
@@ -10,16 +8,22 @@ add_lldb_unittest(LLDBCoreTests
   FormatEntityTest.cpp
   MangledTest.cpp
   ModuleSpecTest.cpp
+  PluginManagerTest.cpp
   ProgressReportTest.cpp
   RichManglingContextTest.cpp
   SourceLocationSpecTest.cpp
   SourceManagerTest.cpp
   TelemetryTest.cpp
   UniqueCStringMapTest.cpp
+  Value.cpp
 
+  LINK_COMPONENTS
+    Support
+    Telemetry
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
     lldbPluginObjectFilePECOFF
@@ -29,7 +33,4 @@ add_lldb_unittest(LLDBCoreTests
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
-    ${TELEMETRY_DEPS}
   )
