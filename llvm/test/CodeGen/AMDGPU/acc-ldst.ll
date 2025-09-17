@@ -9,8 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-COUNT-8: global_load_dwordx4 a[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:     v_accvgpr_write
 ; GCN:         v_mfma_f32_32x32x1f32
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 2
 ; GCN-NOT:     v_accvgpr_read
 ; GCN-COUNT-8: global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
@@ -28,8 +27,7 @@ bb:
 ; GCN:      global_load_dword a{{[0-9]+}}, v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:  v_accvgpr_read
 ; GCN:      v_mfma_f32_32x32x1f32 a[[[N:[0-9]+]]:
-; GCN-NEXT: s_nop 7
-; GCN-NEXT: s_nop 7
+; GCN-NEXT: s_nop 15
 ; GCN-NEXT: s_nop 2
 ; GCN-NOT:  v_accvgpr_read
 ; GCN-NEXT: global_store_dword v{{[0-9:]+}}, a[[N]], s[{{[0-9:]+}}]
@@ -80,8 +78,7 @@ bb:
 ; GCN-COUNT-8:  global_load_dwordx4 v[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-COUNT-32: v_accvgpr_write
 ; GCN:          v_mfma_f32_32x32x1f32
-; GCN-NEXT:     s_nop 7
-; GCN-NEXT:     s_nop 7
+; GCN-NEXT:     s_nop 15
 ; GCN-NEXT:     s_nop 2
 ; GCN-NOT:      v_accvgpr_read
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}]

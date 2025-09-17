@@ -1245,21 +1245,21 @@ struct SliceDimInfo {
   OpFoldResult outputSize;
 };
 
-/// Return the first input extract slice operand, if present, for the current
+/// Return all extract slice operands, if present, for the current
 /// generic op.
-static FailureOr<OpOperand *> getSliceOperand(GenericOp genericOp) {
-  OpOperand *sliceOperand = nullptr;
+static FailureOr<SmallVector<OpOperand *>>
+getSliceOperands(GenericOp genericOp) {
+  SmallVector<OpOperand *> sliceOperands;
   for (auto operand : genericOp.getDpsInputOperands()) {
     auto extractOp = operand->get().getDefiningOp<tensor::ExtractSliceOp>();
     if (!extractOp)
       continue;
-    sliceOperand = operand;
-    break;
+    sliceOperands.push_back(operand);
   }
-  if (!sliceOperand) {
+  if (sliceOperands.empty()) {
     return failure();
   }
-  return sliceOperand;
+  return sliceOperands;
 }
 
 // Return a map of dims that have partial slices on them so that other operands
@@ -1336,14 +1336,24 @@ pushDownExtractSliceOpThroughGenericOp(RewriterBase &rewriter,
         genericOp,
         "propagation through generic with gather semantics is unsupported.");
   // Collect the sliced operand, if present.
-  auto maybeSliceOperand = getSliceOperand(genericOp);
-  if (failed(maybeSliceOperand))
+  auto maybeSliceOperands = getSliceOperands(genericOp);
+  if (failed(maybeSliceOperands))
     return failure();
-  OpOperand *sliceOperand = *maybeSliceOperand;
-  unsigned OperandIndex = sliceOperand->getOperandNumber();
+  SmallVector<OpOperand *> sliceOperands = *maybeSliceOperands;
+  OpOperand *sliceOperand;
 
-  if (!controlFn(sliceOperand))
+  bool foundValidOperand = false;
+  for (auto currSliceOperand : sliceOperands) {
+    if (controlFn(currSliceOperand)) {
+      sliceOperand = currSliceOperand;
+      foundValidOperand = true;
+      break;
+    }
+  }
+  if (!foundValidOperand) {
     return failure();
+  }
+  unsigned OperandIndex = sliceOperand->getOperandNumber();
 
   tensor::ExtractSliceOp producerSliceOp =
       sliceOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
