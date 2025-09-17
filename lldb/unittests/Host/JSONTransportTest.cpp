@@ -322,38 +322,38 @@ protected:
 } // namespace
 
 namespace lldb_private {
+
 using namespace test_protocol;
+
 template <>
-inline test_protocol::Req make_request(int id, llvm::StringRef method,
-                                       std::optional<json::Value> params) {
+inline test_protocol::Req MakeRequest(int id, llvm::StringRef method,
+                                      std::optional<json::Value> params) {
   return test_protocol::Req{id, method.str(), params};
 }
-template <> inline Resp make_response(const Req &req, llvm::Error error) {
+template <> inline Resp MakeResponse(const Req &req, llvm::Error error) {
   llvm::consumeError(std::move(error));
   return Resp{req.id, std::nullopt};
 }
-template <> inline Resp make_response(const Req &req, json::Value result) {
+template <> inline Resp MakeResponse(const Req &req, json::Value result) {
   return Resp{req.id, std::move(result)};
 }
 template <>
-inline Evt make_event(llvm::StringRef method,
-                      std::optional<json::Value> params) {
+inline Evt MakeEvent(llvm::StringRef method,
+                     std::optional<json::Value> params) {
   return Evt{method.str(), params};
 }
-
-template <> inline llvm::Expected<json::Value> get_result(const Resp &resp) {
+template <> inline llvm::Expected<json::Value> GetResult(const Resp &resp) {
   return resp.result;
 }
-
-template <> inline int get_id(const Resp &resp) { return resp.id; }
-template <> inline llvm::StringRef get_method(const Req &req) {
+template <> inline int GetId(const Resp &resp) { return resp.id; }
+template <> inline llvm::StringRef GetMethod(const Req &req) {
   return req.name;
 }
-template <> inline llvm::StringRef get_method(const Evt &evt) {
+template <> inline llvm::StringRef GetMethod(const Evt &evt) {
   return evt.name;
 }
-template <> inline json::Value get_params(const Req &req) { return req.params; }
-template <> inline json::Value get_params(const Evt &evt) { return evt.params; }
+template <> inline json::Value GetParams(const Req &req) { return req.params; }
+template <> inline json::Value GetParams(const Evt &evt) { return evt.params; }
 
 } // namespace lldb_private
 

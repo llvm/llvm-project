@@ -173,7 +173,7 @@ public:
   template <typename Result, typename Params>
   Expected<json::Value> Call(StringRef method, const Params &params) {
     std::promise<Response> promised_result;
-    Request req = make_request<int64_t, lldb_protocol::mcp::Request>(
+    Request req = MakeRequest<int64_t, lldb_protocol::mcp::Request>(
         /*id=*/1, method, toJSON(params));
     EXPECT_THAT_ERROR(to_server->Send(req), Succeeded());
     EXPECT_CALL(client, Received(testing::An<const Response &>()))

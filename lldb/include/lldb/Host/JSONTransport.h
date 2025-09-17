@@ -76,37 +76,55 @@ using VoidT = std::monostate;
 
 template <typename T> using Callback = llvm::unique_function<T>;
 
+/// A handler for the response to an outgoing request.
 template <typename T>
 using Reply = typename std::conditional<
-    std::is_same_v<T, VoidT> == true, llvm::unique_function<void(llvm::Error)>,
+    std::is_same_v<T, VoidT> || std::is_void_v<T>,
+    llvm::unique_function<void(llvm::Error)>,
     llvm::unique_function<void(llvm::Expected<T>)>>::type;
 
+/// A function to send an outgoing request and receive a response.
 template <typename Result, typename Params>
 using OutgoingRequest = typename std::conditional<
-    std::is_same_v<Params, VoidT> == true,
+    std::is_same_v<Params, VoidT> || std::is_void_v<Params>,
     llvm::unique_function<void(Reply<Result>)>,
     llvm::unique_function<void(const Params &, Reply<Result>)>>::type;
 
+/// A function to send an outgoing event.
 template <typename Params>
 using OutgoingEvent = typename std::conditional<
-    std::is_same_v<Params, VoidT> == true, llvm::unique_function<void()>,
+    std::is_same_v<Params, VoidT> || std::is_void_v<Params>,
+    llvm::unique_function<void()>,
     llvm::unique_function<void(const Params &)>>::type;
 
+/// Creates a request with the given id, method, and optional params.
 template <typename Id, typename Req>
-Req make_request(Id id, llvm::StringRef method,
-                 std::optional<llvm::json::Value> params = std::nullopt);
+Req MakeRequest(Id, llvm::StringRef, std::optional<llvm::json::Value>);
+
+/// Creates an error response for a given request.
 template <typename Req, typename Resp>
-Resp make_response(const Req &req, llvm::Error error);
+Resp MakeResponse(const Req &, llvm::Error);
+
+/// Creates a success response for a given request.
 template <typename Req, typename Resp>
-Resp make_response(const Req &req, llvm::json::Value result);
+Resp MakeResponse(const Req &, llvm::json::Value);
+
+/// Creates an event.
 template <typename Evt>
-Evt make_event(llvm::StringRef method,
-               std::optional<llvm::json::Value> params = std::nullopt);
+Evt MakeEvent(llvm::StringRef, std::optional<llvm::json::Value>);
+
+/// Extracts the result value from a response.
 template <typename Resp>
-llvm::Expected<llvm::json::Value> get_result(const Resp &resp);
-template <typename Id, typename T> Id get_id(const T &);
-template <typename T> llvm::StringRef get_method(const T &);
-template <typename T> llvm::json::Value get_params(const T &);
+llvm::Expected<llvm::json::Value> GetResult(const Resp &);
+
+/// Extracts the id from a response.
+template <typename Id, typename Resp> Id GetId(const Resp &);
+
+/// Extracts the method from a request or event.
+template <typename T> llvm::StringRef GetMethod(const T &);
+
+/// Extracts the parameters from a request or event.
+template <typename T> llvm::json::Value GetParams(const T &);
 
 /// A transport is responsible for maintaining the connection to a client
 /// application, and reading/writing structured messages to it.
@@ -193,7 +211,7 @@ protected:
     ~ReplyOnce() {
       if (transport && handler && !replied) {
         assert(false && "must reply to all calls!");
-        (*this)(make_response<Req, Resp>(
+        (*this)(MakeResponse<Req, Resp>(
             req, llvm::createStringError("failed to reply")));
       }
     }
@@ -257,9 +275,9 @@ public:
       return std::move(result);
     }
 
-    /// Bind a handler for a request.
-    /// e.g. `bind("peek", &ThisModule::peek, this, std::placeholders::_1);`.
-    ///  Handler should be e.g. `Expected<PeekResult> peek(const PeekParams&);`
+    /// Bind a handler for an incoming request.
+    /// e.g. `bind("peek", &ThisModule::peek, this);`.
+    /// Handler should be e.g. `Expected<PeekResult> peek(const PeekParams&);`
     /// PeekParams must be JSON parsable and PeekResult must be serializable.
     template <typename Result, typename Params, typename Fn, typename... Args>
     void bind(llvm::StringLiteral method, Fn &&fn, Args &&...args) {
@@ -273,8 +291,8 @@ public:
               llvm::Expected<Result> result = std::invoke(
                   std::forward<Fn>(fn), std::forward<Args>(args)...);
               if (!result)
-                return reply(make_response<Req, Resp>(req, result.takeError()));
-              reply(make_response<Req, Resp>(req, toJSON(*result)));
+                return reply(MakeResponse<Req, Resp>(req, result.takeError()));
+              reply(MakeResponse<Req, Resp>(req, toJSON(*result)));
             };
       } else {
         m_request_handlers[method] =
@@ -282,21 +300,21 @@ public:
              args...](const Req &req,
                       llvm::unique_function<void(const Resp &)> reply) mutable {
               llvm::Expected<Params> params =
-                  parse<Params>(get_params<Req>(req), method);
+                  parse<Params>(GetParams<Req>(req), method);
               if (!params)
-                return reply(make_response<Req, Resp>(req, params.takeError()));
+                return reply(MakeResponse<Req, Resp>(req, params.takeError()));
 
               llvm::Expected<Result> result = std::invoke(
                   std::forward<Fn>(fn), std::forward<Args>(args)..., *params);
               if (!result)
-                return reply(make_response<Req, Resp>(req, result.takeError()));
+                return reply(MakeResponse<Req, Resp>(req, result.takeError()));
 
-              reply(make_response<Req, Resp>(req, toJSON(*result)));
+              reply(MakeResponse<Req, Resp>(req, toJSON(*result)));
             };
       }
     }
 
-    /// Bind a handler for a event.
+    /// Bind a handler for an incoming event.
     /// e.g. `bind("peek", &ThisModule::peek, this);`
     /// Handler should be e.g. `void peek(const PeekParams&);`
     /// PeekParams must be JSON parsable.
@@ -312,7 +330,7 @@ public:
         m_event_handlers[method] = [this, method, fn,
                                     args...](const Evt &evt) mutable {
           llvm::Expected<Params> params =
-              parse<Params>(get_params<Evt>(evt), method);
+              parse<Params>(GetParams<Evt>(evt), method);
           if (!params)
             return OnError(params.takeError());
           std::invoke(std::forward<Fn>(fn), std::forward<Args>(args)...,
@@ -330,10 +348,10 @@ public:
         return [this, method](Reply<Result> fn) {
           std::scoped_lock<std::recursive_mutex> guard(m_mutex);
           Id id = ++m_seq;
-          Req req = make_request<Req, Resp>(id, method, std::nullopt);
+          Req req = MakeRequest<Req, Resp>(id, method, std::nullopt);
           m_pending_responses[id] = [fn = std::move(fn),
                                      method](const Resp &resp) mutable {
-            llvm::Expected<llvm::json::Value> result = get_result<Resp>(resp);
+            llvm::Expected<llvm::json::Value> result = GetResult<Resp>(resp);
             if (!result)
               return fn(result.takeError());
             fn(parse<Result>(*result, method));
@@ -345,11 +363,10 @@ public:
         return [this, method](const Params &params, Reply<Result> fn) {
           std::scoped_lock<std::recursive_mutex> guard(m_mutex);
           Id id = ++m_seq;
-          Req req =
-              make_request<Id, Req>(id, method, llvm::json::Value(params));
+          Req req = MakeRequest<Id, Req>(id, method, llvm::json::Value(params));
           m_pending_responses[id] = [fn = std::move(fn),
                                      method](const Resp &resp) mutable {
-            llvm::Expected<llvm::json::Value> result = get_result<Resp>(resp);
+            llvm::Expected<llvm::json::Value> result = GetResult<Resp>(resp);
             if (llvm::Error err = result.takeError())
               return fn(std::move(err));
             fn(parse<Result>(*result, method));
@@ -368,13 +385,13 @@ public:
       if constexpr (std::is_void_v<Params> || std::is_same_v<VoidT, Params>) {
         return [this, method]() {
           if (llvm::Error error =
-                  m_transport.Send(make_event<Evt>(method, std::nullopt)))
+                  m_transport.Send(MakeEvent<Evt>(method, std::nullopt)))
             OnError(std::move(error));
         };
       } else {
         return [this, method](const Params &params) {
           if (llvm::Error error =
-                  m_transport.Send(make_event<Evt>(method, toJSON(params))))
+                  m_transport.Send(MakeEvent<Evt>(method, toJSON(params))))
             OnError(std::move(error));
         };
       }
@@ -382,7 +399,7 @@ public:
 
     void Received(const Evt &evt) override {
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-      auto it = m_event_handlers.find(get_method<Evt>(evt));
+      auto it = m_event_handlers.find(GetMethod<Evt>(evt));
       if (it == m_event_handlers.end()) {
         OnError(llvm::createStringError(
             llvm::formatv("no handled for event {0}", toJSON(evt))));
@@ -395,9 +412,9 @@ public:
       ReplyOnce reply(req, &m_transport, this);
 
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-      auto it = m_request_handlers.find(get_method<Req>(req));
+      auto it = m_request_handlers.find(GetMethod<Req>(req));
       if (it == m_request_handlers.end()) {
-        reply(make_response<Req, Resp>(
+        reply(MakeResponse<Req, Resp>(
             req, llvm::createStringError("method not found")));
         return;
       }
@@ -407,7 +424,7 @@ public:
 
     void Received(const Resp &resp) override {
       std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-      auto it = m_pending_responses.find(get_id<Id, Resp>(resp));
+      auto it = m_pending_responses.find(GetId<Id, Resp>(resp));
       if (it == m_pending_responses.end()) {
         OnError(llvm::createStringError(
             llvm::formatv("no pending request for {0}", toJSON(resp))));

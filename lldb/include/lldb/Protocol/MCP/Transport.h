@@ -22,13 +22,13 @@ namespace lldb_private {
 /// @{
 template <>
 inline lldb_protocol::mcp::Request
-make_request(int64_t id, llvm::StringRef method,
-             std::optional<llvm::json::Value> params) {
+MakeRequest(int64_t id, llvm::StringRef method,
+            std::optional<llvm::json::Value> params) {
   return lldb_protocol::mcp::Request{id, method.str(), params};
 }
 template <>
 inline lldb_protocol::mcp::Response
-make_response(const lldb_protocol::mcp::Request &req, llvm::Error error) {
+MakeResponse(const lldb_protocol::mcp::Request &req, llvm::Error error) {
   lldb_protocol::mcp::Error protocol_error;
   llvm::handleAllErrors(
       std::move(error),
@@ -44,42 +44,41 @@ make_response(const lldb_protocol::mcp::Request &req, llvm::Error error) {
 }
 template <>
 inline lldb_protocol::mcp::Response
-make_response(const lldb_protocol::mcp::Request &req,
-              llvm::json::Value result) {
+MakeResponse(const lldb_protocol::mcp::Request &req, llvm::json::Value result) {
   return lldb_protocol::mcp::Response{req.id, std::move(result)};
 }
 template <>
 inline lldb_protocol::mcp::Notification
-make_event(llvm::StringRef method, std::optional<llvm::json::Value> params) {
+MakeEvent(llvm::StringRef method, std::optional<llvm::json::Value> params) {
   return lldb_protocol::mcp::Notification{method.str(), params};
 }
 template <>
 inline llvm::Expected<llvm::json::Value>
-get_result(const lldb_protocol::mcp::Response &resp) {
+GetResult(const lldb_protocol::mcp::Response &resp) {
   if (const lldb_protocol::mcp::Error *error =
           std::get_if<lldb_protocol::mcp::Error>(&resp.result))
     return llvm::make_error<lldb_protocol::mcp::MCPError>(error->message,
                                                           error->code);
   return std::get<llvm::json::Value>(resp.result);
 }
-template <> inline int64_t get_id(const lldb_protocol::mcp::Response &resp) {
+template <> inline int64_t GetId(const lldb_protocol::mcp::Response &resp) {
   return std::get<int64_t>(resp.id);
 }
 template <>
-inline llvm::StringRef get_method(const lldb_protocol::mcp::Request &req) {
+inline llvm::StringRef GetMethod(const lldb_protocol::mcp::Request &req) {
   return req.method;
 }
 template <>
-inline llvm::StringRef get_method(const lldb_protocol::mcp::Notification &evt) {
+inline llvm::StringRef GetMethod(const lldb_protocol::mcp::Notification &evt) {
   return evt.method;
 }
 template <>
-inline llvm::json::Value get_params(const lldb_protocol::mcp::Request &req) {
+inline llvm::json::Value GetParams(const lldb_protocol::mcp::Request &req) {
   return req.params;
 }
 template <>
 inline llvm::json::Value
-get_params(const lldb_protocol::mcp::Notification &evt) {
+GetParams(const lldb_protocol::mcp::Notification &evt) {
   return evt.params;
 }
 /// @}
