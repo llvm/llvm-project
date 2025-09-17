@@ -27,6 +27,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <cstdint>
@@ -688,36 +689,22 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       return idx;
     };
 
-    // Obtain offsets for new shape from flat index.
-    auto getOffsetsFromIdx = [](int64_t idx, Type ty) {
-      SmallVector<int64_t> res;
-      ShapedType shapedty = static_cast<ShapedType>(ty);
-      int64_t numElements = shapedty.getNumElements();
-      for (unsigned size : shapedty.getShape()) {
-        numElements /= size;
-        res.push_back(idx / numElements);
-        idx -= (idx / numElements) * size;
-      }
-      return res;
-    };
-
     // For every scale operand of this ScaledMFMAOp, if the scale follows the
     // following pattern:
-    //
-    // %unit = vector.extract %ScaleSrc[offsets] : f8E8M0FNU from
-    // vector<?x?x?xf8E8M0FNU> %scale = vector.insert %unit, ... : f8E8M0FNU
-    // into vector<4xf8E8M0FNU> amdgpu.scaled_mfma(%scale[0] * ...
+    // (f8 here means f8E8M0FNU)
+    // %unit = vector.extract %ScaleSrc[offsets] : f8 from vector<...>
+    // %scale = vector.insert %unit, ... : f8 into vector<4xf8>
+    // amdgpu.scaled_mfma(%scale[0] * ...
     //
     // rewrite to:
     //
-    // %reshaped = vector.shape_cast %ScaleSrc : vector<?x?x?xf8E8M0FNU> to
-    // vector<?x4xf8E8M0FNU> %scale = vector.extract %reshaped[?] :
-    // vector<4xf8E8M0FNU> from vector<?x4xf8E8M0FNU>
+    // %reshaped = vector.shape_cast %ScaleSrc : vector<...> to vector<?xf8>
+    // %scale = vector.extract %reshaped[?] : vector<4xf8> from vector<?xf8>
     // amdgpu.scaled_mfma(%scale[0-3] * ...
     //
     // This creates duplicate shape_casts for every use but these will be
     // removed in CSE.
-    for (auto opIdx : SmallVector<int64_t>({3, 4})) {
+    for (auto opIdx : std::array<int64_t, 2>({3, 4})) {
       auto insertOp = op.getOperand(opIdx).getDefiningOp<vector::InsertOp>();
       if (!insertOp) {
         return rewriter.notifyMatchFailure(op,
@@ -738,7 +725,7 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       Value scaleSrc = extractOp.getOperand(0);
       auto stype = dyn_cast<VectorType>(scaleSrc.getType());
       if (!stype) {
-        return rewriter.notifyMatchFailure(op, "not a shaped type");
+        return rewriter.notifyMatchFailure(op, "not a vector type");
       }
       // We do not handle dynamic dims yet, assume that the input is padded to
       // a static shape now.
@@ -748,25 +735,32 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       }
 
       int64_t numElements = stype.getNumElements();
-      if (numElements <= 4 || !(numElements % 4)) {
+      if (numElements <= 4) {
         return rewriter.notifyMatchFailure(
-            op, "no packing if # of scales less than or indivisible by four");
+            op, "no packing if # of scales less than four");
+      }
+      int64_t idx = getIdxFromExtract(extractOp);
+      int64_t offset = idx - (idx % 4);
+      int64_t size = std::min(4l, numElements - offset);
+      int64_t opsel = idx - offset;
+      if (size != 4l) {
+        opsel += 4l - size;
+        offset = numElements - 4l;
+        size = 4l;
       }
 
-      Type newSrcType = VectorType::get(
-          SmallVector<int64_t>({numElements / 4, 4}), stype.getElementType());
+      Type newSrcType = VectorType::get(SmallVector<int64_t>({numElements}),
+                                        stype.getElementType());
       Value newScaleSrc =
           rewriter.create<vector::ShapeCastOp>(loc, newSrcType, scaleSrc);
-      int64_t idx = getIdxFromExtract(extractOp);
-      SmallVector<int64_t> offsets(getOffsetsFromIdx(idx, newSrcType));
       auto scaleTy = VectorType::get({4}, stype.getElementType());
       Value extract = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, newScaleSrc, SmallVector<int64_t>{offsets[0], 0},
-          SmallVector<int64_t>{1, 4}, SmallVector<int64_t>{1, 1});
+          loc, newScaleSrc, ArrayRef<int64_t>{offset}, ArrayRef<int64_t>{size},
+          ArrayRef<int64_t>{1});
       Value scale = rewriter.create<vector::ShapeCastOp>(loc, scaleTy, extract);
       rewriter.modifyOpInPlace(
           op, [&op, opIdx, scale] { op->setOperand(opIdx, scale); });
-      setOpsel(opIdx, offsets[1]);
+      setOpsel(opIdx, opsel);
     }
     return success();
   }
