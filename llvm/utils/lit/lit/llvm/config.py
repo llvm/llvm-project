@@ -145,6 +145,12 @@ class LLVMConfig(object):
         have_zstd = getattr(config, "have_zstd", None)
         if have_zstd:
             features.add("zstd")
+        have_icu = getattr(config, "have_icu", None)
+        if have_icu:
+            features.add("icu")
+        have_iconv = getattr(config, "have_iconv", None)
+        if have_iconv:
+            features.add("iconv")
 
         if getattr(config, "reverse_iteration", None):
             features.add("reverse_iteration")
