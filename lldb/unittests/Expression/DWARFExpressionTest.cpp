@@ -1198,14 +1198,15 @@ struct MockProcessWithMemRead : Process {
 TEST_F(DWARFExpressionMockProcessTest, DW_op_deref_no_ptr_fixing) {
   llvm::DenseMap<lldb::addr_t, lldb::addr_t> memory;
   constexpr lldb::addr_t expected_value = ((0xffULL) << 56) | 0xabcdefULL;
-  memory[42] = expected_value;
+  constexpr lldb::addr_t addr = 42;
+  memory[addr] = expected_value;
 
   PlatformTargetDebugger test_setup = CreateTarget();
   lldb::ProcessSP process_sp = std::make_shared<MockProcessWithMemRead>(
       test_setup.target_sp, Listener::MakeListener("dummy"), std::move(memory));
   auto thread = std::make_shared<MockThread>(*process_sp);
   lldb::RegisterContextSP reg_ctx_sp =
-      std::make_shared<MockRegisterContext>(*thread, RegisterValue(42ull));
+      std::make_shared<MockRegisterContext>(*thread, RegisterValue(addr));
   thread->SetRegisterContext(reg_ctx_sp);
   process_sp->GetThreadList().AddThread(thread);
 
@@ -1228,7 +1229,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_op_deref_no_ptr_fixing) {
   llvm::Expected<Value> result_reg = evaluate_expr(expr_reg);
   ASSERT_THAT_EXPECTED(result_reg, llvm::Succeeded());
   ASSERT_EQ(result_reg->GetValueType(), Value::ValueType::LoadAddress);
-  ASSERT_EQ(result_reg->GetScalar().ULongLong(), 42ull);
+  ASSERT_EQ(result_reg->GetScalar().ULongLong(), addr);
 
   uint8_t expr_deref[] = {DW_OP_breg22, 0, DW_OP_deref};
   llvm::Expected<Value> result_deref = evaluate_expr(expr_deref);
