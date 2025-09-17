@@ -205,7 +205,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
-    if (isPPC64){
+    if (isPPC64) {
       setOperationAction(ISD::SSUBO, MVT::i64, Custom);
       setOperationAction(ISD::SADDO, MVT::i64, Custom);
     }
