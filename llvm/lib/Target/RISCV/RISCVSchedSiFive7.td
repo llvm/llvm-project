@@ -412,13 +412,9 @@ multiclass SiFive7WriteResBase<int VLEN,
     def : WriteRes<WriteFMinMax32, [PipeB]>;
   }
 
-  def : WriteRes<WriteFDiv32, [PipeB, FDiv]> {
-    let Latency = 27;
-    let ReleaseAtCycles = [1, 26];
-  }
-  def : WriteRes<WriteFSqrt32, [PipeB, FDiv]> {
-    let Latency = 27;
-    let ReleaseAtCycles = [1, 26];
+  let Latency = 27, ReleaseAtCycles = [1, 26] in {
+    def : WriteRes<WriteFDiv32, [PipeB, FDiv]>;
+    def : WriteRes<WriteFSqrt32, [PipeB, FDiv]>;
   }
 
   // Double precision
@@ -432,13 +428,9 @@ multiclass SiFive7WriteResBase<int VLEN,
     def : WriteRes<WriteFMinMax64, [PipeB]>;
   }
 
-  def : WriteRes<WriteFDiv64, [PipeB, FDiv]> {
-    let Latency = 56;
-    let ReleaseAtCycles = [1, 55];
-  }
-  def : WriteRes<WriteFSqrt64, [PipeB, FDiv]> {
-    let Latency = 56;
-    let ReleaseAtCycles = [1, 55];
+  let Latency = 56, ReleaseAtCycles = [1, 55] in {
+    def : WriteRes<WriteFDiv64, [PipeB, FDiv]>;
+    def : WriteRes<WriteFSqrt64, [PipeB, FDiv]>;
   }
 
   // Conversions
