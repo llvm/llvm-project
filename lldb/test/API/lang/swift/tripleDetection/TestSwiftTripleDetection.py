@@ -25,16 +25,6 @@ class TestSwiftTripleDetection(TestBase):
         bkpt = target.BreakpointCreateByName("main")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.expect("expression 1")
-        with open(types_log,'rb') as f:
-            import sys
-            for line in f.readlines():
-                s = ""
-                for c in line:
-                    if c > 127:
-                        s += '\\'+str(c)
-                    else:
-                        s+=str(chr(c))
-                sys.stderr.write(s)
         self.filecheck('platform shell cat "%s"' % types_log, __file__)
         # CHECK: {{SwiftASTContextForExpressions.*Module triple: ".*-apple-macos.[0-9.]+"}}
         # CHECK: {{SwiftASTContextForExpressions.*Target triple: ".*-apple-macos-unknown"}}
