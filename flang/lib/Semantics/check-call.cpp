@@ -802,7 +802,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         !evaluate::HasVectorSubscript(actual)) {
       context.Warn(common::UsageWarning::VolatileOrAsynchronousTemporary,
           messages.at(),
+<<<<<<< HEAD
           "The array section '%s' should not be associated with %s with %s attribute, unless the dummy is assumed-shape or assumed-rank"_warn_en_US,
+=======
+          "The array section '%s' should not be associated with %s with %s attribute, unless the dummy is assumed-shape or assumed-rank"_port_en_US,
+>>>>>>> cd1d1dfbd20c (initial commit)
           actual.AsFortran(), dummyName,
           dummyIsAsynchronous ? "ASYNCHRONOUS" : "VOLATILE");
       volatileOrAsyncNeedsTempDiagnosticIssued = true;
