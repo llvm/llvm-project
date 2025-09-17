@@ -622,7 +622,8 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   assert(getEMachine() == ELF::EM_CUDA);
   unsigned SM = getEIdentABIVersion() == ELF::ELFABIVERSION_CUDA_V1
                     ? getPlatformFlags() & ELF::EF_CUDA_SM
-                    : getPlatformFlags() & ELF::EF_CUDA_SM_MASK;
+                    : (getPlatformFlags() & ELF::EF_CUDA_SM_MASK) >>
+                          ELF::EF_CUDA_SM_OFFSET;
 
   switch (SM) {
   // Fermi architecture.
@@ -674,6 +675,8 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
     return "sm_86";
   case ELF::EF_CUDA_SM87:
     return "sm_87";
+  case ELF::EF_CUDA_SM88:
+    return "sm_88";
 
   // Ada architecture.
   case ELF::EF_CUDA_SM89:
@@ -694,6 +697,9 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   case ELF::EF_CUDA_SM103:
     return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_103a"
                                                           : "sm_103";
+  case ELF::EF_CUDA_SM110:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_110a"
+                                                          : "sm_110";
 
   // Rubin architecture.
   case ELF::EF_CUDA_SM120:
