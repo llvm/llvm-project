@@ -480,6 +480,7 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
       }
       Visit(Obj);
     }
+    VisitCallExpr(CE);
   }
 
   void VisitLambdaExpr(LambdaExpr *LE) {
@@ -495,12 +496,11 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
     Visit(MTE->getSubExpr());
   }
 
-  void VisitExprWithCleanups(FullExpr *FE) {
-    Visit(FE->getSubExpr());
-  }
+  void VisitExprWithCleanups(FullExpr *FE) { Visit(FE->getSubExpr()); }
 
   void VisitCXXConstructExpr(CXXConstructExpr *CE) {
-    Visit(CE->getArg(0));
+    if (CE->getNumArgs() > 0)
+      Visit(CE->getArg(0));
   }
 };
 } // namespace

@@ -226,15 +226,49 @@ extern void abc_02(func_type *);
   func_ptr();
 } // expected-warning {{function declared 'noreturn' should not return}}
 
-[[noreturn]] void test_lambda() {
+[[noreturn]] void test_lambda_capture_ref() {
   func_type func_ptr = noret;
   [&func_ptr]() { func_ptr = ordinary; } ();
   func_ptr();
 } // expected-warning {{function declared 'noreturn' should not return}}
 
-[[noreturn]] void test_lambda_var(int x) {
+[[noreturn]] void test_lambda_var_capture_ref() {
   func_type func_ptr = noret;
-  auto LF = [&](){func_ptr = ordinary;};
+  auto LF = [&func_ptr](){func_ptr = ordinary; };
   LF();
   func_ptr();
 } // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_lambda_capture_ref_all() {
+  func_type func_ptr = noret;
+  [&]() { func_ptr = ordinary; } ();
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void test_lambda_var_capture_ref_all() {
+  func_type func_ptr = noret;
+  auto LF = [&](){func_ptr = ordinary; };
+  LF();
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void lambda_capture_by_value() {
+  func_type func_ptr = noret;
+  auto LF = [func_ptr](){ return func_ptr; };
+  LF();
+  func_ptr();
+}
+
+[[noreturn]] void lambda_pass_by_ref() {
+  func_type func_ptr = noret;
+  auto LF = [](func_type &fptr){ fptr = ordinary; };
+  LF(func_ptr);
+  func_ptr();
+} // expected-warning {{function declared 'noreturn' should not return}}
+
+[[noreturn]] void lambda_pass_by_value() {
+  func_type func_ptr = noret;
+  auto LF = [](func_type fptr){ fptr = ordinary; };
+  LF(func_ptr);
+  func_ptr();
+}
