@@ -120,11 +120,11 @@ class OpenMP_AllocatorClauseSkip<
                     extraClassDeclaration> {
 
   let arguments = (ins
-    DefaultValuedOptionalAttr<I64Attr, "0">:$allocator
+    Optional<I64>:$allocator
   );
 
   let optAssemblyFormat = [{
-    `allocator` `(` custom<AllocatorHandle>($allocator) `)`
+    `allocator` `(` $allocator `)`
   }];
 
   let description = [{
