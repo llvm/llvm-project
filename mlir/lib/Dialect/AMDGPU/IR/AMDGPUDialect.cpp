@@ -653,26 +653,24 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
         switch (op.getOperandNumber()) {
         case 3:
           return smfma.getScalesIdxA() != 0;
-          break;
         case 4:
           return smfma.getScalesIdxB() != 0;
-          break;
         default:
-          return true;
           break;
         }
       }
+      return true;
     };
 
     auto setOpsel = [&](unsigned idx, int64_t val) {
       switch (idx) {
       case 3:
-        return op.setScalesIdxA(val);
+        op.setScalesIdxA(val);
         break;
       case 4:
-        return op.setScalesIdxB(val);
+        op.setScalesIdxB(val);
         break;
-      default:
+      default: 
         break;
       }
     };
@@ -695,7 +693,7 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       SmallVector<int64_t> res;
       ShapedType shapedty = static_cast<ShapedType>(ty);
       int64_t numElements = shapedty.getNumElements();
-      for (auto size : shapedty.getShape()) {
+      for (unsigned size : shapedty.getShape()) {
         numElements /= size;
         res.push_back(idx / numElements);
         idx -= (idx / numElements) * size;
@@ -706,17 +704,19 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
     // For every scale operand of this ScaledMFMAOp, if the scale follows the
     // following pattern:
     //
-    // %unit = vector.extract %ScaleSrc[offsets] : f8E8M0FNU from vector<?x?x?xf8E8M0FNU>
-    // %scale = vector.insert %unit, ... : f8E8M0FNU into vector<4xf8E8M0FNU>
-    // amdgpu.scaled_mfma(%scale[0] * ...
+    // %unit = vector.extract %ScaleSrc[offsets] : f8E8M0FNU from
+    // vector<?x?x?xf8E8M0FNU> %scale = vector.insert %unit, ... : f8E8M0FNU
+    // into vector<4xf8E8M0FNU> amdgpu.scaled_mfma(%scale[0] * ...
     //
     // rewrite to:
     //
-    // %reshaped = vector.shape_cast %ScaleSrc : vector<?x?x?xf8E8M0FNU> to vector<?x4xf8E8M0FNU>
-    // %scale = vector.extract %reshaped[?] : vector<4xf8E8M0FNU> from vector<?x4xf8E8M0FNU>
+    // %reshaped = vector.shape_cast %ScaleSrc : vector<?x?x?xf8E8M0FNU> to
+    // vector<?x4xf8E8M0FNU> %scale = vector.extract %reshaped[?] :
+    // vector<4xf8E8M0FNU> from vector<?x4xf8E8M0FNU>
     // amdgpu.scaled_mfma(%scale[0-3] * ...
     //
-    // This creates duplicate shape_casts for every use but these will be removed in CSE.
+    // This creates duplicate shape_casts for every use but these will be
+    // removed in CSE.
     for (auto opIdx : SmallVector<int64_t>({3, 4})) {
       auto insertOp = op.getOperand(opIdx).getDefiningOp<vector::InsertOp>();
       if (!insertOp) {
