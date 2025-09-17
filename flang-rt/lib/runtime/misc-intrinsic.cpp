@@ -61,35 +61,22 @@ RT_EXT_API_GROUP_BEGIN
 void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
+
+  // Semantics for character strings: A null character (CHAR(0)) can be used to
+  // mark the end of the names in PATH1 and PATH2; otherwise, trailing blanks in
+  // the file names are ignored.
+  // (https://gcc.gnu.org/onlinedocs/gfortran/RENAME.html)
 #if !defined(RT_DEVICE_COMPILATION)
-  // Get the raw strings (null-terminated)
-  char *pathSrc{EnsureNullTerminated(
-      path1.OffsetElement(), path1.ElementBytes(), terminator)};
-  char *pathDst{EnsureNullTerminated(
-      path2.OffsetElement(), path2.ElementBytes(), terminator)};
-  char *srcFilePath = pathSrc;
-  char *dstFilePath = pathDst;
+  // Trim tailing spaces, respect presences of null character when doing so.
+  auto pathSrc{SaveDefaultCharacter(path1.OffsetElement(),
+      TrimTrailingSpaces(path1.OffsetElement(), path1.ElementBytes()),
+      terminator)};
+  auto pathDst{SaveDefaultCharacter(path2.OffsetElement(),
+      TrimTrailingSpaces(path2.OffsetElement(), path2.ElementBytes()),
+      terminator)};
 
-  // Trim trailing blanks (if string have not been null-terminated)
-  if (!IsNullTerminated(path1.OffsetElement(), path1.ElementBytes())) {
-    auto srcTrimPos{TrimTrailingSpaces(pathSrc, path1.ElementBytes())};
-    char *srcPathTrim{
-        static_cast<char *>(alloca((srcTrimPos + 1)))};
-    std::memcpy(srcPathTrim, pathSrc, srcTrimPos);
-    srcPathTrim[srcTrimPos] = '\0';
-    srcFilePath = srcPathTrim;
-  }
-  if (!IsNullTerminated(path2.OffsetElement(), path2.ElementBytes())) {
-    auto dstTrimPos{TrimTrailingSpaces(pathDst, path2.ElementBytes())};
-    char *dstPathTrim{
-        static_cast<char *>(alloca((dstTrimPos + 1)))};
-    std::memcpy(dstPathTrim, pathDst, dstTrimPos);
-    dstPathTrim[dstTrimPos] = '\0';
-    dstFilePath = dstPathTrim;
-  }
-
-  // We simply call rename(2) from POSIX
-  int result{rename(srcFilePath, dstFilePath)};
+  // We can now simply call rename(2) from POSIX.
+  int result{rename(pathSrc.get(), pathDst.get())};
   if (status) {
     // When an error has happened,
     int errorCode{0}; // Assume success
@@ -98,14 +85,6 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
       errorCode = errno;
     }
     StoreIntToDescriptor(status, errorCode, terminator);
-  }
-
-  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
-  if (pathSrc != path1.OffsetElement()) {
-    FreeMemory(pathSrc);
-  }
-  if (pathDst != path2.OffsetElement()) {
-    FreeMemory(pathDst);
   }
 #else // !defined(RT_DEVICE_COMPILATION)
   terminator.Crash("RENAME intrinsic is only supported on host devices");
