@@ -1546,11 +1546,14 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   case DecoderTreeNode::CheckAny: {
     const auto *N = static_cast<const CheckAnyNode *>(Node);
     unsigned Size = 0;
+    // All children except the last one are preceded by OPC_Scope opcode and
+    // the size of the child.
     for (const DecoderTreeNode *Child : drop_end(N->children())) {
       unsigned ChildSize = computeNodeSize(Child);
       Size += OpcodeSize + getULEB128Size(ChildSize) + ChildSize;
     }
-    return Size + computeNodeSize(*std::prev(N->child_end()));
+    const DecoderTreeNode *Child = *std::prev(N->child_end());
+    return Size + computeNodeSize(Child);
   }
   case DecoderTreeNode::CheckAll: {
     const auto *N = static_cast<const CheckAllNode *>(Node);
