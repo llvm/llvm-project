@@ -59,7 +59,7 @@ define <2 x i16> @vwmul_v2i16_multiple_users(ptr %x, ptr %y, ptr %z) {
   ret <2 x i16> %i
 }
 
-; FIXME: We should have a vsext.vl instead of vzext.vl.
+; Make sure we have a vsext.vl and a vwaddu.vx.
 define <4 x i32> @pr159152(<4 x i8> %x) {
 ; NO_FOLDING-LABEL: pr159152:
 ; NO_FOLDING:       # %bb.0:
