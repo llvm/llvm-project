@@ -14,6 +14,7 @@
 #ifndef __AVXVNNIINT8INTRIN_H
 #define __AVXVNNIINT8INTRIN_H
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding signed 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -34,7 +35,6 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -50,6 +50,7 @@
   ((__m128i)__builtin_ia32_vpdpbssd128((__v4si)(__W), (__v16qi)(__A),          \
                                        (__v16qi)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding signed 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -70,7 +71,6 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -86,6 +86,7 @@
   ((__m256i)__builtin_ia32_vpdpbssd256((__v8si)(__W), (__v32qi)(__A),          \
                                        (__v32qi)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding signed 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -107,7 +108,6 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -123,6 +123,7 @@
   ((__m128i)__builtin_ia32_vpdpbssds128((__v4si)(__W), (__v16qi)(__A),         \
                                         (__v16qi)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding signed 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -144,7 +145,6 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -160,6 +160,7 @@
   ((__m256i)__builtin_ia32_vpdpbssds256((__v8si)(__W), (__v32qi)(__A),         \
                                         (__v32qi)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -180,7 +181,6 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -196,6 +196,7 @@
   ((__m128i)__builtin_ia32_vpdpbsud128((__v4si)(__W), (__v16qi)(__A),          \
                                        (__v16qu)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -216,7 +217,6 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -232,6 +232,7 @@
   ((__m256i)__builtin_ia32_vpdpbsud256((__v8si)(__W), (__v32qi)(__A),          \
                                        (__v32qu)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -253,7 +254,6 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -269,6 +269,7 @@
   ((__m128i)__builtin_ia32_vpdpbsuds128((__v4si)(__W), (__v16qi)(__A),         \
                                         (__v16qu)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of signed 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -290,7 +291,6 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -306,6 +306,7 @@
   ((__m256i)__builtin_ia32_vpdpbsuds256((__v8si)(__W), (__v32qi)(__A),         \
                                         (__v32qu)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -326,7 +327,6 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -342,6 +342,7 @@
   ((__m128i)__builtin_ia32_vpdpbuud128((__v4si)(__W), (__v16qu)(__A),          \
                                        (__v16qu)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -362,7 +363,6 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -378,6 +378,7 @@
   ((__m256i)__builtin_ia32_vpdpbuud256((__v8si)(__W), (__v32qu)(__A),          \
                                        (__v32qu)(__B)))
 
+// clang-format off
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a __A with
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
@@ -399,7 +400,6 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -415,6 +415,7 @@
   ((__m128i)__builtin_ia32_vpdpbuuds128((__v4si)(__W), (__v16qu)(__A),         \
                                         (__v16qu)(__B)))
 
+// clang-format off
 ///    corresponding unsigned 8-bit integers in \a __B, producing 4 intermediate
 ///    signed 16-bit results. Sum these 4 results with the corresponding
 ///    32-bit integer in \a __W with signed saturation, and store the packed
@@ -435,7 +436,6 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
-// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
