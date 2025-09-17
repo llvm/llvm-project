@@ -18,8 +18,6 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/utsname.h>
 
-#include <stdio.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, gethostname, (char *name, size_t size)) {

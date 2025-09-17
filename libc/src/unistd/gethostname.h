@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_UNISTD_GETHOSTNAME_H
 
 #include "hdr/types/size_t.h"
-#include "hdr/unistd_macros.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
