@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-return-braced-init-list %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-return-braced-init-list %t
 
 namespace std {
 typedef decltype(sizeof(int)) size_t;
