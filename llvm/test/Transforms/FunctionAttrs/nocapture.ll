@@ -161,7 +161,7 @@ declare void @throw_if_bit_set(ptr, i8) readonly
 define i1 @c6(ptr %q, i8 %bit) personality ptr @__gxx_personality_v0 {
 ; FNATTRS: Function Attrs: nofree memory(read)
 ; FNATTRS-LABEL: define noundef i1 @c6
-; FNATTRS-SAME: (ptr readonly [[Q:%.*]], i8 [[BIT:%.*]]) #[[ATTR5:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; FNATTRS-SAME: (ptr readonly captures(address) [[Q:%.*]], i8 [[BIT:%.*]]) #[[ATTR5:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; FNATTRS-NEXT:    invoke void @throw_if_bit_set(ptr [[Q]], i8 [[BIT]])
 ; FNATTRS-NEXT:            to label [[RET0:%.*]] unwind label [[RET1:%.*]]
 ; FNATTRS:       ret0:
@@ -364,7 +364,7 @@ declare void @external_not_willreturn(ptr) readonly nounwind
 define void @readonly_nounwind_not_willreturn(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nounwind memory(read)
 ; FNATTRS-LABEL: define void @readonly_nounwind_not_willreturn
-; FNATTRS-SAME: (ptr readonly [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(address) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @external_not_willreturn(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -382,7 +382,7 @@ declare void @external_willreturn(ptr) readonly nounwind willreturn
 define void @readonly_nounwind_willreturn(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
 ; FNATTRS-LABEL: define void @readonly_nounwind_willreturn
-; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(address) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @external_willreturn(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -398,7 +398,7 @@ define void @readonly_nounwind_willreturn(ptr %p) {
 
 define void @callsite_readonly_nounwind_not_willreturn(ptr %f, ptr %p) {
 ; FNATTRS-LABEL: define void @callsite_readonly_nounwind_not_willreturn
-; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr captures(address) [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR8:[0-9]+]]
 ; FNATTRS-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; FNATTRS-NEXT:    ret void
@@ -416,13 +416,13 @@ define void @callsite_readonly_nounwind_not_willreturn(ptr %f, ptr %p) {
 
 define void @callsite_readonly_nounwind_willreturn(ptr %f, ptr %p) {
 ; FNATTRS-LABEL: define void @callsite_readonly_nounwind_willreturn
-; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr captures(none) [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr captures(address) [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR10:[0-9]+]]
 ; FNATTRS-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @callsite_readonly_nounwind_willreturn
-; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr captures(none) [[P:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr [[P:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR8:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
@@ -1032,7 +1032,7 @@ define void @recurse_fptr(ptr %f, ptr %p) {
 define void @readnone_indirec(ptr %f, ptr %p) {
 ; FNATTRS: Function Attrs: nofree nosync memory(none)
 ; FNATTRS-LABEL: define void @readnone_indirec
-; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr readnone [[P:%.*]]) #[[ATTR19:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr readnone captures(address) [[P:%.*]]) #[[ATTR19:[0-9]+]] {
 ; FNATTRS-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR23:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
