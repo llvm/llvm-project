@@ -39,7 +39,9 @@ def InstB : TestInstruction {
 // CHECK-NEXT:    OPC_CheckField, 2, 2, 0,     //  6:  check Inst[3:2] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 10:  decode to InstB using decoder 0
 // CHECK-NEXT:                                 // 10: }
-// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 14: decode to InstA using decoder 1
+// CHECK-NEXT:                                 // 10: {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 14:  decode to InstA using decoder 1
+// CHECK-NEXT:                                 // 14: }
 // CHECK-NEXT: };
 
 // CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }

@@ -1545,6 +1545,9 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   switch (Node->getKind()) {
   case DecoderTreeNode::CheckAny: {
     const auto *N = static_cast<const CheckAnyNode *>(Node);
+    // Pretend the node was optimized. See the comment in emitCheckAnyNode.
+    if (range_size(N->children()) == 1)
+      return computeNodeSize(*N->child_begin());
     unsigned Size = 0;
     // All children except the last one are preceded by OPC_Scope opcode and
     // the size of the child.
@@ -1653,6 +1656,13 @@ formatted_raw_ostream &DecoderTableEmitter::emitComment(indent Indent) {
 
 void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
                                            indent Indent) {
+  // TODO: Single-child CheckAny node should be optimized out. For now,
+  //   pretend this is the case and print the single child unindented.
+  if (range_size(N->children()) == 1) {
+    emitNode(*N->child_begin(), Indent);
+    return;
+  }
+
   for (const DecoderTreeNode *Child : drop_end(N->children())) {
     emitOpcode("OPC_Scope");
     emitULEB128(computeNodeSize(Child));
@@ -1663,7 +1673,9 @@ void DecoderTableEmitter::emitCheckAnyNode(const CheckAnyNode *N,
   }
 
   const DecoderTreeNode *Child = *std::prev(N->child_end());
-  emitNode(Child, Indent);
+  emitComment(Indent) << "{\n";
+  emitNode(Child, Indent + 1);
+  emitComment(Indent) << "}\n";
 }
 
 void DecoderTableEmitter::emitCheckAllNode(const CheckAllNode *N,

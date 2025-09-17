@@ -37,28 +37,36 @@ class I<dag out_ops, dag in_ops> : Instruction {
 // CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     //  7:   check Inst[11:6] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 11:   decode to NOP using decoder 0
 // CHECK-NEXT:                                 // 11:  }
-// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 15:  decode to SHIFT0 using decoder 1
+// CHECK-NEXT:                                 // 11:  {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 15:   decode to SHIFT0 using decoder 1
+// CHECK-NEXT:                                 // 15:  }
 // CHECK-NEXT:                                 // 15: }
 // CHECK-NEXT:    1, 14,                       // 19: case 0x1: {
 // CHECK-NEXT:    OPC_Scope, 8,                // 21:  {
 // CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     // 23:   check Inst[11:6] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 27:   decode to {{.*}}:NOP using decoder 0
 // CHECK-NEXT:                                 // 27:  }
-// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 31:  decode to SHIFT1 using decoder 1
+// CHECK-NEXT:                                 // 27:  {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 31:   decode to SHIFT1 using decoder 1
+// CHECK-NEXT:                                 // 31:  }
 // CHECK-NEXT:                                 // 31: }
 // CHECK-NEXT:    2, 14,                       // 35: case 0x2: {
 // CHECK-NEXT:    OPC_Scope, 8,                // 37:  {
 // CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     // 39:   check Inst[11:6] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 43:   decode to {{.*}}:NOP using decoder 0
 // CHECK-NEXT:                                 // 43:  }
-// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 47:  decode to SHIFT2 using decoder 1
+// CHECK-NEXT:                                 // 43:  {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 47:   decode to SHIFT2 using decoder 1
+// CHECK-NEXT:                                 // 47:  }
 // CHECK-NEXT:                                 // 47: }
 // CHECK-NEXT:    3, 0,                        // 51: case 0x3: {
 // CHECK-NEXT:    OPC_Scope, 8,                // 53:  {
 // CHECK-NEXT:    OPC_CheckField, 6, 6, 0,     // 55:   check Inst[11:6] == 0x0
 // CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 0, // 59:   decode to {{.*}}:NOP using decoder 0
 // CHECK-NEXT:                                 // 59:  }
-// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 63:  decode to SHIFT3 using decoder 1
+// CHECK-NEXT:                                 // 59:  {
+// CHECK-NEXT:    OPC_Decode, {{[0-9, ]+}}, 1, // 63:   decode to SHIFT3 using decoder 1
+// CHECK-NEXT:                                 // 63:  }
 // CHECK-NEXT:                                 // 63: }
 // CHECK-NEXT:                                 // 63: } // switch Inst[15:12]
 // CHECK-NEXT:  };
