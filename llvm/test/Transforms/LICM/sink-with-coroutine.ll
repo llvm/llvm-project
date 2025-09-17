@@ -22,7 +22,7 @@ define i64 @licm(i64 %n) #0 {
 ; CHECK-NEXT:    [[T6:%.*]] = icmp ult i64 [[T5]], [[N]]
 ; CHECK-NEXT:    br i1 [[T6]], label [[LOOP]], label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    call void @llvm.coro.end(ptr null, i1 false, token none)
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.coro.end(ptr null, i1 false, token none)
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:
@@ -46,7 +46,7 @@ await.ready:
   br i1 %t6, label %loop, label %bb2
 
 bb2:
-  call void @llvm.coro.end(ptr null, i1 false, token none)
+  %res = call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret i64 0
 }
 
@@ -82,7 +82,7 @@ define i64 @hoist_threadlocal() presplitcoroutine {
 ; CHECK:       loop.end:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[FOR_BODY]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.coro.end(ptr null, i1 false, token none)
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.coro.end(ptr null, i1 false, token none)
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:
@@ -119,11 +119,12 @@ loop.end:
   br i1 %cmp, label %exit, label %for.body
 
 exit:
-  call void @llvm.coro.end(ptr null, i1 false, token none)
+  %res = call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret i64 0
 }
 
 declare i8  @llvm.coro.suspend(token, i1)
+declare i1  @llvm.coro.end(ptr, i1, token)
 declare nonnull ptr @readonly_funcs() readonly
 declare nonnull ptr @llvm.threadlocal.address(ptr nonnull) nounwind readnone willreturn
 declare void @not.reachable()
