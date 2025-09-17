@@ -52,10 +52,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     default: {
       InaccessibleTargetMemLocation TargetLoc =
           static_cast<InaccessibleTargetMemLocation>(Loc);
-      if (TargetLoc == InaccessibleTargetMemLocation::MEM_TARGET_0)
-        OS << "MEM_TARGET_0: ";
-      if (TargetLoc == InaccessibleTargetMemLocation::MEM_TARGET_1)
-        OS << "MEM_TARGET_1: ";
+      if (TargetLoc == InaccessibleTargetMemLocation::TargetMem0)
+        OS << "TargetMem0: ";
+      if (TargetLoc == InaccessibleTargetMemLocation::TargetMem1)
+        OS << "TargetMem1: ";
       break;
     }
     }

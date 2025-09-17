@@ -25,7 +25,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
-#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -315,8 +314,7 @@ public:
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
-  LLVM_ABI std::string getAsString(const Triple *TT = nullptr,
-                                   bool InAttrGrp = false) const;
+  LLVM_ABI std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute belongs to the LLVMContext.
   LLVM_ABI bool hasParentContext(LLVMContext &C) const;
@@ -463,8 +461,7 @@ public:
   LLVM_ABI MemoryEffects getMemoryEffects() const;
   LLVM_ABI CaptureInfo getCaptureInfo() const;
   LLVM_ABI FPClassTest getNoFPClass() const;
-  LLVM_ABI std::string getAsString(const Triple *TT = nullptr,
-                                   bool InAttrGrp = false) const;
+  LLVM_ABI std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
   LLVM_ABI bool hasParentContext(LLVMContext &C) const;
