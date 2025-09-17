@@ -2076,7 +2076,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       if (originalOpName != opName)
         diag << " (tried '" << opName << "' as well)";
       auto &note = diag.attachNote();
-      note << "Registered dialects: ";
+      note << "Available dialects: ";
       std::vector<StringRef> registered = getContext()->getAvailableDialects();
       auto loaded = getContext()->getLoadedDialects();
 
