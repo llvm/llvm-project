@@ -489,23 +489,8 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
 
   SmallVector<RegionSuccessor> successors;
   branch.getEntrySuccessorRegions(*operands, successors);
-  for (const RegionSuccessor &successor : successors) {
-    // The successor can be either an entry block or the parent operation.
-    ProgramPoint *point =
-        successor.getSuccessor()
-            ? getProgramPointBefore(&successor.getSuccessor()->front())
-            : getProgramPointAfter(branch);
-    // Mark the entry block as executable.
-    auto *state = getOrCreate<Executable>(point);
-    propagateIfChanged(state, state->setToLive());
-    LDBG() << "Marked region successor live: " << point;
-    // Add the parent op as a predecessor.
-    auto *predecessors = getOrCreate<PredecessorState>(point);
-    propagateIfChanged(
-        predecessors,
-        predecessors->join(branch, successor.getSuccessorInputs()));
-    LDBG() << "Added region branch as predecessor for successor: " << point;
-  }
+
+  visitRegionBranchEdges(branch, branch.getOperation(), successors);
 }
 
 void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
@@ -521,26 +506,30 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
   else
     branch.getSuccessorRegions(op->getParentRegion(), successors);
 
-  // Mark successor region entry blocks as executable and add this op to the
-  // list of predecessors.
+  visitRegionBranchEdges(branch, op, successors);
+}
+
+void DeadCodeAnalysis::visitRegionBranchEdges(
+    RegionBranchOpInterface regionBranchOp, Operation *predecessorOp,
+    const SmallVector<RegionSuccessor> &successors) {
   for (const RegionSuccessor &successor : successors) {
-    PredecessorState *predecessors;
-    if (Region *region = successor.getSuccessor()) {
-      auto *state =
-          getOrCreate<Executable>(getProgramPointBefore(&region->front()));
-      propagateIfChanged(state, state->setToLive());
-      LDBG() << "Marked region entry block live for region: " << region;
-      predecessors = getOrCreate<PredecessorState>(
-          getProgramPointBefore(&region->front()));
-    } else {
-      // Add this terminator as a predecessor to the parent op.
-      predecessors =
-          getOrCreate<PredecessorState>(getProgramPointAfter(branch));
-    }
-    propagateIfChanged(predecessors,
-                       predecessors->join(op, successor.getSuccessorInputs()));
-    LDBG() << "Added region terminator as predecessor for successor: "
-           << (successor.getSuccessor() ? "region entry" : "parent op");
+    // The successor can be either an entry block or the parent operation.
+    ProgramPoint *point =
+        successor.getSuccessor()
+            ? getProgramPointBefore(&successor.getSuccessor()->front())
+            : getProgramPointAfter(regionBranchOp);
+
+    // Mark the entry block as executable.
+    auto *state = getOrCreate<Executable>(point);
+    propagateIfChanged(state, state->setToLive());
+    LDBG() << "Marked region successor live: " << point;
+
+    // Add the parent op as a predecessor.
+    auto *predecessors = getOrCreate<PredecessorState>(point);
+    propagateIfChanged(
+        predecessors,
+        predecessors->join(predecessorOp, successor.getSuccessorInputs()));
+    LDBG() << "Added region branch as predecessor for successor: " << point;
   }
 }
 
