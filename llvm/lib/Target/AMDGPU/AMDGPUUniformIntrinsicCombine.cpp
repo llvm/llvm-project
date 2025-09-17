@@ -16,6 +16,12 @@
 /// uniformity. And every instruction that's downstream and cares about dynamic
 /// uniformity must be convergent (and isel will introduce v_readfirstlane for
 /// them if their operands can't be proven statically uniform).
+///
+/// Although the transformations are applied at the function level, this pass is
+/// structured as a ModulePass because we must also inspect intrinsic
+/// declarations at the module scope. A function pass would require re-scanning
+/// all instructions in every function, while the module view lets us directly
+/// pair intrinsic uses with their declarations in a single traversal.
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
