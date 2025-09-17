@@ -10848,6 +10848,14 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                "public:\n"
                "  E *f();\n"
                "};");
+  AlwaysBreak.RequiresClausePosition = FormatStyle::RCPS_SingleLine;
+  verifyFormat("template <typename T> requires std::floating_point<T>\n"
+               "using LerpValue = ClampedValue<T, T{0}, T{1}>;",
+               AlwaysBreak);
+  AlwaysBreak.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+  verifyFormat("template <typename T> requires std::floating_point<T>\n"
+               "using LerpValue = ClampedValue<T, T{0}, T{1}>;",
+               AlwaysBreak);
 
   FormatStyle NeverBreak = getLLVMStyle();
   NeverBreak.BreakTemplateDeclarations = FormatStyle::BTDS_No;
@@ -10937,12 +10945,6 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                Style);
 
   Style.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
-  verifyNoChange("template <auto x>\n"
-                 "requires(x > 1)\n"
-                 "constexpr int with_req(int) {\n"
-                 "  return 1;\n"
-                 "}",
-                 Style);
   verifyFormat("template <auto x> requires(x > 1)\n"
                "constexpr int with_req(int) {\n"
                "  return 1;\n"
