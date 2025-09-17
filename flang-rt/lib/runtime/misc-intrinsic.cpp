@@ -74,7 +74,7 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
   if (!IsNullTerminated(path1.OffsetElement(), path1.ElementBytes())) {
     auto srcTrimPos{TrimTrailingSpaces(pathSrc, path1.ElementBytes())};
     char *srcPathTrim{
-        static_cast<char *>(alloca((srcTrimPos + 1) * sizeof(char)))};
+        static_cast<char *>(alloca((srcTrimPos + 1)))};
     std::memcpy(srcPathTrim, pathSrc, srcTrimPos);
     srcPathTrim[srcTrimPos] = '\0';
     srcFilePath = srcPathTrim;
@@ -82,7 +82,7 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
   if (!IsNullTerminated(path2.OffsetElement(), path2.ElementBytes())) {
     auto dstTrimPos{TrimTrailingSpaces(pathDst, path2.ElementBytes())};
     char *dstPathTrim{
-        static_cast<char *>(alloca((dstTrimPos + 1) * sizeof(char)))};
+        static_cast<char *>(alloca((dstTrimPos + 1)))};
     std::memcpy(dstPathTrim, pathDst, dstTrimPos);
     dstPathTrim[dstTrimPos] = '\0';
     dstFilePath = dstPathTrim;
