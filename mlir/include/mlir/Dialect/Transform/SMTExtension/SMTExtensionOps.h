@@ -18,5 +18,4 @@
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.h.inc"
 
-
 #endif // MLIR_DIALECT_TRANSFORM_SMTEXTENSION_SMTEXTENSIONOPS_H

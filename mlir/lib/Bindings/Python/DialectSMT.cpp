@@ -42,12 +42,12 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
               },
               "cls"_a, "width"_a, "context"_a = nb::none());
   auto smtIntType = mlir_type_subclass(m, "IntType", mlirSMTTypeIsAInt)
-                         .def_classmethod(
-                             "get",
-                             [](const nb::object &, MlirContext context) {
-                               return mlirSMTTypeGetInt(context);
-                             },
-                             "cls"_a, "context"_a.none() = nb::none());
+                        .def_classmethod(
+                            "get",
+                            [](const nb::object &, MlirContext context) {
+                              return mlirSMTTypeGetInt(context);
+                            },
+                            "cls"_a, "context"_a.none() = nb::none());
 
   auto exportSMTLIB = [](MlirOperation module, bool inlineSingleUseValues,
                          bool indentLetBody) {
