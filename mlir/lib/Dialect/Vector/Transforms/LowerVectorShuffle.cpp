@@ -23,7 +23,7 @@ using namespace mlir::vector;
 
 namespace {
 
-/// Lowers a `vector.shuffle` operation with mix-size inputs to a new
+/// Lowers a `vector.shuffle` operation with mixed-size inputs to a new
 /// `vector.shuffle` which promotes the smaller input to the larger vector size
 /// and an updated version of the original `vector.shuffle`.
 ///
@@ -33,12 +33,16 @@ namespace {
 ///
 ///   is lowered to:
 ///
-///     %0 = vector.shuffle %v1, %v1 [0, 1, -1, -1] : 
-///       vector<2xf32>, vector<2xf32> 
-///     %1 = vector.shuffle %0, %v2 [0, 4, 1, 5] : 
+///     %0 = vector.shuffle %v1, %v1 [0, 1, -1, -1] :
+///       vector<2xf32>, vector<2xf32>
+///     %1 = vector.shuffle %0, %v2 [0, 4, 1, 5] :
 ///       vector<4xf32>, vector<4xf32>
 ///
-struct MixSizeInputShuffleOpRewrite final
+/// Note: This transformation helps legalize vector.shuffle ops when lowering
+/// to SPIR-V/LLVM, which don't support shuffle operations with mixed-size
+/// inputs.
+///
+struct MixedSizeInputShuffleOpRewrite final
     : OpRewritePattern<vector::ShuffleOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -51,7 +55,7 @@ struct MixSizeInputShuffleOpRewrite final
     if (v1Type.getRank() != 1 || v2Type.getRank() != 1)
       return failure();
 
-    // Bail out if inputs don't have mixed sized.
+    // Bail out if inputs don't have mixed sizes.
     int64_t v1OrigNumElems = v1Type.getNumElements();
     int64_t v2OrigNumElems = v2Type.getNumElements();
     if (v1OrigNumElems == v2OrigNumElems)
@@ -102,5 +106,5 @@ struct MixSizeInputShuffleOpRewrite final
 
 void mlir::vector::populateVectorShuffleLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<MixSizeInputShuffleOpRewrite>(patterns.getContext(), benefit);
+  patterns.add<MixedSizeInputShuffleOpRewrite>(patterns.getContext(), benefit);
 }
