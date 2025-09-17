@@ -14,43 +14,38 @@
 #include "src/__support/macros/config.h"
 
 #include "src/errno/libc_errno.h"
-#include "src/string/strlen.h"
-#include "src/string/strncpy.h"
+#include "src/string/string_utils.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/utsname.h>
 
+#include <stdio.h>
+
 namespace LIBC_NAMESPACE_DECL {
 
-// Matching the behavior of glibc version 2.2 and later.
-// Copies up to len bytes from the returned nodename field into name.
-LLVM_LIBC_FUNCTION(int, gethostname, (char *name, size_t len)) {
+LLVM_LIBC_FUNCTION(int, gethostname, (char *name, size_t size)) {
   // Check for invalid pointer
   if (name == nullptr) {
     libc_errno = EFAULT;
     return -1;
   }
 
+  // Because there is no SYS_gethostname syscall, we use uname to get the hostname.
   struct utsname unameData;
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_uname, &unameData);
-
-  // Checks if the length of the nodename was greater than or equal to len, and
-  // if it is, then the function returns -1 with errno set to ENAMETOOLONG. In
-  // this case, a terminating null byte is not included in the returned name.
-  if (strlen(unameData.nodename) >= len) {
-    strncpy(name, unameData.nodename, len);
-    libc_errno = ENAMETOOLONG;
+  if (ret < 0) {
+    libc_errno = static_cast<int>(-ret);
     return -1;
   }
 
-  // If the size of the array name is not large enough (less than the size of
-  // nodename with null termination), then anything might happen. In this case,
-  // what happens to the array name will be determined by the implementation of
-  // LIBC_NAMESPACE_DECL::strncpy
-  strncpy(name, unameData.nodename, len);
+  // Guarantee that the name will be null terminated.
+  // The amount of bytes copied is min(size + 1, strlen(nodename) + 1)
+  // +1 to account for the null terminator (the last copied byte is a NULL).
+  internal::strlcpy(name, unameData.nodename, size + 1);
 
-  if (ret < 0) {
-    libc_errno = static_cast<int>(-ret);
+  // Checks if the length of the hostname was greater than or equal to size
+  if (internal::string_length(unameData.nodename) >= size) {
+    libc_errno = ENAMETOOLONG;
     return -1;
   }
 
