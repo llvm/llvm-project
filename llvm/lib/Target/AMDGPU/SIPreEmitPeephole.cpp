@@ -473,6 +473,13 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
     const MachineInstr &MI) {
   unsigned OpCode = MI.getOpcode();
   Register DstReg = MI.getOperand(0).getReg();
+  // Only the first register in the register pair needs to be checked due to the
+  // unpacking order. Packed instructions are unpacked such that the lower 32
+  // bits (i.e., the first register in the pair) are written first. This can
+  // introduce dependencies if the first register is written in one instruction
+  // and then read as part of the higher 32 bits in the subsequent instruction.
+  // Such scenarios can arise due to specific combinations of op_sel and
+  // op_sel_hi modifiers.
   Register UnpackedDstReg = TRI->getSubReg(DstReg, AMDGPU::sub0);
   int Src0ModifiersIdx =
       AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src0_modifiers);
@@ -486,6 +493,8 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
     Register HiSrc0Reg = (Src0Mods & SISrcMods::OP_SEL_1)
                              ? TRI->getSubReg(SrcReg0, AMDGPU::sub1)
                              : TRI->getSubReg(SrcReg0, AMDGPU::sub0);
+    // Check if the register selected by op_sel_hi is the same as the first
+    // register in the destination register pair
     if (UnpackedDstReg == HiSrc0Reg ||
         TRI->regsOverlap(UnpackedDstReg, HiSrc0Reg))
       return true;
@@ -501,6 +510,7 @@ bool SIPreEmitPeephole::canUnpackingIntroduceDependencies(
       return true;
   }
 
+  // Applicable for packed instructions with 3 source operands, such as V_PK_FMA
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
     int Src2ModifiersIdx =
         AMDGPU::getNamedOperandIdx(OpCode, AMDGPU::OpName::src2_modifiers);
@@ -549,15 +559,14 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder NewMI,
   //  lane.
   //  NEG_HI shares the same bit position with ABS. But packed instructions do
   //  not support ABS. Therefore, NEG_HI must be translated to NEG source
-  //  modifier for the higher 32 bits. Unpacked VOP3 instructions do support
-  //  ABS, therefore we need to explicitly add the NEG modifier if present in
-  //  the packed instruction
+  //  modifier for the higher 32 bits. Unpacked VOP3 instructions support
+  //  ABS, but do not support NEG_HI. Therefore we need to explicitly add the
+  //  NEG modifier if present in the packed instruction
   if (SrcMods & NegModifier)
     NewSrcMods |= SISrcMods::NEG;
   // Src modifiers. Only negative modifiers are added if needed. Unpacked
   // operations do not have op_sel, therefore it must be handled explicitly as
-  // done below. Unpacked operations support abs, but packed instructions do
-  // not. Thus, abs is not handled.
+  // done below.
   NewMI.addImm(NewSrcMods);
   if (SrcMO.isImm()) {
     NewMI.addImm(SrcMO.getImm());
@@ -799,6 +808,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
     }
   }
 
+  // TODO: fold this into previous block, if possible. Evaluate and handle any
+  // side effects.
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the compiler
     // to co-issue unpacked instructions with MFMA
