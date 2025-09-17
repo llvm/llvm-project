@@ -54,7 +54,7 @@ resume:                                   ; preds = %await2.suspend
   br label %coro.ret
 
 coro.ret:
-  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
     ret void
 
 cleanuppad:
@@ -80,7 +80,7 @@ declare void @print(i32)
 declare noalias ptr @malloc(i32)
 declare void @free(ptr)
 
-declare void @llvm.coro.end(ptr, i1, token) #2
+declare i1 @llvm.coro.end(ptr, i1, token) #2
 
 ; Function Attrs: nobuiltin nounwind
 
