@@ -284,8 +284,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairShift_ri<bits<3> f, string opcodestr, Operand ImmType, 
                       bit direction>
     : RVPPairBase<f, 0b0, direction, (outs GPRPairRV32:$rd),
-                       (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
-                       "$rd, $rs1, $shamt"> {
+                  (ins GPRPairRV32:$rs1, ImmType:$shamt), opcodestr,
+                  "$rd, $rs1, $shamt"> {
   let Inst{31}    = 0b0;
 }
 
@@ -401,7 +401,7 @@ class RVPNarrowingBinary_rr<bits<3> f, bits<2> w, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairBinary_rr<bits<4> f, bits<2> w, string opcodestr>
-  : RVPPairBinaryBase_rr<f{3-1}, f{0}, w, 0b0, 0b0, opcodestr>;
+    : RVPPairBinaryBase_rr<f{3-1}, f{0}, w, 0b0, 0b0, opcodestr>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPPairBinaryShift_rr<bits<3> f, bits<2> w, string opcodestr>
@@ -1298,160 +1298,160 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNCLIPR_HS   : RVPNarrowingShift_rr<0b111, 0b01, "pnclipr.hs">;
   def NCLIPR       : RVPNarrowingShift_rr<0b111, 0b11, "nclipr">;
 
-  def PSLLI_DB      : RVPPairShiftB_ri<0b000,  "pslli.db">;
-  def PSLLI_DH      : RVPPairShiftH_ri<0b000, "pslli.dh">;
-  def PSLLI_DW      : RVPPairShiftW_ri<0b000, "pslli.dw">;
+  def PSLLI_DB     : RVPPairShiftB_ri<0b000,  "pslli.db">;
+  def PSLLI_DH     : RVPPairShiftH_ri<0b000, "pslli.dh">;
+  def PSLLI_DW     : RVPPairShiftW_ri<0b000, "pslli.dw">;
 
-  def PSSLAI_DH     : RVPPairShiftH_ri<0b101, "psslai.dh">;
-  def PSSLAI_DW     : RVPPairShiftW_ri<0b101, "psslai.dw">;
+  def PSSLAI_DH    : RVPPairShiftH_ri<0b101, "psslai.dh">;
+  def PSSLAI_DW    : RVPPairShiftW_ri<0b101, "psslai.dw">;
 
-  def PSEXT_DH_B    : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
-  def PSEXT_DW_B    : RVPPairUnary_r<0b01, 0b00100, "psext.dw.b">;
+  def PSEXT_DH_B   : RVPPairUnary_r<0b00, 0b00100, "psext.dh.b">;
+  def PSEXT_DW_B   : RVPPairUnary_r<0b01, 0b00100, "psext.dw.b">;
 
-  def PSEXT_DW_H    : RVPPairUnary_r<0b01, 0b00101, "psext.dw.h">;
+  def PSEXT_DW_H   : RVPPairUnary_r<0b01, 0b00101, "psext.dw.h">;
 
-  def PSABS_DH      : RVPPairUnary_r<0b00, 0b00111, "psabs.dh">;
-  def PSABS_DB      : RVPPairUnary_r<0b10, 0b00111, "psabs.db">;
+  def PSABS_DH     : RVPPairUnary_r<0b00, 0b00111, "psabs.dh">;
+  def PSABS_DB     : RVPPairUnary_r<0b10, 0b00111, "psabs.db">;
 
-  def PSLL_DHS      : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
-  def PSLL_DWS      : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
-  def PSLL_DBS      : RVPPairShift_rr<0b000, 0b10, "psll.dbs">;
+  def PSLL_DHS     : RVPPairShift_rr<0b000, 0b00, "psll.dhs">;
+  def PSLL_DWS     : RVPPairShift_rr<0b000, 0b01, "psll.dws">;
+  def PSLL_DBS     : RVPPairShift_rr<0b000, 0b10, "psll.dbs">;
 
-  def PADD_DHS      : RVPPairShift_rr<0b001, 0b00, "padd.dhs">;
-  def PADD_DWS      : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
-  def PADD_DBS      : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
+  def PADD_DHS     : RVPPairShift_rr<0b001, 0b00, "padd.dhs">;
+  def PADD_DWS     : RVPPairShift_rr<0b001, 0b01, "padd.dws">;
+  def PADD_DBS     : RVPPairShift_rr<0b001, 0b10, "padd.dbs">;
 
-  def PSSHA_DHS     : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;
-  def PSSHA_DWS     : RVPPairShift_rr<0b110, 0b01, "pssha.dws">;
+  def PSSHA_DHS    : RVPPairShift_rr<0b110, 0b00, "pssha.dhs">;
+  def PSSHA_DWS    : RVPPairShift_rr<0b110, 0b01, "pssha.dws">;
 
-  def PSSHAR_DHS    : RVPPairShift_rr<0b111, 0b00, "psshar.dhs">;
-  def PSSHAR_DWS    : RVPPairShift_rr<0b111, 0b01, "psshar.dws">;
+  def PSSHAR_DHS   : RVPPairShift_rr<0b111, 0b00, "psshar.dhs">;
+  def PSSHAR_DWS   : RVPPairShift_rr<0b111, 0b01, "psshar.dws">;
 
-  def PSRLI_DB      : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
-  def PSRLI_DH      : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
-  def PSRLI_DW      : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
+  def PSRLI_DB     : RVPPairShiftB_ri<0b000, "psrli.db",  0b1>;
+  def PSRLI_DH     : RVPPairShiftH_ri<0b000, "psrli.dh",  0b1>;
+  def PSRLI_DW     : RVPPairShiftW_ri<0b000, "psrli.dw",  0b1>;
 
-  def PUSATI_DH     : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1>;
-  def PUSATI_DW     : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1>;
+  def PUSATI_DH    : RVPPairShiftH_ri<0b010, "pusati.dh", 0b1>;
+  def PUSATI_DW    : RVPPairShiftW_ri<0b010, "pusati.dw", 0b1>;
 
-  def PSRAI_DB      : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
-  def PSRAI_DH      : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
-  def PSRAI_DW      : RVPPairShiftW_ri<0b100, "psrai.dw",  0b1>;
+  def PSRAI_DB     : RVPPairShiftB_ri<0b100, "psrai.db",  0b1>;
+  def PSRAI_DH     : RVPPairShiftH_ri<0b100, "psrai.dh",  0b1>;
+  def PSRAI_DW     : RVPPairShiftW_ri<0b100, "psrai.dw",  0b1>;
 
-  def PSRARI_DH     : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
-  def PSRARI_DW     : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
+  def PSRARI_DH    : RVPPairShiftH_ri<0b101, "psrari.dh", 0b1>;
+  def PSRARI_DW    : RVPPairShiftW_ri<0b101, "psrari.dw", 0b1>;
 
-  def PSATI_DH      : RVPPairShiftH_ri<0b110, "psati.dh",  0b1>;
-  def PSATI_DW      : RVPPairShiftW_ri<0b110, "psati.dw",  0b1>;
+  def PSATI_DH     : RVPPairShiftH_ri<0b110, "psati.dh",  0b1>;
+  def PSATI_DW     : RVPPairShiftW_ri<0b110, "psati.dw",  0b1>;
 
-  def PSRL_DHS      : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
-  def PSRL_DWS      : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
-  def PSRL_DBS      : RVPPairShift_rr<0b000, 0b10, "psrl.dbs", 0b1>;
+  def PSRL_DHS     : RVPPairShift_rr<0b000, 0b00, "psrl.dhs", 0b1>;
+  def PSRL_DWS     : RVPPairShift_rr<0b000, 0b01, "psrl.dws", 0b1>;
+  def PSRL_DBS     : RVPPairShift_rr<0b000, 0b10, "psrl.dbs", 0b1>;
 
-  def PSRA_DHS      : RVPPairShift_rr<0b100, 0b00, "psra.dhs", 0b1>;
-  def PSRA_DWS      : RVPPairShift_rr<0b100, 0b01, "psra.dws", 0b1>;
-  def PSRA_DBS      : RVPPairShift_rr<0b100, 0b10, "psra.dbs", 0b1>;
+  def PSRA_DHS     : RVPPairShift_rr<0b100, 0b00, "psra.dhs", 0b1>;
+  def PSRA_DWS     : RVPPairShift_rr<0b100, 0b01, "psra.dws", 0b1>;
+  def PSRA_DBS     : RVPPairShift_rr<0b100, 0b10, "psra.dbs", 0b1>;
 
-  def PADD_DH       : RVPPairBinary_rr<0b0000, 0b00, "padd.dh">;
-  def PADD_DW       : RVPPairBinary_rr<0b0000, 0b01, "padd.dw">;
-  def PADD_DB       : RVPPairBinary_rr<0b0000, 0b10, "padd.db">;
-  def ADDD          : RVPPairBinary_rr<0b0000, 0b11, "addd">;
+  def PADD_DH      : RVPPairBinary_rr<0b0000, 0b00, "padd.dh">;
+  def PADD_DW      : RVPPairBinary_rr<0b0000, 0b01, "padd.dw">;
+  def PADD_DB      : RVPPairBinary_rr<0b0000, 0b10, "padd.db">;
+  def ADDD         : RVPPairBinary_rr<0b0000, 0b11, "addd">;
 
-  def PSADD_DH      : RVPPairBinary_rr<0b0010, 0b00, "psadd.dh">;
-  def PSADD_DW      : RVPPairBinary_rr<0b0010, 0b01, "psadd.dw">;
-  def PSADD_DB      : RVPPairBinary_rr<0b0010, 0b10, "psadd.db">;
+  def PSADD_DH     : RVPPairBinary_rr<0b0010, 0b00, "psadd.dh">;
+  def PSADD_DW     : RVPPairBinary_rr<0b0010, 0b01, "psadd.dw">;
+  def PSADD_DB     : RVPPairBinary_rr<0b0010, 0b10, "psadd.db">;
 
-  def PAADD_DH      : RVPPairBinary_rr<0b0011, 0b00, "paadd.dh">;
-  def PAADD_DW      : RVPPairBinary_rr<0b0011, 0b01, "paadd.dw">;
-  def PAADD_DB      : RVPPairBinary_rr<0b0011, 0b10, "paadd.db">;
+  def PAADD_DH     : RVPPairBinary_rr<0b0011, 0b00, "paadd.dh">;
+  def PAADD_DW     : RVPPairBinary_rr<0b0011, 0b01, "paadd.dw">;
+  def PAADD_DB     : RVPPairBinary_rr<0b0011, 0b10, "paadd.db">;
 
-  def PSADDU_DH     : RVPPairBinary_rr<0b0110, 0b00, "psaddu.dh">;
-  def PSADDU_DW     : RVPPairBinary_rr<0b0110, 0b01, "psaddu.dw">;
-  def PSADDU_DB     : RVPPairBinary_rr<0b0110, 0b10, "psaddu.db">;
+  def PSADDU_DH    : RVPPairBinary_rr<0b0110, 0b00, "psaddu.dh">;
+  def PSADDU_DW    : RVPPairBinary_rr<0b0110, 0b01, "psaddu.dw">;
+  def PSADDU_DB    : RVPPairBinary_rr<0b0110, 0b10, "psaddu.db">;
 
-  def PAADDU_DH     : RVPPairBinary_rr<0b0111, 0b00, "paaddu.dh">;
-  def PAADDU_DW     : RVPPairBinary_rr<0b0111, 0b01, "paaddu.dw">;
-  def PAADDU_DB     : RVPPairBinary_rr<0b0111, 0b10, "paaddu.db">;
+  def PAADDU_DH    : RVPPairBinary_rr<0b0111, 0b00, "paaddu.dh">;
+  def PAADDU_DW    : RVPPairBinary_rr<0b0111, 0b01, "paaddu.dw">;
+  def PAADDU_DB    : RVPPairBinary_rr<0b0111, 0b10, "paaddu.db">;
 
-  def PSUB_DH       : RVPPairBinary_rr<0b1000, 0b00, "psub.dh">;
-  def PSUB_DW       : RVPPairBinary_rr<0b1000, 0b01, "psub.dw">;
-  def PSUB_DB       : RVPPairBinary_rr<0b1000, 0b10, "psub.db">;
-  def SUBD          : RVPPairBinary_rr<0b1000, 0b11, "subd">;
+  def PSUB_DH      : RVPPairBinary_rr<0b1000, 0b00, "psub.dh">;
+  def PSUB_DW      : RVPPairBinary_rr<0b1000, 0b01, "psub.dw">;
+  def PSUB_DB      : RVPPairBinary_rr<0b1000, 0b10, "psub.db">;
+  def SUBD         : RVPPairBinary_rr<0b1000, 0b11, "subd">;
 
-  def PDIF_DH       : RVPPairBinary_rr<0b1001, 0b00, "pdif.dh">;
-  def PDIF_DB       : RVPPairBinary_rr<0b1001, 0b10, "pdif.db">;
+  def PDIF_DH      : RVPPairBinary_rr<0b1001, 0b00, "pdif.dh">;
+  def PDIF_DB      : RVPPairBinary_rr<0b1001, 0b10, "pdif.db">;
 
-  def PSSUB_DH      : RVPPairBinary_rr<0b1010, 0b00, "pssub.dh">;
-  def PSSUB_DW      : RVPPairBinary_rr<0b1010, 0b01, "pssub.dw">;
-  def PSSUB_DB      : RVPPairBinary_rr<0b1010, 0b10, "pssub.db">;
+  def PSSUB_DH     : RVPPairBinary_rr<0b1010, 0b00, "pssub.dh">;
+  def PSSUB_DW     : RVPPairBinary_rr<0b1010, 0b01, "pssub.dw">;
+  def PSSUB_DB     : RVPPairBinary_rr<0b1010, 0b10, "pssub.db">;
 
-  def PASUB_DH      : RVPPairBinary_rr<0b1011, 0b00, "pasub.dh">;
-  def PASUB_DW      : RVPPairBinary_rr<0b1011, 0b01, "pasub.dw">;
-  def PASUB_DB      : RVPPairBinary_rr<0b1011, 0b10, "pasub.db">;
+  def PASUB_DH     : RVPPairBinary_rr<0b1011, 0b00, "pasub.dh">;
+  def PASUB_DW     : RVPPairBinary_rr<0b1011, 0b01, "pasub.dw">;
+  def PASUB_DB     : RVPPairBinary_rr<0b1011, 0b10, "pasub.db">;
 
-  def PDIFU_DH      : RVPPairBinary_rr<0b1101, 0b00, "pdifu.dh">;
-  def PDIFU_DB      : RVPPairBinary_rr<0b1101, 0b10, "pdifu.db">;
+  def PDIFU_DH     : RVPPairBinary_rr<0b1101, 0b00, "pdifu.dh">;
+  def PDIFU_DB     : RVPPairBinary_rr<0b1101, 0b10, "pdifu.db">;
 
-  def PSSUBU_DH     : RVPPairBinary_rr<0b1110, 0b00, "pssubu.dh">;
-  def PSSUBU_DW     : RVPPairBinary_rr<0b1110, 0b01, "pssubu.dw">;
-  def PSSUBU_DB     : RVPPairBinary_rr<0b1110, 0b10, "pssubu.db">;
+  def PSSUBU_DH    : RVPPairBinary_rr<0b1110, 0b00, "pssubu.dh">;
+  def PSSUBU_DW    : RVPPairBinary_rr<0b1110, 0b01, "pssubu.dw">;
+  def PSSUBU_DB    : RVPPairBinary_rr<0b1110, 0b10, "pssubu.db">;
 
-  def PASUBU_DH     : RVPPairBinary_rr<0b1111, 0b00, "pasubu.dh">;
-  def PASUBU_DW     : RVPPairBinary_rr<0b1111, 0b01, "pasubu.dw">;
-  def PASUBU_DB     : RVPPairBinary_rr<0b1111, 0b10, "pasubu.db">;
+  def PASUBU_DH    : RVPPairBinary_rr<0b1111, 0b00, "pasubu.dh">;
+  def PASUBU_DW    : RVPPairBinary_rr<0b1111, 0b01, "pasubu.dw">;
+  def PASUBU_DB    : RVPPairBinary_rr<0b1111, 0b10, "pasubu.db">;
 
-  def PSH1ADD_DH    : RVPPairBinaryShift_rr<0b010, 0b00, "psh1add.dh">;
-  def PSH1ADD_DW    : RVPPairBinaryShift_rr<0b010, 0b01, "psh1add.dw">;
+  def PSH1ADD_DH   : RVPPairBinaryShift_rr<0b010, 0b00, "psh1add.dh">;
+  def PSH1ADD_DW   : RVPPairBinaryShift_rr<0b010, 0b01, "psh1add.dw">;
 
-  def PSSH1SADD_DH  : RVPPairBinaryShift_rr<0b011, 0b00, "pssh1sadd.dh">;
-  def PSSH1SADD_DW  : RVPPairBinaryShift_rr<0b011, 0b01, "pssh1sadd.dw">;
+  def PSSH1SADD_DH : RVPPairBinaryShift_rr<0b011, 0b00, "pssh1sadd.dh">;
+  def PSSH1SADD_DW : RVPPairBinaryShift_rr<0b011, 0b01, "pssh1sadd.dw">;
 
-  def PPACK_DH      : RVPPairBinaryPack_rr<0b000, 0b00, "ppack.dh">;
-  def PPACK_DW      : RVPPairBinaryPack_rr<0b000, 0b01, "ppack.dw">;
+  def PPACK_DH     : RVPPairBinaryPack_rr<0b000, 0b00, "ppack.dh">;
+  def PPACK_DW     : RVPPairBinaryPack_rr<0b000, 0b01, "ppack.dw">;
 
-  def PPACKBT_DH    : RVPPairBinaryPack_rr<0b001, 0b00, "ppackbt.dh">;
-  def PPACKBT_DW    : RVPPairBinaryPack_rr<0b001, 0b01, "ppackbt.dw">;
+  def PPACKBT_DH   : RVPPairBinaryPack_rr<0b001, 0b00, "ppackbt.dh">;
+  def PPACKBT_DW   : RVPPairBinaryPack_rr<0b001, 0b01, "ppackbt.dw">;
 
-  def PPACKTB_DH    : RVPPairBinaryPack_rr<0b010, 0b00, "ppacktb.dh">;
-  def PPACKTB_DW    : RVPPairBinaryPack_rr<0b010, 0b01, "ppacktb.dw">;
+  def PPACKTB_DH   : RVPPairBinaryPack_rr<0b010, 0b00, "ppacktb.dh">;
+  def PPACKTB_DW   : RVPPairBinaryPack_rr<0b010, 0b01, "ppacktb.dw">;
 
-  def PPACKT_DH     : RVPPairBinaryPack_rr<0b011, 0b00, "ppackt.dh">;
-  def PPACKT_DW     : RVPPairBinaryPack_rr<0b011, 0b01, "ppackt.dw">;
+  def PPACKT_DH    : RVPPairBinaryPack_rr<0b011, 0b00, "ppackt.dh">;
+  def PPACKT_DW    : RVPPairBinaryPack_rr<0b011, 0b01, "ppackt.dw">;
 
-  def PAS_DHX       : RVPPairBinaryExchanged_rr<0b0000, 0b00, "pas.dhx">;
-  def PSA_DHX       : RVPPairBinaryExchanged_rr<0b0000, 0b10, "psa.dhx">;
+  def PAS_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b00, "pas.dhx">;
+  def PSA_DHX      : RVPPairBinaryExchanged_rr<0b0000, 0b10, "psa.dhx">;
 
-  def PSAS_DHX      : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
-  def PSSA_DHX      : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
+  def PSAS_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
+  def PSSA_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
 
-  def PAAX_DHX      : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paax.dhx">;
-  def PASA_DHX      : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
+  def PAAX_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paax.dhx">;
+  def PASA_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
 
-  def PMSEQ_DH      : RVPPairBinaryExchanged_rr<0b1000, 0b00, "pmseq.dh">;
-  def PMSEQ_DW      : RVPPairBinaryExchanged_rr<0b1000, 0b01, "pmseq.dw">;
-  def PMSEQ_DB      : RVPPairBinaryExchanged_rr<0b1000, 0b10, "pmseq.db">;
+  def PMSEQ_DH     : RVPPairBinaryExchanged_rr<0b1000, 0b00, "pmseq.dh">;
+  def PMSEQ_DW     : RVPPairBinaryExchanged_rr<0b1000, 0b01, "pmseq.dw">;
+  def PMSEQ_DB     : RVPPairBinaryExchanged_rr<0b1000, 0b10, "pmseq.db">;
 
-  def PMSLT_DH      : RVPPairBinaryExchanged_rr<0b1010, 0b00, "pmslt.dh">;
-  def PMSLT_DW      : RVPPairBinaryExchanged_rr<0b1010, 0b01, "pmslt.dw">;
-  def PMSLT_DB      : RVPPairBinaryExchanged_rr<0b1010, 0b10, "pmslt.db">;
+  def PMSLT_DH     : RVPPairBinaryExchanged_rr<0b1010, 0b00, "pmslt.dh">;
+  def PMSLT_DW     : RVPPairBinaryExchanged_rr<0b1010, 0b01, "pmslt.dw">;
+  def PMSLT_DB     : RVPPairBinaryExchanged_rr<0b1010, 0b10, "pmslt.db">;
 
-  def PMSLTU_DH     : RVPPairBinaryExchanged_rr<0b1011, 0b00, "pmsltu.dh">;
-  def PMSLTU_DW     : RVPPairBinaryExchanged_rr<0b1011, 0b01, "pmsltu.dw">;
-  def PMSLTU_DB     : RVPPairBinaryExchanged_rr<0b1011, 0b10, "pmsltu.db">;
+  def PMSLTU_DH    : RVPPairBinaryExchanged_rr<0b1011, 0b00, "pmsltu.dh">;
+  def PMSLTU_DW    : RVPPairBinaryExchanged_rr<0b1011, 0b01, "pmsltu.dw">;
+  def PMSLTU_DB    : RVPPairBinaryExchanged_rr<0b1011, 0b10, "pmsltu.db">;
 
-  def PMIN_DH       : RVPPairBinaryExchanged_rr<0b1100, 0b00, "pmin.dh">;
-  def PMIN_DW       : RVPPairBinaryExchanged_rr<0b1100, 0b01, "pmin.dw">;
-  def PMIN_DB       : RVPPairBinaryExchanged_rr<0b1100, 0b10, "pmin.db">;
+  def PMIN_DH      : RVPPairBinaryExchanged_rr<0b1100, 0b00, "pmin.dh">;
+  def PMIN_DW      : RVPPairBinaryExchanged_rr<0b1100, 0b01, "pmin.dw">;
+  def PMIN_DB      : RVPPairBinaryExchanged_rr<0b1100, 0b10, "pmin.db">;
 
-  def PMINU_DH      : RVPPairBinaryExchanged_rr<0b1101, 0b00, "pminu.dh">;
-  def PMINU_DW      : RVPPairBinaryExchanged_rr<0b1101, 0b01, "pminu.dw">;
-  def PMINU_DB      : RVPPairBinaryExchanged_rr<0b1101, 0b10, "pminu.db">;
+  def PMINU_DH     : RVPPairBinaryExchanged_rr<0b1101, 0b00, "pminu.dh">;
+  def PMINU_DW     : RVPPairBinaryExchanged_rr<0b1101, 0b01, "pminu.dw">;
+  def PMINU_DB     : RVPPairBinaryExchanged_rr<0b1101, 0b10, "pminu.db">;
 
-  def PMAX_DH       : RVPPairBinaryExchanged_rr<0b1110, 0b00, "pmax.dh">;
-  def PMAX_DW       : RVPPairBinaryExchanged_rr<0b1110, 0b01, "pmax.dw">;
-  def PMAX_DB       : RVPPairBinaryExchanged_rr<0b1110, 0b10, "pmax.db">;
+  def PMAX_DH      : RVPPairBinaryExchanged_rr<0b1110, 0b00, "pmax.dh">;
+  def PMAX_DW      : RVPPairBinaryExchanged_rr<0b1110, 0b01, "pmax.dw">;
+  def PMAX_DB      : RVPPairBinaryExchanged_rr<0b1110, 0b10, "pmax.db">;
 
-  def PMAXU_DH      : RVPPairBinaryExchanged_rr<0b1111, 0b00, "pmaxu.dh">;
-  def PMAXU_DW      : RVPPairBinaryExchanged_rr<0b1111, 0b01, "pmaxu.dw">;
-  def PMAXU_DB      : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
+  def PMAXU_DH     : RVPPairBinaryExchanged_rr<0b1111, 0b00, "pmaxu.dh">;
+  def PMAXU_DW     : RVPPairBinaryExchanged_rr<0b1111, 0b01, "pmaxu.dw">;
+  def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
 } // Predicates = [HasStdExtP, IsRV32]
