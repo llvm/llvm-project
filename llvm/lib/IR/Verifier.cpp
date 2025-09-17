@@ -1772,8 +1772,8 @@ void Verifier::visitComdat(const Comdat &C) {
             GV);
     else
       Check(C.getUsers().empty(),
-          "COFF comdats must have a defined global value with the same name",
-          GV);
+            "COFF comdats must have a defined global value with the same name",
+            GV);
   }
 }
 
