@@ -41,6 +41,32 @@ class OperationOp(OperationOp):
         return self.regions[0].blocks[0]
 
 
+@_ods_cext.register_operation(_Dialect, replace=True)
+class TypeOp(TypeOp):
+    """Specialization for the type op class."""
+
+    def __init__(self, sym_name, *, loc=None, ip=None):
+        super().__init__(sym_name, loc=loc, ip=ip)
+        self.regions[0].blocks.append()
+
+    @property
+    def body(self):
+        return self.regions[0].blocks[0]
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class AttributeOp(AttributeOp):
+    """Specialization for the attribute op class."""
+
+    def __init__(self, sym_name, *, loc=None, ip=None):
+        super().__init__(sym_name, loc=loc, ip=ip)
+        self.regions[0].blocks.append()
+
+    @property
+    def body(self):
+        return self.regions[0].blocks[0]
+
+
 @register_attribute_builder("VariadicityArrayAttr")
 def _variadicity_array_attr(x, context):
     return _ods_cext.ir.Attribute.parse(
