@@ -1382,7 +1382,6 @@ bool SemaHLSL::handleRootSignatureElements(
             llvm::hlsl::rootsig::DescriptorTableOffsetAppend) {
           // Manually specified the offset
           Offset = Clause->Offset;
-          Unbound = false;
         } else if (Unbound) {
           // Trying to append onto unbound offset
           Diag(Loc, diag::err_hlsl_appending_onto_unbound);
