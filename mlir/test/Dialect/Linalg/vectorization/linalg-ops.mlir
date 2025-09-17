@@ -1375,11 +1375,8 @@ func.func @test_vectorize_dynamic_pack(%src: tensor<?x?xf32>, %dest: tensor<?x?x
   %pack = linalg.pack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?xf32> -> tensor<?x?x16x2xf32>
   return %pack : tensor<?x?x16x2xf32>
 }
+
 //  CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-//  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-//  CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//  CHECK-DAG: %[[D0:.*]] = tensor.dim {{.*}} %[[C0]] : tensor<?x?x16x2xf32>
-//  CHECK-DAG: %[[D1:.*]] = tensor.dim {{.*}} %[[C1]] : tensor<?x?x16x2xf32>
 //  CHECK-DAG: %[[C0_1:.*]] = arith.constant 0 : index
 //  CHECK-DAG: %[[C0_0:.*]] = arith.constant 0 : index
 //  CHECK-DAG: %[[C1_0:.*]] = arith.constant 1 : index
