@@ -56,10 +56,10 @@ class SelectZibi<CondCode Cond>
           (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, uimm7:$cimm,
               (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
-def : SelectZibi<SETEQ>;
-def : SelectZibi<SETNE>;
-
 let Predicates = [HasStdExtZibi] in {
+  def : SelectZibi<SETEQ>;
+  def : SelectZibi<SETNE>;
+
   defm : BccImmPat<SETEQ, BEQI>;
   defm : BccImmPat<SETNE, BNEI>;
 } // Predicates = [HasStdExtZibi]
