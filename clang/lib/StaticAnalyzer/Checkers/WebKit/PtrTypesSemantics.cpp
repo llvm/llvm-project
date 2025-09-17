@@ -130,7 +130,8 @@ bool isRefType(const std::string &Name) {
 }
 
 bool isRetainPtr(const std::string &Name) {
-  return Name == "RetainPtr" || Name == "RetainPtrArc";
+  return Name == "RetainPtr" || Name == "RetainPtrArc" ||
+         Name == "OSObjectPtr" || Name == "OSObjectPtrArc";
 }
 
 bool isCheckedPtr(const std::string &Name) {
@@ -170,7 +171,8 @@ bool isCtorOfRetainPtr(const clang::FunctionDecl *F) {
   const std::string &FunctionName = safeGetName(F);
   return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
          FunctionName == "adoptCF" || FunctionName == "retainPtr" ||
-         FunctionName == "RetainPtrArc" || FunctionName == "adoptNSArc";
+         FunctionName == "RetainPtrArc" || FunctionName == "adoptNSArc" ||
+         FunctionName == "adoptOSObject" || FunctionName == "adoptOSObjectArc";
 }
 
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
