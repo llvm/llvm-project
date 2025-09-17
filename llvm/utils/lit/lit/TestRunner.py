@@ -722,7 +722,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     return std_fds
 
 
-def _expandLateSubstitutions(arguments, cwd):
+def _expandLateSubstitutions(cmd, arguments, cwd):
     for i, arg in enumerate(arguments):
         if not isinstance(arg, str):
             continue
@@ -731,8 +731,11 @@ def _expandLateSubstitutions(arguments, cwd):
             filePath = match.group(1)
             if not os.path.isabs(filePath):
                 filePath = os.path.join(cwd, filePath)
-            with open(filePath) as fileHandle:
-                return fileHandle.read()
+            try:
+                with open(filePath) as fileHandle:
+                    return fileHandle.read()
+            except FileNotFoundError:
+                raise InternalShellError(cmd, "File does not exist: %s" % filePath)
 
         arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
 
@@ -854,7 +857,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
 
         # Expand all late substitutions.
-        args = _expandLateSubstitutions(args, cmd_shenv.cwd)
+        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
 
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
@@ -2411,6 +2414,20 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         status, output, attempts=i + 1, max_allowed_attempts=attempts
     )
 
+def _expandLateSubstitutionsExternal(commandLine):
+    filePaths = []
+    def _replaceReadFile(match):
+        filePath = match.group(1)
+        filePaths.append(filePath)
+        return "$(cat %s)" % filePath
+
+    commandLine = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, commandLine)
+    # Add test commands before the command to check if the file exists as
+    # cat inside a subshell will never return a non-zero exit code outside
+    # of the subshell.
+    for filePath in filePaths:
+        commandLine = "%s && test -e %s" % (commandLine, filePath)
+    return commandLine
 
 def executeShTest(
     test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
@@ -2441,5 +2458,9 @@ def executeShTest(
         conditions,
         recursion_limit=test.config.recursiveExpansionLimit,
     )
+
+    if useExternalSh:
+        for index, command in enumerate(script):
+            script[index] = _expandLateSubstitutionsExternal(command)
 
     return _runShTest(test, litConfig, useExternalSh, script, tmpBase)
