@@ -118,7 +118,7 @@ ExternalFileUnit *UnitMap::Find(const char *path, std::size_t pathLen) {
     for (int j{0}; j < buckets_; ++j) {
       for (Chain *p{bucket_[j].get()}; p; p = p->next.get()) {
         if (p->unit.path() && p->unit.pathLength() == pathLen &&
-            std::memcmp(p->unit.path(), path, pathLen) == 0) {
+            runtime::memcmp(p->unit.path(), path, pathLen) == 0) {
           return &p->unit;
         }
       }

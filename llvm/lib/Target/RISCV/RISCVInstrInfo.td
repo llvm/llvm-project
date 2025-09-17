@@ -1698,8 +1698,6 @@ let Predicates = [IsRV32] in {
 def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
 }
 let Predicates = [IsRV64] in {
-def : Pat<(i64 (seteq (i64 (and GPR:$rs1, 0x0000000080000000)), 0)),
-          (XORI (i64 (SRLIW GPR:$rs1, 31)), 1)>;
 def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
 def : Pat<(i64 (setlt (sext_inreg GPR:$rs1, i32), 0)), (SRLIW GPR:$rs1, 31)>;
 }
@@ -2330,8 +2328,8 @@ include "RISCVInstrInfoZalasr.td"
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZicfiss.td"
 include "RISCVInstrInfoZilsd.td"
+include "RISCVInstrInfoZibi.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2358,6 +2356,9 @@ include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoZcmop.td"
 include "RISCVInstrInfoZclsd.td"
+
+// Control Flow Integriy, this requires Zimop/Zcmop
+include "RISCVInstrInfoZicfiss.td"
 
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"

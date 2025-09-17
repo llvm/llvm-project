@@ -215,6 +215,7 @@ class DebugCommunication(object):
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
+        self.invalidated_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
         self.module_events: List[Dict] = []
         self.sequence: int = 1
@@ -440,6 +441,8 @@ class DebugCommunication(object):
         elif event == "capabilities" and body:
             # Update the capabilities with new ones from the event.
             self.capabilities.update(body["capabilities"])
+        elif event == "invalidated":
+            self.invalidated_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -1014,6 +1017,7 @@ class DebugCommunication(object):
                 "supportsVariableType": True,
                 "supportsStartDebuggingRequest": True,
                 "supportsProgressReporting": True,
+                "supportsInvalidatedEvent": True,
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
@@ -1490,12 +1494,17 @@ class DebugAdapterServer(DebugCommunication):
         init_commands: list[str] = [],
         log_file: Optional[TextIO] = None,
         env: Optional[dict[str, str]] = None,
+        additional_args: list[str] = [],
     ):
         self.process = None
         self.connection = None
         if executable is not None:
             process, connection = DebugAdapterServer.launch(
-                executable=executable, connection=connection, env=env, log_file=log_file
+                executable=executable,
+                connection=connection,
+                env=env,
+                log_file=log_file,
+                additional_args=additional_args,
             )
             self.process = process
             self.connection = connection
@@ -1528,6 +1537,8 @@ class DebugAdapterServer(DebugCommunication):
         env: Optional[dict[str, str]] = None,
         log_file: Optional[TextIO] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[int] = None,
+        additional_args: list[str] = [],
     ) -> tuple[subprocess.Popen, Optional[str]]:
         adapter_env = os.environ.copy()
         if env is not None:
@@ -1537,9 +1548,16 @@ class DebugAdapterServer(DebugCommunication):
             adapter_env["LLDBDAP_LOG"] = log_file
         args = [executable]
 
+        # Add additional arguments first (like --no-lldbinit)
+        args.extend(additional_args)
+
         if connection is not None:
             args.append("--connection")
             args.append(connection)
+
+        if connection_timeout is not None:
+            args.append("--connection-timeout")
+            args.append(str(connection_timeout))
 
         process = subprocess.Popen(
             args,

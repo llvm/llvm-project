@@ -8,8 +8,15 @@
 
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "TestingSupport.h"
+#include "clang/AST/Type.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
+#include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
+#include "clang/Analysis/FlowSensitive/StorageLocation.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace dataflow {
@@ -190,7 +197,7 @@ TEST(RecordOpsTest, RecordsEqual) {
       });
 }
 
-TEST(TransferTest, CopyRecordBetweenDerivedAndBase) {
+TEST(RecordOpsTest, CopyRecordBetweenDerivedAndBase) {
   std::string Code = R"(
     struct A {
       int i;
@@ -263,6 +270,67 @@ TEST(TransferTest, CopyRecordBetweenDerivedAndBase) {
                   Env.getValue(*B.getChild(*IDecl)));
         EXPECT_EQ(Env.getValue(A.getSyntheticField("synth_int")),
                   Env.getValue(B.getSyntheticField("synth_int")));
+      });
+}
+
+TEST(RecordOpsTest, CopyRecordWithExplicitSharedBaseTypeToCopy) {
+  std::string Code = R"(
+    struct Base {
+      bool BaseField;
+      char UnmodeledField;
+    };
+
+    struct DerivedOne : public Base {
+      int DerivedOneField;
+    };
+
+    struct DerivedTwo : public Base {
+      int DerivedTwoField;
+    };
+
+    void target(Base B, DerivedOne D1, DerivedTwo D2) {
+      (void) B.BaseField;
+      // [[p]]
+    }
+  )";
+  auto SyntheticFieldCallback = [](QualType Ty) -> llvm::StringMap<QualType> {
+    CXXRecordDecl *BaseDecl = nullptr;
+    std::string TypeAsString = Ty.getAsString();
+    if (TypeAsString == "Base")
+      BaseDecl = Ty->getAsCXXRecordDecl();
+    else if (TypeAsString == "DerivedOne" || TypeAsString == "DerivedTwo")
+      BaseDecl = Ty->getAsCXXRecordDecl()
+                     ->bases_begin()
+                     ->getType()
+                     ->getAsCXXRecordDecl();
+    else
+      return {};
+    QualType FieldType = getFieldNamed(BaseDecl, "BaseField")->getType();
+    return {{"synth_field", FieldType}};
+  };
+  // Test copying derived to base class.
+  runDataflow(
+      Code, SyntheticFieldCallback,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        const ValueDecl *BaseFieldDecl = findValueDecl(ASTCtx, "BaseField");
+        auto &B = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "B");
+        auto &D1 = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "D1");
+        auto &D2 = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "D2");
+
+        EXPECT_NE(Env.getValue(*D1.getChild(*BaseFieldDecl)),
+                  Env.getValue(*D2.getChild(*BaseFieldDecl)));
+        EXPECT_NE(Env.getValue(D1.getSyntheticField("synth_field")),
+                  Env.getValue(D2.getSyntheticField("synth_field")));
+
+        copyRecord(D1, D2, Env, B.getType());
+
+        EXPECT_EQ(Env.getValue(*D1.getChild(*BaseFieldDecl)),
+                  Env.getValue(*D2.getChild(*BaseFieldDecl)));
+        EXPECT_EQ(Env.getValue(D1.getSyntheticField("synth_field")),
+                  Env.getValue(D2.getSyntheticField("synth_field")));
       });
 }
 
