@@ -810,13 +810,15 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
 Lanemask Operands
 ^^^^^^^^^^^^^^^^^^
 
-A Lanemask operand is 64-bit unsigned value that can the store lane information 
+A Lanemask operand is a 64-bit unsigned value that can store lane information 
 for a register operand in the instruction. It can be used as many times as needed
-in an instruction, with one (atleast) or more register operands associated with it.
+in an instruction, with one or more register operands associated with it. While 
+the active bits represent the live subregister (in virtual registers) or regUnits
+(in physical registers), the remaining bits can represent the UNDEF part of it. 
 
 
 For example, the COPY_LANEMASK instruction uses this operand to copy only active 
-lanes(of the source register) in the mask. The syntax for it would look:
+lanes (of the source register) in the mask. The syntax for it would look like:
 
 .. code-block:: text
 

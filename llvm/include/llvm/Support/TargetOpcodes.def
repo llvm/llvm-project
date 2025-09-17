@@ -115,8 +115,8 @@ HANDLE_TARGET_OPCODE(REG_SEQUENCE)
 HANDLE_TARGET_OPCODE(COPY)
 
 /// COPY_LANEMASK - Target-independent register copy for active mask in 
-/// register as represented by the lanemask. This instruction cannot be 
-/// only used to copy from the subregisters of virtual registers.
+/// register as represented by the lanemask. This instruction does not 
+/// support copy between subregisters of virtual registers.
 HANDLE_TARGET_OPCODE(COPY_LANEMASK)
 
 /// BUNDLE - This instruction represents an instruction bundle. Instructions
