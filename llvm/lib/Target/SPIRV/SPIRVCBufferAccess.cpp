@@ -111,7 +111,7 @@ static bool replaceCBufferAccesses(Module &M) {
 
           for (Instruction *I : Insts) {
             Instruction *NewInst = CE->getAsInstruction();
-            NewInst->insertBefore(I);
+            NewInst->insertBefore(I->getIterator());
             I->replaceUsesOfWith(CE, NewInst);
             NewInst->replaceUsesOfWith(MemberGV, GetPointerCall);
           }
