@@ -3230,14 +3230,15 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           match(Ops[1], m_scev_UDiv(m_SCEV(D), m_SCEVConstant(C2))) &&
           C2->getAPInt().isPowerOf2() &&
           C1V.logBase2() <= getMinTrailingZeros(D)) {
-        const SCEV *NewMul;
+        const SCEV *NewMul = nullptr;
         if (C1V.uge(C2->getAPInt())) {
           NewMul = getMulExpr(getUDivExpr(getConstant(C1V), C2), D);
-        } else {
+        } else if (C2->getAPInt().logBase2() <= getMinTrailingZeros(D)) {
           assert(C1V.ugt(1) && "C1 <= 1 should have been folded earlier");
           NewMul = getUDivExpr(D, getUDivExpr(C2, getConstant(C1V)));
         }
-        return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
+        if (NewMul)
+          return C1V == LHSC->getAPInt() ? NewMul : getNegativeSCEV(NewMul);
       }
     }
   }
