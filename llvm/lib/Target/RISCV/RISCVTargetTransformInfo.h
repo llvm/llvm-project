@@ -287,7 +287,7 @@ public:
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+                          unsigned /*AddressSpace*/, bool /*IsMaskConstant*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
