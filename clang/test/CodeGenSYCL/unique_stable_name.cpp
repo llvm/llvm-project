@@ -102,6 +102,7 @@ int main() {
   // CHECK: declare noundef ptr @_Z4funcI4DerpEDTu33__builtin_sycl_unique_stable_nameDtsrT_3strEEEv
   // CHECK: define internal void @_Z18kernel_single_taskIZ4mainEUlPZ4mainEUlvE_E_S2_EvT0_
   // CHECK: define internal void @_Z26unnamed_kernel_single_taskIZ4mainEUlvE_EvT_
+  // CHECK: define internal void @_Z18kernel_single_taskIZ4mainEUlvE_S0_EvT0_
 
   unnamed_kernel_single_task(
       []() {

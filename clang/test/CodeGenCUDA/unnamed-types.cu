@@ -6,10 +6,13 @@
 
 // HOST: @0 = private unnamed_addr constant [43 x i8] c"_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_\00", align 1
 // HOST: @1 = private unnamed_addr constant [60 x i8] c"_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_\00", align 1
+// HOST: @2 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg1MUlvE_EEvT_\00", align 1
+// HOST: @3 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg2MUlvE_EEvT_\00", align 1
 // Check that, on MSVC, the same device kernel mangling name is generated.
 // MSVC: @0 = private unnamed_addr constant [43 x i8] c"_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_\00", align 1
 // MSVC: @1 = private unnamed_addr constant [60 x i8] c"_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_\00", align 1
-
+// MSVC: @2 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg1MUlvE_EEvT_\00", align 1
+// MSVC: @3 = private unnamed_addr constant [25 x i8] c"_Z1fIN2QL3dg2MUlvE_EEvT_\00", align 1
 __device__ float d0(float x) {
   return [](float x) { return x + 1.f; }(x);
 }
@@ -42,7 +45,6 @@ void f0(float *p) {
 
 // The inner/outer lambdas are required to be mangled following ODR but their
 // linkages are still required to keep the original `internal` linkage.
-
 // HOST: define internal void @_ZZ2f1PfENKUlS_E_clES_(
 void f1(float *p) {
   [](float *p) {
@@ -53,8 +55,39 @@ void f1(float *p) {
               [] __device__ (float x, float y) { return x * y; },
               [] __device__ (float x) { return x + 5.f; });
 }
+// HOST: define internal void @_Z16__device_stub__fIN2QL3dg1MUlvE_EEvT_(
+// HOST: define internal void @_Z16__device_stub__fIN2QL3dg2MUlvE_EEvT_(
+
 // HOST: @__hip_register_globals
 // HOST: __hipRegisterFunction{{.*}}@_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_{{.*}}@0
 // HOST: __hipRegisterFunction{{.*}}@_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_{{.*}}@1
+// HOST: __hipRegisterFunction{{.*}}@_Z1fIN2QL3dg1MUlvE_EEvT_{{.*}}@2
+// HOST: __hipRegisterFunction{{.*}}_Z1fIN2QL3dg2MUlvE_EEvT_{{.*}}@3
+
 // MSVC: __hipRegisterFunction{{.*}}@"??$k0@V<lambda_1>@?0???R1?0??f1@@YAXPEAM@Z@QEBA@0@Z@@@YAXPEAMV<lambda_1>@?0???R0?0??f1@@YAX0@Z@QEBA@0@Z@@Z{{.*}}@0
 // MSVC: __hipRegisterFunction{{.*}}@"??$k1@V<lambda_2>@?0??f1@@YAXPEAM@Z@V<lambda_3>@?0??2@YAX0@Z@V<lambda_4>@?0??2@YAX0@Z@@@YAXPEAMV<lambda_2>@?0??f1@@YAX0@Z@V<lambda_3>@?0??1@YAX0@Z@V<lambda_4>@?0??1@YAX0@Z@@Z{{.*}}@1
+// MSVC: __hipRegisterFunction{{.*}}@"??$f@V<lambda_1>@dg1@QL@@@@YAXV<lambda_1>@dg1@QL@@@Z"{{.*}}@2
+// MSVC: __hipRegisterFunction{{.*}}@"??$f@V<lambda_1>@dg2@QL@@@@YAXV<lambda_1>@dg2@QL@@@Z"{{.*}}@3
+
+// DEVICE: define amdgpu_kernel void @_Z1fIN2QL3dg1MUlvE_EEvT_(
+// DEVICE: call noundef i32 @_ZNK2QL3dg1MUlvE_clEv(
+// DEVICE: define internal noundef i32 @_ZNK2QL3dg1MUlvE_clEv(
+// DEVICE  define amdgpu_kernel void @_Z1fIN2QL3dg2MUlvE_EEvT_(
+// DEVICE: call noundef i32 @_ZNK2QL3dg2MUlvE_clEv(
+// DEVICE: define internal noundef i32 @_ZNK2QL3dg2MUlvE_clEv
+
+namespace QL {
+auto dg1 = [] { return 1; };
+}
+namespace QL {
+auto dg2 = [] { return 2; };
+}
+using namespace QL;
+template<typename T>
+__global__ void f(T t) {
+  t();
+}
+void g() {
+  f<<<1,1>>>(dg1);
+  f<<<1,1>>>(dg2);
+}
