@@ -103,12 +103,10 @@ DebugHandlerBase::DebugHandlerBase(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}
 DebugHandlerBase::~DebugHandlerBase() = default;
 
 void DebugHandlerBase::beginModule(Module *M) {
-  if (M->debug_compile_units().empty()) {
+  if (M->debug_compile_units().empty())
     Asm = nullptr;
-    return;
-  }
-
-  LScopes.initialize(*M);
+  else
+    LScopes.initialize(*M);
 }
 
 // Each LexicalScope has first instruction and last instruction to mark

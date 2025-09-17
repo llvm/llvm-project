@@ -96,6 +96,7 @@ class DwarfFile {
   // Collection of abstract subprogram DIEs.
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
+  /// Keeps track of abstract subprograms to populate them only once.
   // FIXME: merge creation and population of abstract scopes.
   SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
 

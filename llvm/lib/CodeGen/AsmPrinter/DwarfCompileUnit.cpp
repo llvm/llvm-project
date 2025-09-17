@@ -1251,16 +1251,14 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     LexicalScope *Scope) {
   auto *SP = cast<DISubprogram>(Scope->getScopeNode());
 
-  if (getFinalizedAbstractSubprograms().contains(SP)) {
+  // Populate subprogram DIE only once.
+  if (!getFinalizedAbstractSubprograms().insert(SP).second)
     return;
-  }
 
   auto [ContextDIE, ContextCU] = getOrCreateAbstractSubprogramContextDIE(SP);
   DIE *AbsDef = getAbstractScopeDIEs().lookup(SP);
   if (!AbsDef)
     AbsDef = &createAbstractSubprogramDIE(SP, ContextDIE, ContextCU);
-
-  getFinalizedAbstractSubprograms().insert(SP);
 
   if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
     ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer,
