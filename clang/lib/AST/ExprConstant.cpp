@@ -945,6 +945,7 @@ namespace {
     }
 
     ASTContext &getASTContext() const override { return Ctx; }
+    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {

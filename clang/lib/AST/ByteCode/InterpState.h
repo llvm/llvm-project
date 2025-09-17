@@ -68,6 +68,9 @@ public:
     return Parent.getEvalStatus();
   }
   ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
+  const LangOptions &getLangOpts() const {
+    return Ctx.getASTContext().getLangOpts();
+  }
 
   // Forward status checks and updates to the walker.
   bool keepEvaluatingAfterFailure() const override {
