@@ -60,7 +60,7 @@ private:
   lldb_private::MainLoop m_loop;
   std::thread m_loop_thread;
   std::mutex m_mutex;
-  uint32_t m_client_count = 0;
+  size_t m_client_count = 0;
 
   std::unique_ptr<Socket> m_listener;
 
