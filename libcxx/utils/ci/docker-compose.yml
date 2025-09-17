@@ -37,4 +37,4 @@ services:
         ANDROID_CLANG_VERSION: r563880
         ANDROID_CLANG_PREBUILTS_COMMIT: 6ae4184bb8706f9731569b9a0a82be3fcdcb951c
         ANDROID_SYSROOT_COMMIT: f8b85cc5262c6e5cbc9a92c1bab2b18b32a4c63f
-        <<: *compiler_versions
+        <<: [*image_versions, *compiler_versions]

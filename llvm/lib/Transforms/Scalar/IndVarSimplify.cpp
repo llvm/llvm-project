@@ -1881,14 +1881,16 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       if (Unreachable == nullptr || InLoop == nullptr)
         return Changed;
       if (llvm::any_of(*Unreachable, [](Instruction &I) {
-            if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-              if (II->getIntrinsicID() != Intrinsic::trap &&
-                  II->getIntrinsicID() != Intrinsic::ubsantrap)
-                return true;
-            } else if (!isa<UnreachableInst>(I)) {
-              return true;
+            if (!I.mayHaveSideEffects())
+              return false;
+            if (auto *CB = dyn_cast<CallBase>(&I)) {
+              if (CB->onlyAccessesInaccessibleMemOrArgMem() &&
+                  llvm::all_of(CB->args(), [](const llvm::Use &U) {
+                    return isa<Constant>(U.get());
+                  }))
+                return false;
             }
-            return false;
+            return true;
           })) {
         return Changed;
       }

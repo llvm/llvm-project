@@ -19,6 +19,27 @@ namespace llvm {
 class raw_ostream;
 namespace mcdxbc {
 
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+};
+
+struct RootDescriptor {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Flags;
+};
+
+struct DescriptorRange {
+  dxil::ResourceClass RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Flags;
+  uint32_t OffsetInDescriptorsFromTableStart;
+};
+
 struct RootParameterInfo {
   dxbc::RootParameterType Type;
   dxbc::ShaderVisibility Visibility;
@@ -30,11 +51,11 @@ struct RootParameterInfo {
 };
 
 struct DescriptorTable {
-  SmallVector<dxbc::RTS0::v2::DescriptorRange> Ranges;
-  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator begin() const {
+  SmallVector<DescriptorRange> Ranges;
+  SmallVector<DescriptorRange>::const_iterator begin() const {
     return Ranges.begin();
   }
-  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator end() const {
+  SmallVector<DescriptorRange>::const_iterator end() const {
     return Ranges.end();
   }
 };
@@ -42,8 +63,8 @@ struct DescriptorTable {
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
-  SmallVector<dxbc::RTS0::v1::RootConstants> Constants;
-  SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
+  SmallVector<RootConstants> Constants;
+  SmallVector<RootDescriptor> Descriptors;
   SmallVector<DescriptorTable> Tables;
 
   void addInfo(dxbc::RootParameterType Type, dxbc::ShaderVisibility Visibility,
@@ -52,15 +73,14 @@ struct RootParametersContainer {
   }
 
   void addParameter(dxbc::RootParameterType Type,
-                    dxbc::ShaderVisibility Visibility,
-                    dxbc::RTS0::v1::RootConstants Constant) {
+                    dxbc::ShaderVisibility Visibility, RootConstants Constant) {
     addInfo(Type, Visibility, Constants.size());
     Constants.push_back(Constant);
   }
 
   void addParameter(dxbc::RootParameterType Type,
                     dxbc::ShaderVisibility Visibility,
-                    dxbc::RTS0::v2::RootDescriptor Descriptor) {
+                    RootDescriptor Descriptor) {
     addInfo(Type, Visibility, Descriptors.size());
     Descriptors.push_back(Descriptor);
   }
@@ -76,11 +96,11 @@ struct RootParametersContainer {
     return Info;
   }
 
-  const dxbc::RTS0::v1::RootConstants &getConstant(size_t Index) const {
+  const RootConstants &getConstant(size_t Index) const {
     return Constants[Index];
   }
 
-  const dxbc::RTS0::v2::RootDescriptor &getRootDescriptor(size_t Index) const {
+  const RootDescriptor &getRootDescriptor(size_t Index) const {
     return Descriptors[Index];
   }
 
@@ -110,6 +130,8 @@ struct RootSignatureDesc {
   LLVM_ABI void write(raw_ostream &OS) const;
 
   LLVM_ABI size_t getSize() const;
+  LLVM_ABI uint32_t computeRootParametersOffset() const;
+  LLVM_ABI uint32_t computeStaticSamplersOffset() const;
 };
 } // namespace mcdxbc
 } // namespace llvm

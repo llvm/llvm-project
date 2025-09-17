@@ -1118,6 +1118,22 @@ bool SBFrame::IsArtificial() const {
   return false;
 }
 
+bool SBFrame::IsSynthetic() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return false;
+  }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->IsSynthetic();
+
+  return false;
+}
+
 bool SBFrame::IsHidden() const {
   LLDB_INSTRUMENT_VA(this);
 

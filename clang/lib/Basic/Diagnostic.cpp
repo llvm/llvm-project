@@ -664,6 +664,8 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
 
 void DiagnosticsEngine::Report(Level DiagLevel, const Diagnostic &Info) {
   assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
+  assert(!getDiagnosticIDs()->isTrapDiag(Info.getID()) &&
+         "Trap diagnostics should not be consumed by the DiagnosticsEngine");
   Client->HandleDiagnostic(DiagLevel, Info);
   if (Client->IncludeInDiagnosticCounts()) {
     if (DiagLevel == Warning)

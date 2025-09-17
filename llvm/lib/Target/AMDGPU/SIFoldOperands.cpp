@@ -173,6 +173,7 @@ struct FoldCandidate {
 
 class SIFoldOperandsImpl {
 public:
+  MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
@@ -705,6 +706,36 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   }
 
   MachineOperand *New = Fold.Def.OpToFold;
+
+  // Verify the register is compatible with the operand.
+  if (const TargetRegisterClass *OpRC =
+          TII->getRegClass(MI->getDesc(), Fold.UseOpNo, TRI, *MF)) {
+    const TargetRegisterClass *OldRC = MRI->getRegClass(Old.getReg());
+    const TargetRegisterClass *NewRC = MRI->getRegClass(New->getReg());
+    unsigned NewSubReg = New->getSubReg();
+    unsigned OldSubReg = Old.getSubReg();
+
+    const TargetRegisterClass *ConstrainRC = OpRC;
+    if (NewSubReg && OldSubReg) {
+      unsigned PreA, PreB;
+      ConstrainRC = TRI->getCommonSuperRegClass(OpRC, OldSubReg, NewRC,
+                                                NewSubReg, PreA, PreB);
+    } else if (OldSubReg) {
+      ConstrainRC = TRI->getMatchingSuperRegClass(OldRC, OpRC, OldSubReg);
+    } else if (NewSubReg) {
+      ConstrainRC = TRI->getMatchingSuperRegClass(NewRC, OpRC, NewSubReg);
+    }
+
+    if (!ConstrainRC)
+      return false;
+
+    if (!MRI->constrainRegClass(New->getReg(), ConstrainRC)) {
+      LLVM_DEBUG(dbgs() << "Cannot constrain " << printReg(New->getReg(), TRI)
+                        << TRI->getRegClassName(ConstrainRC) << '\n');
+      return false;
+    }
+  }
+
   // Rework once the VS_16 register class is updated to include proper
   // 16-bit SGPRs instead of 32-bit ones.
   if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
@@ -1260,30 +1291,13 @@ void SIFoldOperandsImpl::foldOperand(
       return;
 
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
-    if (!DestReg.isPhysical() && DestRC == &AMDGPU::AGPR_32RegClass) {
-      std::optional<int64_t> UseImmVal = OpToFold.getEffectiveImmVal();
-      if (UseImmVal && TII->isInlineConstant(
-                           *UseImmVal, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64));
-        UseMI->getOperand(1).ChangeToImmediate(*UseImmVal);
-        CopiesToReplace.push_back(UseMI);
-        return;
-      }
-    }
-
-    // Allow immediates COPYd into sgpr_lo16 to be further folded while
-    // still being legal if not further folded
-    if (DestRC == &AMDGPU::SGPR_LO16RegClass) {
-      assert(ST->useRealTrue16Insts());
-      MRI->setRegClass(DestReg, &AMDGPU::SGPR_32RegClass);
-      DestRC = &AMDGPU::SGPR_32RegClass;
-    }
-
     // In order to fold immediates into copies, we need to change the copy to a
     // MOV. Find a compatible mov instruction with the value.
     for (unsigned MovOp :
          {AMDGPU::S_MOV_B32, AMDGPU::V_MOV_B32_e32, AMDGPU::S_MOV_B64,
-          AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_MOV_B16_t16_e64}) {
+          AMDGPU::V_MOV_B64_PSEUDO, AMDGPU::V_MOV_B16_t16_e64,
+          AMDGPU::V_ACCVGPR_WRITE_B32_e64, AMDGPU::AV_MOV_B32_IMM_PSEUDO,
+          AMDGPU::AV_MOV_B64_IMM_PSEUDO}) {
       const MCInstrDesc &MovDesc = TII->get(MovOp);
       assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
 
@@ -1299,11 +1313,23 @@ void SIFoldOperandsImpl::foldOperand(
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
       const TargetRegisterClass *MovSrcRC =
           TRI->getRegClass(MovDesc.operands()[SrcIdx].RegClass);
+      if (MovSrcRC) {
+        if (UseSubReg)
+          MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
+        if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
+          break;
 
-      if (UseSubReg)
-        MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);
-      if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
-        break;
+        // FIXME: This is mutating the instruction only and deferring the actual
+        // fold of the immediate
+      } else {
+        // For the _IMM_PSEUDO cases, there can be value restrictions on the
+        // immediate to verify. Technically we should always verify this, but it
+        // only matters for these concrete cases.
+        // TODO: Handle non-imm case if it's useful.
+        if (!OpToFold.isImm() ||
+            !TII->isImmOperandLegal(MovDesc, 1, *OpToFold.getEffectiveImmVal()))
+          break;
+      }
 
       MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
       MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
@@ -1447,30 +1473,9 @@ void SIFoldOperandsImpl::foldOperand(
       return;
   }
 
-  if (!FoldingImmLike) {
-    if (OpToFold.isReg() && ST->needsAlignedVGPRs()) {
-      // Don't fold if OpToFold doesn't hold an aligned register.
-      const TargetRegisterClass *RC =
-          TRI->getRegClassForReg(*MRI, OpToFold.getReg());
-      assert(RC);
-      if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
-        unsigned SubReg = OpToFold.getSubReg();
-        if (const TargetRegisterClass *SubRC =
-                TRI->getSubRegisterClass(RC, SubReg))
-          RC = SubRC;
-      }
-
-      if (!RC || !TRI->isProperlyAlignedRC(*RC))
-        return;
-    }
-
-    tryAddToFoldList(FoldList, UseMI, UseOpIdx, OpToFold);
-
-    // FIXME: We could try to change the instruction from 64-bit to 32-bit
-    // to enable more folding opportunities.  The shrink operands pass
-    // already does this.
-    return;
-  }
+  // FIXME: We could try to change the instruction from 64-bit to 32-bit
+  // to enable more folding opportunities.  The shrink operands pass
+  // already does this.
 
   tryAddToFoldList(FoldList, UseMI, UseOpIdx, OpToFold);
 }
@@ -1948,8 +1953,10 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
         // Direct copy from SGPR to AGPR is not possible on gfx908. To avoid
         // creation of exploded copies SGPR->VGPR->AGPR in the copyPhysReg()
         // later, create a copy here and track if we already have such a copy.
-        if (TRI->getSubRegisterClass(MRI->getRegClass(Src.Reg), Src.SubReg) !=
-            VGPRUseSubRC) {
+        const TargetRegisterClass *SubRC =
+            TRI->getSubRegisterClass(MRI->getRegClass(Src.Reg), Src.SubReg);
+        if (!VGPRUseSubRC->hasSubClassEq(SubRC)) {
+          // TODO: Try to reconstrain class
           VGPRCopy = MRI->createVirtualRegister(VGPRUseSubRC);
           BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::COPY), VGPRCopy).add(*Def);
           B.addReg(VGPRCopy);
@@ -2765,6 +2772,7 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 }
 
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
+  this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();

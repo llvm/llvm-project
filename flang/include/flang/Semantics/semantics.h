@@ -200,20 +200,59 @@ public:
     return message;
   }
 
-  template <typename FeatureOrUsageWarning, typename... A>
-  parser::Message *Warn(
-      FeatureOrUsageWarning warning, parser::CharBlock at, A &&...args) {
-    if (languageFeatures_.ShouldWarn(warning) && !IsInModuleFile(at)) {
-      parser::Message &msg{
-          messages_.Say(warning, at, std::forward<A>(args)...)};
-      return &msg;
-    } else {
-      return nullptr;
-    }
+  template <typename... A>
+  parser::Message *Warn(parser::Messages &messages,
+      common::LanguageFeature feature, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, feature, at,
+        std::forward<A>(args)...);
   }
-
-  template <typename FeatureOrUsageWarning, typename... A>
-  parser::Message *Warn(FeatureOrUsageWarning warning, A &&...args) {
+  template <typename... A>
+  parser::Message *Warn(parser::Messages &messages,
+      common::UsageWarning warning, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, warning, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::LanguageFeature feature, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, feature, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::UsageWarning warning, parser::CharBlock at, A &&...args) {
+    return messages.Warn(IsInModuleFile(at), languageFeatures_, warning, at,
+        std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::LanguageFeature feature, A &&...args) {
+    return messages.Warn(IsInModuleFile(messages.at()), languageFeatures_,
+        feature, messages.at(), std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(parser::ContextualMessages &messages,
+      common::UsageWarning warning, A &&...args) {
+    return messages.Warn(IsInModuleFile(messages.at()), languageFeatures_,
+        warning, messages.at(), std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(
+      common::LanguageFeature feature, parser::CharBlock at, A &&...args) {
+    return Warn(messages_, feature, at, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(
+      common::UsageWarning warning, parser::CharBlock at, A &&...args) {
+    return Warn(messages_, warning, at, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(common::LanguageFeature feature, A &&...args) {
+    CHECK(location_);
+    return Warn(feature, *location_, std::forward<A>(args)...);
+  }
+  template <typename... A>
+  parser::Message *Warn(common::UsageWarning warning, A &&...args) {
     CHECK(location_);
     return Warn(warning, *location_, std::forward<A>(args)...);
   }
