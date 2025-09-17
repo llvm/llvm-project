@@ -67,6 +67,7 @@ extern char ***_NSGetArgv(void);
 #  include <libkern/OSAtomic.h>
 #  include <mach-o/dyld.h>
 #  include <mach/mach.h>
+#  include <mach/mach_error.h>
 #  include <mach/mach_time.h>
 #  include <mach/vm_statistics.h>
 #  include <malloc/malloc.h>
@@ -1327,17 +1328,35 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     kr = mach_vm_region_recurse(mach_task_self(), &address, &vmsize, &depth,
                                 (vm_region_info_t)&vminfo, &count);
 
-    // There are cases where going beyond the processes' max vm does
-    // not return KERN_INVALID_ADDRESS so we check for going beyond that
-    // max address as well.
-    if (kr == KERN_INVALID_ADDRESS || address > max_vm_address) {
+    if (kr == KERN_SUCCESS) {
+      // There are cases where going beyond the processes' max vm does
+      // not return KERN_INVALID_ADDRESS so we check for going beyond that
+      // max address as well.
+      if (address > max_vm_address) {
+        address = max_vm_address;
+        kr = -1;  // break after this iteration.
+      }
+
+      if (max_occupied_addr)
+        *max_occupied_addr = address + vmsize;
+    } else if (kr == KERN_INVALID_ADDRESS) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
-      vmsize = 0;
-      kr = -1;  // break after this iteration.
+
+      // We will break after this iteration anyway since kr != KERN_SUCCESS
+    } else if (kr == KERN_DENIED) {
+      Report("ERROR: Unable to find a memory range for dynamic shadow.\n");
+      Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
+      Die();
     } else {
-      if (max_occupied_addr) *max_occupied_addr = address + vmsize;
+      Report(
+          "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
+          kr, mach_error_string(kr));
+      DCHECK(false && "mach_vm_region_recurse returned unexpected code");
+      break;  // address is not valid unless KERN_SUCCESS, therefore we must not
+              // use it.
     }
+
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
       uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
