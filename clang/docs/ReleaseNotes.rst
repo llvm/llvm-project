@@ -348,7 +348,7 @@ Bug Fixes in This Version
 - Fixed a failed assertion with a negative limit parameter value inside of
   ``__has_embed``. (#GH157842)
 - Fixed an assertion when an improper use of the ``malloc`` attribute targetting
-  a function without arguments caused us to try to access a non-existant argument.
+  a function without arguments caused us to try to access a non-existent argument.
   (#GH159080)
 
 Bug Fixes to Compiler Builtins
