@@ -108,6 +108,10 @@ static std::optional<std::string> getFloatReplacement(const BuiltinType *BT,
     return GetReplacementType(Target.getFloatWidth());
   case BuiltinType::Double:
     return GetReplacementType(Target.getDoubleWidth());
+  case BuiltinType::LongDouble:
+    return GetReplacementType(Target.getLongDoubleWidth());
+  case BuiltinType::Float128:
+    return "float128_t";
   default:
     return std::nullopt;
   }
