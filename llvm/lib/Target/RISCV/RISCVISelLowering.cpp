@@ -378,13 +378,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
-  // With Zbb we have an XLen rev8 instruction, but not GREVI. So we'll
-  // pattern match it directly in isel.
   setOperationAction(ISD::BSWAP, XLenVT,
-                     (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb() ||
-                      Subtarget.hasVendorXTHeadBb())
-                         ? Legal
-                         : Expand);
+                     Subtarget.hasREV8Like() ? Legal : Expand);
 
   if ((Subtarget.hasVendorXCVbitmanip() || Subtarget.hasVendorXqcibm()) &&
       !Subtarget.is64Bit()) {
@@ -2752,7 +2747,7 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
-    return true;
+    return Subtarget.hasVInstructions();
   case MVT::i64:
     return Subtarget.hasVInstructionsI64();
   case MVT::f16:
@@ -9150,10 +9145,22 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
     }
-    // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV) && (!HasCZero || isSimm12Constant(TrueV))) {
-      SDValue Neg = DAG.getNegative(CondV, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
+    if (isNullConstant(FalseV)) {
+      // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
+      if (auto *TrueC = dyn_cast<ConstantSDNode>(TrueV)) {
+        uint64_t TrueM1 = TrueC->getZExtValue() - 1;
+        if (isPowerOf2_64(TrueM1)) {
+          unsigned ShAmount = Log2_64(TrueM1);
+          if (Subtarget.hasShlAdd(ShAmount))
+            return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, CondV,
+                               DAG.getConstant(ShAmount, DL, VT), CondV);
+        }
+      }
+      // (select c, y, 0) -> -c & y
+      if (!HasCZero || isSimm12Constant(TrueV)) {
+        SDValue Neg = DAG.getNegative(CondV, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
+      }
     }
   }
 
@@ -21561,6 +21568,16 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.sext(BitWidth);
     break;
   }
+  case RISCVISD::SHL_ADD: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    Known <<= ShAmt;
+    Known.Zero.setLowBits(ShAmt); // the <<= operator left these bits unknown
+    Known2 = DAG.computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1);
+    Known = KnownBits::add(Known, Known2);
+    break;
+  }
   case RISCVISD::CTZW: {
     KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     unsigned PossibleTZ = Known2.trunc(32).countMaxTrailingZeros();
@@ -24820,12 +24837,16 @@ bool RISCVTargetLowering::areTwoSDNodeTargetMMOFlagsMergeable(
 }
 
 bool RISCVTargetLowering::isCtpopFast(EVT VT) const {
-  if (VT.isScalableVector())
-    return isTypeLegal(VT) && Subtarget.hasStdExtZvbb();
-  if (VT.isFixedLengthVector() && Subtarget.hasStdExtZvbb())
-    return true;
-  return Subtarget.hasCPOPLike() &&
-         (VT == MVT::i32 || VT == MVT::i64 || VT.isFixedLengthVector());
+  if (VT.isVector()) {
+    EVT SVT = VT.getVectorElementType();
+    // If the element type is legal we can use cpop.v if it is enabled.
+    if (isLegalElementTypeForRVV(SVT))
+      return Subtarget.hasStdExtZvbb();
+    // Don't consider it fast if the type needs to be legalized or scalarized.
+    return false;
+  }
+
+  return Subtarget.hasCPOPLike() && (VT == MVT::i32 || VT == MVT::i64);
 }
 
 unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,

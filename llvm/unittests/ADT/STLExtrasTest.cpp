@@ -1602,6 +1602,16 @@ TEST(STLExtrasTest, Fill) {
   EXPECT_THAT(V2, ElementsAre(Val, Val, Val, Val));
 }
 
+TEST(STLExtrasTest, Accumulate) {
+  EXPECT_EQ(accumulate(std::vector<int>(), 0), 0);
+  EXPECT_EQ(accumulate(std::vector<int>(), 3), 3);
+  std::vector<int> V1 = {1, 2, 3, 4, 5};
+  EXPECT_EQ(accumulate(V1, 0), std::accumulate(V1.begin(), V1.end(), 0));
+  EXPECT_EQ(accumulate(V1, 10), std::accumulate(V1.begin(), V1.end(), 10));
+  EXPECT_EQ(accumulate(drop_begin(V1), 7),
+            std::accumulate(V1.begin() + 1, V1.end(), 7));
+}
+
 struct Foo;
 struct Bar {};
 

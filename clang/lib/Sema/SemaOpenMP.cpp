@@ -3864,6 +3864,7 @@ getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
     Kind = OMPC_MAP_alloc;
     break;
   case OMPC_DEFAULTMAP_MODIFIER_firstprivate:
+  case OMPC_DEFAULTMAP_MODIFIER_private:
   case OMPC_DEFAULTMAP_MODIFIER_last:
     llvm_unreachable("Unexpected defaultmap implicit behavior");
   case OMPC_DEFAULTMAP_MODIFIER_none:
@@ -4100,9 +4101,13 @@ public:
           } else {
             OpenMPDefaultmapClauseModifier M =
                 Stack->getDefaultmapModifier(ClauseKind);
-            OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
-                M, ClauseKind == OMPC_DEFAULTMAP_aggregate || Res);
-            ImpInfo.Mappings[ClauseKind][Kind].insert(E);
+            if (M == OMPC_DEFAULTMAP_MODIFIER_private) {
+              ImpInfo.Privates.insert(E);
+            } else {
+              OpenMPMapClauseKind Kind = getMapClauseKindFromModifier(
+                  M, ClauseKind == OMPC_DEFAULTMAP_aggregate || Res);
+              ImpInfo.Mappings[ClauseKind][Kind].insert(E);
+            }
           }
           return;
         }
@@ -23220,7 +23225,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultmapClause(
                 ? "'alloc', 'from', 'to', 'tofrom', "
                   "'firstprivate', 'none', 'default', 'present'"
                 : "'storage', 'from', 'to', 'tofrom', "
-                  "'firstprivate', 'none', 'default', 'present'";
+                  "'firstprivate', 'private', 'none', 'default', 'present'";
         if (!isDefaultmapKind && isDefaultmapModifier) {
           Diag(KindLoc, diag::err_omp_unexpected_clause_value)
               << KindValue << getOpenMPClauseNameForDiag(OMPC_defaultmap);
