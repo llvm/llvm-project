@@ -908,9 +908,10 @@ def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
 def PPCRegGxRCOperand : AsmOperandClass {
   let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_idx : Operand<iPTR>,
-  RegClassByHwMode<[PPC32, PPC64],
-                   [GPRC, G8RC]> {
+def ptr_rc_idx : RegClassByHwMode<[PPC32, PPC64],
+                                  [GPRC, G8RC]>;
+
+def PtrRCIdxOp : RegisterOperand<ptr_rc_idx> {
   let ParserMatchClass = PPCRegGxRCOperand;
 }
 
@@ -985,7 +986,7 @@ def memri : Operand<iPTR> {
 }
 def memrr : Operand<iPTR> {
   let PrintMethod = "printMemRegReg";
-  let MIOperandInfo = (ops PtrOpNoR0:$ptrreg, ptr_rc_idx:$offreg);
+  let MIOperandInfo = (ops PtrOpNoR0:$ptrreg, PtrRCIdxOp:$offreg);
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
