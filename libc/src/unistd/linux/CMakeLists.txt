@@ -205,8 +205,6 @@ add_entrypoint_object(
     libc.include.sys_utsname
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    libc.src.string.strlen
-    libc.src.string.strncpy
 )
 
 add_entrypoint_object(
