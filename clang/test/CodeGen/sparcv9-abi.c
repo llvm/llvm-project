@@ -136,6 +136,15 @@ struct large f_large(struct large x) {
   return x;
 }
 
+// Large returns are converted into a pointer argument.
+// Such conversion should preserve the alignment of overaligned arguments.
+// define{{.*}} void @f_largereturn_aligned(ptr dead_on_unwind noalias writable sret(%struct.large) align 8 %agg.result, i64 %0, i64 %x.coerce0, i64 %x.coerce1)
+struct large f_largereturn_aligned(struct align16_int x) {
+  struct large ret;
+  ret.x = x.x;
+  return ret;
+}
+
 // A 64-bit struct fits in a register.
 struct reg {
   int a, b;

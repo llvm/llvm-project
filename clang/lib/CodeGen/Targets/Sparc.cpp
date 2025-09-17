@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/CodeGen/CGFunctionInfo.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -369,9 +370,11 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned RetOffset = 0;
-  FI.getReturnInfo() = classifyType(FI.getReturnType(), 32 * 8, RetOffset);
+  ABIArgInfo RetType = classifyType(FI.getReturnType(), 32 * 8, RetOffset);
+  FI.getReturnInfo() = RetType;
 
-  unsigned ArgOffset = 0;
+  // Indirect returns will have its pointer passed as an argument.
+  unsigned ArgOffset = RetType.isIndirect() ? RetOffset : 0;
   for (auto &I : FI.arguments())
     I.info = classifyType(I.type, 16 * 8, ArgOffset);
 }
