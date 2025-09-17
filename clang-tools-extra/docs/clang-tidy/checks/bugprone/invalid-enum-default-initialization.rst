@@ -70,3 +70,8 @@ enum type) are set to 0.
   enum Enum1 Array3[2][2] = {{Enum1_A, Enum1_A}}; // warn: elements of second array are initialized to 0
 
   struct Struct1 S1 = {1}; // warn: element 'b' is initialized to 0
+
+.. option:: IgnoredContainers
+
+Semicolon-separated list of enums regexp for which this check won't be
+enforced. Default is `::std::errc`.
