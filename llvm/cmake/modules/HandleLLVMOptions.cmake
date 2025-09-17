@@ -1469,3 +1469,11 @@ if(LLVM_ENABLE_LLVM_LIBC)
     message(WARNING "Unable to link against LLVM libc. LLVM will be built without linking against the LLVM libc overlay.")
   endif()
 endif()
+
+check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
+set(LLVM_ENABLE_ONDISK_CAS_default OFF)
+if(HAVE_FLOCK OR LLVM_ON_WIN32)
+  # LLVM OnDisk CAS currently requires flock on Unix.
+  set(LLVM_ENABLE_ONDISK_CAS_default ON)
+endif()
+option(LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ${LLVM_ENABLE_ONDISK_CAS_default})
