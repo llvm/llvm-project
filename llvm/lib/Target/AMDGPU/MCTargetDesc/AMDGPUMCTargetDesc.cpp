@@ -104,7 +104,7 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
     STI->ToggleFeature(AMDGPU::FeatureWavefrontSize32);
   }
 
-  assert((STI->hasFeature(AMDGPU::FeatureWavefrontSize64) ^
+  assert((STI->hasFeature(AMDGPU::FeatureWavefrontSize64) !=
           STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) &&
          "wavesize features are mutually exclusive");
 
