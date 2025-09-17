@@ -17,11 +17,11 @@ using namespace llvm;
 using namespace llvm::bolt;
 
 // It is assumed in a few places that BinaryBasicBlock stores its instructions
-// in a contiguous vector. Give this assumption a name to simplify marking the
-// particular places with static_assert.
+// in a contiguous vector.
 using BasicBlockStorageIsVector =
     std::is_same<BinaryBasicBlock::const_iterator,
                  std::vector<MCInst>::const_iterator>;
+static_assert(BasicBlockStorageIsVector::value);
 
 namespace {
 // Cannot reuse MCPlusBuilder::InstructionIterator because it has to be
@@ -58,12 +58,13 @@ uint64_t MCInstReference::getAddress(const MCCodeEmitter *Emitter) const {
 
   const BinaryContext &BC = getFunction()->getBinaryContext();
   if (auto *Ref = tryGetRefInBB()) {
-    static_assert(BasicBlockStorageIsVector::value,
-                  "Cannot use 'const MCInst *' as iterator type");
     uint64_t AddressOfBB = getFunction()->getAddress() + Ref->BB->getOffset();
     const MCInst *FirstInstInBB = &*Ref->BB->begin();
+    const MCInst *ThisInst = &getMCInst();
 
-    uint64_t OffsetInBB = BC.computeCodeSize(FirstInstInBB, Ref->Inst, Emitter);
+    // Usage of plain 'const MCInst *' as iterators assumes the instructions
+    // are stored in a vector, see BasicBlockStorageIsVector.
+    uint64_t OffsetInBB = BC.computeCodeSize(FirstInstInBB, ThisInst, Emitter);
 
     return AddressOfBB + OffsetInBB;
   }
@@ -80,15 +81,10 @@ uint64_t MCInstReference::getAddress(const MCCodeEmitter *Emitter) const {
 raw_ostream &MCInstReference::print(raw_ostream &OS) const {
   if (const RefInBB *Ref = tryGetRefInBB()) {
     OS << "MCInstBBRef<";
-    if (Ref->BB == nullptr) {
+    if (Ref->BB == nullptr)
       OS << "BB:(null)";
-    } else {
-      static_assert(BasicBlockStorageIsVector::value,
-                    "Cannot use pointer arithmetic on 'const MCInst *'");
-      const MCInst *FirstInstInBB = &*Ref->BB->begin();
-      unsigned IndexInBB = Ref->Inst - FirstInstInBB;
-      OS << "BB:" << Ref->BB->getName() << ":" << IndexInBB;
-    }
+    else
+      OS << "BB:" << Ref->BB->getName() << ":" << Ref->Index;
     OS << ">";
     return OS;
   }

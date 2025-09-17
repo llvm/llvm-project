@@ -25,20 +25,21 @@ class BinaryFunction;
 /// MCInstReference represents a reference to a constant MCInst as stored either
 /// in a BinaryFunction (i.e. before a CFG is created), or in a BinaryBasicBlock
 /// (after a CFG is created).
+///
+/// The reference may be invalidated when the function containing the referenced
+/// instruction is modified.
 class MCInstReference {
 public:
   using nocfg_const_iterator = std::map<uint32_t, MCInst>::const_iterator;
 
   /// Constructs an empty reference.
-  MCInstReference() : Reference(RefInBB(nullptr, nullptr)) {}
+  MCInstReference() : Reference(RefInBB(nullptr, /*Index=*/0)) {}
   /// Constructs a reference to the instruction inside the basic block.
   MCInstReference(const BinaryBasicBlock *BB, const MCInst *Inst)
-      : Reference(RefInBB(BB, Inst)) {
-    assert(BB && Inst && "Neither BB nor Inst should be nullptr");
-  }
+      : Reference(RefInBB(BB, getInstIndexInBB(BB, Inst))) {}
   /// Constructs a reference to the instruction inside the basic block.
   MCInstReference(const BinaryBasicBlock *BB, unsigned Index)
-      : Reference(RefInBB(BB, &BB->getInstructionAtIndex(Index))) {
+      : Reference(RefInBB(BB, Index)) {
     assert(BB && "Basic block should not be nullptr");
   }
   /// Constructs a reference to the instruction inside the function without
@@ -57,8 +58,11 @@ public:
 
   const MCInst &getMCInst() const {
     assert(!empty() && "Empty reference");
-    if (auto *Ref = tryGetRefInBB())
-      return *Ref->Inst;
+    if (auto *Ref = tryGetRefInBB()) {
+      [[maybe_unused]] unsigned NumInstructions = Ref->BB->size();
+      assert(Ref->Index < NumInstructions && "Invalid reference");
+      return Ref->BB->getInstructionAtIndex(Ref->Index);
+    }
     return getRefInBF().It->second;
   }
 
@@ -92,6 +96,15 @@ public:
   raw_ostream &print(raw_ostream &OS) const;
 
 private:
+  static unsigned getInstIndexInBB(const BinaryBasicBlock *BB,
+                                   const MCInst *Inst) {
+    assert(BB && Inst && "Neither BB nor Inst should be nullptr");
+    // Usage of pointer arithmetic assumes the instructions are stored in a
+    // vector, see BasicBlockStorageIsVector in MCInstUtils.cpp.
+    const MCInst *FirstInstInBB = &*BB->begin();
+    return Inst - FirstInstInBB;
+  }
+
   // Two cases are possible:
   // * functions with CFG reconstructed - a function stores a collection of
   //   basic blocks, each basic block stores a contiguous vector of MCInst
@@ -99,21 +112,20 @@ private:
   //   the instructions are directly stored in std::map in BinaryFunction
   //
   // In both cases, the direct parent of MCInst is stored together with an
-  // iterator pointing to the instruction.
+  // index or iterator pointing to the instruction.
 
-  // Helper struct: CFG is available, the direct parent is a basic block,
-  // iterator's type is `MCInst *`.
+  // Helper struct: CFG is available, the direct parent is a basic block.
   struct RefInBB {
-    RefInBB(const BinaryBasicBlock *BB, const MCInst *Inst)
-        : BB(BB), Inst(Inst) {}
+    RefInBB(const BinaryBasicBlock *BB, unsigned Index)
+        : BB(BB), Index(Index) {}
     RefInBB(const RefInBB &Other) = default;
     RefInBB &operator=(const RefInBB &Other) = default;
 
     const BinaryBasicBlock *BB;
-    const MCInst *Inst;
+    unsigned Index;
 
     bool operator==(const RefInBB &Other) const {
-      return BB == Other.BB && Inst == Other.Inst;
+      return BB == Other.BB && Index == Other.Index;
     }
   };
 
