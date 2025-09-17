@@ -1,0 +1,1675 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=amdgpu-next-use -debug-only=amdgpu-next-use %s -o /dev/null 2>&1 | FileCheck %s
+# 
+# MIR CFG:
+#
+#       bb.0.entry
+#           |
+#           +<--------+
+#       bb.1.loop1    |
+#           +---------+
+#           |
+#        bb.2.bb
+#           |
+#           +<--------+
+#       bb.3.loop2    |
+#           +---------+
+#           |
+#       bb.4.exit
+#
+
+
+# CHECK-LABEL: === NextUseAnalysis Results for test6 ===
+# CHECK: --- MBB_0 ---
+# CHECK: Instr: %0:vgpr_32 = COPY killed $vgpr7
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %26[ 20 ]
+# CHECK: Vreg: %28[ 20 ]
+# CHECK: Vreg: %30[ 20 ]
+# CHECK: Vreg: %56[ 52 ]
+# CHECK: Vreg: %32[ 20 ]
+# CHECK: Vreg: %58[ 52 ]
+# CHECK: Vreg: %22[ 20 ]
+# CHECK: Vreg: %24[ 20 ]
+# CHECK: Instr: %1:vgpr_32 = COPY killed $vgpr6
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 53 ]
+# CHECK: Vreg: %26[ 19 ]
+# CHECK: Vreg: %28[ 19 ]
+# CHECK: Vreg: %30[ 19 ]
+# CHECK: Vreg: %56[ 51 ]
+# CHECK: Vreg: %32[ 19 ]
+# CHECK: Vreg: %58[ 51 ]
+# CHECK: Vreg: %22[ 19 ]
+# CHECK: Vreg: %24[ 19 ]
+# CHECK: Instr: %2:vgpr_32 = COPY killed $vgpr5
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 52 ]
+# CHECK: Vreg: %26[ 18 ]
+# CHECK: Vreg: %28[ 18 ]
+# CHECK: Vreg: %30[ 18 ]
+# CHECK: Vreg: %56[ 50 ]
+# CHECK: Vreg: %32[ 18 ]
+# CHECK: Vreg: %58[ 50 ]
+# CHECK: Vreg: %1[ 40 ]
+# CHECK: Vreg: %22[ 18 ]
+# CHECK: Vreg: %24[ 18 ]
+# CHECK: Instr: %3:vgpr_32 = COPY killed $vgpr4
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 51 ]
+# CHECK: Vreg: %26[ 17 ]
+# CHECK: Vreg: %2[ 5 ]
+# CHECK: Vreg: %28[ 17 ]
+# CHECK: Vreg: %30[ 17 ]
+# CHECK: Vreg: %56[ 49 ]
+# CHECK: Vreg: %32[ 17 ]
+# CHECK: Vreg: %58[ 49 ]
+# CHECK: Vreg: %1[ 39 ]
+# CHECK: Vreg: %22[ 17 ]
+# CHECK: Vreg: %24[ 17 ]
+# CHECK: Instr: %4:vgpr_32 = COPY killed $vgpr3
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 50 ]
+# CHECK: Vreg: %26[ 16 ]
+# CHECK: Vreg: %2[ 4 ]
+# CHECK: Vreg: %28[ 16 ]
+# CHECK: Vreg: %30[ 16 ]
+# CHECK: Vreg: %56[ 48 ]
+# CHECK: Vreg: %32[ 16 ]
+# CHECK: Vreg: %58[ 48 ]
+# CHECK: Vreg: %1[ 38 ]
+# CHECK: Vreg: %22[ 16 ]
+# CHECK: Vreg: %3[ 4 ]
+# CHECK: Vreg: %24[ 16 ]
+# CHECK: Instr: %5:vgpr_32 = COPY killed $vgpr2
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 49 ]
+# CHECK: Vreg: %26[ 15 ]
+# CHECK: Vreg: %2[ 3 ]
+# CHECK: Vreg: %28[ 15 ]
+# CHECK: Vreg: %4[ 4 ]
+# CHECK: Vreg: %30[ 15 ]
+# CHECK: Vreg: %56[ 47 ]
+# CHECK: Vreg: %32[ 15 ]
+# CHECK: Vreg: %58[ 47 ]
+# CHECK: Vreg: %1[ 37 ]
+# CHECK: Vreg: %22[ 15 ]
+# CHECK: Vreg: %3[ 3 ]
+# CHECK: Vreg: %24[ 15 ]
+# CHECK: Instr: %6:vgpr_32 = COPY killed $vgpr1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 48 ]
+# CHECK: Vreg: %26[ 14 ]
+# CHECK: Vreg: %2[ 2 ]
+# CHECK: Vreg: %28[ 14 ]
+# CHECK: Vreg: %4[ 3 ]
+# CHECK: Vreg: %30[ 14 ]
+# CHECK: Vreg: %56[ 46 ]
+# CHECK: Vreg: %32[ 14 ]
+# CHECK: Vreg: %58[ 46 ]
+# CHECK: Vreg: %1[ 36 ]
+# CHECK: Vreg: %22[ 14 ]
+# CHECK: Vreg: %3[ 2 ]
+# CHECK: Vreg: %24[ 14 ]
+# CHECK: Vreg: %5[ 3 ]
+# CHECK: Instr: %7:vgpr_32 = COPY killed $vgpr0
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 47 ]
+# CHECK: Vreg: %26[ 13 ]
+# CHECK: Vreg: %2[ 1 ]
+# CHECK: Vreg: %28[ 13 ]
+# CHECK: Vreg: %4[ 2 ]
+# CHECK: Vreg: %30[ 13 ]
+# CHECK: Vreg: %56[ 45 ]
+# CHECK: Vreg: %6[ 3 ]
+# CHECK: Vreg: %32[ 13 ]
+# CHECK: Vreg: %58[ 45 ]
+# CHECK: Vreg: %1[ 35 ]
+# CHECK: Vreg: %22[ 13 ]
+# CHECK: Vreg: %3[ 1 ]
+# CHECK: Vreg: %24[ 13 ]
+# CHECK: Vreg: %5[ 2 ]
+# CHECK: Instr: %8:vreg_64 = REG_SEQUENCE killed %3, %subreg.sub0, killed %2, %subreg.sub1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 46 ]
+# CHECK: Vreg: %26[ 12 ]
+# CHECK: Vreg: %7[ 2 ]
+# CHECK: Vreg: %2[ 0 ]
+# CHECK: Vreg: %28[ 12 ]
+# CHECK: Vreg: %4[ 1 ]
+# CHECK: Vreg: %30[ 12 ]
+# CHECK: Vreg: %56[ 44 ]
+# CHECK: Vreg: %6[ 2 ]
+# CHECK: Vreg: %32[ 12 ]
+# CHECK: Vreg: %58[ 44 ]
+# CHECK: Vreg: %1[ 34 ]
+# CHECK: Vreg: %22[ 12 ]
+# CHECK: Vreg: %3[ 0 ]
+# CHECK: Vreg: %24[ 12 ]
+# CHECK: Vreg: %5[ 1 ]
+# CHECK: Instr: %9:vreg_64 = REG_SEQUENCE killed %5, %subreg.sub0, killed %4, %subreg.sub1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 45 ]
+# CHECK: Vreg: %26[ 11 ]
+# CHECK: Vreg: %7[ 1 ]
+# CHECK: Vreg: %28[ 11 ]
+# CHECK: Vreg: %4[ 0 ]
+# CHECK: Vreg: %30[ 11 ]
+# CHECK: Vreg: %56[ 43 ]
+# CHECK: Vreg: %6[ 1 ]
+# CHECK: Vreg: %32[ 11 ]
+# CHECK: Vreg: %58[ 43 ]
+# CHECK: Vreg: %1[ 33 ]
+# CHECK: Vreg: %8:sub0[ 24 ]
+# CHECK: Vreg: %8:sub1[ 25 ]
+# CHECK: Vreg: %8[ 42 ]
+# CHECK: Vreg: %22[ 11 ]
+# CHECK: Vreg: %24[ 11 ]
+# CHECK: Vreg: %5[ 0 ]
+# CHECK: Instr: %10:vreg_64 = REG_SEQUENCE killed %7, %subreg.sub0, killed %6, %subreg.sub1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 44 ]
+# CHECK: Vreg: %26[ 10 ]
+# CHECK: Vreg: %7[ 0 ]
+# CHECK: Vreg: %28[ 10 ]
+# CHECK: Vreg: %9:sub0[ 15 ]
+# CHECK: Vreg: %9:sub1[ 16 ]
+# CHECK: Vreg: %30[ 10 ]
+# CHECK: Vreg: %56[ 42 ]
+# CHECK: Vreg: %6[ 0 ]
+# CHECK: Vreg: %32[ 10 ]
+# CHECK: Vreg: %58[ 42 ]
+# CHECK: Vreg: %1[ 32 ]
+# CHECK: Vreg: %8:sub0[ 23 ]
+# CHECK: Vreg: %8:sub1[ 24 ]
+# CHECK: Vreg: %8[ 41 ]
+# CHECK: Vreg: %22[ 10 ]
+# CHECK: Vreg: %24[ 10 ]
+# CHECK: Instr: %11:vgpr_32 = GLOBAL_LOAD_UBYTE %10, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 43 ]
+# CHECK: Vreg: %26[ 9 ]
+# CHECK: Vreg: %28[ 9 ]
+# CHECK: Vreg: %9:sub0[ 14 ]
+# CHECK: Vreg: %9:sub1[ 15 ]
+# CHECK: Vreg: %30[ 9 ]
+# CHECK: Vreg: %56[ 41 ]
+# CHECK: Vreg: %32[ 9 ]
+# CHECK: Vreg: %58[ 41 ]
+# CHECK: Vreg: %1[ 31 ]
+# CHECK: Vreg: %8:sub0[ 22 ]
+# CHECK: Vreg: %8:sub1[ 23 ]
+# CHECK: Vreg: %8[ 40 ]
+# CHECK: Vreg: %22[ 9 ]
+# CHECK: Vreg: %10[ 0 ]
+# CHECK: Vreg: %24[ 9 ]
+# CHECK: Instr: %12:vgpr_32 = GLOBAL_LOAD_UBYTE %10, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 42 ]
+# CHECK: Vreg: %26[ 8 ]
+# CHECK: Vreg: %28[ 8 ]
+# CHECK: Vreg: %9:sub0[ 13 ]
+# CHECK: Vreg: %9:sub1[ 14 ]
+# CHECK: Vreg: %30[ 8 ]
+# CHECK: Vreg: %11[ 1 ]
+# CHECK: Vreg: %56[ 40 ]
+# CHECK: Vreg: %32[ 8 ]
+# CHECK: Vreg: %58[ 40 ]
+# CHECK: Vreg: %1[ 30 ]
+# CHECK: Vreg: %8:sub0[ 21 ]
+# CHECK: Vreg: %8:sub1[ 22 ]
+# CHECK: Vreg: %8[ 39 ]
+# CHECK: Vreg: %22[ 8 ]
+# CHECK: Vreg: %10[ 0 ]
+# CHECK: Vreg: %24[ 8 ]
+# CHECK: Instr: %13:vgpr_32 = V_LSHL_OR_B32_e64 killed %12, 8, killed %11, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 41 ]
+# CHECK: Vreg: %26[ 7 ]
+# CHECK: Vreg: %28[ 7 ]
+# CHECK: Vreg: %9:sub0[ 12 ]
+# CHECK: Vreg: %9:sub1[ 13 ]
+# CHECK: Vreg: %30[ 7 ]
+# CHECK: Vreg: %11[ 0 ]
+# CHECK: Vreg: %56[ 39 ]
+# CHECK: Vreg: %32[ 7 ]
+# CHECK: Vreg: %58[ 39 ]
+# CHECK: Vreg: %1[ 29 ]
+# CHECK: Vreg: %8:sub0[ 20 ]
+# CHECK: Vreg: %8:sub1[ 21 ]
+# CHECK: Vreg: %8[ 38 ]
+# CHECK: Vreg: %22[ 7 ]
+# CHECK: Vreg: %10[ 1 ]
+# CHECK: Vreg: %24[ 7 ]
+# CHECK: Vreg: %12[ 0 ]
+# CHECK: Instr: %14:vgpr_32 = GLOBAL_LOAD_UBYTE %10, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 40 ]
+# CHECK: Vreg: %26[ 6 ]
+# CHECK: Vreg: %28[ 6 ]
+# CHECK: Vreg: %9:sub0[ 11 ]
+# CHECK: Vreg: %9:sub1[ 12 ]
+# CHECK: Vreg: %30[ 6 ]
+# CHECK: Vreg: %56[ 38 ]
+# CHECK: Vreg: %32[ 6 ]
+# CHECK: Vreg: %13[ 3 ]
+# CHECK: Vreg: %58[ 38 ]
+# CHECK: Vreg: %1[ 28 ]
+# CHECK: Vreg: %8:sub0[ 19 ]
+# CHECK: Vreg: %8:sub1[ 20 ]
+# CHECK: Vreg: %8[ 37 ]
+# CHECK: Vreg: %22[ 6 ]
+# CHECK: Vreg: %10[ 0 ]
+# CHECK: Vreg: %24[ 6 ]
+# CHECK: Instr: %15:vgpr_32 = GLOBAL_LOAD_UBYTE %10, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 39 ]
+# CHECK: Vreg: %26[ 5 ]
+# CHECK: Vreg: %14[ 1 ]
+# CHECK: Vreg: %28[ 5 ]
+# CHECK: Vreg: %9:sub0[ 10 ]
+# CHECK: Vreg: %9:sub1[ 11 ]
+# CHECK: Vreg: %30[ 5 ]
+# CHECK: Vreg: %56[ 37 ]
+# CHECK: Vreg: %32[ 5 ]
+# CHECK: Vreg: %13[ 2 ]
+# CHECK: Vreg: %58[ 37 ]
+# CHECK: Vreg: %1[ 27 ]
+# CHECK: Vreg: %8:sub0[ 18 ]
+# CHECK: Vreg: %8:sub1[ 19 ]
+# CHECK: Vreg: %8[ 36 ]
+# CHECK: Vreg: %22[ 5 ]
+# CHECK: Vreg: %10[ 0 ]
+# CHECK: Vreg: %24[ 5 ]
+# CHECK: Instr: %16:vgpr_32 = V_LSHL_OR_B32_e64 killed %15, 8, killed %14, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 38 ]
+# CHECK: Vreg: %26[ 4 ]
+# CHECK: Vreg: %14[ 0 ]
+# CHECK: Vreg: %28[ 4 ]
+# CHECK: Vreg: %9:sub0[ 9 ]
+# CHECK: Vreg: %9:sub1[ 10 ]
+# CHECK: Vreg: %30[ 4 ]
+# CHECK: Vreg: %56[ 36 ]
+# CHECK: Vreg: %32[ 4 ]
+# CHECK: Vreg: %13[ 1 ]
+# CHECK: Vreg: %58[ 36 ]
+# CHECK: Vreg: %1[ 26 ]
+# CHECK: Vreg: %8:sub0[ 17 ]
+# CHECK: Vreg: %8:sub1[ 18 ]
+# CHECK: Vreg: %8[ 35 ]
+# CHECK: Vreg: %15[ 0 ]
+# CHECK: Vreg: %22[ 4 ]
+# CHECK: Vreg: %10[ 15 ]
+# CHECK: Vreg: %24[ 4 ]
+# CHECK: Instr: %17:vgpr_32 = V_LSHL_OR_B32_e64 killed %16, 16, killed %13, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 37 ]
+# CHECK: Vreg: %26[ 3 ]
+# CHECK: Vreg: %28[ 3 ]
+# CHECK: Vreg: %9:sub0[ 8 ]
+# CHECK: Vreg: %9:sub1[ 9 ]
+# CHECK: Vreg: %16[ 0 ]
+# CHECK: Vreg: %30[ 3 ]
+# CHECK: Vreg: %56[ 35 ]
+# CHECK: Vreg: %32[ 3 ]
+# CHECK: Vreg: %13[ 0 ]
+# CHECK: Vreg: %58[ 35 ]
+# CHECK: Vreg: %1[ 25 ]
+# CHECK: Vreg: %8:sub0[ 16 ]
+# CHECK: Vreg: %8:sub1[ 17 ]
+# CHECK: Vreg: %8[ 34 ]
+# CHECK: Vreg: %22[ 3 ]
+# CHECK: Vreg: %10[ 14 ]
+# CHECK: Vreg: %24[ 3 ]
+# CHECK: Instr: %18:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 36 ]
+# CHECK: Vreg: %26[ 2 ]
+# CHECK: Vreg: %28[ 2 ]
+# CHECK: Vreg: %9:sub0[ 7 ]
+# CHECK: Vreg: %9:sub1[ 8 ]
+# CHECK: Vreg: %30[ 2 ]
+# CHECK: Vreg: %56[ 34 ]
+# CHECK: Vreg: %32[ 2 ]
+# CHECK: Vreg: %58[ 34 ]
+# CHECK: Vreg: %1[ 24 ]
+# CHECK: Vreg: %8:sub0[ 15 ]
+# CHECK: Vreg: %8:sub1[ 16 ]
+# CHECK: Vreg: %8[ 33 ]
+# CHECK: Vreg: %22[ 2 ]
+# CHECK: Vreg: %10[ 13 ]
+# CHECK: Vreg: %17[ 2 ]
+# CHECK: Vreg: %24[ 2 ]
+# CHECK: Instr: %19:sreg_32 = S_MOV_B32 1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 35 ]
+# CHECK: Vreg: %26[ 1 ]
+# CHECK: Vreg: %28[ 1 ]
+# CHECK: Vreg: %9:sub0[ 6 ]
+# CHECK: Vreg: %9:sub1[ 7 ]
+# CHECK: Vreg: %30[ 1 ]
+# CHECK: Vreg: %56[ 33 ]
+# CHECK: Vreg: %18[ 1 ]
+# CHECK: Vreg: %32[ 1 ]
+# CHECK: Vreg: %58[ 33 ]
+# CHECK: Vreg: %1[ 23 ]
+# CHECK: Vreg: %8:sub0[ 14 ]
+# CHECK: Vreg: %8:sub1[ 15 ]
+# CHECK: Vreg: %8[ 32 ]
+# CHECK: Vreg: %22[ 1 ]
+# CHECK: Vreg: %10[ 12 ]
+# CHECK: Vreg: %17[ 1 ]
+# CHECK: Vreg: %24[ 1 ]
+# CHECK: Instr: %20:sreg_32 = S_MOV_B32 0
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 34 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ 32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ 32 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ 31 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %24[ 0 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 34 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ 32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ 32 ]
+# CHECK: Vreg: %20[ 0 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ 31 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %24[ 0 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: --- MBB_1 ---
+# CHECK: Instr: %21:sreg_32 = PHI %20, %bb.0, %22, %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+34 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+32 ]
+# CHECK: Vreg: %20[ 0 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+31 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %24[ 0 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: Instr: %23:sreg_32 = PHI %20, %bb.0, %24, %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+34 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %21[ 23 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+32 ]
+# CHECK: Vreg: %20[ 0 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+31 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %24[ 0 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: Instr: %25:sreg_32 = PHI %19, %bb.0, %26, %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+34 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %21[ 23 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %23[ 20 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+32 ]
+# CHECK: Vreg: %20[ 26 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+31 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: Instr: %27:vgpr_32 = PHI %17, %bb.0, %28, %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+34 ]
+# CHECK: Vreg: %21[ 23 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %23[ 20 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %25[ 1 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+32 ]
+# CHECK: Vreg: %20[ 26 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+31 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %19[ 26 ]
+# CHECK: Instr: %29:vgpr_32 = PHI %18, %bb.0, %30, %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+34 ]
+# CHECK: Vreg: %21[ 23 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %23[ 20 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+32 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %25[ 1 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+32 ]
+# CHECK: Vreg: %20[ 26 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %27[ LoopTag+30 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+31 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %19[ 26 ]
+# CHECK: Instr: %31:vgpr_32 = PHI %17, %bb.0, %32, %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+34 ]
+# CHECK: Vreg: %21[ 23 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %23[ 20 ]
+# CHECK: Vreg: %56[ LoopTag+32 ]
+# CHECK: Vreg: %18[ 26 ]
+# CHECK: Vreg: %25[ 1 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+32 ]
+# CHECK: Vreg: %20[ 26 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %27[ LoopTag+30 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+31 ]
+# CHECK: Vreg: %29[ LoopTag+41 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %19[ 26 ]
+# CHECK: Instr: %33:sreg_32 = S_ADD_I32 %25, -1, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+33 ]
+# CHECK: Vreg: %21[ 22 ]
+# CHECK: Vreg: %9:sub0[ 4 ]
+# CHECK: Vreg: %9:sub1[ 5 ]
+# CHECK: Vreg: %23[ 19 ]
+# CHECK: Vreg: %56[ LoopTag+31 ]
+# CHECK: Vreg: %18[ 25 ]
+# CHECK: Vreg: %25[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+31 ]
+# CHECK: Vreg: %20[ 25 ]
+# CHECK: Vreg: %1[ 21 ]
+# CHECK: Vreg: %27[ LoopTag+29 ]
+# CHECK: Vreg: %8:sub0[ 12 ]
+# CHECK: Vreg: %8:sub1[ 13 ]
+# CHECK: Vreg: %8[ LoopTag+30 ]
+# CHECK: Vreg: %29[ LoopTag+40 ]
+# CHECK: Vreg: %10[ 10 ]
+# CHECK: Vreg: %17[ 25 ]
+# CHECK: Vreg: %31[ LoopTag+31 ]
+# CHECK: Vreg: %19[ 25 ]
+# CHECK: Instr: %34:sreg_32_xm0 = S_ASHR_I32 %33, 31, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+32 ]
+# CHECK: Vreg: %33[ 0 ]
+# CHECK: Vreg: %21[ 21 ]
+# CHECK: Vreg: %9:sub0[ 3 ]
+# CHECK: Vreg: %9:sub1[ 4 ]
+# CHECK: Vreg: %23[ 18 ]
+# CHECK: Vreg: %56[ LoopTag+30 ]
+# CHECK: Vreg: %18[ 24 ]
+# CHECK: Vreg: %25[ 7 ]
+# CHECK: Vreg: %58[ LoopTag+30 ]
+# CHECK: Vreg: %20[ 24 ]
+# CHECK: Vreg: %1[ 20 ]
+# CHECK: Vreg: %27[ LoopTag+28 ]
+# CHECK: Vreg: %8:sub0[ 11 ]
+# CHECK: Vreg: %8:sub1[ 12 ]
+# CHECK: Vreg: %8[ LoopTag+29 ]
+# CHECK: Vreg: %29[ LoopTag+39 ]
+# CHECK: Vreg: %10[ 9 ]
+# CHECK: Vreg: %17[ 24 ]
+# CHECK: Vreg: %31[ LoopTag+30 ]
+# CHECK: Vreg: %19[ 24 ]
+# CHECK: Instr: %35:sreg_64 = REG_SEQUENCE killed %33, %subreg.sub0, killed %34, %subreg.sub1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+31 ]
+# CHECK: Vreg: %33[ 0 ]
+# CHECK: Vreg: %21[ 20 ]
+# CHECK: Vreg: %9:sub0[ 2 ]
+# CHECK: Vreg: %9:sub1[ 3 ]
+# CHECK: Vreg: %23[ 17 ]
+# CHECK: Vreg: %56[ LoopTag+29 ]
+# CHECK: Vreg: %18[ 23 ]
+# CHECK: Vreg: %25[ 6 ]
+# CHECK: Vreg: %58[ LoopTag+29 ]
+# CHECK: Vreg: %20[ 23 ]
+# CHECK: Vreg: %1[ 19 ]
+# CHECK: Vreg: %27[ LoopTag+27 ]
+# CHECK: Vreg: %8:sub0[ 10 ]
+# CHECK: Vreg: %8:sub1[ 11 ]
+# CHECK: Vreg: %8[ LoopTag+28 ]
+# CHECK: Vreg: %34[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+38 ]
+# CHECK: Vreg: %10[ 8 ]
+# CHECK: Vreg: %17[ 23 ]
+# CHECK: Vreg: %31[ LoopTag+29 ]
+# CHECK: Vreg: %19[ 23 ]
+# CHECK: Instr: %36:sreg_64 = nsw S_LSHL_B64 killed %35, 2, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+30 ]
+# CHECK: Vreg: %21[ 19 ]
+# CHECK: Vreg: %9:sub0[ 1 ]
+# CHECK: Vreg: %9:sub1[ 2 ]
+# CHECK: Vreg: %35[ 0 ]
+# CHECK: Vreg: %23[ 16 ]
+# CHECK: Vreg: %56[ LoopTag+28 ]
+# CHECK: Vreg: %18[ 22 ]
+# CHECK: Vreg: %25[ 5 ]
+# CHECK: Vreg: %58[ LoopTag+28 ]
+# CHECK: Vreg: %20[ 22 ]
+# CHECK: Vreg: %1[ 18 ]
+# CHECK: Vreg: %27[ LoopTag+26 ]
+# CHECK: Vreg: %8:sub0[ 9 ]
+# CHECK: Vreg: %8:sub1[ 10 ]
+# CHECK: Vreg: %8[ LoopTag+27 ]
+# CHECK: Vreg: %29[ LoopTag+37 ]
+# CHECK: Vreg: %10[ 7 ]
+# CHECK: Vreg: %17[ 22 ]
+# CHECK: Vreg: %31[ LoopTag+28 ]
+# CHECK: Vreg: %19[ 22 ]
+# CHECK: Instr: %37:vgpr_32, %38:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %9.sub0, %36.sub0, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+29 ]
+# CHECK: Vreg: %21[ 18 ]
+# CHECK: Vreg: %9:sub0[ 0 ]
+# CHECK: Vreg: %9:sub1[ 1 ]
+# CHECK: Vreg: %23[ 15 ]
+# CHECK: Vreg: %56[ LoopTag+27 ]
+# CHECK: Vreg: %18[ 21 ]
+# CHECK: Vreg: %25[ 4 ]
+# CHECK: Vreg: %58[ LoopTag+27 ]
+# CHECK: Vreg: %20[ 21 ]
+# CHECK: Vreg: %1[ 17 ]
+# CHECK: Vreg: %27[ LoopTag+25 ]
+# CHECK: Vreg: %8:sub0[ 8 ]
+# CHECK: Vreg: %8:sub1[ 9 ]
+# CHECK: Vreg: %8[ LoopTag+26 ]
+# CHECK: Vreg: %29[ LoopTag+36 ]
+# CHECK: Vreg: %10[ 6 ]
+# CHECK: Vreg: %36:sub0[ 0 ]
+# CHECK: Vreg: %36:sub1[ 1 ]
+# CHECK: Vreg: %17[ 21 ]
+# CHECK: Vreg: %31[ LoopTag+27 ]
+# CHECK: Vreg: %19[ 21 ]
+# CHECK: Instr: %39:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %36.sub1, %9.sub1, killed %38, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+28 ]
+# CHECK: Vreg: %21[ 17 ]
+# CHECK: Vreg: %9:sub0[ 25 ]
+# CHECK: Vreg: %9:sub1[ 0 ]
+# CHECK: Vreg: %23[ 14 ]
+# CHECK: Vreg: %56[ LoopTag+26 ]
+# CHECK: Vreg: %37[ 1 ]
+# CHECK: Vreg: %18[ 20 ]
+# CHECK: Vreg: %25[ 3 ]
+# CHECK: Vreg: %58[ LoopTag+26 ]
+# CHECK: Vreg: %20[ 20 ]
+# CHECK: Vreg: %1[ 16 ]
+# CHECK: Vreg: %27[ LoopTag+24 ]
+# CHECK: Vreg: %8:sub0[ 7 ]
+# CHECK: Vreg: %8:sub1[ 8 ]
+# CHECK: Vreg: %8[ LoopTag+25 ]
+# CHECK: Vreg: %29[ LoopTag+35 ]
+# CHECK: Vreg: %10[ 5 ]
+# CHECK: Vreg: %36:sub0[ 7 ]
+# CHECK: Vreg: %36:sub1[ 0 ]
+# CHECK: Vreg: %17[ 20 ]
+# CHECK: Vreg: %31[ LoopTag+26 ]
+# CHECK: Vreg: %38[ 0 ]
+# CHECK: Vreg: %19[ 20 ]
+# CHECK: Instr: %40:vreg_64 = REG_SEQUENCE killed %37, %subreg.sub0, killed %39, %subreg.sub1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+27 ]
+# CHECK: Vreg: %21[ 16 ]
+# CHECK: Vreg: %9:sub0[ 24 ]
+# CHECK: Vreg: %9:sub1[ 25 ]
+# CHECK: Vreg: %23[ 13 ]
+# CHECK: Vreg: %56[ LoopTag+25 ]
+# CHECK: Vreg: %37[ 0 ]
+# CHECK: Vreg: %18[ 19 ]
+# CHECK: Vreg: %25[ 2 ]
+# CHECK: Vreg: %58[ LoopTag+25 ]
+# CHECK: Vreg: %39[ 0 ]
+# CHECK: Vreg: %20[ 19 ]
+# CHECK: Vreg: %1[ 15 ]
+# CHECK: Vreg: %27[ LoopTag+23 ]
+# CHECK: Vreg: %8:sub0[ 6 ]
+# CHECK: Vreg: %8:sub1[ 7 ]
+# CHECK: Vreg: %8[ LoopTag+24 ]
+# CHECK: Vreg: %29[ LoopTag+34 ]
+# CHECK: Vreg: %10[ 4 ]
+# CHECK: Vreg: %36:sub0[ 6 ]
+# CHECK: Vreg: %36:sub1[ 7 ]
+# CHECK: Vreg: %17[ 19 ]
+# CHECK: Vreg: %31[ LoopTag+25 ]
+# CHECK: Vreg: %19[ 19 ]
+# CHECK: Instr: %41:vgpr_32 = GLOBAL_LOAD_DWORD killed %40, 0, 0, implicit $exec :: (load (s32) from %ir.gep1, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+26 ]
+# CHECK: Vreg: %40[ 0 ]
+# CHECK: Vreg: %21[ 15 ]
+# CHECK: Vreg: %9:sub0[ 23 ]
+# CHECK: Vreg: %9:sub1[ 24 ]
+# CHECK: Vreg: %23[ 12 ]
+# CHECK: Vreg: %56[ LoopTag+24 ]
+# CHECK: Vreg: %18[ 18 ]
+# CHECK: Vreg: %25[ 1 ]
+# CHECK: Vreg: %58[ LoopTag+24 ]
+# CHECK: Vreg: %20[ 18 ]
+# CHECK: Vreg: %1[ 14 ]
+# CHECK: Vreg: %27[ LoopTag+22 ]
+# CHECK: Vreg: %8:sub0[ 5 ]
+# CHECK: Vreg: %8:sub1[ 6 ]
+# CHECK: Vreg: %8[ LoopTag+23 ]
+# CHECK: Vreg: %29[ LoopTag+33 ]
+# CHECK: Vreg: %10[ 3 ]
+# CHECK: Vreg: %36:sub0[ 5 ]
+# CHECK: Vreg: %36:sub1[ 6 ]
+# CHECK: Vreg: %17[ 18 ]
+# CHECK: Vreg: %31[ LoopTag+24 ]
+# CHECK: Vreg: %19[ 18 ]
+# CHECK: Instr: %28:vgpr_32 = V_ADD_U32_e64 %25, %41, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+25 ]
+# CHECK: Vreg: %21[ 14 ]
+# CHECK: Vreg: %9:sub0[ 22 ]
+# CHECK: Vreg: %9:sub1[ 23 ]
+# CHECK: Vreg: %23[ 11 ]
+# CHECK: Vreg: %56[ LoopTag+23 ]
+# CHECK: Vreg: %18[ 17 ]
+# CHECK: Vreg: %25[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+23 ]
+# CHECK: Vreg: %20[ 17 ]
+# CHECK: Vreg: %1[ 13 ]
+# CHECK: Vreg: %27[ LoopTag+21 ]
+# CHECK: Vreg: %8:sub0[ 4 ]
+# CHECK: Vreg: %8:sub1[ 5 ]
+# CHECK: Vreg: %8[ LoopTag+22 ]
+# CHECK: Vreg: %41[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+32 ]
+# CHECK: Vreg: %10[ 2 ]
+# CHECK: Vreg: %36:sub0[ 4 ]
+# CHECK: Vreg: %36:sub1[ 5 ]
+# CHECK: Vreg: %17[ 17 ]
+# CHECK: Vreg: %31[ LoopTag+23 ]
+# CHECK: Vreg: %19[ 17 ]
+# CHECK: Instr: %30:vgpr_32 = V_MUL_LO_U32_e64 %41, %25, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+24 ]
+# CHECK: Vreg: %21[ 13 ]
+# CHECK: Vreg: %28[ 16 ]
+# CHECK: Vreg: %9:sub0[ 21 ]
+# CHECK: Vreg: %9:sub1[ 22 ]
+# CHECK: Vreg: %23[ 10 ]
+# CHECK: Vreg: %56[ LoopTag+22 ]
+# CHECK: Vreg: %18[ 16 ]
+# CHECK: Vreg: %25[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+22 ]
+# CHECK: Vreg: %20[ 16 ]
+# CHECK: Vreg: %1[ 12 ]
+# CHECK: Vreg: %27[ LoopTag+20 ]
+# CHECK: Vreg: %8:sub0[ 3 ]
+# CHECK: Vreg: %8:sub1[ 4 ]
+# CHECK: Vreg: %8[ LoopTag+21 ]
+# CHECK: Vreg: %41[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+31 ]
+# CHECK: Vreg: %10[ 1 ]
+# CHECK: Vreg: %36:sub0[ 3 ]
+# CHECK: Vreg: %36:sub1[ 4 ]
+# CHECK: Vreg: %17[ 16 ]
+# CHECK: Vreg: %31[ LoopTag+22 ]
+# CHECK: Vreg: %19[ 16 ]
+# CHECK: Instr: GLOBAL_STORE_SHORT_D16_HI %10, %30, 2, 0, implicit $exec :: (store (s16) into %ir.p1 + 2, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+23 ]
+# CHECK: Vreg: %21[ 12 ]
+# CHECK: Vreg: %28[ 15 ]
+# CHECK: Vreg: %9:sub0[ 20 ]
+# CHECK: Vreg: %9:sub1[ 21 ]
+# CHECK: Vreg: %23[ 9 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+21 ]
+# CHECK: Vreg: %18[ 15 ]
+# CHECK: Vreg: %25[ 8 ]
+# CHECK: Vreg: %58[ LoopTag+21 ]
+# CHECK: Vreg: %20[ 15 ]
+# CHECK: Vreg: %1[ 11 ]
+# CHECK: Vreg: %27[ LoopTag+19 ]
+# CHECK: Vreg: %8:sub0[ 2 ]
+# CHECK: Vreg: %8:sub1[ 3 ]
+# CHECK: Vreg: %8[ LoopTag+20 ]
+# CHECK: Vreg: %41[ LoopTag+31 ]
+# CHECK: Vreg: %29[ LoopTag+30 ]
+# CHECK: Vreg: %10[ 0 ]
+# CHECK: Vreg: %36:sub0[ 2 ]
+# CHECK: Vreg: %36:sub1[ 3 ]
+# CHECK: Vreg: %17[ 15 ]
+# CHECK: Vreg: %31[ LoopTag+21 ]
+# CHECK: Vreg: %19[ 15 ]
+# CHECK: Instr: GLOBAL_STORE_SHORT %10, %30, 0, 0, implicit $exec :: (store (s16) into %ir.p1, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+22 ]
+# CHECK: Vreg: %21[ 11 ]
+# CHECK: Vreg: %28[ 14 ]
+# CHECK: Vreg: %9:sub0[ 19 ]
+# CHECK: Vreg: %9:sub1[ 20 ]
+# CHECK: Vreg: %23[ 8 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+20 ]
+# CHECK: Vreg: %18[ 14 ]
+# CHECK: Vreg: %25[ 7 ]
+# CHECK: Vreg: %58[ LoopTag+20 ]
+# CHECK: Vreg: %20[ 14 ]
+# CHECK: Vreg: %1[ 10 ]
+# CHECK: Vreg: %27[ LoopTag+18 ]
+# CHECK: Vreg: %8:sub0[ 1 ]
+# CHECK: Vreg: %8:sub1[ 2 ]
+# CHECK: Vreg: %8[ LoopTag+19 ]
+# CHECK: Vreg: %41[ LoopTag+30 ]
+# CHECK: Vreg: %29[ LoopTag+29 ]
+# CHECK: Vreg: %10[ 0 ]
+# CHECK: Vreg: %36:sub0[ 1 ]
+# CHECK: Vreg: %36:sub1[ 2 ]
+# CHECK: Vreg: %17[ 14 ]
+# CHECK: Vreg: %31[ LoopTag+20 ]
+# CHECK: Vreg: %19[ 14 ]
+# CHECK: Instr: %42:vgpr_32, %43:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %8.sub0, %36.sub0, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+21 ]
+# CHECK: Vreg: %21[ 10 ]
+# CHECK: Vreg: %28[ 13 ]
+# CHECK: Vreg: %9:sub0[ 18 ]
+# CHECK: Vreg: %9:sub1[ 19 ]
+# CHECK: Vreg: %23[ 7 ]
+# CHECK: Vreg: %30[ 13 ]
+# CHECK: Vreg: %56[ LoopTag+19 ]
+# CHECK: Vreg: %18[ 13 ]
+# CHECK: Vreg: %25[ 6 ]
+# CHECK: Vreg: %58[ LoopTag+19 ]
+# CHECK: Vreg: %20[ 13 ]
+# CHECK: Vreg: %1[ 9 ]
+# CHECK: Vreg: %27[ LoopTag+17 ]
+# CHECK: Vreg: %8:sub0[ 0 ]
+# CHECK: Vreg: %8:sub1[ 1 ]
+# CHECK: Vreg: %8[ LoopTag+18 ]
+# CHECK: Vreg: %41[ LoopTag+29 ]
+# CHECK: Vreg: %29[ LoopTag+28 ]
+# CHECK: Vreg: %10[ 24 ]
+# CHECK: Vreg: %36:sub0[ 0 ]
+# CHECK: Vreg: %36:sub1[ 1 ]
+# CHECK: Vreg: %17[ 13 ]
+# CHECK: Vreg: %31[ LoopTag+19 ]
+# CHECK: Vreg: %19[ 13 ]
+# CHECK: Instr: %44:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %36.sub1, %8.sub1, killed %43, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+20 ]
+# CHECK: Vreg: %21[ 9 ]
+# CHECK: Vreg: %28[ 12 ]
+# CHECK: Vreg: %9:sub0[ 17 ]
+# CHECK: Vreg: %9:sub1[ 18 ]
+# CHECK: Vreg: %42[ 1 ]
+# CHECK: Vreg: %23[ 6 ]
+# CHECK: Vreg: %30[ 12 ]
+# CHECK: Vreg: %56[ LoopTag+18 ]
+# CHECK: Vreg: %18[ 12 ]
+# CHECK: Vreg: %25[ 5 ]
+# CHECK: Vreg: %58[ LoopTag+18 ]
+# CHECK: Vreg: %20[ 12 ]
+# CHECK: Vreg: %1[ 8 ]
+# CHECK: Vreg: %27[ LoopTag+16 ]
+# CHECK: Vreg: %8:sub0[ 25 ]
+# CHECK: Vreg: %8:sub1[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+17 ]
+# CHECK: Vreg: %41[ LoopTag+28 ]
+# CHECK: Vreg: %29[ LoopTag+27 ]
+# CHECK: Vreg: %10[ 23 ]
+# CHECK: Vreg: %36:sub1[ 0 ]
+# CHECK: Vreg: %17[ 12 ]
+# CHECK: Vreg: %43[ 0 ]
+# CHECK: Vreg: %31[ LoopTag+18 ]
+# CHECK: Vreg: %19[ 12 ]
+# CHECK: Instr: %45:vreg_64 = REG_SEQUENCE killed %42, %subreg.sub0, killed %44, %subreg.sub1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+19 ]
+# CHECK: Vreg: %21[ 8 ]
+# CHECK: Vreg: %28[ 11 ]
+# CHECK: Vreg: %9:sub0[ 16 ]
+# CHECK: Vreg: %9:sub1[ 17 ]
+# CHECK: Vreg: %42[ 0 ]
+# CHECK: Vreg: %23[ 5 ]
+# CHECK: Vreg: %30[ 11 ]
+# CHECK: Vreg: %56[ LoopTag+17 ]
+# CHECK: Vreg: %18[ 11 ]
+# CHECK: Vreg: %44[ 0 ]
+# CHECK: Vreg: %25[ 4 ]
+# CHECK: Vreg: %58[ LoopTag+17 ]
+# CHECK: Vreg: %20[ 11 ]
+# CHECK: Vreg: %1[ 7 ]
+# CHECK: Vreg: %27[ LoopTag+15 ]
+# CHECK: Vreg: %8:sub0[ 24 ]
+# CHECK: Vreg: %8:sub1[ 25 ]
+# CHECK: Vreg: %8[ LoopTag+16 ]
+# CHECK: Vreg: %41[ LoopTag+27 ]
+# CHECK: Vreg: %29[ LoopTag+26 ]
+# CHECK: Vreg: %10[ 22 ]
+# CHECK: Vreg: %17[ 11 ]
+# CHECK: Vreg: %31[ LoopTag+17 ]
+# CHECK: Vreg: %19[ 11 ]
+# CHECK: Instr: %46:vgpr_32 = GLOBAL_LOAD_USHORT %45, 0, 0, implicit $exec :: (load (s16) from %ir.gep2, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+18 ]
+# CHECK: Vreg: %45[ 0 ]
+# CHECK: Vreg: %21[ 7 ]
+# CHECK: Vreg: %28[ 10 ]
+# CHECK: Vreg: %9:sub0[ 15 ]
+# CHECK: Vreg: %9:sub1[ 16 ]
+# CHECK: Vreg: %23[ 4 ]
+# CHECK: Vreg: %30[ 10 ]
+# CHECK: Vreg: %56[ LoopTag+16 ]
+# CHECK: Vreg: %18[ 10 ]
+# CHECK: Vreg: %25[ 3 ]
+# CHECK: Vreg: %58[ LoopTag+16 ]
+# CHECK: Vreg: %20[ 10 ]
+# CHECK: Vreg: %1[ 6 ]
+# CHECK: Vreg: %27[ LoopTag+14 ]
+# CHECK: Vreg: %8:sub0[ 23 ]
+# CHECK: Vreg: %8:sub1[ 24 ]
+# CHECK: Vreg: %8[ LoopTag+15 ]
+# CHECK: Vreg: %41[ LoopTag+26 ]
+# CHECK: Vreg: %29[ LoopTag+25 ]
+# CHECK: Vreg: %10[ 21 ]
+# CHECK: Vreg: %17[ 10 ]
+# CHECK: Vreg: %31[ LoopTag+16 ]
+# CHECK: Vreg: %19[ 10 ]
+# CHECK: Instr: %47:vgpr_32 = GLOBAL_LOAD_USHORT killed %45, 2, 0, implicit $exec :: (load (s16) from %ir.gep2 + 2, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+17 ]
+# CHECK: Vreg: %45[ 0 ]
+# CHECK: Vreg: %21[ 6 ]
+# CHECK: Vreg: %28[ 9 ]
+# CHECK: Vreg: %9:sub0[ 14 ]
+# CHECK: Vreg: %9:sub1[ 15 ]
+# CHECK: Vreg: %23[ 3 ]
+# CHECK: Vreg: %30[ 9 ]
+# CHECK: Vreg: %56[ LoopTag+15 ]
+# CHECK: Vreg: %18[ 9 ]
+# CHECK: Vreg: %25[ 2 ]
+# CHECK: Vreg: %58[ LoopTag+15 ]
+# CHECK: Vreg: %20[ 9 ]
+# CHECK: Vreg: %1[ 5 ]
+# CHECK: Vreg: %46[ 1 ]
+# CHECK: Vreg: %27[ LoopTag+13 ]
+# CHECK: Vreg: %8:sub0[ 22 ]
+# CHECK: Vreg: %8:sub1[ 23 ]
+# CHECK: Vreg: %8[ LoopTag+14 ]
+# CHECK: Vreg: %41[ LoopTag+25 ]
+# CHECK: Vreg: %29[ LoopTag+24 ]
+# CHECK: Vreg: %10[ 20 ]
+# CHECK: Vreg: %17[ 9 ]
+# CHECK: Vreg: %31[ LoopTag+15 ]
+# CHECK: Vreg: %19[ 9 ]
+# CHECK: Instr: %48:vgpr_32 = V_LSHL_OR_B32_e64 killed %47, 16, killed %46, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+16 ]
+# CHECK: Vreg: %21[ 5 ]
+# CHECK: Vreg: %47[ 0 ]
+# CHECK: Vreg: %28[ 8 ]
+# CHECK: Vreg: %9:sub0[ 13 ]
+# CHECK: Vreg: %9:sub1[ 14 ]
+# CHECK: Vreg: %23[ 2 ]
+# CHECK: Vreg: %30[ 8 ]
+# CHECK: Vreg: %56[ LoopTag+14 ]
+# CHECK: Vreg: %18[ 8 ]
+# CHECK: Vreg: %25[ 1 ]
+# CHECK: Vreg: %58[ LoopTag+14 ]
+# CHECK: Vreg: %20[ 8 ]
+# CHECK: Vreg: %1[ 4 ]
+# CHECK: Vreg: %46[ 0 ]
+# CHECK: Vreg: %27[ LoopTag+12 ]
+# CHECK: Vreg: %8:sub0[ 21 ]
+# CHECK: Vreg: %8:sub1[ 22 ]
+# CHECK: Vreg: %8[ LoopTag+13 ]
+# CHECK: Vreg: %41[ LoopTag+24 ]
+# CHECK: Vreg: %29[ LoopTag+23 ]
+# CHECK: Vreg: %10[ 19 ]
+# CHECK: Vreg: %17[ 8 ]
+# CHECK: Vreg: %31[ LoopTag+14 ]
+# CHECK: Vreg: %19[ 8 ]
+# CHECK: Instr: %26:sreg_32 = S_ADD_I32 %25, 1, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+15 ]
+# CHECK: Vreg: %21[ 4 ]
+# CHECK: Vreg: %28[ 7 ]
+# CHECK: Vreg: %9:sub0[ 12 ]
+# CHECK: Vreg: %9:sub1[ 13 ]
+# CHECK: Vreg: %23[ 1 ]
+# CHECK: Vreg: %30[ 7 ]
+# CHECK: Vreg: %56[ LoopTag+13 ]
+# CHECK: Vreg: %18[ 7 ]
+# CHECK: Vreg: %25[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+13 ]
+# CHECK: Vreg: %20[ 7 ]
+# CHECK: Vreg: %1[ 3 ]
+# CHECK: Vreg: %27[ LoopTag+11 ]
+# CHECK: Vreg: %8:sub0[ 20 ]
+# CHECK: Vreg: %8:sub1[ 21 ]
+# CHECK: Vreg: %8[ LoopTag+12 ]
+# CHECK: Vreg: %41[ LoopTag+23 ]
+# CHECK: Vreg: %48[ 2 ]
+# CHECK: Vreg: %29[ LoopTag+22 ]
+# CHECK: Vreg: %10[ 18 ]
+# CHECK: Vreg: %17[ 7 ]
+# CHECK: Vreg: %31[ LoopTag+13 ]
+# CHECK: Vreg: %19[ 7 ]
+# CHECK: Instr: %24:sreg_32 = S_ADD_I32 %23, -1, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+14 ]
+# CHECK: Vreg: %26[ 4 ]
+# CHECK: Vreg: %21[ 3 ]
+# CHECK: Vreg: %28[ 6 ]
+# CHECK: Vreg: %9:sub0[ 11 ]
+# CHECK: Vreg: %9:sub1[ 12 ]
+# CHECK: Vreg: %23[ 0 ]
+# CHECK: Vreg: %30[ 6 ]
+# CHECK: Vreg: %56[ LoopTag+12 ]
+# CHECK: Vreg: %18[ 6 ]
+# CHECK: Vreg: %25[ 2 ]
+# CHECK: Vreg: %58[ LoopTag+12 ]
+# CHECK: Vreg: %20[ 6 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %27[ LoopTag+10 ]
+# CHECK: Vreg: %8:sub0[ 19 ]
+# CHECK: Vreg: %8:sub1[ 20 ]
+# CHECK: Vreg: %8[ LoopTag+11 ]
+# CHECK: Vreg: %41[ LoopTag+22 ]
+# CHECK: Vreg: %48[ 1 ]
+# CHECK: Vreg: %29[ LoopTag+21 ]
+# CHECK: Vreg: %10[ 17 ]
+# CHECK: Vreg: %17[ 6 ]
+# CHECK: Vreg: %31[ LoopTag+12 ]
+# CHECK: Vreg: %19[ 6 ]
+# CHECK: Instr: %32:vgpr_32 = V_ADD_U32_e64 killed %23, killed %48, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+13 ]
+# CHECK: Vreg: %26[ 3 ]
+# CHECK: Vreg: %21[ 2 ]
+# CHECK: Vreg: %28[ 5 ]
+# CHECK: Vreg: %9:sub0[ 10 ]
+# CHECK: Vreg: %9:sub1[ 11 ]
+# CHECK: Vreg: %23[ 0 ]
+# CHECK: Vreg: %30[ 5 ]
+# CHECK: Vreg: %56[ LoopTag+11 ]
+# CHECK: Vreg: %18[ 5 ]
+# CHECK: Vreg: %25[ 1 ]
+# CHECK: Vreg: %58[ LoopTag+11 ]
+# CHECK: Vreg: %20[ 5 ]
+# CHECK: Vreg: %1[ 1 ]
+# CHECK: Vreg: %27[ LoopTag+9 ]
+# CHECK: Vreg: %8:sub0[ 18 ]
+# CHECK: Vreg: %8:sub1[ 19 ]
+# CHECK: Vreg: %8[ LoopTag+10 ]
+# CHECK: Vreg: %41[ LoopTag+21 ]
+# CHECK: Vreg: %48[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+20 ]
+# CHECK: Vreg: %10[ 16 ]
+# CHECK: Vreg: %17[ 5 ]
+# CHECK: Vreg: %24[ 5 ]
+# CHECK: Vreg: %31[ LoopTag+11 ]
+# CHECK: Vreg: %19[ 5 ]
+# CHECK: Instr: %49:sreg_32 = V_CMP_GE_U32_e64 killed %25, %1, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+12 ]
+# CHECK: Vreg: %26[ 2 ]
+# CHECK: Vreg: %21[ 1 ]
+# CHECK: Vreg: %28[ 4 ]
+# CHECK: Vreg: %9:sub0[ 9 ]
+# CHECK: Vreg: %9:sub1[ 10 ]
+# CHECK: Vreg: %30[ 4 ]
+# CHECK: Vreg: %56[ LoopTag+10 ]
+# CHECK: Vreg: %18[ 4 ]
+# CHECK: Vreg: %25[ 0 ]
+# CHECK: Vreg: %32[ 4 ]
+# CHECK: Vreg: %58[ LoopTag+10 ]
+# CHECK: Vreg: %20[ 4 ]
+# CHECK: Vreg: %1[ 0 ]
+# CHECK: Vreg: %27[ LoopTag+8 ]
+# CHECK: Vreg: %8:sub0[ 17 ]
+# CHECK: Vreg: %8:sub1[ 18 ]
+# CHECK: Vreg: %8[ LoopTag+9 ]
+# CHECK: Vreg: %41[ LoopTag+20 ]
+# CHECK: Vreg: %29[ LoopTag+19 ]
+# CHECK: Vreg: %10[ 15 ]
+# CHECK: Vreg: %17[ 4 ]
+# CHECK: Vreg: %24[ 4 ]
+# CHECK: Vreg: %31[ LoopTag+10 ]
+# CHECK: Vreg: %19[ 4 ]
+# CHECK: Instr: %22:sreg_32 = SI_IF_BREAK killed %49, killed %21, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+11 ]
+# CHECK: Vreg: %26[ 1 ]
+# CHECK: Vreg: %21[ 0 ]
+# CHECK: Vreg: %28[ 3 ]
+# CHECK: Vreg: %9:sub0[ 8 ]
+# CHECK: Vreg: %9:sub1[ 9 ]
+# CHECK: Vreg: %49[ 0 ]
+# CHECK: Vreg: %30[ 3 ]
+# CHECK: Vreg: %56[ LoopTag+9 ]
+# CHECK: Vreg: %18[ 3 ]
+# CHECK: Vreg: %32[ 3 ]
+# CHECK: Vreg: %58[ LoopTag+9 ]
+# CHECK: Vreg: %20[ 3 ]
+# CHECK: Vreg: %1[ 25 ]
+# CHECK: Vreg: %27[ LoopTag+7 ]
+# CHECK: Vreg: %8:sub0[ 16 ]
+# CHECK: Vreg: %8:sub1[ 17 ]
+# CHECK: Vreg: %8[ LoopTag+8 ]
+# CHECK: Vreg: %41[ LoopTag+19 ]
+# CHECK: Vreg: %29[ LoopTag+18 ]
+# CHECK: Vreg: %10[ 14 ]
+# CHECK: Vreg: %17[ 3 ]
+# CHECK: Vreg: %24[ 3 ]
+# CHECK: Vreg: %31[ LoopTag+9 ]
+# CHECK: Vreg: %19[ 3 ]
+# CHECK: Instr: %50:vgpr_32 = COPY %26, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+10 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %28[ 2 ]
+# CHECK: Vreg: %9:sub0[ 7 ]
+# CHECK: Vreg: %9:sub1[ 8 ]
+# CHECK: Vreg: %30[ 2 ]
+# CHECK: Vreg: %56[ LoopTag+8 ]
+# CHECK: Vreg: %18[ 2 ]
+# CHECK: Vreg: %32[ 2 ]
+# CHECK: Vreg: %58[ LoopTag+8 ]
+# CHECK: Vreg: %20[ 2 ]
+# CHECK: Vreg: %1[ 24 ]
+# CHECK: Vreg: %27[ LoopTag+6 ]
+# CHECK: Vreg: %8:sub0[ 15 ]
+# CHECK: Vreg: %8:sub1[ 16 ]
+# CHECK: Vreg: %8[ LoopTag+7 ]
+# CHECK: Vreg: %41[ LoopTag+18 ]
+# CHECK: Vreg: %22[ 1 ]
+# CHECK: Vreg: %29[ LoopTag+17 ]
+# CHECK: Vreg: %10[ 13 ]
+# CHECK: Vreg: %17[ 2 ]
+# CHECK: Vreg: %24[ 2 ]
+# CHECK: Vreg: %31[ LoopTag+8 ]
+# CHECK: Vreg: %19[ 2 ]
+# CHECK: Instr: SI_LOOP %22, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+9 ]
+# CHECK: Vreg: %26[ 1 ]
+# CHECK: Vreg: %28[ 1 ]
+# CHECK: Vreg: %9:sub0[ 6 ]
+# CHECK: Vreg: %9:sub1[ 7 ]
+# CHECK: Vreg: %30[ 1 ]
+# CHECK: Vreg: %56[ LoopTag+7 ]
+# CHECK: Vreg: %18[ 1 ]
+# CHECK: Vreg: %32[ 1 ]
+# CHECK: Vreg: %58[ LoopTag+7 ]
+# CHECK: Vreg: %20[ 1 ]
+# CHECK: Vreg: %1[ 23 ]
+# CHECK: Vreg: %27[ LoopTag+5 ]
+# CHECK: Vreg: %8:sub0[ 14 ]
+# CHECK: Vreg: %8:sub1[ 15 ]
+# CHECK: Vreg: %8[ LoopTag+6 ]
+# CHECK: Vreg: %41[ LoopTag+17 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+16 ]
+# CHECK: Vreg: %10[ 12 ]
+# CHECK: Vreg: %17[ 1 ]
+# CHECK: Vreg: %24[ 1 ]
+# CHECK: Vreg: %50[ LoopTag+3 ]
+# CHECK: Vreg: %31[ LoopTag+7 ]
+# CHECK: Vreg: %19[ 1 ]
+# CHECK: Instr: S_BRANCH %bb.2
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+8 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+6 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+6 ]
+# CHECK: Vreg: %20[ 0 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %27[ LoopTag+4 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+5 ]
+# CHECK: Vreg: %41[ LoopTag+16 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+15 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %24[ 0 ]
+# CHECK: Vreg: %50[ LoopTag+2 ]
+# CHECK: Vreg: %31[ LoopTag+6 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ LoopTag+8 ]
+# CHECK: Vreg: %26[ 0 ]
+# CHECK: Vreg: %28[ 0 ]
+# CHECK: Vreg: %9:sub0[ 5 ]
+# CHECK: Vreg: %9:sub1[ 6 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ LoopTag+6 ]
+# CHECK: Vreg: %18[ 0 ]
+# CHECK: Vreg: %32[ 0 ]
+# CHECK: Vreg: %58[ LoopTag+6 ]
+# CHECK: Vreg: %20[ 0 ]
+# CHECK: Vreg: %1[ 22 ]
+# CHECK: Vreg: %27[ LoopTag+4 ]
+# CHECK: Vreg: %8:sub0[ 13 ]
+# CHECK: Vreg: %8:sub1[ 14 ]
+# CHECK: Vreg: %8[ LoopTag+5 ]
+# CHECK: Vreg: %41[ LoopTag+16 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %29[ LoopTag+15 ]
+# CHECK: Vreg: %10[ 11 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Vreg: %24[ 0 ]
+# CHECK: Vreg: %50[ LoopTag+2 ]
+# CHECK: Vreg: %31[ LoopTag+6 ]
+# CHECK: Vreg: %19[ 0 ]
+# CHECK: --- MBB_2 ---
+# CHECK: Instr: SI_END_CF killed %22, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 7 ]
+# CHECK: Vreg: %30[ 2 ]
+# CHECK: Vreg: %56[ 5 ]
+# CHECK: Vreg: %58[ 5 ]
+# CHECK: Vreg: %27[ 3 ]
+# CHECK: Vreg: %8[ 4 ]
+# CHECK: Vreg: %41[ 15 ]
+# CHECK: Vreg: %22[ 0 ]
+# CHECK: Vreg: %29[ 14 ]
+# CHECK: Vreg: %17[ 16 ]
+# CHECK: Vreg: %50[ 1 ]
+# CHECK: Vreg: %31[ 5 ]
+# CHECK: Instr: %51:vgpr_32 = V_ADD_U32_e64 -2, killed %50, 0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 6 ]
+# CHECK: Vreg: %30[ 1 ]
+# CHECK: Vreg: %56[ 4 ]
+# CHECK: Vreg: %58[ 4 ]
+# CHECK: Vreg: %27[ 2 ]
+# CHECK: Vreg: %8[ 3 ]
+# CHECK: Vreg: %41[ 14 ]
+# CHECK: Vreg: %29[ 13 ]
+# CHECK: Vreg: %17[ 15 ]
+# CHECK: Vreg: %50[ 0 ]
+# CHECK: Vreg: %31[ 4 ]
+# CHECK: Instr: %52:vgpr_32 = V_MUL_LO_U32_e64 killed %30, killed %51, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 5 ]
+# CHECK: Vreg: %30[ 0 ]
+# CHECK: Vreg: %56[ 3 ]
+# CHECK: Vreg: %51[ 0 ]
+# CHECK: Vreg: %58[ 3 ]
+# CHECK: Vreg: %27[ 1 ]
+# CHECK: Vreg: %8[ 2 ]
+# CHECK: Vreg: %41[ 13 ]
+# CHECK: Vreg: %29[ 12 ]
+# CHECK: Vreg: %17[ 14 ]
+# CHECK: Vreg: %31[ 3 ]
+# CHECK: Instr: %53:vgpr_32 = V_MUL_LO_U32_e64 100, killed %27, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 4 ]
+# CHECK: Vreg: %52[ 2 ]
+# CHECK: Vreg: %56[ 2 ]
+# CHECK: Vreg: %58[ 2 ]
+# CHECK: Vreg: %27[ 0 ]
+# CHECK: Vreg: %8[ 1 ]
+# CHECK: Vreg: %41[ 12 ]
+# CHECK: Vreg: %29[ 11 ]
+# CHECK: Vreg: %17[ 13 ]
+# CHECK: Vreg: %31[ 2 ]
+# CHECK: Instr: GLOBAL_STORE_DWORD %8, %53, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 3 ]
+# CHECK: Vreg: %52[ 1 ]
+# CHECK: Vreg: %56[ 1 ]
+# CHECK: Vreg: %58[ 1 ]
+# CHECK: Vreg: %8[ 0 ]
+# CHECK: Vreg: %53[ 0 ]
+# CHECK: Vreg: %41[ 11 ]
+# CHECK: Vreg: %29[ 10 ]
+# CHECK: Vreg: %17[ 12 ]
+# CHECK: Vreg: %31[ 1 ]
+# CHECK: Instr: %54:sreg_32 = S_MOV_B32 0
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ 8 ]
+# CHECK: Vreg: %53[ 10 ]
+# CHECK: Vreg: %41[ 10 ]
+# CHECK: Vreg: %29[ 9 ]
+# CHECK: Vreg: %17[ 11 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %54[ 0 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ 8 ]
+# CHECK: Vreg: %53[ 10 ]
+# CHECK: Vreg: %41[ 10 ]
+# CHECK: Vreg: %29[ 9 ]
+# CHECK: Vreg: %17[ 11 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: --- MBB_3 ---
+# CHECK: Instr: %55:sreg_32 = PHI %54, %bb.2, %56, %bb.3
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %54[ 0 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+8 ]
+# CHECK: Vreg: %53[ LoopTag+10 ]
+# CHECK: Vreg: %41[ LoopTag+10 ]
+# CHECK: Vreg: %29[ LoopTag+9 ]
+# CHECK: Vreg: %17[ LoopTag+11 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: Instr: %57:sreg_32 = PHI %54, %bb.2, %58, %bb.3
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %54[ 0 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+8 ]
+# CHECK: Vreg: %53[ LoopTag+10 ]
+# CHECK: Vreg: %41[ LoopTag+10 ]
+# CHECK: Vreg: %29[ LoopTag+9 ]
+# CHECK: Vreg: %55[ 3 ]
+# CHECK: Vreg: %17[ LoopTag+11 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: Instr: %59:vgpr_32 = PHI %31, %bb.2, %52, %bb.3
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %54[ 6 ]
+# CHECK: Vreg: %8[ LoopTag+8 ]
+# CHECK: Vreg: %53[ LoopTag+10 ]
+# CHECK: Vreg: %41[ LoopTag+10 ]
+# CHECK: Vreg: %29[ LoopTag+9 ]
+# CHECK: Vreg: %55[ 3 ]
+# CHECK: Vreg: %17[ LoopTag+11 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: Vreg: %57[ 1 ]
+# CHECK: Instr: %58:sreg_32 = S_ADD_I32 killed %57, 2, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %52[ 5 ]
+# CHECK: Vreg: %59[ LoopTag+7 ]
+# CHECK: Vreg: %54[ 5 ]
+# CHECK: Vreg: %8[ LoopTag+7 ]
+# CHECK: Vreg: %53[ LoopTag+9 ]
+# CHECK: Vreg: %41[ LoopTag+9 ]
+# CHECK: Vreg: %29[ LoopTag+8 ]
+# CHECK: Vreg: %55[ 2 ]
+# CHECK: Vreg: %17[ LoopTag+10 ]
+# CHECK: Vreg: %31[ 5 ]
+# CHECK: Vreg: %57[ 0 ]
+# CHECK: Instr: %60:sreg_32 = V_CMP_GE_U32_e64 %58, %0, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 0 ]
+# CHECK: Vreg: %52[ 4 ]
+# CHECK: Vreg: %59[ LoopTag+6 ]
+# CHECK: Vreg: %54[ 4 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+6 ]
+# CHECK: Vreg: %53[ LoopTag+8 ]
+# CHECK: Vreg: %41[ LoopTag+8 ]
+# CHECK: Vreg: %29[ LoopTag+7 ]
+# CHECK: Vreg: %55[ 1 ]
+# CHECK: Vreg: %17[ LoopTag+9 ]
+# CHECK: Vreg: %31[ 4 ]
+# CHECK: Instr: %56:sreg_32 = SI_IF_BREAK killed %60, killed %55, implicit-def dead $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 5 ]
+# CHECK: Vreg: %52[ 3 ]
+# CHECK: Vreg: %59[ LoopTag+5 ]
+# CHECK: Vreg: %54[ 3 ]
+# CHECK: Vreg: %58[ 1 ]
+# CHECK: Vreg: %8[ LoopTag+5 ]
+# CHECK: Vreg: %53[ LoopTag+7 ]
+# CHECK: Vreg: %60[ 0 ]
+# CHECK: Vreg: %41[ LoopTag+7 ]
+# CHECK: Vreg: %29[ LoopTag+6 ]
+# CHECK: Vreg: %55[ 0 ]
+# CHECK: Vreg: %17[ LoopTag+8 ]
+# CHECK: Vreg: %31[ 3 ]
+# CHECK: Instr: %61:vgpr_32 = COPY %58, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 4 ]
+# CHECK: Vreg: %52[ 2 ]
+# CHECK: Vreg: %59[ LoopTag+4 ]
+# CHECK: Vreg: %54[ 2 ]
+# CHECK: Vreg: %56[ 1 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+4 ]
+# CHECK: Vreg: %53[ LoopTag+6 ]
+# CHECK: Vreg: %41[ LoopTag+6 ]
+# CHECK: Vreg: %29[ LoopTag+5 ]
+# CHECK: Vreg: %17[ LoopTag+7 ]
+# CHECK: Vreg: %31[ 2 ]
+# CHECK: Instr: SI_LOOP %56, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 3 ]
+# CHECK: Vreg: %52[ 1 ]
+# CHECK: Vreg: %59[ LoopTag+3 ]
+# CHECK: Vreg: %54[ 1 ]
+# CHECK: Vreg: %61[ LoopTag+4 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %58[ 1 ]
+# CHECK: Vreg: %8[ LoopTag+3 ]
+# CHECK: Vreg: %53[ LoopTag+5 ]
+# CHECK: Vreg: %41[ LoopTag+5 ]
+# CHECK: Vreg: %29[ LoopTag+4 ]
+# CHECK: Vreg: %17[ LoopTag+6 ]
+# CHECK: Vreg: %31[ 1 ]
+# CHECK: Instr: S_BRANCH %bb.4
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %59[ LoopTag+2 ]
+# CHECK: Vreg: %54[ 0 ]
+# CHECK: Vreg: %61[ LoopTag+3 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+2 ]
+# CHECK: Vreg: %53[ LoopTag+4 ]
+# CHECK: Vreg: %41[ LoopTag+4 ]
+# CHECK: Vreg: %29[ LoopTag+3 ]
+# CHECK: Vreg: %17[ LoopTag+5 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %52[ 0 ]
+# CHECK: Vreg: %59[ LoopTag+2 ]
+# CHECK: Vreg: %54[ 0 ]
+# CHECK: Vreg: %61[ LoopTag+3 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %58[ 0 ]
+# CHECK: Vreg: %8[ LoopTag+2 ]
+# CHECK: Vreg: %53[ LoopTag+4 ]
+# CHECK: Vreg: %41[ LoopTag+4 ]
+# CHECK: Vreg: %29[ LoopTag+3 ]
+# CHECK: Vreg: %17[ LoopTag+5 ]
+# CHECK: Vreg: %31[ 0 ]
+# CHECK: --- MBB_4 ---
+# CHECK: Instr: SI_END_CF killed %56, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %59[ 1 ]
+# CHECK: Vreg: %61[ 2 ]
+# CHECK: Vreg: %56[ 0 ]
+# CHECK: Vreg: %8[ 1 ]
+# CHECK: Vreg: %53[ 3 ]
+# CHECK: Vreg: %41[ 3 ]
+# CHECK: Vreg: %29[ 2 ]
+# CHECK: Vreg: %17[ 4 ]
+# CHECK: Instr: GLOBAL_STORE_DWORD killed %8, %59, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %59[ 0 ]
+# CHECK: Vreg: %61[ 1 ]
+# CHECK: Vreg: %8[ 0 ]
+# CHECK: Vreg: %53[ 2 ]
+# CHECK: Vreg: %41[ 2 ]
+# CHECK: Vreg: %29[ 1 ]
+# CHECK: Vreg: %17[ 3 ]
+# CHECK: Instr: %62:vgpr_32 = V_ADD3_U32_e64 killed %59, killed %61, killed %29, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %59[ 0 ]
+# CHECK: Vreg: %61[ 0 ]
+# CHECK: Vreg: %53[ 1 ]
+# CHECK: Vreg: %41[ 1 ]
+# CHECK: Vreg: %29[ 0 ]
+# CHECK: Vreg: %17[ 2 ]
+# CHECK: Instr: %63:vgpr_32 = V_ADD3_U32_e64 killed %62, killed %53, killed %41, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %53[ 0 ]
+# CHECK: Vreg: %41[ 0 ]
+# CHECK: Vreg: %17[ 1 ]
+# CHECK: Vreg: %62[ 0 ]
+# CHECK: Instr: %64:vgpr_32 = V_ADD3_U32_e64 killed %17, killed %63, 100, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %63[ 0 ]
+# CHECK: Vreg: %17[ 0 ]
+# CHECK: Instr: %65:sreg_32_xm0 = V_READFIRSTLANE_B32 killed %64, implicit $exec
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %64[ 0 ]
+# CHECK: Instr: $sgpr0 = COPY killed %65
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %65[ 0 ]
+# CHECK: Instr: SI_RETURN_TO_EPILOG killed $sgpr0
+# CHECK-NEXT: Next-use distances:
+# CHECK: (no register uses)
+# CHECK: Block End Distances:
+# CHECK: (no registers live at block end)
+# CHECK: === End NextUseAnalysis Results ===
+
+--- |
+  define amdgpu_ps i32 @test6(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, i32 %TC1, i32 %TC2) {
+  0:
+  %ld1 = load i32, ptr addrspace(1) %p1, align 1
+  %add1 = add i32 %ld1, 100
+  br label %1
+  1:
+  %phi.inc1 = phi i32 [ 0, %0 ], [ %inc1, %1 ]
+  %phi1 = phi i32 [ %ld1, %0 ], [ %add2, %1 ]
+  %phi2 = phi i32 [ 100, %0 ], [ %mul1, %1 ]
+  %phi3 = phi i32 [ %ld1, %0 ], [ %sub, %1 ]
+  %sext1 = sext i32 %phi.inc1 to i64
+  %gep1 = getelementptr inbounds i32, ptr addrspace(1) %p2, i64 %sext1
+  %ld2 = load i32, ptr addrspace(1) %gep1, align 4
+  %inc1 = add i32 %phi.inc1, 1
+  %add2 = add i32 %ld2, %inc1
+  %mul1 = mul i32 %ld2, %inc1
+  store i32 %mul1, ptr addrspace(1) %p1, align 2
+  %mul2 = mul i32 %mul1, %phi.inc1
+  %sext2 = sext i32 %inc1 to i64
+  %gep2 = getelementptr inbounds i32, ptr addrspace(1) %p3, i64 %sext1
+  %ld3 = load i32, ptr addrspace(1) %gep2, align 2
+  %sub =  sub i32 %ld3, %phi.inc1
+  %cond1 = icmp ult i32 %inc1, %TC1
+  br i1 %cond1, label %1, label %2
+  2:
+  %mul3 = mul i32 %phi1, 100
+  store i32 %mul3, ptr addrspace(1) %p3
+  br label %3
+  3:
+  %phi.inc2 = phi i32 [ 0, %2 ], [ %inc2, %3 ]
+  %phi4 = phi i32 [ %phi3, %2 ], [ %mul2, %3 ]
+  %inc2 = add i32 %phi.inc2, 2
+  store i32 %phi4, ptr addrspace(1) %p3
+  %add3 = add i32 %phi4, %inc2
+  %cond2 = icmp ult i32 %inc2, %TC2
+  br i1 %cond2, label %3, label %4
+  4:
+  %add4 = add i32 %add3, %phi2
+  %add5 = add i32 %add4, %mul3
+  %add6 = add i32 %add5, %ld2
+  %add7 = add i32 %add6, %add1
+  ret i32 %add7
+  }
+...
+
+---
+name:            test6
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  
+    %38:vgpr_32 = COPY killed $vgpr7
+    %37:vgpr_32 = COPY killed $vgpr6
+    %36:vgpr_32 = COPY killed $vgpr5
+    %35:vgpr_32 = COPY killed $vgpr4
+    %34:vgpr_32 = COPY killed $vgpr3
+    %33:vgpr_32 = COPY killed $vgpr2
+    %32:vgpr_32 = COPY killed $vgpr1
+    %31:vgpr_32 = COPY killed $vgpr0
+    %94:vreg_64 = REG_SEQUENCE killed %35, %subreg.sub0, killed %36, %subreg.sub1
+    %93:vreg_64 = REG_SEQUENCE killed %33, %subreg.sub0, killed %34, %subreg.sub1
+    %92:vreg_64 = REG_SEQUENCE killed %31, %subreg.sub0, killed %32, %subreg.sub1
+    %48:vgpr_32 = GLOBAL_LOAD_UBYTE %92, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)
+    %50:vgpr_32 = GLOBAL_LOAD_UBYTE %92, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)
+    %53:vgpr_32 = V_LSHL_OR_B32_e64 killed %50, 8, killed %48, implicit $exec
+    %54:vgpr_32 = GLOBAL_LOAD_UBYTE %92, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)
+    %56:vgpr_32 = GLOBAL_LOAD_UBYTE %92, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)
+    %58:vgpr_32 = V_LSHL_OR_B32_e64 killed %56, 8, killed %54, implicit $exec
+    %0:vgpr_32 = V_LSHL_OR_B32_e64 killed %58, 16, killed %53, implicit $exec
+    %44:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
+    %43:sreg_32 = S_MOV_B32 1
+    %42:sreg_32 = S_MOV_B32 0
+  
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %1:sreg_32 = PHI %42, %bb.0, %13, %bb.1
+    %2:sreg_32 = PHI %42, %bb.0, %11, %bb.1
+    %3:sreg_32 = PHI %43, %bb.0, %10, %bb.1
+    %4:vgpr_32 = PHI %0, %bb.0, %8, %bb.1
+    %5:vgpr_32 = PHI %44, %bb.0, %9, %bb.1
+    %6:vgpr_32 = PHI %0, %bb.0, %12, %bb.1
+    %61:sreg_32 = S_ADD_I32 %3, -1, implicit-def dead $scc
+    %62:sreg_32_xm0 = S_ASHR_I32 %61, 31, implicit-def dead $scc
+    %64:sreg_64 = REG_SEQUENCE killed %61, %subreg.sub0, killed %62, %subreg.sub1
+    %66:sreg_64 = nsw S_LSHL_B64 killed %64, 2, implicit-def dead $scc
+    %97:vgpr_32, %99:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %93.sub0, %66.sub0, 0, implicit $exec
+    %98:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %66.sub1, %93.sub1, killed %99, 0, implicit $exec
+    %67:vreg_64 = REG_SEQUENCE killed %97, %subreg.sub0, killed %98, %subreg.sub1
+    %7:vgpr_32 = GLOBAL_LOAD_DWORD killed %67, 0, 0, implicit $exec :: (load (s32) from %ir.gep1, addrspace 1)
+    %8:vgpr_32 = V_ADD_U32_e64 %3, %7, 0, implicit $exec
+    %9:vgpr_32 = V_MUL_LO_U32_e64 %7, %3, implicit $exec
+    GLOBAL_STORE_SHORT_D16_HI %92, %9, 2, 0, implicit $exec :: (store (s16) into %ir.p1 + 2, addrspace 1)
+    GLOBAL_STORE_SHORT %92, %9, 0, 0, implicit $exec :: (store (s16) into %ir.p1, addrspace 1)
+    %105:vgpr_32, %107:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %94.sub0, %66.sub0, 0, implicit $exec
+    %106:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 killed %66.sub1, %94.sub1, killed %107, 0, implicit $exec
+    %68:vreg_64 = REG_SEQUENCE killed %105, %subreg.sub0, killed %106, %subreg.sub1
+    %69:vgpr_32 = GLOBAL_LOAD_USHORT %68, 0, 0, implicit $exec :: (load (s16) from %ir.gep2, addrspace 1)
+    %70:vgpr_32 = GLOBAL_LOAD_USHORT killed %68, 2, 0, implicit $exec :: (load (s16) from %ir.gep2 + 2, addrspace 1)
+    %72:vgpr_32 = V_LSHL_OR_B32_e64 killed %70, 16, killed %69, implicit $exec
+    %10:sreg_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
+    %11:sreg_32 = S_ADD_I32 %2, -1, implicit-def dead $scc
+    %12:vgpr_32 = V_ADD_U32_e64 killed %2, killed %72, 0, implicit $exec
+    %74:sreg_32 = V_CMP_GE_U32_e64 killed %3, %37, implicit $exec
+    %13:sreg_32 = SI_IF_BREAK killed %74, killed %1, implicit-def dead $scc
+    %95:vgpr_32 = COPY %10, implicit $exec
+    SI_LOOP %13, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.2
+  
+  bb.2:
+    successors: %bb.3(0x80000000)
+  
+    SI_END_CF killed %13, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %77:vgpr_32 = V_ADD_U32_e64 -2, killed %95, 0, implicit $exec
+    %21:vgpr_32 = V_MUL_LO_U32_e64 killed %9, killed %77, implicit $exec
+    %22:vgpr_32 = V_MUL_LO_U32_e64 100, killed %4, implicit $exec
+    GLOBAL_STORE_DWORD %94, %22, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
+    %75:sreg_32 = S_MOV_B32 0
+  
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  
+    %23:sreg_32 = PHI %75, %bb.2, %27, %bb.3
+    %24:sreg_32 = PHI %75, %bb.2, %26, %bb.3
+    %25:vgpr_32 = PHI %6, %bb.2, %21, %bb.3
+    %26:sreg_32 = S_ADD_I32 killed %24, 2, implicit-def dead $scc
+    %80:sreg_32 = V_CMP_GE_U32_e64 %26, %38, implicit $exec
+    %27:sreg_32 = SI_IF_BREAK killed %80, killed %23, implicit-def dead $scc
+    %96:vgpr_32 = COPY %26, implicit $exec
+    SI_LOOP %27, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.4
+  
+  bb.4:
+    SI_END_CF killed %27, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    GLOBAL_STORE_DWORD killed %94, %25, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
+    %81:vgpr_32 = V_ADD3_U32_e64 killed %25, killed %96, killed %5, implicit $exec
+    %82:vgpr_32 = V_ADD3_U32_e64 killed %81, killed %22, killed %7, implicit $exec
+    %84:vgpr_32 = V_ADD3_U32_e64 killed %0, killed %82, 100, implicit $exec
+    %85:sreg_32_xm0 = V_READFIRSTLANE_B32 killed %84, implicit $exec
+    $sgpr0 = COPY killed %85
+    SI_RETURN_TO_EPILOG killed $sgpr0
+...
+---

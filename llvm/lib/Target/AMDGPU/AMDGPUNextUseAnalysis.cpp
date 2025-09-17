@@ -132,37 +132,11 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 
         Curr.merge(SuccDist, EntryOff[SuccNum], EdgeWeight);
         LLVM_DEBUG(dbgs() << "\nCurr after merge:"; printVregDistances(Curr));
-        // Now take care of the PHIs operands in the Succ
-        for (auto &PHI : Succ->phis()) {
-          for (auto &U : PHI.uses()) {
-            if (U.isReg()) {
-              auto OpNo = U.getOperandNo();
-              auto B = PHI.getOperand(++OpNo);
-              assert(B.isMBB());
-              MachineBasicBlock *ValueSrc = B.getMBB();
-              if (ValueSrc->getNumber() == MBB->getNumber()) {
-                // We assume that all the PHIs have zero distance from the
-                // succ end!
-                Curr.insert(VRegMaskPair(U, TRI, MRI), 0);
-              }
-            }
-          }
-          for (auto &U : PHI.defs()) {
-            Curr.clear(VRegMaskPair(U, TRI, MRI));
-          }
-        }
       }
 
-      LLVM_DEBUG(dbgs() << "\nCurr after succsessors processing: ";
-                 printVregDistances(Curr));
       NextUseMap[MBBNum].Bottom = Curr;
 
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
-
-        if (MI.isPHI())
-          // We'll take care of PHIs when merging this block to it's
-          // predecessor.
-          continue;
 
         for (auto &MO : MI.operands()) {
           if (MO.isReg() && MO.getReg().isVirtual()) {
@@ -178,8 +152,9 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         }
         NextUseMap[MBBNum].InstrDist[&MI] = Curr;
         NextUseMap[MBBNum].InstrOffset[&MI] = Offset;
-        printVregDistances(Curr, Offset);
-        ++Offset;
+        // printVregDistances(Curr, Offset);
+        if (!MI.isPHI())
+          ++Offset;
       }
 
       // EntryOff needs the TOTAL instruction count for correct predecessor distances
