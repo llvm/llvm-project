@@ -59,7 +59,6 @@ public:
     FT_Org,
     FT_Dwarf,
     FT_DwarfFrame,
-    FT_SFrame,
     FT_BoundaryAlign,
     FT_SymbolId,
     FT_CVInlineLines,
@@ -144,12 +143,6 @@ private:
       // .loc dwarf directives.
       int64_t LineDelta;
     } dwarf;
-    struct {
-      // This FRE describes unwind info at AddrDelta from function start.
-      const MCExpr *AddrDelta;
-      // Fragment that records how many bytes of AddrDelta to emit.
-      MCFragment *FDEFragment;
-    } sframe;
   } u{};
 
 public:
@@ -302,24 +295,6 @@ public:
   void setDwarfLineDelta(int64_t LineDelta) {
     assert(Kind == FT_Dwarf);
     u.dwarf.LineDelta = LineDelta;
-  }
-
-  //== FT_SFrame functions
-  const MCExpr &getSFrameAddrDelta() const {
-    assert(Kind == FT_SFrame);
-    return *u.sframe.AddrDelta;
-  }
-  void setSFrameAddrDelta(const MCExpr *E) {
-    assert(Kind == FT_SFrame);
-    u.sframe.AddrDelta = E;
-  }
-  MCFragment *getSFrameFDE() const {
-    assert(Kind == FT_SFrame);
-    return u.sframe.FDEFragment;
-  }
-  void setSFrameFDE(MCFragment *F) {
-    assert(Kind == FT_SFrame);
-    u.sframe.FDEFragment = F;
   }
 };
 
