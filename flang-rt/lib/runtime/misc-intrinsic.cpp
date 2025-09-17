@@ -15,6 +15,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "../../include/flang-rt/runtime/descriptor.h"
+
 namespace Fortran::runtime {
 
 static RT_API_ATTRS void TransferImpl(Descriptor &result,
@@ -60,25 +62,34 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 #if !defined(RT_DEVICE_COMPILATION)
+  // Get the raw strings (null-terminated)
   char *pathSrc{EnsureNullTerminated(
       path1.OffsetElement(), path1.ElementBytes(), terminator)};
   char *pathDst{EnsureNullTerminated(
       path2.OffsetElement(), path2.ElementBytes(), terminator)};
+  char *srcFilePath = pathSrc;
+  char *dstFilePath = pathDst;
 
-  // Trim trailing blanks
-  auto srcTrimPos{TrimTrailingSpaces(pathSrc, path1.ElementBytes())};
-  auto dstTrimPos{TrimTrailingSpaces(pathDst, path2.ElementBytes())};
-  char *srcPathTrim{
-      static_cast<char *>(alloca((srcTrimPos + 1) * sizeof(char)))};
-  char *dstPathTrim{
-      static_cast<char *>(alloca((dstTrimPos + 1) * sizeof(char)))};
-  std::memcpy(srcPathTrim, pathSrc, srcTrimPos);
-  std::memcpy(dstPathTrim, pathDst, dstTrimPos);
-  srcPathTrim[srcTrimPos] = '\0';
-  dstPathTrim[dstTrimPos] = '\0';
+  // Trim trailing blanks (if string have not been null-terminated)
+  if (!IsNullTerminated(path1.OffsetElement(), path1.ElementBytes())) {
+    auto srcTrimPos{TrimTrailingSpaces(pathSrc, path1.ElementBytes())};
+    char *srcPathTrim{
+        static_cast<char *>(alloca((srcTrimPos + 1) * sizeof(char)))};
+    std::memcpy(srcPathTrim, pathSrc, srcTrimPos);
+    srcPathTrim[srcTrimPos] = '\0';
+    srcFilePath = srcPathTrim;
+  }
+  if (!IsNullTerminated(path2.OffsetElement(), path2.ElementBytes())) {
+    auto dstTrimPos{TrimTrailingSpaces(pathDst, path2.ElementBytes())};
+    char *dstPathTrim{
+        static_cast<char *>(alloca((dstTrimPos + 1) * sizeof(char)))};
+    std::memcpy(dstPathTrim, pathDst, dstTrimPos);
+    dstPathTrim[dstTrimPos] = '\0';
+    dstFilePath = dstPathTrim;
+  }
 
   // We simply call rename(2) from POSIX
-  int result{rename(srcPathTrim, dstPathTrim)};
+  int result{rename(srcFilePath, dstFilePath)};
   if (status) {
     // When an error has happened,
     int errorCode{0}; // Assume success
