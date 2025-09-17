@@ -670,7 +670,7 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       case 4:
         op.setScalesIdxB(val);
         break;
-      default: 
+      default:
         break;
       }
     };
@@ -678,8 +678,8 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
     // Obtain flat index from offsets and shape.
     auto getIdxFromExtract = [](vector::ExtractOp op) {
       ShapedType ty = dyn_cast<ShapedType>(op.getOperand(0).getType());
-      int cumul = 1;
-      int idx = 0;
+      int64_t cumul = 1;
+      int64_t idx = 0;
       for (auto [offset, size] :
            reverse(llvm::zip_equal(op.getStaticPosition(), ty.getShape()))) {
         idx += offset * cumul;
@@ -720,33 +720,37 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
     for (auto opIdx : SmallVector<int64_t>({3, 4})) {
       auto insertOp = op.getOperand(opIdx).getDefiningOp<vector::InsertOp>();
       if (!insertOp) {
-        return failure();
+        return rewriter.notifyMatchFailure(op,
+                                           "defining op not a vector.insert");
       }
       if (llvm::any_of(insertOp.getResult().getUses(), checkIfUnpackable)) {
-        return failure();
+        return rewriter.notifyMatchFailure(op,
+                                           "some scaled mfma's already packed");
       }
 
       auto extractOp =
           insertOp.getOperand(0).getDefiningOp<vector::ExtractOp>();
       if (!extractOp) {
-        return failure();
+        return rewriter.notifyMatchFailure(op,
+                                           "defining op not a vector.extract");
       }
 
       Value scaleSrc = extractOp.getOperand(0);
-      auto stype = dyn_cast<ShapedType>(scaleSrc.getType());
+      auto stype = dyn_cast<VectorType>(scaleSrc.getType());
       if (!stype) {
-        return failure();
+        return rewriter.notifyMatchFailure(op, "not a shaped type");
       }
       // We do not handle dynamic dims yet, assume that the input is padded to
       // a static shape now.
-      if (llvm::any_of(llvm::seq<int64_t>(0, stype.getRank()),
-                       [&](int64_t i) { return stype.isDynamicDim(i); })) {
-        return failure();
+      if (!stype.hasStaticShape()) {
+        return rewriter.notifyMatchFailure(op,
+                                           "dynamic dims not yet supported");
       }
 
       int64_t numElements = stype.getNumElements();
-      if (numElements <= 4) {
-        return failure();
+      if (numElements <= 4 || !(numElements % 4)) {
+        return rewriter.notifyMatchFailure(
+            op, "no packing if # of scales less than or indivisible by four");
       }
 
       Type newSrcType = VectorType::get(
@@ -760,7 +764,8 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
           loc, newScaleSrc, SmallVector<int64_t>{offsets[0], 0},
           SmallVector<int64_t>{1, 4}, SmallVector<int64_t>{1, 1});
       Value scale = rewriter.create<vector::ShapeCastOp>(loc, scaleTy, extract);
-      op.setOperand(opIdx, scale);
+      rewriter.modifyOpInPlace(
+          op, [&op, opIdx, scale] { op->setOperand(opIdx, scale); });
       setOpsel(opIdx, offsets[1]);
     }
     return success();
