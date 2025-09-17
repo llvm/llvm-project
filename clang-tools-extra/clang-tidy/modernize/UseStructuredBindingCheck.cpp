@@ -363,11 +363,10 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
     if (DS2)
       Hints.emplace_back(FixItHint::CreateRemoval(DS2->getSourceRange()));
 
-    std::string ReplacementText = Prefix.str() + " [" +
-                                  FirstVar->getNameAsString() + ", " +
-                                  SecondVar->getNameAsString() + "]";
-    if (CFRS)
-      ReplacementText += " :";
+    std::string ReplacementText =
+        (Twine(Prefix) + " [" + FirstVar->getNameAsString() + ", " +
+         SecondVar->getNameAsString() + "]" + (CFRS ? " :" : ""))
+            .str();
     diag(DiagLoc, "use structured binding to decompose a pair")
         << FixItHint::CreateReplacement(ReplaceRange, ReplacementText) << Hints;
   };
