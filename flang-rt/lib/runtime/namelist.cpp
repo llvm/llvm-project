@@ -624,6 +624,12 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   if (next && *next == '/') {
     io.HandleRelativePosition(byteCount);
+    if (auto *listInput{
+            io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      // Don't let the namelist's terminal '/' mess up a parent I/O's
+      // list-directed input.
+      listInput->set_hitSlash(false);
+    }
   } else if (*next && (*next == '&' || *next == '$')) {
     // stop at beginning of next group
   } else {
