@@ -270,7 +270,8 @@ public:
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
                          unsigned AddressSpace) const override;
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace, bool IsMaskConstant = false) const override;
+                          unsigned AddressSpace,
+                          bool IsMaskConstant = false) const override;
   bool isLegalNTLoad(Type *DataType, Align Alignment) const override;
   bool isLegalNTStore(Type *DataType, Align Alignment) const override;
   bool isLegalBroadcastLoad(Type *ElementTy,

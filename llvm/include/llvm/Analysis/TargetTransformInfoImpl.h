@@ -309,7 +309,8 @@ public:
   }
 
   virtual bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace, bool IsMaskConstant) const {
+                                  unsigned AddressSpace,
+                                  bool IsMaskConstant) const {
     return false;
   }
 

@@ -165,7 +165,8 @@ public:
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace, bool IsMaskConstant) const override;
+                          unsigned AddressSpace,
+                          bool IsMaskConstant) const override;
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
                          unsigned AddressSpace) const override;
   bool isLegalMaskedGather(Type *Ty, Align Alignment) const override;

@@ -593,11 +593,12 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 }
 
 bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
-                                      unsigned AddrSpace, bool IsMaskConstant) const {
+                                      unsigned AddrSpace,
+                                      bool IsMaskConstant) const {
 
   if (!IsMaskConstant)
     return false;
-  
+
   //  We currently only support this feature for 256-bit vectors, so the
   //  alignment must be at least 32
   if (Alignment < 32)
