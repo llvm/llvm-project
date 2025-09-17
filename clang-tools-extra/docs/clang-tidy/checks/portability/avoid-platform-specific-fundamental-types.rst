@@ -5,13 +5,8 @@ portability-avoid-platform-specific-fundamental-types
 
 Detects fundamental types (``int``, ``short``, ``long``, ``long long``, ``char``
 , ``float``, etc) and warns against their use due to platform-dependent 
-behavior.
-
-This check detects fundamental types (``int``, ``short``, ``long``, ``float``,
-``char`` and their ``unsigned`` or ``signed`` variants) and warns against their
-use due to non-standard platform-dependent behavior. For example, ``long`` is
-64 bits on Linux but 32 bits on Windows. There is no standard rationale or
-intent for the sizes of these types.
+behaviour. For example, ``long`` is 64 bits on Linux but 32 bits on Windows.
+There is no standard rationale or intent for the sizes of these types.
 
 Instead of fundamental types, use fixed-width types such as ``int32_t`` or
 implementation-defined types with standard semantics, e.g. ``int_fast32_t`` for
@@ -58,7 +53,7 @@ Examples
 Rationale
 ---------
 
-Fundamental types have platform-dependent sizes and behavior:
+Examples of platform-dependent behaviour:
 
 - ``int`` is typically 32 bits on modern platforms but is only guaranteed to be
   16 bits by the spec
@@ -78,19 +73,18 @@ fixed at 32 bits for backwards compatibility with code that relied on a 32-bit
 implementation of ``int``.
 
 If code is explicitly relying on the size of an ``int`` being 32 bits, it is
-better to say so in the typename with ``int32_t``. Otherwise, use an
-appropriate implementation-defined type such as ``fast_int32_t`` or
-``least_int32_t`` that communicates the appropriate time/space tradeoff.
+better to say so in the typename with ``int32_t``. Otherwise, use an appropriate
+implementation-defined type such as ``fast_int32_t`` or ``least_int32_t`` that
+communicates the appropriate time/space tradeoff.
 
 Likewise, ``float`` and ``double`` should be replaced by ``float32_t`` and
-``float64_t`` which are guaranteed to be standard IEEE754 floats for a given
-size.
+``float64_t`` which, if they exist, are guaranteed to be standard IEEE754 floats
+of the given size.
 
 ``char`` should be replaced by ``char8_t`` when used in the representation of
 Unicode text. When used to represent a byte on a given platform, ``std::byte``
-is an appropriate replacement. ``char`` can be either signed or unsigned
-depending on the platform (unsigned on ARM, signed on x86), while ``char8_t``
-and ``std::byte`` are guaranteed to be implemented as unsigned.
+is the correct replacement. ``char8_t`` and ``std::byte`` are guaranteed to be
+implemented with similar behaviour to unsigned char.
 
 Types Not Flagged
 -----------------
@@ -102,8 +96,8 @@ The following types are intentionally not flagged:
 - Already typedef'd types, though the check will flag the typedef itself.
 
 ``bool`` is excluded because it can only be true or false, and is not
-vulnerable to overflow or narrowing issues that occur as a result of using
-types of an implementation-defined size.
+vulnerable to overflow or narrowing issues that occur as a result of it being an
+implementation-defined size.
 
 Options
 -------
@@ -113,7 +107,9 @@ Options
    When `true`, the check will warn about fundamental integer types
    (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and 
    ``unsigned`` variants).
-   When `false`, integer types are not flagged. Default is `true`.
+   When `false`, integer types are not flagged. 
+   
+   Default is `true`.
 
 .. option:: WarnOnFloats
 
@@ -128,3 +124,5 @@ Options
    When `true`, the check will warn about character types (``char``,
    ``signed char``, and ``unsigned char``).
    When `false`, character types are not flagged.
+
+   Default is `true`
