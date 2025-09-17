@@ -6735,12 +6735,16 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
     bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum;
 
-    // minnum(X, nan) -> X
-    // maxnum(X, nan) -> X
+    // minnum(X, qnan) -> X
+    // maxnum(X, qnan) -> X
+    // minnum(X, snan) -> nan
+    // maxnum(X, snan) -> nan
     // minimum(X, nan) -> nan
     // maximum(X, nan) -> nan
-    if (match(Op1, m_NaN()))
+    if (match(Op1, m_QNaN()))
       return PropagateNaN ? propagateNaN(cast<Constant>(Op1)) : Op0;
+    else if (match(Op1, m_SNaN()))
+      return propagateNaN(cast<Constant>(Op1));
 
     // In the following folds, inf can be replaced with the largest finite
     // float, if the ninf flag is set.
