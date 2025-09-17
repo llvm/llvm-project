@@ -365,6 +365,38 @@ LLVM_ABI bool setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
     std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt);
 
+/// Based on branch weight metadata, return either:
+/// - \c std::nullopt if the implementation is unable to handle the loop form
+///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
+/// - Else, the estimated probability that, at the end of any iteration, the
+///   latch of \p L will start another iteration.  The result \c P is such that
+///   `0 <= P <= 1`, and `1 - P` is the probability of exiting the loop.
+std::optional<double> getLoopProbability(Loop *L);
+
+/// Set branch weight metadata for the latch of \p L to indicate that, at the
+/// end of any iteration, its estimated probability of starting another
+/// iteration is \p P.  Return false if the implementation is unable to handle
+/// the loop form of \p L (e.g., \p L must have a latch block that controls the
+/// loop exit).  Otherwise, return true.
+bool setLoopProbability(Loop *L, double P);
+
+/// Based on branch weight metadata, return either:
+/// - \c std::nullopt if the implementation cannot extract the probability
+///   (e.g., \p B must have exactly two target labels, so it must be a
+///   conditional branch).
+/// - The probability \c P that control flows from \p B to its first target
+///   label such that `1 - P` is the probability of control flowing to its
+///   second target label, or vice-versa if \p ForFirstTarget is false.
+std::optional<double> getBranchProbability(BranchInst *B, bool ForFirstTarget);
+
+/// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
+/// the probabilities of control flowing to its first and second target labels,
+/// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if
+/// the implementation cannot set the probability (e.g., \p B must have exactly
+/// two target labels, so it must be a conditional branch).  Otherwise, return
+/// true.
+bool setBranchProbability(BranchInst *B, double P, bool ForFirstTarget);
+
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially
 /// true.
