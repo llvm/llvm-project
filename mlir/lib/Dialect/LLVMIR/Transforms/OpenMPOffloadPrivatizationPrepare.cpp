@@ -202,6 +202,16 @@ class PrepareForOMPOffloadPrivatizationPass
           return clonedOp;
         };
 
+        if (isFirstPrivate) {
+          Region &copyRegion = privatizer.getCopyRegion();
+          assert(!copyRegion.empty() && "copyRegion cannot be empty");
+          LLVM::LLVMFuncOp copyFunc = createFuncOpForRegion(
+              loc, mod,  copyRegion,
+              llvm::formatv("{0}_{1}", privatizer.getSymName(), "copy").str(),
+              firstOp, rewriter);
+          rewriter.create<LLVM::CallOp>(loc, copyFunc, ValueRange{varPtr, heapMem});
+        }
+
         rewriter.setInsertionPoint(targetOp);
         rewriter.setInsertionPoint(cloneAndMarkForDeletion(mapInfoOperation));
 
@@ -218,76 +228,8 @@ class PrepareForOMPOffloadPrivatizationPass
             if (memberMapInfoOp.getVarPtrPtr()) {
               Operation *varPtrPtrdefOp =
                   memberMapInfoOp.getVarPtrPtr().getDefiningOp();
-
-              // In the case of firstprivate, we have to do the following
-              // 1. Allocate heap memory for the underlying data.
-              // 2. Copy the original underlying data to the new memory
-              // allocated on the heap.
-              // 3. Put this new (heap) address in the originating
-              // struct/descriptor
-
-              // Consider the following sequence of omp.map.info and omp.target
-              // operations.
-              // %0 = llvm.getelementptr %19[0, 0]
-              // %1 = omp.map.info var_ptr(%19 : !llvm.ptr, i32) ...
-              //                   var_ptr_ptr(%0 : !llvm.ptr)  bounds(..)
-              // %2 = omp.map.info var_ptr(%19 : !llvm.ptr, !desc_type)>) ...
-              //                   members(%1 : [0] : !llvm.ptr) -> !llvm.ptr
-              // omp.target nowait map_entries(%2 -> %arg5, %1 -> %arg8 : ..)
-              //                   private(@privatizer %19 -> %arg9 [map_idx=1]
-              //                   : !llvm.ptr) {
-              // We need to allocate memory on the heap for the underlying
-              // pointer which is stored at the var_ptr_ptr operand of %1. Then
-              // we need to copy this pointer to the new heap allocated memory
-              // location. Then, we need to store the address of the new heap
-              // location in the originating struct/descriptor. So, we generate
-              // the following (pseudo) MLIR code (Using the same names of
-              // mlir::Value instances in the example as in the code below)
-              //
-              // %dataMalloc = malloc(totalSize)
-              // %loadDataPtr = load %0 : !llvm.ptr -> !llvm.ptr
-              // memcpy(%dataMalloc, %loadDataPtr, totalSize)
-              // %newVarPtrPtrOp = llvm.getelementptr %heapMem[0, 0]
-              // llvm.store %dataMalloc, %newVarPtrPtrOp
-              // %1.cloned = omp.map.info var_ptr(%heapMem : !llvm.ptr, i32) ...
-              //                          var_ptr_ptr(%newVarPtrPtrOp :
-              //                          !llvm.ptr)
-              // %2.cloned = omp.map.info var_ptr(%heapMem : !llvm.ptr,
-              //                                             !desc_type)>) ...
-              //                          members(%1.cloned : [0] : !llvm.ptr)
-              //             -> !llvm.ptr
-              // omp.target nowait map_entries(%2.cloned -> %arg5,
-              //                               %1.cloned -> %arg8 : ..)
-              //            private(@privatizer %heapMem -> .. [map_idx=1] : ..)
-              //            {
-
-              if (isFirstPrivate) {
-                assert(!memberMapInfoOp.getBounds().empty() &&
-                       "empty bounds on member map of firstprivate variable");
-                Location loc = memberMapInfoOp.getLoc();
-                Value totalSize =
-                    getSizeInBytes(memberMapInfoOp, mod, rewriter);
-                auto dataMalloc =
-                    allocateHeapMem(loc, totalSize, mod, rewriter);
-                auto loadDataPtr = rewriter.create<LLVM::LoadOp>(
-                    loc, memberMapInfoOp.getVarPtrPtr().getType(),
-                    memberMapInfoOp.getVarPtrPtr());
-                (void)rewriter.create<LLVM::MemcpyOp>(
-                    loc, dataMalloc.getResult(), loadDataPtr.getResult(),
-                    totalSize, /*isVolatile=*/false);
-                Operation *newVarPtrPtrOp = rewriter.clone(*varPtrPtrdefOp);
-                rewriter.replaceAllUsesExcept(memberMapInfoOp.getVarPtrPtr(),
-                                              newVarPtrPtrOp->getOpResult(0),
-                                              loadDataPtr);
-                rewriter.modifyOpInPlace(newVarPtrPtrOp, [&]() {
-                  newVarPtrPtrOp->replaceUsesOfWith(varPtr, heapMem);
-                });
-                (void)rewriter.create<LLVM::StoreOp>(
-                    loc, dataMalloc.getResult(), newVarPtrPtrOp->getResult(0));
-              } else {
-                rewriter.setInsertionPoint(
-                    cloneAndMarkForDeletion(varPtrPtrdefOp));
-              }
+              rewriter.setInsertionPoint(
+                  cloneAndMarkForDeletion(varPtrPtrdefOp));
             }
           }
         }
