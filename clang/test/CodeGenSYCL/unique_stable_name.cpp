@@ -11,7 +11,7 @@
 // CHECK: @[[MACRO_MACRO_X:[^\w]+]] = private unnamed_addr constant [[MACRO_MACRO_SIZE:\[[0-9]+ x i8\]]] c"_ZTSZZ4mainENKUlvE_clEvEUlvE4_\00"
 // CHECK: @[[MACRO_MACRO_Y:[^\w]+]] = private unnamed_addr constant [[MACRO_MACRO_SIZE]] c"_ZTSZZ4mainENKUlvE_clEvEUlvE5_\00"
 // CHECK: @[[INT3:[^\w]+]] = private unnamed_addr constant [[INT_SIZE]] c"_ZTSi\00"
-// CHECK: @[[LAMBDA:[^\w]+]] = private unnamed_addr constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00"
+// CHECK: @[[LAMBDA:[^\w]+]] = private unnamed_addr constant [[LAMBDA_X_SIZE]] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00"
 // CHECK: @[[LAMBDA_IN_DEP_INT:[^\w]+]] = private unnamed_addr constant [[DEP_INT_SIZE:\[[0-9]+ x i8\]]] c"_ZTSZ28lambda_in_dependent_functionIiEvvEUlvE_\00",
 // CHECK: @[[LAMBDA_IN_DEP_X:[^\w]+]] = private unnamed_addr constant [[DEP_LAMBDA_SIZE:\[[0-9]+ x i8\]]] c"_ZTSZ28lambda_in_dependent_functionIZZ4mainENKUlvE_clEvEUlvE_EvvEUlvE_\00",
 // CHECK: @[[LAMBDA_NO_DEP:[^\w]+]] = private unnamed_addr constant [[NO_DEP_LAMBDA_SIZE:\[[0-9]+ x i8\]]] c"_ZTSZ13lambda_no_depIidEvT_T0_EUlidE_\00",
@@ -101,7 +101,7 @@ int main() {
   // CHECK: define internal void @_Z22not_kernel_single_taskIZ4mainE7kernel2PFPKcvEEvT0_
   // CHECK: declare noundef ptr @_Z4funcI4DerpEDTu33__builtin_sycl_unique_stable_nameDtsrT_3strEEEv
   // CHECK: define internal void @_Z18kernel_single_taskIZ4mainEUlPZ4mainEUlvE_E_S2_EvT0_
-  // CHECK: _Z26unnamed_kernel_single_taskIZ4mainEUlvE_EvT_
+  // CHECK: define internal void @_Z26unnamed_kernel_single_taskIZ4mainEUlvE_EvT_
 
   unnamed_kernel_single_task(
       []() {
@@ -130,7 +130,7 @@ int main() {
         // CHECK: call void @_Z28lambda_in_dependent_functionIiEvv
 
         lambda_in_dependent_function<decltype(x)>();
-        // CHECK:   call void @_Z28lambda_in_dependent_functionIZZ4mainENKUlvE_clEvEUlvE_Evv
+        // CHECK: call void @_Z28lambda_in_dependent_functionIZZ4mainENKUlvE_clEvEUlvE_Evv
 
         lambda_no_dep<int, double>(3, 5.5);
         // CHECK: call void @_Z13lambda_no_depIidEvT_T0_(i32 noundef 3, double noundef 5.500000e+00)
@@ -140,7 +140,7 @@ int main() {
         auto y = [](int a) { return a; };
         auto z = [](double b) { return b; };
         lambda_two_dep<decltype(y), decltype(z)>();
-        // CHECK: @_Z14lambda_two_depIZZ4mainENKUlvE_clEvEUliE_ZZ4mainENKS0_clEvEUldE_Evv
+        // CHECK: call void @_Z14lambda_two_depIZZ4mainENKUlvE_clEvEUliE_ZZ4mainENKS0_clEvEUldE_Evv
 
         lambda_two_dep<decltype(z), decltype(y)>();
         // CHECK: call void @_Z14lambda_two_depIZZ4mainENKUlvE_clEvEUldE_ZZ4mainENKS0_clEvEUliE_Evv

@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -fsycl-is-device -O0 \
-// RUN:  -triple spirv64-unknown-unknown -emit-llvm  %s -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -fsycl-is-device -O0 -triple spirv64-unknown-unknown \
+// RUN: -emit-llvm  %s -o - | FileCheck %s --check-prefix=DEVICE
 
-// RUN: %clang_cc1 -fsycl-is-host -O0 \
-// RUN:  -triple spirv64-unknown-unknown -emit-llvm  %s -o - | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -fsycl-is-host -O0 -triple spirv64-unknown-unknown \
+// RUN: -emit-llvm  %s -o - | FileCheck %s --check-prefix=HOST
 
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spir-unknown--unknown %s -o - | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm \
+// RUN: -aux-triple x86_64-pc-windows-msvc -triple spir-unknown--unknown \
+// RUN: %s -o - | FileCheck %s --check-prefix=MSVC
 
 namespace QL {
 auto dg1 = [] { return 1; };
@@ -36,6 +38,7 @@ void g() {
 // HOST: call spir_func void @_Z1fIN2QL3dg1MUlvE_EEvT_
 // HOST: call spir_func void @_Z1fIN2QL3dg2MUlvE_EEvT_
 // HOST: define internal spir_func void @_Z1fIN2QL3dg1MUlvE_EEvT
+// HOST: define internal spir_func void @_Z1fIN2QL3dg2MUlvE_EEvT_
 
 // MSVC: define dso_local spir_kernel void @_ZTSN2QL3dg1MUlvE_E
 // MSVC: call spir_func noundef i32 @_ZNK2QL3dg1MUlvE_clEv
