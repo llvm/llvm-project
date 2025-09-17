@@ -65,7 +65,6 @@ void LexicalScopes::initialize(const Module &M) {
   }
 }
 
-/// initialize - Scan machine function and constuct lexical scope nest.
 void LexicalScopes::scanFunction(const MachineFunction &Fn) {
   resetFunction();
   // Don't attempt any lexical scope creation for a NoDebug compile unit.
