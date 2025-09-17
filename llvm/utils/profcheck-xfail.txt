@@ -1232,6 +1232,7 @@ Transforms/LoopVectorize/AArch64/single-early-exit-interleave.ll
 Transforms/LoopVectorize/AArch64/smallest-and-widest-types.ll
 Transforms/LoopVectorize/AArch64/store-costs-sve.ll
 Transforms/LoopVectorize/AArch64/strict-fadd.ll
+Transforms/LoopVectorize/AArch64/struct-return-cost.ll
 Transforms/LoopVectorize/AArch64/sve2-histcnt-epilogue.ll
 Transforms/LoopVectorize/AArch64/sve-basic-vec.ll
 Transforms/LoopVectorize/AArch64/sve-epilog-vect-inloop-reductions.ll
