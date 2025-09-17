@@ -246,7 +246,7 @@ define void @PR34523() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    br i1 poison, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 poison, label %[[BB5:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label %[[BB5:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:

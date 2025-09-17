@@ -96,17 +96,18 @@ exit:
 define void @cbz_exit_minsize(ptr %in, ptr %res) #0 {
 ; CHECK-LABEL: cbz_exit_minsize:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:  .LBB3_1: @ %loop
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr.w r3, [r0, r2, lsl #2]
+; CHECK-NEXT:    ldr.w r4, [r0, r2, lsl #2]
+; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:    adds r2, #1
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    bne .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %exit
-; CHECK-NEXT:    subs r0, r2, #1
-; CHECK-NEXT:    str r0, [r1]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    str r3, [r1]
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   br label %loop
 
@@ -126,17 +127,18 @@ exit:
 define void @cbnz_exit_minsize(ptr %in, ptr %res) #0 {
 ; CHECK-LABEL: cbnz_exit_minsize:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:  .LBB4_1: @ %loop
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr.w r3, [r0, r2, lsl #2]
+; CHECK-NEXT:    ldr.w r4, [r0, r2, lsl #2]
+; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:    adds r2, #1
-; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    beq .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %exit
-; CHECK-NEXT:    subs r0, r2, #1
-; CHECK-NEXT:    str r0, [r1]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    str r3, [r1]
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   br label %loop
 
