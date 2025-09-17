@@ -43,7 +43,7 @@ entry:
 await.ready:
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -80,7 +80,7 @@ entry:
 await.ready:
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   call void @llvm.lifetime.end.p0(ptr  %testval)
   ret void
 }
@@ -128,7 +128,7 @@ if.end:
 await.ready:
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -137,6 +137,6 @@ declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly) #3
 declare ptr @llvm.coro.frame() #5
 declare i8 @llvm.coro.suspend(token, i1) #3
-declare i1 @llvm.coro.end(ptr, i1, token) #3
+declare void @llvm.coro.end(ptr, i1, token) #3
 declare void @llvm.lifetime.start.p0(ptr nocapture) #4
 declare void @llvm.lifetime.end.p0(ptr nocapture) #4
