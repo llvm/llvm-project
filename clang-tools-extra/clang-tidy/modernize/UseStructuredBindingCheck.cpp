@@ -202,12 +202,12 @@ UseStructuredBindingCheck::UseStructuredBindingCheck(StringRef Name,
   ;
 }
 
-static auto getVarInitWithMemberMatcher(StringRef PairName,
-                                        StringRef MemberName,
-                                        StringRef TypeName,
-                                        StringRef BindingName) {
+static auto getVarInitWithMemberMatcher(
+    StringRef PairName, StringRef MemberName, StringRef TypeName,
+    StringRef BindingName,
+    ast_matchers::internal::Matcher<VarDecl> ExtraMatcher) {
   return varDecl(
-             unless(hasAnySpecifiersShouldBeIgnored()), unless(isInMarco()),
+             ExtraMatcher,
              hasInitializer(
                  ignoringImpCasts(ignoringCopyCtorAndImplicitCast(memberExpr(
                      hasObjectExpression(ignoringImpCasts(declRefExpr(
@@ -223,10 +223,20 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
                hasUnqualifiedDesugaredType(recordType(
                    hasDeclaration(cxxRecordDecl(hasAnyName(PairTypes))))));
 
-  auto VarInitWithFirstMember = getVarInitWithMemberMatcher(
-      PairDeclName, "first", FirstTypeName, FirstVarDeclName);
-  auto VarInitWithSecondMember = getVarInitWithMemberMatcher(
-      PairDeclName, "second", SecondTypeName, SecondVarDeclName);
+  auto UnlessShouldBeIgnored =
+      unless(anyOf(hasAnySpecifiersShouldBeIgnored(), isInMarco()));
+
+  auto VarInitWithFirstMember =
+      getVarInitWithMemberMatcher(PairDeclName, "first", FirstTypeName,
+                                  FirstVarDeclName, UnlessShouldBeIgnored);
+  auto VarInitWithSecondMember =
+      getVarInitWithMemberMatcher(PairDeclName, "second", SecondTypeName,
+                                  SecondVarDeclName, UnlessShouldBeIgnored);
+
+  auto RefToBindName = [&UnlessShouldBeIgnored](const llvm::StringLiteral &Name)
+      -> ast_matchers::internal::BindableMatcher<Stmt> {
+    return declRefExpr(to(varDecl(UnlessShouldBeIgnored).bind(Name)));
+  };
 
   // X x;
   // Y y;
@@ -237,23 +247,10 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
           has(cxxOperatorCallExpr(
                   hasOverloadedOperatorName("="),
                   hasLHS(ignoringImplicit(
-                      callExpr(
-                          callee(
-                              functionDecl(isInStdNamespace(), hasName("tie"))),
-                          hasArgument(
-                              0,
-                              declRefExpr(to(
-                                  varDecl(
-                                      unless(hasAnySpecifiersShouldBeIgnored()),
-                                      unless(isInMarco()))
-                                      .bind(FirstVarDeclName)))),
-                          hasArgument(
-                              1,
-                              declRefExpr(to(
-                                  varDecl(
-                                      unless(hasAnySpecifiersShouldBeIgnored()),
-                                      unless(isInMarco()))
-                                      .bind(SecondVarDeclName)))))
+                      callExpr(callee(functionDecl(isInStdNamespace(),
+                                                   hasName("tie"))),
+                               hasArgument(0, RefToBindName(FirstVarDeclName)),
+                               hasArgument(1, RefToBindName(SecondVarDeclName)))
                           .bind(StdTieExprName))),
                   hasRHS(expr(hasType(PairType))))
                   .bind(StdTieAssignStmtName)),
@@ -269,7 +266,7 @@ void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
       declStmt(
           unless(isInMarco()),
           hasSingleDecl(
-              varDecl(unless(hasAnySpecifiersShouldBeIgnored()),
+              varDecl(UnlessShouldBeIgnored,
                       hasType(qualType(anyOf(PairType, lValueReferenceType(
                                                            pointee(PairType))))
                                   .bind(PairVarTypeName)),
