@@ -22,8 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
-namespace gi {
+namespace llvm::gi {
 
 /// Entry into the static pool of all CXX Predicate code. This contains
 /// fully expanded C++ code.
@@ -80,7 +79,6 @@ public:
   }
 };
 
-} // namespace gi
-} // end namespace llvm
+} // namespace llvm::gi
 
 #endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H

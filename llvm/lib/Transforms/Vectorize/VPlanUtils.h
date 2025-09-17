@@ -50,6 +50,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
     case Instruction::ICmp:
     case Instruction::FCmp:
     case Instruction::Select:
+    case VPInstruction::Not:
     case VPInstruction::Broadcast:
     case VPInstruction::PtrAdd:
       return true;

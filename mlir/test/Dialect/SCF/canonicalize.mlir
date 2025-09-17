@@ -749,7 +749,7 @@ func.func @replace_single_iteration_const_diff(%arg0 : index) {
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 2
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
-  %5 = arith.addi %arg0, %c1 : index
+  %5 = arith.addi %arg0, %c1 overflow<nsw> : index
   // CHECK-NOT: scf.for
   scf.for %arg2 = %arg0 to %5 step %c1 {
     // CHECK-NEXT: %[[MUL:.*]] = arith.muli %[[A0]], %[[CST]]
@@ -1483,6 +1483,24 @@ func.func @execute_region_no_inline() {
 
 // -----
 
+// CHECK-LABEL: func @execute_region_under_func_no_inline
+func.func @execute_region_under_func_no_inline() {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 no_inline {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  return
+}
+
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       scf.execute_region
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       scf.yield %[[VAL]] : i64
+
+// -----
+
 // CHECK-LABEL: func @func_execute_region_inline
 func.func @func_execute_region_inline() {
     "test.foo"() : () -> ()
@@ -1915,8 +1933,9 @@ func.func @index_switch_fold_no_res() {
 
 // -----
 
+// Step 0 is invalid, the loop is eliminated.
 // CHECK-LABEL: func @scf_for_all_step_size_0()
-//       CHECK:   scf.forall (%{{.*}}) = (0) to (1) step (0)
+//       CHECK-NOT:   scf.forall
 func.func @scf_for_all_step_size_0()  {
   %x = arith.constant 0 : index
   scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {

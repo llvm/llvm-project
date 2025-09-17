@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -Wno-alloc-size -analyzer-checker=core,unix.Malloc,unix.MismatchedDeallocator,cplusplus.NewDelete -std=c++11 -verify %s
-// RUN: %clang_analyze_cc1 -Wno-alloc-size -analyzer-checker=core,unix.Malloc,unix.MismatchedDeallocator,cplusplus.NewDelete,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,unix.MismatchedDeallocator,cplusplus.NewDelete -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,unix.MismatchedDeallocator,cplusplus.NewDelete,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -verify %s
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 

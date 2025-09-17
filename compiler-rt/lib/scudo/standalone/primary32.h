@@ -511,6 +511,8 @@ uptr SizeClassAllocator32<Config>::tryReleaseToOS(uptr ClassId,
 
 template <typename Config>
 uptr SizeClassAllocator32<Config>::releaseToOS(ReleaseToOS ReleaseType) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSTraceName(ReleaseType));
+
   uptr TotalReleasedBytes = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     if (I == SizeClassMap::BatchClassId)
@@ -1092,6 +1094,12 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
   // 2. Mark the free blocks and we can tell which pages are in-use by
   //    querying `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context = markFreeBlocks(Sci, ClassId, BlockSize, Base,
                                               NumberOfRegions, ReleaseType);
   if (!Context.hasBlockMarked())

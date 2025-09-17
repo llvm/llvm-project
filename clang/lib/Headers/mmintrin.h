@@ -39,15 +39,9 @@ typedef short __v8hi __attribute__((__vector_size__(16)));
 typedef char __v16qi __attribute__((__vector_size__(16)));
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS_SSE2                                                \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS_SSE2                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2 constexpr
@@ -71,9 +65,9 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
 ///
 /// This intrinsic corresponds to the <c> EMMS </c> instruction.
 ///
-static __inline__ void __attribute__((__always_inline__, __nodebug__,
-                                      __target__("mmx,no-evex512")))
-_mm_empty(void) {
+static __inline__ void
+    __attribute__((__always_inline__, __nodebug__, __target__("mmx")))
+    _mm_empty(void) {
   __builtin_ia32_emms();
 }
 

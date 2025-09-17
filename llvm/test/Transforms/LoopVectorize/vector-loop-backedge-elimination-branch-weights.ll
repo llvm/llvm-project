@@ -60,9 +60,8 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = add nsw <8 x i8> [[WIDE_LOAD1]], splat (i8 10)
-; VF8UF2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i32 8
 ; VF8UF2-NEXT:    store <8 x i8> [[TMP3]], ptr [[A]], align 1
-; VF8UF2-NEXT:    store <8 x i8> [[TMP4]], ptr [[TMP6]], align 1
+; VF8UF2-NEXT:    store <8 x i8> [[TMP4]], ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
 ; VF8UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]

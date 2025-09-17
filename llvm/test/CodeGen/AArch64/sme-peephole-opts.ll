@@ -63,8 +63,7 @@ define void @test2() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
@@ -95,8 +94,7 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mrs x19, SVCR
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -226,22 +224,21 @@ define float @test6(float %f) nounwind "aarch64_pstate_sm_enabled" {
 define void @test7() nounwind "aarch64_inout_zt0" {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #144
-; CHECK-NEXT:    stp x30, x19, [sp, #128] // 16-byte Folded Spill
-; CHECK-NEXT:    add x19, sp, #64
-; CHECK-NEXT:    str zt0, [x19]
-; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    ldr zt0, [x19]
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    str zt0, [x19]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    ldr zt0, [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #128] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #144
+; CHECK-NEXT:    str zt0, [x19]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   call void @callee()
   call void @callee()
@@ -529,14 +526,24 @@ define void @test13(ptr %ptr) nounwind "aarch64_pstate_sm_enabled" {
 ; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbnz x8, .LBB14_2
+; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    bl callee_farg_fret
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    addsvl x8, x8, #-1
+; CHECK-NEXT:    cbz x8, .LBB14_3
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    brk #0x1
+; CHECK-NEXT:  .LBB14_3:
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl callee_farg_fret
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill

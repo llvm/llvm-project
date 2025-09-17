@@ -78,6 +78,12 @@ def FeatureStdExtE
     : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">,
       RISCVExtensionBitmask<0, 4>;
 
+def FeatureStdExtZibi
+    : RISCVExperimentalExtension<0, 1, "Branch with Immediate">;
+def HasStdExtZibi : Predicate<"Subtarget->hasStdExtZibi()">,
+                    AssemblerPredicate<(all_of FeatureStdExtZibi),
+                                       "'Zibi' (Branch with Immediate)">;
+
 def FeatureStdExtZic64b
     : RISCVExtension<1, 0, "Cache Block Size Is 64 Bytes">;
 
@@ -1403,19 +1409,26 @@ def HasVendorXMIPSCMov
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
 def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
 def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
-def FeatureVendorXMIPSCBOP
-    : RISCVExtension<1, 0, "MIPS Software Prefetch">;
+
+def FeatureVendorXMIPSCBOP : RISCVExtension<1, 0, "MIPS Software Prefetch">;
 def HasVendorXMIPSCBOP
     : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
                          "'Xmipscbop' (MIPS hardware prefetch)">;
 def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
+
+def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
+def HasVendorXMIPSEXECTL
+    : Predicate<"Subtarget->hasVendorXMIPSEXT()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
+                         "'Xmipsexectl' (MIPS execution control)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1675,7 +1688,7 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
                                 "RV32I Base Instruction Set">;
 
 defvar RV32 = DefaultMode;
-def RV64           : HwMode<"+64bit", [IsRV64]>;
+def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

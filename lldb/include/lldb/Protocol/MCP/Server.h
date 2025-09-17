@@ -14,41 +14,19 @@
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
+#include "lldb/Protocol/MCP/Transport.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include <mutex>
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Signals.h"
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace lldb_protocol::mcp {
-
-class MCPTransport
-    : public lldb_private::JSONRPCTransport<Request, Response, Notification> {
-public:
-  using LogCallback = std::function<void(llvm::StringRef message)>;
-
-  MCPTransport(lldb::IOObjectSP in, lldb::IOObjectSP out,
-               std::string client_name, LogCallback log_callback = {})
-      : JSONRPCTransport(in, out), m_client_name(std::move(client_name)),
-        m_log_callback(log_callback) {}
-  virtual ~MCPTransport() = default;
-
-  void Log(llvm::StringRef message) override {
-    if (m_log_callback)
-      m_log_callback(llvm::formatv("{0}: {1}", m_client_name, message).str());
-  }
-
-private:
-  std::string m_client_name;
-  LogCallback m_log_callback;
-};
-
-/// Information about this instance of lldb's MCP server for lldb-mcp to use to
-/// coordinate connecting an lldb-mcp client.
-struct ServerInfo {
-  std::string connection_uri;
-  lldb::pid_t pid;
-};
-llvm::json::Value toJSON(const ServerInfo &);
-bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
 
 class Server : public MCPTransport::MessageHandler {
 public:
@@ -109,6 +87,44 @@ private:
 
   llvm::StringMap<RequestHandler> m_request_handlers;
   llvm::StringMap<NotificationHandler> m_notification_handlers;
+};
+
+class ServerInfoHandle;
+
+/// Information about this instance of lldb's MCP server for lldb-mcp to use to
+/// coordinate connecting an lldb-mcp client.
+struct ServerInfo {
+  std::string connection_uri;
+
+  /// Writes the server info into a unique file in `~/.lldb`.
+  static llvm::Expected<ServerInfoHandle> Write(const ServerInfo &);
+  /// Loads any server info saved in `~/.lldb`.
+  static llvm::Expected<std::vector<ServerInfo>> Load();
+};
+llvm::json::Value toJSON(const ServerInfo &);
+bool fromJSON(const llvm::json::Value &, ServerInfo &, llvm::json::Path);
+
+/// A handle that tracks the server info on disk and cleans up the disk record
+/// once it is no longer referenced.
+class ServerInfoHandle {
+public:
+  explicit ServerInfoHandle(llvm::StringRef filename = "");
+  ~ServerInfoHandle();
+
+  ServerInfoHandle(ServerInfoHandle &&other);
+  ServerInfoHandle &operator=(ServerInfoHandle &&other) noexcept;
+
+  /// ServerIinfoHandle is not copyable.
+  /// @{
+  ServerInfoHandle(const ServerInfoHandle &) = delete;
+  ServerInfoHandle &operator=(const ServerInfoHandle &) = delete;
+  /// @}
+
+  /// Remove the file.
+  void Remove();
+
+private:
+  llvm::SmallString<128> m_filename;
 };
 
 } // namespace lldb_protocol::mcp

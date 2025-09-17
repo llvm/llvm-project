@@ -283,9 +283,7 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
 
   const MCInstrDesc &MCID1 = TII->get(MulOpc);
   const MCInstrDesc &MCID2 = TII->get(AddSubOpc);
-  const MachineFunction &MF = *MI->getParent()->getParent();
-  Register TmpReg =
-      MRI->createVirtualRegister(TII->getRegClass(MCID1, 0, TRI, MF));
+  Register TmpReg = MRI->createVirtualRegister(TII->getRegClass(MCID1, 0, TRI));
 
   MachineInstrBuilder MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID1, TmpReg)
     .addReg(Src1Reg, getKillRegState(Src1Kill))
