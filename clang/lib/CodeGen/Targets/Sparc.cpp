@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
