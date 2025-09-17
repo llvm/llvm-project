@@ -922,9 +922,9 @@ void CGHLSLRuntime::emitInitListOpaqueValues(CodeGenFunction &CGF,
 
 std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
     const ArraySubscriptExpr *ArraySubsExpr, CodeGenFunction &CGF) {
-  assert(ArraySubsExpr->getType()->isHLSLResourceRecord() ||
-         ArraySubsExpr->getType()->isHLSLResourceRecordArray() &&
-             "expected resource array subscript expression");
+  assert((ArraySubsExpr->getType()->isHLSLResourceRecord() ||
+          ArraySubsExpr->getType()->isHLSLResourceRecordArray()) &&
+         "expected resource array subscript expression");
 
   // Let clang codegen handle local resource array subscripts,
   // or when the subscript references on opaque expression (as part of
