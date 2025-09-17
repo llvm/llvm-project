@@ -2184,8 +2184,7 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-  assert(I->getIntrinsicID() ==
-             Intrinsic::experimental_vector_partial_reduce_add &&
+  assert(I->getIntrinsicID() == Intrinsic::vector_partial_reduce_add &&
          "Unexpected intrinsic!");
   return true;
 }
@@ -17474,8 +17473,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
             if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
               return true;
             if (match(SingleUser,
-                      m_Intrinsic<
-                          Intrinsic::experimental_vector_partial_reduce_add>(
+                      m_Intrinsic<Intrinsic::vector_partial_reduce_add>(
                           m_Value(), m_Specific(I))))
               return true;
             return false;
@@ -22522,8 +22520,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
                                       SelectionDAG &DAG) {
 
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-         getIntrinsicID(N) ==
-             Intrinsic::experimental_vector_partial_reduce_add &&
+         getIntrinsicID(N) == Intrinsic::vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
   bool Scalable = N->getValueType(0).isScalableVector();
@@ -22617,8 +22614,7 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
                                           SelectionDAG &DAG) {
 
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-         getIntrinsicID(N) ==
-             Intrinsic::experimental_vector_partial_reduce_add &&
+         getIntrinsicID(N) == Intrinsic::vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
   if (!Subtarget->hasSVE2() && !Subtarget->isStreamingSVEAvailable())
@@ -22683,7 +22679,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
-  case Intrinsic::experimental_vector_partial_reduce_add: {
+  case Intrinsic::vector_partial_reduce_add: {
     if (SDValue Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
       return Dot;
     if (SDValue WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))
