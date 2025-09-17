@@ -125,10 +125,6 @@ bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
 
 bool verifyLOD(float LOD) { return !std::isnan(LOD); }
 
-bool verifyBoundOffset(uint32_t Offset) {
-  return Offset != NumDescriptorsUnbounded;
-}
-
 bool verifyNoOverflowedOffset(uint64_t Offset) {
   return Offset <= std::numeric_limits<uint32_t>::max();
 }
