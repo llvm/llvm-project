@@ -167,7 +167,7 @@ private:
 };
 
 class nb_buffer : public nb::object {
-  NB_OBJECT_DEFAULT(nb_buffer, object, "buffer", PyObject_CheckBuffer);
+  NB_OBJECT_DEFAULT(nb_buffer, object, "Buffer", PyObject_CheckBuffer);
 
   nb_buffer_info request() const {
     int flags = PyBUF_STRIDES | PyBUF_FORMAT;
@@ -252,9 +252,12 @@ public:
           return PyAffineMapAttribute(affineMap.getContext(), attr);
         },
         nb::arg("affine_map"), "Gets an attribute wrapping an AffineMap.");
-    c.def_prop_ro("value", mlirAffineMapAttrGetValue,
-                  nb::sig("def value(self) -> AffineMap"),
-                  "Returns the value of the AffineMap attribute");
+    c.def_prop_ro(
+        "value", mlirAffineMapAttrGetValue,
+        // clang-format off
+                  nb::sig("def value(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.AffineMap")),
+        // clang-format on
+        "Returns the value of the AffineMap attribute");
   }
 };
 
@@ -492,7 +495,9 @@ public:
       nb::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
           .def("__iter__", &PyArrayAttributeIterator::dunderIter)
           .def("__next__", &PyArrayAttributeIterator::dunderNext,
-               nb::sig("def __next__(self) -> Attribute"));
+               // clang-format off
+               nb::sig("def __next__(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")));
+      // clang-format on
     }
 
   private:
@@ -526,7 +531,9 @@ public:
              throw nb::index_error("ArrayAttribute index out of range");
            return arr.getItem(i);
          },
-         nb::sig("def __getitem__(self, arg: int, /) -> Attribute"))
+         // clang-format off
+         nb::sig("def __getitem__(self, arg: int, /) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")))
+        // clang-format on
         .def("__len__",
              [](const PyArrayAttribute &arr) {
                return mlirArrayAttrGetNumElements(arr);
@@ -620,7 +627,9 @@ public:
         [](nb::object & /*class*/) -> MlirTypeID {
           return mlirIntegerAttrGetTypeID();
         },
-        nb::sig("def static_typeid(/) -> TypeID"));
+        // clang-format off
+        nb::sig("def static_typeid(/) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TypeID")));
+    // clang-format on
   }
 
 private:
@@ -679,16 +688,18 @@ public:
   }
 
   static void bindDerived(ClassTy &c) {
-    c.def_static(
-        "get",
-        [](const std::vector<std::string> &symbols,
-           DefaultingPyMlirContext context) {
-          return PySymbolRefAttribute::fromList(symbols, context.resolve());
-        },
-        nb::arg("symbols"), nb::arg("context") = nb::none(),
-        nb::sig("def get(symbols: Sequence[str], context: mlir.ir.Context | "
-                "None = None) -> Attribute"),
-        "Gets a uniqued SymbolRef attribute from a list of symbol names");
+    c
+        .def_static(
+            "get",
+            [](const std::vector<std::string> &symbols,
+               DefaultingPyMlirContext context) {
+              return PySymbolRefAttribute::fromList(symbols, context.resolve());
+            },
+            nb::arg("symbols"), nb::arg("context") = nb::none(),
+            // clang-format off
+        nb::sig("def get(symbols: Sequence[str], context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
+            // clang-format on
+            "Gets a uniqued SymbolRef attribute from a list of symbol names");
     c.def_prop_ro(
         "value",
         [](PySymbolRefAttribute &self) {
@@ -754,7 +765,11 @@ public:
           return PyOpaqueAttribute(context->getRef(), attr);
         },
         nb::arg("dialect_namespace"), nb::arg("buffer"), nb::arg("type"),
-        nb::arg("context") = nb::none(), "Gets an Opaque attribute.");
+        nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get(dialect_namespace: str, buffer: typing_extensions.Buffer, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ", context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.OpaqueAttr")),
+        // clang-format on
+        "Gets an Opaque attribute.");
     c.def_prop_ro(
         "dialect_namespace",
         [](PyOpaqueAttribute &self) {
@@ -1040,6 +1055,9 @@ public:
                     nb::arg("array"), nb::arg("signless") = true,
                     nb::arg("type") = nb::none(), nb::arg("shape") = nb::none(),
                     nb::arg("context") = nb::none(),
+                    // clang-format off
+                    nb::sig("def get(array: typing_extensions.Buffer, signless: bool = True, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") " | None = None, shape: Sequence[int] | None = None, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.DenseElementsAttr")),
+                    // clang-format on
                     kDenseElementsAttrGetDocstring)
         .def_static("get", PyDenseElementsAttribute::getFromList,
                     nb::arg("attrs"), nb::arg("type") = nb::none(),
@@ -1060,7 +1078,9 @@ public:
                     "get_splat_value called on a non-splat attribute");
               return mlirDenseElementsAttrGetSplatValue(self);
             },
-            nb::sig("def get_splat_value(self) -> Attribute"));
+            // clang-format off
+            nb::sig("def get_splat_value(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")));
+    // clang-format on
   }
 
   static PyType_Slot slots[];
@@ -1520,6 +1540,9 @@ public:
                  nb::arg("array"), nb::arg("name"), nb::arg("type"),
                  nb::arg("alignment") = nb::none(),
                  nb::arg("is_mutable") = false, nb::arg("context") = nb::none(),
+                 // clang-format off
+                 nb::sig("def get_from_buffer(array: typing_extensions.Buffer, name: str, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ", alignment: int | None = None, is_mutable: bool = False, context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.DenseResourceElementsAttr")),
+                 // clang-format on
                  kDenseResourceElementsAttrGetFromBufferDocstring);
   }
 };
@@ -1571,7 +1594,9 @@ public:
             throw nb::key_error("attempt to access a non-existent attribute");
           return attr;
         },
-        nb::sig("def __getitem__(self, arg: str, /) -> Attribute"));
+        // clang-format off
+        nb::sig("def __getitem__(self, arg: str, /) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")));
+    // clang-format on
     c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
       if (index < 0 || index >= self.dunderLen()) {
         throw nb::index_error("attempt to access out of bounds attribute");
@@ -1640,7 +1665,7 @@ public:
     c.def_prop_ro(
         "value",
         [](PyTypeAttribute &self) { return mlirTypeAttrGetValue(self.get()); },
-        nb::sig("def value(self) -> Type"));
+        nb::sig("def value(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")));
   }
 };
 
@@ -1777,6 +1802,7 @@ nb::object symbolRefOrFlatSymbolRefAttributeCaster(PyAttribute &pyAttribute) {
 } // namespace
 
 void mlir::python::populateIRAttributes(nb::module_ &m) {
+
   PyAffineMapAttribute::bind(m);
   PyDenseBoolArrayAttribute::bind(m);
   PyDenseBoolArrayAttribute::PyDenseArrayIterator::bind(m);

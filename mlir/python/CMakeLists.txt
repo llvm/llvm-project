@@ -864,23 +864,9 @@ if(NOT LLVM_ENABLE_IDE)
   )
 endif()
 
-################################################################################
-# The fully assembled package of modules.
-# This must come last.
-################################################################################
-
-add_mlir_python_modules(MLIRPythonModules
-  ROOT_PREFIX ${MLIRPythonModules_ROOT_PREFIX}
-  INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
-  DECLARED_SOURCES
-    MLIRPythonSources
-    MLIRPythonExtension.RegisterEverything
-    ${_ADDL_TEST_SOURCES}
-  COMMON_CAPI_LINK_LIBS
-    MLIRPythonCAPI
-)
-
 # _mlir stubgen
+# Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
+# generated type stubs get created.
 
 set(_core_type_stub_sources
   _mlir/__init__.pyi
@@ -891,10 +877,11 @@ set(_core_type_stub_sources
 
 # Note 1: INTERFACE_SOURCES is a genex ($<BUILD_INTERFACE> $<INSTALL_INTERFACE>)
 # which will be evaluated by file(GENERATE ...) inside mlir_generate_type_stubs. This will evaluate to the correct
-# thing in the build dir (i.e., actual source dir paths) and in the install dir (where it's a conventional path; see install/lib/cmake/mlir/MLIRTargets.cmake).
+# thing in the build dir (i.e., actual source dir paths) and in the install dir
+# (where it's a conventional path; see install/lib/cmake/mlir/MLIRTargets.cmake).
 #
-# Note 2: MLIRPythonExtension.Core is the target that is defined using target_sources(INTERFACE) **NOT** MLIRPythonModules.extension._mlir.dso.
-# So be sure to use the correct target!
+# Note 2: MLIRPythonExtension.Core is the target that is defined using target_sources(INTERFACE)
+# **NOT** MLIRPythonModules.extension._mlir.dso. So be sure to use the correct target!
 get_target_property(_core_extension_srcs MLIRPythonExtension.Core INTERFACE_SOURCES)
 
 # Why is MODULE_NAME _mlir_libs._mlir here but mlir._mlir_libs._mlirPythonTestNanobind below???
@@ -906,8 +893,9 @@ get_target_property(_core_extension_srcs MLIRPythonExtension.Core INTERFACE_SOUR
 # Note, this also why IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}" here while below
 # "${MLIRPythonModules_ROOT_PREFIX}/.." (because MLIR_BINDINGS_PYTHON_INSTALL_PREFIX, by default, ends at mlir).
 #
-# Further note: this function creates file targets like "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/_mlir/__init__.pyi".
-# These must match the file targets that declare_mlir_python_sources expects, which are like "${ROOT_DIR}/${WHATEVER_SOURCE}".
+# Further note: this function creates file targets like
+# "${CMAKE_CURRENT_BINARY_DIR}/type_stubs/_mlir_libs/_mlir/__init__.pyi". These must match the file targets
+# that declare_mlir_python_sources expects, which are like "${ROOT_DIR}/${WHATEVER_SOURCE}".
 # This is why _mlir_libs is prepended below.
 mlir_generate_type_stubs(
   MODULE_NAME _mlir_libs._mlir
@@ -917,7 +905,7 @@ mlir_generate_type_stubs(
   DEPENDS_TARGET_SRC_DEPS "${_core_extension_srcs}"
   IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}"
 )
-add_dependencies(MLIRPythonModules "${NB_STUBGEN_CUSTOM_TARGET}")
+set(_mlir_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
 
 list(TRANSFORM _core_type_stub_sources PREPEND "_mlir_libs/")
 declare_mlir_python_sources(
@@ -946,11 +934,31 @@ if(MLIR_INCLUDE_TESTS)
     DEPENDS_TARGET_SRC_DEPS "${_test_extension_srcs}"
     IMPORT_PATHS "${MLIRPythonModules_ROOT_PREFIX}/.."
   )
-  add_dependencies(MLIRPythonModules "${NB_STUBGEN_CUSTOM_TARGET}")
+  set(_mlirPythonTestNanobind_typestub_gen_target "${NB_STUBGEN_CUSTOM_TARGET}")
   declare_mlir_python_sources(
     MLIRPythonTestSources.PythonTestExtensionNanobind.type_stub_gen
     ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/type_stubs"
     ADD_TO_PARENT MLIRPythonTestSources.Dialects
     SOURCES _mlir_libs/_mlirPythonTestNanobind.pyi
   )
+endif()
+
+################################################################################
+# The fully assembled package of modules.
+# This must come last.
+################################################################################
+
+add_mlir_python_modules(MLIRPythonModules
+  ROOT_PREFIX ${MLIRPythonModules_ROOT_PREFIX}
+  INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
+  DECLARED_SOURCES
+    MLIRPythonSources
+    MLIRPythonExtension.RegisterEverything
+    ${_ADDL_TEST_SOURCES}
+  COMMON_CAPI_LINK_LIBS
+    MLIRPythonCAPI
+)
+add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
+if(MLIR_INCLUDE_TESTS)
+  add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")
 endif()

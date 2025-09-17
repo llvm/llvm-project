@@ -502,7 +502,9 @@ public:
     c.def_prop_ro(
         "element_type",
         [](PyComplexType &self) { return mlirComplexTypeGetElementType(self); },
-        nb::sig("def element_type(self) -> Type"), "Returns element type.");
+        // clang-format off
+        nb::sig("def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")), "Returns element type.");
+    // clang-format on
   }
 };
 
@@ -513,7 +515,9 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
       [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
-      nb::sig("def element_type(self) -> Type"),
+      // clang-format off
+      nb::sig("def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")),
+      // clang-format on
       "Returns the element type of the shaped type.");
   c.def_prop_ro(
       "has_rank",
@@ -727,7 +731,9 @@ public:
             return std::nullopt;
           return encoding;
         },
-        nb::sig("def encoding(self) -> Attribute | None"));
+        // clang-format off
+        nb::sig("def encoding(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") " | None"));
+    // clang-format on
   }
 };
 
@@ -790,7 +796,9 @@ public:
             [](PyMemRefType &self) -> MlirAttribute {
               return mlirMemRefTypeGetLayout(self);
             },
-            nb::sig("def layout(self) -> Attribute"),
+            // clang-format off
+            nb::sig("def layout(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute")),
+            // clang-format on
             "The layout of the MemRef type.")
         .def(
             "get_strides_and_offset",
@@ -819,7 +827,9 @@ public:
                 return std::nullopt;
               return a;
             },
-            nb::sig("def memory_space(self) -> Attribute | None"),
+            // clang-format off
+            nb::sig("def memory_space(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") " | None"),
+            // clang-format on
             "Returns the memory space of the given MemRef type.");
   }
 };
@@ -860,7 +870,9 @@ public:
                 return std::nullopt;
               return a;
             },
-            nb::sig("def memory_space(self) -> Attribute | None"),
+            // clang-format off
+            nb::sig("def memory_space(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") " | None"),
+            // clang-format on
             "Returns the memory space of the given Unranked MemRef type.");
   }
 };
@@ -883,15 +895,19 @@ public:
           return PyTupleType(context->getRef(), t);
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
-        nb::sig("def get_tuple(elements: Sequence[Type], context: "
-                "mlir.ir.Context | None = None) -> TupleType"),
+        // clang-format off
+        nb::sig("def get_tuple(elements: Sequence[" MAKE_MLIR_PYTHON_QUALNAME("ir.Type") "], context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.TupleType")),
+        // clang-format off
         "Create a tuple type");
     c.def(
         "get_type",
         [](PyTupleType &self, intptr_t pos) {
           return mlirTupleTypeGetType(self, pos);
         },
-        nb::arg("pos"), nb::sig("def get_type(self, pos: int) -> Type"),
+        nb::arg("pos"),
+        // clang-format off
+        nb::sig("def get_type(self, pos: int) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")),
+        // clang-format on
         "Returns the pos-th type in the tuple type.");
     c.def_prop_ro(
         "num_types",
@@ -922,8 +938,9 @@ public:
           return PyFunctionType(context->getRef(), t);
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
-        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], "
-                "context: mlir.ir.Context | None = None) -> FunctionType"),
+        // clang-format off
+        nb::sig("def get(inputs: Sequence[" MAKE_MLIR_PYTHON_QUALNAME("ir.Type") "], results: Sequence[" MAKE_MLIR_PYTHON_QUALNAME("ir.Type") "], context: " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " | None = None) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.FunctionType")),
+        // clang-format on
         "Gets a FunctionType from a list of input and result types");
     c.def_prop_ro(
         "inputs",

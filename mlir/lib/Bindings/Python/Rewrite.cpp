@@ -10,8 +10,10 @@
 
 #include "IRModule.h"
 #include "mlir-c/Rewrite.h"
+// clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+// clang-format on
 #include "mlir/Config/mlir-config.h"
 
 namespace nb = nanobind;
@@ -87,6 +89,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             new (&self)
                 PyPDLPatternModule(mlirPDLPatternModuleFromModule(module));
           },
+          // clang-format off
+          nb::sig("def __init__(self, module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module")") -> None"),
+          // clang-format on
           "module"_a, "Create a PDL module from the given module.")
       .def("freeze", [](PyPDLPatternModule &self) {
         return new PyFrozenRewritePatternSet(mlirFreezeRewritePattern(
@@ -106,8 +111,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
            throw std::runtime_error("pattern application failed to converge");
        },
        "module"_a, "set"_a,
-       nb::sig("def apply_patterns_and_fold_greedily(module: "
-               "mlir.ir.Module, set: FrozenRewritePatternSet) -> None"),
+       // clang-format off
+       nb::sig("def apply_patterns_and_fold_greedily(module: " MAKE_MLIR_PYTHON_QUALNAME("ir.Module") ", set: " MAKE_MLIR_PYTHON_QUALNAME("rewrite.FrozenRewritePatternSet") ") -> None"),
+       // clang-format on
        "Applys the given patterns to the given module greedily while folding "
        "results.")
       .def(
@@ -120,8 +126,9 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
                   "pattern application failed to converge");
           },
           "op"_a, "set"_a,
-          nb::sig("def apply_patterns_and_fold_greedily(op: _OperationBase, "
-                  "set: FrozenRewritePatternSet) -> None"),
+          // clang-format off
+          nb::sig("def apply_patterns_and_fold_greedily(op: " MAKE_MLIR_PYTHON_QUALNAME("ir._OperationBase") ", set: " MAKE_MLIR_PYTHON_QUALNAME("rewrite.FrozenRewritePatternSet") ") -> None"),
+          // clang-format on
           "Applys the given patterns to the given op greedily while folding "
           "results.");
 }

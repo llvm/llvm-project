@@ -235,6 +235,7 @@ public:
   /// Controls whether error diagnostics should be propagated to diagnostic
   /// handlers, instead of being captured by `ErrorCapture`.
   void setEmitErrorDiagnostics(bool value) { emitErrorDiagnostics = value; }
+  bool getEmitErrorDiagnostics() { return emitErrorDiagnostics; }
   struct ErrorCapture;
 
 private:
@@ -269,7 +270,8 @@ class DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "mlir.ir.Context";
+  static constexpr const char kTypeDescription[] =
+      MAKE_MLIR_PYTHON_QUALNAME("ir.Context");
   static PyMlirContext &resolve();
 };
 
@@ -495,7 +497,8 @@ class DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "mlir.ir.Location";
+  static constexpr const char kTypeDescription[] =
+      MAKE_MLIR_PYTHON_QUALNAME("ir.Location");
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }

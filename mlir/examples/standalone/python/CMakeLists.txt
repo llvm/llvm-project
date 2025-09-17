@@ -69,19 +69,6 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
 ################################################################################
 
 set(StandalonePythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
-add_mlir_python_modules(StandalonePythonModules
-  ROOT_PREFIX "${StandalonePythonModules_ROOT_PREFIX}"
-  INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
-  DECLARED_SOURCES
-    StandalonePythonSources
-    # TODO: Remove this in favor of showing fine grained registration once
-    # available.
-    MLIRPythonExtension.RegisterEverything
-    MLIRPythonSources.Core
-    MLIRPythonSources.Dialects.builtin
-  COMMON_CAPI_LINK_LIBS
-    StandalonePythonCAPI
-)
 
 # Everything here is very tightly coupled. See the ample descriptions at the bottom of
 # mlir/python/CMakeLists.txt.
@@ -107,4 +94,18 @@ declare_mlir_python_sources(
   SOURCES
     _mlir_libs/_standaloneDialectsNanobind/__init__.pyi
     _mlir_libs/_standaloneDialectsNanobind/standalone.pyi
+)
+
+add_mlir_python_modules(StandalonePythonModules
+  ROOT_PREFIX "${StandalonePythonModules_ROOT_PREFIX}"
+  INSTALL_PREFIX "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}"
+  DECLARED_SOURCES
+    StandalonePythonSources
+    # TODO: Remove this in favor of showing fine grained registration once
+    # available.
+    MLIRPythonExtension.RegisterEverything
+    MLIRPythonSources.Core
+    MLIRPythonSources.Dialects.builtin
+  COMMON_CAPI_LINK_LIBS
+    StandalonePythonCAPI
 )
