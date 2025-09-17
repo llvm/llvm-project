@@ -110,10 +110,15 @@ using namespace std::placeholders;
 #define SV_NAME "slp-vectorizer"
 #define DEBUG_TYPE "SLP"
 
+STATISTIC(NumFaddVectorized, "Number of vectorized fadd reductions");
 STATISTIC(NumVectorInstructions, "Number of vector instructions generated");
 
 DEBUG_COUNTER(VectorizedGraphs, "slp-vectorized",
               "Controls which SLP graphs should be vectorized.");
+
+static cl::opt<bool> SLPEnableOrderedFPReductions(
+    "slp-ordered-fp-reds", cl::init(true), cl::Hidden,
+    cl::desc("Enable vectorization of ordered floating point reductions"));
 
 static cl::opt<bool>
     RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
@@ -2016,6 +2021,11 @@ public:
   ArrayRef<Value *> getRootNodeScalars() const {
     assert(!VectorizableTree.empty() && "No graph to get the first node from");
     return VectorizableTree.front()->Scalars;
+  }
+
+  bool areAllEntriesIdentityOrdered() const {
+    return all_of(VectorizableTree,
+                  [&](auto &Entry) { return Entry->ReorderIndices.empty(); });
   }
 
   /// Returns the type/is-signed info for the root node in the graph without
@@ -23428,6 +23438,8 @@ class HorizontalReduction {
   /// signedness.
   SmallVector<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales;
 
+  Value *InitialFAddValue = nullptr;
+
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
            RecurrenceDescriptor::isMinMaxRecurrenceKind(getRdxKind(I));
@@ -23439,6 +23451,14 @@ class HorizontalReduction {
   static bool isBoolLogicOp(Instruction *I) {
     return isa<SelectInst>(I) &&
            (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
+  }
+
+  bool isOrderedFaddReduction() const {
+    if (!isa<Instruction>(ReductionRoot))
+      return false;
+    auto *I = cast<Instruction>(ReductionRoot);
+    return RdxKind == RecurKind::FAdd &&
+           !I->getFastMathFlags().allowReassoc();
   }
 
   /// Checks if instruction is associative and can be vectorized.
@@ -23467,6 +23487,10 @@ class HorizontalReduction {
       return true;
 
     return I->isAssociative();
+  }
+
+  static bool isAssocVectorizable(RecurKind Kind, Instruction *I) {
+    return !isVectorizable(Kind, I) && Kind == RecurKind::FAdd && SLPEnableOrderedFPReductions;
   }
 
   static Value *getRdxOperand(Instruction *I, unsigned Index) {
@@ -23908,6 +23932,111 @@ public:
     return true;
   }
 
+  bool matchNonAssociativeReduction(BoUpSLP &R, Instruction *Root,
+                                  ScalarEvolution &SE, const DataLayout &DL,
+                                  const TargetLibraryInfo &TLI) {
+    RdxKind = HorizontalReduction::getRdxKind(Root);
+    if (!isAssocVectorizable(RdxKind, Root))
+      return false;
+
+    Type *Ty = Root->getType();
+    if (!isValidElementType(Ty) || Ty->isPointerTy())
+      return false;
+
+    if (auto *Sel = dyn_cast<SelectInst>(Root))
+      if (!Sel->getCondition()->hasOneUse())
+        return false;
+
+    ReductionRoot = Root;
+    if (!isOrderedFaddReduction())
+      return false;
+
+    initReductionOps(Root);
+    ReducedVals.resize(1);
+    Instruction *Current = Root;
+    unsigned ReductionOpcode = 0;
+    while (Current) {
+      Instruction *LHS = dyn_cast<Instruction>(Current->getOperand(0));
+      Instruction *RHS = dyn_cast<Instruction>(Current->getOperand(1));
+
+      if (!LHS && !RHS)
+        break;
+
+      addReductionOps(Current);
+      ReducedValsToOps[Current->getOperand(0)].push_back(Current);
+      ReducedValsToOps[Current->getOperand(1)].push_back(Current);
+
+      if (!LHS || !RHS) {
+        if (!RHS)
+          std::swap(LHS, RHS);
+        // Cant handle fadd = fadd + float case for last reduction operation
+        // since we dont know if this fadd is next operation or operand with
+        // float being initial value for reduction.
+        if (ReductionOpcode && RHS->getOpcode() == ReductionOpcode &&
+            ReductionOpcode != Instruction::FAdd)
+          ReducedVals[0].push_back(RHS);
+        break;
+      }
+
+      unsigned LHSOpcode = LHS->getOpcode();
+      unsigned RHSOpcode = RHS->getOpcode();
+
+      // Normalize FAdd -> LHS - FAdd, RHS - RedOperand (might also be FAdd).
+      if (RHSOpcode == Instruction::FAdd && LHSOpcode != Instruction::FAdd) {
+        std::swap(LHS, RHS);
+        std::swap(LHSOpcode, RHSOpcode);
+      }
+
+      // If RedOperand opcode differs from previous that means that building a
+      // tree from this reduction is probably not profitable, stop reduction
+      // matching here.
+      if (!ReductionOpcode)
+        ReductionOpcode = RHSOpcode;
+      else if (RHSOpcode != ReductionOpcode)
+        break;
+
+      // Worst case if both FAdd operands are also FAdds, since we dont have a
+      // direct path for continuing reduction matching, in a general case stop
+      // here.
+      if (LHSOpcode == Instruction::FAdd && RHSOpcode == Instruction::FAdd) {
+        if (!LHS->hasOneUse() && !RHS->hasOneUse()) {
+          ReducedVals[0].push_back(RHS);
+          ReducedVals[0].push_back(LHS);
+          break;
+        }
+        // The only case where we can continue, reduction operation must have
+        // only one use.
+        if (!LHS->hasOneUse() || !RHS->hasOneUse()) {
+          ReducedVals[0].push_back(LHS->hasOneUse() ? RHS : LHS);
+          Current = LHS->hasOneUse() ? LHS : RHS;
+          continue;
+        }
+        break;
+      }
+
+      if (LHSOpcode != Instruction::FAdd && RHSOpcode != Instruction::FAdd) {
+        if (LHSOpcode == ReductionOpcode && RHSOpcode == ReductionOpcode) {
+          ReducedVals[0].push_back(RHS);
+          ReducedVals[0].push_back(LHS);
+        }
+        break;
+      }
+
+      if (!LHS->hasOneUse())
+        break;
+
+      ReducedVals[0].push_back(RHS);
+      Current = LHS;
+    }
+
+    std::reverse(ReducedVals[0].begin(), ReducedVals[0].end());
+
+    if (ReducedVals[0].size() <= 2)
+      return false;
+
+    return true;
+  }
+
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI, AssumptionCache *AC,
@@ -24099,7 +24228,7 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp = RdxKind != RecurKind::Mul &&
                                     RdxKind != RecurKind::FMul &&
-                                    RdxKind != RecurKind::FMulAdd;
+                                    RdxKind != RecurKind::FMulAdd && !isOrderedFaddReduction();
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -24200,6 +24329,8 @@ public:
         return IsAnyRedOpGathered;
       };
       bool AnyVectorized = false;
+      Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);;
+      Instruction *InsertPt = RdxRootInst;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
              ReduxWidth >= ReductionLimit) {
@@ -24232,6 +24363,10 @@ public:
             }))
           break;
         V.buildTree(VL, IgnoreList);
+
+        if (isOrderedFaddReduction() && !V.areAllEntriesIdentityOrdered())
+            return nullptr;
+
         if (V.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true)) {
           if (!AdjustReducedVals())
             V.analyzedReductionVals(VL);
@@ -24360,8 +24495,6 @@ public:
 
         // Emit a reduction. If the root is a select (min/max idiom), the insert
         // point is the compare condition of that select.
-        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-        Instruction *InsertPt = RdxRootInst;
         if (IsCmpSelMinMax)
           InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
 
@@ -24414,6 +24547,40 @@ public:
           if (!V.isVectorized(RdxVal))
             RequiredExtract.insert(RdxVal);
         }
+
+        auto FirstIt = find_if(VL, [&](Value *RdxVal) {
+          return VectorizedVals.lookup(RdxVal);
+        });
+        auto LastIt = find_if(reverse(VL), [&](Value *RdxVal) {
+          return VectorizedVals.lookup(RdxVal);
+        });
+        if (isOrderedFaddReduction()) {
+          //[FirstIt, LastIt] - range of vectorized Vals, we need it to get last
+          // non-vectorized Val at the beginning and it's ReductionOp and first
+          // non-vectorized Val at the end and it's ReductinoOp
+          // fadd - initial value for reduction
+          // fadd - v
+          // fadd - v
+          // fadd - v
+          // fadd - v
+          // fadd - scalar remainder
+          if (LastIt != VL.rend())
+            ReductionRoot =
+                cast<Instruction>(ReducedValsToOps.find(*LastIt)->second[0]);
+
+          if (!InitialFAddValue) {
+            auto *FAddBinOp = cast<BinaryOperator>(
+                ReducedValsToOps.find(*FirstIt)->second[0]);
+            InitialFAddValue = ConstantExpr::getBinOpIdentity(
+                FAddBinOp->getOpcode(), FAddBinOp->getType());
+            if (FirstIt != VL.end()) {
+              auto *Op1 = FAddBinOp->getOperand(0);
+              if (!isa<PoisonValue>(Op1))
+                InitialFAddValue = Op1;
+            }
+          }
+        }
+
         Pos += ReduxWidth;
         Start = Pos;
         ReduxWidth = NumReducedVals - Pos;
@@ -24431,10 +24598,28 @@ public:
         continue;
       }
     }
-    if (!VectorValuesAndScales.empty())
-      VectorizedTree = GetNewVectorizedTree(
-          VectorizedTree,
-          emitReduction(Builder, *TTI, ReductionRoot->getType()));
+    if (!VectorValuesAndScales.empty()) {
+      if (!isOrderedFaddReduction()) {
+        VectorizedTree = GetNewVectorizedTree(
+            VectorizedTree,
+            emitReduction(Builder, *TTI, ReductionRoot->getType()));
+      } else {
+        for (auto V : VectorValuesAndScales) {
+          assert(InitialFAddValue && isa<PoisonValue>(InitialFAddValue) &&
+                 "Invalid InitialFAddValue");
+          VectorizedTree = Builder.CreateFAddReduce(InitialFAddValue, std::get<0>(V));
+          InitialFAddValue = VectorizedTree;
+        }
+        auto LastIt = find_if(reverse(ReducedVals[0]), [&](Value *RdxVal) {
+          return VectorizedVals.lookup(RdxVal);
+        });
+        for_each(reverse(make_range(LastIt.base(), ReducedVals[0].end())),
+                   [&](Value *V) {
+                     ReducedValsToOps.find(V)->second[0]->moveAfter(
+                         cast<Instruction>(VectorizedTree));
+                   });
+      }
+    }
     if (VectorizedTree) {
       // Reorder operands of bool logical op in the natural order to avoid
       // possible problem with poison propagation. If not possible to reorder
@@ -24522,15 +24707,18 @@ public:
             ExtraReductions.emplace_back(RedOp, RdxVal);
         }
       }
-      // Iterate through all not-vectorized reduction values/extra arguments.
-      bool InitStep = true;
-      while (ExtraReductions.size() > 1) {
-        SmallVector<std::pair<Instruction *, Value *>> NewReds =
-            FinalGen(ExtraReductions, InitStep);
-        ExtraReductions.swap(NewReds);
-        InitStep = false;
+
+      if (!isOrderedFaddReduction()) {
+        // Iterate through all not-vectorized reduction values/extra arguments.
+        bool InitStep = true;
+        while (ExtraReductions.size() > 1) {
+          SmallVector<std::pair<Instruction *, Value *>> NewReds =
+              FinalGen(ExtraReductions, InitStep);
+          ExtraReductions.swap(NewReds);
+          InitStep = false;
+        }
+        VectorizedTree = ExtraReductions.front().second;
       }
-      VectorizedTree = ExtraReductions.front().second;
 
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
@@ -24544,21 +24732,28 @@ public:
         IgnoreSet.insert_range(RdxOps);
 #endif
       for (ArrayRef<Value *> RdxOps : ReductionOps) {
+        SmallVector<Value *, 4> RdxOpsForDeletion;
         for (Value *Ignore : RdxOps) {
-          if (!Ignore)
+          if (!Ignore || (isOrderedFaddReduction() && !Ignore->use_empty() &&
+                          !any_of(cast<Instruction>(Ignore)->operands(),
+                                  [](const Value *Val) {
+                                    return isa<PoisonValue>(Val);
+                                  })))
             continue;
 #ifndef NDEBUG
           for (auto *U : Ignore->users()) {
-            assert(IgnoreSet.count(U) &&
-                   "All users must be either in the reduction ops list.");
+            assert((IgnoreSet.count(U) ||
+                   isOrderedFaddReduction()) &&
+                       "All users must be either in the reduction ops list.");
           }
 #endif
           if (!Ignore->use_empty()) {
             Value *P = PoisonValue::get(Ignore->getType());
             Ignore->replaceAllUsesWith(P);
           }
+          RdxOpsForDeletion.push_back(Ignore);
         }
-        V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
+        V.removeInstructionsAndOperands(ArrayRef(RdxOpsForDeletion), VectorValuesAndScales);
       }
     } else if (!CheckForReusedReductionOps) {
       for (ReductionOpsType &RdxOps : ReductionOps)
@@ -24639,6 +24834,8 @@ private:
           continue;
         }
         InstructionCost ScalarCost = 0;
+        if (RdxVal->use_empty())
+          continue;
         for (User *U : RdxVal->users()) {
           auto *RdxOp = cast<Instruction>(U);
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
@@ -25426,7 +25623,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     if (!isReductionCandidate(Inst))
       return nullptr;
     HorizontalReduction HorRdx;
-    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI) && !HorRdx.matchNonAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
     return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };
