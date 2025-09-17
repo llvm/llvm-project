@@ -674,8 +674,10 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
          A.existsInTarget(*Aux)))) {
     if (A.isRegularKeywordAttribute() || A.isDeclspecAttribute()) {
       S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
-                             ? diag::err_keyword_not_supported_on_target
-                             : diag::warn_unhandled_ms_attribute_ignored)
+                             ? static_cast<unsigned>(
+                                   diag::err_keyword_not_supported_on_target)
+                             : static_cast<unsigned>(
+                                   diag::warn_unhandled_ms_attribute_ignored))
           << A << A.getRange();
     } else {
       S.DiagnoseUnknownAttribute(A);

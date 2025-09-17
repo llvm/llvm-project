@@ -6837,8 +6837,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
       !AL.existsInTarget(S.Context.getTargetInfo())) {
     if (AL.isRegularKeywordAttribute() || AL.isDeclspecAttribute()) {
       S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
-                              ? diag::err_keyword_not_supported_on_target
-                              : diag::warn_unhandled_ms_attribute_ignored)
+                              ? static_cast<unsigned>(
+                                    diag::err_keyword_not_supported_on_target)
+                              : static_cast<unsigned>(
+                                    diag::warn_unhandled_ms_attribute_ignored))
           << AL.getAttrName() << AL.getRange();
     } else {
       S.DiagnoseUnknownAttribute(AL);
