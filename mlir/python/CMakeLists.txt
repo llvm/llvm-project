@@ -23,6 +23,7 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
+    _mlir_libs/_mlir/py.typed
     ir.py
     passmanager.py
     rewrite.py
