@@ -168,6 +168,9 @@ public:
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  MachineBasicBlock *EmitCheckMatchingVL(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
@@ -532,8 +535,8 @@ public:
   /// node. \p Condition should be one of the enum values from
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue,
-                              unsigned Condition) const;
+                              SDValue Chain, SDValue InGlue, unsigned Condition,
+                              bool InsertVectorLengthCheck = false) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
