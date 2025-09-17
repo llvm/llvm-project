@@ -7924,6 +7924,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     auto &TargetTriple = TC.getTriple();
     if (TargetTriple.isHexagon() || TargetTriple.isAArch64() ||
         TargetTriple.isX86()) {
+
+      // Add preprocessor flag with Ripple version. 1.0 in this case.
+      CmdArgs.push_back("-D__RIPPLE__=10");
+
       if (!Args.hasArg(options::OPT_fdisable_ripple_lib)) {
         // Collect all the ripple's runtime libs (.bc files) available for the
         // target
