@@ -65,9 +65,11 @@ set(LLVM_TEST_DEPENDS_COMMON
   count
   llvm-config
   not
+  prepare-check-lit
   )
 
 set(LLVM_TEST_DEPENDS
+  ${LLVM_TEST_DEPENDS_COMMON}
   BugpointPasses
   LLVMWindowsDriver
   UnitTests
@@ -267,7 +269,6 @@ set_target_properties(check-llvm PROPERTIES FOLDER "LLVM/Tests")
 # reduced set of dependencies in their individual CMakeLists.txt
 add_lit_testsuites(LLVM ${CMAKE_CURRENT_SOURCE_DIR}
   ${exclude_from_check_all}
-  DEPENDS ${LLVM_TEST_DEPENDS_COMMON}
   DEPENDS ${LLVM_TEST_DEPENDS}
   FOLDER "Tests/Subdirectories"
   SKIP "^FileCheck" "^TableGen"
