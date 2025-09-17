@@ -444,28 +444,19 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 /// Get the constant values of the operands of an operation. If any of the
 /// constant value lattices are uninitialized, return std::nullopt to indicate
 /// the analysis should bail out.
-static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
-    Operation *op,
-    function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {
+std::optional<SmallVector<Attribute>>
+DeadCodeAnalysis::getOperandValues(Operation *op) {
   SmallVector<Attribute> operands;
   operands.reserve(op->getNumOperands());
   for (Value operand : op->getOperands()) {
-    const Lattice<ConstantValue> *cv = getLattice(operand);
+    Lattice<ConstantValue> *cv = getOrCreate<Lattice<ConstantValue>>(operand);
+    cv->useDefSubscribe(this);
     // If any of the operands' values are uninitialized, bail out.
     if (cv->getValue().isUninitialized())
-      return {};
+      return std::nullopt;
     operands.push_back(cv->getValue().getConstantValue());
   }
   return operands;
-}
-
-std::optional<SmallVector<Attribute>>
-DeadCodeAnalysis::getOperandValues(Operation *op) {
-  return getOperandValuesImpl(op, [&](Value value) {
-    auto *lattice = getOrCreate<Lattice<ConstantValue>>(value);
-    lattice->useDefSubscribe(this);
-    return lattice;
-  });
 }
 
 void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
