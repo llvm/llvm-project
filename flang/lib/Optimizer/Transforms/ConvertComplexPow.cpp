@@ -56,9 +56,6 @@ static bool isZero(Value v) {
 
 void ConvertComplexPowPass::runOnOperation() {
   ModuleOp mod = getOperation();
-  if (fir::getTargetTriple(mod).isAMDGCN())
-    return;
-
   fir::FirOpBuilder builder(mod, fir::getKindMapping(mod));
 
   mod.walk([&](complex::PowOp op) {
@@ -118,6 +115,8 @@ void ConvertComplexPowPass::runOnOperation() {
     }
 
     auto call = fir::CallOp::create(builder, loc, callee, args);
+    if (auto fmf = op.getFastmathAttr())
+      call.setFastmathAttr(fmf);
     op.replaceAllUsesWith(call.getResult(0));
     op.erase();
   });
