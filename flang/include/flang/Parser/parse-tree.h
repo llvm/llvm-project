@@ -4879,20 +4879,13 @@ struct OpenMPAssumeConstruct : public OmpBlockConstruct {
 
 // 2.7.2 SECTIONS
 // 2.11.2 PARALLEL SECTIONS
-struct OmpSectionsDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpSectionsDirective, llvm::omp::Directive);
-  CharBlock source;
+struct OmpBeginSectionsDirective : public OmpBeginDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OmpBeginSectionsDirective, OmpBeginDirective);
 };
 
-struct OmpBeginSectionsDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpBeginSectionsDirective);
-  std::tuple<OmpSectionsDirective, OmpClauseList> t;
-  CharBlock source;
-};
-struct OmpEndSectionsDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpEndSectionsDirective);
-  std::tuple<OmpSectionsDirective, OmpClauseList> t;
-  CharBlock source;
+struct OmpEndSectionsDirective : public OmpEndDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndSectionsDirective, OmpEndDirective);
 };
 
 // [!$omp section]
@@ -4909,6 +4902,12 @@ struct OpenMPSectionConstruct {
 struct OpenMPSectionsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPSectionsConstruct);
   CharBlock source;
+  const OmpBeginSectionsDirective &BeginDir() const {
+    return std::get<OmpBeginSectionsDirective>(t);
+  }
+  const std::optional<OmpEndSectionsDirective> &EndDir() const {
+    return std::get<std::optional<OmpEndSectionsDirective>>(t);
+  }
   // Each of the OpenMPConstructs in the list below contains an
   // OpenMPSectionConstruct. This is guaranteed by the parser.
   // The end sections directive is optional here because it is difficult to

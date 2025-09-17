@@ -662,7 +662,6 @@ public:
   NODE(parser, OmpScheduleClause)
   NODE(OmpScheduleClause, Modifier)
   NODE_ENUM(OmpScheduleClause, Kind)
-  NODE(parser, OmpSectionsDirective)
   NODE(parser, OmpSelfModifier)
   NODE_ENUM(OmpSelfModifier, Value)
   NODE(parser, OmpSeverityClause)

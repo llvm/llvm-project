@@ -80,8 +80,7 @@ struct DirectiveNameScope {
 
   static OmpDirectiveName GetOmpDirectiveName(
       const OmpBeginSectionsDirective &x) {
-    auto &dir{std::get<OmpSectionsDirective>(x.t)};
-    return MakeName(dir.source, dir.v);
+    return x.DirName();
   }
 
   template <typename T>
