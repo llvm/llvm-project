@@ -2169,22 +2169,22 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
 
 void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
                                               raw_ostream &OS) {
-  StringRef KindName;
-  switch (T->getBehaviorKind()) {
-  case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
-    KindName = "__wrap";
-    break;
-  case clang::OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
-    KindName = "__no_wrap";
-    break;
-  }
-  OS << KindName << " ";
   printBefore(T->getUnderlyingType(), OS);
 }
 
 void TypePrinter::printOverflowBehaviorAfter(const OverflowBehaviorType *T,
                                              raw_ostream &OS) {
   printAfter(T->getUnderlyingType(), OS);
+  StringRef BehaviorName;
+  switch (T->getBehaviorKind()) {
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
+    BehaviorName = "wrap";
+    break;
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::NoWrap:
+    BehaviorName = "no_wrap";
+    break;
+  }
+  OS << " __attribute__((overflow_behavior(" << BehaviorName << ")))";
 }
 
 void TypePrinter::printHLSLAttributedResourceBefore(

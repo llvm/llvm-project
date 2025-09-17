@@ -195,9 +195,9 @@ namespace overflow_behavior_types {
     WrapB1 a = 0;
     WrapB1_2 b = 0;
     N ta = a;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1' (aka '__wrap B1')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1' (aka 'B1 __attribute__((overflow_behavior(wrap)))')}}
     N tb = b;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1_2' (aka '__wrap B1')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1_2' (aka 'B1 __attribute__((overflow_behavior(wrap)))')}}
     N tc = 0 ? a : b;
     // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__wrap B1'}}
   } // namespace same_canonical
@@ -207,9 +207,9 @@ namespace overflow_behavior_types {
     WrapX1 a = 0;
     WrapY1 b = 0;
     N ta = a;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapX1' (aka '__wrap X1')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapX1' (aka 'X1 __attribute__((overflow_behavior(wrap)))')}}
     N tb = b;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapY1' (aka '__wrap Y1')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapY1' (aka 'Y1 __attribute__((overflow_behavior(wrap)))')}}
     N tc = 0 ? a : b;
     // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__wrap B1'}}
   } // namespace same_underlying
@@ -219,9 +219,9 @@ namespace overflow_behavior_types {
     volatile ConstWrapX1 a = 0;
     const volatile WrapY1 b = 0;
     N ta = a;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'volatile ConstWrapX1' (aka '__wrap X1 const volatile')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'volatile ConstWrapX1' (aka 'X1 const volatile __attribute__((overflow_behavior(wrap)))')}}
     N tb = b;
-    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile WrapY1' (aka '__wrap Y1 const volatile')}}
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile WrapY1' (aka 'Y1 const volatile __attribute__((overflow_behavior(wrap)))')}}
     N tc = 0 ? a : b;
     // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__wrap B1 const volatile'}}
   } // namespace balanced_qualifiers
