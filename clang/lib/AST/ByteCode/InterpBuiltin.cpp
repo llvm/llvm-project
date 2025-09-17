@@ -2919,40 +2919,38 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
                                                  unsigned ID) {
   assert(Call->getNumArgs() == 3);
 
-  PrimType ImmPT = *S.getContext().classify(Call->getArg(2));
-  APSInt ImmAPS = popToAPSInt(S.Stk, ImmPT);
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(2));
   uint64_t Index = ImmAPS.getZExtValue();
 
   const Pointer &SubVec = S.Stk.pop<Pointer>();
   if (!SubVec.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  const Pointer &DstVec = S.Stk.pop<Pointer>();
-  if (!DstVec.getFieldDesc()->isPrimitiveArray())
+  const Pointer &BaseVec = S.Stk.pop<Pointer>();
+  if (!BaseVec.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  const Pointer &Result = S.Stk.peek<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  unsigned DstElements = DstVec.getNumElems();
+  unsigned BaseElements = BaseVec.getNumElems();
   unsigned SubElements = SubVec.getNumElems();
 
-  assert(SubElements != 0 && DstElements != 0 && (DstElements % SubElements) == 0);
+  assert(SubElements != 0 && BaseElements != 0 && (BaseElements % SubElements) == 0);
 
-  unsigned NumLanes = DstElements / SubElements;
+  unsigned NumLanes = BaseElements / SubElements;
   unsigned Lane = static_cast<unsigned>(Index % NumLanes);
   unsigned InsertPos = Lane * SubElements;
 
-  PrimType ElemPT = DstVec.getFieldDesc()->getPrimType();
+  PrimType ElemPT = BaseVec.getFieldDesc()->getPrimType();
 
   TYPE_SWITCH(ElemPT, {
-    for (unsigned I = 0; I != DstElements; ++I)
-      Result.elem<T>(I) = DstVec.elem<T>(I);
-
+    for (unsigned I = 0; I != BaseElements; ++I)
+      Dst.elem<T>(I) = BaseVec.elem<T>(I);
     for (unsigned I = 0; I != SubElements; ++I)
-      Result.elem<T>(InsertPos + I) = SubVec.elem<T>(I);
+      Dst.elem<T>(InsertPos + I) = SubVec.elem<T>(I);
   });
 
-  Result.initializeAllElements();
+  Dst.initializeAllElements();
 
   return true;
 }
