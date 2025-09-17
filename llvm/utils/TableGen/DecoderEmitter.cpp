@@ -1043,7 +1043,7 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
        << ";\n";
     for (auto [Base, Width, Offset] : OpInfo.fields()) {
       OS << Indent << "tmp |= fieldFromInstruction(insn, " << Base << ", "
-         << Width << ")";
+         << Width << ')';
       if (Offset)
         OS << " << " << Offset;
       OS << ";\n";
