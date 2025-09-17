@@ -4610,10 +4610,6 @@ void CodeGenModule::emitMultiVersionFunctions() {
     }
     llvm::Function *ResolverFunc = cast<llvm::Function>(ResolverConstant);
 
-    if (!ResolverFunc->hasLocalLinkage() && supportsCOMDAT())
-      ResolverFunc->setComdat(
-          getModule().getOrInsertComdat(ResolverFunc->getName()));
-
     const TargetInfo &TI = getTarget();
     llvm::stable_sort(
         Options, [&TI](const CodeGenFunction::FMVResolverOption &LHS,
@@ -4622,7 +4618,11 @@ void CodeGenModule::emitMultiVersionFunctions() {
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);
+
     setMultiVersionResolverAttributes(ResolverFunc, GD);
+    if (!ResolverFunc->hasLocalLinkage() && supportsCOMDAT())
+      ResolverFunc->setComdat(
+          getModule().getOrInsertComdat(ResolverFunc->getName()));
   }
 
   // Ensure that any additions to the deferred decls list caused by emitting a

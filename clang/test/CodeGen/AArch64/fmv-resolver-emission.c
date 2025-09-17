@@ -328,7 +328,7 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@internal_func.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@internal_func.resolver() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
