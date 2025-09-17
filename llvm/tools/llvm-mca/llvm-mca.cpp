@@ -413,7 +413,11 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
-  assert(STI && "Unable to create subtarget info!");
+  if (!STI) {
+    WithColor::error() << "unable to create subtarget info\n";
+    return 1;
+  }
+
   if (!STI->isCPUStringValid(MCPU))
     return 1;
 
