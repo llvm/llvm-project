@@ -525,6 +525,9 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
+// Determines if a character string is null-terminated.
+RT_API_ATTRS bool IsNullTerminated(char *str, std::size_t length);
+
 // Ensures that a character string is null-terminated, allocating a /p length +1
 // size memory for null-terminator if necessary. Returns the original or a newly
 // allocated null-terminated string (responsibility for deallocation is on the
