@@ -3771,25 +3771,25 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
           (CallerFnType == SemaARM::ArmStreamingCompatible ||
            ((CallerFnType == SemaARM::ArmStreaming) ^ IsCalleeStreaming))) {
         const LangOptions &LO = getLangOpts();
-        auto VL = LO.VScaleMin * 128;
-        auto SVL = LO.VScaleStreamingMin * 128;
+        unsigned VL = LO.VScaleMin * 128;
+        unsigned SVL = LO.VScaleStreamingMin * 128;
 
-        if (IsScalableArg) {
-          if (VL && SVL && VL != SVL)
+        bool IsVLError = CallerFnType != SemaARM::ArmStreamingCompatible &&
+                         (VL && SVL && VL != SVL);
+
+        auto EmitDiag = [&](bool IsArg) {
+          if (IsVLError)
             Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
-                << /*IsArg=*/true << VL << SVL;
+                << IsArg << VL << SVL;
           else
             Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-                << /*IsArg=*/true;
-        }
-        if (IsScalableRet) {
-          if (VL && SVL && VL != SVL)
-            Diag(Loc, diag::err_sme_streaming_transition_vl_mismatch)
-                << /*IsArg=*/false << VL << SVL;
-          else
-            Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
-                << /*IsArg=*/false;
-        }
+                << IsArg;
+        };
+
+        if (IsScalableArg)
+          EmitDiag(true);
+        if (IsScalableRet)
+          EmitDiag(false);
       }
     }
 
