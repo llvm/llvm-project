@@ -1236,7 +1236,7 @@ private:
   KindTy Kind;
 };
 
-class CheckAnyNode : public DecoderTreeNode {
+class CheckManyNode : public DecoderTreeNode {
   SmallVector<std::unique_ptr<DecoderTreeNode>, 0> Children;
 
   static const DecoderTreeNode *
@@ -1244,40 +1244,10 @@ class CheckAnyNode : public DecoderTreeNode {
     return Element.get();
   }
 
-public:
-  CheckAnyNode() : DecoderTreeNode(CheckAny) {}
-
-  void addChild(std::unique_ptr<DecoderTreeNode> N) {
-    Children.push_back(std::move(N));
-  }
-
-  using child_iterator = mapped_iterator<decltype(Children)::const_iterator,
-                                         decltype(&mapElement)>;
-
-  child_iterator child_begin() const {
-    return child_iterator(Children.begin(), mapElement);
-  }
-
-  child_iterator child_end() const {
-    return child_iterator(Children.end(), mapElement);
-  }
-
-  iterator_range<child_iterator> children() const {
-    return make_range(child_begin(), child_end());
-  }
-};
-
-class CheckAllNode : public DecoderTreeNode {
-  SmallVector<std::unique_ptr<DecoderTreeNode>, 0> Children;
-
-  static const DecoderTreeNode *
-  mapElement(decltype(Children)::const_reference Element) {
-    return Element.get();
-  }
+protected:
+  explicit CheckManyNode(KindTy Kind) : DecoderTreeNode(Kind) {}
 
 public:
-  CheckAllNode() : DecoderTreeNode(CheckAll) {}
-
   void addChild(std::unique_ptr<DecoderTreeNode> Child) {
     Children.push_back(std::move(Child));
   }
@@ -1296,6 +1266,16 @@ public:
   iterator_range<child_iterator> children() const {
     return make_range(child_begin(), child_end());
   }
+};
+
+class CheckAnyNode : public CheckManyNode {
+public:
+  CheckAnyNode() : CheckManyNode(CheckAny) {}
+};
+
+class CheckAllNode : public CheckManyNode {
+public:
+  CheckAllNode() : CheckManyNode(CheckAll) {}
 };
 
 class CheckFieldNode : public DecoderTreeNode {
@@ -1480,8 +1460,8 @@ DecoderTreeBuilder::buildTerminalNode(unsigned EncodingID,
                                                NegativeMask.getZExtValue()));
   }
 
-  std::string DecoderIndex = getDecoderString(Encoding);
-  N->addChild(std::make_unique<DecodeNode>(Encoding, DecoderIndex));
+  std::string DecoderString = getDecoderString(Encoding);
+  N->addChild(std::make_unique<DecodeNode>(Encoding, std::move(DecoderString)));
 
   return N;
 }
@@ -1505,15 +1485,15 @@ std::unique_ptr<DecoderTreeNode> DecoderTreeBuilder::buildCheckAllOrSwitchNode(
 std::unique_ptr<DecoderTreeNode>
 DecoderTreeBuilder::buildCheckAnyNode(const FilterChooser &FC) {
   auto N = std::make_unique<CheckAnyNode>();
-  if (FC.SingletonEncodingID) {
+
+  if (FC.SingletonEncodingID)
     N->addChild(buildTerminalNode(*FC.SingletonEncodingID, FC.FilterBits));
-  } else {
+  else
     N->addChild(buildCheckAllOrSwitchNode(FC.StartBit, FC.NumBits,
                                           FC.FilterChooserMap));
-  }
-  if (FC.VariableFC) {
+
+  if (FC.VariableFC)
     N->addChild(buildCheckAnyNode(*FC.VariableFC));
-  }
 
   return N;
 }
@@ -1557,13 +1537,17 @@ void DecoderTableEmitter::analyzeNode(const DecoderTreeNode *Node) const {
 
 unsigned
 DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
+  // To make the arithmetic below clearer.
+  static constexpr unsigned OpcodeSize = 1;
+  static constexpr unsigned FieldWidthSize = 1;
+
   switch (Node->getKind()) {
   case DecoderTreeNode::CheckAny: {
     const auto *N = static_cast<const CheckAnyNode *>(Node);
     unsigned Size = 0;
     for (const DecoderTreeNode *Child : drop_end(N->children())) {
       unsigned ChildSize = computeNodeSize(Child);
-      Size += 1 + getULEB128Size(ChildSize) + ChildSize;
+      Size += OpcodeSize + getULEB128Size(ChildSize) + ChildSize;
     }
     return Size + computeNodeSize(*std::prev(N->child_end()));
   }
@@ -1576,12 +1560,13 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
   }
   case DecoderTreeNode::CheckField: {
     const auto *N = static_cast<const CheckFieldNode *>(Node);
-    return 1 + getULEB128Size(N->getStartBit()) + 1 +
+    return OpcodeSize + getULEB128Size(N->getStartBit()) + FieldWidthSize +
            getULEB128Size(N->getValue());
   }
   case DecoderTreeNode::SwitchField: {
     const auto *N = static_cast<const SwitchFieldNode *>(Node);
-    unsigned Size = 1 + getULEB128Size(N->getStartBit()) + 1;
+    unsigned Size =
+        OpcodeSize + getULEB128Size(N->getStartBit()) + FieldWidthSize;
 
     for (auto [Val, Child] : drop_end(N->cases())) {
       unsigned ChildSize = computeNodeSize(Child);
@@ -1597,18 +1582,19 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
     const auto *N = static_cast<const CheckPredicateNode *>(Node);
     unsigned PredicateIndex =
         TableInfo.getPredicateIndex(N->getPredicateString());
-    return 1 + getULEB128Size(PredicateIndex);
+    return OpcodeSize + getULEB128Size(PredicateIndex);
   }
   case DecoderTreeNode::SoftFail: {
     const auto *N = static_cast<const SoftFailNode *>(Node);
-    return 1 + getULEB128Size(N->getPositiveMask()) +
+    return OpcodeSize + getULEB128Size(N->getPositiveMask()) +
            getULEB128Size(N->getNegativeMask());
   }
   case DecoderTreeNode::Decode: {
     const auto *N = static_cast<const DecodeNode *>(Node);
     unsigned InstOpcode = N->getEncoding().getInstruction()->EnumVal;
     unsigned DecoderIndex = TableInfo.getDecoderIndex(N->getDecoderString());
-    return 1 + getULEB128Size(InstOpcode) + getULEB128Size(DecoderIndex);
+    return OpcodeSize + getULEB128Size(InstOpcode) +
+           getULEB128Size(DecoderIndex);
   }
   }
   llvm_unreachable("Unknown node kind");
