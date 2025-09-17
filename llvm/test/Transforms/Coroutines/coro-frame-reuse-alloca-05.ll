@@ -55,7 +55,7 @@ cleanup:
   call ptr @llvm.coro.free(token %0, ptr %1)
   br label %coro.ret
 coro.ret:
-  call void @llvm.coro.end(ptr null, i1 false, token none)
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 ; CHECK:       %a.Frame = type { ptr, ptr, %"struct.task::promise_type", i1, [14 x i8], %struct.big_structure }
@@ -69,6 +69,6 @@ declare token @llvm.coro.save(ptr) #3
 declare ptr @llvm.coro.frame() #5
 declare i8 @llvm.coro.suspend(token, i1) #3
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
-declare void @llvm.coro.end(ptr, i1, token) #3
+declare i1 @llvm.coro.end(ptr, i1, token) #3
 declare void @llvm.lifetime.start.p0(ptr nocapture) #4
 declare void @llvm.lifetime.end.p0(ptr nocapture) #4
