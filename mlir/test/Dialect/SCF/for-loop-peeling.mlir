@@ -328,10 +328,9 @@ func.func @regression(%arg0: memref<i64>, %arg1: index) {
 // -----
 
 // Regression test: Make sure that we do not crash.
-
+// The step is 0, the loop will be eliminated.
 // CHECK-LABEL: func @zero_step(
-//       CHECK:   scf.for
-//       CHECK:   scf.for
+//       CHECK-NOT:   scf.for
 func.func @zero_step(%arg0: memref<i64>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
