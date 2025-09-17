@@ -47,15 +47,15 @@ __attribute__((ifunc("ifunc_resolver"))) int ifunc(void);
 // BTI: define internal ptr @static_target_version.resolver() #[[ATTR_RESOLVER]]
 
 // In NOBTI case, no attribute groups are assigned to the resolver functions:
-// NOBTI: define weak_odr ptr @global_target_clones.resolver(){{[^#]*}} {
-// NOBTI: define weak_odr ptr @global_target_version.resolver(){{[^#]*}} {
-// NOBTI: define internal ptr @static_target_clones.resolver(){{[^#]*}} {
-// NOBTI: define internal ptr @static_target_version.resolver(){{[^#]*}} {
+// NOBTI: define weak_odr ptr @global_target_clones.resolver(){{( comdat)?}} {
+// NOBTI: define weak_odr ptr @global_target_version.resolver(){{( comdat)?}} {
+// NOBTI: define internal ptr @static_target_clones.resolver() {
+// NOBTI: define internal ptr @static_target_version.resolver() {
 
-// HIDDEN: define weak_odr hidden ptr @global_target_clones.resolver(){{[^#]*}}
-// HIDDEN: define weak_odr hidden ptr @global_target_version.resolver(){{[^#]*}}
-// HIDDEN: define internal ptr @static_target_clones.resolver(){{[^#]*}}
-// HIDDEN: define internal ptr @static_target_version.resolver(){{[^#]*}}
+// HIDDEN: define weak_odr hidden ptr @global_target_clones.resolver(){{( comdat)?}} {
+// HIDDEN: define weak_odr hidden ptr @global_target_version.resolver(){{( comdat)?}} {
+// HIDDEN: define internal ptr @static_target_clones.resolver() {
+// HIDDEN: define internal ptr @static_target_version.resolver() {
 
 // ELF:       attributes #[[ATTR_IFUNC_RESOLVER]] = { {{.*}}"branch-target-enforcement"{{.*}} }
 
