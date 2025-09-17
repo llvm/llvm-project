@@ -227,7 +227,7 @@ void InitializePlatformEarly() {
 #  if !SANITIZER_GO && SANITIZER_IOS
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
   if (max_vm < HiAppMemEnd()) {
-    Printf(
+    Report(
         "ThreadSanitizer: Unsupported virtual memory layout:\n\tVM address "
         "limit = %p\n\tExpected %p.\n",
         (void*)max_vm, (void*)HiAppMemEnd());
@@ -235,8 +235,8 @@ void InitializePlatformEarly() {
   }
   // In some configurations, the max_vm is expanded, but much of this space is
   // already mapped. TSAN will not work in this configuration.
-  else if (IsAddressInMappedRegion(HiAppMemEnd() - 1)) {
-    Printf(
+  if (IsAddressInMappedRegion(HiAppMemEnd() - 1)) {
+    Report(
         "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
         "already mapped.\n");
     Die();
