@@ -258,13 +258,40 @@ static RT_API_ATTRS bool HandleSubscripts(IoStatementState &io,
   return false;
 }
 
-static RT_API_ATTRS void StorageSequenceExtension(
-    Descriptor &desc, const Descriptor &source) {
+static RT_API_ATTRS bool HasDefinedIoSubroutine(common::DefinedIo definedIo,
+    typeInfo::SpecialBinding::Which specialBinding,
+    const typeInfo::DerivedType *derivedType,
+    const NonTbpDefinedIoTable *table) {
+  for (; derivedType; derivedType = derivedType->GetParentType()) {
+    if ((table && table->Find(*derivedType, definedIo) != nullptr) ||
+        derivedType->FindSpecialBinding(specialBinding)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static RT_API_ATTRS bool HasDefinedIoSubroutine(common::DefinedIo definedIo,
+    typeInfo::SpecialBinding::Which specialBinding,
+    const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
+  const DescriptorAddendum *addendum{descriptor.Addendum()};
+  return addendum &&
+      HasDefinedIoSubroutine(
+          definedIo, specialBinding, addendum->derivedType(), table);
+}
+
+static RT_API_ATTRS void StorageSequenceExtension(Descriptor &desc,
+    const Descriptor &source, const io::NonTbpDefinedIoTable *table) {
   // Support the near-universal extension of NAMELIST input into a
   // designatable storage sequence identified by its initial scalar array
   // element.  For example, treat "A(1) = 1. 2. 3." as if it had been
   // "A(1:) = 1. 2. 3.".
-  if (desc.rank() == 0 && (source.rank() == 1 || source.IsContiguous())) {
+  // (But don't do this for derived types with defined formatted READs,
+  // since they might do non-list-directed input that won't stop at the
+  // next namelist input item name.)
+  if (desc.rank() == 0 && (source.rank() == 1 || source.IsContiguous()) &&
+      !HasDefinedIoSubroutine(common::DefinedIo::ReadFormatted,
+          typeInfo::SpecialBinding::Which::ReadFormatted, desc, table)) {
     if (auto stride{source.rank() == 1
                 ? source.GetDimension(0).ByteStride()
                 : static_cast<SubscriptValue>(source.ElementBytes())};
@@ -561,7 +588,8 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         next = io.GetCurrentChar(byteCount);
       } while (next && (*next == '(' || *next == '%'));
       if (lastSubscriptDescriptor) {
-        StorageSequenceExtension(*lastSubscriptDescriptor, *lastSubscriptBase);
+        StorageSequenceExtension(*lastSubscriptDescriptor, *lastSubscriptBase,
+            group.nonTbpDefinedIo);
       }
     }
     // Skip the '='
@@ -596,6 +624,12 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   if (next && *next == '/') {
     io.HandleRelativePosition(byteCount);
+    if (auto *listInput{
+            io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      // Don't let the namelist's terminal '/' mess up a parent I/O's
+      // list-directed input.
+      listInput->set_hitSlash(false);
+    }
   } else if (*next && (*next == '&' || *next == '$')) {
     // stop at beginning of next group
   } else {
