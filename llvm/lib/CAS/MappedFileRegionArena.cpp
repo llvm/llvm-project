@@ -216,17 +216,18 @@ Expected<MappedFileRegionArena> MappedFileRegionArena::create(
     if (!Size)
       return Size.takeError();
 
-    Header *H = reinterpret_cast<Header *>(HeaderContent.data());
-    if (H->HeaderOffset != HeaderOffset)
+    Header H;
+    memcpy(&H, HeaderContent.data(), sizeof(H));
+    if (H.HeaderOffset != HeaderOffset)
       return createStringError(
           std::make_error_code(std::errc::invalid_argument),
           "specified header offset (" + utostr(HeaderOffset) +
-              ") does not match existing config (" + utostr(H->HeaderOffset) +
+              ") does not match existing config (" + utostr(H.HeaderOffset) +
               ")");
 
     // If the capacity doesn't match, use the existing capacity instead.
-    if (H->Capacity != Capacity)
-      Capacity = H->Capacity;
+    if (H.Capacity != Capacity)
+      Capacity = H.Capacity;
   }
 
   // If the size is smaller than capacity, we need to resize the file.
