@@ -355,7 +355,9 @@ public:
 
 class RemarkEngine {
 private:
-  /// Postponed remarks. They are shown at the end of the pipeline.
+  /// Postponed remarks. They are deferred to the end of the pipeline, where the
+  /// user can intercept them for custom processing, otherwise they will be reported
+  /// on engine destruction.
   llvm::SmallVector<Remark, 8> postponedRemarks;
   /// Regex that filters missed optimization remarks: only matching one are
   /// reported.
