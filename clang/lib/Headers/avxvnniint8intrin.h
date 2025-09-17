@@ -34,6 +34,7 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -44,6 +45,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpbssd_epi32(__W, __A, __B)                                        \
   ((__m128i)__builtin_ia32_vpdpbssd128((__v4si)(__W), (__v16qi)(__A),          \
                                        (__v16qi)(__B)))
@@ -68,6 +70,7 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -78,6 +81,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpbssd_epi32(__W, __A, __B)                                     \
   ((__m256i)__builtin_ia32_vpdpbssd256((__v8si)(__W), (__v32qi)(__A),          \
                                        (__v32qi)(__B)))
@@ -103,6 +107,7 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -113,6 +118,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpbssds_epi32(__W, __A, __B)                                       \
   ((__m128i)__builtin_ia32_vpdpbssds128((__v4si)(__W), (__v16qi)(__A),         \
                                         (__v16qi)(__B)))
@@ -138,6 +144,7 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := SignExtend16(__A.byte[4*j]) * SignExtend16(__B.byte[4*j])
@@ -148,6 +155,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpbssds_epi32(__W, __A, __B)                                    \
   ((__m256i)__builtin_ia32_vpdpbssds256((__v8si)(__W), (__v32qi)(__A),         \
                                         (__v32qi)(__B)))
@@ -172,6 +180,7 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -182,6 +191,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format off
 #define _mm_dpbsud_epi32(__W, __A, __B)                                        \
   ((__m128i)__builtin_ia32_vpdpbsud128((__v4si)(__W), (__v16qi)(__A),          \
                                        (__v16qu)(__B)))
@@ -206,6 +216,7 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -216,6 +227,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format off
 #define _mm256_dpbsud_epi32(__W, __A, __B)                                     \
   ((__m256i)__builtin_ia32_vpdpbsud256((__v8si)(__W), (__v32qi)(__A),          \
                                        (__v32qu)(__B)))
@@ -241,6 +253,7 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -251,6 +264,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format off
 #define _mm_dpbsuds_epi32(__W, __A, __B)                                       \
   ((__m128i)__builtin_ia32_vpdpbsuds128((__v4si)(__W), (__v16qi)(__A),         \
                                         (__v16qu)(__B)))
@@ -276,6 +290,7 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := Signed(SignExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j]))
@@ -286,6 +301,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format off
 #define _mm256_dpbsuds_epi32(__W, __A, __B)                                    \
   ((__m256i)__builtin_ia32_vpdpbsuds256((__v8si)(__W), (__v32qi)(__A),         \
                                         (__v32qu)(__B)))
@@ -310,6 +326,7 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -320,6 +337,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format off
 #define _mm_dpbuud_epi32(__W, __A, __B)                                        \
   ((__m128i)__builtin_ia32_vpdpbuud128((__v4si)(__W), (__v16qu)(__A),          \
                                        (__v16qu)(__B)))
@@ -344,6 +362,7 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -354,6 +373,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format off
 #define _mm256_dpbuud_epi32(__W, __A, __B)                                     \
   ((__m256i)__builtin_ia32_vpdpbuud256((__v8si)(__W), (__v32qu)(__A),          \
                                        (__v32qu)(__B)))
@@ -379,6 +399,7 @@
 /// \returns
 ///    A 128-bit vector of [4 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 3
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -389,6 +410,7 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format off
 #define _mm_dpbuuds_epi32(__W, __A, __B)                                       \
   ((__m128i)__builtin_ia32_vpdpbuuds128((__v4si)(__W), (__v16qu)(__A),         \
                                         (__v16qu)(__B)))
@@ -413,6 +435,7 @@
 /// \returns
 ///    A 256-bit vector of [8 x int].
 ///
+// clang-format off
 /// \code{.operation}
 /// FOR j := 0 to 7
 /// 	tmp1.word := ZeroExtend16(__A.byte[4*j]) * ZeroExtend16(__B.byte[4*j])
@@ -423,6 +446,7 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format off
 #define _mm256_dpbuuds_epi32(__W, __A, __B)                                    \
   ((__m256i)__builtin_ia32_vpdpbuuds256((__v8si)(__W), (__v32qu)(__A),         \
                                         (__v32qu)(__B)))
