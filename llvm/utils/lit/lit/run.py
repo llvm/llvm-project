@@ -82,9 +82,14 @@ class Run(object):
 
         # Windows has a limit of 60 workers per pool, so we need to use multiple pools
         # if we have more workers requested than the limit.
+        # Also, allow to override the limit with the LIT_WINDOWS_MAX_WORKERS_PER_POOL environment variable.
         max_workers_per_pool = (
             WINDOWS_MAX_WORKERS_PER_POOL if os.name == "nt" else self.workers
         )
+        max_workers_per_pool = int(
+            os.getenv("LIT_WINDOWS_MAX_WORKERS_PER_POOL", max_workers_per_pool)
+        )
+
         num_pools = max(1, _ceilDiv(self.workers, max_workers_per_pool))
 
         # Distribute self.workers across num_pools as evenly as possible
