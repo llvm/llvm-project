@@ -83,7 +83,7 @@ struct InvalidatedEventBody {
 
   /// If specified, the client only needs to refetch data related to this stack
   /// frame (and the `threadId` is ignored).
-  std::optional<uint64_t> frameId;
+  std::optional<uint64_t> stackFrameId;
 };
 llvm::json::Value toJSON(const InvalidatedEventBody::Area &);
 llvm::json::Value toJSON(const InvalidatedEventBody &);

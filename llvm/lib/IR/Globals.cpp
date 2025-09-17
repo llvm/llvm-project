@@ -288,10 +288,22 @@ void GlobalObject::setSection(StringRef S) {
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
 }
 
-void GlobalObject::setSectionPrefix(StringRef Prefix) {
+bool GlobalObject::setSectionPrefix(StringRef Prefix) {
+  StringRef ExistingPrefix;
+  if (std::optional<StringRef> MaybePrefix = getSectionPrefix())
+    ExistingPrefix = *MaybePrefix;
+
+  if (ExistingPrefix == Prefix)
+    return false;
+
+  if (Prefix.empty()) {
+    setMetadata(LLVMContext::MD_section_prefix, nullptr);
+    return true;
+  }
   MDBuilder MDB(getContext());
   setMetadata(LLVMContext::MD_section_prefix,
               MDB.createGlobalObjectSectionPrefix(Prefix));
+  return true;
 }
 
 std::optional<StringRef> GlobalObject::getSectionPrefix() const {
