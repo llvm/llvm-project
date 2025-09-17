@@ -78,7 +78,7 @@ struct TestXeGPUUnrollingPatterns
             xegpu::DistributeLayoutAttr layout =
                 xegpu::getDistributeLayoutAttr(loadOp.getResult());
             if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getInstDataAsInt();
+              auto inst_data = layout.getEffectiveInstDataAsInt();
               if (!inst_data.empty())
                 return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
             } else {
@@ -92,7 +92,7 @@ struct TestXeGPUUnrollingPatterns
             auto layout = llvm::dyn_cast_or_null<xegpu::LayoutAttr>(
                 op->getAttr("layout"));
             if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getInstDataAsInt();
+              auto inst_data = layout.getEffectiveInstDataAsInt();
               if (!inst_data.empty())
                 return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
             } else {
