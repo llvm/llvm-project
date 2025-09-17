@@ -53,7 +53,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Org:           OS << "Org"; break;
   case MCFragment::FT_Dwarf:         OS << "Dwarf"; break;
   case MCFragment::FT_DwarfFrame:    OS << "DwarfCallFrame"; break;
-  case MCFragment::FT_SFrame:        OS << "SFrame"; break;
   case MCFragment::FT_LEB:           OS << "LEB"; break;
   case MCFragment::FT_BoundaryAlign: OS<<"BoundaryAlign"; break;
   case MCFragment::FT_SymbolId:      OS << "SymbolId"; break;
@@ -80,8 +79,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
-  case MCFragment::FT_DwarfFrame:
-  case MCFragment::FT_SFrame: {
+  case MCFragment::FT_DwarfFrame: {
     if (isLinkerRelaxable())
       OS << " LinkerRelaxable";
     auto Fixed = getContents();
@@ -131,7 +129,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << " LineDelta:" << getDwarfLineDelta();
       break;
     case MCFragment::FT_DwarfFrame:
-    case MCFragment::FT_SFrame:
       OS << " AddrDelta:";
       getDwarfAddrDelta().print(OS, nullptr);
       break;
