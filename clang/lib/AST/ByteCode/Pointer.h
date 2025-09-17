@@ -702,6 +702,8 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialized the given element of a primitive array.
+  void initializeElement(unsigned Index) const;
   /// Initialize all elements of a primitive array at once. This can be
   /// used in situations where we *know* we have initialized *all* elements
   /// of a primtive array.
