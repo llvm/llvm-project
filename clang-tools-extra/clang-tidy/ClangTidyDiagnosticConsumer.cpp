@@ -160,12 +160,11 @@ ClangTidyError::ClangTidyError(StringRef CheckName,
 
 ClangTidyContext::ClangTidyContext(
     std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-    bool AllowEnablingAnalyzerAlphaCheckers, bool EnableModuleHeadersParsing,
-    bool ExperimentalCustomChecks)
+    bool AllowEnablingAnalyzerAlphaCheckers, bool EnableModuleHeadersParsing)
     : OptionsProvider(std::move(OptionsProvider)),
+
       AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers),
-      EnableModuleHeadersParsing(EnableModuleHeadersParsing),
-      ExperimentalCustomChecks(ExperimentalCustomChecks) {
+      EnableModuleHeadersParsing(EnableModuleHeadersParsing) {
   // Before the first translation unit we can get errors related to command-line
   // parsing, use dummy string for the file name in this case.
   setCurrentFile("dummy");

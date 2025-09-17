@@ -8,10 +8,8 @@
 
 #include "ClangTidyOptions.h"
 #include "ClangTidyModuleRegistry.h"
-#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -131,51 +129,6 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
   }
 }
 
-namespace {
-struct MultiLineString {
-  std::string &S;
-};
-} // namespace
-
-template <> struct BlockScalarTraits<MultiLineString> {
-  static void output(const MultiLineString &S, void *Ctxt, raw_ostream &OS) {
-    OS << S.S;
-  }
-  static StringRef input(StringRef Str, void *Ctxt, MultiLineString &S) {
-    S.S = Str;
-    return "";
-  }
-};
-
-template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
-  static void enumeration(IO &IO, clang::DiagnosticIDs::Level &Level) {
-    IO.enumCase(Level, "Warning", clang::DiagnosticIDs::Level::Warning);
-    IO.enumCase(Level, "Note", clang::DiagnosticIDs::Level::Note);
-  }
-};
-template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
-  static const bool flow = false;
-};
-template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
-  static void mapping(IO &IO, ClangTidyOptions::CustomCheckDiag &D) {
-    IO.mapRequired("BindName", D.BindName);
-    MultiLineString MLS{D.Message};
-    IO.mapRequired("Message", MLS);
-    IO.mapOptional("Level", D.Level);
-  }
-};
-template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
-  static const bool flow = false;
-};
-template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
-  static void mapping(IO &IO, ClangTidyOptions::CustomCheckValue &V) {
-    IO.mapRequired("Name", V.Name);
-    MultiLineString MLS{V.Query};
-    IO.mapRequired("Query", MLS);
-    IO.mapRequired("Diagnostic", V.Diags);
-  }
-};
-
 struct ChecksVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
@@ -231,7 +184,6 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
-    IO.mapOptional("CustomChecks", Options.CustomChecks);
   }
 };
 
@@ -293,8 +245,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
-  // FIXME: how to handle duplicate names check?
-  mergeVectors(CustomChecks, Other.CustomChecks);
+
   for (const auto &KeyValue : Other.CheckOptions) {
     CheckOptions.insert_or_assign(
         KeyValue.getKey(),
