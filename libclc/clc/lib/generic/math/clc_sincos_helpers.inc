@@ -74,8 +74,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_cosf_piby4(__CLC_FLOATN x,
   return ret;
 }
 
-_CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
-                                                      __CLC_INTN regn) {
+_CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
+                                                     __CLC_INTN regn) {
   // Core Remez [1,2] approximation to tan(x) on the interval [0,pi/4].
   __CLC_FLOATN r = x * x;
 
