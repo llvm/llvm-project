@@ -673,9 +673,10 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
         (S.Context.getLangOpts().SYCLIsDevice && Aux &&
          A.existsInTarget(*Aux)))) {
     if (A.isRegularKeywordAttribute() || A.isDeclspecAttribute()) {
-      S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
-                             ? diag::err_keyword_not_supported_on_target
-                             : diag::warn_unhandled_ms_attribute_ignored)
+      S.Diag(A.getLoc(),
+             A.isRegularKeywordAttribute()
+                 ? (unsigned)diag::err_keyword_not_supported_on_target
+                 : (unsigned)diag::warn_unhandled_ms_attribute_ignored)
           << A << A.getRange();
     } else {
       S.DiagnoseUnknownAttribute(A);
