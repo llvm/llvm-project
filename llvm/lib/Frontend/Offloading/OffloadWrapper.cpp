@@ -801,13 +801,16 @@ struct SYCLWrapper {
     return ConstantExpr::getGetElementPtr(Var->getValueType(), Var, ZeroZero);
   }
 
-  /// Creates a global variable that is initiazed with the given \p Entries.
+  /// Each image contains its own set of symbols, which may contain different
+  /// symbols than other images. This function constructs an array of
+  /// symbol entries for a particular image.
   ///
-  /// \returns Pair of Constants that point at entries content.
+  /// \returns Pointers to the beginning and end of the array.
   std::pair<Constant *, Constant *>
-  addOffloadEntriesToModule(StringRef Entries) {
+  initOffloadEntriesPerImage(StringRef Entries) {
     SmallVector<Constant *> EntriesInits;
-    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(Entries);
+    std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
+        Entries, /*BufferName*/ "", /*RequiresNullTerminator*/ false);
     for (line_iterator LI(*MB); !LI.is_at_eof(); ++LI) {
       Constant *C = addStringToModule(*LI, "__sycl_offload_entry_name");
       GlobalVariable *GV =
@@ -887,7 +890,7 @@ struct SYCLWrapper {
 
     // For SYCL images offload entries are defined here per image.
     std::pair<Constant *, Constant *> ImageEntriesPtrs =
-        addOffloadEntriesToModule(OI.StringData.lookup("symbols"));
+        initOffloadEntriesPerImage(OI.StringData.lookup("symbols"));
     Constant *WrappedBinary = ConstantStruct::get(
         SyclDeviceImageTy, Version, OffloadKindConstant, ImageKindConstant,
         TripleConstant, CompileOptions, LinkOptions, Binary.first,
