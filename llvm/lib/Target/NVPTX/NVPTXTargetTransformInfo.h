@@ -181,8 +181,8 @@ public:
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddrSpace, bool IsMaskConstant) const override;
+  bool isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddrSpace,
+                          bool IsMaskConstant) const override;
 
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 
