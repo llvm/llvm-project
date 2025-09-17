@@ -2177,10 +2177,7 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
     return PoisonValue::get(VT->getElementType());
 
   // TODO: Handle undef.
-  if (!isa<ConstantVector, ConstantDataVector, ConstantInt>(Op))
-    return nullptr;
-
-  auto *EltC = dyn_cast<ConstantInt>(Op->getAggregateElement(0U));
+  auto *EltC = dyn_cast_or_null<ConstantInt>(Op->getAggregateElement(0U));
   if (!EltC)
     return nullptr;
 
@@ -3062,28 +3059,22 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     }
   }
 
-  switch (IntrinsicID) {
-  default: break;
-  case Intrinsic::vector_reduce_add:
-  case Intrinsic::vector_reduce_mul:
-  case Intrinsic::vector_reduce_and:
-  case Intrinsic::vector_reduce_or:
-  case Intrinsic::vector_reduce_xor:
-  case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_umin:
-  case Intrinsic::vector_reduce_umax:
-    if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
-      return C;
-    break;
-  }
-
-  // Support ConstantVector in case we have an Undef in the top.
-  if (isa<ConstantVector, ConstantDataVector, ConstantAggregateZero,
-          ConstantInt>(Operands[0])) {
+  if (Operands[0]->getType()->isVectorTy()) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+      if (Constant *C = constantFoldVectorReduce(IntrinsicID, Operands[0]))
+        return C;
+      break;
     case Intrinsic::x86_sse_cvtss2si:
     case Intrinsic::x86_sse_cvtss2si64:
     case Intrinsic::x86_sse2_cvtsd2si:
@@ -3111,6 +3102,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     case Intrinsic::wasm_alltrue:
       // Check each element individually
+      if (!isa<ConstantVector, ConstantDataVector, ConstantAggregateZero,
+               ConstantInt>(Op))
+        break;
       unsigned E = cast<FixedVectorType>(Op->getType())->getNumElements();
       for (unsigned I = 0; I != E; ++I)
         if (Constant *Elt = Op->getAggregateElement(I))
