@@ -2502,6 +2502,7 @@ static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   case clang::CXXCtorType::Ctor_Comdat:
     llvm_unreachable("Unexpected constructor kind.");
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
@@ -2517,6 +2518,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Comdat:
     llvm_unreachable("Unexpected destructor kind.");
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 static llvm::StringRef
