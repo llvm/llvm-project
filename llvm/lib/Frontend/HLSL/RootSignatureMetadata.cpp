@@ -545,25 +545,13 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
 
 Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
                                           uint32_t Location) {
-  bool HasSampler = false;
-  bool HasOtherRangeType = false;
-  dxil::ResourceClass OtherRangeType;
-
+  dxil::ResourceClass CurrRC = dxil::ResourceClass::Sampler;
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
-    dxil::ResourceClass RangeType =
-        static_cast<dxil::ResourceClass>(Range.RangeType);
-
-    if (RangeType == dxil::ResourceClass::Sampler) {
-      HasSampler = true;
-    } else {
-      HasOtherRangeType = true;
-      OtherRangeType = RangeType;
-    }
+    if (Range.RangeType == dxil::ResourceClass::Sampler &&
+        CurrRC != dxil::ResourceClass::Sampler)
+      return make_error<TableSamplerMixinError>(CurrRC, Location);
+    CurrRC = Range.RangeType;
   }
-
-  // Samplers cannot be mixed with other resources in a descriptor table.
-  if (HasSampler && HasOtherRangeType)
-    return make_error<TableSamplerMixinError>(OtherRangeType, Location);
   return Error::success();
 }
 
@@ -573,31 +561,29 @@ Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
 
   for (const mcdxbc::DescriptorRange &Range : Table.Ranges) {
     // Validation of NumDescriptors should have happened by this point.
-    if (Range.NumDescriptors <= 0)
+    if (Range.NumDescriptors == 0)
       continue;
-    const dxil::ResourceClass &RangeType =
-        static_cast<dxil::ResourceClass>(Range.RangeType);
 
     if (Range.OffsetInDescriptorsFromTableStart != DescriptorTableOffsetAppend)
       Offset = Range.OffsetInDescriptorsFromTableStart;
 
     if (!verifyNoOverflowedOffset(Offset))
       return make_error<OffsetOverflowError>(
-          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+          Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     const uint64_t RangeBound = llvm::hlsl::rootsig::computeRangeBound(
         Range.BaseShaderRegister, Range.NumDescriptors);
 
     if (!verifyNoOverflowedOffset(RangeBound))
       return make_error<ShaderRegisterOverflowError>(
-          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+          Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
 
     const uint64_t OffsetBound =
         llvm::hlsl::rootsig::computeRangeBound(Offset, Range.NumDescriptors);
 
     if (!verifyNoOverflowedOffset(OffsetBound))
       return make_error<DescriptorRangeOverflowError>(
-          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+          Range.RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
     Offset = updateOngoingOffset(Offset, Range.NumDescriptors,
                                  Range.OffsetInDescriptorsFromTableStart);
   }
