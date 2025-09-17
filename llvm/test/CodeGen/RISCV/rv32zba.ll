@@ -1136,3 +1136,132 @@ define i32 @mul_neg8(i32 %a) {
   %c = mul i32 %a, -8
   ret i32 %c
 }
+
+define i32 @select3i32(i1 zeroext %x) {
+; RV32I-LABEL: select3i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    andi a0, a0, 3
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: select3i32:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: select3i32:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
+; RV32XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i32 3, i32 0
+  ret i32 %select
+}
+
+define i32 @select5i32(i1 zeroext %x) {
+; RV32I-LABEL: select5i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    andi a0, a0, 5
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: select5i32:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: select5i32:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
+; RV32XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i32 5, i32 0
+  ret i32 %select
+}
+
+define i32 @select9i32(i1 zeroext %x) {
+; RV32I-LABEL: select9i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    andi a0, a0, 9
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: select9i32:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: select9i32:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
+; RV32XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i32 9, i32 0
+  ret i32 %select
+}
+
+define i64 @select3i64(i1 zeroext %x) {
+; RV32I-LABEL: select3i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    andi a0, a0, 3
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: select3i64:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh1add a0, a0, a0
+; RV32ZBA-NEXT:    li a1, 0
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: select3i64:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
+; RV32XANDESPERF-NEXT:    li a1, 0
+; RV32XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i64 3, i64 0
+  ret i64 %select
+}
+
+define i64 @select5i64(i1 zeroext %x) {
+; RV32I-LABEL: select5i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    andi a0, a0, 5
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: select5i64:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh2add a0, a0, a0
+; RV32ZBA-NEXT:    li a1, 0
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: select5i64:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
+; RV32XANDESPERF-NEXT:    li a1, 0
+; RV32XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i64 5, i64 0
+  ret i64 %select
+}
+
+define i64 @select9i64(i1 zeroext %x) {
+; RV32I-LABEL: select9i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    andi a0, a0, 9
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: select9i64:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    sh3add a0, a0, a0
+; RV32ZBA-NEXT:    li a1, 0
+; RV32ZBA-NEXT:    ret
+;
+; RV32XANDESPERF-LABEL: select9i64:
+; RV32XANDESPERF:       # %bb.0:
+; RV32XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
+; RV32XANDESPERF-NEXT:    li a1, 0
+; RV32XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i64 9, i64 0
+  ret i64 %select
+}
