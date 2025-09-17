@@ -26,7 +26,7 @@ resume:                                           ; preds = %loop
   br label %loop
 
 cleanup:                                          ; preds = %loop
-  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
+  %0 = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
   unreachable
 }
 
@@ -72,14 +72,14 @@ resume:                                           ; preds = %loop
   br label %loop
 
 cleanup:                                          ; preds = %loop
-  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
+  %0 = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
   unreachable
 }
 
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare void @llvm.coro.end(ptr, i1, token)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare ptr @prototype(ptr, i1 zeroext)

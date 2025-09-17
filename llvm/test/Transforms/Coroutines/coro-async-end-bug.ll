@@ -14,7 +14,7 @@ declare token @llvm.coro.id.async(i32, i32, i32, ptr) #0
 
 declare ptr @llvm.coro.begin(token, ptr writeonly) #0
 
-declare void @llvm.coro.end.async(ptr, i1, ...) #0
+declare i1 @llvm.coro.end.async(ptr, i1, ...) #0
 
 define swifttailcc void @repo(ptr swiftasync %0, ptr noalias nocapture %1, ptr noalias nocapture %2, ptr %3, ptr %4, ptr %Self, ptr %Self.AsyncSequence, ptr %Self.Element.Comparable) #1 {
 entry:
@@ -27,7 +27,7 @@ entry:
   %10 = getelementptr inbounds <{ ptr, ptr }>, ptr %9, i32 0, i32 1
   %11 = load ptr, ptr %10, align 8
   %12 = load ptr, ptr %5, align 8
-  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %7, i1 false, ptr @repo.0, ptr %11, ptr %12, i1 %8, ptr null)
+  %13 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %7, i1 false, ptr @repo.0, ptr %11, ptr %12, i1 %8, ptr null)
   unreachable
 }
 

@@ -31,7 +31,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 
@@ -46,7 +46,7 @@ declare ptr @llvm.coro.begin(token, ptr)
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare void @llvm.coro.end(ptr, i1, token)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
 ; CHECK-LABEL: @main
 define i32 @main() {
