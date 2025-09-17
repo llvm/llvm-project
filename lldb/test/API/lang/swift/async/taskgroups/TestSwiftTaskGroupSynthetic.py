@@ -32,21 +32,21 @@ class TestCase(TestBase):
                 textwrap.dedent(
                     r"""
                     \((?:Throwing)?TaskGroup<\(\)\??(?:, Error)?>\) group = \{
-                      \[0\] = id:([1-9]\d*) flags:(?:running\|)?(?:enqueued\|)?groupChildTask \{
+                      \[0\] = id:([1-9]\d*) flags:(?:suspended\|)?(?:running\|)?(?:enqueued\|)?groupChildTask \{
                         address = 0x[0-9a-f]+
                         id = \1
                         enqueuePriority = \.medium
                         parent = (.+)
                         children = \{\}
                       \}
-                      \[1\] = id:([1-9]\d*) flags:(?:running\|)?(?:enqueued\|)?groupChildTask \{
+                      \[1\] = id:([1-9]\d*) flags:(?:suspended\|)?(?:running\|)?(?:enqueued\|)?groupChildTask \{
                         address = 0x[0-9a-f]+
                         id = \3
                         enqueuePriority = \.medium
                         parent = \2
                         children = \{\}
                       \}
-                      \[2\] = id:([1-9]\d*) flags:(?:running\|)?(?:enqueued\|)?groupChildTask \{
+                      \[2\] = id:([1-9]\d*) flags:(?:suspended\|)?(?:running\|)?(?:enqueued\|)?groupChildTask \{
                         address = 0x[0-9a-f]+
                         id = \4
                         enqueuePriority = \.medium

@@ -21,7 +21,7 @@ class TestCase(TestBase):
             patterns=[
                 textwrap.dedent(
                     r"""
-                    \(Task<\(\), Error>\) task = id:([1-9]\d*) flags:(?:running|enqueued) \{
+                    \(Task<\(\), Error>\) task = id:([1-9]\d*) flags:(?:suspended\|)?(?:running|enqueued) \{
                       address = 0x[0-9a-f]+
                       id = \1
                       enqueuePriority = \.medium
@@ -46,7 +46,7 @@ class TestCase(TestBase):
             patterns=[
                 textwrap.dedent(
                     r"""
-                    \(UnsafeCurrentTask\) currentTask = id:([1-9]\d*) flags:(?:running\|)?(?:enqueued\|)?asyncLetTask \{
+                    \(UnsafeCurrentTask\) currentTask = id:([1-9]\d*) flags:(?:suspended\|)?(?:running\|)?(?:enqueued\|)?asyncLetTask \{
                       address = 0x[0-9a-f]+
                       id = \1
                       enqueuePriority = \.medium
