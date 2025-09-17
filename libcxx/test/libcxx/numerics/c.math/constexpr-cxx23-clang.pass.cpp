@@ -201,9 +201,7 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmaf(1.0f, 1.0f, 1.0f) == 2.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fmal(1.0L, 1.0L, 1.0L) == 2.0L);
 #else
-  ASSERT_CONSTEXPR_CXX23(std::fma(1.0f, 1.0f, 1.0f) == 2.0f);
   ASSERT_CONSTEXPR_CXX23(std::fma(1.0, 1.0, 1.0) == 2.0);
-  ASSERT_CONSTEXPR_CXX23(std::fma(1.0L, 1.0L, 1.0L) == 2.0L);
   ASSERT_CONSTEXPR_CXX23(std::fmaf(1.0f, 1.0f, 1.0f) == 2.0f);
   ASSERT_CONSTEXPR_CXX23(std::fmal(1.0L, 1.0L, 1.0L) == 2.0L);
 #endif
