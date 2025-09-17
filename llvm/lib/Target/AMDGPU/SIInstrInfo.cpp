@@ -7584,9 +7584,8 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
     if (Entry.second)
       Entry.first->eraseFromParent();
 }
-void SIInstrInfo::getReadFirstLaneFromCopyToM0(MachineRegisterInfo &MRI,
-                                               Register DstReg,
-                                               MachineInstr &Inst) const {
+void SIInstrInfo::createReadFirstLaneFromCopyToPhysReg(
+    MachineRegisterInfo &MRI, Register DstReg, MachineInstr &Inst) const {
   // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
   // hope for the best.
   if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {
@@ -7629,7 +7628,7 @@ void SIInstrInfo::handleCopyToPhyHelper(SIInstrWorklist &Worklist,
                                         Register DstReg, MachineInstr &Inst,
                                         MachineRegisterInfo &MRI) const {
   if (DstReg == AMDGPU::M0) {
-    getReadFirstLaneFromCopyToM0(MRI, DstReg, Inst);
+    createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
     Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
     return;
   }
@@ -7656,7 +7655,7 @@ void SIInstrInfo::handleCopyToPhyHelper(SIInstrWorklist &Worklist,
     } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
                I->getOperand(0).isReg() &&
                I->getOperand(0).getReg() == DstReg) {
-      getReadFirstLaneFromCopyToM0(MRI, DstReg, Inst);
+      createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
       Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
     } else if (I->readsRegister(DstReg, &RI))
       // COPY cannot be erased if other type of inst uses it.
