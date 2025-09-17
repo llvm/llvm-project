@@ -48,6 +48,7 @@ namespace clang {
   class ObjCDeclSpec;
   class Sema;
   class Declarator;
+  class OverflowBehaviorType;
   struct TemplateIdAnnotation;
 
 /// Represents a C++ nested-name-specifier or a global scope specifier.
@@ -322,6 +323,12 @@ public:
 
   enum FriendSpecified : bool { No, Yes };
 
+  // overflow behavior qualifiers
+  enum OverflowBehaviorSpelling {
+    OBS_Attribute, // __attribute__((overflow_behavior(...)))
+    OBS_Keyword    // __wrap / __no_wrap
+  };
+
 private:
   // storage-class-specifier
   LLVM_PREFERRED_TYPE(SCS)
@@ -358,6 +365,16 @@ private:
   // type-qualifiers
   LLVM_PREFERRED_TYPE(TQ)
   unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
+
+  // overflow behavior qualifiers
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned OB_wrap_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned OB_no_wrap_specified : 1;
+  LLVM_PREFERRED_TYPE(OverflowBehaviorSpelling)
+  unsigned OB_wrap_spelling : 1;
+  LLVM_PREFERRED_TYPE(OverflowBehaviorSpelling)
+  unsigned OB_no_wrap_spelling : 1;
 
   // function-specifier
   LLVM_PREFERRED_TYPE(bool)
@@ -409,6 +426,7 @@ private:
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
+  SourceLocation OB_wrapLoc, OB_no_wrapLoc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
@@ -460,7 +478,9 @@ public:
         TypeSpecType(TST_unspecified), TypeAltiVecVector(false),
         TypeAltiVecPixel(false), TypeAltiVecBool(false), TypeSpecOwned(false),
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
-        TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
+        TypeQualifiers(TQ_unspecified), OB_wrap_specified(false),
+        OB_no_wrap_specified(false), OB_wrap_spelling(OBS_Attribute),
+        OB_no_wrap_spelling(OBS_Attribute), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
         FS_noreturn_specified(false), FriendSpecifiedFirst(false),
         ConstexprSpecifier(
@@ -591,6 +611,27 @@ public:
   SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
   SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
+
+  // overflow behavior qualifiers
+  bool isWrapSpecified() const { return OB_wrap_specified; }
+  bool isNoWrapSpecified() const { return OB_no_wrap_specified; }
+  SourceLocation getWrapSpecLoc() const { return OB_wrapLoc; }
+  SourceLocation getNoWrapSpecLoc() const { return OB_no_wrapLoc; }
+  OverflowBehaviorSpelling getWrapSpelling() const {
+    return static_cast<OverflowBehaviorSpelling>(OB_wrap_spelling);
+  }
+  OverflowBehaviorSpelling getNoWrapSpelling() const {
+    return static_cast<OverflowBehaviorSpelling>(OB_no_wrap_spelling);
+  }
+
+  bool SetOverflowBehavior(OverflowBehaviorType::OverflowBehaviorKind Kind,
+                           OverflowBehaviorSpelling Spelling,
+                           SourceLocation Loc, const char *&PrevSpec,
+                           unsigned &DiagID);
+
+  void
+  DiagnoseOverflowBehaviorConflict(Sema &S, SourceLocation NewLoc,
+                                   OverflowBehaviorSpelling NewSpelling) const;
 
   /// Clear out all of the type qualifiers.
   void ClearTypeQualifiers() {

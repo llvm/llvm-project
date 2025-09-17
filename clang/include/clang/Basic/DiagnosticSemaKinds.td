@@ -4049,16 +4049,17 @@ def err_overflow_behavior_unknown_ident
             "'no_wrap' "
             "are supported">;
 def warn_overflow_behavior_non_integer_type
-    : Warning<"%0 attribute cannot be applied to non-integer type '%1'; "
-              "attribute ignored">,
+    : Warning<"%0 %select{attribute|specifier}2 cannot be applied to "
+              "non-integer type '%1'; %select{attribute|specifier}2 ignored">,
       InGroup<OverflowBehaviorAttributeIgnored>;
 def warn_overflow_behavior_attribute_disabled
     : Warning<"%0 attribute is ignored because it is not enabled; pass "
               "-foverflow-behavior-types">,
       InGroup<OverflowBehaviorAttributeIgnored>;
 def warn_conflicting_overflow_behavior_attributes
-    : Warning<"conflicting 'overflow_behavior' attributes on the same type; "
-              "'no_wrap' takes precedence over 'wrap'">,
+    : Warning<"conflicting %select{'overflow_behavior' attributes|overflow "
+              "behavior specifiers}0 on the same type; 'no_wrap' takes "
+              "precedence over 'wrap'">,
       InGroup<OverflowBehaviorAttributeIgnored>;
 def warn_impcast_overflow_behavior_assignment
     : Warning<"implicit conversion from %0 to %1 during assignment discards "

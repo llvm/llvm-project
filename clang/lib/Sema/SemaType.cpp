@@ -1562,6 +1562,30 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Qualified;
   }
 
+  // Check for __wrap and __no_wrap
+  if (DS.isWrapSpecified() || DS.isNoWrapSpecified()) {
+    if (!Result->isIntegerType()) {
+      SourceLocation Loc =
+          DS.isWrapSpecified() ? DS.getWrapSpecLoc() : DS.getNoWrapSpecLoc();
+      StringRef SpecifierName = DS.isWrapSpecified() ? "__wrap" : "__no_wrap";
+      S.Diag(Loc, diag::warn_overflow_behavior_non_integer_type)
+          << SpecifierName << Result.getAsString() << 1;
+    } else {
+      if (DS.isWrapSpecified() && DS.isNoWrapSpecified()) {
+        DS.DiagnoseOverflowBehaviorConflict(S, DS.getNoWrapSpecLoc(),
+                                            DS.getNoWrapSpelling());
+        Result = state.getOverflowBehaviorType(
+            OverflowBehaviorType::OverflowBehaviorKind::NoWrap, Result);
+      } else {
+        OverflowBehaviorType::OverflowBehaviorKind Kind =
+            DS.isWrapSpecified()
+                ? OverflowBehaviorType::OverflowBehaviorKind::Wrap
+                : OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+        Result = state.getOverflowBehaviorType(Kind, Result);
+      }
+    }
+  }
+
   if (S.getLangOpts().HLSL)
     Result = S.HLSL().ProcessResourceTypeAttributes(Result);
 
@@ -6660,7 +6684,7 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
   // Check that the underlying type is an integer type
   if (!Type->isIntegerType()) {
     S.Diag(Attr.getLoc(), diag::warn_overflow_behavior_non_integer_type)
-        << Attr << Type.getAsString();
+        << Attr << Type.getAsString() << 0; // 0 for attribute
     Attr.setInvalid();
     return;
   }
@@ -6706,11 +6730,9 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
     OverflowBehaviorType::OverflowBehaviorKind ExistingKind =
         ExistingOBT->getBehaviorKind();
     if (ExistingKind != Kind) {
-      // Conflicting attributes - issue warning and let no_wrap take precedence
-      S.Diag(Attr.getLoc(),
-             diag::warn_conflicting_overflow_behavior_attributes);
+      S.Diag(Attr.getLoc(), diag::warn_conflicting_overflow_behavior_attributes)
+          << 0;
       if (Kind == OverflowBehaviorType::OverflowBehaviorKind::NoWrap) {
-        // Current is no_wrap, replace existing
         Type = State.getOverflowBehaviorType(Kind,
                                              ExistingOBT->getUnderlyingType());
       }

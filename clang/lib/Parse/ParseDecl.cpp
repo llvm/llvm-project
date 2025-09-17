@@ -4484,6 +4484,16 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+    case tok::kw___wrap:
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::Wrap,
+          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw___no_wrap:
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::NoWrap,
+          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+      break;
 
     // C++ typename-specifier:
     case tok::kw_typename:
@@ -5625,6 +5635,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
+  case tok::kw___wrap:
+  case tok::kw___no_wrap:
   case tok::kw__Sat:
 
     // Debugger support.
@@ -5838,6 +5850,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
+  case tok::kw___wrap:
+  case tok::kw___no_wrap:
   case tok::kw__Sat:
 
     // function-specifier
@@ -6150,6 +6164,16 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_restrict:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
+      break;
+    case tok::kw___wrap:
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::Wrap,
+          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw___no_wrap:
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::NoWrap,
+          DeclSpec::OBS_Keyword, Loc, PrevSpec, DiagID);
       break;
     case tok::kw__Atomic:
       if (!AtomicOrPtrauthAllowed)

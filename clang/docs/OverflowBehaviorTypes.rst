@@ -8,21 +8,30 @@ OverflowBehaviorTypes
 Introduction
 ============
 
-Clang provides a type attribute that allows developers to have fine-grained control
-over the overflow behavior of integer types. The ``overflow_behavior``
-attribute can be used to specify how arithmetic operations on a given integer
+Clang provides overflow behavior types that allow developers to have fine-grained control
+over the overflow behavior of integer types. Overflow behavior can be specified using
+either attribute syntax or keyword syntax to control how arithmetic operations on a given integer
 type should behave upon overflow. This is particularly useful for projects that
 need to balance performance and safety, allowing developers to enable or
 disable overflow checks for specific types.
 
-The attribute can be enabled using the compiler option
+Overflow behavior types can be enabled using the compiler option
 ``-foverflow-behavior-types``.
 
-The attribute syntax is as follows:
+There are two syntax options for specifying overflow behavior:
+
+**Attribute syntax:**
 
 .. code-block:: c++
 
   __attribute__((overflow_behavior(behavior)))
+
+**Keyword syntax:**
+
+.. code-block:: c++
+
+  __wrap          // equivalent to __attribute__((overflow_behavior(wrap)))
+  __no_wrap       // equivalent to __attribute__((overflow_behavior(no_wrap)))
 
 Where ``behavior`` can be one of the following:
 
@@ -50,7 +59,9 @@ characteristics of result types across all scenarios are described under `Promot
 Examples
 ========
 
-Here is an example of how to use the ``overflow_behavior`` attribute with a ``typedef``:
+Here are examples using both syntax options:
+
+**Using attribute syntax with a typedef:**
 
 .. code-block:: c++
 
@@ -60,12 +71,31 @@ Here is an example of how to use the ``overflow_behavior`` attribute with a ``ty
     return a + 1; // Overflow is checked for this operation.
   }
 
-Here is an example of how to use the ``overflow_behavior`` attribute with a type directly:
+**Using keyword syntax with a typedef:**
+
+.. code-block:: c++
+
+  typedef unsigned int __no_wrap non_wrapping_uint;
+
+  non_wrapping_uint add_one(non_wrapping_uint a) {
+    return a + 1; // Overflow is checked for this operation.
+  }
+
+**Using attribute syntax with a type directly:**
 
 .. code-block:: c++
 
   int mul_alot(int n) {
     int __attribute__((overflow_behavior(wrap))) a = n;
+    return a * 1337; // Potential overflow is not checked and is well-defined
+  }
+
+**Using keyword syntax with a type directly:**
+
+.. code-block:: c++
+
+  int mul_alot(int n) {
+    int __wrap a = n;
     return a * 1337; // Potential overflow is not checked and is well-defined
   }
 
@@ -91,7 +121,7 @@ variety of scenarios is detailed below.
 
   .. code-block:: c++
 
-    typedef char __attribute__((overflow_behavior(no_wrap))) no_wrap_char;
+    typedef char __no_wrap no_wrap_char;
     no_wrap_char c;
     unsigned long ul;
     auto result = c + ul; // result is no_wrap_char
@@ -103,8 +133,8 @@ variety of scenarios is detailed below.
 
   .. code-block:: c++
 
-    typedef unsigned char __attribute__((overflow_behavior(wrap))) u8_wrap;
-    typedef unsigned short __attribute__((overflow_behavior(wrap))) u16_wrap;
+    typedef unsigned char __wrap u8_wrap;
+    typedef unsigned short __wrap u16_wrap;
     u8_wrap a;
     u16_wrap b;
     auto result = a + b; // result is u16_wrap
@@ -143,13 +173,13 @@ promotion rules:
 
 .. code-block:: c++
 
-  unsigned short __attribute__((overflow_behavior(no_wrap))) a = 0; // u16 __no_wrap
+  unsigned short __no_wrap a = 0; // u16 __no_wrap
 
   // Normally, arithmetic that is less-than-int is promoted to at least int.
   // Following traditional C promotion rules: u16 + s32 results in s32
   // However, since `a` is an OBT, our special promotion rules apply: u16 __no_wrap + s32 results in u16 __no_wrap
 
-  a + 1; // result is short __attribute__((overflow_behavior(no_wrap)))
+  a + 1; // result is short __no_wrap
 
 Conversion Semantics
 ====================
@@ -173,9 +203,6 @@ the **destination type**:
   on compiler flags.
 
 .. code-block:: c++
-
-  #define __wrap __attribute__((overflow_behavior(wrap)))
-  #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
 
   // Examples of constant conversion behavior
   short x1 = (int __wrap)100000;        // Warning: truncation to standard type
@@ -202,15 +229,15 @@ version.
 .. code-block:: c++
 
   char x = 1;
-  int __attribute__((overflow_behavior(wrap))) a = x; // x converted to int __attribute__((overflow_behavior(wrap)))
+  int __wrap a = x; // x converted to int __wrap
 
 When assigning one overflow behavior type to another, the left-hand side's type
 is always used - just like with traditional integer types.
 
 .. code-block:: c++
 
-  long __attribute__((overflow_behavior(wrap))) x = __LONG_MAX__;
-  int __attribute__((overflow_behavior(no_wrap))) a = x; // x converted to int __attribute__((overflow_behavior(no_wrap)))
+  long __wrap x = __LONG_MAX__;
+  int __no_wrap a = x; // x converted to int __no_wrap
 
 For the purposes of truncation warnings from UBSAN or ``-Wconversion``, the
 left-hand side's overflow behavior determines the instrumentation and
@@ -235,9 +262,6 @@ conversion, the behavior depends on the **destination type**:
   error is issued as normal.
 
 .. code-block:: c++
-
-  #define __wrap __attribute__((overflow_behavior(wrap)))
-  #define __no_wrap __attribute__((overflow_behavior(no_wrap)))
 
   // C++ narrowing conversion behavior
   constexpr short __wrap x1 = {(int)100000};    // OK: wrapping destination
@@ -274,7 +298,7 @@ type of an OBT parameter is not enough to precisely pick an overload candidate.
 
 .. code-block:: c++
 
-  void foo(__attribute__((overflow_behavior(no_wrap))) int a);
+  void foo(int __no_wrap a);
   void foo(short a);
 
   void bar(int a) {
@@ -287,7 +311,7 @@ candidates are not implicitly convertible.
 
 .. code-block:: c++
 
-  void foo(__attribute__((overflow_behavior(no_wrap))) int a);
+  void foo(int __no_wrap a);
   void foo(char *a);
 
   void bar(int a) {
@@ -300,8 +324,8 @@ certain contexts.
 
 .. code-block:: c++
 
-  void foo(__attribute__((overflow_behavior(no_wrap))) int a);
-  void foo(__attribute__((overflow_behavior(wrap))) int a);
+  void foo(int __no_wrap a);
+  void foo(int __wrap a);
 
   void bar(int a) {
     foo(a); // call to 'foo' is ambiguous
@@ -323,7 +347,7 @@ behavior kind.
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrap_int;
+  typedef int __wrap wrap_int;
 
   int foo(wrap_int x) {
     return _Generic(x, int: 1, char: 2, default: 3); // returns 3
@@ -353,12 +377,12 @@ specialization purposes, enabling precise type-based template selection.
   };
 
   template<>
-  struct TypeProcessor<int __attribute__((overflow_behavior(wrap)))> {
+  struct TypeProcessor<int __wrap> {
     static constexpr int value = 2; // __wrap int specialization
   };
 
   template<>
-  struct TypeProcessor<int __attribute__((overflow_behavior(no_wrap)))> {
+  struct TypeProcessor<int __no_wrap> {
     static constexpr int value = 3; // __no_wrap int specialization
   };
 
@@ -420,7 +444,7 @@ overflow behavior.
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __wrap wrapping_int;
 
   void some_function(int);
 
@@ -434,7 +458,7 @@ integer type.
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __wrap wrapping_int;
 
   void some_function(int);
 
@@ -460,7 +484,7 @@ loss of the specified overflow behavior. This is the main warning in the
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __wrap wrapping_int;
 
   void some_function() {
     wrapping_int w = 1;
@@ -473,7 +497,7 @@ Here's another example showing function parameter conversion with a ``no_wrap`` 
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(no_wrap))) safe_int;
+  typedef int __no_wrap safe_int;
 
   void bar(int x); // Function expects standard int
 
@@ -489,8 +513,8 @@ integer type.
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
-  typedef int __attribute__((overflow_behavior(no_wrap))) safe_int;
+  typedef int __wrap wrapping_int;
+  typedef int __no_wrap safe_int;
 
   void some_function() {
     wrapping_int w = 1;
@@ -516,7 +540,7 @@ allowing developers to control assignment-specific warnings separately.
 
 .. code-block:: c++
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __wrap wrapping_int;
 
   void some_function() {
     wrapping_int w = 1;
@@ -540,7 +564,7 @@ explicit ``overflow_behavior`` attribute.
 
 .. code-block:: c++
 
-  typedef unsigned int __attribute__((overflow_behavior(wrap))) wrapping_uint;
+  typedef unsigned int __wrap wrapping_uint;
 
   void some_function(unsigned int);
 
@@ -564,8 +588,8 @@ types when passed to any varargs function.
 
   #include <cstdio>
 
-  typedef int __attribute__((overflow_behavior(wrap))) wrap_int;
-  typedef unsigned int __attribute__((overflow_behavior(no_wrap))) nowrap_uint;
+  typedef int __wrap wrap_int;
+  typedef unsigned int __no_wrap nowrap_uint;
 
   void example() {
     wrap_int wi = 42;
@@ -582,14 +606,14 @@ format string functions without requiring special format specifiers, while
 still maintaining their overflow behavior semantics in arithmetic operations.
 
 The format string checker uses the underlying type to determine compatibility,
-so ``int __attribute__((overflow_behavior(wrap)))`` is fully compatible with
+so ``int __wrap`` is fully compatible with
 ``%d``, ``%i``, ``%x``, etc., just like a regular ``int`` would be.
 
 -Woverflow-behavior-attribute-ignored
 -------------------------------------
 
-This warning is issued when the ``overflow_behavior`` attribute is applied to
-a type that is not an integer type.
+This warning is issued when attempting to create an overflow behavior type from
+a non-integer type.
 
 .. code-block:: c++
 

@@ -1003,6 +1003,47 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   llvm_unreachable("Unknown type qualifier!");
 }
 
+bool DeclSpec::SetOverflowBehavior(
+    OverflowBehaviorType::OverflowBehaviorKind Kind,
+    OverflowBehaviorSpelling Spelling, SourceLocation Loc,
+    const char *&PrevSpec, unsigned &DiagID) {
+  if (Kind == OverflowBehaviorType::OverflowBehaviorKind::Wrap) {
+    if (OB_wrap_specified) {
+      PrevSpec = "__wrap";
+      DiagID = diag::warn_duplicate_declspec;
+      return true;
+    }
+    OB_wrap_specified = true;
+    OB_wrap_spelling = Spelling;
+    OB_wrapLoc = Loc;
+  } else {
+    if (OB_no_wrap_specified) {
+      PrevSpec = "__no_wrap";
+      DiagID = diag::warn_duplicate_declspec;
+      return true;
+    }
+    OB_no_wrap_specified = true;
+    OB_no_wrap_spelling = Spelling;
+    OB_no_wrapLoc = Loc;
+  }
+  return false;
+}
+
+void DeclSpec::DiagnoseOverflowBehaviorConflict(
+    Sema &S, SourceLocation NewLoc,
+    OverflowBehaviorSpelling NewSpelling) const {
+  OverflowBehaviorSpelling ExistingSpelling;
+  ExistingSpelling =
+      OB_wrap_specified ? getWrapSpelling() : getNoWrapSpelling();
+
+  unsigned DiagSelector = NewSpelling == OBS_Keyword ? 1 : 0;
+  if (NewSpelling != ExistingSpelling)
+    DiagSelector = 0;
+
+  S.Diag(NewLoc, diag::warn_conflicting_overflow_behavior_attributes)
+      << DiagSelector;
+}
+
 bool DeclSpec::setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,
                                      unsigned &DiagID) {
   // 'inline inline' is ok.  However, since this is likely not what the user
