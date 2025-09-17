@@ -64,23 +64,25 @@ TEST(LlvmLibcSIMDTest, MaskOperations) {
 
   EXPECT_TRUE(cpp::any_of(mask));
   EXPECT_FALSE(cpp::all_of(mask));
+  EXPECT_FALSE(cpp::none_of(mask));
   EXPECT_TRUE(cpp::some_of(mask));
   EXPECT_EQ(cpp::find_first_set(mask), 0);
   EXPECT_EQ(cpp::find_last_set(mask), 2);
+  EXPECT_EQ(cpp::popcount(mask), 2);
 }
 
 TEST(LlvmLibcSIMDTest, SplitConcat) {
   cpp::simd<char, 8> v{1, 1, 2, 2, 3, 3, 4, 4};
   auto [v1, v2, v3, v4] = cpp::split<2, 2, 2, 2>(v);
-  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v1 == 1)));
-  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v2 == 2)));
-  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v3 == 3)));
-  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(v4 == 4)));
+  EXPECT_TRUE(cpp::all_of(v1 == 1));
+  EXPECT_TRUE(cpp::all_of(v2 == 2));
+  EXPECT_TRUE(cpp::all_of(v3 == 3));
+  EXPECT_TRUE(cpp::all_of(v4 == 4));
 
   cpp::simd<char, 8> m = cpp::concat(v1, v2, v3, v4);
-  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(m == v)));
+  EXPECT_TRUE(cpp::all_of(m == v));
 
   cpp::simd<char, 1> c(~0);
   cpp::simd<char, 8> n = cpp::concat(c, c, c, c, c, c, c, c);
-  EXPECT_TRUE(cpp::all_of(cpp::simd_cast<bool>(n == ~0)));
+  EXPECT_TRUE(cpp::all_of(n == ~0));
 }
