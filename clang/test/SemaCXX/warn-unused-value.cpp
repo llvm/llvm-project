@@ -178,3 +178,39 @@ auto b() {
 }
 } // namespace test6
 #endif
+
+// ensure lambda in non-dependent context generate same diagnostics as function[ template]
+namespace lambda_in_non_dependent_context {
+void f1() {
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0;
+}
+template <typename T> void f2(T) {
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+}
+auto L1 = [] {
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0;
+};
+auto L2 = [](auto) {
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+};
+void f() {
+  auto L1 = [] {
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+    return;
+    0, 0;
+  };
+  auto L2 = [](auto) {
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+    return;
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  };
+}
+}

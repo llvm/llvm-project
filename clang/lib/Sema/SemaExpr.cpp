@@ -20542,7 +20542,7 @@ void Sema::MarkDeclarationsReferencedInExpr(Expr *E,
 ///        namespace { auto *p = new double[3][false ? (1, 2) : 3]; }
 bool Sema::DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
                            const PartialDiagnostic &PD) {
-  if (!Stmts.empty() && getCurFunctionOrMethodDecl()) {
+  if (!Stmts.empty() && getCurFunctionOrMethodDecl(/*AllowLambda=*/true)) {
     if (!FunctionScopes.empty())
       FunctionScopes.back()->PossiblyUnreachableDiags.push_back(
           sema::PossiblyUnreachableDiag(PD, Loc, Stmts));

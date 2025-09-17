@@ -1972,6 +1972,10 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   if (LSI.CallOperator->hasAttr<SYCLKernelEntryPointAttr>())
     SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
 
+  // TODO: Find out if passing LSI.CallOperator->getDescribedFunctionTemplate()
+  //       is necessary when it is a generic lambda. Are there any behaviour
+  //       changes? `FunctionTemplateDecl` is always passed when handling simple
+  //       function templates.
   ActOnFinishFunctionBody(LSI.CallOperator, Body, /*IsInstantiation=*/false,
                           /*RetainFunctionScopeInfo=*/true);
 
@@ -2162,11 +2166,17 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
 
   PopExpressionEvaluationContext();
 
-  sema::AnalysisBasedWarnings::Policy WP =
-      AnalysisWarnings.getPolicyInEffectAt(EndLoc);
   // We cannot release LSI until we finish computing captures, which
   // requires the scope to be popped.
-  Sema::PoppedFunctionScopePtr _ = PopFunctionScopeInfo(&WP, LSI->CallOperator);
+  Sema::PoppedFunctionScopePtr _ = [&] {
+    if (LSI->CallOperator->getDescribedFunctionTemplate())
+      return PopFunctionScopeInfo(/*WP=*/nullptr,
+                                  TemplateOrNonTemplateCallOperatorDecl);
+
+    sema::AnalysisBasedWarnings::Policy WP =
+        AnalysisWarnings.getPolicyInEffectAt(EndLoc);
+    return PopFunctionScopeInfo(&WP, TemplateOrNonTemplateCallOperatorDecl);
+  }();
 
   // True if the current capture has a used capture or default before it.
   bool CurHasPreviousCapture = CaptureDefault != LCD_None;
