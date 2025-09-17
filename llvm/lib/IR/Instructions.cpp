@@ -2898,6 +2898,10 @@ unsigned CastInst::isEliminableCastPair(
     if (!AreBothBitcasts)
       return 0;
 
+  // TODO: Add PtrToAddr to table.
+  if (firstOp == Instruction::PtrToAddr || secondOp == Instruction::PtrToAddr)
+    return 0;
+
   int ElimCase = CastResults[firstOp-Instruction::CastOpsBegin]
                             [secondOp-Instruction::CastOpsBegin];
   switch (ElimCase) {

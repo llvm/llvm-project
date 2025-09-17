@@ -6,7 +6,7 @@
 define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ARR1:%.*]] = ptrtoint ptr [[ARR:%.*]] to i64
+; CHECK-NEXT:    [[ARR1:%.*]] = ptrtoaddr ptr [[ARR:%.*]] to i64
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[T1_0:%.*]] = phi ptr [ [[ARR]], [[BB:%.*]] ], [ null, [[BB6]] ]
@@ -16,8 +16,8 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[T1_0_LCSSA:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
 ; CHECK-NEXT:    [[T1_0_LCSSA4:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
 ; CHECK-NEXT:    [[T1_0_LCSSA1:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
-; CHECK-NEXT:    [[T1_0_LCSSA3:%.*]] = ptrtoint ptr [[T1_0_LCSSA]] to i64
-; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoint ptr [[T1_0_LCSSA4]] to i64
+; CHECK-NEXT:    [[T1_0_LCSSA3:%.*]] = ptrtoaddr ptr [[T1_0_LCSSA]] to i64
+; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoaddr ptr [[T1_0_LCSSA4]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[ARR1]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[T1_0_LCSSA3]] to i32
