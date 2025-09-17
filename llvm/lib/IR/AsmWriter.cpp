@@ -2887,7 +2887,7 @@ public:
   void writeMDNode(unsigned Slot, const MDNode *Node);
   void writeAttribute(const Attribute &Attr, bool InAttrGroup = false);
   void writeAttributeSet(const AttributeSet &AttrSet, bool InAttrGroup = false);
-  void writeAllAttributeGroups(const Triple *TT = nullptr);
+  void writeAllAttributeGroups();
 
   void printTypeIdentities();
   void printGlobal(const GlobalVariable *GV);
@@ -3146,7 +3146,7 @@ void AssemblyWriter::printModule(const Module *M) {
   // Output all attribute groups.
   if (!Machine.as_empty()) {
     Out << '\n';
-    writeAllAttributeGroups(&M->getTargetTriple());
+    writeAllAttributeGroups();
   }
 
   // Output named metadata.
@@ -4095,7 +4095,7 @@ void AssemblyWriter::printFunction(const Function *F) {
     for (const Attribute &Attr : AS) {
       if (!Attr.isStringAttribute()) {
         if (!AttrStr.empty()) AttrStr += ' ';
-        AttrStr += Attr.getAsString(&F->getParent()->getTargetTriple(), false);
+        AttrStr += Attr.getAsString();
       }
     }
 
@@ -4939,9 +4939,8 @@ void AssemblyWriter::printMDNodeBody(const MDNode *Node) {
 }
 
 void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
-  llvm::Triple *TT;
   if (!Attr.isTypeAttribute()) {
-    Out << Attr.getAsString(TT, InAttrGroup);
+    Out << Attr.getAsString(InAttrGroup);
     return;
   }
 
@@ -4962,7 +4961,7 @@ void AssemblyWriter::writeAttributeSet(const AttributeSet &AttrSet,
   }
 }
 
-void AssemblyWriter::writeAllAttributeGroups(const Triple *TT) {
+void AssemblyWriter::writeAllAttributeGroups() {
   std::vector<std::pair<AttributeSet, unsigned>> asVec;
   asVec.resize(Machine.as_size());
 
@@ -4970,8 +4969,8 @@ void AssemblyWriter::writeAllAttributeGroups(const Triple *TT) {
     asVec[I.second] = I;
 
   for (const auto &I : asVec)
-    Out << "attributes #" << I.second << " = { "
-        << I.first.getAsString(TT, true) << " }\n";
+    Out << "attributes #" << I.second << " = { " << I.first.getAsString(true)
+        << " }\n";
 }
 
 void AssemblyWriter::printUseListOrder(const Value *V,

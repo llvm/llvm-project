@@ -24,7 +24,7 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoSync),
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoFree),
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
-// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, MEM_TARGET_0: Ref, MEM_TARGET_1: Mod, Other: NoModRef
+// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, TargetMem0: Ref, TargetMem1: Mod, Other: NoModRef
 // CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(576)),
 // CHECK-NEXT:    });
 // CHECK-NEXT:  case 1:
@@ -34,7 +34,7 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoSync),
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoFree),
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
-// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, MEM_TARGET_0: NoModRef, MEM_TARGET_1: Ref, Other: NoModRef
+// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, TargetMem0: NoModRef, TargetMem1: Ref, Other: NoModRef
 // CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(256)),
 // CHECK-NEXT:    });
 // CHECK-NEXT:  case 2:
@@ -44,7 +44,7 @@ def int_aarch64_get_fpmr_set_za   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [In
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoSync),
 // CHECK-NEXT:      Attribute::get(C, Attribute::NoFree),
 // CHECK-NEXT:      Attribute::get(C, Attribute::WillReturn),
-// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, MEM_TARGET_0: Mod, MEM_TARGET_1: NoModRef, Other: NoModRef
+// CHECK-NEXT:      // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, TargetMem0: Mod, TargetMem1: NoModRef, Other: NoModRef
 // CHECK-NEXT:      Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(128)),
 
 // CHECK: static constexpr uint16_t IntrinsicsToAttributesMap[] = {
