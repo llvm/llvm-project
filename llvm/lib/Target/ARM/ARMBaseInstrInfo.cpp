@@ -1897,12 +1897,7 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.isDebugInstr())
     return false;
 
-  // Terminators and labels can't be scheduled around.
-  if (MI.isTerminator() || MI.isPosition())
-    return true;
-
-  // INLINEASM_BR can jump to another block
-  if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
 
   if (isSEHInstruction(MI))
@@ -1918,21 +1913,7 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // Make sure to skip any debug instructions
   while (++I != MBB->end() && I->isDebugInstr())
     ;
-  if (I != MBB->end() && I->getOpcode() == ARM::t2IT)
-    return true;
-
-  // Don't attempt to schedule around any instruction that defines
-  // a stack-oriented pointer, as it's unlikely to be profitable. This
-  // saves compile time, because it doesn't require every single
-  // stack slot reference to depend on the instruction that does the
-  // modification.
-  // Calls don't actually change the stack pointer, even if they have imp-defs.
-  // No ARM calling conventions change the stack pointer. (X86 calling
-  // conventions sometimes do).
-  if (!MI.isCall() && MI.definesRegister(ARM::SP, /*TRI=*/nullptr))
-    return true;
-
-  return false;
+  return (I != MBB->end() && I->getOpcode() == ARM::t2IT);
 }
 
 bool ARMBaseInstrInfo::
