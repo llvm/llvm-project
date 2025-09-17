@@ -356,8 +356,8 @@ public:
 class RemarkEngine {
 private:
   /// Postponed remarks. They are deferred to the end of the pipeline, where the
-  /// user can intercept them for custom processing, otherwise they will be reported
-  /// on engine destruction.
+  /// user can intercept them for custom processing, otherwise they will be
+  /// reported on engine destruction.
   llvm::SmallVector<Remark, 8> postponedRemarks;
   /// Regex that filters missed optimization remarks: only matching one are
   /// reported.
@@ -412,7 +412,7 @@ private:
 
   /// Report a remark. When `forcePrintPostponedRemarks` is true, the remark
   /// will be printed even if it is postponed.
-  void report(const Remark &remark, bool forcePrintPostponedRemarks);
+  void reportImpl(const Remark &remark);
 
 public:
   /// Default constructor is deleted, use the other constructor.
