@@ -572,7 +572,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64, s128});
+      .customFor(!ST.is64Bit(), {s32})
+      .customFor(ST.is64Bit(), {s32, s64})
+      .lowerFor({s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -702,7 +704,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
-  getActionDefinitionsBuilder(G_ATOMICRMW_ADD)
+  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+      .lowerIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(2, p0)));
+
+  getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD})
       .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
@@ -719,6 +724,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+  if (RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID))
+    return true;
+
   switch (IntrinsicID) {
   default:
     return false;
@@ -751,6 +760,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::riscv_masked_atomicrmw_add:
   case Intrinsic::riscv_masked_atomicrmw_sub:
+  case Intrinsic::riscv_masked_cmpxchg:
     return true;
   }
 }
@@ -1350,7 +1360,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  // TODO: G_FCONSTANT
+  case TargetOpcode::G_FCONSTANT: {
+    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
+
+    // Convert G_FCONSTANT to G_CONSTANT.
+    Register DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||

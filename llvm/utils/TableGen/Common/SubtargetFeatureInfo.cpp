@@ -190,8 +190,9 @@ void SubtargetFeatureInfo::emitMCPredicateCheck(
   bool ParenIfBinOp = range_size(MCPredicates) > 1;
   for (const Record *R : MCPredicates) {
     OS << LS;
-    emitFeaturesAux(TargetName, *R->getValueAsDag("AssemblerCondDag"),
-                    ParenIfBinOp, OS);
+    if (emitFeaturesAux(TargetName, *R->getValueAsDag("AssemblerCondDag"),
+                        ParenIfBinOp, OS))
+      PrintFatalError(R, "Invalid AssemblerCondDag!");
   }
 }
 
@@ -206,12 +207,14 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     OS << "const ";
   OS << "{\n";
   OS << "  FeatureBitset Features;\n";
-  for (const auto &SF : SubtargetFeatures) {
-    const SubtargetFeatureInfo &SFI = SF.second;
+  for (const SubtargetFeatureInfo &SFI : make_second_range(SubtargetFeatures)) {
+    const Record *Def = SFI.TheDef;
 
     OS << "  if (";
-    emitFeaturesAux(TargetName, *SFI.TheDef->getValueAsDag("AssemblerCondDag"),
-                    /*ParenIfBinOp=*/false, OS);
+    if (emitFeaturesAux(TargetName, *Def->getValueAsDag("AssemblerCondDag"),
+                        /*ParenIfBinOp=*/false, OS))
+      PrintFatalError(Def, "Invalid AssemblerCondDag!");
+
     OS << ")\n";
     OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";
   }
