@@ -110,6 +110,8 @@ AST_MATCHER_P2(Stmt, hasPreTwoVarDecl, ast_matchers::internal::Matcher<VarDecl>,
   const DeclStmt *DS1 = (!DS2->isSingleDecl() || ((I + 2) == C->body_rend())
                              ? nullptr
                              : dyn_cast<DeclStmt>(*(I + 2)));
+  if (DS1 && !DS1->isSingleDecl())
+    return false;
 
   if (matchTwoVarDecl(DS1, DS2, InnerMatcher1, InnerMatcher2, Finder,
                       Builder)) {
