@@ -55,10 +55,9 @@ matchTwoVarDecl(const DeclStmt *DS1, const DeclStmt *DS2,
     return true;
   };
 
-  if (!CollectVarsInDeclStmt(DS1) || !CollectVarsInDeclStmt(DS2))
-    return false;
-
-  if (Vars.size() != 2)
+  // If we already get two VarDecls, then don't need to collect from DS2.
+  if (!CollectVarsInDeclStmt(DS1) ||
+      (Vars.size() != 2 && !CollectVarsInDeclStmt(DS2)) || Vars.size() != 2)
     return false;
 
   if (InnerMatcher1.matches(*Vars[0].first, Finder, Builder) &&
