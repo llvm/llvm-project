@@ -339,8 +339,9 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *CFRS = Result.Nodes.getNodeAs<CXXForRangeStmt>(ForRangeStmtName);
-  auto DiagAndFix = [&](SourceLocation DiagLoc, SourceRange ReplaceRange,
-                        TransferType TT = TT_ByVal) {
+  auto DiagAndFix = [&DS1, &DS2, &FirstVar, &SecondVar, &CFRS,
+                     this](SourceLocation DiagLoc, SourceRange ReplaceRange,
+                           TransferType TT = TT_ByVal) {
     StringRef Prefix;
     switch (TT) {
     case TT_ByVal:
