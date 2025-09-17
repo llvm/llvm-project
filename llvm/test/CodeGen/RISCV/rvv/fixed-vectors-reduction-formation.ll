@@ -908,13 +908,10 @@ define float @reduce_fadd_4xi32_non_associative2(ptr %p) {
 define float @reduce_fmaxnum_16xf32_prefix2(ptr %p) {
 ; CHECK-LABEL: reduce_fmaxnum_16xf32_prefix2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vfmv.f.s fa4, v8
-; CHECK-NEXT:    fmax.s fa0, fa5, fa4
+; CHECK-NEXT:    vfredmax.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %p, align 256
   %e0 = extractelement <16 x float> %v, i32 0
@@ -926,13 +923,10 @@ define float @reduce_fmaxnum_16xf32_prefix2(ptr %p) {
 define float @reduce_fminnum_16xf32_prefix2(ptr %p) {
 ; CHECK-LABEL: reduce_fminnum_16xf32_prefix2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vfmv.f.s fa4, v8
-; CHECK-NEXT:    fmin.s fa0, fa5, fa4
+; CHECK-NEXT:    vfredmin.vs v8, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %p, align 256
   %e0 = extractelement <16 x float> %v, i32 0
