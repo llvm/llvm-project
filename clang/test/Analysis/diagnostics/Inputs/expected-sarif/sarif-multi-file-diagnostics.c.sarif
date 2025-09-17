@@ -7,7 +7,7 @@
           "length": -1,
           "location": {
             "index": 0,
-            "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
+            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
           },
           "mimeType": "text/plain",
           "roles": [
@@ -24,21 +24,39 @@
                 {
                   "locations": [
                     {
-                      "importance": "essential",
+                      "importance": "important",
                       "location": {
                         "message": {
-                          "text": "Calling 'f'"
+                          "text": "Assuming 'p' is null"
                         },
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
-                            "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
+                            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
                           },
                           "region": {
-                            "endColumn": 6,
-                            "endLine": 13,
+                            "endColumn": 7,
+                            "startColumn": 7,
+                            "startLine": 8
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "unimportant",
+                      "location": {
+                        "message": {
+                          "text": "Taking false branch"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
+                          },
+                          "region": {
+                            "endColumn": 3,
                             "startColumn": 3,
-                            "startLine": 13
+                            "startLine": 8
                           }
                         }
                       }
@@ -47,18 +65,18 @@
                       "importance": "essential",
                       "location": {
                         "message": {
-                          "text": "tainted"
+                          "text": "Dereference of null pointer (loaded from variable 'p')"
                         },
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
-                            "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
+                            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
                           },
                           "region": {
-                            "endColumn": 18,
-                            "endLine": 9,
-                            "startColumn": 11,
-                            "startLine": 9
+                            "endColumn": 14,
+                            "endLine": 11,
+                            "startColumn": 12,
+                            "startLine": 11
                           }
                         }
                       }
@@ -68,30 +86,31 @@
               ]
             }
           ],
+          "hostedViewerUri": "file:///[...]/report-d03238.html",
           "level": "warning",
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
-                  "uri": "file:///[...]/sarif-diagnostics-taint-test.c"
+                  "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
                 },
                 "region": {
-                  "endColumn": 18,
-                  "endLine": 9,
-                  "startColumn": 11,
-                  "startLine": 9
+                  "endColumn": 14,
+                  "endLine": 11,
+                  "startColumn": 12,
+                  "startLine": 11
                 }
               }
             }
           ],
           "message": {
-            "text": "tainted"
+            "text": "Dereference of null pointer (loaded from variable 'p')"
           },
           "partialFingerprints": {
-            "clang/issueHash/v1": "5c964815b8d6db3989bacdd308e657d0"
+            "clang/issueHash/v1": "d0323824ffaf9fee78b866e18d300fda"
           },
-          "ruleId": "debug.TaintTest",
+          "ruleId": "core.NullDereference",
           "ruleIndex": 0
         }
       ],
@@ -109,10 +128,11 @@
                 "rank": -1
               },
               "fullDescription": {
-                "text": "Mark tainted symbols as such."
+                "text": "Check for dereferences of null pointers"
               },
-              "id": "debug.TaintTest",
-              "name": "debug.TaintTest"
+              "helpUri": "https://clang.llvm.org/docs/analyzer/checkers.html#core-nulldereference",
+              "id": "core.NullDereference",
+              "name": "core.NullDereference"
             }
           ],
           "version": "[clang version]"
