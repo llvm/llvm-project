@@ -14,9 +14,11 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <utility>
 
@@ -154,11 +156,43 @@ class PrepareForOMPOffloadPrivatizationPass
         rewriter.setInsertionPoint(chainOfOps.front());
         // Copy the value of the local variable into the heap-allocated
         // location.
-        Location loc = chainOfOps.front()->getLoc();
+        Operation *firstOp = chainOfOps.front();
+        Location loc = firstOp->getLoc();
         Type varType = getElemType(varPtr);
-        auto loadVal = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
-        (void)rewriter.create<LLVM::StoreOp>(loc, loadVal.getResult(), heapMem);
 
+
+        // // auto loadVal = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
+        // // (void)rewriter.create<LLVM::StoreOp>(loc, loadVal.getResult(), heapMem);
+        #if 0
+        Region &initRegion = privatizer.getInitRegion();
+        assert(!initRegion.empty() && "initRegion cannot be empty");
+        Block &entryBlock = initRegion.front();
+        Block *insertBlock = firstOp->getBlock();
+        Block *newBlock = insertBlock->splitBlock(firstOp);
+        Region *destRegion = firstOp->getParentRegion();
+        IRMapping irMap;
+        irMap.map(varPtr, entryBlock.getArgument(0));
+        irMap.map(heapMem, entryBlock.getArgument(1));
+
+        LDBG() << "Operation being walked before cloning the init region\n\n";
+        LLVM_DEBUG(llvm::dbgs() << getOperation() << "\n");
+        initRegion.cloneInto(destRegion, Region::iterator(newBlock), irMap);
+        LDBG() << "Operation being walked after cloning the init region\n";
+        LLVM_DEBUG(llvm::dbgs() << getOperation() << "\n");
+        //        rewriter.setInsertionPointToEnd(insertBlock);
+        // LLVM::BrOp::create(rewriter, loc,
+        //            , );
+#else
+        // Todo: Handle boxchar (by value)
+        Region &initRegion = privatizer.getInitRegion();
+        assert(!initRegion.empty() && "initRegion cannot be empty");
+        LLVM::LLVMFuncOp initFunc = createFuncOpForRegion(
+            loc, mod, initRegion,
+            llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
+            firstOp, rewriter);
+
+        rewriter.create<LLVM::CallOp>(loc, initFunc, ValueRange{varPtr, heapMem});
+#endif
         using ReplacementEntry = std::pair<Operation *, Operation *>;
         llvm::SmallVector<ReplacementEntry> replRecord;
         auto cloneAndMarkForDeletion = [&](Operation *origOp) -> Operation * {
@@ -411,6 +445,44 @@ private:
                                ModuleOp mod, IRRewriter &rewriter) const {
     LLVM::LLVMFuncOp mallocFn = getMalloc(mod, rewriter);
     return rewriter.create<LLVM::CallOp>(loc, mallocFn, ValueRange{size});
+  }
+  LLVM::LLVMFuncOp createFuncOpForRegion(Location loc, ModuleOp mod,
+                                         Region &srcRegion,
+                                         llvm::StringRef funcName,
+                                         Operation *insertPt,
+                                         IRRewriter &rewriter) {
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    MLIRContext *ctx = mod.getContext();
+    rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
+    Region clonedRegion;
+    IRMapping mapper;
+    srcRegion.cloneInto(&clonedRegion, mapper);
+    SmallVector<Type> paramTypes = {srcRegion.getArgument(0).getType(),
+                                    srcRegion.getArgument(1).getType()};
+    LDBG() << "paramTypes are \n"
+           << srcRegion.getArgument(0).getType() << "\n"
+           << srcRegion.getArgument(1).getType() << "\n";
+    LLVM::LLVMFunctionType funcType =
+        LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), paramTypes);
+
+    LDBG() << "funcType is " << funcType << "\n";
+    LLVM::LLVMFuncOp func =
+        LLVM::LLVMFuncOp::create(rewriter, loc, funcName, funcType);
+    func.setAlwaysInline(true);
+    rewriter.inlineRegionBefore(clonedRegion, func.getRegion(),
+                                func.getRegion().end());
+    for (auto &block : func.getRegion().getBlocks()) {
+      if (isa<omp::YieldOp>(block.getTerminator())) {
+        omp::YieldOp yieldOp = cast<omp::YieldOp>(block.getTerminator());
+        rewriter.setInsertionPoint(yieldOp);
+        rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(yieldOp, TypeRange(),
+                                                    Value());
+      }
+    }
+    LDBG() << funcName << " is \n" << func << "\n";
+    LLVM_DEBUG(llvm::dbgs() << "Module is \n" << mod << "\n");
+    return func;
   }
 };
 } // namespace
