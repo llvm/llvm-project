@@ -41,12 +41,10 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
-/// Tracks uniformity of newly created instructions.
-using UniformityTracker = ValueMap<const Value *, bool>;
-
 /// Wrapper for querying uniformity info that first checks new instructions.
-static bool isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
-                                  const UniformityTracker &Tracker) {
+static bool
+isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
+                      const ValueMap<const Value *, bool> &Tracker) {
   Value *V = U.get();
   if (auto It = Tracker.find(V); It != Tracker.end())
     return !It->second; // divergent if marked false
@@ -56,7 +54,7 @@ static bool isDivergentUseWithNew(const Use &U, const UniformityInfo &UI,
 /// Optimizes uniform intrinsics.
 static bool optimizeUniformIntrinsic(IntrinsicInst &II,
                                      const UniformityInfo &UI,
-                                     UniformityTracker &Tracker) {
+                                     ValueMap<const Value *, bool> &Tracker) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
 
   switch (IID) {
@@ -76,10 +74,6 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
     if (isDivergentUseWithNew(II.getOperandUse(0), UI, Tracker))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
-
-    // If there are no ICmp users, return early.
-    if (none_of(II.users(), [](User *U) { return isa<ICmpInst>(U); }))
-      return false;
 
     bool Changed = false;
     for (User *U : make_early_inc_range(II.users())) {
@@ -122,7 +116,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 /// Iterate over intrinsics in the module to optimise.
 static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   bool IsChanged = false;
-  UniformityTracker Tracker;
+  ValueMap<const Value *, bool> Tracker;
 
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -140,9 +134,6 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
     for (User *U : F.users()) {
       auto *II = cast<IntrinsicInst>(U);
       Function *ParentF = II->getFunction();
-      if (ParentF->isDeclaration())
-        continue;
-
       const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
       IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
     }
