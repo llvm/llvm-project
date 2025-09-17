@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 
 #include "L0Defs.h"
 #include "L0Trace.h"
@@ -152,3 +153,5 @@ public:
 };
 
 } // namespace llvm::omp::target::plugin
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H

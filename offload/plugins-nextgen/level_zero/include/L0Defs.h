@@ -9,7 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
 
 #include "PluginInterface.h"
 #include "Shared/Requirements.h"
@@ -71,3 +72,5 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
                        __func__);
 
 } // namespace llvm::omp::target::plugin
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H

@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PROGRAM_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PROGRAM_H
 
 #include "L0Kernel.h"
 
@@ -133,3 +134,5 @@ bool isValidOneOmpImage(const __tgt_device_image *Image, uint64_t &MajorVer,
 bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
                         uint64_t &MinorVer);
 } // namespace llvm::omp::target::plugin
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PROGRAM_H

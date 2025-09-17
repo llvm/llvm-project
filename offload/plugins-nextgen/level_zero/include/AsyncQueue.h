@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
 #include <vector>
 
@@ -48,3 +49,5 @@ typedef ObjPool<AsyncQueueTy> AsyncQueuePoolTy;
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H

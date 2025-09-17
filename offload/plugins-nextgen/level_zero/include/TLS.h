@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_TLS_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_TLS_H
 
 #include "AsyncQueue.h"
 #include "L0Memory.h"
@@ -84,3 +85,5 @@ struct L0ThreadTblTy : public PerThread<L0ThreadTLSTy> {
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_TLS_H

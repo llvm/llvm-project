@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 // clang-format off
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0TRACE_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0TRACE_H
 
 #include "Shared/Debug.h"
 #include "omptarget.h"
@@ -191,3 +192,5 @@ inline const char *getZeErrorName(int32_t Error) {
     return "ZE_RESULT_ERROR_UNKNOWN";
   }
 }
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0TRACE_H

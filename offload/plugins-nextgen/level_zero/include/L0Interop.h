@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0INTEROP_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0INTEROP_H
 
 namespace llvm::omp::target::plugin::L0Interop {
 
@@ -23,3 +24,5 @@ struct Property {
 };
 
 } // namespace llvm::omp::target::plugin::L0Interop
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0INTEROP_H

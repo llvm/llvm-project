@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0MEMORY_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0MEMORY_H
 
 #include <cassert>
 #include <level_zero/ze_api.h>
@@ -572,3 +573,5 @@ public:
 };
 
 } // namespace llvm::omp::target::plugin
+
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0MEMORY_H
