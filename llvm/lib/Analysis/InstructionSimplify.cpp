@@ -6668,6 +6668,7 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
   assert(OutNewConstVal != nullptr);
 
   bool PropagateNaN = IID == Intrinsic::minimum || IID == Intrinsic::maximum;
+  bool PropagateNaN_S = IID == Intrinsic::minnum || IID == Intrinsic::maxnum;
   bool ReturnsOtherForAllNaNs =
       IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum;
   bool IsMin = IID == Intrinsic::minimum || IID == Intrinsic::minnum ||
@@ -6686,12 +6687,14 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
 
   // minnum(x, qnan) -> x
   // maxnum(x, qnan) -> x
+  // minnum(x, snan) -> qnan
+  // maxnum(x, snan) -> qnan
   // minimum(X, nan) -> qnan
   // maximum(X, nan) -> qnan
   // minimumnum(X, nan) -> x
   // maximumnum(X, nan) -> x
   if (CAPF.isNaN()) {
-    if (PropagateNaN) {
+    if (PropagateNaN || (PropagateNaN_S && CAPF.isSignaling())) {
       *OutNewConstVal = ConstantFP::get(CFP->getType(), CAPF.makeQuiet());
       return MinMaxOptResult::UseNewConstVal;
     } else if (ReturnsOtherForAllNaNs || !CAPF.isSignaling()) {

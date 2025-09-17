@@ -830,6 +830,67 @@ define float @maxnum(float %a, float %b) {
   ret float %r
 }
 
+define float @maxnum_const_snan(float %x) {
+; CHECK-LABEL: @maxnum_const_snan(
+; CHECK-NEXT:    ret float 0x7FFC000000000000
+;
+  %r = call float @llvm.minnum.f32(float %x, float 0x7FF4000000000000)
+  ret float %r
+}
+
+define double @minnum_const_snan(double %x) {
+; CHECK-LABEL: @minnum_const_snan(
+; CHECK-NEXT:    ret double 0x7FFC000000000000
+;
+  %r = call double @llvm.minnum.f64(double %x, double 0x7FF4000000000000)
+  ret double %r
+}
+
+define float @maxnum_const_qnan(float %x) {
+; CHECK-LABEL: @maxnum_const_qnan(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %r = call float @llvm.minnum.f32(float %x, float 0x7FF8000000000000)
+  ret float %r
+}
+
+define double @minnum_const_qnan(double %x) {
+; CHECK-LABEL: @minnum_const_qnan(
+; CHECK-NEXT:    ret double [[X:%.*]]
+;
+  %r = call double @llvm.minnum.f64(double %x, double 0x7FF8000000000000)
+  ret double %r
+}
+
+define <2 x float> @maxnum_const_snan_v2f32(<2 x float> %a) {
+; CHECK-LABEL: @maxnum_const_snan_v2f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FFC000000000000)
+;
+entry:
+  %r = tail call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> <float 0x7FF4000000000000, float 0x7FF4000000000000>)
+  ret <2 x float> %r
+}
+define <2 x float> @maxnum_const_qnan_v2f32(<2 x float> %a) {
+; CHECK-LABEL: @maxnum_const_qnan_v2f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x float> [[A:%.*]]
+;
+entry:
+  %r = tail call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  ret <2 x float> %r
+}
+define <2 x float> @maxnum_const_mixednan_v2f32(<2 x float> %a) {
+; CHECK-LABEL: @maxnum_const_mixednan_v2f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = tail call <2 x float> @llvm.maxnum.v2f32(<2 x float> [[A:%.*]], <2 x float> <float 0x7FF8000000000000, float 0x7FF4000000000000>)
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+entry:
+  %r = tail call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> <float 0x7FF8000000000000, float 0x7FF4000000000000>)
+  ret <2 x float> %r
+}
+
 define <2 x float> @minnum(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @minnum(
 ; CHECK-NEXT:    [[X:%.*]] = call fast <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
