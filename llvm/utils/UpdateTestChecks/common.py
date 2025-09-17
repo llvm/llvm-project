@@ -955,13 +955,12 @@ class FunctionTestBuilder:
             conflict_strs = []
             for run_index, prefixes in warning_info:
                 conflict_strs.append(
-                    "RUN #{} (prefixes: {})".format(
-                        run_index + 1, ", ".join(prefixes)
-                    )
+                    "RUN #{} (prefixes: {})".format(run_index + 1, ", ".join(prefixes))
                 )
             warn(
                 "For function '{}', the following RUN lines will not generate checks due to conflicting output: {}".format(
-                    func, ", ".join(conflict_strs)),
+                    func, ", ".join(conflict_strs)
+                ),
                 test_file=self._path,
             )
 
