@@ -2679,8 +2679,9 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
     if (SplatBitSize == 64 && !Subtarget.is64Bit()) {
       // We can only handle 64-bit elements that are within
-      // the signed 32-bit range on 32-bit targets.
-      if (!SplatValue.isSignedIntN(32))
+      // the signed 10-bit range on 32-bit targets.
+      // See the BUILD_VECTOR case in LoongArchDAGToDAGISel::Select().
+      if (!SplatValue.isSignedIntN(10))
         return SDValue();
       if ((Is128Vec && ResTy == MVT::v4i32) ||
           (Is256Vec && ResTy == MVT::v8i32))
