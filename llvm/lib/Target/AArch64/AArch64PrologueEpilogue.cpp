@@ -1219,6 +1219,7 @@ AArch64EpilogueEmitter::AArch64EpilogueEmitter(MachineFunction &MF,
                                                const AArch64FrameLowering &AFL)
     : AArch64PrologueEpilogueCommon(MF, MBB, AFL) {
   EmitCFI = AFI->needsAsyncDwarfUnwindInfo(MF);
+  HomPrologEpilog = AFL.homogeneousPrologEpilog(MF, &MBB);
   SEHEpilogueStartI = MBB.end();
 }
 
@@ -1253,7 +1254,7 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   if (MF.hasEHFunclets())
     AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
 
-  if (AFL.homogeneousPrologEpilog(MF, &MBB)) {
+  if (HomPrologEpilog) {
     assert(!NeedsWinCFI);
     auto FirstHomogenousEpilogI = MBB.getFirstTerminator();
     if (FirstHomogenousEpilogI != MBB.begin()) {

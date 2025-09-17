@@ -61,8 +61,13 @@ protected:
   const AArch64FrameLowering &AFL;
   const AArch64RegisterInfo &RegInfo;
 
+  // Common flags. These generally should not change outside of the (possibly
+  // derived) constructor.
   bool HasFP = false;
-  bool NeedsWinCFI = false;
+  bool EmitCFI = false;     // Note: Set in derived constructors.
+  bool IsFunclet = false;   // Note: Set in derived constructors.
+  bool NeedsWinCFI = false; // Note: Can be changed in emitFramePointerSetup.
+  bool HomPrologEpilog = false; // Note: Set in derived constructors.
 
   // Note: "HasWinCFI" is mutable as it can change in any "emit" function.
   mutable bool HasWinCFI = false;
@@ -132,14 +137,9 @@ private:
 #endif
 
   // Prologue flags. These generally should not change outside of the
-  // constructor. Two exceptions are "CombineSPBump" which is set in
-  // determineLocalsStackSize, and "NeedsWinCFI" which is set in
-  // emitFramePointerSetup.
-  bool EmitCFI = false;
+  // constructor.
   bool EmitAsyncCFI = false;
-  bool IsFunclet = false;
-  bool CombineSPBump = false;
-  bool HomPrologEpilog = false;
+  bool CombineSPBump = false; // Note: This is set in determineLocalsStackSize.
 };
 
 /// A helper class for emitting the epilogue. Substantial new functionality
@@ -178,13 +178,8 @@ private:
 
   void finalizeEpilogue() const;
 
-  // Epilogue flags. These generally should not change outside of the
-  // constructor (or early in emitEpilogue).
-  bool EmitCFI = false;
-  bool IsFunclet = false;
-
-  DebugLoc DL;
   MachineBasicBlock::iterator SEHEpilogueStartI;
+  DebugLoc DL;
 };
 
 } // namespace llvm
