@@ -114,6 +114,13 @@ using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 template <typename T, typename... Ts>
 using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 
+/// traits class for checking whether type `T` is same as all other types in
+/// `Ts`.
+template <typename T = void, typename... Ts>
+using all_types_equal = std::conjunction<std::is_same<T, Ts>...>;
+template <typename T = void, typename... Ts>
+constexpr bool all_types_equal_v = all_types_equal<T, Ts...>::value;
+
 /// Determine if all types in Ts are distinct.
 ///
 /// Useful to statically assert when Ts is intended to describe a non-multi set
@@ -996,9 +1003,17 @@ class concat_iterator
 
   static constexpr bool ReturnsByValue =
       !(std::is_reference_v<decltype(*std::declval<IterTs>())> && ...);
+  static constexpr bool ReturnsConvertibleType =
+      !all_types_equal_v<
+          std::remove_cv_t<ValueT>,
+          remove_cvref_t<decltype(*std::declval<IterTs>())>...> &&
+      (std::is_convertible_v<decltype(*std::declval<IterTs>()), ValueT> && ...);
 
+  // Cannot return a reference type if a conversion takes place, provided that
+  // the result of dereferencing all `IterTs...` is convertible to `ValueT`.
   using reference_type =
-      typename std::conditional_t<ReturnsByValue, ValueT, ValueT &>;
+      std::conditional_t<ReturnsByValue || ReturnsConvertibleType, ValueT,
+                         ValueT &>;
 
   /// We store both the current and end iterators for each concatenated
   /// sequence in a tuple of pairs.
@@ -1031,7 +1046,7 @@ class concat_iterator
 
   /// Dereferences the `Index`-th iterator and returns the resulting reference.
   /// If `Index` is at end, recurse over iterators in `Others...`.
-  template <size_t Index, size_t... Others> handle_type getImpl() const {
+  template <size_t Index, size_t... Others> reference_type getImpl() const {
     auto &Begin = std::get<Index>(Begins);
     auto &End = std::get<Index>(Ends);
     if (Begin == End) {
