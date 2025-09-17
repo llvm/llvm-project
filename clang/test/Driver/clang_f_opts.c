@@ -223,11 +223,11 @@
 // RUN: %clang -S -O20 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-O %s
 // CHECK-INVALID-O: warning: optimization level '-O20' is not supported; using '-O3' instead
 
-// RUN: not %clang -### -S -finput-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-CHARSET %s
-// CHECK-INVALID-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
+// RUN: not %clang -### -S -finput-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
+// CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
 
-// RUN: not %clang -### -S -fexec-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-INPUT-CHARSET %s
-// CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-fexec-charset=iso-8859-1'
+// RUN: not %clang -### -S -fexec-charset=iso-8859-1 -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-EXEC-INPUT-CHARSET %s
+// CHECK-EXEC-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-fexec-charset=iso-8859-1'
 
 // Test that we don't error on these.
 // RUN: not %clang -### -S -Werror                                                \
