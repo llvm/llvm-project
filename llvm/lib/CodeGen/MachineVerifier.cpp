@@ -2376,20 +2376,24 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     // If we have only one valid type, this is likely a copy between a virtual
     // and physical register.
-    TypeSize SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
-    TypeSize DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+    TypeSize SrcSize = TypeSize::getZero();
+    TypeSize DstSize = TypeSize::getZero();
     if (SrcReg.isPhysical() && DstTy.isValid()) {
       const TargetRegisterClass *SrcRC =
           TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
-      if (SrcRC)
-        SrcSize = TRI->getRegSizeInBits(*SrcRC);
+      if (!SrcRC)
+        SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
+    } else {
+      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     }
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
           TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
-      if (DstRC)
-        DstSize = TRI->getRegSizeInBits(*DstRC);
+      if (!DstRC)
+        DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
+    } else {
+      DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     }
 
     // The next two checks allow COPY between physical and virtual registers,
