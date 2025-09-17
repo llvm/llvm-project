@@ -1380,18 +1380,19 @@ public:
       : Target(Target), Encodings(Encodings) {}
 
   std::unique_ptr<DecoderTreeNode> buildTree(const FilterChooser &FC) {
-    return buildCheckAnyNode(FC);
+    return convertFilterChooser(FC);
   }
 
 private:
   std::unique_ptr<DecoderTreeNode>
-  buildTerminalNode(unsigned EncodingID, const KnownBits &FilterBits);
+  convertSingleton(unsigned EncodingID, const KnownBits &FilterBits);
 
-  std::unique_ptr<DecoderTreeNode> buildCheckAllOrSwitchNode(
+  std::unique_ptr<DecoderTreeNode> convertFilterChooserMap(
       unsigned StartBit, unsigned NumBits,
       const std::map<uint64_t, std::unique_ptr<const FilterChooser>> &FCMap);
 
-  std::unique_ptr<DecoderTreeNode> buildCheckAnyNode(const FilterChooser &FC);
+  std::unique_ptr<DecoderTreeNode>
+  convertFilterChooser(const FilterChooser &FC);
 };
 
 class DecoderTableEmitter {
@@ -1435,8 +1436,8 @@ private:
 } // namespace
 
 std::unique_ptr<DecoderTreeNode>
-DecoderTreeBuilder::buildTerminalNode(unsigned EncodingID,
-                                      const KnownBits &FilterBits) {
+DecoderTreeBuilder::convertSingleton(unsigned EncodingID,
+                                     const KnownBits &FilterBits) {
   const InstructionEncoding &Encoding = Encodings[EncodingID];
   auto N = std::make_unique<CheckAllNode>();
 
@@ -1466,34 +1467,34 @@ DecoderTreeBuilder::buildTerminalNode(unsigned EncodingID,
   return N;
 }
 
-std::unique_ptr<DecoderTreeNode> DecoderTreeBuilder::buildCheckAllOrSwitchNode(
+std::unique_ptr<DecoderTreeNode> DecoderTreeBuilder::convertFilterChooserMap(
     unsigned StartBit, unsigned NumBits,
     const std::map<uint64_t, std::unique_ptr<const FilterChooser>> &FCMap) {
   if (FCMap.size() == 1) {
     const auto &[FieldVal, ChildFC] = *FCMap.begin();
     auto N = std::make_unique<CheckAllNode>();
     N->addChild(std::make_unique<CheckFieldNode>(StartBit, NumBits, FieldVal));
-    N->addChild(buildCheckAnyNode(*ChildFC));
+    N->addChild(convertFilterChooser(*ChildFC));
     return N;
   }
   auto N = std::make_unique<SwitchFieldNode>(StartBit, NumBits);
   for (const auto &[FieldVal, ChildFC] : FCMap)
-    N->addCase(FieldVal, buildCheckAnyNode(*ChildFC));
+    N->addCase(FieldVal, convertFilterChooser(*ChildFC));
   return N;
 }
 
 std::unique_ptr<DecoderTreeNode>
-DecoderTreeBuilder::buildCheckAnyNode(const FilterChooser &FC) {
+DecoderTreeBuilder::convertFilterChooser(const FilterChooser &FC) {
   auto N = std::make_unique<CheckAnyNode>();
 
   if (FC.SingletonEncodingID)
-    N->addChild(buildTerminalNode(*FC.SingletonEncodingID, FC.FilterBits));
+    N->addChild(convertSingleton(*FC.SingletonEncodingID, FC.FilterBits));
   else
-    N->addChild(buildCheckAllOrSwitchNode(FC.StartBit, FC.NumBits,
-                                          FC.FilterChooserMap));
+    N->addChild(
+        convertFilterChooserMap(FC.StartBit, FC.NumBits, FC.FilterChooserMap));
 
   if (FC.VariableFC)
-    N->addChild(buildCheckAnyNode(*FC.VariableFC));
+    N->addChild(convertFilterChooser(*FC.VariableFC));
 
   return N;
 }
