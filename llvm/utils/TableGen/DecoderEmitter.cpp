@@ -1031,8 +1031,7 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     // One variable part and no/zero constant part. Initialize `tmp` with the
     // variable part.
     auto [Base, Width, Offset] = OpInfo.fields().front();
-    OS << Indent << "tmp = fieldFromInstruction(insn, " << Base << ", " << Width
-       << ')';
+    OS << Indent << "tmp = extractBits<" << Base << ", " << Width << ">(insn)";
     if (Offset)
       OS << " << " << Offset;
     OS << ";\n";
@@ -1042,8 +1041,8 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     OS << Indent << "tmp = " << format_hex(OpInfo.InitValue.value_or(0), 0)
        << ";\n";
     for (auto [Base, Width, Offset] : OpInfo.fields()) {
-      OS << Indent << "tmp |= fieldFromInstruction(insn, " << Base << ", "
-         << Width << ')';
+      OS << Indent << "tmp |= extractBits<" << Base << ", " << Width
+         << ">(insn)";
       if (Offset)
         OS << " << " << Offset;
       OS << ";\n";

@@ -10,6 +10,7 @@
 #ifndef LLVM_MC_MCDECODER_H
 #define LLVM_MC_MCDECODER_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/Support/MathExtras.h"
 #include <bitset>
@@ -56,6 +57,24 @@ uint64_t fieldFromInstruction(const std::bitset<N> &Insn, unsigned StartBit,
   assert(NumBits <= 64 && "Cannot support >64-bit extractions!");
   const std::bitset<N> Mask(maskTrailingOnes<uint64_t>(NumBits));
   return ((Insn >> StartBit) & Mask).to_ullong();
+}
+
+template <unsigned StartBit, unsigned NumBits, typename T>
+inline std::enable_if_t<std::is_unsigned_v<T>, T> extractBits(T Val) {
+  static_assert(StartBit + NumBits <= std::numeric_limits<T>::digits);
+  return (Val >> StartBit) & maskTrailingOnes<T>(NumBits);
+}
+
+template <unsigned StartBit, unsigned NumBits, size_t N>
+uint64_t extractBits(const std::bitset<N> &Val) {
+  static_assert(StartBit + NumBits <= N);
+  std::bitset<N> Mask = maskTrailingOnes<uint64_t>(NumBits);
+  return ((Val >> StartBit) & Mask).to_ullong();
+}
+
+template <unsigned StartBit, unsigned NumBits>
+uint64_t extractBits(const APInt &Val) {
+  return Val.extractBitsAsZExtValue(NumBits, StartBit);
 }
 
 } // namespace llvm::MCD
