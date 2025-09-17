@@ -17,7 +17,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
-#include <memory>
 #include <optional>
 
 using namespace lldb;

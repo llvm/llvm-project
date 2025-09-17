@@ -7,7 +7,7 @@ class State {
   var number : Int
 }
 
-struct S {}
+struct S { var properties: Bool = true }
 
 func f(_ strct : S) {
   print("in function") // break here
