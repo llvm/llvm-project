@@ -12,7 +12,8 @@ if(DEFINED LIBOMP_INSTALL_RPATH)
   set(CMAKE_INSTALL_RPATH "${LIBOMP_INSTALL_RPATH}")
 endif()
 
-if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+# Permit redefining OPENMP_STANDALONE_BUILD when doing a runtimes build.
+if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(offload C CXX ASM)
 else()
@@ -131,6 +132,14 @@ else()
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED NO)
   set(CMAKE_CXX_EXTENSIONS NO)
+endif()
+
+# Emit a warning for people who haven't updated their build.
+if(NOT "openmp" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES AND
+   NOT "openmp" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
+  message(WARNING "Building the offloading runtime with no device library. See "
+                  "https://openmp.llvm.org/SupportAndFAQ.html#q-how-to-build-an-openmp-gpu-offload-capable-compiler.html "
+                  "for more information.")
 endif()
 
 # Set the path of all resulting libraries to a unified location so that it can
@@ -443,9 +452,9 @@ option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
   # Header install location
   add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryIds.h
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/device/include/EmissaryIds.h
     DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryMPI.h
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/device/include/EmissaryMPI.h
     DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
 endif()
 
@@ -453,9 +462,7 @@ add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
-
 add_subdirectory(tools)
-add_subdirectory(DeviceRTL)
 add_subdirectory(docs)
 
 # Build target agnostic offloading library.

@@ -1,6 +1,5 @@
 ! Tests mapping of a basic `do concurrent` loop to
 ! `!$omp target teams distribute parallel do`.
-! XFAIL: *
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
 
@@ -14,7 +13,6 @@ program do_concurrent_shape
     end do
 end program do_concurrent_shape
 
-! CHECK-LABEL: do_concurrent_shape
 ! CHECK: fir.store %{{c10.*}} to %[[DIM0_EXT:.*]] : !fir.ref<index>
 ! CHECK: fir.store %{{c20.*}} to %[[DIM1_EXT:.*]] : !fir.ref<index>
 

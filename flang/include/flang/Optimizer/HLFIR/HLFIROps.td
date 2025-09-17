@@ -375,6 +375,44 @@ def hlfir_CmpCharOp : hlfir_Op<"cmpchar",
   let hasVerifier = 1;
 }
 
+def hlfir_CharTrimOp
+    : hlfir_Op<
+          "char_trim", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "trim character";
+  let description = [{ Trim a character string. }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$chr);
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+      $chr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$chr)>];
+}
+
+def hlfir_IndexOp
+    : hlfir_Op<"index", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "index transformational intrinsic";
+  let description = [{
+    Search for a substring position within a string, optionally backward
+    if back is set to true.
+  }];
+
+  let arguments = (ins AnyScalarCharacterEntity:$substr,
+      AnyScalarCharacterEntity:$str,
+      Optional<Type<AnyLogicalLike.predicate>>:$back);
+
+  let results = (outs AnyIntegerType);
+
+  let assemblyFormat = [{
+      $substr `in` $str  (`back` $back^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_AllOp : hlfir_Op<"all", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "ALL transformational intrinsic";
   let description = [{

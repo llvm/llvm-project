@@ -138,6 +138,15 @@ build or install tree can be supplied to CMake via `CMAKE_PREFIX_PATH`:
 
     cmake -DCMAKE_PREFIX_PATH=path/to/comgr/build/or/install
 
+Testing
+--------------------------------
+
+Comgr has both unit tests (older) and LLVM LIT tests (newer). They can be run
+from the build directory via:
+
+    make test # unit
+    make test-lit # lit
+
 Environment Variables
 ---------------------
 

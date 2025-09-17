@@ -476,6 +476,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
+  // Requested cluster dimensions.
+  AMDGPU::ClusterDimsAttr ClusterDims;
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -1244,6 +1247,7 @@ public:
     MUI = MachineUniformityInfo;
   }
   MachineUniformityInfo *getMachineUniformityInfo() const { return MUI; }
+  AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
 };
 
 } // end namespace llvm

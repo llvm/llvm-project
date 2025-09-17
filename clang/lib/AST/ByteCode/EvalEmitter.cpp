@@ -49,14 +49,15 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
   return std::move(this->EvalResult);
 }
 
-EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
+EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
   S.setEvalLocation(VD->getLocation());
   EvalResult.setSource(VD);
 
-  if (const Expr *Init = VD->getAnyInitializer()) {
+  // FIXME: I think Init is never null.
+  if (Init) {
     QualType T = VD->getType();
     this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
                                   !T->isObjCObjectPointerType();
@@ -65,7 +66,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
 
   EvalResult.setSource(VD);
 
-  if (!this->visitDeclAndReturn(VD, S.inConstantContext()))
+  if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
     EvalResult.setInvalid();
 
   S.EvaluatingDecl = nullptr;
@@ -213,6 +214,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
 
+    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
+      return false;
+
     if (!Ptr.isZero() && !CheckFinalLoad(S, OpPC, Ptr))
       return false;
 
@@ -328,18 +332,17 @@ bool EvalEmitter::emitDestroy(uint32_t I, const SourceInfo &Info) {
 /// This is what we do here.
 void EvalEmitter::updateGlobalTemporaries() {
   for (const auto &[E, Temp] : S.SeenGlobalTemporaries) {
-    if (std::optional<unsigned> GlobalIndex = P.getGlobal(E)) {
-      const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
-      APValue *Cached = Temp->getOrCreateValue(true);
-
-      if (OptPrimType T = Ctx.classify(E->getType())) {
-        TYPE_SWITCH(
-            *T, { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
-      } else {
-        if (std::optional<APValue> APV =
-                Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
-          *Cached = *APV;
-      }
+    UnsignedOrNone GlobalIndex = P.getGlobal(E);
+    assert(GlobalIndex);
+    const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
+    APValue *Cached = Temp->getOrCreateValue(true);
+    if (OptPrimType T = Ctx.classify(E->getType())) {
+      TYPE_SWITCH(*T,
+                  { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
+    } else {
+      if (std::optional<APValue> APV =
+              Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
+        *Cached = *APV;
     }
   }
   S.SeenGlobalTemporaries.clear();

@@ -137,6 +137,15 @@ void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
 void populateVectorTransferFullPartialPatterns(
     RewritePatternSet &patterns, const VectorTransformsOptions &options);
 
+/// Collect a set of patterns to collapse the most inner unit dims in xfer Ops
+///
+/// These patters reduce the rank of the operands of vector transfer ops to
+/// operate on vectors without trailing unit dims. This helps reduce the rank of
+/// the operands, which can be helpful when lowering to dialects that only
+/// support 1D vector type such as LLVM.
+void populateDropInnerMostUnitDimsXferOpPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to reduce the rank of the operands of vector
 /// transfer ops to operate on the largest contigious vector.
 /// These patterns are useful when lowering to dialects with 1d vector type

@@ -119,6 +119,7 @@
 ; GCN-O0-NEXT:        SI Final Branch Preparation
 ; GCN-O0-NEXT:        Post RA hazard recognizer
 ; GCN-O0-NEXT:        AMDGPU Insert waits for SGPR read hazards
+; GCN-O0-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O0-NEXT:        Branch relaxation pass
 ; GCN-O0-NEXT:        Register Usage Information Collector Pass
 ; GCN-O0-NEXT:        Remove Loads Into Fake Uses
@@ -443,6 +444,7 @@
 ; GCN-O3-NEXT:        SI peephole optimizations
 ; GCN-O3-NEXT:        Post RA hazard recognizer
 ; GCN-O3-NEXT:        AMDGPU Insert waits for SGPR read hazards
+; GCN-O3-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass

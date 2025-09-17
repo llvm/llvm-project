@@ -1,6 +1,5 @@
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
-! XFAIL: *
 program reduce
 integer :: i = 0
 integer, dimension(2) :: r = 0
