@@ -53,7 +53,7 @@ bool InstrumentManager::canCustomize(
     const llvm::SmallVector<Instrument *> &IVec) const {
   for (const auto I : IVec) {
     if (I->getDesc() == LatencyInstrument::DESC_NAME) {
-      auto LatInst = static_cast<LatencyInstrument*>(I);
+      auto LatInst = static_cast<LatencyInstrument *>(I);
       return LatInst->hasValue();
     }
   }
@@ -64,7 +64,7 @@ void InstrumentManager::customize(const llvm::SmallVector<Instrument *> &IVec,
                                   InstrDesc &ID) const {
   for (const auto I : IVec) {
     if (I->getDesc() == LatencyInstrument::DESC_NAME) {
-      auto LatInst = static_cast<LatencyInstrument*>(I);
+      auto LatInst = static_cast<LatencyInstrument *>(I);
       if (LatInst->hasValue()) {
         auto Latency = LatInst->getLatency();
         // TODO Allow to customize a subset of ID.Writes
