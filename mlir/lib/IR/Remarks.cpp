@@ -241,7 +241,7 @@ void RemarkEngine::report(const Remark &remark) {
 
 void RemarkEngine::emitPostponedRemarks() {
   for (auto &remark : postponedRemarks)
-    report(remark, /*forcePrintPostponedRemarks=*/true);
+    reportImpl(remark);
   postponedRemarks.clear();
 }
 
