@@ -506,7 +506,7 @@ class StagingBufferTy {
     void *Ret = nullptr;
     size_t AllocSize = Size * Count;
     CALL_ZE_RET_NULL(zeMemAllocHost, Context, &AllocDesc, AllocSize,
-                     L0Alignment, &Ret);
+                     L0DefaultAlignment, &Ret);
     Buffers.push_back(Ret);
     return Ret;
   }

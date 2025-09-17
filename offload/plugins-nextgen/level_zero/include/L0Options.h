@@ -141,9 +141,9 @@ struct L0OptionsTy {
 
   bool Init = false; // have the options already been processed
 
-  /// Read environment variables
   L0OptionsTy() {}
 
+  /// Read environment variables
   void processEnvironmentVars();
 
   void init() {
@@ -155,9 +155,9 @@ struct L0OptionsTy {
 
   /// Parse the string and split it into tokens of string_views based on the
   /// Delim character.
-  std::vector<std::string_view> tokenize(const std::string_view &Filter,
-                                         const std::string &Delim,
-                                         bool ProhibitEmptyTokens = false);
+  static std::vector<std::string_view>
+  tokenize(const std::string_view &Filter, const std::string &Delim,
+           bool ProhibitEmptyTokens = false);
 
   bool isDigits(const std::string_view &str) {
     if (str.size() == 0)

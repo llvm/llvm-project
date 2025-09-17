@@ -1,4 +1,5 @@
 //===--- Level Zero Target RTL Implementation -----------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -43,7 +44,7 @@ LIBOMP_DECL(double, omp_get_wtime(void));
 namespace llvm::omp::target::plugin {
 
 /// Default alignmnet for allocation
-constexpr size_t L0Alignment = 0;
+constexpr size_t L0DefaultAlignment = 0;
 /// Default staging buffer size for host to device copy (16KB)
 constexpr size_t L0StagingBufferSize = (1 << 14);
 /// Default staging buffer count

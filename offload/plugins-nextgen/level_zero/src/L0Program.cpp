@@ -132,22 +132,22 @@ int32_t L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
     if (IsLibModule)
       return OFFLOAD_SUCCESS;
     return OFFLOAD_FAIL;
-  } else {
-    // Check if module link is required. We do not need this check for
-    // library module
-    if (!RequiresModuleLink && !IsLibModule) {
-      ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
-                                           nullptr, 0};
-      CALL_ZE_RET_FAIL(zeModuleGetProperties, Module, &Properties);
-      RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
-    }
-    // For now, assume the first module contains libraries, globals.
-    if (Modules.empty())
-      GlobalModule = Module;
-    Modules.push_back(Module);
-    l0Device.addGlobalModule(Module);
-    return OFFLOAD_SUCCESS;
   }
+
+  // Check if module link is required. We do not need this check for
+  // library module
+  if (!RequiresModuleLink && !IsLibModule) {
+    ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
+                                         nullptr, 0};
+    CALL_ZE_RET_FAIL(zeModuleGetProperties, Module, &Properties);
+    RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
+  }
+  // For now, assume the first module contains libraries, globals.
+  if (Modules.empty())
+    GlobalModule = Module;
+  Modules.push_back(Module);
+  l0Device.addGlobalModule(Module);
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t L0ProgramTy::linkModules() {
@@ -376,8 +376,6 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
          "isValidOneOmpImage() returns true for invalid ELF image");
   auto processELF = [&](auto *EObj) {
     assert(EObj && "isValidOneOmpImage() returns true for invalid ELF image.");
-    assert(MajorVer == 1 && MinorVer == 0 &&
-           "FIXME: update image processing for new oneAPI OpenMP version.");
     const auto &E = EObj->getELFFile();
     // Collect auxiliary information.
     uint64_t MaxImageIdx = 0;

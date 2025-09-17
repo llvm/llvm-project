@@ -163,7 +163,9 @@ void L0KernelTy::decideKernelGroupArguments(
   uint32_t GRPSizes[3] = {MaxGroupSize, 1, 1};
   bool UsedReductionSubscriptionRate = false;
   if (!MaxGroupCountForced) {
-    { GRPCounts[0] *= OptSubscRate; }
+    { 
+      GRPCounts[0] *= OptSubscRate; 
+    }
 
     size_t LoopTripcount = 0;
     if (LoopLevels) {
@@ -626,6 +628,12 @@ int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
     }
   } else {
     ze_event_handle_t Event = nullptr;
+    if (AllowCooperative)
+      CALL_ZE_RET_FAIL(zeCommandListAppendLaunchCooperativeKernel, CmdList,
+                       zeKernel, &GroupCounts, Event, 0, nullptr);
+    else
+      CALL_ZE_RET_FAIL(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                       &GroupCounts, Event, 0, nullptr);
     KernelLock.unlock();
     CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
     CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, Device.getMutex(),

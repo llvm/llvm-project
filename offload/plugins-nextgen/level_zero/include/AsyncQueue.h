@@ -13,6 +13,8 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
+#include <list>
+#include <tuple>
 #include <vector>
 
 #include "L0Memory.h"

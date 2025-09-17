@@ -99,7 +99,7 @@ void L0OptionsTy::processEnvironmentVars() {
 
         std::string_view TopDeviceStr = DeviceSubTuple[0];
         static const std::array<std::string, 7> DeviceStr = {
-            "host", "cpu", "gpu", "acc", "fpga", "*"};
+            "host", "cpu", "gpu", "acc", "*"};
         auto It =
             find_if(DeviceStr.begin(), DeviceStr.end(),
                     [&](auto DeviceStr) { return TopDeviceStr == DeviceStr; });

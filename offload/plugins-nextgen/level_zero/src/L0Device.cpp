@@ -64,15 +64,15 @@ constexpr int DeviceArchMapSize = sizeof(DeviceArchMap) / sizeof(DeviceArchMap[0
 DeviceArchTy L0DeviceTy::computeArch() const {
   const auto PCIDeviceId = getPCIId();
   if (PCIDeviceId != 0) {
-    for (int arch = 0; arch < DeviceArchMapSize; arch++) {
+    for (int ArchIndex = 0; ArchIndex < DeviceArchMapSize; ArchIndex++) {
       for (int i = 0;; i++) {
-        const auto Id = DeviceArchMap[arch].ids[i];
+        const auto Id = DeviceArchMap[ArchIndex].ids[i];
         if (Id == PCIIdTy::None)
           break;
 
         auto maskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
         if (maskedId == Id)
-          return DeviceArchMap[arch].arch; // Exact match or prefix match
+          return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match
       }
     }
   }
