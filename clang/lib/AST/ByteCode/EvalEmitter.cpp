@@ -51,19 +51,16 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
                                             bool CheckFullyInitialized) {
+  assert(VD);
+  assert(Init);
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
   S.setEvalLocation(VD->getLocation());
   EvalResult.setSource(VD);
 
-  // FIXME: I think Init is never null.
-  if (Init) {
-    QualType T = VD->getType();
-    this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
-                                  !T->isObjCObjectPointerType();
-  } else
-    this->ConvertResultToRValue = false;
-
+  QualType T = VD->getType();
+  this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
+                                !T->isObjCObjectPointerType();
   EvalResult.setSource(VD);
 
   if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
