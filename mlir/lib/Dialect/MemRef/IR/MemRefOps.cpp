@@ -111,6 +111,65 @@ static void constifyIndexValues(SmallVectorImpl<OpFoldResult> &values,
   }
 }
 
+/// Helper function to retrieve a fusable memory-space cast, and the
+/// corresponding new result memref type.
+static std::tuple<MemorySpaceCastOpInterface, PtrLikeTypeInterface, Type>
+getFuseCastInfo(BaseMemRefType resultTy, Value src) {
+  MemorySpaceCastOpInterface castOp =
+      MemorySpaceCastOpInterface::getIfFusableCast(src);
+
+  // Bail if the cast is not fusable.
+  if (!castOp)
+    return {};
+
+  // Transform the source and target type of `castOp` to have the same metadata
+  // as `resultTy`. Bail if not possible.
+  FailureOr<PtrLikeTypeInterface> srcTy = resultTy.clonePtrWith(
+      castOp.getSourcePtr().getType().getMemorySpace(), std::nullopt);
+  if (failed(srcTy))
+    return {};
+
+  FailureOr<PtrLikeTypeInterface> tgtTy = resultTy.clonePtrWith(
+      castOp.getTargetPtr().getType().getMemorySpace(), std::nullopt);
+  if (failed(tgtTy))
+    return {};
+
+  // Check if this is a valid memory-space cast.
+  if (!castOp.isValidMemorySpaceCast(*tgtTy, *srcTy))
+    return {};
+
+  return std::make_tuple(castOp, *tgtTy, *srcTy);
+}
+
+/// Implementation of `fuseCastOperands` method for memref operations that
+/// return a single memref result.
+template <typename ConcreteOpTy>
+static FailureOr<SmallVector<Value>>
+fuseCastOperandsPassthroughOpImpl(ConcreteOpTy op, OpBuilder &builder,
+                                  bool &modifiedInPlace, OpOperand &src) {
+  auto [castOp, tgtTy, resTy] = getFuseCastInfo(op.getType(), src.get());
+  // Bail if we cannot cast.
+  if (!castOp)
+    return failure();
+
+  modifiedInPlace = false;
+
+  // Create the new operands.
+  SmallVector<Value> operands;
+  llvm::append_range(operands, op->getOperands());
+  operands[src.getOperandNumber()] = castOp.getSourcePtr();
+
+  // Create the fused op and results.
+  auto newOp = ConcreteOpTy::create(
+      builder, op.getLoc(), TypeRange(resTy), operands, op.getProperties(),
+      llvm::to_vector_of<NamedAttribute>(op->getDiscardableAttrs()));
+
+  // Insert a memory-space cast to the original memory space of the op.
+  MemorySpaceCastOpInterface result =
+      castOp.cloneMemorySpaceCastOp(builder, tgtTy, newOp.getResult());
+  return SmallVector<Value>({result.getTargetPtr()});
+}
+
 //===----------------------------------------------------------------------===//
 // AllocOp / AllocaOp
 //===----------------------------------------------------------------------===//
@@ -542,6 +601,12 @@ OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
   return getMemref();
 }
 
+FailureOr<SmallVector<Value>>
+AssumeAlignmentOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getMemrefMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -708,6 +773,12 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
+}
+
+FailureOr<SmallVector<Value>> CastOp::fuseCastOperands(OpBuilder &builder,
+                                                       bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSourceMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1601,6 +1672,12 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   return OpFoldResult();
 }
 
+FailureOr<SmallVector<Value>> LoadOp::fuseCastOperands(OpBuilder &builder,
+                                                       bool &modifiedInPlace) {
+  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
+      getMemrefMutable(), getResult(), modifiedInPlace);
+}
+
 //===----------------------------------------------------------------------===//
 // MemorySpaceCastOp
 //===----------------------------------------------------------------------===//
@@ -1643,6 +1720,33 @@ OpFoldResult MemorySpaceCastOp::fold(FoldAdaptor adaptor) {
     return getResult();
   }
   return Value{};
+}
+
+TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getSourcePtr() {
+  return cast<TypedValue<PtrLikeTypeInterface>>(getSource());
+}
+
+TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getTargetPtr() {
+  return cast<TypedValue<PtrLikeTypeInterface>>(getDest());
+}
+
+bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,
+                                               PtrLikeTypeInterface src) {
+  return isa<MemRefType>(tgt) &&
+         tgt.clonePtrWith(src.getMemorySpace(), std::nullopt) == src;
+}
+
+MemorySpaceCastOpInterface
+MemorySpaceCastOp::cloneMemorySpaceCastOp(OpBuilder &b, Type tgt, Value src) {
+  assert(isValidMemorySpaceCast(cast<PtrLikeTypeInterface>(tgt),
+                                cast<PtrLikeTypeInterface>(src.getType())) &&
+         "invalid arguments");
+  return MemorySpaceCastOp::create(b, getLoc(), tgt, src);
+}
+
+bool MemorySpaceCastOp::isFusableMemorySpaceCast() {
+  // Only allow fusion when this is discarding information.
+  return getDest().getType().getMemorySpace() == nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2041,6 +2145,12 @@ void ReinterpretCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ReinterpretCastOpExtractStridedMetadataFolder>(context);
 }
 
+FailureOr<SmallVector<Value>>
+ReinterpretCastOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // Reassociative reshape ops
 //===----------------------------------------------------------------------===//
@@ -2348,6 +2458,12 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
       ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
+FailureOr<SmallVector<Value>>
+ExpandShapeOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSrcMutable());
+}
+
 /// Compute the layout map after collapsing a given source MemRef type with the
 /// specified reassociation indices.
 ///
@@ -2569,6 +2685,12 @@ OpFoldResult CollapseShapeOp::fold(FoldAdaptor adaptor) {
                                                        adaptor.getOperands());
 }
 
+FailureOr<SmallVector<Value>>
+CollapseShapeOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSrcMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
@@ -2609,6 +2731,12 @@ LogicalResult ReshapeOp::verify() {
   return success();
 }
 
+FailureOr<SmallVector<Value>>
+ReshapeOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
@@ -2624,6 +2752,12 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
                             SmallVectorImpl<OpFoldResult> &results) {
   /// store(memrefcast) -> store
   return foldMemRefCast(*this, getValueToStore());
+}
+
+FailureOr<SmallVector<Value>> StoreOp::fuseCastOperands(OpBuilder &builder,
+                                                        bool &modifiedInPlace) {
+  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
+      getMemrefMutable(), ValueRange(), modifiedInPlace);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3282,6 +3416,12 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+FailureOr<SmallVector<Value>>
+SubViewOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
@@ -3380,6 +3520,12 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
     return getResult();
   }
   return {};
+}
+
+FailureOr<SmallVector<Value>>
+TransposeOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getInMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3525,6 +3671,12 @@ void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
+FailureOr<SmallVector<Value>> ViewOp::fuseCastOperands(OpBuilder &builder,
+                                                       bool &modifiedInPlace) {
+  return fuseCastOperandsPassthroughOpImpl(*this, builder, modifiedInPlace,
+                                           getSourceMutable());
+}
+
 //===----------------------------------------------------------------------===//
 // AtomicRMWOp
 //===----------------------------------------------------------------------===//
@@ -3568,6 +3720,12 @@ OpFoldResult AtomicRMWOp::fold(FoldAdaptor adaptor) {
   if (succeeded(foldMemRefCast(*this, getValue())))
     return getResult();
   return OpFoldResult();
+}
+
+FailureOr<SmallVector<Value>>
+AtomicRMWOp::fuseCastOperands(OpBuilder &builder, bool &modifiedInPlace) {
+  return mlir::detail::fuseInPlaceMemorySpaceCastImpl(
+      getMemrefMutable(), getResult(), modifiedInPlace);
 }
 
 //===----------------------------------------------------------------------===//
