@@ -4562,6 +4562,13 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
     }
 
+    // Adapt the element type of EVec into ContainerVT.
+    MVT EVecEltVT = EVecContainerVT.getVectorElementType();
+    MVT ContainerEltVT = ContainerVT.getVectorElementType();
+    if (EVecEltVT != ContainerEltVT)
+      EVec = DAG.getAnyExtOrTrunc(
+          EVec, DL, EVecContainerVT.changeVectorElementType(ContainerEltVT));
+
     // Adapt EVec's type into ContainerVT.
     if (EVecContainerVT.getVectorMinNumElements() <
         ContainerVT.getVectorMinNumElements())
