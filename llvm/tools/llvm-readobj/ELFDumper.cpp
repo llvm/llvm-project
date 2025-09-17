@@ -5369,8 +5369,10 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       reportError(std::move(CGSectionErr),
                   "While reading call graph info FormatVersionNumber");
 
-    if (FormatVersionNumber != 0) {      
-      Error FormatErr = createError("Unknown format version value [" + std::to_string(FormatVersionNumber) + "] in .callgraph section.");
+    if (FormatVersionNumber != 0) {
+      Error FormatErr = createError("Unknown format version value [" +
+                                    std::to_string(FormatVersionNumber) +
+                                    "] in .callgraph section.");
       reportError(std::move(FormatErr), "Unknown value");
     }
 
@@ -5382,7 +5384,8 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                   "While reading call graph info function entry PC");
 
     if (FuncCGInfo.find(FuncAddr) != FuncCGInfo.end()) {
-      Error DuplicatePcErr = createError("for function PC: 0x" + Twine::utohexstr(FuncAddr));
+      Error DuplicatePcErr =
+          createError("for function PC: 0x" + Twine::utohexstr(FuncAddr));
       reportError(std::move(DuplicatePcErr), "Duplicate call graph entry");
     }
 
@@ -5392,7 +5395,8 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr), "Kind");
 
     if (KindVal > 3) {
-      Error KindErr = createError("Unknown value [" + std::to_string(KindVal) + "].");
+      Error KindErr =
+          createError("Unknown value [" + std::to_string(KindVal) + "].");
       PrintMalformedError(KindErr, Twine::utohexstr(FuncAddr), "FunctionKind");
     }
 
