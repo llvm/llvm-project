@@ -133,12 +133,11 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
 void AvoidPlatformSpecificFundamentalTypesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("type");
-  if (!TL)
-    return;
+  assert(TL);
 
-  SourceLocation Loc = TL->getBeginLoc();
-  QualType QT = TL->getType();
-  SourceRange TypeRange = TL->getSourceRange();
+  const SourceLocation Loc = TL->getBeginLoc();
+  const QualType QT = TL->getType();
+  const SourceRange TypeRange = TL->getSourceRange();
 
   // Skip implicit type locations, such as literals
   if (!Loc.isValid() || !TypeRange.isValid())
@@ -175,7 +174,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
         << TypeName;
   } else {
     diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
-              "consider using a 'typedef' or fixed-width type instead")
+              "consider using a type alias or fixed-width type instead")
         << TypeName;
   }
 }
