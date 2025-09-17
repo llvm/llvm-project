@@ -1276,10 +1276,17 @@ TYPE_PARSER(sourced(construct<OmpClauseList>(
 // 2.1 (variable | /common-block/ | array-sections)
 TYPE_PARSER(construct<OmpObjectList>(nonemptyList(Parser<OmpObject>{})))
 
-TYPE_PARSER(sourced(construct<OmpErrorDirective>(
-    verbatim("ERROR"_tok), Parser<OmpClauseList>{})))
-
 // --- Parsers for directives and constructs --------------------------
+
+static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
+  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
+
+static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+  return [&dirs](const OmpDirectiveName &name) -> bool {
+    return dirs.test(llvm::to_underlying(name.v));
+  };
+}
 
 TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
 
@@ -1355,26 +1362,22 @@ struct LooselyStructuredBlockParser {
   }
 };
 
-TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
+TYPE_PARSER(construct<OmpErrorDirective>(
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_error)) >=
+    Parser<OmpDirectiveSpecification>{}))
 
-TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
-    sourced(construct<OpenMPUtilityConstruct>(
-        sourced(Parser<OmpErrorDirective>{}))) ||
-    sourced(construct<OpenMPUtilityConstruct>(
-        sourced(Parser<OmpNothingDirective>{}))))))
+TYPE_PARSER(construct<OmpNothingDirective>(
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_nothing)) >=
+    Parser<OmpDirectiveSpecification>{}))
+
+TYPE_PARSER( //
+    sourced(construct<OpenMPUtilityConstruct>(Parser<OmpErrorDirective>{})) ||
+    sourced(construct<OpenMPUtilityConstruct>(Parser<OmpNothingDirective>{})))
 
 TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
     verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
-
-static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
-  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
-}
-
-static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
-  return [&dirs](const OmpDirectiveName &name) -> bool {
-    return dirs.test(llvm::to_underlying(name.v));
-  };
-}
 
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;

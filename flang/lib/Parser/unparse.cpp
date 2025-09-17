@@ -2610,13 +2610,18 @@ public:
     return false;
   }
   void Unparse(const OmpErrorDirective &x) {
-    Word("!$OMP ERROR ");
-    Walk(x.t);
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OmpNothingDirective &x) {
-    Word("!$OMP NOTHING");
+    BeginOpenMP();
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
+    EndOpenMP();
   }
   void Unparse(const OmpSectionsDirective &x) {
     switch (x.v) {
