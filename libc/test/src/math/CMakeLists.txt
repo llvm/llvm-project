@@ -1679,6 +1679,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    rsqrtf16_test.cpp
+  DEPENDS
+    libc.src.math.rsqrtf16
+)
+
+add_fp_unittest(
   sqrtf16_test
   NEED_MPFR
   SUITE
