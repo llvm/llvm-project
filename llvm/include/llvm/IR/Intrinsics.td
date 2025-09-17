@@ -1818,7 +1818,7 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
 // Intrinsic to support constant time select
 def int_ct_select : DefaultAttrsIntrinsic<[llvm_any_ty],
     [llvm_i1_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-    [IntrWriteMem, IntrWillReturn, NoUndef<RetIndex>]>;
+    [IntrNoMem, IntrWillReturn, IntrNoDuplicate, NoUndef<RetIndex>]>;
 
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
