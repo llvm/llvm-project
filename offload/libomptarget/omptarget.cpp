@@ -309,38 +309,6 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
   return Rc;
 }
 
-static int prepareAndSubmitData(DeviceTy &Device, void *HstPtrBegin,
-                                void *HstPtrBase, void *LocalTgtPtrBegin,
-                                TargetPointerResultTy &PointerTpr,
-                                void *PointerHstPtrBegin,
-                                void *PointerTgtPtrBegin,
-                                AsyncInfoTy &AsyncInfo) {
-  uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
-  void *ExpectedTgtPtrBase = (void *)((uint64_t)LocalTgtPtrBegin - Delta);
-
-  if (PointerTpr.getEntry()->addShadowPointer(
-          ShadowPtrInfoTy{(void **)PointerHstPtrBegin,
-                          (void **)PointerTgtPtrBegin, ExpectedTgtPtrBase, sizeof(void*)})) {
-    DP("USM_SPECIAL: Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
-       DPxPTR(PointerTgtPtrBegin), DPxPTR(LocalTgtPtrBegin));
-
-    void *&LocalTgtPtrBase = AsyncInfo.getVoidPtrLocation();
-    LocalTgtPtrBase = ExpectedTgtPtrBase;
-
-    int Ret =
-        Device.submitData(PointerTgtPtrBegin, &LocalTgtPtrBase, sizeof(void *),
-                          AsyncInfo, PointerTpr.getEntry());
-    if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Copying data to device failed.\n");
-      return OFFLOAD_FAIL;
-    }
-    if (PointerTpr.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
-        OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
 /// Utility function to perform a pointer attachment operation.
 ///
 /// For something like:
@@ -672,14 +640,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // Perhaps OMP_TGT_MAPTYPE_DESCRIPTOR would help here, not sure.
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) &&
         (!IsHostPtr || (PointerTpr.getEntry() != nullptr &&
-                        PointerHstPtrBegin != PointerTgtPtrBegin)))
-      if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase, TgtPtrBegin,
-                               PointerTpr, PointerHstPtrBegin,
-                               PointerTgtPtrBegin,
-                               AsyncInfo) != OFFLOAD_SUCCESS)
-        return OFFLOAD_FAIL;
-
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
+                        PointerHstPtrBegin != PointerTgtPtrBegin))) {
       int Ret = performPointerAttachment(
           Device, AsyncInfo, reinterpret_cast<void **>(PointerHstPtrBegin),
           HstPtrBase, HstPtrBegin,
