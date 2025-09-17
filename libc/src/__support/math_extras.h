@@ -15,7 +15,6 @@
 #include "src/__support/CPP/type_traits.h" // is_unsigned_v, is_constant_evaluated
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/compiler.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -26,9 +25,6 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 mask_trailing_ones() {
   constexpr unsigned T_BITS = CHAR_BIT * sizeof(T);
   static_assert(count <= T_BITS && "Invalid bit index");
-#ifndef LIBC_COMPILER_IS_MSVC
-  return count == 0 ? 0 : (T(-1) >> (T_BITS - count));
-#else
   // MSVC complains about out of range shifts.
   if constexpr (count == 0)
     return 0;
@@ -36,7 +32,6 @@ mask_trailing_ones() {
     return T(-1);
   else
     return T(-1) >> (T_BITS - count);
-#endif // !LIBC_COMPILER_IS_MSVC
 }
 
 // Create a bitmask with the count left-most bits set to 1, and all other bits
