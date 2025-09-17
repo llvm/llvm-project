@@ -190,7 +190,7 @@ public:
                          unsigned AddressSpace) const override;
 
   bool isLegalMaskedStore(Type *DataTy, Align Alignment,
-                          unsigned AddressSpace) const override {
+                          unsigned AddressSpace, bool /*IsMaskConstant*/) const override {
     return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
   }
 
