@@ -850,7 +850,8 @@ static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
   OS << T->getNumRows() << ", " << T->getNumColumns();
 }
 
-static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T, raw_ostream &OS) {
+static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                  raw_ostream &OS) {
   OS << "matrix<";
   TP.printBefore(T->getElementType(), OS);
 }
@@ -861,14 +862,16 @@ static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
   OS << ">";
 }
 
-static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T, raw_ostream &OS) {
+static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                   raw_ostream &OS) {
   TP.printBefore(T->getElementType(), OS);
   OS << " __attribute__((matrix_type(";
   printDims(T, OS);
   OS << ")))";
 }
 
-void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T, raw_ostream &OS) {
+void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
+                                            raw_ostream &OS) {
   if (Policy.UseHLSLTypes) {
     printHLSLMatrixBefore(*this, T, OS);
     return;
@@ -876,7 +879,8 @@ void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T, raw_ost
   printClangMatrixBefore(*this, T, OS);
 }
 
-void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
+void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
+                                           raw_ostream &OS) {
   if (Policy.UseHLSLTypes) {
     printHLSLMatrixAfter(T, OS);
     return;

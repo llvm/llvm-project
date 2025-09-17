@@ -123,7 +123,7 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
 
 void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
   ASTContext &AST = SemaPtr->getASTContext();
- llvm::SmallVector<NamedDecl *> TemplateParams;
+  llvm::SmallVector<NamedDecl *> TemplateParams;
 
   auto *TypeParam = TemplateTypeParmDecl::Create(
       AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 0,

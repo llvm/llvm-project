@@ -115,7 +115,7 @@ typedef vector<float64_t, 2> float64_t2;
 typedef vector<float64_t, 3> float64_t3;
 typedef vector<float64_t, 4> float64_t4;
 
-ifdef __HLSL_ENABLE_16_BIT
+#ifdef __HLSL_ENABLE_16_BIT
 typedef matrix<int16_t, 1, 1> int16_t1x1;
 typedef matrix<int16_t, 1, 2> int16_t1x2;
 typedef matrix<int16_t, 1, 3> int16_t1x3;
