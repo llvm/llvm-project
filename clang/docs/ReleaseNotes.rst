@@ -514,6 +514,14 @@ clang-format
 - Add ``NumericLiteralCase`` option for enforcing character case in numeric
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
+- Add ``BreakAfterOpenBracketBracedList'', ``BreakAfterOpenBracketFunction'',
+  ``BreakAfterOpenBracketIf``, ``BreakAfterOpenBracketLoop``,
+  ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketBracedList'',
+  ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+  ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch`` options.
+- Deprecate ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
+  ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
+  ``bool`` type.
 
 libclang
 --------
