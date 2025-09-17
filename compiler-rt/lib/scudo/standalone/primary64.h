@@ -1442,6 +1442,12 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   //    Then we can tell which pages are in-use by querying
   //    `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context =
       markFreeBlocks(Region, BlockSize, AllocatedUserEnd,
                      getCompactPtrBaseByClassId(ClassId), GroupsToRelease);
@@ -1453,11 +1459,6 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   // ==================================================================== //
   // 4. Release the unused physical pages back to the OS.
   // ==================================================================== //
-
-  // Only add trace point after it is determined that a release will occur to
-  // avoid incurring performance penalties.
-  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
-
   RegionReleaseRecorder<MemMapT> Recorder(&Region->MemMapInfo.MemMap,
                                           Region->RegionBeg,
                                           Context.getReleaseOffset());
