@@ -857,6 +857,12 @@ bool SILowerControlFlow::run(MachineFunction &MF) {
   LoweredIf.clear();
   KillBlocks.clear();
 
+  if (Changed)
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : MBB)
+        if (MI.isBundled())
+          MI.unbundleFromSucc();
+
   return Changed;
 }
 
