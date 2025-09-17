@@ -1328,7 +1328,7 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
+  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
   /// takes an accumulator of type \p AccumType and a second vector operand to
   /// be accumulated, whose element count is specified by \p VF. The type of
   /// reduction is specified by \p Opcode. The second operand passed to the

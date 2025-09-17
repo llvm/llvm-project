@@ -2184,8 +2184,7 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-  assert(I->getIntrinsicID() ==
-             Intrinsic::experimental_vector_partial_reduce_add &&
+  assert(I->getIntrinsicID() == Intrinsic::vector_partial_reduce_add &&
          "Unexpected intrinsic!");
   return true;
 }
@@ -2941,6 +2940,63 @@ AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
 }
 
 MachineBasicBlock *
+AArch64TargetLowering::EmitCheckMatchingVL(MachineInstr &MI,
+                                           MachineBasicBlock *MBB) const {
+  MachineFunction *MF = MBB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  const TargetRegisterClass *RC_GPR = &AArch64::GPR64RegClass;
+  const TargetRegisterClass *RC_GPRsp = &AArch64::GPR64spRegClass;
+
+  Register RegVL_GPR = MRI.createVirtualRegister(RC_GPR);
+  Register RegVL_GPRsp = MRI.createVirtualRegister(RC_GPRsp); // for ADDSVL src
+  Register RegSVL_GPR = MRI.createVirtualRegister(RC_GPR);
+  Register RegSVL_GPRsp = MRI.createVirtualRegister(RC_GPRsp); // for ADDSVL dst
+
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // RDVL requires GPR64, ADDSVL requires GPR64sp
+  // We need to insert COPY instructions, these will later be removed by the
+  // RegisterCoalescer
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::RDVLI_XI), RegVL_GPR).addImm(1);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegVL_GPRsp)
+      .addReg(RegVL_GPR);
+
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::ADDSVL_XXI), RegSVL_GPRsp)
+      .addReg(RegVL_GPRsp)
+      .addImm(-1);
+  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegSVL_GPR)
+      .addReg(RegSVL_GPRsp);
+
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator It = ++MBB->getIterator();
+  MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *PassBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MF->insert(It, TrapBB);
+  MF->insert(It, PassBB);
+
+  // Continue if vector lengths match
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::CBZX))
+      .addReg(RegSVL_GPR)
+      .addMBB(PassBB);
+
+  // Transfer rest of current BB to PassBB
+  PassBB->splice(PassBB->begin(), MBB,
+                 std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  PassBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  // Trap if vector lengths mismatch
+  BuildMI(TrapBB, DL, TII->get(AArch64::BRK)).addImm(1);
+
+  MBB->addSuccessor(TrapBB);
+  MBB->addSuccessor(PassBB);
+
+  MI.eraseFromParent();
+  return PassBB;
+}
+
+MachineBasicBlock *
 AArch64TargetLowering::EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                     MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
@@ -3342,6 +3398,9 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
 
   case AArch64::PROBED_STACKALLOC_DYN:
     return EmitDynamicProbedAlloc(MI, BB);
+
+  case AArch64::CHECK_MATCHING_VL_PSEUDO:
+    return EmitCheckMatchingVL(MI, BB);
 
   case AArch64::LD1_MXIPXX_H_PSEUDO_B:
     return EmitTileLoad(AArch64::LD1_MXIPXX_H_B, AArch64::ZAB0, MI, BB);
@@ -9119,13 +9178,28 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   }
 }
 
-SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
-                                                   bool Enable, SDValue Chain,
-                                                   SDValue InGlue,
-                                                   unsigned Condition) const {
+SDValue AArch64TargetLowering::changeStreamingMode(
+    SelectionDAG &DAG, SDLoc DL, bool Enable, SDValue Chain, SDValue InGlue,
+    unsigned Condition, bool InsertVectorLengthCheck) const {
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setHasStreamingModeChanges(true);
+
+  auto GetCheckVL = [&](SDValue Chain, SDValue InGlue = SDValue()) -> SDValue {
+    SmallVector<SDValue, 2> Ops = {Chain};
+    if (InGlue)
+      Ops.push_back(InGlue);
+    return DAG.getNode(AArch64ISD::CHECK_MATCHING_VL, DL,
+                       DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+  };
+
+  if (InsertVectorLengthCheck && Enable) {
+    // Non-streaming -> Streaming
+    // Insert vector length check before smstart
+    SDValue CheckVL = GetCheckVL(Chain, InGlue);
+    Chain = CheckVL.getValue(0);
+    InGlue = CheckVL.getValue(1);
+  }
 
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
@@ -9153,7 +9227,16 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   if (InGlue)
     Ops.push_back(InGlue);
 
-  return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+  SDValue SMChange =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+
+  if (!InsertVectorLengthCheck || Enable)
+    return SMChange;
+
+  // Streaming -> Non-streaming
+  // Insert vector length check after smstop since we cannot read VL
+  // in streaming mode
+  return GetCheckVL(SMChange.getValue(0), SMChange.getValue(1));
 }
 
 // Emit a call to __arm_sme_save or __arm_sme_restore.
@@ -9735,9 +9818,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    Chain =
-        changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
-                            Chain, InGlue, getSMToggleCondition(CallAttrs));
+    bool InsertVectorLengthCheck =
+        (CallConv == CallingConv::AArch64_SVE_VectorCall);
+    Chain = changeStreamingMode(
+        DAG, DL, CallAttrs.callee().hasStreamingInterface(), Chain, InGlue,
+        getSMToggleCondition(CallAttrs), InsertVectorLengthCheck);
     InGlue = Chain.getValue(1);
   }
 
@@ -17388,8 +17473,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
             if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
               return true;
             if (match(SingleUser,
-                      m_Intrinsic<
-                          Intrinsic::experimental_vector_partial_reduce_add>(
+                      m_Intrinsic<Intrinsic::vector_partial_reduce_add>(
                           m_Value(), m_Specific(I))))
               return true;
             return false;
@@ -18990,6 +19074,18 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
     else if (SDValue R = performUADDVZextCombine(A, DAG))
       return R;
   }
+
+  // uaddv(A) --> A if all lanes of A are known to be zeros except the 0th lane.
+  MVT VT = N->getSimpleValueType(0);
+  MVT OpVT = A.getSimpleValueType();
+  assert(VT == OpVT &&
+         "The operand type should be consistent with the result type of UADDV");
+  APInt Mask = APInt::getAllOnes(OpVT.getVectorNumElements());
+  Mask.clearBit(0);
+  KnownBits KnownLeadingLanes = DAG.computeKnownBits(A, Mask);
+  if (KnownLeadingLanes.isZero())
+    return A;
+
   return SDValue();
 }
 
@@ -22424,8 +22520,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
                                       SelectionDAG &DAG) {
 
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-         getIntrinsicID(N) ==
-             Intrinsic::experimental_vector_partial_reduce_add &&
+         getIntrinsicID(N) == Intrinsic::vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
   bool Scalable = N->getValueType(0).isScalableVector();
@@ -22519,8 +22614,7 @@ SDValue tryLowerPartialReductionToWideAdd(SDNode *N,
                                           SelectionDAG &DAG) {
 
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-         getIntrinsicID(N) ==
-             Intrinsic::experimental_vector_partial_reduce_add &&
+         getIntrinsicID(N) == Intrinsic::vector_partial_reduce_add &&
          "Expected a partial reduction node");
 
   if (!Subtarget->hasSVE2() && !Subtarget->isStreamingSVEAvailable())
@@ -22585,7 +22679,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
-  case Intrinsic::experimental_vector_partial_reduce_add: {
+  case Intrinsic::vector_partial_reduce_add: {
     if (SDValue Dot = tryLowerPartialReductionToDot(N, Subtarget, DAG))
       return Dot;
     if (SDValue WideAdd = tryLowerPartialReductionToWideAdd(N, Subtarget, DAG))

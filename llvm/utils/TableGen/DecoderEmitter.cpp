@@ -228,7 +228,6 @@ struct DecoderTableInfo {
   DecoderSet Decoders;
   bool HasCheckPredicate;
   bool HasSoftFail;
-  bool HasTryDecode;
 
   void insertPredicate(StringRef Predicate) {
     Predicates.insert(CachedHashString(Predicate));
@@ -624,7 +623,6 @@ static StringRef getDecoderOpName(DecoderOps Op) {
     CASE(OPC_CheckField);
     CASE(OPC_CheckPredicate);
     CASE(OPC_Decode);
-    CASE(OPC_TryDecode);
     CASE(OPC_SoftFail);
   }
 #undef CASE
@@ -792,8 +790,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS,
       OS << "if !checkPredicate(" << PIdx << ") pop scope";
       break;
     }
-    case OPC_Decode:
-    case OPC_TryDecode: {
+    case OPC_Decode: {
       // Decode the Opcode value.
       unsigned Opc = DecodeAndEmitULEB128(I, OS);
 
@@ -1164,22 +1161,10 @@ void DecoderTableBuilder::emitSingletonTableEntry(
   TableInfo.insertDecoder(Decoder);
   unsigned DecoderIndex = TableInfo.getDecoderIndex(Decoder);
 
-  // Produce OPC_Decode or OPC_TryDecode opcode based on the information
-  // whether the instruction decoder is complete or not. If it is complete
-  // then it handles all possible values of remaining variable/unfiltered bits
-  // and for any value can determine if the bitpattern is a valid instruction
-  // or not. This means OPC_Decode will be the final step in the decoding
-  // process. If it is not complete, then the Fail return code from the
-  // decoder method indicates that additional processing should be done to see
-  // if there is any other instruction that also matches the bitpattern and
-  // can decode it.
-  const DecoderOps DecoderOp =
-      Encoding.hasCompleteDecoder() ? OPC_Decode : OPC_TryDecode;
-  TableInfo.Table.insertOpcode(DecoderOp);
+  TableInfo.Table.insertOpcode(MCD::OPC_Decode);
   const Record *InstDef = Encodings[EncodingID].getInstruction()->TheDef;
   TableInfo.Table.insertULEB128(Target.getInstrIntValue(InstDef));
   TableInfo.Table.insertULEB128(DecoderIndex);
-  TableInfo.HasTryDecode |= DecoderOp == OPC_TryDecode;
 }
 
 std::unique_ptr<Filter>
@@ -1689,48 +1674,28 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
        << "      makeUp(insn, Len);";
   }
   OS << R"(
-      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
-      assert(DecodeComplete);
-
+      S = decodeToMCInst(DecodeIdx, S, insn, MI, Address, DisAsm,
+                         DecodeComplete);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
-                   << ", using decoder " << DecodeIdx << ": "
-                   << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
-      return S;
-    })";
-  if (TableInfo.HasTryDecode) {
-    OS << R"(
-    case OPC_TryDecode: {
-      // Decode the Opcode value.
-      unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
-      unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
-
-      // Perform the decode operation.
-      MCInst TmpMI;
-      TmpMI.setOpcode(Opc);
-      bool DecodeComplete;
-      S = decodeToMCInst(DecodeIdx, S, insn, TmpMI, Address, DisAsm, DecodeComplete);
-      LLVM_DEBUG(dbgs() << Loc << ": OPC_TryDecode: opcode " << Opc
-                   << ", using decoder " << DecodeIdx << ": ");
+                        << ", using decoder " << DecodeIdx << ": "
+                        << (S ? "PASS, " : "FAIL, "));
 
       if (DecodeComplete) {
-        // Decoding complete.
-        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
-        MI = TmpMI;
+        LLVM_DEBUG(dbgs() << "decoding complete\n");
         return S;
       }
       assert(S == MCDisassembler::Fail);
       if (ScopeStack.empty()) {
-        LLVM_DEBUG(dbgs() << "FAIL, returning FAIL\n");
+        LLVM_DEBUG(dbgs() << "returning Fail\n");
         return MCDisassembler::Fail;
       }
       Ptr = ScopeStack.pop_back_val();
-      LLVM_DEBUG(dbgs() << "FAIL, continuing at " << Ptr - DecodeTable << '\n');
+      LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       // Reset decode status. This also drops a SoftFail status that could be
       // set before the decode attempt.
       S = MCDisassembler::Success;
       break;
     })";
-  }
   if (TableInfo.HasSoftFail) {
     OS << R"(
     case OPC_SoftFail: {
