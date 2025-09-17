@@ -10,7 +10,6 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/JSONTransport.h"
 #include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/ADT/SmallString.h"
@@ -109,11 +108,11 @@ Expected<std::vector<ServerInfo>> ServerInfo::Load() {
   return infos;
 }
 
-Server::Server(std::string name, std::string version,
-               std::unique_ptr<MCPTransport> transport_up,
-               lldb_private::MainLoop &loop)
-    : m_name(std::move(name)), m_version(std::move(version)),
-      m_transport_up(std::move(transport_up)), m_loop(loop) {
+Server::Server(std::string name, std::string version, MCPTransport &client,
+               LogCallback log_callback, ClosedCallback closed_callback)
+    : m_name(std::move(name)), m_version(std::move(version)), m_client(client),
+      m_log_callback(std::move(log_callback)),
+      m_closed_callback(std::move(closed_callback)) {
   AddRequestHandlers();
 }
 
@@ -287,22 +286,15 @@ ServerCapabilities Server::GetCapabilities() {
   return capabilities;
 }
 
-llvm::Error Server::Run() {
-  auto handle = m_transport_up->RegisterMessageHandler(m_loop, *this);
-  if (!handle)
-    return handle.takeError();
-
-  lldb_private::Status status = m_loop.Run();
-  if (status.Fail())
-    return status.takeError();
-
-  return llvm::Error::success();
+void Server::Log(llvm::StringRef message) {
+  if (m_log_callback)
+    m_log_callback(message);
 }
 
 void Server::Received(const Request &request) {
   auto SendResponse = [this](const Response &response) {
-    if (llvm::Error error = m_transport_up->Send(response))
-      m_transport_up->Log(llvm::toString(std::move(error)));
+    if (llvm::Error error = m_client.Send(response))
+      Log(llvm::toString(std::move(error)));
   };
 
   llvm::Expected<Response> response = Handle(request);
@@ -324,7 +316,7 @@ void Server::Received(const Request &request) {
 }
 
 void Server::Received(const Response &response) {
-  m_transport_up->Log("unexpected MCP message: response");
+  Log("unexpected MCP message: response");
 }
 
 void Server::Received(const Notification &notification) {
@@ -332,16 +324,11 @@ void Server::Received(const Notification &notification) {
 }
 
 void Server::OnError(llvm::Error error) {
-  m_transport_up->Log(llvm::toString(std::move(error)));
-  TerminateLoop();
+  Log(llvm::toString(std::move(error)));
 }
 
 void Server::OnClosed() {
-  m_transport_up->Log("EOF");
-  TerminateLoop();
-}
-
-void Server::TerminateLoop() {
-  m_loop.AddPendingCallback(
-      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  Log("EOF");
+  if (m_closed_callback)
+    m_closed_callback();
 }
