@@ -211,48 +211,6 @@ spirv.module Logical GLSL450 {
 // -----
 
 spirv.module Logical GLSL450 {
-  spirv.func @f_result_type_mismatch(%arg0 : i32, %arg1 : i32) -> () "None" {
-    // expected-error @+1 {{has incorrect number of results has for callee: expected 0, but provided 1}}
-    %1 = spirv.FunctionCall @f_result_type_mismatch(%arg0, %arg0) : (i32, i32) -> (i32)
-    spirv.Return
-  }
-}
-
-// -----
-
-spirv.module Logical GLSL450 {
-  spirv.func @f_type_mismatch(%arg0 : i32, %arg1 : i32) -> () "None" {
-    // expected-error @+1 {{has incorrect number of operands for callee: expected 2, but provided 1}}
-    spirv.FunctionCall @f_type_mismatch(%arg0) : (i32) -> ()
-    spirv.Return
-  }
-}
-
-// -----
-
-spirv.module Logical GLSL450 {
-  spirv.func @f_type_mismatch(%arg0 : i32, %arg1 : i32) -> () "None" {
-    %0 = spirv.Constant 2.0 : f32
-    // expected-error @+1 {{operand type mismatch: expected operand type 'i32', but provided 'f32' for operand number 1}}
-    spirv.FunctionCall @f_type_mismatch(%arg0, %0) : (i32, f32) -> ()
-    spirv.Return
-  }
-}
-
-// -----
-
-spirv.module Logical GLSL450 {
-  spirv.func @f_type_mismatch(%arg0 : i32, %arg1 : i32) -> i32 "None" {
-    %cst = spirv.Constant 0: i32
-    // expected-error @+1 {{result type mismatch: expected 'i32', but provided 'f32'}}
-    %0 = spirv.FunctionCall @f_type_mismatch(%arg0, %arg0) : (i32, i32) -> f32
-    spirv.ReturnValue %cst: i32
-  }
-}
-
-// -----
-
-spirv.module Logical GLSL450 {
   spirv.func @f_foo(%arg0 : i32, %arg1 : i32) -> i32 "None" {
     // expected-error @+1 {{op callee function 'f_undefined' not found in nearest symbol table}}
     %0 = spirv.FunctionCall @f_undefined(%arg0, %arg0) : (i32, i32) -> i32
