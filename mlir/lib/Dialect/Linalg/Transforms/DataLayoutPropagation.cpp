@@ -14,6 +14,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -289,9 +290,11 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
 
   auto empty = linalg::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
-  auto packedOperand = linalg::PackOp::create(
-      b, loc, opOperand->get(), empty, innerDimsPos, innerTileSizes,
-      /*padding=*/std::nullopt, outerDimsPerm);
+  auto poison = ub::PoisonOp::create(
+      b, loc, getElementTypeOrSelf(opOperand->get().getType()));
+  auto packedOperand =
+      linalg::PackOp::create(b, loc, opOperand->get(), empty, innerDimsPos,
+                             innerTileSizes, poison, outerDimsPerm);
   return std::make_tuple(packedOperand, indexingMap);
 }
 
