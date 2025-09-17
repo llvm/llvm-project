@@ -1949,21 +1949,17 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
 /// Check the dependence for two accesses with the same stride \p Stride.
 /// \p Distance is the positive distance in bytes, and \p TypeByteSize is type
-/// size of source and sink in bytes.
-/// TODO: Relax HasSameSize check in caller.
+/// size in bytes.
 ///
 /// \returns true if they are independent.
-static bool
-areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
-                              std::pair<uint64_t, uint64_t> TypeByteSize) {
+static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
+                                          uint64_t TypeByteSize) {
   assert(Stride > 1 && "The stride must be greater than 1");
-  assert(TypeByteSize.first > 0 && TypeByteSize.second > 0 &&
-         "The type size in byte must be non-zero");
+  assert(TypeByteSize > 0 && "The type size in byte must be non-zero");
   assert(Distance > 0 && "The distance must be non-zero");
 
-  // Skip if the distance is not multiple of type byte size of either source or
-  // sink.
-  if (Distance % TypeByteSize.first || Distance % TypeByteSize.second)
+  // Skip if the distance is not multiple of type byte size.
+  if (Distance % TypeByteSize)
     return false;
 
   // No dependence if the distance is not multiple of the stride.
@@ -2196,7 +2192,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
     if (ConstDist > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(ConstDist, *CommonStride, TypeByteSize)) {
+        areStridedAccessesIndependent(ConstDist, *CommonStride,
+                                      TypeByteSize.first)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
@@ -2211,6 +2208,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
       // Write to the same location with the same size.
+      assert(HasSameSize && "Accesses must have the same size");
       return Dependence::Forward;
     }
 
