@@ -10,6 +10,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/AsmParser/Parser.h"
@@ -872,6 +873,36 @@ TEST(InstructionsTest, GEPIndices) {
   EXPECT_EQ(CGEPI->idx_end(), CGEPI->indices().end());
 
   delete GEPI;
+}
+
+TEST(InstructionsTest, PtrToIntGEPFolding) {
+  LLVMContext Context;
+  llvm::Module *M = new llvm::Module("PtrToIntGEPFolding", Context);
+  llvm::IRBuilder<llvm::TargetFolder> Builder(
+      Context, llvm::TargetFolder(M->getDataLayout()));
+
+  auto *Int64Ty = Builder.getInt64Ty();
+  auto *ArrTy = llvm::ArrayType::get(Int64Ty, 1);
+  auto *StructTy = llvm::StructType::create(Context, {ArrTy}, "anon_struct");
+
+  // Create alias @m2 to @0
+  llvm::GlobalAlias *AliasM2 = llvm::GlobalAlias::create(
+      StructTy,
+      0, // address space
+      llvm::GlobalValue::InternalLinkage, "m2", (llvm::Constant *)nullptr, M);
+
+  // Build getelementptr for ptrtoint
+  std::vector<llvm::Value *> GEPIdxs = {
+      llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0),
+      llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 0),
+      llvm::ConstantInt::get(llvm::Type::getInt32Ty(Context), 1)};
+  llvm::Value *GEP = Builder.CreateGEP(StructTy, AliasM2, GEPIdxs, "",
+                                       llvm::GEPNoWrapFlags::inBounds());
+  // Make sure stripAndAccumulateConstantOffsets can properly handle
+  // GEPs with nullptr global aliasees.
+  llvm::Value *PtrToInt = Builder.CreatePtrToInt(GEP, Int64Ty);
+  EXPECT_TRUE(PtrToInt);
+  delete M;
 }
 
 TEST(InstructionsTest, ZeroIndexGEP) {
