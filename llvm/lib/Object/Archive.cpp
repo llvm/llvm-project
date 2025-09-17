@@ -473,9 +473,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   }
 
   Header = Parent->createArchiveMemberHeader(
-      Start,
-      Parent ? Parent->getData().size() - (Start - Parent->getData().data())
-             : 0,
+      Start, Parent->getData().size() - (Start - Parent->getData().data()),
       Err);
 
   // If we are pointed to real data, Start is not a nullptr, then there must be
