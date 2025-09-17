@@ -388,6 +388,24 @@ func.func @xfer_read_minor_identitiy_bcast_dims(
   return %res : vector<8x4x2x3xf32>
 }
 
+// CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_scalar
+//  CHECK-SAME:     %[[MEM:.*]]: memref<f32>) -> vector<8x4x2x3xf32> {
+//       CHECK:     %[[LOAD:.*]] = memref.load %[[MEM]][] : memref<f32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[LOAD]] : f32 to vector<8x4x2x3xf32>
+//       CHECK:     return %[[BC]] : vector<8x4x2x3xf32>
+func.func @xfer_read_minor_identitiy_bcast_scalar(
+    %mem: memref<f32>) -> vector<8x4x2x3xf32> {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.transfer_read %mem[], %pad {
+    in_bounds = [true, true, true, true],
+    permutation_map = affine_map<() -> (0, 0, 0, 0)>
+  } : memref<f32>, vector<8x4x2x3xf32>
+
+  return %res : vector<8x4x2x3xf32>
+}
+
 // CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims_scalable
 //  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>, %[[IDX:.*]]: index) -> vector<8x[4]x2x3xf32> {
 //       CHECK:     %[[T_READ:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]]{{.*}} permutation_map = #[[$MAP]]} : memref<?x?x?x?xf32>, vector<[4]x2x3xf32>
