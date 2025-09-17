@@ -4889,6 +4889,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
+        ":MemRefTransforms",
         ":MemRefUtils",
         ":Pass",
         ":Rewrite",
