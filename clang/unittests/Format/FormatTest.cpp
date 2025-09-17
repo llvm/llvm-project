@@ -10848,6 +10848,14 @@ TEST_F(FormatTest, WrapsTemplateDeclarations) {
                "public:\n"
                "  E *f();\n"
                "};");
+  AlwaysBreak.RequiresClausePosition = FormatStyle::RCPS_SingleLine;
+  verifyFormat("template <typename T> requires std::floating_point<T>\n"
+               "using LerpValue = ClampedValue<T, T{0}, T{1}>;",
+               AlwaysBreak);
+  AlwaysBreak.RequiresClausePosition = FormatStyle::RCPS_WithPreceding;
+  verifyFormat("template <typename T> requires std::floating_point<T>\n"
+               "using LerpValue = ClampedValue<T, T{0}, T{1}>;",
+               AlwaysBreak);
 
   FormatStyle NeverBreak = getLLVMStyle();
   NeverBreak.BreakTemplateDeclarations = FormatStyle::BTDS_No;
