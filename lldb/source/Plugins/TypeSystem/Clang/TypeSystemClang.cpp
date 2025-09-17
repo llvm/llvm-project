@@ -6714,14 +6714,14 @@ bool TypeSystemClang::FindInAnonRecordFields(const clang::RecordDecl *rd,
   uint32_t local_idx = 0;
 
   // We need the visible base count to compute the child index offset
-  const clang::CXXRecordDecl *crd =
-      llvm::dyn_cast<clang::CXXRecordDecl>(rd);
+  const clang::CXXRecordDecl *crd = llvm::dyn_cast<clang::CXXRecordDecl>(rd);
   const uint32_t bases =
       TypeSystemClang::GetNumBaseClasses(crd, omit_empty_base_classes);
 
-  // We only treat anonymous record fields as transparent containers for further lookup.
-  for (auto it = rd->field_begin(), ie = rd->field_end();
-       it != ie; ++it, ++local_idx) {
+  // We only treat anonymous record fields as transparent containers for further
+  // lookup.
+  for (auto it = rd->field_begin(), ie = rd->field_end(); it != ie;
+       ++it, ++local_idx) {
     llvm::StringRef fname = it->getName();
     const bool is_anon = it->isAnonymousStructOrUnion() || fname.empty();
 
@@ -6739,7 +6739,8 @@ bool TypeSystemClang::FindInAnonRecordFields(const clang::RecordDecl *rd,
       continue;
 
     const auto *inner_rt = it->getType()->castAs<clang::RecordType>();
-    const clang::RecordDecl *inner_rd = inner_rt->getOriginalDecl()->getDefinitionOrSelf();
+    const clang::RecordDecl *inner_rd =
+        inner_rt->getOriginalDecl()->getDefinitionOrSelf();
     if (!inner_rd)
       continue;
 
@@ -6822,8 +6823,10 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               std::vector<uint32_t> save_indices = child_indexes;
               child_indexes.push_back(this_slot);
               const auto *rt = field->getType()->castAs<clang::RecordType>();
-              const clang::RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
-              if (rd && FindInAnonRecordFields(rd, child_indexes, name, omit_empty_base_classes))
+              const clang::RecordDecl *rd =
+                  rt->getOriginalDecl()->getDefinitionOrSelf();
+              if (rd && FindInAnonRecordFields(rd, child_indexes, name,
+                                               omit_empty_base_classes))
                 return child_indexes.size();
               child_indexes = std::move(save_indices);
             }
@@ -6837,9 +6840,10 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
         }
 
         if (cxx_record_decl) {
-          for (const clang::CXXBaseSpecifier &base_spec : cxx_record_decl->bases()) {
-            uint32_t base_slot =
-                GetIndexForRecordBase(record_decl, &base_spec, omit_empty_base_classes);
+          for (const clang::CXXBaseSpecifier &base_spec :
+               cxx_record_decl->bases()) {
+            uint32_t base_slot = GetIndexForRecordBase(record_decl, &base_spec,
+                                                       omit_empty_base_classes);
             if (base_slot == UINT32_MAX)
               continue;
 
