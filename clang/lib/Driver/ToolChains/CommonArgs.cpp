@@ -3506,20 +3506,16 @@ std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   switch (Range) {
   case LangOptions::ComplexRangeKind::CX_Full:
     return "full";
-    break;
   case LangOptions::ComplexRangeKind::CX_Basic:
     return "basic";
-    break;
   case LangOptions::ComplexRangeKind::CX_Improved:
     return "improved";
-    break;
   case LangOptions::ComplexRangeKind::CX_Promoted:
     return "promoted";
-    break;
   case LangOptions::ComplexRangeKind::CX_None:
     return "none";
-    break;
   }
+  llvm_unreachable("Unknown ComplexRangeKind!");
 }
 
 std::string
