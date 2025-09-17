@@ -235,6 +235,7 @@ public:
   mlir::Value visitCirAttr(cir::ConstRecordAttr attr);
   mlir::Value visitCirAttr(cir::ConstVectorAttr attr);
   mlir::Value visitCirAttr(cir::GlobalViewAttr attr);
+  mlir::Value visitCirAttr(cir::TypeInfoAttr attr);
   mlir::Value visitCirAttr(cir::VTableAttr attr);
   mlir::Value visitCirAttr(cir::ZeroAttr attr);
 
@@ -519,6 +520,20 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   }
 
   llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
+}
+
+// TypeInfoAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::TypeInfoAttr typeinfoArr) {
+  mlir::Type llvmTy = converter->convertType(typeinfoArr.getType());
+  mlir::Location loc = parentOp->getLoc();
+  mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+
+  for (auto [idx, elt] : llvm::enumerate(typeinfoArr.getData())) {
+    mlir::Value init = visit(elt);
+    result = rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+  }
+
+  return result;
 }
 
 // VTableAttr visitor.

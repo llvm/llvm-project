@@ -342,8 +342,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::VTableAttr>(
-          attrType))
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
+                cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -2738,6 +2738,25 @@ LogicalResult cir::AtomicCmpXchg::verify() {
       pointeeType != getDesired().getType())
     return emitOpError("ptr, expected and desired types must match");
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeInfoAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::TypeInfoAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::mlir::Type type, ::mlir::ArrayAttr typeinfoData) {
+
+  if (cir::ConstRecordAttr::verify(emitError, type, typeinfoData).failed())
+    return failure();
+
+  for (auto &member : typeinfoData) {
+    if (llvm::isa<GlobalViewAttr, IntAttr>(member))
+      continue;
+    return emitError() << "expected GlobalViewAttr or IntAttr attribute";
+  }
   return success();
 }
 
