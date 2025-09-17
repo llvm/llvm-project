@@ -172,11 +172,11 @@ bool CompilerInstance::createTarget() {
   return true;
 }
 
-llvm::vfs::FileSystem &CompilerInstance::getVirtualFileSystem() const {
-  return getFileManager().getVirtualFileSystem();
-}
-
 void CompilerInstance::setFileManager(FileManager *Value) {
+  if (!hasVirtualFileSystem())
+    setVirtualFileSystem(Value->getVirtualFileSystemPtr());
+  assert(Value == nullptr ||
+         getVirtualFileSystemPtr() == Value->getVirtualFileSystemPtr());
   FileMgr = Value;
 }
 
@@ -287,6 +287,20 @@ static void collectVFSEntries(CompilerInstance &CI,
     MDC->addFile(E.VPath, E.RPath);
 }
 
+void CompilerInstance::createVirtualFileSystem(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS, DiagnosticConsumer *DC) {
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts, DC,
+                          /*ShouldOwnClient=*/false);
+
+  VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
+                                        std::move(BaseFS), CAS);
+  // FIXME: Should this go into createVFSFromCompilerInvocation?
+  if (getFrontendOpts().ShowStats)
+    VFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(VFS));
+}
+
 // Diagnostics
 static void SetUpDiagnosticLog(DiagnosticOptions &DiagOpts,
                                const CodeGenOptions *CodeGenOpts,
@@ -338,11 +352,10 @@ static void SetupSerializedDiagnostics(DiagnosticOptions &DiagOpts,
   }
 }
 
-void CompilerInstance::createDiagnostics(llvm::vfs::FileSystem &VFS,
-                                         DiagnosticConsumer *Client,
+void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(VFS, getDiagnosticOpts(), Client,
-                                  ShouldOwnClient, &getCodeGenOpts());
+  Diagnostics = createDiagnostics(getVirtualFileSystem(), getDiagnosticOpts(),
+                                  Client, ShouldOwnClient, &getCodeGenOpts());
 }
 
 IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
@@ -381,17 +394,9 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
 
 // File Manager
 
-FileManager *CompilerInstance::createFileManager(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
-  if (!VFS)
-    VFS = FileMgr ? &FileMgr->getVirtualFileSystem()
-                  : createVFSFromCompilerInvocation(getInvocation(),
-                                                    getDiagnostics(), CAS);
-  assert(VFS && "FileManager has no VFS?");
-  if (getFrontendOpts().ShowStats)
-    VFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(VFS));
-  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
+FileManager *CompilerInstance::createFileManager() {
+  assert(VFS && "CompilerInstance needs a VFS for creating FileManager");
+  FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(getFileSystemOpts(), VFS);
   return FileMgr.get();
 }
 
@@ -1388,20 +1393,21 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto &Inv = Instance.getInvocation();
 
   if (ThreadSafeConfig) {
-    Instance.createFileManager(ThreadSafeConfig->getVFS());
+    Instance.setVirtualFileSystem(ThreadSafeConfig->getVFS());
+    Instance.createFileManager();
   } else if (FrontendOpts.ModulesShareFileManager) {
+    Instance.setVirtualFileSystem(getVirtualFileSystemPtr());
     Instance.setFileManager(&getFileManager());
   } else {
-    Instance.createFileManager(&getVirtualFileSystem());
+    Instance.setVirtualFileSystem(&getVirtualFileSystem());
+    Instance.createFileManager();
   }
 
   if (ThreadSafeConfig) {
-    Instance.createDiagnostics(Instance.getVirtualFileSystem(),
-                               &ThreadSafeConfig->getDiagConsumer(),
+    Instance.createDiagnostics(&ThreadSafeConfig->getDiagConsumer(),
                                /*ShouldOwnClient=*/false);
   } else {
     Instance.createDiagnostics(
-        Instance.getVirtualFileSystem(),
         new ForwardingDiagnosticConsumer(getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
   }

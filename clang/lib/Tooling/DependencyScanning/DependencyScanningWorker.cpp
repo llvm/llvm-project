@@ -566,12 +566,13 @@ public:
     ScanInstance.getInvocation().getCASOpts() = CASOpts;
     ScanInstance.setBuildingModule(false);
 
+    ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
+
     // Create the compiler's actual diagnostics engine.
     if (!DiagGenerationAsCompilation)
       sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
     assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
-    ScanInstance.createDiagnostics(*FS, DiagConsumer,
-                                   /*ShouldOwnClient=*/false);
+    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
     if (VerboseOS)
@@ -596,13 +597,8 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
 
-    // Support for virtual file system overlays.
-    FS = createVFSFromCompilerInvocation(ScanInstance.getInvocation(),
-                                         ScanInstance.getDiagnostics(),
-                                         std::move(FS));
-
     // Create a new FileManager to match the invocation's FileSystemOptions.
-    auto *FileMgr = ScanInstance.createFileManager(FS);
+    auto *FileMgr = ScanInstance.createFileManager();
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
