@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/unistd/gethostname.h"
+
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
+
+using LlvmLibcGetHostNameTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcGetHostNameTest, GetCurrHostName) {
   char hostbuffer[1024];

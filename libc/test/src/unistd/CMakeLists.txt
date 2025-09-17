@@ -417,6 +417,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.unistd.gethostname
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
