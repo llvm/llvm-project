@@ -68,7 +68,7 @@ Fundamental types have platform-dependent sizes and behavior:
 - ``char`` is signed on ARM and unsigned on x86
 
 For historical reasons, the C++ standard allows the implementation to define
-the size and representation of these types. They communicate intent in
+the size, representation, and purpose of these types. They communicate intent in
 non-standard ways and are often needlessly incompatible.
 
 For example, ``int`` was traditionally the word size of a given processor in
@@ -88,16 +88,18 @@ size.
 
 ``char`` should be replaced by ``char8_t`` when used in the representation of
 Unicode text. When used to represent a byte on a given platform, ``std::byte``
-is an appropriate replacement.
+is an appropriate replacement. ``char`` can be either signed or unsigned
+depending on the platform (unsigned on ARM, signed on x86), while ``char8_t``
+and ``std::byte`` are guaranteed to be implemented as unsigned.
 
 Types Not Flagged
 -----------------
 
 The following types are intentionally not flagged:
 
-- ``bool`` (boolean type)
+- ``bool`` (boolean type).
 - Standard library typedefs like ``size_t``, ``ptrdiff_t``, or ``uint32_t``.
-- Already typedef'd types, though the check will flag the typedef itself
+- Already typedef'd types, though the check will flag the typedef itself.
 
 ``bool`` is excluded because it can only be true or false, and is not
 vulnerable to overflow or narrowing issues that occur as a result of using
@@ -119,16 +121,6 @@ Options
    (``float`` and ``double``).
    When `false`, floating point types are not flagged.
 
-   Floating point types can have platform-dependent behavior:
-
-  - ``float`` is typically 32-bit IEEE754, but can vary on some platforms
-  - ``double`` is typically 64-bit IEEE754, but on some microcontrollers
-    without a 64-bit FPU it can be 32 bits
-
-   When this option is enabled, the check will suggest using ``float32_t`` and
-   ``float64_t`` instead of ``float`` and ``double`` respectively, when the
-   target platform supports standard IEEE754 sizes.
-
    Default is `true`
 
 .. option:: WarnOnChars
@@ -136,12 +128,3 @@ Options
    When `true`, the check will warn about character types (``char``,
    ``signed char``, and ``unsigned char``).
    When `false`, character types are not flagged.
-
-   Character types can have platform-dependent behavior:
-
-   - ``char`` can be either signed or unsigned depending on the platform (signed
-     on ARM, unsigned on x86)
-   - The signedness of ``char`` affects comparisons and arithmetic operations
-
-   When this option is enabled, the check will suggest using ``std::byte`` or a 
-   Unicode character type instead of character types.
