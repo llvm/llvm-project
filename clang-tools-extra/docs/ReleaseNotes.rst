@@ -221,7 +221,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` with new
-  ``IgnoredEnums`` option to ignore some enums during analysis.
+  `IgnoredEnums` option to ignore some enums during analysis.
 
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing

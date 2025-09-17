@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -check-suffixes=,DEFAULT -std=c++17 %s bugprone-invalid-enum-default-initialization %t
-// RUN: %check_clang_tidy -std=c++17 %s bugprone-invalid-enum-default-initialization %t -- -config="{CheckOptions: {bugprone-invalid-enum-default-initialization.IgnoredEnums: '::MyEnum'}}"
+// RUN: %check_clang_tidy -check-suffixes=,DEFAULT -std=c++17-or-later %s bugprone-invalid-enum-default-initialization %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-invalid-enum-default-initialization %t -- -config="{CheckOptions: {bugprone-invalid-enum-default-initialization.IgnoredEnums: '::MyEnum'}}"
 
 enum class Enum0: int {
   A = 0,
