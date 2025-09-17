@@ -152,6 +152,27 @@ public:
     return isLoadFromStack(Inst);
   };
 
+  bool isReturn(const MCInst &Inst) const override {
+    // BR X30 is equivalent to RET
+    if (Inst.getOpcode() == AArch64::BR &&
+        Inst.getOperand(0).getReg() == AArch64::LR)
+      return true;
+
+    return Analysis->isReturn(Inst);
+  }
+
+  bool isBranch(const MCInst &Inst) const override {
+    if (isReturn(Inst))
+      return false;
+    return Analysis->isBranch(Inst);
+  }
+
+  bool isIndirectBranch(const MCInst &Inst) const override {
+    if (isReturn(Inst))
+      return false;
+    return Analysis->isIndirectBranch(Inst);
+  }
+
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
     createDirectCall(Inst, Target, Ctx, false);
