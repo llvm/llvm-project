@@ -26,7 +26,7 @@ public:
   createToFile(llvm::StringRef path, llvm::remarks::Format fmt);
 
   void streamOptimizationRemark(const Remark &remark) override;
-  void finalize() override {}
+  void finalize() override;
   ~LLVMRemarkStreamer() override;
 
 private:

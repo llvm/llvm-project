@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/BitstreamRemarkSerializer.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Remarks/Remark.h"
 #include <cassert>
 #include <optional>
@@ -197,6 +198,7 @@ void BitstreamRemarkSerializerHelper::setupBlockInfo() {
     Bitstream.Emit(static_cast<unsigned>(C), 8);
 
   Bitstream.EnterBlockInfoBlock();
+  auto ExitBlock = make_scope_exit([&] { Bitstream.ExitBlock(); });
 
   // Setup the main metadata. Depending on the container type, we'll setup the
   // required records next.
@@ -206,7 +208,7 @@ void BitstreamRemarkSerializerHelper::setupBlockInfo() {
   case BitstreamRemarkContainerType::RemarksFileExternal:
     // Needs to know where the external remarks file is.
     setupMetaExternalFile();
-    break;
+    return;
   case BitstreamRemarkContainerType::RemarksFile:
     // Contains remarks: emit the version.
     setupMetaRemarkVersion();
@@ -214,16 +216,16 @@ void BitstreamRemarkSerializerHelper::setupBlockInfo() {
     setupMetaStrTab();
     // Contains remarks: emit the remark abbrevs.
     setupRemarkBlockInfo();
-    break;
+    return;
   }
-
-  Bitstream.ExitBlock();
+  llvm_unreachable("Unexpected BitstreamRemarkContainerType");
 }
 
 void BitstreamRemarkSerializerHelper::emitMetaBlock(
     std::optional<StringRef> Filename) {
   // Emit the meta block
   Bitstream.EnterSubblock(META_BLOCK_ID, 3);
+  auto ExitBlock = make_scope_exit([&] { Bitstream.ExitBlock(); });
 
   // The container version and type.
   R.clear();
@@ -236,13 +238,12 @@ void BitstreamRemarkSerializerHelper::emitMetaBlock(
   case BitstreamRemarkContainerType::RemarksFileExternal:
     assert(Filename != std::nullopt);
     emitMetaExternalFile(*Filename);
-    break;
+    return;
   case BitstreamRemarkContainerType::RemarksFile:
     emitMetaRemarkVersion(CurrentRemarkVersion);
-    break;
+    return;
   }
-
-  Bitstream.ExitBlock();
+  llvm_unreachable("Unexpected BitstreamRemarkContainerType");
 }
 
 void BitstreamRemarkSerializerHelper::emitLateMetaBlock(

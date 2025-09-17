@@ -46,6 +46,21 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Renamed :program:`clang-tidy`'s option name of check
+  :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` from
+  ``NamePrefixSuffixSilenceDissimilarityTreshold`` to
+  ``NamePrefixSuffixSilenceDissimilarityThreshold``,
+  correcting a spelling mistake.
+
 Improvements to clangd
 ----------------------
 
@@ -126,6 +141,19 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
   count messages.
 
+- Improved :program:`clang-tidy` by not crashing when an empty `directory`
+  field is used in a compilation database; the current working directory
+  will be used instead, and an error message will be printed.
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
+  scripts by adding the `-hide-progress` option to suppress progress and
+  informational messages.
+
 New checks
 ^^^^^^^^^^
 
@@ -135,6 +163,11 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
+
+  Finds derived class methods that shadow a (non-virtual) base class method.
+
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
   check.
@@ -142,11 +175,23 @@ New checks
   Finds calls to ``operator[]`` in STL containers and suggests replacing them
   with safe alternatives.
 
+- New :doc:`google-runtime-float
+  <clang-tidy/checks/google/runtime-float>` check.
+
+  Finds uses of ``long double`` and suggests against their use due to lack of
+  portability.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
+
+- New :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check.
+
+  Finds calls to STL library iterator algorithms that could be replaced with
+  LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
 
 - New :doc:`misc-override-with-different-visibility
   <clang-tidy/checks/misc/override-with-different-visibility>` check.
@@ -157,8 +202,18 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
+  :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
+  correcting a spelling mistake on its option
+  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
@@ -182,6 +237,11 @@ Changes in existing checks
   namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type.
+
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
@@ -196,8 +256,22 @@ Changes in existing checks
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
 
+- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
+
+  - Fix-it handles callees with nested-name-specifier correctly.
+
+  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+    handled correctly.
+
+  - ``for`` loops are supported.
+
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
+  which are part of an implicit instantiation of a template.
 
 - Improved :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
@@ -232,8 +306,9 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check by correctly
-  generating fix-it hints when size method is called from implicit ``this``
-  and adding detection in container's method except ``empty``.
+  generating fix-it hints when size method is called from implicit ``this``,
+  ignoring default constructors with user provided arguments and adding
+  detection in container's method except ``empty``.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
@@ -243,6 +318,10 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
+
+- Improved :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
+  literal suffixes added in C++23 and C23.
 
 Removed checks
 ^^^^^^^^^^^^^^

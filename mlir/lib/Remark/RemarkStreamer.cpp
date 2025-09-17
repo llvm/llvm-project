@@ -49,6 +49,12 @@ LLVMRemarkStreamer::~LLVMRemarkStreamer() {
   if (file && remarkStreamer)
     file->keep();
 }
+
+void LLVMRemarkStreamer::finalize() {
+  if (!remarkStreamer)
+    return;
+  remarkStreamer->releaseSerializer();
+}
 } // namespace mlir::remark::detail
 
 namespace mlir::remark {

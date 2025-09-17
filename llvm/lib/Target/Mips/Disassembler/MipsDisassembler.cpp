@@ -105,7 +105,7 @@ LLVMInitializeMipsDisassembler() {
 
 static unsigned getReg(const MCDisassembler *D, unsigned RC, unsigned RegNo) {
   const MCRegisterInfo *RegInfo = D->getContext().getRegisterInfo();
-  return *(RegInfo->getRegClass(RC).begin() + RegNo);
+  return RegInfo->getRegClass(RC).getRegister(RegNo);
 }
 static DecodeStatus DecodeHWRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
@@ -1003,7 +1003,7 @@ static DecodeStatus DecodeMem(MCInst &Inst, unsigned Insn, uint64_t Address,
   Reg = getReg(Decoder, Mips::GPR32RegClassID, Reg);
   Base = getReg(Decoder, Mips::GPR32RegClassID, Base);
 
-  if (Inst.getOpcode() == Mips::SC ||
+  if (Inst.getOpcode() == Mips::SC || Inst.getOpcode() == Mips::SC64 ||
       Inst.getOpcode() == Mips::SCD)
     Inst.addOperand(MCOperand::createReg(Reg));
 

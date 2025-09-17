@@ -15,7 +15,6 @@
 #ifndef LLVM_ADT_IDENTITY_H
 #define LLVM_ADT_IDENTITY_H
 
-
 namespace llvm {
 
 // Similar to `std::identity` from C++20.
@@ -23,14 +22,10 @@ template <class Ty> struct identity {
   using is_transparent = void;
   using argument_type = Ty;
 
-  Ty &operator()(Ty &self) const {
-    return self;
-  }
-  const Ty &operator()(const Ty &self) const {
-    return self;
-  }
+  Ty &operator()(Ty &self) const { return self; }
+  const Ty &operator()(const Ty &self) const { return self; }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // LLVM_ADT_IDENTITY_H

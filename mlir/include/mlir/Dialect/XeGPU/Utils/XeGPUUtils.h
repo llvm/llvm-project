@@ -20,6 +20,7 @@ class OpResult;
 class OpBuilder;
 class ValueRange;
 class TypeConverter;
+class OpFoldResult;
 
 namespace xegpu {
 class DistributeLayoutAttr;
@@ -143,6 +144,11 @@ void doSCFStructuralTypeConversionWithTensorType(Operation *op,
 /// if no GPU module parent or XeVM target attribute exists.
 std::optional<std::string> getChipStr(Operation *op);
 
+/// Generates element-wise addition ops of two arrays with same length.
+SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
+                                         ArrayRef<OpFoldResult> lhs,
+                                         ArrayRef<OpFoldResult> rhs);
+
 /// Generates element-wise addition ops of two arrays with automatic alignment.
 /// When the input arrays have different sizes, the shorter array is
 /// right-aligned with the longer array, and the unmatched leading elements from
@@ -156,7 +162,6 @@ std::optional<std::string> getChipStr(Operation *op);
 SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
-
 } // namespace xegpu
 
 } // namespace mlir

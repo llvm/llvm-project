@@ -366,6 +366,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
               const std::vector<uint8_t> &CmdArgs) {
+  llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
     // is replicating the compilation environment from bitcode, without needing
@@ -399,6 +400,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
 static void codegen(const Config &Conf, TargetMachine *TM,
                     AddStreamFn AddStream, unsigned Task, Module &Mod,
                     const ModuleSummaryIndex &CombinedIndex) {
+  llvm::TimeTraceScope timeScope("codegen");
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
@@ -538,13 +540,12 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
   return T;
 }
 
-Error lto::finalizeOptimizationRemarks(
-    LLVMContext &Context, std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
-  finalizeLLVMOptimizationRemarks(Context);
   if (!DiagOutputFile)
     return Error::success();
+  DiagOutputFile.finalize();
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
   return Error::success();
@@ -553,6 +554,7 @@ Error lto::finalizeOptimizationRemarks(
 Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
                    ModuleSummaryIndex &CombinedIndex) {
+  llvm::TimeTraceScope timeScope("LTO backend");
   Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -578,6 +580,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
 static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
+  llvm::TimeTraceScope timeScope("Drop dead symbols");
   std::vector<GlobalValue*> DeadGVs;
   for (auto &GV : Mod.global_values())
     if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
@@ -604,6 +607,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
                        bool CodeGenOnly, AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
+  llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -628,23 +632,20 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     // If CodeGenOnly is set, we only perform code generation and skip
     // optimization. This value may differ from Conf.CodeGenOnly.
     codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
-    return finalizeOptimizationRemarks(Mod.getContext(),
-                                       std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(Mod.getContext(),
-                                       std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
-          std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+          LLVMRemarkFileHandle DiagnosticOutputFile) {
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
                  CmdArgs))
-          return finalizeOptimizationRemarks(Mod.getContext(),
-                                             std::move(DiagnosticOutputFile));
+          return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
         // Save the current module before the first codegen round.
         // Note that the second codegen round runs only `codegen()` without
@@ -654,8 +655,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
           cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
         codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
-        return finalizeOptimizationRemarks(Mod.getContext(),
-                                           std::move(DiagnosticOutputFile));
+        return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
       };
 
   if (ThinLTOAssumeMerged)
@@ -674,18 +674,17 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   thinLTOFinalizeInModule(Mod, DefinedGlobals, /*PropagateAttrs=*/true);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(Mod.getContext(),
-                                       std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   if (!DefinedGlobals.empty())
     thinLTOInternalizeModule(Mod, DefinedGlobals);
 
   if (Conf.PostInternalizeModuleHook &&
       !Conf.PostInternalizeModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(Mod.getContext(),
-                                       std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   auto ModuleLoader = [&](StringRef Identifier) {
+    llvm::TimeTraceScope moduleLoaderScope("Module loader", Identifier);
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
     if (ModuleMap) {
@@ -719,18 +718,20 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     return MOrErr;
   };
 
-  FunctionImporter Importer(CombinedIndex, ModuleLoader,
-                            ClearDSOLocalOnDeclarations);
-  if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
-    return Err;
+  {
+    llvm::TimeTraceScope importScope("Import functions");
+    FunctionImporter Importer(CombinedIndex, ModuleLoader,
+                              ClearDSOLocalOnDeclarations);
+    if (Error Err = Importer.importFunctions(Mod, ImportList).takeError())
+      return Err;
+  }
 
   // Do this after any importing so that imported code is updated.
   updateMemProfAttributes(Mod, CombinedIndex);
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(Mod.getContext(),
-                                       std::move(DiagnosticOutputFile));
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   return OptimizeAndCodegen(Mod, TM.get(), std::move(DiagnosticOutputFile));
 }

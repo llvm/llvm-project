@@ -406,6 +406,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
                                SmallVector<Instruction *> &NewInsts) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
+  LLVMContext &Ctx = GEP->getContext();
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
@@ -438,23 +439,23 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   assert(CurPtr == Alloca && "GEP not based on alloca");
 
-  unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
+  int64_t VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
     return nullptr;
 
   APInt IndexQuot;
-  uint64_t Rem;
-  APInt::udivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
+  int64_t Rem;
+  APInt::sdivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
   if (Rem != 0)
     return nullptr;
   if (VarOffsets.size() == 0)
-    return ConstantInt::get(GEP->getContext(), IndexQuot);
+    return ConstantInt::get(Ctx, IndexQuot);
 
   IRBuilder<> Builder(GEP);
 
   const auto &VarOffset = VarOffsets.front();
   APInt OffsetQuot;
-  APInt::udivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
+  APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
   if (Rem != 0 || OffsetQuot.isZero())
     return nullptr;
 
@@ -465,7 +466,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   if (!OffsetQuot.isOne()) {
     ConstantInt *ConstMul =
-        ConstantInt::get(OffsetType, OffsetQuot.getZExtValue());
+        ConstantInt::get(Ctx, OffsetQuot.sext(OffsetType->getBitWidth()));
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -474,8 +475,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return Offset;
 
   ConstantInt *ConstIndex =
-      ConstantInt::get(OffsetType, IndexQuot.getZExtValue());
-  Value *IndexAdd = Builder.CreateAdd(ConstIndex, Offset);
+      ConstantInt::get(Ctx, IndexQuot.sext(OffsetType->getBitWidth()));
+  Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
   return IndexAdd;

@@ -14,7 +14,6 @@
 #include "BitstreamRemarkParser.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include <cassert>
 #include <optional>
 
 using namespace llvm;
@@ -27,7 +26,8 @@ template <typename... Ts> Error error(char const *Fmt, const Ts &...Vals) {
   raw_string_ostream OS(Buffer);
   OS << formatv(Fmt, Vals...);
   return make_error<StringError>(
-      Buffer, std::make_error_code(std::errc::illegal_byte_sequence));
+      std::move(Buffer),
+      std::make_error_code(std::errc::illegal_byte_sequence));
 }
 
 } // namespace
@@ -61,6 +61,7 @@ static Expected<unsigned> expectSubBlock(BitstreamCursor &Stream) {
   case BitstreamEntry::Error:
     return error("Expected subblock, but got unexpected end of bitstream.");
   }
+  llvm_unreachable("Unexpected BitstreamEntry");
 }
 
 Error BitstreamBlockParserHelperBase::expectBlock() {
@@ -79,7 +80,6 @@ Error BitstreamBlockParserHelperBase::enterBlock() {
   return Error::success();
 }
 
-/// Parse a record and fill in the fields in the parser.
 Error BitstreamMetaParserHelper::parseRecord(unsigned Code) {
   // Note: 2 is used here because it's the max number of fields we have per
   // record.
@@ -93,9 +93,7 @@ Error BitstreamMetaParserHelper::parseRecord(unsigned Code) {
   case RECORD_META_CONTAINER_INFO: {
     if (Record.size() != 2)
       return malformedRecord(MetaContainerInfoName);
-    Container.emplace();
-    Container->Version = Record[0];
-    Container->Type = Record[1];
+    Container = {Record[0], Record[1]};
     // Error immediately if container version is outdated, so the user sees an
     // explanation instead of a parser error.
     if (Container->Version != CurrentContainerVersion) {
@@ -162,10 +160,7 @@ Error BitstreamRemarkParserHelper::handleRecord() {
   case RECORD_REMARK_DEBUG_LOC: {
     if (Record.size() != 3)
       return malformedRecord(RemarkDebugLocName);
-    Loc.emplace();
-    Loc->SourceFileNameIdx = Record[0];
-    Loc->SourceLine = Record[1];
-    Loc->SourceColumn = Record[2];
+    Loc = {Record[0], Record[1], Record[2]};
     break;
   }
   case RECORD_REMARK_HOTNESS: {
@@ -177,21 +172,14 @@ Error BitstreamRemarkParserHelper::handleRecord() {
   case RECORD_REMARK_ARG_WITH_DEBUGLOC: {
     if (Record.size() != 5)
       return malformedRecord(RemarkArgWithDebugLocName);
-    auto &Arg = Args.emplace_back();
-    Arg.KeyIdx = Record[0];
-    Arg.ValueIdx = Record[1];
-    Arg.Loc.emplace();
-    Arg.Loc->SourceFileNameIdx = Record[2];
-    Arg.Loc->SourceLine = Record[3];
-    Arg.Loc->SourceColumn = Record[4];
+    auto &Arg = Args.emplace_back(Record[0], Record[1]);
+    Arg.Loc = {Record[2], Record[3], Record[4]};
     break;
   }
   case RECORD_REMARK_ARG_WITHOUT_DEBUGLOC: {
     if (Record.size() != 2)
       return malformedRecord(RemarkArgWithoutDebugLocName);
-    auto &Arg = Args.emplace_back();
-    Arg.KeyIdx = Record[0];
-    Arg.ValueIdx = Record[1];
+    Args.emplace_back(Record[0], Record[1]);
     break;
   }
   default:
@@ -359,16 +347,14 @@ Error BitstreamRemarkParser::parseMeta() {
 
 Error BitstreamRemarkParser::processCommonMeta() {
   auto &Helper = ParserHelper->MetaHelper;
-  if (auto Container = Helper.Container) {
-    ContainerVersion = Container->Version;
-    // Always >= BitstreamRemarkContainerType::First since it's unsigned.
-    if (Container->Type >
-        static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
-      return Helper.error("Invalid container type.");
-    ContainerType = static_cast<BitstreamRemarkContainerType>(Container->Type);
-  } else {
+  if (!Helper.Container)
     return Helper.error("Missing container info.");
-  }
+  auto &Container = *Helper.Container;
+  ContainerVersion = Container.Version;
+  // Always >= BitstreamRemarkContainerType::First since it's unsigned.
+  if (Container.Type > static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
+    return Helper.error("Invalid container type.");
+  ContainerType = static_cast<BitstreamRemarkContainerType>(Container.Type);
   return Error::success();
 }
 

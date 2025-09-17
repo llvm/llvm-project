@@ -152,6 +152,8 @@ Other tools that support remarks:
     .. option:: -opt-remarks-format=<format>
     .. option:: -opt-remarks-with-hotness
 
+.. _yamlremarks:
+
 YAML remarks
 ============
 
@@ -355,6 +357,7 @@ The remark container
 The bitstream remark container supports multiple types:
 
 .. _bitstreamremarksfileexternal:
+
 ``RemarksFileExternal: a link to an external remarks file``
 
     This container type expects only a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
@@ -371,6 +374,7 @@ The bitstream remark container supports multiple types:
     have a well-formed file.
 
 .. _bitstreamremarksfile:
+
 ``RemarksFile: a standalone remarks file``
 
     This container type expects a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
@@ -378,7 +382,7 @@ The bitstream remark container supports multiple types:
     * :ref:`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
     * :ref:`RECORD_META_REMARK_VERSION <bitstreamremarksrecordmetaremarkversion>`
 
-    This container type expects 1 or more :ref:`REMARK_BLOCK <bitstreamremarksremarkblock>`.
+    Then, this container type expects 1 or more :ref:`REMARK_BLOCK <bitstreamremarksremarkblock>`.
     If no remarks are emitted, the meta blocks are also not emitted, so the file is empty.
 
     After the remark blocks, another :ref:`META_BLOCK <bitstreamremarksmetablock>` is emitted, containing:
@@ -390,19 +394,7 @@ The bitstream remark container supports multiple types:
     Standalone remarks files can be referenced by the
     :ref:`RECORD_META_EXTERNAL_FILE <bitstreamremarksrecordmetaexternalfile>`
     entry in the :ref:`RemarksFileExternal
-    <_bitstreamremarksfileexternal>` container.
-
-
-
-``Standalone: the metadata and the remark entries emitted together``
-
-    This container type expects only a :ref:`META_BLOCK <bitstreamremarksmetablock>` containing only:
-
-    * :ref:`RECORD_META_CONTAINER_INFO <bitstreamremarksrecordmetacontainerinfo>`
-    * :ref:`RECORD_META_REMARK_VERSION <bitstreamremarksrecordmetaremarkversion>`
-    * :ref:`RECORD_META_STRTAB <bitstreamremarksrecordmetastrtab>`
-
-    This container type expects 0 or more :ref:`REMARK_BLOCK <bitstreamremarksremarkblock>`.
+    <bitstreamremarksfileexternal>` container.
 
 .. FIXME: Add complete output of :program:`llvm-bcanalyzer` on the different container types (once format changes are completed)
 

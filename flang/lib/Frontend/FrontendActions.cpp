@@ -958,6 +958,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
   pto.LoopInterchange = opts.InterchangeLoops;
+  pto.LoopFusion = opts.FuseLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;
@@ -1342,7 +1343,7 @@ void CodeGenAction::executeAction() {
       std::make_unique<BackendRemarkConsumer>(remarkConsumer));
 
   // write optimization-record
-  llvm::Expected<std::unique_ptr<llvm::ToolOutputFile>> optRecordFileOrErr =
+  llvm::Expected<llvm::LLVMRemarkFileHandle> optRecordFileOrErr =
       setupLLVMOptimizationRemarks(
           llvmModule->getContext(), codeGenOpts.OptRecordFile,
           codeGenOpts.OptRecordPasses, codeGenOpts.OptRecordFormat,
@@ -1354,10 +1355,7 @@ void CodeGenAction::executeAction() {
     return;
   }
 
-  std::unique_ptr<llvm::ToolOutputFile> optRecordFile =
-      std::move(*optRecordFileOrErr);
-  auto FinalizeRemarks =
-      make_scope_exit([&]() { llvm::finalizeLLVMOptimizationRemarks(Ctx); });
+  llvm::LLVMRemarkFileHandle optRecordFile = std::move(*optRecordFileOrErr);
 
   if (optRecordFile) {
     optRecordFile->keep();

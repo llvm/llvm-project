@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
@@ -638,6 +639,8 @@ public:
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
+    /// Allow unrolling to add parallel reduction phis.
+    bool AddAdditionalAccumulators;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
@@ -794,10 +797,13 @@ public:
                            LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                            TargetLibraryInfo *LibInfo) const;
 
+  /// Which addressing mode Loop Strength Reduction will try to generate.
   enum AddressingModeKind {
-    AMK_PreIndexed,
-    AMK_PostIndexed,
-    AMK_None
+    AMK_None = 0x0,        ///< Don't prefer any addressing mode
+    AMK_PreIndexed = 0x1,  ///< Prefer pre-indexed addressing mode
+    AMK_PostIndexed = 0x2, ///< Prefer post-indexed addressing mode
+    AMK_All = 0x3,         ///< Consider all addressing modes
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/AMK_All)
   };
 
   /// Return the preferred addressing mode LSR should make efforts to generate.
@@ -1533,7 +1539,9 @@ public:
       Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
       TTI::TargetCostKind CostKind) const;
 
-  /// \return The cost of Load and Store instructions.
+  /// \return The cost of Load and Store instructions. The operand info
+  /// \p OpdInfo should refer to the stored value for stores and the address
+  /// for loads.
   LLVM_ABI InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
@@ -1647,12 +1655,12 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
-  /// getArithmeticReductionCost of an Add reduction with multiply and optional
-  /// extensions. This is the cost of as:
-  /// ResTy vecreduce.add(mul (A, B)).
-  /// ResTy vecreduce.add(mul(ext(Ty A), ext(Ty B)).
+  /// getArithmeticReductionCost of an Add/Sub reduction with multiply and
+  /// optional extensions. This is the cost of as:
+  /// * ResTy vecreduce.add/sub(mul (A, B)) or,
+  /// * ResTy vecreduce.add/sub(mul(ext(Ty A), ext(Ty B)).
   LLVM_ABI InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
@@ -1812,10 +1820,11 @@ public:
                                          unsigned ChainSizeInBytes,
                                          VectorType *VecTy) const;
 
-  /// \returns True if the targets prefers fixed width vectorization if the
+  /// \returns True if the target prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
   /// scalable version of the vectorized loop.
-  LLVM_ABI bool preferFixedOverScalableIfEqualCost() const;
+  /// \p IsEpilogue is true if the decision is for the epilogue loop.
+  LLVM_ABI bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const;
 
   /// \returns True if target prefers SLP vectorizer with altermate opcode
   /// vectorization, false - otherwise.
@@ -1841,6 +1850,10 @@ public:
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.
   LLVM_ABI bool preferEpilogueVectorization() const;
+
+  /// \returns True if the loop vectorizer should discard any VFs where the
+  /// maximum register pressure exceeds getNumberOfRegisters.
+  LLVM_ABI bool shouldConsiderVectorizationRegPressure() const;
 
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
