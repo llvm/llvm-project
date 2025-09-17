@@ -111,6 +111,44 @@ entry:
   ret i32 %0
 }
 
+; sinf clobbering errno, but %p is memory accessed w/ vector size larger than errno.
+; Can do constant store-to-load forwarding.
+define <4 x i32> @does_not_alias_errno_vec(ptr %p, float %f) {
+; CHECK-LABEL: define <4 x i32> @does_not_alias_errno_vec(
+; CHECK-SAME: ptr [[P:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @escape(ptr [[P]])
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
+;
+entry:
+  call void @escape(ptr %p)
+  store <4 x i32> zeroinitializer, ptr %p
+  call float @sinf(float %f)
+  %v = load <4 x i32>, ptr %p
+  ret <4 x i32> %v
+}
+
+; sinf clobbering errno, but %p is memory accessed w/ scalable vector size larger than errno.
+; Can do constant store-to-load forwarding.
+define <vscale x 4 x i32> @does_not_alias_errno_scalablevec(ptr %p, float %f) {
+; CHECK-LABEL: define <vscale x 4 x i32> @does_not_alias_errno_scalablevec(
+; CHECK-SAME: ptr [[P:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @escape(ptr [[P]])
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  call void @escape(ptr %p)
+  store <vscale x 4 x i32> zeroinitializer, ptr %p
+  call float @sinf(float %f)
+  %v = load <vscale x 4 x i32>, ptr %p
+  ret <vscale x 4 x i32> %v
+}
+
 declare float @sinf(float) memory(errnomem: write)
 declare float @read_errno(ptr) memory(argmem: write, errnomem: read)
 declare void @escape(ptr %p)
