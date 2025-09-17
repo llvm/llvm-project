@@ -12,8 +12,9 @@ Introduction
 
 The LLVM Qualification Group is an open working group within the LLVM community. 
 It was created to coordinate efforts around enabling the use of LLVM components 
-in safety-critical applications such as those governed by ISO 26262 (automotive), 
-DO-178C (aerospace), and EN 50128 (railways).
+in safety-critical applications governed by functional safety standards 
+such as IEC 61508 (for general E/E/PE systems), IEC 62304 (medical devices), 
+ISO 26262 (automotive), DO-178C (aerospace), and EN 50716 (railways).
 
 Motivation
 ==========
