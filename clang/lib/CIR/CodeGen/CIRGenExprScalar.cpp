@@ -193,6 +193,15 @@ public:
     return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
+  mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *e) {
+    if (e->isGLValue())
+      return emitLoadOfLValue(cgf.getOrCreateOpaqueLValueMapping(e),
+                              e->getExprLoc());
+
+    // Otherwise, assume the mapping is the scalar directly.
+    return cgf.getOrCreateOpaqueRValueMapping(e).getValue();
+  }
+
   mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
 
@@ -660,6 +669,11 @@ public:
   mlir::Value VisitUnaryReal(const UnaryOperator *e);
 
   mlir::Value VisitUnaryImag(const UnaryOperator *e);
+
+  mlir::Value VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope scope(cgf, die);
+    return Visit(die->getExpr());
+  }
 
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 

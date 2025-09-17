@@ -104,6 +104,7 @@
 #include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
+#include "llvm/Transforms/Scalar/LoopFuse.h"
 #include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
@@ -313,6 +314,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   SLPVectorization = false;
   LoopUnrolling = true;
   LoopInterchange = EnableLoopInterchange;
+  LoopFusion = false;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
@@ -1550,6 +1552,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
+
+  // FIXME: This may not be the right place in the pipeline.
+  // We need to have the data to support the right place.
+  if (PTO.LoopFusion)
+    OptimizePM.addPass(LoopFusePass());
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is

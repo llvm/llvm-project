@@ -127,9 +127,10 @@ public:
   /// For each input file discovered, check whether it's external path is in a
   /// stable directory. Traversal is stopped if the current module is not
   /// considered stable.
-  bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                      bool isSystem, bool isOverridden,
-                      bool isExplicitModule) override {
+  bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                 StringRef Filename, bool isSystem,
+                                 bool isOverridden,
+                                 bool isExplicitModule) override {
     if (StableDirs.empty())
       return false;
     auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);
@@ -413,11 +414,12 @@ public:
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
     ScanInstance.setBuildingModule(false);
 
+    ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
+
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
     assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
-    ScanInstance.createDiagnostics(*FS, DiagConsumer,
-                                   /*ShouldOwnClient=*/false);
+    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
 
@@ -438,19 +440,15 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
 
-    // Support for virtual file system overlays.
-    FS = createVFSFromCompilerInvocation(ScanInstance.getInvocation(),
-                                         ScanInstance.getDiagnostics(),
-                                         std::move(FS));
-
     // Create a new FileManager to match the invocation's FileSystemOptions.
-    auto *FileMgr = ScanInstance.createFileManager(FS);
+    auto *FileMgr = ScanInstance.createFileManager();
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      StringRef ModulesCachePath =
-          ScanInstance.getHeaderSearchOpts().ModuleCachePath;
-
+      SmallString<256> ModulesCachePath;
+      normalizeModuleCachePath(
+          *FileMgr, ScanInstance.getHeaderSearchOpts().ModuleCachePath,
+          ModulesCachePath);
       DepFS->resetBypassedPathPrefix();
       if (!ModulesCachePath.empty())
         DepFS->setBypassedPathPrefix(ModulesCachePath);

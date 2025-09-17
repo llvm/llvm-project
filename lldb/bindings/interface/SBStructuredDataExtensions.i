@@ -38,19 +38,17 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
         else:
             raise TypeError(f"cannot subscript {self.type_name(data_type)} type")
 
-    def __bool__(self):
+    def __str__(self):
         data_type = self.GetType()
-        if data_type == eStructuredDataTypeInvalid:
-            return False
-        elif data_type in (
-            eStructuredDataTypeArray,
-            eStructuredDataTypeDictionary,
+        if data_type in (
+            eStructuredDataTypeString,
+            eStructuredDataTypeInteger,
+            eStructuredDataTypeSignedInteger,
+            eStructuredDataTypeFloat,
         ):
-            return self.GetSize() != 0
-        elif data_type != eStructuredDataTypeGeneric:
-            return bool(self.dynamic)
+            return str(self.dynamic)
         else:
-            raise TypeError("cannot convert generic to bool")
+            return repr(self)
 
     def __int__(self):
         data_type = self.GetType()
@@ -58,7 +56,7 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
             eStructuredDataTypeInteger,
             eStructuredDataTypeSignedInteger,
         ):
-            return int(self.dynamic)
+            return self.dynamic
         else:
             raise TypeError(f"cannot convert {self.type_name(data_type)} to int")
 

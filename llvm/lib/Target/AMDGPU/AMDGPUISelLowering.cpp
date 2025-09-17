@@ -4119,8 +4119,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
-
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
   // the same code size.
@@ -4210,12 +4208,12 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
              (ElementType.getSizeInBits() - 1)) {
     ShiftAmt = ShiftFullAmt;
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   EVT ConcatType;
@@ -5289,6 +5287,30 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
+bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
+  if (!Subtarget->isGCN())
+    return false;
+
+  ConstantSDNode *SDConstant = dyn_cast<ConstantSDNode>(N);
+  ConstantFPSDNode *SDFPConstant = dyn_cast<ConstantFPSDNode>(N);
+  auto &ST = DAG.getSubtarget<GCNSubtarget>();
+  const auto *TII = ST.getInstrInfo();
+
+  if (!ST.hasMovB64() || (!SDConstant && !SDFPConstant))
+    return false;
+
+  if (ST.has64BitLiterals())
+    return true;
+
+  if (SDConstant) {
+    const APInt &APVal = SDConstant->getAPIntValue();
+    return isUInt<32>(APVal.getZExtValue()) || TII->isInlineConstant(APVal);
+  }
+
+  APInt Val = SDFPConstant->getValueAPF().bitcastToAPInt();
+  return isUInt<32>(Val.getZExtValue()) || TII->isInlineConstant(Val);
+}
+
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5338,6 +5360,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Src = N->getOperand(0);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src)) {
       SDLoc SL(N);
+      if (isInt64ImmLegal(C, DAG))
+        break;
       uint64_t CVal = C->getZExtValue();
       SDValue BV = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
@@ -5348,6 +5372,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Src)) {
       const APInt &Val = C->getValueAPF().bitcastToAPInt();
       SDLoc SL(N);
+      if (isInt64ImmLegal(C, DAG))
+        break;
       uint64_t CVal = Val.getZExtValue();
       SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
                                 DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
@@ -5667,6 +5693,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TC_RETURN_GFX)
+  NODE_NAME_CASE(TC_RETURN_GFX_WholeWave)
   NODE_NAME_CASE(TC_RETURN_CHAIN)
   NODE_NAME_CASE(TC_RETURN_CHAIN_DVGPR)
   NODE_NAME_CASE(TRAP)

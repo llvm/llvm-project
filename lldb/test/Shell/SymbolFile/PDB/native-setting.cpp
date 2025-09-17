@@ -1,4 +1,4 @@
-// REQUIRES: target-windows
+// REQUIRES: diasdk, target-windows
 
 // Test plugin.symbol-file.pdb.reader setting
 // RUN: %build -o %t.exe -- %s

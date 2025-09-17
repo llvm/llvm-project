@@ -5672,6 +5672,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::USUBSAT:
   case ISD::MULHU:
   case ISD::MULHS:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
   case ISD::ABDU:
   case ISD::ABDS:
   case ISD::SMIN:
@@ -8243,8 +8247,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF, except
     // for scalable vectors where we will generate appropriate code to
     // deal with out-of-bounds cases correctly.
-    if (N3C && N1.getValueType().isFixedLengthVector() &&
-        N3C->getZExtValue() >= N1.getValueType().getVectorNumElements())
+    if (N3C && VT.isFixedLengthVector() &&
+        N3C->getZExtValue() >= VT.getVectorNumElements())
       return getUNDEF(VT);
 
     // Undefined index can be assumed out-of-bounds, so that's UNDEF too.
@@ -9049,6 +9053,18 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
+static bool isInTailCallPositionWrapper(const CallInst *CI,
+                                        const SelectionDAG *SelDAG,
+                                        bool AllowReturnsFirstArg) {
+  if (!CI || !CI->isTailCall())
+    return false;
+  // TODO: Fix "returns-first-arg" determination so it doesn't depend on which
+  // helper symbol we lower to.
+  return isInTailCallPosition(*CI, SelDAG->getTarget(),
+                              AllowReturnsFirstArg &&
+                                  funcReturnsFirstArgOfCall(*CI));
+}
+
 std::pair<SDValue, SDValue>
 SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
                         SDValue Mem1, SDValue Size, const CallInst *CI) {
@@ -9063,10 +9079,8 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
       {Size, getDataLayout().getIntPtrType(*getContext())}};
 
   TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall = false;
-  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-  IsTailCall = CI && CI->isTailCall() &&
-               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
+  bool IsTailCall =
+      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
@@ -9144,10 +9158,7 @@ SDValue SelectionDAG::getMemcpy(
     IsTailCall = *OverrideTailCall;
   } else {
     bool LowersToMemcpy = StringRef(MemCpyName) == StringRef("memcpy");
-    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-    IsTailCall = CI && CI->isTailCall() &&
-                 isInTailCallPosition(*CI, getTarget(),
-                                      ReturnsFirstArg && LowersToMemcpy);
+    IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemcpy);
   }
 
   CLI.setDebugLoc(dl)
@@ -9251,10 +9262,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     bool LowersToMemmove =
         TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
-    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
-    IsTailCall = CI && CI->isTailCall() &&
-                 isInTailCallPosition(*CI, getTarget(),
-                                      ReturnsFirstArg && LowersToMemmove);
+    IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemmove);
   }
 
   CLI.setDebugLoc(dl)

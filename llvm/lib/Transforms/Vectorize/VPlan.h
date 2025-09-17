@@ -716,11 +716,14 @@ public:
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
-public:
   void transferFlags(VPIRFlags &Other) {
     OpType = Other.OpType;
     AllFlags = Other.AllFlags;
   }
+
+  /// Only keep flags also present in \p Other. \p Other must have the same
+  /// OpType as the current object.
+  void intersectFlags(const VPIRFlags &Other);
 
   /// Drop all poison-generating flags.
   void dropPoisonGeneratingFlags() {
@@ -905,6 +908,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
     return R && classof(R);
   }
 
+  virtual VPRecipeWithIRFlags *clone() override = 0;
+
   static inline bool classof(const VPSingleDefRecipe *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
@@ -913,9 +918,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   void execute(VPTransformState &State) override = 0;
 
   /// Compute the cost for this recipe for \p VF, using \p Opcode and \p Ctx.
-  std::optional<InstructionCost>
-  getCostForRecipeWithOpcode(unsigned Opcode, ElementCount VF,
-                             VPCostContext &Ctx) const;
+  InstructionCost getCostForRecipeWithOpcode(unsigned Opcode, ElementCount VF,
+                                             VPCostContext &Ctx) const;
 };
 
 /// Helper to access the operand that contains the unroll part for this recipe
@@ -1058,13 +1062,6 @@ public:
     VScale,
   };
 
-private:
-  typedef unsigned char OpcodeTy;
-  OpcodeTy Opcode;
-
-  /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
-
   /// Returns true if this VPInstruction generates scalar values for all lanes.
   /// Most VPInstructions generate a single value per part, either vector or
   /// scalar. VPReplicateRecipe takes care of generating multiple (scalar)
@@ -1072,6 +1069,13 @@ private:
   /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
   /// underlying ingredient.
   bool doesGeneratePerAllLanes() const;
+
+private:
+  typedef unsigned char OpcodeTy;
+  OpcodeTy Opcode;
+
+  /// An optional name that can be used for the generated IR instruction.
+  const std::string Name;
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
@@ -1081,11 +1085,6 @@ private:
   /// the modeled instruction. \returns the generated value. . In some cases an
   /// existing value is returned rather than a generated one.
   Value *generate(VPTransformState &State);
-
-  /// Utility methods serving execute(): generates a scalar single instance of
-  /// the modeled instruction for a given lane. \returns the scalar generated
-  /// value for lane \p Lane.
-  Value *generatePerLane(VPTransformState &State, const VPLane &Lane);
 
 #if !defined(NDEBUG)
   /// Return the number of operands determined by the opcode of the
@@ -1796,6 +1795,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
 
+  /// This recipe generates a GEP instruction.
+  unsigned getOpcode() const { return Instruction::GetElementPtr; }
+
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
 
@@ -1899,6 +1901,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
   void execute(VPTransformState &State) override;
+
+  Type *getSourceElementType() const { return IndexedTy; }
 
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -2424,6 +2428,12 @@ public:
   VPValue *getMask(unsigned Idx) const {
     assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
     return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
+  }
+
+  /// Set mask number \p Idx to \p V.
+  void setMask(unsigned Idx, VPValue *V) {
+    assert((Idx > 0 || !isNormalized()) && "First index has no mask!");
+    Idx == 0 ? setOperand(1, V) : setOperand(Idx * 2 + !isNormalized(), V);
   }
 
   void execute(VPTransformState &State) override {

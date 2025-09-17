@@ -2078,7 +2078,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
-      return llvm::createStringError("Could not evaluate %s.",
+      return llvm::createStringError("could not evaluate %s",
                                      DW_OP_value_to_name(op));
     }
 
@@ -2195,7 +2195,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         // Note that we don't have to parse FDEs because this DWARF expression
         // is commonly evaluated with a valid stack frame.
         StackID id = frame->GetStackID();
-        addr_t cfa = id.GetCallFrameAddress();
+        addr_t cfa = id.GetCallFrameAddressWithMetadata();
         if (cfa != LLDB_INVALID_ADDRESS) {
           stack.push_back(Scalar(cfa));
           stack.back().SetValueType(Value::ValueType::LoadAddress);
