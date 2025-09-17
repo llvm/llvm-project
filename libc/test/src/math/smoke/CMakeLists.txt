@@ -3509,8 +3509,8 @@ add_fp_unittest(
   SRCS
     rsqrtf16_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.rsqrtf16
+    libc.hdr.errno_macros
 )
 
 add_fp_unittest(
