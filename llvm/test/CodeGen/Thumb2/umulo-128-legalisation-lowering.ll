@@ -88,7 +88,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    adds r1, r1, r6
 ; THUMBV7-NEXT:    umlal r2, r7, r3, r8
 ; THUMBV7-NEXT:    adc r4, r4, #0
-; THUMBV7-NEXT:    orrs r0, r4
+; THUMBV7-NEXT:    orrs r5, r4
 ; THUMBV7-NEXT:    orrs r0, r5
 ; THUMBV7-NEXT:    ldrd r5, r4, [sp, #36] @ 8-byte Folded Reload
 ; THUMBV7-NEXT:    adds r5, r5, r4

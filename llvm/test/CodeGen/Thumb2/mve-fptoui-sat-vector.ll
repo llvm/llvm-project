@@ -3228,10 +3228,10 @@ define arm_aapcs_vfpcc <8 x i19> @test_unsigned_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    vmov r2, s14
 ; CHECK-NEXT:    vmaxnm.f32 s2, s2, s4
 ; CHECK-NEXT:    vmov r4, s12
-; CHECK-NEXT:    vminnm.f32 s2, s2, s6
-; CHECK-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-NEXT:    vminnm.f32 s8, s8, s6
+; CHECK-NEXT:    vminnm.f32 s2, s2, s6
 ; CHECK-NEXT:    vcvt.u32.f32 s8, s8
+; CHECK-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s3
@@ -3250,20 +3250,21 @@ define arm_aapcs_vfpcc <8 x i19> @test_unsigned_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    vmov r1, s10
 ; CHECK-NEXT:    lsrl r4, r11, #7
 ; CHECK-NEXT:    orr.w r1, r1, r12
-; CHECK-NEXT:    str r1, [r0]
-; CHECK-NEXT:    orr.w r1, r2, r4
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    lsll r2, r7, #12
-; CHECK-NEXT:    vmov r4, s8
-; CHECK-NEXT:    orrs r2, r1
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    lsll r4, r1, #31
 ; CHECK-NEXT:    orr.w r12, r2, r4
+; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    vmov r2, s8
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    lsll r4, r7, #12
+; CHECK-NEXT:    lsll r2, r1, #31
+; CHECK-NEXT:    orrs r2, r4
 ; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s3
-; CHECK-NEXT:    lsll r4, r3, #5
+; CHECK-NEXT:    orr.w r12, r12, r2
 ; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
+; CHECK-NEXT:    lsll r4, r3, #5
 ; CHECK-NEXT:    vminnm.f32 s0, s0, s6
+; CHECK-NEXT:    orrs r1, r7
 ; CHECK-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    mov r6, r2
@@ -3274,7 +3275,6 @@ define arm_aapcs_vfpcc <8 x i19> @test_unsigned_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    lsrs r3, r3, #16
 ; CHECK-NEXT:    strb r3, [r0, #18]
 ; CHECK-NEXT:    orr.w r3, r5, r11
-; CHECK-NEXT:    orrs r3, r7
 ; CHECK-NEXT:    orrs r1, r3
 ; CHECK-NEXT:    orr.w r1, r1, r2, lsl #18
 ; CHECK-NEXT:    str r1, [r0, #12]
