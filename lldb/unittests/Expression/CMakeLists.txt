@@ -6,16 +6,12 @@ add_lldb_unittest(ExpressionTests
   CppModuleConfigurationTest.cpp
   ExpressionTest.cpp
 
-  LINK_COMPONENTS
-    AArch64
-    Support
   LINK_LIBS
     lldbCore
     lldbPluginObjectFileELF
     lldbPluginObjectFileWasm
     lldbPluginSymbolVendorWasm
     lldbPluginPlatformLinux
-    lldbPluginABIAArch64
     lldbPluginExpressionParserClang
     lldbPluginTypeSystemClang
     lldbUtility
