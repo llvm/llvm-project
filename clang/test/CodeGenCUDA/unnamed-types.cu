@@ -45,6 +45,7 @@ void f0(float *p) {
 
 // The inner/outer lambdas are required to be mangled following ODR but their
 // linkages are still required to keep the original `internal` linkage.
+
 // HOST: define internal void @_ZZ2f1PfENKUlS_E_clES_(
 void f1(float *p) {
   [](float *p) {
