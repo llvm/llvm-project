@@ -823,6 +823,12 @@ public:
   LLVM_ABI bool isLegalMaskedLoad(Type *DataType, Align Alignment,
                                   unsigned AddressSpace) const;
 
+  /// Return true if it is legal to widen loads beyond their current width,
+  /// assuming the result is still well-aligned. For example, converting a load
+  /// i32 to a load i64, or vectorizing three continuous load i32s into a load
+  /// <4 x i32>.
+  LLVM_ABI bool isLegalToWidenLoads() const;
+
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports nontemporal load.

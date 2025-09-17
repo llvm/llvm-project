@@ -110,7 +110,7 @@ define dso_local i32 @foo() {
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-PTX-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-PTX-NEXT:    st.b64 [%SP], 4294967297;
+; CHECK-PTX-NEXT:    st.v2.b32 [%SP], {1, 1};
 ; CHECK-PTX-NEXT:    st.b32 [%SP+8], 1;
 ; CHECK-PTX-NEXT:    st.b64 [%SP+16], 1;
 ; CHECK-PTX-NEXT:    st.b64 [%SP+24], 4607182418800017408;
