@@ -11,7 +11,7 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s  -o -\
 ! RUN:         | FileCheck --check-prefix=CHECK-WITHOUT-VERSION %s
 ! RUN: %flang_fc1 -emit-llvm -dwarf-version=5 %s  -o - \
-! RUN:         | FileCheck --check-prefix=CHECK-WITHOUT-DEBUG-KIND %s
+! RUN:         | FileCheck --check-prefix=CHECK-WITHOUT-VERSION %s
 
 program test
 end program test
@@ -21,4 +21,3 @@ end program test
 ! CHECK-DWARF3: !{i32 7, !"Dwarf Version", i32 3}
 ! CHECK-DWARF2: !{i32 7, !"Dwarf Version", i32 2}
 ! CHECK-WITHOUT-VERSION-NOT: "Dwarf Version"
-! CHECK-WITHOUT-DEBUG-KIND-NOT: "Dwarf Version"

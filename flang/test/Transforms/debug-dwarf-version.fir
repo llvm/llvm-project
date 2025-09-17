@@ -1,4 +1,3 @@
-
 // RUN: fir-opt --add-debug-info="dwarf-version=5" --mlir-print-debuginfo %s \
 // RUN:         | FileCheck --check-prefix=CHECK-DWARF5 %s
 // RUN: fir-opt --add-debug-info="dwarf-version=4" --mlir-print-debuginfo %s \
