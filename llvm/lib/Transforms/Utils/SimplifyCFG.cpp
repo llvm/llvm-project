@@ -1853,45 +1853,111 @@ static void hoistConditionalLoadsStores(
   }
 }
 
-static bool hoistImplyingConditions(BranchInst *BI, IRBuilder<> &Builder,
-                                    const DataLayout &DL) {
-  if (!isa<ICmpInst>(BI->getCondition()))
-    return false;
+static std::optional<bool>
+visitConditions(Value *V, const Value *baseCond, const BasicBlock *contextBB,
+                SmallVectorImpl<Instruction *> &impliedConditions,
+                const DataLayout &DL) {
+  if (!isa<Instruction>(V))
+    return std::nullopt;
 
-  ICmpInst *branchCond = cast<ICmpInst>(BI->getCondition());
-  BasicBlock *truePathBB = BI->getSuccessor(0);
+  Instruction *I = cast<Instruction>(V);
+  // we only care about conditions in the same basic block
+  if (contextBB != I->getParent())
+    return std::nullopt;
 
-  for (auto &I : *truePathBB)
-    if (I.mayHaveSideEffects())
-      return false;
+  std::optional<bool> Imp = isImpliedCondition(V, baseCond, DL);
+  // TODO: Handle negated condition case.
+  if (Imp != true)
+    return std::nullopt;
 
-  for (auto &I : *truePathBB) {
-    if (isa<ICmpInst>(I)) {
-      ICmpInst *impliedICmp = cast<ICmpInst>(&I);
-      if (impliedICmp->getPredicate() == branchCond->getPredicate() &&
-          impliedICmp->getOperand(0) == branchCond->getOperand(0) &&
-          impliedICmp->getOperand(1) == branchCond->getOperand(1)) {
-        // found the same condition, so we can skip processing this.
-        continue;
-      }
+  std::optional<bool> LHS = visitConditions(I->getOperand(0), baseCond,
+                                            contextBB, impliedConditions, DL);
+  std::optional<bool> RHS = visitConditions(I->getOperand(1), baseCond,
+                                            contextBB, impliedConditions, DL);
 
-      std::optional<bool> Imp = isImpliedCondition(impliedICmp, branchCond, DL);
-      if (Imp == true) {
-        Builder.SetInsertPoint(BI);
-        Value *newBranchCond = Builder.CreateICmp(impliedICmp->getPredicate(),
-                                                  impliedICmp->getOperand(0),
-                                                  impliedICmp->getOperand(1));
-
-        branchCond->replaceAllUsesWith(newBranchCond);
-        branchCond->eraseFromParent();
-        impliedICmp->replaceAllUsesWith(
-            ConstantInt::getTrue(truePathBB->getContext()));
-        return true;
-      }
-    }
+  if (!LHS.has_value() && !RHS.has_value()) {
+    impliedConditions.push_back(I);
   }
 
-  return false;
+  return Imp;
+}
+
+static bool hoistImplyingConditions(BranchInst *BI, IRBuilder<> &Builder,
+                                    const DataLayout &DL) {
+  // Only look for CFG like
+  // A -> B, C
+  // B -> D, C
+  // or
+  // A -> B, C
+  // B -> C, D
+  // TODO: Handle the false branch case as well.
+  BasicBlock *parentTrueBB = BI->getSuccessor(0);
+  BasicBlock *parentFalseBB = BI->getSuccessor(1);
+
+  if (!isa<BranchInst>(parentTrueBB->getTerminator()))
+    return false;
+
+  BranchInst *childBI = cast<BranchInst>(parentTrueBB->getTerminator());
+  // TODO: Handle the unconditional branch case.
+  if (childBI->isUnconditional())
+    return false;
+
+  BasicBlock *childTrueBB = childBI->getSuccessor(0);
+  BasicBlock *childFalseBB = childBI->getSuccessor(1);
+  if (parentFalseBB != childTrueBB && parentFalseBB != childFalseBB)
+    return false;
+
+  // Avoid cases that have loops for simplicity.
+  if (childTrueBB == BI->getParent() || childFalseBB == BI->getParent())
+    return false;
+
+  auto NoSideEffects = [](BasicBlock &BB) {
+    return llvm::none_of(BB, [](const Instruction &I) {
+      return I.mayWriteToMemory() || I.mayHaveSideEffects();
+    });
+  };
+  // If the basic blocks have side effects, don't hoist conditions.
+  if (!NoSideEffects(*parentTrueBB) || !NoSideEffects(*parentFalseBB))
+    return false;
+
+  bool isCommonBBonTruePath = (parentFalseBB == childTrueBB);
+  // Check if parent branch condition is implied by the child branch
+  // condition. If so, we can hoist the child branch condition to the
+  // parent branch. For example:
+  // Parent branch condition: x > y
+  // Child branch condition: x == z (given z > y)
+  // We can hoist x == z to the parent branch and eliminate x > y
+  // condition check as x == z is a much stronger branch condition.
+  // So it will result in the true path being taken less often.
+  // Now that we know childBI condition implies parent BI condition,
+  // we need to find out which conditions to hoist out.
+  SmallVector<Instruction *, 2> hoistCandidates;
+  std::optional<bool> Imp =
+      visitConditions(childBI->getCondition(), BI->getCondition(),
+                      (!isCommonBBonTruePath ? parentTrueBB : parentFalseBB),
+                      hoistCandidates, DL);
+  // We found no implication relationship.
+  if (!Imp.has_value())
+    return false;
+
+  // TODO: Handle negated condition case.
+  if (Imp == false)
+    return false;
+
+  // We don't handle multiple hoist candidates for now.
+  if (hoistCandidates.size() > 1)
+    return false;
+
+  // We can hoist the condition.
+  Instruction *parentBranchCond = dyn_cast<Instruction>(BI->getCondition());
+  Builder.SetInsertPoint(BI);
+  Instruction *hoistedCondition = Builder.Insert(hoistCandidates[0]->clone());
+  parentBranchCond->replaceAllUsesWith(hoistedCondition);
+  parentBranchCond->eraseFromParent();
+  hoistCandidates[0]->replaceAllUsesWith(
+      ConstantInt::getTrue(parentTrueBB->getContext()));
+
+  return true;
 }
 
 static bool isSafeCheapLoadStore(const Instruction *I,
