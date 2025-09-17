@@ -535,3 +535,19 @@ llvm.func @nanosleep() {
   nvvm.nanosleep 100000000000000
   llvm.return
 }
+
+// -----
+
+llvm.func @clusterlaunchcontrol_query_cancel_is_canceled_invalid_return_type(%try_cancel_response: i128) {
+  // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op is_canceled query type returns an i1}}
+  %res = nvvm.clusterlaunchcontrol.query.cancel query = is_canceled, %try_cancel_response : i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @clusterlaunchcontrol_query_cancel_get_first_cta_id_invalid_return_type(%try_cancel_response: i128) {
+  // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op get_first_cta_id_x, get_first_cta_id_y, get_first_cta_id_z query types return an i32}}
+  %res = nvvm.clusterlaunchcontrol.query.cancel query = get_first_cta_id_x, %try_cancel_response : i1
+  llvm.return
+}

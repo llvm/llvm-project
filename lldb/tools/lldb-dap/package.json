@@ -615,6 +615,14 @@
                 "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
                 "default": "internalConsole"
               },
+              "stdio": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.).",
+                "default": []
+              },
               "timeout": {
                 "type": "number",
                 "description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
