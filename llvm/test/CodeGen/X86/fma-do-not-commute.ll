@@ -1,4 +1,4 @@
-; RUN: llc -fp-contract=fast -mattr=+fma -disable-cgp < %s -o - | FileCheck %s
+; RUN: llc -mattr=+fma -disable-cgp < %s -o - | FileCheck %s
 ; Check that the 2nd and 3rd arguments of fmaXXX231 reg1, reg2, mem3 are not commuted.
 ; <rdar://problem/16800495> 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -20,8 +20,8 @@ loop:
   %sum0 = phi float [ %fma, %loop ], [ %arg, %entry ]
   %addrVal = load float, ptr %addr, align 4
   %addr2Val = load float, ptr %addr2, align 4
-  %fmul = fmul float %addrVal, %addr2Val
-  %fma = fadd float %sum0, %fmul
+  %fmul = fmul contract float %addrVal, %addr2Val
+  %fma = fadd contract float %sum0, %fmul
   br i1 true, label %exit, label %loop
 
 exit:

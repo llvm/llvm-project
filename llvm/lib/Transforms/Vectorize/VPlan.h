@@ -1795,6 +1795,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
 
+  /// This recipe generates a GEP instruction.
+  unsigned getOpcode() const { return Instruction::GetElementPtr; }
+
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
 
@@ -1898,6 +1901,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
   void execute(VPTransformState &State) override;
+
+  Type *getSourceElementType() const { return IndexedTy; }
 
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
