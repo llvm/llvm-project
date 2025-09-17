@@ -15,7 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseN1Model : SchedMachineModel {
-  let IssueWidth            =   8; // Maximum micro-ops dispatch rate.
+  let IssueWidth            =   3; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that this
+                                   // value is better.
   let MicroOpBufferSize     = 128; // NOTE: Copied from Cortex-A76.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
