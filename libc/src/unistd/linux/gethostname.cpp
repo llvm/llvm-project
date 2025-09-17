@@ -30,7 +30,8 @@ LLVM_LIBC_FUNCTION(int, gethostname, (char *name, size_t size)) {
     return -1;
   }
 
-  // Because there is no SYS_gethostname syscall, we use uname to get the hostname.
+  // Because there is no SYS_gethostname syscall, we use uname to get the
+  // hostname.
   struct utsname unameData;
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_uname, &unameData);
   if (ret < 0) {
