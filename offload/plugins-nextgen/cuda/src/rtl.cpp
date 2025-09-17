@@ -1581,7 +1581,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
     unsigned SM =
         Header.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1
             ? Header.e_flags & ELF::EF_CUDA_SM
-            : (Header.e_flags & ELF::EF_CUDA_SM_MASK) >> 8;
+            : (Header.e_flags & ELF::EF_CUDA_SM_MASK) >> ELF::EF_CUDA_SM_OFFSET;
 
     CUdevice Device;
     CUresult Res = cuDeviceGet(&Device, DeviceId);
