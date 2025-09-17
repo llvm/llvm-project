@@ -622,7 +622,8 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   assert(getEMachine() == ELF::EM_CUDA);
   unsigned SM = getEIdentABIVersion() == ELF::ELFABIVERSION_CUDA_V1
                     ? getPlatformFlags() & ELF::EF_CUDA_SM
-                    : getPlatformFlags() & ELF::EF_CUDA_SM_MASK;
+                    : (getPlatformFlags() & ELF::EF_CUDA_SM_MASK) >>
+                          ELF::EF_CUDA_SM_OFFSET;
 
   switch (SM) {
   // Fermi architecture.
