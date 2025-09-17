@@ -29,3 +29,14 @@ void LambdaAccessingADummy() {
   int d;
   int a9[1] = {[d = 0] = 1}; // both-error {{is not an integral constant expression}}
 }
+
+const int p = 10;
+struct B {
+  int a;
+  void *p;
+};
+struct B2 : B {
+  void *q;
+};
+_Static_assert(&(B2().a) == &p, ""); // both-error {{taking the address of a temporary object of type 'int'}} \
+                                     // both-error {{not an integral constant expression}}

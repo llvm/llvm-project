@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | \
+// RUN:   llvm-cxxfilt | FileCheck %s
 
 // Verify that no per variable _Init_thread instructions are emitted for non-trivial static locals
 // These would normally be emitted by the MicrosoftCXXABI, but the DirectX backend should exlude them
@@ -13,17 +14,17 @@ void InitBuf(RWBuffer<int> buf) {
 }
 
 // CHECK-NOT: _Init_thread_epoch
-// CHECK: define internal void @_Z4mainv
+// CHECK: define internal void @main
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[Tmp0:%.*]] = alloca %"class.hlsl::RWBuffer"
 // CHECK-NEXT: [[Tmp1:%.*]] = alloca %"class.hlsl::RWBuffer"
-// CHECK-NEXT: [[Tmp2:%.*]] = load i8, ptr @_ZGVZ4mainvE5mybuf
+// CHECK-NEXT: [[Tmp2:%.*]] = load i8, ptr @guard variable for main()::mybuf
 // CHECK-NEXT: [[Tmp3:%.*]] = icmp eq i8 [[Tmp2]], 0
 // CHECK-NEXT: br i1 [[Tmp3]]
 // CHECK-NOT: _Init_thread_header
 // CHECK: init.check:
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1EjijjPKc(
-// CHECK-NEXT: store i8 1, ptr @_ZGVZ4mainvE5mybuf
+// CHECK-NEXT: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding
+// CHECK-NEXT: store i8 1, ptr @guard variable for main()::mybuf
 // CHECK-NOT: _Init_thread_footer
 
 

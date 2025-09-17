@@ -2032,7 +2032,7 @@ TEST_P(ASTMatchersTest, DependentTemplateSpecializationType) {
           typename A<T>::template B<T> a;
         };
       )",
-      dependentTemplateSpecializationType()));
+      templateSpecializationType()));
 }
 
 TEST_P(ASTMatchersTest, RecordType) {

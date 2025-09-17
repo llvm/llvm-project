@@ -22,6 +22,7 @@
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
@@ -156,6 +157,10 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
       diags.Report(debugWarning) << arg->getValue();
     }
+    // The default value of 2 here is to match clang.
+    opts.DwarfVersion =
+        getLastArgIntValue(args, clang::driver::options::OPT_dwarf_version_EQ,
+                           /*Default=*/2, diags);
   }
   return true;
 }
@@ -274,6 +279,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_fexperimental_loop_fusion))
+    opts.FuseLoops = 1;
 
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
@@ -1258,7 +1266,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
       res.getLangOpts().OMPHostIRFile = arg->getValue();
       if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
-        diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+        diags.Report(clang::diag::err_omp_host_ir_file_not_found)
             << res.getLangOpts().OMPHostIRFile;
     }
 
