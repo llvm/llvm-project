@@ -230,6 +230,10 @@ void stdTieNotWarnCases() {
   a = 4;
   std::tie(a, b) = getPair<int, int>(); // no warning
 
+  int c = 0, d = 0;
+  int e = 0;
+  std::tie(a, b) = getPair<int, int>(); // no warning
+
   int* pa = nullptr;
   int* pb = nullptr;
   MarkUsed(pa);
