@@ -5331,17 +5331,16 @@ getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
 template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   const Elf_Shdr *CGSection = findSectionByName(".callgraph");
   if (!CGSection) {
-    Error NoSectionErr = createError("No .callgraph section found.");    
+    Error NoSectionErr = createError("No .callgraph section found.");
     reportError(std::move(NoSectionErr), "Missing section");
-    return false;
   }
 
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
     Error SectionReadErr = SectionBytesOrErr.takeError();
-    reportError(std::move(SectionReadErr), "Unable to read the .callgraph section");
-    return false;
+    reportError(std::move(SectionReadErr),
+                "Unable to read the .callgraph section");
   }
 
   auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
@@ -5366,55 +5365,44 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     // Format version number.
     uint64_t FormatVersionNumber = Data.getU64(&Offset, &CGSectionErr);
 
-    if (CGSectionErr) {
+    if (CGSectionErr)
       reportError(std::move(CGSectionErr),
                   "While reading call graph info FormatVersionNumber");
-      return false;
-    }
 
     if (FormatVersionNumber != 0) {      
       Error FormatErr = createError("Unknown format version value [" + std::to_string(FormatVersionNumber) + "] in .callgraph section.");
       reportError(std::move(FormatErr), "Unknown value");
-      return false;
     }
 
     // Read function address.
     typename ELFT::uint FuncAddr =
         Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
-    if (CGSectionErr) {
+    if (CGSectionErr)
       reportError(std::move(CGSectionErr),
                   "While reading call graph info function entry PC");
-      return false;
-    }
 
     if (FuncCGInfo.find(FuncAddr) != FuncCGInfo.end()) {
       Error DuplicatePcErr = createError("for function PC: 0x" + Twine::utohexstr(FuncAddr));
-      reportError(std::move(DuplicatePcErr), "Duplicate call graph entry");      
-      return false;
+      reportError(std::move(DuplicatePcErr), "Duplicate call graph entry");
     }
 
     // Read function kind.
     uint64_t KindVal = Data.getU64(&Offset, &CGSectionErr);
-    if (CGSectionErr) {
+    if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr), "Kind");
-      return false;
-    }
 
     if (KindVal > 3) {
       Error KindErr = createError("Unknown value [" + std::to_string(KindVal) + "].");
       PrintMalformedError(KindErr, Twine::utohexstr(FuncAddr), "FunctionKind");
-      return false;
     }
 
     FunctionKind Kind = static_cast<FunctionKind>(KindVal);
     if (Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID) {
       // Read type id if this function is an indirect call target.
       uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
-      if (CGSectionErr) {
+      if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "indirect type id");
-        return false;
-      }
       TypeIdToIndirTargets[TypeId].push_back(FuncAddr);
     }
     if (Kind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID)
@@ -5431,53 +5419,41 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
 
     // Read number of indirect call sites for this function.
     uint64_t NumIndirectCallSites = Data.getU64(&Offset, &CGSectionErr);
-    if (CGSectionErr) {
+    if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "number of indirect callsites");
-      return false;
-    }
 
     for (unsigned long I = 0; I < NumIndirectCallSites; I++) {
       uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
-      if (CGSectionErr) {
+      if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "indirect target type id");
-        return false;
-      }
       typename ELFT::uint CallSitePc =
           Data.getUnsigned(&Offset, sizeof(CallSitePc), &CGSectionErr);
-      if (CGSectionErr) {
+      if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "indirect callsite PC");
-        return false;
-      }
       TypeIdToIndirCallSites[TypeId].push_back(CallSitePc);
       CGInfo.IndirectCallSites.push_back(CallSitePc);
     }
 
     // Read number of direct call sites for this function.
     uint64_t NumDirectCallSites = Data.getU64(&Offset, &CGSectionErr);
-    if (CGSectionErr) {
+    if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "number of direct callsites");
-      return false;
-    }
     // Read direct call sites and populate FuncCGInfo.
     for (uint64_t I = 0; I < NumDirectCallSites; ++I) {
       typename ELFT::uint CallSite =
           Data.getUnsigned(&Offset, sizeof(CallSite), &CGSectionErr);
-      if (CGSectionErr) {
+      if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "direct callsite PC");
-        return false;
-      }
       typename ELFT::uint Callee =
           Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
-      if (CGSectionErr) {
+      if (CGSectionErr)
         PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                             "indirect callee PC");
-        return false;
-      }
       CGInfo.DirectCallSites.emplace_back(CallSite, Callee);
     }
     FuncCGInfo[FuncAddr] = CGInfo;
