@@ -945,6 +945,7 @@ namespace {
     }
 
     ASTContext &getASTContext() const override { return Ctx; }
+    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -12187,6 +12188,9 @@ static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
 }
 
 bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  // FIXME: Unary shuffle with mask not currently supported.
+  if (E->getNumSubExprs() == 2)
+    return Error(E);
   APValue VecVal1;
   const Expr *Vec1 = E->getExpr(0);
   if (!EvaluateAsRValue(Info, Vec1, VecVal1))
@@ -17758,6 +17762,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                                  bool IsConstantInitialization) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
+  assert(VD && "Need a valid VarDecl");
 
   llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [&] {
     std::string Name;

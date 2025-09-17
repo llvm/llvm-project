@@ -52,6 +52,23 @@ Potentially Breaking Changes
   ``--gcc-install-dir`` command line argument. This will silence the
   warning. It can also be disabled using the
   ``-Wno-gcc-install-dir-libstdcxx`` command line flag.
+- Scalar deleting destructor support has been aligned with MSVC when
+  targeting the MSVC ABI. Clang previously implemented support for
+  ``::delete`` by calling the complete object destructor and then the
+  appropriate global delete operator (as is done for the Itanium ABI).
+  The scalar deleting destructor is now called to destroy the object
+  and deallocate its storage. This is an ABI change that can result in
+  memory corruption when a program built for the MSVC ABI has
+  portions compiled with clang 21 or earlier and portions compiled
+  with a version of clang 22 (or MSVC). Consider a class ``X`` that
+  declares a virtual destructor and an ``operator delete`` member
+  with the destructor defined in library ``A`` and a call to `::delete`` in
+  library ``B``. If library ``A`` is compiled with clang 21 and library ``B``
+  is compiled with clang 22, the ``::delete`` call might dispatch to the
+  scalar deleting destructor emitted in library ``A`` which will erroneously
+  call the member ``operator delete`` instead of the expected global
+  delete operator. The old behavior is retained under ``-fclang-abi-compat=21``
+  flag.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -291,6 +308,10 @@ Improvements to Clang's diagnostics
 - Fixed a bug where the source location was missing when diagnosing ill-formed
   placeholder constraints.
 
+- The two-element, unary mask variant of ``__builtin_shufflevector`` is now
+  properly being rejected when used at compile-time. It was not implemented
+  and caused assertion failures before (#GH158471).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -375,6 +396,8 @@ Bug Fixes to C++ Support
   the function type.
 - Fix an assertion failure when a ``constexpr`` variable is only referenced through
   ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
+- Fix an assertion failure when taking the address on a non-type template parameter argument of
+  object type. (#GH151531)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -443,6 +466,8 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+
+Support calling `consteval` function between different target.
 
 AIX Support
 ^^^^^^^^^^^
@@ -532,6 +557,8 @@ OpenMP Support
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support for ``variable-category`` modifier in ``default clause``.
+- Added support for ``defaultmap`` directive implicit-behavior ``storage``.
+- Added support for ``defaultmap`` directive implicit-behavior ``private``.
 
 Improvements
 ^^^^^^^^^^^^

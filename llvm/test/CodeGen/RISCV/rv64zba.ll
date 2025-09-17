@@ -4576,3 +4576,63 @@ define i64 @append_32ones(i64 %x) {
   %o = or i64 %s, 4294967295
   ret i64 %o
 }
+
+define i32 @select3(i1 zeroext %x) {
+; RV64I-LABEL: select3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    andi a0, a0, 3
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: select3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: select3:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    nds.lea.h a0, a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i32 3, i32 0
+  ret i32 %select
+}
+
+define i32 @select5(i1 zeroext %x) {
+; RV64I-LABEL: select5:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    andi a0, a0, 5
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: select5:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: select5:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    nds.lea.w a0, a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i32 5, i32 0
+  ret i32 %select
+}
+
+define i32 @select9(i1 zeroext %x) {
+; RV64I-LABEL: select9:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    andi a0, a0, 9
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: select9:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+;
+; RV64XANDESPERF-LABEL: select9:
+; RV64XANDESPERF:       # %bb.0:
+; RV64XANDESPERF-NEXT:    nds.lea.d a0, a0, a0
+; RV64XANDESPERF-NEXT:    ret
+  %select = select i1 %x, i32 9, i32 0
+  ret i32 %select
+}
