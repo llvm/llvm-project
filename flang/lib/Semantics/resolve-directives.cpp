@@ -413,7 +413,7 @@ public:
   }
 
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
-    PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
+    PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
   }
   void Post(const parser::OmpMetadirectiveDirective &) { PopContext(); }

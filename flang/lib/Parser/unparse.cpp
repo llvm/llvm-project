@@ -2675,8 +2675,8 @@ public:
   void Unparse(const OmpFailClause &x) { Walk(x.v); }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
-    Word("!$OMP METADIRECTIVE ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }

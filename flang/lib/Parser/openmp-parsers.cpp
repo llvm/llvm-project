@@ -1008,11 +1008,11 @@ TYPE_PARSER(construct<OmpMatchClause>(
     Parser<traits::OmpContextSelectorSpecification>{}))
 
 TYPE_PARSER(construct<OmpOtherwiseClause>(
-    maybe(indirect(sourced(Parser<OmpDirectiveSpecification>{})))))
+    maybe(indirect(Parser<OmpDirectiveSpecification>{}))))
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
-    maybe(indirect(sourced(Parser<OmpDirectiveSpecification>{})))))
+    maybe(indirect(Parser<OmpDirectiveSpecification>{}))))
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(
@@ -1281,6 +1281,16 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 
 // --- Parsers for directives and constructs --------------------------
 
+static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
+  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
+
+static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+  return [&dirs](const OmpDirectiveName &name) -> bool {
+    return dirs.test(llvm::to_underlying(name.v));
+  };
+}
+
 TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
 
 OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
@@ -1293,7 +1303,7 @@ OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
 
 TYPE_PARSER(sourced(
     // Parse the old syntax: FLUSH [clauses] [(objects)]
-    construct<OmpDirectiveSpecification>(
+    sourced(construct<OmpDirectiveSpecification>(
         // Force this old-syntax parser to fail for FLUSH followed by '('.
         // Otherwise it could succeed on the new syntax but have one of
         // lists absent in the parsed result.
@@ -1303,13 +1313,13 @@ TYPE_PARSER(sourced(
             verbatim("FLUSH"_tok) / !lookAhead("("_tok),
             maybe(Parser<OmpClauseList>{}),
             maybe(parenthesized(Parser<OmpArgumentList>{})),
-            pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax))) ||
+            pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax)))) ||
     // Parse the standard syntax: directive [(arguments)] [clauses]
-    construct<OmpDirectiveSpecification>( //
+    sourced(construct<OmpDirectiveSpecification>( //
         sourced(OmpDirectiveNameParser{}),
         maybe(parenthesized(Parser<OmpArgumentList>{})),
         maybe(Parser<OmpClauseList>{}),
-        pure(OmpDirectiveSpecification::Flags::None))))
+        pure(OmpDirectiveSpecification::Flags::None)))))
 
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
   // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.
@@ -1363,18 +1373,10 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
     sourced(construct<OpenMPUtilityConstruct>(
         sourced(Parser<OmpNothingDirective>{}))))))
 
-TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
-    verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
-
-static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
-  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
-}
-
-static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
-  return [&dirs](const OmpDirectiveName &name) -> bool {
-    return dirs.test(llvm::to_underlying(name.v));
-  };
-}
+TYPE_PARSER(construct<OmpMetadirectiveDirective>(
+    predicated(Parser<OmpDirectiveName>{},
+        IsDirective(llvm::omp::Directive::OMPD_metadirective)) >=
+    Parser<OmpDirectiveSpecification>{}))
 
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
