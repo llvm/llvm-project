@@ -3989,13 +3989,13 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
   return SelectVOP3Mods(In, Src, SrcMods);
 }
 
-// Match lowered fpext from bf16 to f32. This is a bit operation extending
+// Match lowered fpext from f16/bf16 to f32. This is a bit operation extending
 // a 16-bit value with 16-bit of zeroes at LSB:
 //
-// 1. (f32 (bitcast (build_vector (i16 0), (i16 (bitcast bf16:val)))))
+// 1. (f32 (bitcast (build_vector (i16 0), (i16 (bitcast f16/bf16:val)))))
 // 2. (f32 (bitcast (and i32:val, 0xffff0000))) -> IsExtractHigh = true
 // 3. (f32 (bitcast (shl i32:va, 16) -> IsExtractHigh = false
-static SDValue matchBF16FPExtendLike(SDValue Op, bool &IsExtractHigh) {
+static SDValue match16FPExtendLike(SDValue Op, bool &IsExtractHigh) {
   if (Op.getValueType() != MVT::f32 || Op.getOpcode() != ISD::BITCAST)
     return SDValue();
   Op = Op.getOperand(0);
@@ -4006,7 +4006,7 @@ static SDValue matchBF16FPExtendLike(SDValue Op, bool &IsExtractHigh) {
     if (!Low16 || !Low16->isZero())
       return SDValue();
     Op = stripBitcast(Op.getOperand(1));
-    if (Op.getValueType() != MVT::bf16)
+    if (Op.getValueType() != MVT::bf16 && Op.getValueType() != MVT::f16)
       return SDValue();
     return Op;
   }
@@ -4045,16 +4045,12 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   bool IsExtractHigh = false;
   if (Src.getOpcode() == ISD::FP_EXTEND) {
     Src = Src.getOperand(0);
-  } else if (VT == MVT::bf16) {
-    SDValue B16 = matchBF16FPExtendLike(Src, IsExtractHigh);
-    if (!B16)
-      return false;
-    Src = B16;
+  } else if (SDValue FP16 = match16FPExtendLike(Src, IsExtractHigh)) {
+    Src = FP16;
   } else
     return false;
 
-  if (Src.getValueType() != VT &&
-      (VT != MVT::bf16 || Src.getValueType() != MVT::i32))
+  if (Src.getValueType() != VT && Src.getValueType() != MVT::i32)
     return false;
 
   Src = stripBitcast(Src);
@@ -4078,18 +4074,24 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   // register.
 
   Mods |= SISrcMods::OP_SEL_1;
-  if (IsExtractHigh ||
-      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
+  if (Src.getValueSizeInBits() == 16) {
+    if (Subtarget->useRealTrue16Insts()) {
+
+      if (Src.getOpcode() == ISD::TRUNCATE &&
+          Src.getOperand(0).getValueType() == MVT::i32) {
+        Src = Src.getOperand(0);
+      } else {
+        // In true16 mode, create a Src32 with 16bit src
+        Src = createVOP3PSrc32FromLo16(Src, In, CurDAG, Subtarget);
+      }
+    } else if (isExtractHiElt(Src, Src)) {
+      Mods |= SISrcMods::OP_SEL_0;
+
+      // TODO: Should we try to look for neg/abs here?
+    }
+  } else if (Src.getValueSizeInBits() == 32 && IsExtractHigh)
     Mods |= SISrcMods::OP_SEL_0;
 
-    // TODO: Should we try to look for neg/abs here?
-  }
-
-  // Prevent unnecessary subreg COPY to VGPR_16
-  if (Src.getOpcode() == ISD::TRUNCATE &&
-      Src.getOperand(0).getValueType() == MVT::i32) {
-    Src = Src.getOperand(0);
-  }
   return true;
 }
 
