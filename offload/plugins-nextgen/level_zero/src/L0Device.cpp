@@ -413,13 +413,14 @@ L0DeviceTy::loadBinaryImpl(const __tgt_device_image *TgtImage,
   (void)NumEntries; // silence warning
 
   const auto &Options = getPlugin().getOptions();
-  std::string CompilationOptions(Options.CompilationOptions + " " +
-                                 Options.UserCompilationOptions);
+  std::string CompilationOptions(Options.CompilationOptions);
+  CompilationOptions += " " + Options.UserCompilationOptions;
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
        "Base L0 module compilation options: %s\n", CompilationOptions.c_str());
 
-  CompilationOptions += " " + Options.InternalCompilationOptions;
+  CompilationOptions += " ";
+  CompilationOptions += Options.InternalCompilationOptions;
   auto &Program = addProgram(ImageId, TgtImage);
 
   int32_t RC = Program.buildModules(CompilationOptions);

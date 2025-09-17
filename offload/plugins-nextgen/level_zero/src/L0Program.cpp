@@ -395,7 +395,7 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
           continue;
 
         const uint64_t Type = Note.getType();
-        std::string DescStr(std::move(Note.getDescAsStringRef(4)));
+        auto DescStrRef = Note.getDescAsStringRef(4);
         switch (Type) {
         default:
           DP("Warning: unrecognized INTELONEOMPOFFLOAD note.\n");
@@ -403,19 +403,16 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
         case NT_INTEL_ONEOMP_OFFLOAD_VERSION:
           break;
         case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT:
-          ImageCount = std::stoull(DescStr);
+          if (!DescStrRef.getAsInteger(10, ImageCount)) {
+            DP("Warning: invalid NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT: '%s'\n",
+               DescStrRef.str().c_str());
+            ImageCount = 0;
+          }
           break;
-        case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX: {
-          std::vector<std::string> Parts;
-          do {
-            const auto DelimPos = DescStr.find('\0');
-            if (DelimPos == std::string::npos) {
-              Parts.push_back(std::move(DescStr));
-              break;
-            }
-            Parts.push_back(DescStr.substr(0, DelimPos));
-            DescStr.erase(0, DelimPos + 1);
-          } while (Parts.size() < 4);
+        case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX:
+          llvm::SmallVector<llvm::StringRef, 4> Parts;
+          DescStrRef.split(Parts, '\0', /* MaxSplit = */ 4,
+                           /* KeepEmpty = */ false);
 
           // Ignore records with less than 4 strings.
           if (Parts.size() != 4) {
@@ -424,7 +421,8 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
             continue;
           }
 
-          const uint64_t Idx = std::stoull(Parts[0]);
+          uint64_t Idx = 0;
+          Parts[0].getAsInteger(10, Idx);
           MaxImageIdx = (std::max)(MaxImageIdx, Idx);
           if (AuxInfo.find(Idx) != AuxInfo.end()) {
             DP("Warning: duplicate auxiliary information for image %" PRIu64
@@ -432,12 +430,15 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
                Idx);
             continue;
           }
+
+          uint64_t Part1Id;
+          Parts[1].getAsInteger(10, Part1Id);
+
           AuxInfo.emplace(
               std::piecewise_construct, std::forward_as_tuple(Idx),
-              std::forward_as_tuple(std::stoull(Parts[1]), Parts[2], Parts[3]));
+              std::forward_as_tuple(Part1Id, Parts[2].str(), Parts[3].str()));
           // Image pointer and size
           // will be initialized later.
-        }
         }
       }
     }
@@ -450,24 +451,28 @@ int32_t L0ProgramTy::buildModules(std::string &BuildOptions) {
       auto ExpectedSectionName = E.getSectionName(Sec);
       assert(ExpectedSectionName && "isValidOneOmpImage() returns true for ELF "
                                     "image with invalid section names");
-      std::string SectionName = (*ExpectedSectionName).str();
-      if (SectionName.find(Prefix) != 0)
+      auto &SectionNameRef = *ExpectedSectionName;
+      if (!SectionNameRef.consume_front(Prefix))
         continue;
-      SectionName.erase(0, std::strlen(Prefix));
 
       // Expected section name in split-kernel mode:
       // __openmp_offload_spirv_<image_id>_<part_id>
-      auto PartIdLoc = SectionName.find("_");
-      if (PartIdLoc != std::string::npos) {
-        DP("Found a split section in the image\n");
-        // It seems that we do not need part ID as long as they are ordered
-        // in the image and we keep the ordering in the runtime.
-        SectionName.erase(PartIdLoc);
-      } else {
+      auto Parts = SectionNameRef.split('_');
+      // It seems that we do not need part ID as long as they are ordered
+      // in the image and we keep the ordering in the runtime.
+      SectionNameRef = Parts.first;
+      if (Parts.second.empty()) {
         DP("Found a single section in the image\n");
+      } else {
+        DP("Found a split section in the image\n");
       }
 
-      uint64_t Idx = std::stoull(SectionName);
+      uint64_t Idx = 0;
+      if (!SectionNameRef.getAsInteger(10, Idx)) {
+        DP("Warning: ignoring image section (invalid index '%s').\n",
+           SectionNameRef.str().c_str());
+        continue;
+      }
       if (Idx >= ImageCount) {
         DP("Warning: ignoring image section (index %" PRIu64
            " is out of range).\n",

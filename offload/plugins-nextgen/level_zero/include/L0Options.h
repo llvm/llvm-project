@@ -63,7 +63,6 @@ public:
     return Tmp;
   }
 };
-#define FIXED static constexpr
 
 /// L0 Plugin flags
 struct L0OptionFlagsTy {
@@ -94,7 +93,7 @@ struct L0OptionsTy {
   std::array<int32_t, 3> ReductionPoolInfo{256, 8, 8192};
 
   /// Oversubscription rate for normal kernels
-  FIXED uint32_t SubscriptionRate = 4;
+  uint32_t SubscriptionRate = 4;
 
   /// Loop kernels with known ND-range may be known to have
   /// few iterations and they may not exploit the offload device
@@ -112,7 +111,7 @@ struct L0OptionsTy {
   /// in the kernel should decrease.
   /// Anyway, this is just a heuristics that seems to work well for some
   /// kernels (which poorly expose parallelism in the first place).
-  FIXED double ThinThreadsThreshold = 0.1;
+  double ThinThreadsThreshold = 0.1;
 
   /// List of Root devices provided via option ONEAPI_DEVICE_SELECTOR
   /// All the discard filter should be before the accept filter.
@@ -127,8 +126,8 @@ struct L0OptionsTy {
   // option. With it, the SPIR-V will be converted to LLVM IR with OpenCL 2.0
   // builtins. Otherwise, SPIR-V will be converted to LLVM IR with OpenCL 1.2
   // builtins.
-  std::string CompilationOptions = "-cl-std=CL2.0 ";
-  std::string InternalCompilationOptions = "-cl-take-global-address";
+  static constexpr std::string_view CompilationOptions = "-cl-std=CL2.0 ";
+  static constexpr std::string_view InternalCompilationOptions = "-cl-take-global-address";
   std::string UserCompilationOptions = "";
 
   // Spec constants used for all modules.
@@ -165,24 +164,8 @@ struct L0OptionsTy {
     return std::all_of(str.begin(), str.end(), ::isdigit);
   }
 
-  bool match(const std::string &Var, const std::string &Matched) {
-    if (Var.size() != Matched.size())
-      return false;
-
-    auto equals = [](char a, char b) {
-      return std::tolower(a) == std::tolower(b);
-    };
-    return std::equal(Var.begin(), Var.end(), Matched.begin(), Matched.end(),
-                      equals);
-  }
-
-  bool match(const std::string &Var, const char *Matched) {
-    std::string Str(Matched);
-    return match(Var, Str);
-  }
-
-  bool match(const StringEnvar &Var, const char *Matched) {
-    return match(Var.get(), Matched);
+  bool match(const StringEnvar &Var, const llvm::StringRef Matched) {
+    return Matched.equals_insensitive(Var.get());
   }
 
 }; // L0OptionsTy
