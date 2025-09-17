@@ -1,0 +1,6 @@
+; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+
+@a = global i32 1, section "abc", !rename.key !0
+
+!0 = !{!"Hello World!"}
+; CHECK:  rename metadata must have no operands
