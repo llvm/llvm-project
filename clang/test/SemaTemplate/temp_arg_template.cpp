@@ -117,16 +117,8 @@ namespace CheckDependentNonTypeParamTypes {
       X<int, long, 3> x;
     }
     void h() {
-      // FIXME: If we accept A<B> at all, it's not obvious what should happen
-      // here. While parsing the template, we form
-      //   X<unsigned char, int, (unsigned char)1234>
-      // but in the final instantiation do we get
-      //   B<unsigned char, int, (int)1234>
-      // or
-      //   B<unsigned char, int, (int)(unsigned char)1234>
-      // ?
       X<unsigned char, int, 1234> x;
-      int check[x.value == 1234 ? 1 : -1];
+      // expected-error@-1 {{evaluates to 1234, which cannot be narrowed to type 'unsigned char'}}
     }
   };
 
@@ -143,6 +135,20 @@ namespace CheckDependentNonTypeParamTypes {
     ab.g();
     ab.h();
   }
+
+  template<class> struct C {
+    template<class T, T V> struct D {};
+    using T = D<char, 1234>;
+    // expected-error@-1 {{evaluates to 1234, which cannot be narrowed to type 'char'}}
+  };
+
+  template<class T> struct E {
+    template <template <T V> class TT> struct F {
+      using X = TT<1234>;
+    };
+  };
+  // FIXME: This should be rejected, as there are no valid instantiations for E<char>::F
+  template struct E<char>;
 }
 
 namespace PR32185 {
