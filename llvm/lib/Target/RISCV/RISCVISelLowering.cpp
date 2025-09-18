@@ -4553,6 +4553,14 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       break;
   }
 
+  // Do not slideup if the element type of EVec is different.
+  if (SlideUp) {
+    MVT EVecEltVT = EVec.getSimpleValueType().getVectorElementType();
+    MVT ContainerEltVT = ContainerVT.getVectorElementType();
+    if (EVecEltVT != ContainerEltVT)
+      SlideUp = false;
+  }
+
   if (SlideUp) {
     MVT EVecContainerVT = EVec.getSimpleValueType();
     // Make sure the original vector has scalable vector type.
@@ -4562,12 +4570,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       EVec = convertToScalableVector(EVecContainerVT, EVec, DAG, Subtarget);
     }
 
-    // Adapt the element type of EVec into ContainerVT.
-    MVT EVecEltVT = EVecContainerVT.getVectorElementType();
-    MVT ContainerEltVT = ContainerVT.getVectorElementType();
-    if (EVecEltVT != ContainerEltVT)
-      EVec = DAG.getAnyExtOrTrunc(
-          EVec, DL, EVecContainerVT.changeVectorElementType(ContainerEltVT));
 
     // Adapt EVec's type into ContainerVT.
     if (EVecContainerVT.getVectorMinNumElements() <
