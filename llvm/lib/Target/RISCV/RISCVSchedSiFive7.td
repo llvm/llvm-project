@@ -362,16 +362,14 @@ multiclass SiFive7WriteResBase<int VLEN,
   def : WriteRes<WriteFST64, [PipeA]>;
 
   let Latency = 3 in {
-  def : WriteRes<WriteLDB, [PipeA]>;
-  def : WriteRes<WriteLDH, [PipeA]>;
-  def : WriteRes<WriteLDW, [PipeA]>;
-  def : WriteRes<WriteLDD, [PipeA]>;
-  }
+    def : WriteRes<WriteLDB, [PipeA]>;
+    def : WriteRes<WriteLDH, [PipeA]>;
+    def : WriteRes<WriteLDW, [PipeA]>;
+    def : WriteRes<WriteLDD, [PipeA]>;
 
-  let Latency = 2 in {
-  def : WriteRes<WriteFLD16, [PipeA]>;
-  def : WriteRes<WriteFLD32, [PipeA]>;
-  def : WriteRes<WriteFLD64, [PipeA]>;
+    def : WriteRes<WriteFLD16, [PipeA]>;
+    def : WriteRes<WriteFLD32, [PipeA]>;
+    def : WriteRes<WriteFLD64, [PipeA]>;
   }
 
   // Atomic memory
