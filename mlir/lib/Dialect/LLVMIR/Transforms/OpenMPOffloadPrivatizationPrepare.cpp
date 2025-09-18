@@ -100,7 +100,8 @@ class PrepareForOMPOffloadPrivatizationPass
         // For boxchars this won't be a pointer. But, MapsForPrivatizedSymbols
         // should have mapped the pointer the boxchar so use that as varPtr.
         Value varPtr = privVar;
-        if (!isa<LLVM::LLVMPointerType>(privVar.getType()))
+        bool isPrivatizedByValue = !isa<LLVM::LLVMPointerType>(privVar.getType());
+        if (isPrivatizedByValue)
           varPtr = mapInfoOp.getVarPtr();
 
         assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
@@ -119,7 +120,7 @@ class PrepareForOMPOffloadPrivatizationPass
         // location. We'll inser that load later after we have updated
         // the malloc'd location with the contents of the original
         // variable.
-        if (isa<LLVM::LLVMPointerType>(privVar.getType()))
+        if (!isPrivatizedByValue)
           newPrivVars.push_back(heapMem);
 
         // Find the earliest insertion point for the copy. This will be before
@@ -154,13 +155,12 @@ class PrepareForOMPOffloadPrivatizationPass
         });
 
         rewriter.setInsertionPoint(chainOfOps.front());
-        // Copy the value of the local variable into the heap-allocated
-        // location.
+
         Operation *firstOp = chainOfOps.front();
         Location loc = firstOp->getLoc();
         Type varType = getElemType(varPtr);
 
-
+        LDBG() << "varType = " << varType << "\n";
         // // auto loadVal = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
         // // (void)rewriter.create<LLVM::StoreOp>(loc, loadVal.getResult(), heapMem);
         #if 0
@@ -184,36 +184,56 @@ class PrepareForOMPOffloadPrivatizationPass
         //            , );
 #else
         // Todo: Handle boxchar (by value)
-        Region &initRegion = privatizer.getInitRegion();
-        assert(!initRegion.empty() && "initRegion cannot be empty");
-        LLVM::LLVMFuncOp initFunc = createFuncOpForRegion(
-            loc, mod, initRegion,
-            llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
-            firstOp, rewriter);
 
-        rewriter.create<LLVM::CallOp>(loc, initFunc, ValueRange{varPtr, heapMem});
+        // Create a llvm.func for 'region' that is marked always_inline and call it.
+        auto createAlwaysInlineFuncAndCallIt = [&](Region &region,
+                                                   llvm::StringRef funcName,
+                                                   Value mold,
+                                                   Value arg1) -> Value {
+          assert(!region.empty() && "region cannot be empty");
+          LLVM::LLVMFuncOp func = createFuncOpForRegion(
+              loc, mod, region,
+              funcName,
+              firstOp, rewriter);
+          auto call = rewriter.create<LLVM::CallOp>(loc, func, ValueRange{mold, arg1});
+          LDBG() << "inside createAlwaysInlineFuncAndCallIt\n";
+          return call.getResult();
+        };
+        Value moldArg, newArg;
+        if (isPrivatizedByValue) {
+          moldArg = rewriter.create<LLVM::LoadOp>(loc, varType, varPtr);
+          newArg = rewriter.create<LLVM::LoadOp>(loc, varType, heapMem);
+        } else {
+          moldArg = varPtr;
+          newArg = heapMem;
+        }
+        Value initializedVal = createAlwaysInlineFuncAndCallIt(
+            privatizer.getInitRegion(),
+            llvm::formatv("{0}_{1}", privatizer.getSymName(), "init").str(),
+            moldArg, newArg);
+        LDBG() << "initializedVal = " << initializedVal << "\n";
 #endif
-        using ReplacementEntry = std::pair<Operation *, Operation *>;
-        llvm::SmallVector<ReplacementEntry> replRecord;
-        auto cloneAndMarkForDeletion = [&](Operation *origOp) -> Operation * {
+        if (isFirstPrivate)
+          initializedVal = createAlwaysInlineFuncAndCallIt(
+              privatizer.getCopyRegion(),
+              llvm::formatv("{0}_{1}", privatizer.getSymName(), "copy").str(),
+              moldArg, initializedVal);
+
+        if (isPrivatizedByValue)
+          (void)rewriter.create<LLVM::StoreOp>(loc, initializedVal, heapMem);
+
+        auto cloneModifyAndErase = [&](Operation *origOp) -> Operation * {
           Operation *clonedOp = rewriter.clone(*origOp);
           rewriter.replaceAllOpUsesWith(origOp, clonedOp);
-          replRecord.push_back(std::make_pair(origOp, clonedOp));
+          rewriter.modifyOpInPlace(clonedOp, [&]() {
+            clonedOp->replaceUsesOfWith(varPtr, heapMem);
+          });
+          rewriter.eraseOp(origOp);
           return clonedOp;
         };
 
-        if (isFirstPrivate) {
-          Region &copyRegion = privatizer.getCopyRegion();
-          assert(!copyRegion.empty() && "copyRegion cannot be empty");
-          LLVM::LLVMFuncOp copyFunc = createFuncOpForRegion(
-              loc, mod,  copyRegion,
-              llvm::formatv("{0}_{1}", privatizer.getSymName(), "copy").str(),
-              firstOp, rewriter);
-          rewriter.create<LLVM::CallOp>(loc, copyFunc, ValueRange{varPtr, heapMem});
-        }
-
         rewriter.setInsertionPoint(targetOp);
-        rewriter.setInsertionPoint(cloneAndMarkForDeletion(mapInfoOperation));
+        rewriter.setInsertionPoint(cloneModifyAndErase(mapInfoOperation));
 
         // Fix any members that may use varPtr to now use heapMem
         if (!mapInfoOp.getMembers().empty()) {
@@ -221,26 +241,15 @@ class PrepareForOMPOffloadPrivatizationPass
             Operation *memberOperation = member.getDefiningOp();
             if (!usesVarPtr(memberOperation))
               continue;
-            rewriter.setInsertionPoint(
-                cloneAndMarkForDeletion(memberOperation));
+            rewriter.setInsertionPoint(cloneModifyAndErase(memberOperation));
 
             auto memberMapInfoOp = cast<omp::MapInfoOp>(memberOperation);
             if (memberMapInfoOp.getVarPtrPtr()) {
               Operation *varPtrPtrdefOp =
                   memberMapInfoOp.getVarPtrPtr().getDefiningOp();
-              rewriter.setInsertionPoint(
-                  cloneAndMarkForDeletion(varPtrPtrdefOp));
+              rewriter.setInsertionPoint(cloneModifyAndErase(varPtrPtrdefOp));
             }
           }
-        }
-
-        for (auto repl : replRecord) {
-          Operation *origOp = repl.first;
-          Operation *clonedOp = repl.second;
-          rewriter.modifyOpInPlace(clonedOp, [&]() {
-            clonedOp->replaceUsesOfWith(varPtr, heapMem);
-          });
-          rewriter.eraseOp(origOp);
         }
 
         // If the type of the private variable is not a pointer,
@@ -248,7 +257,7 @@ class PrepareForOMPOffloadPrivatizationPass
         // we need to ensure that the new private variable is also
         // not a pointer. Insert a load from heapMem right before
         // targetOp.
-        if (!isa<LLVM::LLVMPointerType>(privVar.getType())) {
+        if (isPrivatizedByValue) {
           rewriter.setInsertionPoint(targetOp);
           auto newPrivVar = rewriter.create<LLVM::LoadOp>(mapInfoOp.getLoc(),
                                                           varType, heapMem);
@@ -402,11 +411,12 @@ private:
     srcRegion.cloneInto(&clonedRegion, mapper);
     SmallVector<Type> paramTypes = {srcRegion.getArgument(0).getType(),
                                     srcRegion.getArgument(1).getType()};
+    Type resultType = srcRegion.getArgument(0).getType();
     LDBG() << "paramTypes are \n"
            << srcRegion.getArgument(0).getType() << "\n"
            << srcRegion.getArgument(1).getType() << "\n";
     LLVM::LLVMFunctionType funcType =
-        LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), paramTypes);
+        LLVM::LLVMFunctionType::get(resultType, paramTypes);
 
     LDBG() << "funcType is " << funcType << "\n";
     LLVM::LLVMFuncOp func =
@@ -419,7 +429,7 @@ private:
         omp::YieldOp yieldOp = cast<omp::YieldOp>(block.getTerminator());
         rewriter.setInsertionPoint(yieldOp);
         rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(yieldOp, TypeRange(),
-                                                    Value());
+                                                    yieldOp.getResults().front());
       }
     }
     LDBG() << funcName << " is \n" << func << "\n";
