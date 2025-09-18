@@ -356,6 +356,12 @@ m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
+m_AnyOf(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
 template <unsigned Opcode, typename Op0_t>
 inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
   return AllRecipe_match<Opcode, Op0_t>(Op0);
@@ -712,6 +718,29 @@ template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
 inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
 m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
+}
+
+struct live_in_vpvalue {
+  template <typename ITy> bool match(ITy *V) const {
+    VPValue *Val = dyn_cast<VPValue>(V);
+    return Val && Val->isLiveIn();
+  }
+};
+
+inline live_in_vpvalue m_LiveIn() { return live_in_vpvalue(); }
+
+template <typename SubPattern_t> struct OneUse_match {
+  SubPattern_t SubPattern;
+
+  OneUse_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    return V->hasOneUse() && SubPattern.match(V);
+  }
+};
+
+template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
+  return SubPattern;
 }
 
 } // namespace VPlanPatternMatch
