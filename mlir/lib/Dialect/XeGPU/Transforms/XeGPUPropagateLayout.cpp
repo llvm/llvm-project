@@ -525,78 +525,17 @@ void LayoutInfoPropagation::visitShapeCastOp(
     return;
   VectorType sourceTy = shapeCast.getSourceVectorType();
   VectorType resultTy = shapeCast.getResultVectorType();
-  // Shape cast layout propagation has following restrictions:
-  // 1) nD -> nD shape cast is not supported.
-  // 2) Shape cast must always expand the rank (e.g. 1D -> 2D).
-  // 3) Newly expanded dimensions must be 1.
-  // 4) Result layout can not be a slice layout.
-  if (sourceTy.getRank() == resultTy.getRank()) {
-    shapeCast.emitWarning("nD -> nD shape cast is not supported.");
+  // Shape cast layout propagation only supports 1D -> 2D shape casts.
+  // TODO: Support kD -> nD shape casts (k < n, n >= 2) where expanded dims are
+  // unit dimensions and non-unit dims match.
+  if (sourceTy.getRank() != 1 || resultTy.getRank() != 2) {
+    shapeCast.emitWarning("Expecting shape cast to be 1D -> 2D.");
     return;
   }
-  if (sourceTy.getRank() > resultTy.getRank()) {
-    shapeCast.emitWarning("Expecting shape cast to expand the rank.");
-    return;
-  }
-  if (resultLayout.getRank() != resultTy.getRank() ||
-      resultLayout.isSliceLayout()) {
-    shapeCast.emitWarning("Expecting result layout to have same rank as the "
-                          "result type and not be a slice layout.");
-    return;
-  }
-  ArrayRef<int64_t> resultShape = shapeCast.getResultVectorType().getShape();
-  ArrayRef<int64_t> sourceShape = shapeCast.getSourceVectorType().getShape();
-
-  auto findNonUnitDims = [](ArrayRef<int64_t> shape) {
-    SmallVector<int64_t> nonUnitDims;
-    for (int i = 0, e = shape.size(); i < e; ++i)
-      if (shape[i] != 1)
-        nonUnitDims.push_back(i);
-    return nonUnitDims;
-  };
-  SmallVector<int64_t> resultNonUnitDims = findNonUnitDims(resultShape);
-  SmallVector<int64_t> sourceNonUnitDims = findNonUnitDims(sourceShape);
-  // Source and result must have the same number of non-unit dimensions and
-  // thier values must match.
-  if (resultNonUnitDims.size() != sourceNonUnitDims.size()) {
-    shapeCast.emitWarning("Expecting source and result shapes to have same "
-                          "number of non-unit dimensions.");
-    return;
-  }
-  auto reesultNonUnitDimShapes = llvm::map_to_vector(
-      resultNonUnitDims, [&](int64_t idx) { return resultShape[idx]; });
-  auto sourceNonUnitDimShapes = llvm::map_to_vector(
-      sourceNonUnitDims, [&](int64_t idx) { return sourceShape[idx]; });
-  if (llvm::any_of(
-          llvm::zip(sourceNonUnitDimShapes, reesultNonUnitDimShapes),
-          [](auto pair) { return std::get<0>(pair) != std::get<1>(pair); })) {
-    shapeCast.emitWarning("Expecting non-unit dimensions of source and result "
-                          "shapes to match.");
-    return;
-  }
-  // Slice dims are unit dims that exist in the result shape but not in the
-  // source shape.
-  SmallVector<int64_t> sliceDims;
-  int64_t srcPrev, resPrev = 0;
-  // Add a dummy non unit dim at the end to handle trailing unit dims.
-  sourceNonUnitDims.push_back(sourceShape.size());
-  resultNonUnitDims.push_back(resultShape.size());
-  for (auto [s, r] : llvm::zip_equal(sourceNonUnitDims, resultNonUnitDims)) {
-    int unitDimDiff = (r - resPrev) - (s - srcPrev);
-    // Negative unitDimDiff means source shape has more unit dims in this range.
-    if (unitDimDiff < 0) {
-      shapeCast.emitWarning("Unsupported shape cast. Source shape has more "
-                            "unit dims in between two non-unit dims.");
-      return;
-    }
-    for (auto it : llvm::seq<int64_t>(0, unitDimDiff))
-      sliceDims.push_back(resPrev + it);
-    srcPrev = s + 1;
-    resPrev = r + 1;
-  }
+  int64_t slicedDim = resultTy.getShape()[0] == 1 ? 0 : 1;
   xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
       shapeCast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
-      DenseI64ArrayAttr::get(shapeCast->getContext(), sliceDims));
+      DenseI64ArrayAttr::get(shapeCast->getContext(), {slicedDim}));
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
 }
 
