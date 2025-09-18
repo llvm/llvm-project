@@ -843,6 +843,8 @@ void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
+  /// The list of cstring sections. Note that this includes \p cStringSection
+  /// and \p objcMethnameSection already.
   llvm::SmallVector<CStringSection *> cStringSections;
   CStringSection *cStringSection = nullptr;
   DeduplicatedCStringSection *objcMethnameSection = nullptr;
