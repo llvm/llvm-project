@@ -370,6 +370,8 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
   case Kind::Result: {
     // If `index` is greater than zero, then we are referencing a specific
     // result of a multi-result op. The result can still be variadic.
+    if (index < 0)
+      index = dagAndConstant->operandIndexOrNumValues;
     if (index >= 0) {
       std::string v =
           std::string(formatv("{0}.getODSResults({1})", name, index));
@@ -442,6 +444,8 @@ std::string SymbolInfoMap::SymbolInfo::getAllRangeUse(
     return std::string(repl);
   }
   case Kind::Result: {
+    if (index < 0)
+      index = dagAndConstant->operandIndexOrNumValues;
     if (index >= 0) {
       auto repl = formatv(fmt, formatv("{0}.getODSResults({1})", name, index));
       LLVM_DEBUG(dbgs() << repl << " (SingleResult)\n");
@@ -522,8 +526,9 @@ bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
 }
 
 bool SymbolInfoMap::bindOpResult(StringRef symbol, const Operator &op) {
-  std::string name = getValuePackName(symbol).str();
-  auto inserted = symbolInfoMap.emplace(name, SymbolInfo::getResult(&op));
+  int index = -1;
+  StringRef name = getValuePackName(symbol, &index);
+  auto inserted = symbolInfoMap.emplace(name.str(), SymbolInfo::getResult(&op, index));
 
   return symbolInfoMap.count(inserted->first) == 1;
 }

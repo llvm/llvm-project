@@ -615,9 +615,16 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                            op.getQualCppClassName()));
 
   // If the operand's name is set, set to that variable.
-  auto name = tree.getSymbol();
+  int index = -1;
+  auto name = SymbolInfoMap::getValuePackName(tree.getSymbol(), &index).str();
   if (!name.empty())
     os << formatv("{0} = {1};\n", name, castedName);
+
+  if (index != -1) {
+    emitMatchCheck(opName,
+      formatv("(resultNumber{0} == 1)", depth),
+      formatv("\"{0} does not come from result number {1} type\"", castedName, index));
+  }
 
   for (int i = 0, opArgIdx = 0, e = tree.getNumArgs(), nextOperand = 0; i != e;
        ++i, ++opArgIdx) {
@@ -662,6 +669,10 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
           "auto *{0} = "
           "(*{1}.getODSOperands({2}).begin()).getDefiningOp();\n",
           argName, castedName, nextOperand);
+        os.indent() << formatv(
+          "[[maybe_unused]] auto resultNumber{0} = "
+          "::llvm::dyn_cast<::mlir::OpResult>((*{1}.getODSOperands({2}).begin())).getResultNumber();\n",
+          depth + 1, castedName, nextOperand);
       // Null check of operand's definingOp
       emitMatchCheck(
           castedName, /*matchStr=*/argName,

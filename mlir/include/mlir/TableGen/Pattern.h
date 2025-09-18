@@ -433,8 +433,9 @@ public:
                         DagAndConstant(node.getAsOpaquePointer(), operandIndex,
                                        variadicSubIndex));
     }
-    static SymbolInfo getResult(const Operator *op) {
-      return SymbolInfo(op, Kind::Result, std::nullopt);
+    static SymbolInfo getResult(const Operator *op, int index) {
+      return SymbolInfo(op, Kind::Result,
+                        DagAndConstant(nullptr, index, std::nullopt));
     }
     static SymbolInfo getValue() {
       return SymbolInfo(nullptr, Kind::Value, std::nullopt);
