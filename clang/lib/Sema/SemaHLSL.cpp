@@ -1398,9 +1398,8 @@ bool SemaHLSL::handleRootSignatureElements(
 
         // Compute the register bounds and track resource binding
         uint32_t LowerBound(Clause->Reg.Number);
-        uint32_t UpperBound = Clause->NumDescriptors == ~0u
-                                  ? ~0u
-                                  : LowerBound + Clause->NumDescriptors - 1;
+        uint32_t UpperBound = llvm::hlsl::rootsig::computeRangeBound(
+            LowerBound, Clause->NumDescriptors);
 
         BindingChecker.trackBinding(
             Table->Visibility,
