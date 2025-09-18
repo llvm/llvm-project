@@ -179,6 +179,7 @@ auto b() {
 } // namespace test6
 #endif
 
+#if __cplusplus >= 201402L
 // ensure lambda in non-dependent context generate same diagnostics as function[ template]
 namespace lambda_in_non_dependent_context {
 void f1() {
@@ -214,3 +215,4 @@ void f() {
   };
 }
 }
+#endif

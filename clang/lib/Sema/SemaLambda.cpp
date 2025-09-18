@@ -1973,7 +1973,7 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
     SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
 
   // TODO: Find out if passing LSI.CallOperator->getDescribedFunctionTemplate()
-  //       is necessary when it is a generic lambda. Are there any behaviour
+  //       is better when it is a generic lambda. Are there any behaviour
   //       changes? `FunctionTemplateDecl` is always passed when handling simple
   //       function templates.
   ActOnFinishFunctionBody(LSI.CallOperator, Body, /*IsInstantiation=*/false,
@@ -2153,12 +2153,17 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
   CleanupInfo LambdaCleanup = LSI->Cleanup;
   bool ContainsUnexpandedParameterPack = LSI->ContainsUnexpandedParameterPack;
   bool IsGenericLambda = Class->isGenericLambda();
+  sema::AnalysisBasedWarnings::Policy WP =
+      AnalysisWarnings.getPolicyInEffectAt(EndLoc);
 
   CallOperator->setLexicalDeclContext(Class);
-  Decl *TemplateOrNonTemplateCallOperatorDecl =
-      CallOperator->getDescribedFunctionTemplate()
-          ? CallOperator->getDescribedFunctionTemplate()
-          : cast<Decl>(CallOperator);
+  Decl *TemplateOrNonTemplateCallOperatorDecl = CallOperator;
+  sema::AnalysisBasedWarnings::Policy *ActivePolicy = &WP;
+  if (IsGenericLambda) {
+    TemplateOrNonTemplateCallOperatorDecl =
+        CallOperator->getDescribedFunctionTemplate();
+    ActivePolicy = nullptr;
+  }
 
   // FIXME: Is this really the best choice? Keeping the lexical decl context
   // set as CurContext seems more faithful to the source.
@@ -2168,15 +2173,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
 
   // We cannot release LSI until we finish computing captures, which
   // requires the scope to be popped.
-  Sema::PoppedFunctionScopePtr _ = [&] {
-    if (LSI->CallOperator->getDescribedFunctionTemplate())
-      return PopFunctionScopeInfo(/*WP=*/nullptr,
-                                  TemplateOrNonTemplateCallOperatorDecl);
-
-    sema::AnalysisBasedWarnings::Policy WP =
-        AnalysisWarnings.getPolicyInEffectAt(EndLoc);
-    return PopFunctionScopeInfo(&WP, TemplateOrNonTemplateCallOperatorDecl);
-  }();
+  Sema::PoppedFunctionScopePtr _ =
+      PopFunctionScopeInfo(ActivePolicy, TemplateOrNonTemplateCallOperatorDecl);
 
   // True if the current capture has a used capture or default before it.
   bool CurHasPreviousCapture = CaptureDefault != LCD_None;
