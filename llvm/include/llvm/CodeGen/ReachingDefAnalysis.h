@@ -344,13 +344,11 @@ public:
   ReachingDefInfoWrapperPass();
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
+  MachineFunctionProperties getRequiredProperties() const override;
   bool runOnMachineFunction(MachineFunction &F) override;
-
   void releaseMemory() override { RDI.releaseMemory(); }
 
   ReachingDefInfo &getRDI() { return RDI; }
-
   const ReachingDefInfo &getRDI() const { return RDI; }
 };
 

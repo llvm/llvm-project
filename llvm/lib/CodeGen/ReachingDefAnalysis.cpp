@@ -33,6 +33,8 @@ ReachingDefAnalysis::run(MachineFunction &MF,
 PreservedAnalyses
 ReachingDefPrinterPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
   auto &RDI = MFAM.getResult<ReachingDefAnalysis>(MF);
   OS << "Reaching definitions for for machine function: " << MF.getName()
      << '\n';
@@ -68,6 +70,11 @@ bool ReachingDefInfo::invalidate(
 void ReachingDefInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+MachineFunctionProperties
+ReachingDefInfoWrapperPass::getRequiredProperties() const {
+  return MachineFunctionProperties().setNoVRegs();
 }
 
 static bool isValidReg(const MachineOperand &MO) {
