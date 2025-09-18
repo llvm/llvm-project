@@ -174,6 +174,8 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 
   OFFLOAD_ERR(
       printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_NAME, "Name"));
+  OFFLOAD_ERR(printDeviceValue<const char *>(S, D, OL_DEVICE_INFO_PRODUCT_NAME,
+                                             "Product Name"));
   OFFLOAD_ERR(
       printDeviceValue<ol_device_type_t>(S, D, OL_DEVICE_INFO_TYPE, "Type"));
   OFFLOAD_ERR(printDeviceValue<const char *>(

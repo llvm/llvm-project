@@ -1263,7 +1263,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
 
 void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
 
   for (const auto &UV : userValues) {
     UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
@@ -1973,8 +1973,8 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
     if (MachineInstr *Pos = Slots->getInstructionFromIndex(Idx)) {
       // Insert at the end of any debug instructions.
-      auto PostDebug = std::next(Pos->getIterator());
-      PostDebug = skipDebugInstructionsForward(PostDebug, MBB->instr_end());
+      auto PostDebug = std::next(MachineBasicBlock::iterator(Pos));
+      PostDebug = skipDebugInstructionsForward(PostDebug, MBB->end());
       EmitInstsHere(PostDebug);
     } else {
       // Insert position disappeared; walk forwards through slots until we
