@@ -520,6 +520,9 @@ def OMPC_ThreadLimit : Clause<[Spelling<"thread_limit">]> {
 def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
   let isImplicit = true;
 }
+def OMPC_GroupPrivate : Clause<[Spelling<"groupprivate">]> { 
+  let isImplicit = true;
+}
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
