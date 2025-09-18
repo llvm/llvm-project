@@ -109,10 +109,6 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     if (!V)
       return false;
     const auto *CI = dyn_cast<ConstantInt>(V);
-    if (!CI && V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
-        CI = dyn_cast_or_null<ConstantInt>(
-            C->getSplatValue(/*AllowPoison=*/false));
     if (!CI)
       return false;
 
