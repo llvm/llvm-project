@@ -29,8 +29,8 @@ DiagnosedSilenceableFailure
 transform::smt::ConstrainParamsOp::apply(transform::TransformRewriter &rewriter,
                                          transform::TransformResults &results,
                                          transform::TransformState &state) {
-  // TODO: Proper operational semantics are to chuck the SMT problem in the body
-  //       to a SMT solver with the arguments of the body constrained to the
+  // TODO: Proper operational semantics are to check the SMT problem in the body
+  //       with a SMT solver with the arguments of the body constrained to the
   //       values passed into the op. Success or failure is then determined by
   //       the solver's result.
   //       One way to support this is to just promise the TransformOpInterface

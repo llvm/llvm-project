@@ -24,8 +24,6 @@ module attributes {transform.with_named_sequence} {
     // expected-error@below {{must have the same number of block arguments as operands}}
     transform.smt.constrain_params(%param_as_param) : !transform.param<i64> {
       ^bb0(%param_as_smt_var: !smt.int, %param_as_another_smt_var: !smt.int):
-      // This is the kind of thing one might think works:
-      //arith.remsi %param_as_smt_var, %c4 : i32
     }
     transform.yield
   }

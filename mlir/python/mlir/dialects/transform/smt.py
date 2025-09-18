@@ -24,7 +24,8 @@ class ConstrainParamsOp(ConstrainParamsOp):
         loc=None,
         ip=None,
     ):
-        assert len(params) == len(arg_types)
+        if len(params) != len(arg_types):
+            raise ValueError(f"{params=} not same length as {arg_types=}")
         super().__init__(
             params,
             loc=loc,
