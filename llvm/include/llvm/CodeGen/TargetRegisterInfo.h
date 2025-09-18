@@ -700,6 +700,11 @@ public:
                                     unsigned DefSubReg,
                                     const TargetRegisterClass *SrcRC,
                                     unsigned SrcSubReg) const {
+    // Validate that SrcRC and SrcSubReg is actually a valid combination.
+    const TargetRegisterClass *SubRC = getSubClassWithSubReg(SrcRC, SrcSubReg);
+    if (!SubRC || SubRC != SrcRC)
+      return false;
+
     // If this source does not incur a cross register bank copy, use it.
     return findCommonRegClass(DefRC, DefSubReg, SrcRC, SrcSubReg) != nullptr;
   }
