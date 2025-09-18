@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <optional>
@@ -75,16 +76,6 @@ struct XeGPUVectorLinearizePass final
               return std::nullopt;
 
             ArrayRef<int64_t> shape = vecType.getShape();
-            // Bail if any of the (rank-1) leading dims are dynamic (can't fully
-            // unroll).
-            for (int64_t i = 0; i < rank - 1; ++i)
-              if (shape[i] == ShapedType::kDynamic) {
-                LLVM_DEBUG(llvm::dbgs()
-                           << "Dynamic leading dim " << i << " in " << vecType
-                           << " prevents full unroll.\n");
-                return std::nullopt;
-              }
-
             // Produce native shape: 1 x 1 x ... x (original last dim).
             SmallVector<int64_t> native(rank, 1);
             native.back() = shape.back();
@@ -92,7 +83,7 @@ struct XeGPUVectorLinearizePass final
           });
       vector::populateVectorUnrollPatterns(patterns, vectorOptions);
       if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-        LLVM_DEBUG(llvm::dbgs() << "Unroll failed.\n");
+        LDBG() << "Unroll failed.";
         return signalPassFailure();
       }
     }
@@ -111,7 +102,7 @@ struct XeGPUVectorLinearizePass final
                                                            target);
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(patterns)))) {
-        LLVM_DEBUG(llvm::dbgs() << "Linearization failed.\n");
+        LDBG() << "Linearization failed.";
         return signalPassFailure();
       }
     }

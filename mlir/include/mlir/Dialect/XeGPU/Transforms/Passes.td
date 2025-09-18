@@ -81,7 +81,7 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
     This pass linearizes n-D vectors to 1-D vectors for lowering to XeVM.
   }];
   let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
-                           "scf::SCFDialect", "vector::VectorDialect"];
+                           "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
