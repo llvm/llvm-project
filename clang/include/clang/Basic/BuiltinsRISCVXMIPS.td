@@ -11,17 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-class RISCVXMIPSBuiltin<string prototype, string features = ""> : TargetBuiltin {
-  let Spellings = ["__builtin_riscv_" # NAME];
-  let Prototype = prototype;
-  let Features = features;
-}
-
 //===----------------------------------------------------------------------===//
-// MIPS execution control extensions  .
+// MIPS execution control extensions.
 //===----------------------------------------------------------------------===//
 let Attributes = [NoThrow, Const] in {
-def mips_pause : RISCVXMIPSBuiltin<"void()", "xmipsexectl">;
-def mips_ehb   : RISCVXMIPSBuiltin<"void()", "xmipsexectl">;
-def mips_ihb   : RISCVXMIPSBuiltin<"void()", "xmipsexectl">;
+def mips_pause : RISCVBuiltin<"void()", "xmipsexectl">;
+def mips_ehb   : RISCVBuiltin<"void()", "xmipsexectl">;
+def mips_ihb   : RISCVBuiltin<"void()", "xmipsexectl">;
 }

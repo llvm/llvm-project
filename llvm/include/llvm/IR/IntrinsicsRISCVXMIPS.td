@@ -1,4 +1,4 @@
-//===- IntrinsicsRISCVXMIPS.td - Defines MIPS intrinsics -------*- tablegen -*-===//
+//===- IntrinsicsRISCVXMIPS.td - MIPS intrinsics -------*- tablegen -*----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines all of the MIPS specific intrinsics for RISCV.
+// This file defines all of the MIPS specific intrinsics for RISC-V.
 //
 //===----------------------------------------------------------------------===//
 
