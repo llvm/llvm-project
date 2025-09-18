@@ -54,7 +54,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -5420,8 +5419,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // iff srem(BCst, Op1Cst) == 0 && Op1Cst != 1
   if (sd_match(N, m_SRem(m_SRem(m_Value(A), m_ConstInt(BCst)),
                          m_ConstInt(Op1Cst))) &&
-      BCst.srem(Op1Cst).isZero() &&
-      Op1Cst.ne(APInt::getAllOnes(Op1Cst.getBitWidth()))) {
+      BCst.srem(Op1Cst).isZero() && !Op1Cst.isAllOnes()) {
     return DAG.getNode(ISD::SREM, DL, VT, A, DAG.getConstant(Op1Cst, DL, VT));
   }
 
