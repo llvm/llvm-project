@@ -50,6 +50,7 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 /// Replace a select operand based on an equality comparison with the identity
 /// constant of a binop.
@@ -4529,7 +4530,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // metadata of the original select as the net effect of this change is to
       // simplify the conditional.
       Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
+      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
+          !ProfcheckDisableMetadataFixes) {
         MDFrom = &SI;
       }
       return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
