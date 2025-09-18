@@ -176,10 +176,10 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
-struct apint_match {
-  const APInt *&Res;
+struct bind_const_int {
+  uint64_t &Res;
 
-  apint_match(const APInt *&Res) : Res(Res) {}
+  bind_const_int(uint64_t &Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
@@ -187,29 +187,12 @@ struct apint_match {
     Value *V = VPV->getLiveInIRValue();
     if (!V)
       return false;
+    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
     const auto *CI = dyn_cast<ConstantInt>(V);
-    if (!CI && V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
-        CI = dyn_cast_or_null<ConstantInt>(
-            C->getSplatValue(/*AllowPoison=*/false));
     if (!CI)
       return false;
-    Res = &CI->getValue();
-    return true;
-  }
-};
-
-struct bind_const_intval_ty {
-  uint64_t &VR;
-
-  bind_const_intval_ty(uint64_t &V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    const APInt *ConstInt;
-    if (!apint_match(ConstInt).match(V))
-      return false;
-    if (auto C = ConstInt->tryZExtValue()) {
-      VR = *C;
+    if (auto C = CI->getValue().tryZExtValue()) {
+      Res = *C;
       return true;
     }
     return false;
@@ -218,7 +201,7 @@ struct bind_const_intval_ty {
 
 /// Match a plain integer constant no wider than 64-bits, capturing it if we
 /// match.
-inline bind_const_intval_ty m_ConstantInt(uint64_t &C) { return C; }
+inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
