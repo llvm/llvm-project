@@ -621,19 +621,27 @@ public:
   }
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
-    return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
+    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+    mlir::Value result =
+        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus, promotionType);
+    if (result && !promotionType.isNull())
+      return emitUnPromotedValue(result, e->getType());
+    return result;
   }
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e) {
-    return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus);
+    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+    mlir::Value result =
+        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus, promotionType);
+    if (result && !promotionType.isNull())
+      return emitUnPromotedValue(result, e->getType());
+    return result;
   }
 
   mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
-                                   cir::UnaryOpKind kind) {
+                                   cir::UnaryOpKind kind,
+                                   QualType promotionType) {
     ignoreResultAssign = false;
-
-    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
-
     mlir::Value operand;
     if (!promotionType.isNull())
       operand = cgf.emitPromotedScalarExpr(e->getSubExpr(), promotionType);
@@ -645,10 +653,7 @@ public:
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    mlir::Value result = emitUnaryOp(e, kind, operand, nsw);
-    if (result && !promotionType.isNull())
-      return emitUnPromotedValue(result, e->getType());
-    return result;
+    return emitUnaryOp(e, kind, operand, nsw);
   }
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
@@ -1243,9 +1248,23 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
     default:
       break;
     }
-  } else if (isa<UnaryOperator>(e)) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "unary operators");
-    return {};
+  } else if (const auto *uo = dyn_cast<UnaryOperator>(e)) {
+    switch (uo->getOpcode()) {
+    case UO_Imag:
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter::emitPromoted unary imag");
+      return {};
+    case UO_Real:
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "ScalarExprEmitter::emitPromoted unary real");
+      return {};
+    case UO_Minus:
+      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
+    case UO_Plus:
+      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Plus, promotionType);
+    default:
+      break;
+    }
   }
   mlir::Value result = Visit(const_cast<Expr *>(e));
   if (result) {
