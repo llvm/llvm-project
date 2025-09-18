@@ -147,6 +147,7 @@ public:
 
   StackOffset getSVEStackSize(const MachineFunction &MF) const;
 
+  friend class AArch64PrologueEpilogueCommon;
   friend class AArch64PrologueEmitter;
   friend class AArch64EpilogueEmitter;
 
@@ -164,20 +165,10 @@ private:
   /// Returns true if CSRs should be paired.
   bool producePairRegisters(MachineFunction &MF) const;
 
-  bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
-                                      uint64_t StackBumpBytes) const;
-
   int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
   int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
-  bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                uint64_t StackBumpBytes) const;
-  void allocateStackSpace(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI,
-                          int64_t RealignmentPadding, StackOffset AllocSize,
-                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
-                          StackOffset InitialOffset, bool FollowupAllocs) const;
   /// Make a determination whether a Hazard slot is used and create it if
   /// needed.
   void determineStackHazardSlot(MachineFunction &MF,
@@ -214,6 +205,12 @@ private:
   StackOffset getStackOffset(const MachineFunction &MF,
                              int64_t ObjectOffset) const;
 
+  // Given a load or a store instruction, generate an appropriate unwinding SEH
+  // code on Windows.
+  MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
+                                        const TargetInstrInfo &TII,
+                                        MachineInstr::MIFlag Flag) const;
+
   /// Returns how much of the incoming argument stack area (in bytes) we should
   /// clean up in an epilogue. For the C calling convention this will be 0, for
   /// guaranteed tail call conventions it can be positive (a normal return or a
@@ -237,35 +234,11 @@ private:
   Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
                                             bool HasCall = false) const;
 
-  // Convert callee-save register save/restore instruction to do stack pointer
-  // decrement/increment to allocate/deallocate the callee-save stack area by
-  // converting store/load to use pre/post increment version.
-  MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-      const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc,
-      bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
-      MachineInstr::MIFlag FrameFlag = MachineInstr::FrameSetup,
-      int CFAOffset = 0) const;
-
-  // Fixup callee-save register save/restore instructions to take into account
-  // combined SP bump by adding the local stack size to the stack offsets.
-  void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
-                                         uint64_t LocalStackSize,
-                                         bool NeedsWinCFI,
-                                         bool *HasWinCFI) const;
-
-  bool isSVECalleeSave(MachineBasicBlock::iterator I) const;
-
   /// Returns the size of the fixed object area (allocated next to sp on entry)
   /// On Win64 this may include a var args area and an UnwindHelp object for EH.
   unsigned getFixedObjectSize(const MachineFunction &MF,
                               const AArch64FunctionInfo *AFI, bool IsWin64,
                               bool IsFunclet) const;
-
-  bool isVGInstruction(MachineBasicBlock::iterator MBBI,
-                       const TargetLowering &TLI) const;
-
-  bool requiresGetVGCall(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace
