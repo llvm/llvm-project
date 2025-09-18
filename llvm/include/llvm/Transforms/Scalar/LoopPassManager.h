@@ -405,11 +405,9 @@ public:
   explicit FunctionToLoopPassAdaptor(std::unique_ptr<PassConceptT> Pass,
                                      bool UseMemorySSA = false,
                                      bool UseBlockFrequencyInfo = false,
-                                     bool UseBranchProbabilityInfo = false,
                                      bool LoopNestMode = false)
       : Pass(std::move(Pass)), UseMemorySSA(UseMemorySSA),
         UseBlockFrequencyInfo(UseBlockFrequencyInfo),
-        UseBranchProbabilityInfo(UseBranchProbabilityInfo),
         LoopNestMode(LoopNestMode) {
     LoopCanonicalizationFPM.addPass(LoopSimplifyPass());
     LoopCanonicalizationFPM.addPass(LCSSAPass());
@@ -432,7 +430,6 @@ private:
 
   bool UseMemorySSA = false;
   bool UseBlockFrequencyInfo = false;
-  bool UseBranchProbabilityInfo = false;
   const bool LoopNestMode;
 };
 
@@ -446,8 +443,7 @@ private:
 template <typename LoopPassT>
 inline FunctionToLoopPassAdaptor
 createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
-                                bool UseBlockFrequencyInfo = false,
-                                bool UseBranchProbabilityInfo = false) {
+                                bool UseBlockFrequencyInfo = false) {
   if constexpr (is_detected<HasRunOnLoopT, LoopPassT>::value) {
     using PassModelT =
         detail::PassModel<Loop, LoopPassT, LoopAnalysisManager,
@@ -457,7 +453,7 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
     return FunctionToLoopPassAdaptor(
         std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
             new PassModelT(std::forward<LoopPassT>(Pass))),
-        UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, false);
+        UseMemorySSA, UseBlockFrequencyInfo, false);
   } else {
     LoopPassManager LPM;
     LPM.addPass(std::forward<LoopPassT>(Pass));
@@ -469,7 +465,7 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
     return FunctionToLoopPassAdaptor(
         std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
             new PassModelT(std::move(LPM))),
-        UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, true);
+        UseMemorySSA, UseBlockFrequencyInfo, true);
   }
 }
 
@@ -477,9 +473,9 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
 /// be in loop-nest mode if the pass manager contains only loop-nest passes.
 template <>
 inline FunctionToLoopPassAdaptor
-createFunctionToLoopPassAdaptor<LoopPassManager>(
-    LoopPassManager &&LPM, bool UseMemorySSA, bool UseBlockFrequencyInfo,
-    bool UseBranchProbabilityInfo) {
+createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager &&LPM,
+                                                 bool UseMemorySSA,
+                                                 bool UseBlockFrequencyInfo) {
   // Check if LPM contains any loop pass and if it does not, returns an adaptor
   // in loop-nest mode.
   using PassModelT =
@@ -491,8 +487,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(
   return FunctionToLoopPassAdaptor(
       std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
           new PassModelT(std::move(LPM))),
-      UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo,
-      LoopNestMode);
+      UseMemorySSA, UseBlockFrequencyInfo, LoopNestMode);
 }
 
 /// Pass for printing a loop's contents as textual IR.

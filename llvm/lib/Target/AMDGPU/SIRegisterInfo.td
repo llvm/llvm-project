@@ -1025,7 +1025,9 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
 
     // Aligned register tuples starting with low 256 vgprs
     def _Lo256_Align2 : VRegClassBase<numRegs, regTypes,
-        (trunc (decimate regList, 2), !div(!sub(258, numRegs), 2))>;
+        (trunc (decimate regList, 2), !div(!sub(258, numRegs), 2))> {
+      let RegTupleAlignUnits = 2;
+     }
   }
 }
 
@@ -1131,7 +1133,8 @@ def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
   let Size = 32;
 }
 
-def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_64)> {
+def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
+                            (add VReg_64, SReg_64_Encodable)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1139,7 +1142,7 @@ def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_6
 }
 
 def VS_64_Align2 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
-                                   (add VReg_64_Align2, SReg_64)> {
+                                   (add VReg_64_Align2, SReg_64_Encodable)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1153,7 +1156,8 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
   let Size = 32;
 }
 
-def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64_Lo256_Align2, SReg_64)> {
+def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
+                                  (add VReg_64_Lo256_Align2, SReg_64_Encodable)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
