@@ -127,7 +127,8 @@ struct L0OptionsTy {
   // builtins. Otherwise, SPIR-V will be converted to LLVM IR with OpenCL 1.2
   // builtins.
   static constexpr std::string_view CompilationOptions = "-cl-std=CL2.0 ";
-  static constexpr std::string_view InternalCompilationOptions = "-cl-take-global-address";
+  static constexpr std::string_view InternalCompilationOptions =
+      "-cl-take-global-address";
   std::string UserCompilationOptions = "";
 
   // Spec constants used for all modules.

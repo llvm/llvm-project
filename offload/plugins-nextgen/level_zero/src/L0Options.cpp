@@ -78,7 +78,7 @@ void L0OptionsTy::processEnvironmentVars() {
       }
 
       if (!(Parts.first[0] == '*' || Parts.first == "level_zero" ||
-          Parts.first == "!level_zero"))
+            Parts.first == "!level_zero"))
         break;
       isDiscard = Parts.first[0] == '!';
 
@@ -97,7 +97,7 @@ void L0OptionsTy::processEnvironmentVars() {
         bool DeviceNum = false;
         llvm::SmallVector<llvm::StringRef, 3> DeviceSubTuple;
         TargetStr.split(DeviceSubTuple, '.', /* MaxSplit = */ 0,
-                         /* KeepEmpty = */ false);
+                        /* KeepEmpty = */ false);
         int32_t RootD[3] = {-1, -1, -1};
         if (DeviceSubTuple.empty()) {
           FAILURE_MESSAGE(
@@ -106,8 +106,8 @@ void L0OptionsTy::processEnvironmentVars() {
         }
 
         auto TopDeviceStr = DeviceSubTuple[0];
-        static const std::array<std::string, 7> DeviceStr = {
-            "host", "cpu", "gpu", "acc", "*"};
+        static const std::array<std::string, 7> DeviceStr = {"host", "cpu",
+                                                             "gpu", "acc", "*"};
         auto It =
             find_if(DeviceStr.begin(), DeviceStr.end(),
                     [&](auto DeviceStr) { return TopDeviceStr == DeviceStr; });

@@ -163,8 +163,8 @@ void L0KernelTy::decideKernelGroupArguments(
   uint32_t GRPSizes[3] = {MaxGroupSize, 1, 1};
   bool UsedReductionSubscriptionRate = false;
   if (!MaxGroupCountForced) {
-    { 
-      GRPCounts[0] *= OptSubscRate; 
+    {
+      GRPCounts[0] *= OptSubscRate;
     }
 
     size_t LoopTripcount = 0;
