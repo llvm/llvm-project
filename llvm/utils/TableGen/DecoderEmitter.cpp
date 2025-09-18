@@ -1548,7 +1548,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       ScopeStack.push_back(SkipTo);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Scope(" << SkipTo - DecodeTable
                         << ")\n");
-      break;
+      continue;
     }
     case OPC_ExtractField: {
       // Decode the start value.
@@ -1560,7 +1560,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       CurFieldValue = fieldFromInstruction(insn, Start, Len);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_ExtractField(" << Start << ", "
                    << Len << "): " << CurFieldValue << "\n");
-      break;
+      continue;
     }
     case OPC_FilterValueOrSkip: {
       // Decode the field value.
@@ -1572,12 +1572,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       LLVM_DEBUG(dbgs() << Loc << ": OPC_FilterValueOrSkip(" << Val << ", "
                         << SkipTo - DecodeTable << ") "
                         << (Failed ? "FAIL, " : "PASS\n"));
-
-      if (Failed) {
-        Ptr = SkipTo;
-        LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
-      }
-      break;
+      if (!Failed)
+        continue;
+      Ptr = SkipTo;
+      LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
+      continue;
     }
     case OPC_FilterValue: {
       // Decode the field value.
@@ -1586,15 +1585,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_FilterValue(" << Val << ") "
                         << (Failed ? "FAIL, " : "PASS\n"));
-
-      if (Failed) {
-        if (ScopeStack.empty()) {
-          LLVM_DEBUG(dbgs() << "returning Fail\n");
-          return MCDisassembler::Fail;
-        }
-        Ptr = ScopeStack.pop_back_val();
-        LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
-      }
+      if (!Failed)
+        continue;
       break;
     }
     case OPC_CheckField: {
@@ -1615,14 +1607,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
                         << ", " << ExpectedValue << "): FieldValue = "
                         << FieldValue << ", ExpectedValue = " << ExpectedValue
                         << ": " << (Failed ? "FAIL, " : "PASS\n"););
-      if (Failed) {
-        if (ScopeStack.empty()) {
-          LLVM_DEBUG(dbgs() << "returning Fail\n");
-          return MCDisassembler::Fail;
-        }
-        Ptr = ScopeStack.pop_back_val();
-        LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
-      }
+      if (!Failed)
+        continue;
       break;
     })";
   if (TableInfo.HasCheckPredicate) {
@@ -1635,15 +1621,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_CheckPredicate(" << PIdx << "): "
                         << (Failed ? "FAIL, " : "PASS\n"););
-
-      if (Failed) {
-        if (ScopeStack.empty()) {
-          LLVM_DEBUG(dbgs() << "returning Fail\n");
-          return MCDisassembler::Fail;
-        }
-        Ptr = ScopeStack.pop_back_val();
-        LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
-      }
+      if (!Failed)
+        continue;
       break;
     })";
   }
@@ -1672,12 +1651,6 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
         return S;
       }
       assert(S == MCDisassembler::Fail);
-      if (ScopeStack.empty()) {
-        LLVM_DEBUG(dbgs() << "returning Fail\n");
-        return MCDisassembler::Fail;
-      }
-      Ptr = ScopeStack.pop_back_val();
-      LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
       // Reset decode status. This also drops a SoftFail status that could be
       // set before the decode attempt.
       S = MCDisassembler::Success;
@@ -1693,11 +1666,17 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       if (Failed)
         S = MCDisassembler::SoftFail;
       LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
-      break;
+      continue;
     })";
   }
   OS << R"(
     }
+    if (ScopeStack.empty()) {
+      LLVM_DEBUG(dbgs() << "returning Fail\n");
+      return MCDisassembler::Fail;
+    }
+    Ptr = ScopeStack.pop_back_val();
+    LLVM_DEBUG(dbgs() << "continuing at " << Ptr - DecodeTable << '\n');
   }
   llvm_unreachable("bogosity detected in disassembler state machine!");
 }
