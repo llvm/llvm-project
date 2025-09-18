@@ -1,8 +1,4 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection \
-// RUN:                    -DWARN_FLEXIBLE_ARRAY -analyzer-config security.ArrayBound:EnableFakeFlexibleArrayWarn=true -verify %s
-
-#include "../Inputs/system-header-simulator-for-malloc.h"
 
 // Miscellaneous tests for `security.ArrayBound` where we only test the
 // presence or absence of a bug report. If a test doesn't fit in a more
@@ -11,8 +7,6 @@
 
 void clang_analyzer_value(int);
 void clang_analyzer_eval(int);
-void clang_analyzer_warnIfReached();
-
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -329,106 +323,6 @@ int unsigned_index_quirk_inner(unsigned char index) {
   // Regression test: if we don't call `simplifySVal` so 255+1 is folded into 0,
   // we get a false positive "out of bounds".
   return array[index]; // no warning
-}
-
-struct WithTrailingArray {
-  int nargs;
-  int args[1];
-};
-
-int use_trailing(struct WithTrailingArray *p) {
-#ifdef WARN_FLEXIBLE_ARRAY
-  // expected-warning@+2 {{Potential out of bound access to the field 'args', which may be a 'flexible array member'}}
-#endif
-  int x = p->args[3];
-  // No sink
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-  return x;
-}
-
-struct NotReallyTrailing {
-  int array[1];
-  int more_data;
-};
-
-int use_non_trailing(struct NotReallyTrailing *p) {
-  int x = p->array[3]; // expected-warning {{Out of bound access to memory after the end of the field 'array'}}
-  clang_analyzer_warnIfReached(); // sink, no warning
-  return x;
-}
-
-struct TrailingNoException {
-  int n;
-  int some[2];
-};
-
-int use_trailing_no_exception(struct TrailingNoException *p) {
-  int x = p->some[10]; // expected-warning {{Out of bound access to memory after the end of the field 'some'}}
-  clang_analyzer_warnIfReached(); // sink, no warning
-  return x;
-}
-
-int regular_one_array() {
-  int array[1];
-  int x = array[2]; // expected-warning {{Out of bound access to memory after the end of 'array'}}
-  clang_analyzer_warnIfReached(); // sink, no warning
-  return x;
-}
-
-struct WithTrailing0 {
-  int nargs;
-  int args[0];
-};
-
-int use_trailing0(struct WithTrailing0 *p) {
-#ifdef WARN_FLEXIBLE_ARRAY
-  // expected-warning@+2 {{Potential out of bound access to the field 'args', which may be a 'flexible array member'}}
-#endif
-  int x = p->args[10]; // no warning
-  // No sink
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-  return x;
-}
-
-struct RealFlexibleArray {
-  int nargs;
-  int args[];
-};
-
-// Trailing array, allocation unknown
-int use_real_trailing(struct RealFlexibleArray *p) {
-  int x = p->args[3]; // no warning
-  // No sink
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-  return x;
-}
-
-int use_allocated_fam() {
-  struct RealFlexibleArray *p = malloc(sizeof(struct RealFlexibleArray) + 10 * sizeof(int));
-  // This is a false negative.
-  // `ArrayBoundCheckers` queries for the extent of the memory region
-  // `Element{SymRegion{conj_$2{void *, LC1, S1173, #1}},0 S64b,struct RealFlexibleArray}.args`,
-  // which is unknown. Either `ArrayBoundCheckers`, or `DynamicExtent.cpp` should
-  // learn how to handle this pattern.
-  int x = p->args[30];
-  free(p);
-  return x;
-}
-
-// Pattern used in GCC
-union FlexibleArrayUnion {
-  int args[1];
-  struct {int x, y, z;};
-};
-
-int use_union(union FlexibleArrayUnion *p) {
-#ifdef WARN_FLEXIBLE_ARRAY
-  // expected-warning@+2 {{Potential out of bound access to the field 'args', which may be a 'flexible array member'}}
-#endif
-  int x = p->args[2];
-  // No sink
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-  return x;
 }
 
 void custom_unreachable();

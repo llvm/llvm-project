@@ -675,54 +675,11 @@ static Messages getOOBIndexMessage(StringRef Name, NonLoc Index,
           std::string(Buf)};
 }
 
-// "True" flexible array members do not specify any size (`int elems[];`)
-// However, some projects use "fake flexible arrays" (aka "struct hack"), where
-// they specify a size of 0 or 1 to work around a compiler limitation.
-// "True" flexible array members are `IncompleteArrayType` and will be skipped
-// by `performCheckArrayTypeIndex`. We need an heuristic to identify "fake"
-// ones.
-static bool isFakeFlexibleArrays(const ArraySubscriptExpr *E) {
-  auto getFieldDecl = [](ArraySubscriptExpr const *array) -> FieldDecl * {
-    const Expr *BaseExpr = array->getBase()->IgnoreParenImpCasts();
-    if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr)) {
-      return dyn_cast<FieldDecl>(ME->getMemberDecl());
-    }
-    return nullptr;
-  };
-  auto const isLastField = [](RecordDecl const *Parent,
-                              FieldDecl const *Field) {
-    const FieldDecl *LastField = nullptr;
-    for (const FieldDecl *F : Parent->fields()) {
-      LastField = F;
-    }
-
-    return (LastField == Field);
-  };
-  // We expect placeholder constant arrays to have size 0 or 1.
-  auto maybeConstArrayPlaceholder = [](QualType Type) {
-    const ConstantArrayType *CAT =
-        dyn_cast<ConstantArrayType>(Type->getAsArrayTypeUnsafe());
-    return CAT && CAT->getSize().getZExtValue() <= 1;
-  };
-
-  if (FieldDecl const *Field = getFieldDecl(E)) {
-    if (!maybeConstArrayPlaceholder(Field->getType()))
-      return false;
-
-    const RecordDecl *Parent = Field->getParent();
-    return Parent && (Parent->isUnion() || isLastField(Parent, Field));
-  }
-
-  return false;
-}
-
 // Generate a representation of `Expr` suitable for diagnosis.
-static std::string ExprReprForDiagnosis(ArraySubscriptExpr const *E,
-                                        CheckerContext &C) {
+static std::string ExprReprForDiagnosis(Expr const *Base, CheckerContext &C) {
   SmallString<128> Buf;
   llvm::raw_svector_ostream Out(Buf);
 
-  auto const *Base = E->getBase()->IgnoreParenImpCasts();
   switch (Base->getStmtClass()) {
   case Stmt::MemberExprClass:
     Out << "the field '";
@@ -809,8 +766,11 @@ auto ArrayBoundChecker::performCheckArrayTypeIndex(const ArraySubscriptExpr *E,
 
   auto const &[ArrayType, ArraySize] = *ArrayInfo;
 
-  std::string const ExprAsStr = ExprReprForDiagnosis(E, C);
-  bool const IsFakeFAM = isFakeFlexibleArrays(E);
+  Expr const *BaseExpr = E->getBase()->IgnoreImpCasts();
+  std::string const ExprAsStr = ExprReprForDiagnosis(BaseExpr, C);
+  bool const IsFakeFAM = BaseExpr->isFlexibleArrayMemberLike(
+      C.getASTContext(), C.getLangOpts().getStrictFlexArraysLevel(),
+      /*IgnoreTemplateOrMacroSubstitution=*/true);
 
   StateIndexUpdateReporter SUR(ExprAsStr, ArrayType, *Index, ArraySize);
 

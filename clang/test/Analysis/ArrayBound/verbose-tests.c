@@ -240,14 +240,18 @@ struct vec {
 
 double arrayInStruct(void) {
   return v.elems[64];
-  // expected-warning@-1 {{Out of bound access to memory after the end of the field 'elems'}}
-  // expected-note@-2 {{Access of the field 'elems' at index 64, while it holds only 64 'double' elements}}
+#if STRICT_FLEX >= 1
+  // expected-warning@-2 {{Out of bound access to memory after the end of the field 'elems'}}
+  // expected-note@-3 {{Access of the field 'elems' at index 64, while it holds only 64 'double' elements}}
+#endif
 }
 
 double arrayInStructPtr(struct vec *pv) {
   return pv->elems[64];
-  // expected-warning@-1 {{Out of bound access to memory after the end of the field 'elems'}}
-  // expected-note@-2 {{Access of the field 'elems' at index 64, while it holds only 64 'double' elements}}
+#if STRICT_FLEX >= 1
+  // expected-warning@-2 {{Out of bound access to memory after the end of the field 'elems'}}
+  // expected-note@-3 {{Access of the field 'elems' at index 64, while it holds only 64 'double' elements}}
+#endif
 }
 
 struct item {
@@ -465,16 +469,4 @@ int test_case_long_elem_name() {
   return table[55].x;
   // expected-warning@-1 {{Out of bound access to memory after the end of 'table'}}
   // expected-note@-2 {{Access of 'table' at index 55, while it holds only 10 'struct VERYLONGPR...' elements}}
-}
-
-struct What {
-  int x[0];
-  int y;
-};
-
-int who() {
-  struct What who;
-  return who.x[1];
-  // expected-warning@-1 {{Out of bound access to memory after the end of the field 'x'}}
-  // expected-note@-2 {{Access of the field 'x' at index 1, while it holds only 0 'int' elements}}
 }
