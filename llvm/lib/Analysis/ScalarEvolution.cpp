@@ -10791,10 +10791,10 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
     const SCEVMulExpr *LMul = cast<SCEVMulExpr>(LHS);
     const SCEVMulExpr *RMul = cast<SCEVMulExpr>(RHS);
 
+    // (X * vscale) pred (Y * vscale) ==> X pred Y
+    //     when both multiples are NSW.
     // (X * vscale) uicmp/eq/ne (Y * vscale) ==> X uicmp/eq/ne Y
-    //     when neither multiply wraps.
-    // (X * vscale) sicmp (Y * vscale) ==> X sicmp Y
-    //     when neither multiply changes sign.
+    //     when both multiples are NUW.
     if ((LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap()) ||
         (LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap() &&
          !ICmpInst::isSigned(Pred))) {
