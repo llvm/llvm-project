@@ -467,7 +467,7 @@ static FailureOr<SmallVector<LoopLikeOpInterface>> generateLoopNestUsingForOp(
 /// Compute the `OpFoldResult`s that represents the multi-dimensional
 /// `offset`s and `size`s of the tile of the iteration space that the
 /// innermost loop body of the generated tiled loops corresponds to
-/// when tiling using `forall` op. This is handle separately dut to
+/// when tiling using `forall` op. This is handle separately due to
 /// the special case handling needed for when the tiling is done by
 /// specifying number of threads.
 static std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>
@@ -623,6 +623,57 @@ generateLoopNestUsingForallOp(RewriterBase &rewriter, Location loc,
   return loops;
 }
 
+/// Generate the tile-loop nest using custom loop operation.
+/// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
+/// - `tileSizes` is the tile sizes to use. Zero represent untiled loops.
+/// - `destinationTensors` are the init values to use for the outer most loop.
+/// - `mappingVector` is the mapping attributes to use for loop construction.
+///   Can be empty.
+/// - `tiledBodyFn` is called to generated the loop body of the inner
+/// most
+///    loop.
+/// Returns the generated `scf.forall` loop on success.
+static FailureOr<SmallVector<LoopLikeOpInterface>>
+generateLoopNestUsingCustomOp(
+    RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
+    ArrayRef<OpFoldResult> givenTileSizes, ValueRange outerDestinationTensors,
+    const scf::SCFTilingOptions::GenerateLoopHeaderFn &generateLoopHeaderFn,
+    const scf::SCFTilingOptions::GenerateLoopTerminatorFn
+        &generateLoopTerminatorFn,
+    GenerateTiledBodyFn tiledBodyFn) {
+  assert(!loopRanges.empty() && "unexpected empty loop ranges");
+  assert(loopRanges.size() == givenTileSizes.size() &&
+         "expected as many tile sizes as loop ranges");
+  assert(generateLoopHeaderFn && generateLoopTerminatorFn &&
+         "expected loop header/terminator generation function");
+  OpBuilder::InsertionGuard guard(rewriter);
+
+  FailureOr<scf::SCFTilingOptions::CustomLoopHeaderInfo> loopHeaderInfo =
+      generateLoopHeaderFn(rewriter, loc, loopRanges, givenTileSizes,
+                           outerDestinationTensors);
+  if (failed(loopHeaderInfo)) {
+    return failure();
+  }
+
+  SmallVector<Value> ivs;
+  SmallVector<Value> tiledResults;
+  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
+  if (failed(tiledBodyFn(rewriter, loc, ivs, loopHeaderInfo->tileOffset,
+                         loopHeaderInfo->tileSizes,
+                         loopHeaderInfo->destinationTensors, tiledResults,
+                         resultOffsets, resultSizes))) {
+    return failure();
+  }
+
+  if (failed(generateLoopTerminatorFn(rewriter, loc, tiledResults,
+                                      resultOffsets, resultSizes,
+                                      loopHeaderInfo->destinationTensors))) {
+    return failure();
+  }
+
+  return loopHeaderInfo->loops;
+}
+
 /// Generate the tile-loop nest using the loop construct specifed in `options`.
 /// - `options`: Tiling options specified.
 /// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
@@ -662,6 +713,12 @@ static FailureOr<SmallVector<LoopLikeOpInterface>> generateLoopNest(
     return generateLoopNestUsingForallOp(
         rewriter, loc, loopRanges, givenTileSizes, numThreads,
         options.mappingVector, destinationTensors, tiledBodyFn);
+  }
+  if (options.loopType == scf::SCFTilingOptions::LoopType::CustomOp) {
+    return generateLoopNestUsingCustomOp(
+        rewriter, loc, loopRanges, givenTileSizes, destinationTensors,
+        options.generateLoopHeaderFn, options.generateLoopTerminatorFn,
+        tiledBodyFn);
   }
   return rewriter.notifyMatchFailure(loc, "unhandled loop type");
 }
