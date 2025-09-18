@@ -3834,7 +3834,19 @@ libc_math_function(name = "floorf128")
 
 libc_math_function(name = "floorf16")
 
-# TODO: Add fma, fmaf, fmal, fmaf128 functions.
+libc_math_function(
+    name = "fma",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
+
+libc_math_function(
+    name = "fmaf",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
 
 libc_math_function(
     name = "fmaf16",
