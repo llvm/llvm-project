@@ -5472,13 +5472,13 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
 static StringRef GetFuntionKindString(FunctionKind Kind) {
   switch (Kind) {
   case FunctionKind::NOT_INDIRECT_TARGET:
-    return "NOT_INDIRECT_TARGET";
+    return "NOT_INDIRECT";
   case FunctionKind::INDIRECT_TARGET_UNKNOWN_TID:
-    return "INDIRECT_TARGET_UNKNOWN_TID";
+    return "UNKNOWN_TID";
   case FunctionKind::INDIRECT_TARGET_KNOWN_TID:
-    return "INDIRECT_TARGET_KNOWN_TID";
+    return "KNOWN_TID";
   case FunctionKind::NOT_LISTED:
-    return "NOT_LISTED";
+    return "NO_INFO";
   }
   llvm_unreachable("Unknown FunctionKind.");
 }
@@ -8399,44 +8399,43 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     return join(FuncSymNames, ", ");
   };
 
-  DictScope D(this->W, "callgraph_info");
+  ListScope CGI(W, "callgraph_info");
 
-  for (const auto &El : this->FuncCGInfos) {
+  for (const auto &El : this->FuncCGInfos) {    
+    DictScope D(W, "Function");
     typename ELFT::uint FuncEntryPc = El.first;
     FunctionCallgraphInfo CGInfo = El.second;
-    std::string FuncPCStr;
-    raw_string_ostream OS(FuncPCStr);
-    OS << format("0x%lx", FuncEntryPc);
-    DictScope FuncScope(this->W, OS.str());
     std::string FuncSymName = GetFunctionName(FuncEntryPc);
     if (!FuncSymName.empty())
-      this->W.printString("Name", FuncSymName);
+      W.printString("Name", FuncSymName);
 
-    this->W.printNumber("FormatVersionNumber", CGInfo.FormatVersionNumber);
-    this->W.printString("KindStr", GetFuntionKindString(CGInfo.Kind));
-    this->W.printNumber("Kind", (uint64_t)CGInfo.Kind);
+    W.printHex("Address", FuncEntryPc);
+    W.printNumber("Version", CGInfo.FormatVersionNumber);
+    W.printString("KindStr", GetFuntionKindString(CGInfo.Kind));
+    W.printNumber("Kind", (uint64_t)CGInfo.Kind);
     if (CGInfo.Kind == FunctionKind::INDIRECT_TARGET_KNOWN_TID)
-      this->W.printHex("TypeId", CGInfo.FunctionTypeId);
-    this->W.printNumber("NumIndirectCallSites",
+      W.printHex("TypeId", CGInfo.FunctionTypeId);
+    W.printNumber("NumIndirectCallSites",
                         CGInfo.IndirectCallsites.size());
     if (CGInfo.IndirectCallsites.size() > 0) {
-      ListScope ICT(this->W, "indirect_call_sites");
-      for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {
-        DictScope IDC(this->W);
-        this->W.printHex("callsite", IndirCallSitePc);
-        this->W.printHex("type_id", TypeId);
+      ListScope ICSs(W, "IndirectCallsites");
+      for (auto &[IndirCallSitePc, TypeId] : CGInfo.IndirectCallsites) {        
+        DictScope ICS(W, "IndirectCallsite");
+        W.printHex("Address", IndirCallSitePc);
+        W.printHex("TypeId", TypeId);
       }
     }
-    this->W.printNumber("NumDirectCallSites", CGInfo.DirectCallees.size());
+    W.printNumber("NumDirectCallSites", CGInfo.DirectCallees.size());
     if (CGInfo.DirectCallees.size() > 0) {
-      ListScope ICT(this->W, "direct_callees");
-      for (auto CalleePC : CGInfo.DirectCallees) {
-        this->W.printHex("calleePC", CalleePC);
+      ListScope DCs(W, "DirectCallees");
+      for (auto CalleePC : CGInfo.DirectCallees) {        
+        DictScope DCs(W, "DirectCallee");        
+        W.printHex("Address", CalleePC);
         std::string CalleeSymName = GetFunctionName(CalleePC);
         if (!CalleeSymName.empty())
-          this->W.printString("Name", CalleeSymName);
-      }
-    }
+          W.printString("Name", CalleeSymName);
+      }      
+    }  
   }
 }
 
