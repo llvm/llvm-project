@@ -58,6 +58,8 @@ DecoderTableEmitter::computeNodeSize(const DecoderTreeNode *Node) const {
       Size += getULEB128Size(Val) + getULEB128Size(ChildSize) + ChildSize;
     }
 
+    // The last child is emitted with sentinel value 0 instead of the size.
+    // See the comment in emitSwitchFieldNode.
     auto [Val, Child] = *std::prev(N->case_end());
     unsigned ChildSize = computeNodeSize(Child);
     Size += getULEB128Size(Val) + getULEB128Size(0) + ChildSize;
