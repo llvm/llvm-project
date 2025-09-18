@@ -597,6 +597,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesLegacyPass(*PR);
+  initializeSIRestoreNormalEpilogLegacyPass(*PR);
   initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDLegacyPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
@@ -1589,6 +1590,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
+  
+  insertPass(&RenameIndependentSubregsID,&SIRestoreNormalEpilogLegacyID);
 
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass(&MachineSchedulerID, &GCNPreRAOptimizationsID);
