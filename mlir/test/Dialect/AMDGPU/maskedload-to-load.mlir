@@ -167,3 +167,63 @@ func.func @full_mask_maskedstore_to_store(%arg0: memref<8x8xf16>, %arg1: index, 
 // CHECK-NOT: vector.maskedstore
 // CHECK: scf.if %[[PRED]]
 // CHECK:   vector.store
+
+// -----
+
+// CHECK-LABEL: func.func @full_select_maskedload_to_load_splat
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+// CHECK-SAME: %[[PRED:.+]]: i1,
+// CHECK-SAME: %[[PASSTHRU:.+]]: vector<4xf16>)
+func.func @full_select_maskedload_to_load_splat(%arg0: memref<8x8xf16>, %arg1: index, %arg2: i1, %arg3: vector<4xf16>) -> vector<4xf16> {
+  %0 = vector.splat %arg2 : vector<4xi1>
+  %1 = vector.maskedload %arg0[%arg1, %arg1], %0, %arg3 : memref<8x8xf16>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %1 : vector<4xf16>
+}
+// CHECK-NOT: vector.maskedload
+// CHECK: scf.if %[[PRED]]
+// CHECK:   %[[LOAD:.+]] = vector.load
+// CHECK:   scf.yield %[[LOAD]]
+// CHECK: else
+// CHECK:   scf.yield %[[PASSTHRU]]
+
+// -----
+
+// CHECK-LABEL: func.func @full_select_maskedload_to_load_unit_vector_pred
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+// CHECK-SAME: %[[PREDVEC:.+]]: vector<1xi1>,
+// CHECK-SAME: %[[PASSTHRU:.+]]: vector<4xf16>)
+func.func @full_select_maskedload_to_load_unit_vector_pred(%arg0: memref<8x8xf16>, %arg1: index, %arg2: vector<1xi1>, %arg3: vector<4xf16>) -> vector<4xf16> {
+  %0 = vector.broadcast %arg2 : vector<1xi1> to vector<4xi1>
+  %1 = vector.maskedload %arg0[%arg1, %arg1], %0, %arg3 : memref<8x8xf16>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %1 : vector<4xf16>
+}
+// CHECK-NOT: vector.maskedload
+// CHECK: %[[PRED:.+]] = vector.extract %[[PREDVEC]][0] : i1 from vector<1xi1>
+// CHECK: scf.if %[[PRED]]
+// CHECK:   %[[LOAD:.+]] = vector.load
+// CHECK:   scf.yield %[[LOAD]]
+// CHECK: else
+// CHECK:   scf.yield %[[PASSTHRU]]
+
+// -----
+
+// CHECK-LABEL: func.func @full_select_maskedload_to_load_2d_unit_vector_pred
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+// CHECK-SAME: %[[PREDVEC:.+]]: vector<1x1xi1>,
+// CHECK-SAME: %[[PASSTHRU:.+]]: vector<4xf16>)
+func.func @full_select_maskedload_to_load_2d_unit_vector_pred(%arg0: memref<8x8xf16>, %arg1: index, %arg2: vector<1x1xi1>, %arg3: vector<4xf16>) -> vector<4xf16> {
+  %0 = vector.broadcast %arg2 : vector<1x1xi1> to vector<2x2xi1>
+  %1 = vector.shape_cast %0 : vector<2x2xi1> to vector<4xi1>
+  %2 = vector.maskedload %arg0[%arg1, %arg1], %1, %arg3 : memref<8x8xf16>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %2 : vector<4xf16>
+}
+// CHECK-NOT: vector.maskedload
+// CHECK: %[[PRED:.+]] = vector.extract %[[PREDVEC]][0, 0] : i1 from vector<1x1xi1>
+// CHECK: scf.if %[[PRED]]
+// CHECK:   %[[LOAD:.+]] = vector.load
+// CHECK:   scf.yield %[[LOAD]]
+// CHECK: else
+// CHECK:   scf.yield %[[PASSTHRU]]
