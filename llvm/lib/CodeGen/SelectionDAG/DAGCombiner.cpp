@@ -18470,6 +18470,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
   SDNodeFlags Flags = N->getFlags();
+  bool AllowReciprocalN0 = isa<ConstantFPSDNode>(N0) ? true : N0->getFlags().hasAllowReciprocal();
+  bool AllowReciprocalN1 = isa<ConstantFPSDNode>(N1) ? true : N1->getFlags().hasAllowReciprocal();
+  bool AllowReciprocal = Flags.hasAllowReciprocal() && AllowReciprocalN0 && AllowReciprocalN1;
+
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
   if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
@@ -18500,7 +18504,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // Only do the transform if the reciprocal is a legal fp immediate that
     // isn't too nasty (eg NaN, denormal, ...).
     if (((st == APFloat::opOK && !Recip.isDenormal()) ||
-         (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
+         (st == APFloat::opInexact && AllowReciprocal)) &&
         (!LegalOperations ||
          // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
          // backend)... we should handle this gracefully after Legalize.
@@ -18511,7 +18515,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
                          DAG.getConstantFP(Recip, DL, VT));
   }
 
-  if (Flags.hasAllowReciprocal()) {
+  if (AllowReciprocal) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
     if (N1.getOpcode() == ISD::FSQRT) {
