@@ -1319,6 +1319,7 @@ static bool isSupportedVariable(const DeclRefExpr &Node) {
   return D != nullptr && isa<VarDecl>(D);
 }
 
+// Returns true for RecordDecl of type std::unique_ptr<T[]>
 static bool isUniquePtrArray(const CXXRecordDecl *RecordDecl) {
   if (!RecordDecl || !RecordDecl->isInStdNamespace() ||
       RecordDecl->getNameAsString() != "unique_ptr")
@@ -1343,6 +1344,7 @@ static bool isUniquePtrArray(const CXXRecordDecl *RecordDecl) {
 }
 
 class UniquePtrArrayAccessGadget : public WarningGadget {
+private:
   static constexpr const char *const AccessorTag = "unique_ptr_array_access";
   const CXXOperatorCallExpr *AccessorExpr;
 
@@ -1374,12 +1376,20 @@ public:
     if (!Method)
       return false;
 
-    if (Method->getNameAsString() != "operator[]")
+    if (Method->getOverloadedOperator() != OO_Subscript)
       return false;
 
     const CXXRecordDecl *RecordDecl = Method->getParent();
     if (!isUniquePtrArray(RecordDecl))
       return false;
+
+    const Expr *IndexExpr = OpCall->getArg(1);
+    llvm::APSInt IndexValue;
+
+    // Allow [0]
+    if (IndexExpr->EvaluateAsInt(IndexValue, Ctx) && IndexValue.isZero()) {
+      return false;
+    }
 
     Result.addNode(AccessorTag, DynTypedNode::create(*OpCall));
     return true;

@@ -2613,10 +2613,8 @@ public:
     std::string Message;
 
     Loc = Node.get<Stmt>()->getBeginLoc();
-    Message = "Direct operator[] access on std::unique_ptr<T[]> is unsafe "
-              "(no bounds check).";
     S.Diag(Loc, diag::warn_unsafe_buffer_usage_unique_ptr_array_access)
-        << Message << Node.getSourceRange();
+        << Node.getSourceRange();
   }
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
