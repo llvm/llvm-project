@@ -281,7 +281,7 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
   auto inputScalableVecDimsToUnroll =
       vType.getScalableDims().drop_back(targetRank);
-  auto it = llvm::find(inputScalableVecDimsToUnroll, true);
+  const auto *it = llvm::find(inputScalableVecDimsToUnroll, true);
   auto firstScalableDim = it - inputScalableVecDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};
